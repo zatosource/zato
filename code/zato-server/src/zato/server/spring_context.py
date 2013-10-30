@@ -18,7 +18,6 @@ from zato.common.delivery import DeliveryStore
 from zato.common.kvdb import KVDB
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
-from zato.server.connection.http_soap.security import Security as ConnectionHTTPSOAPSecurity
 from zato.server.connection.sql import PoolStore
 from zato.server.odb import ODBManager
 #from zato.server.pickup import Pickup, PickupEventProcessor
@@ -95,13 +94,6 @@ class ZatoContext(PythonConfig):
     @Object
     def bool_parameter_prefixes(self):
         return SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES
-
-    # #######################################################
-    # Security
-    
-    @Object
-    def connection_http_soap_security(self):
-        return ConnectionHTTPSOAPSecurity()
     
     # #######################################################
     # Delivery store
