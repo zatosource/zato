@@ -129,7 +129,7 @@ class URLData(object):
             if match:
                 if logger.isEnabledFor(TRACE1):
                     logger.log(TRACE1, 'Matched target:[%s] with:[%r]', target, item)
-                return match
+                return match, item
             
     def check_security(self, cid, match, path_info, payload, wsgi_environ):
         """ Authenticates and authorizes a given request. Returns None on success

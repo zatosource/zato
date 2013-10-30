@@ -128,13 +128,13 @@ class RequestDispatcher(object):
             soap_action = self._handle_quotes_soap_action(soap_action)
 
         # Can we recognize this combination of URL path and SOAP action at all?
-        url_match = self.url_data.match(path_info, soap_action)
+        url_match, channel_item = self.url_data.match(path_info, soap_action)
         
         # OK, we can possibly handle it
         if url_match:
 
             # Raise 404 if the channel is inactive
-            if not url_match.is_active:
+            if not channel_item.is_active:
                 logger.warn('url_data:[%s] is not active, raising NotFound', sorted(url_match.items()))
                 raise NotFound(cid, 'Channel inactive')
             
@@ -145,11 +145,11 @@ class RequestDispatcher(object):
             try:
                 
                 # Will raise an exception on any security violation
-                self.url_data.check_security(cid, url_match, path_info, payload, wsgi_environ)
+                self.url_data.check_security(cid, channel_item, path_info, payload, wsgi_environ)
 
                 # OK, no security exception at that point means we can finally
                 # invoke the service.
-                response = self.request_handler.handle(cid, url_match, wsgi_environ, 
+                response = self.request_handler.handle(cid, channel_item, wsgi_environ, 
                     payload, worker_store, self.simple_io_config, path_info)
                 
                 # Got response from the service so we can construct response headers now
@@ -182,12 +182,12 @@ class RequestDispatcher(object):
                 logger.error('Caught an exception, cid:[%s], status_code:[%s], _format_exc:[%s]', cid, status_code, _format_exc)
                     
                 try:
-                    error_wrapper = get_client_error_wrapper(url_match.transport, url_match.data_format)
+                    error_wrapper = get_client_error_wrapper(channel_item.transport, channel_item.data_format)
                 except KeyError:
                     # It's OK. Apparently it's neither 'soap' nor json'
                     if logger.isEnabledFor(TRACE1):
                         msg = 'No client error wrapper for transport:[{}], data_format:[{}]'.format(
-                            url_match.transport, url_match.data_format)
+                            channel_item.transport, channel_item.data_format)
                         logger.log(TRACE1, msg)
                 else:
                     response = error_wrapper(cid, response)
