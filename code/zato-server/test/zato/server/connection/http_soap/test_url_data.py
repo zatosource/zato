@@ -98,22 +98,22 @@ class URLDataTestCase(TestCase):
         ud.channel_data.append(item2)
         ud.channel_data.append(item3)
         
-        match = ud.match(url_path1, soap_action1)
+        match, _ = ud.match(url_path1, soap_action1)
         self.assertIsInstance(match, Result)
         eq_(match.named, {})
         eq_(match.spans, {})
         
-        match = ud.match(url_path2, soap_action2)
+        match, _ = ud.match(url_path2, soap_action2)
         self.assertIsInstance(match, Result)
         eq_(match.named, {})
         eq_(match.spans, {})
         
-        match = ud.match('/customer/123/order/456', soap_action3)
+        match, _ = ud.match('/customer/123/order/456', soap_action3)
         self.assertIsInstance(match, Result)
         eq_(sorted(match.named.items()), [(u'cid', u'123'), (u'oid', u'456')])
         eq_(sorted(match.spans.items()), [(u'cid', (13, 16)), (u'oid', (23, 26))])
         
-        match = ud.match('/foo/bar', '')
+        match, _ = ud.match('/foo/bar', '')
         self.assertIsNone(match)
 
 # ##############################################################################
