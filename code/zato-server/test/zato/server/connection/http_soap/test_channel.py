@@ -74,20 +74,21 @@ class DummySecurity(object):
         pass
     
 class DummyURLData(object):
-    def __init__(self, match_return_value):
+    def __init__(self, match_return_value, channel_item_return_value):
         self.match_return_value = match_return_value
+        self.channel_item_return_value = channel_item_return_value
         self.cid = None
-        self.url_match = None
+        self.channel_item = None
         self.path_info = None
         self.payload = None
         self.wsgi_environ = None
         
     def match(self, *ignored_args, **ignored_kwargs):
-        return self.match_return_value
+        return self.match_return_value, self.channel_item_return_value
     
-    def check_security(self, cid, url_match, path_info, payload, wsgi_environ):
+    def check_security(self, cid, channel_item, path_info, payload, wsgi_environ):
         self.cid = cid
-        self.url_match = url_match
+        self.channel_item = channel_item
         self.path_info = path_info
         self.payload = payload
         self.wsgi_environ = wsgi_environ
@@ -235,7 +236,7 @@ class TestRequestDispatcher(MessageHandlingBase):
         self.assertEquals(soap_action, 'aaa')
         
     def test_dispatch_no_url_data(self):
-        rd = channel.RequestDispatcher(DummyURLData(False))
+        rd = channel.RequestDispatcher(DummyURLData(False, None))
         rd.security = DummySecurity()
         
         cid = uuid4().hex
@@ -259,16 +260,16 @@ class TestRequestDispatcher(MessageHandlingBase):
         class DummyRequestHandler(object):
             def __init__(self):
                 self.cid = None
-                self.url_match = None
+                self.channel_item = None
                 self.wsgi_environ = None
                 self.payload = None
                 self.worker_store = None
                 self.simple_io_config = None
                 self.path_info = None
             
-            def handle(self, cid, url_match, wsgi_environ, payload, worker_store, simple_io_config, path_info):    
+            def handle(self, cid, channel_item, wsgi_environ, payload, worker_store, simple_io_config, path_info):    
                 self.cid = cid
-                self.url_match = url_match
+                self.channel_item = channel_item
                 self.wsgi_environ = wsgi_environ
                 self.payload = payload
                 self.worker_store = worker_store
@@ -286,7 +287,12 @@ class TestRequestDispatcher(MessageHandlingBase):
         match_return_value.is_active = True
         match_return_value.transport = uuid4().hex
         match_return_value.data_format = uuid4().hex
-
+        
+        channel_item_return_value = Bunch()
+        channel_item_return_value.is_active = True
+        channel_item_return_value.transport = uuid4().hex
+        channel_item_return_value.data_format = uuid4().hex
+        
         payload = uuid4().hex
         
         wsgi_input = StringIO()
@@ -300,20 +306,20 @@ class TestRequestDispatcher(MessageHandlingBase):
             'zato.http.response.headers': {},
         }
         
-        ud = DummyURLData(match_return_value)
+        ud = DummyURLData(match_return_value, channel_item_return_value)
         rd = channel.RequestDispatcher(ud)
         rd.simple_io_config = simple_io_config
         rd.request_handler = DummyRequestHandler()
         rd.dispatch(cid, req_timestamp, wsgi_environ, worker_store)
         
         eq_(ud.cid, cid)
-        eq_(ud.url_match, match_return_value)
+        eq_(ud.channel_item, channel_item_return_value)
         eq_(ud.path_info, path_info)
         eq_(ud.payload, payload)
         eq_(sorted(ud.wsgi_environ.items()), sorted(wsgi_environ.items()))
         
         eq_(rd.request_handler.cid, cid)
-        eq_(rd.request_handler.url_match, match_return_value)
+        eq_(rd.request_handler.channel_item, channel_item_return_value)
         eq_(sorted(rd.request_handler.wsgi_environ.items()), sorted(wsgi_environ.items()))
         eq_(rd.request_handler.payload, payload)
         eq_(rd.request_handler.worker_store, worker_store)

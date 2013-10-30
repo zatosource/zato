@@ -130,12 +130,14 @@ class URLData(object):
                 if logger.isEnabledFor(TRACE1):
                     logger.log(TRACE1, 'Matched target:[%s] with:[%r]', target, item)
                 return match, item
+
+        return None, None
             
-    def check_security(self, cid, match, path_info, payload, wsgi_environ):
+    def check_security(self, cid, channel_item, path_info, payload, wsgi_environ):
         """ Authenticates and authorizes a given request. Returns None on success
         or raises an exception otherwise.
         """
-        sec = self.url_sec[match.match_target]
+        sec = self.url_sec[channel_item.match_target]
         if sec.sec_def != ZATO_NONE:
             sec_def, sec_def_type = sec.sec_def, sec.sec_def.sec_type
             handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
