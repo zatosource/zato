@@ -29,7 +29,8 @@ from lxml import etree
 from nose.tools import eq_
 
 # Zato
-from zato.common import SIMPLE_IO, URL_TYPE, zato_namespace, ZATO_OK
+from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO, URL_PARAMS_PRIORITY, \
+     URL_TYPE, zato_namespace, ZATO_NONE, ZATO_OK
 from zato.common.util import new_cid
 from zato.server.connection.http_soap import channel
 from zato.server.service.internal import AdminService, Service
@@ -260,21 +261,21 @@ class TestRequestDispatcher(MessageHandlingBase):
         class DummyRequestHandler(object):
             def __init__(self):
                 self.cid = None
+                self.url_match = {ZATO_NONE:ZATO_NONE}
                 self.channel_item = None
-                self.wsgi_environ = None
+                self.wsgi_environ = {ZATO_NONE:ZATO_NONE}
                 self.payload = None
                 self.worker_store = None
                 self.simple_io_config = None
-                self.path_info = None
             
-            def handle(self, cid, channel_item, wsgi_environ, payload, worker_store, simple_io_config, path_info):    
+            def handle(self, cid, url_match, channel_item, wsgi_environ, payload, worker_store, simple_io_config):
                 self.cid = cid
+                self.url_match = url_match
                 self.channel_item = channel_item
                 self.wsgi_environ = wsgi_environ
                 self.payload = payload
                 self.worker_store = worker_store
                 self.simple_io_config = simple_io_config
-                self.path_info = path_info
         
         cid = uuid4().hex
         req_timestamp = uuid4().hex
@@ -319,11 +320,124 @@ class TestRequestDispatcher(MessageHandlingBase):
         eq_(sorted(ud.wsgi_environ.items()), sorted(wsgi_environ.items()))
         
         eq_(rd.request_handler.cid, cid)
+        eq_(sorted(rd.request_handler.url_match.items()), sorted(match_return_value.items()))
         eq_(rd.request_handler.channel_item, channel_item_return_value)
         eq_(sorted(rd.request_handler.wsgi_environ.items()), sorted(wsgi_environ.items()))
         eq_(rd.request_handler.payload, payload)
         eq_(rd.request_handler.worker_store, worker_store)
         eq_(rd.request_handler.simple_io_config, simple_io_config)
-        eq_(rd.request_handler.path_info, path_info)
         
 # ##############################################################################
+
+class TestRequestHandler(TestCase):
+    def test_handle(self):
+        expected_cid = uuid4().hex
+        expected_url_match = uuid4().hex
+        expected_wsgi_environ = uuid4().hex
+        expected_raw_request = uuid4().hex
+        expected_simple_io_config = uuid4().hex
+        expected_channel = CHANNEL.HTTP_SOAP
+        
+        expected_channel_item = Bunch()
+        expected_channel_item.service_impl_name = Bunch()
+        expected_channel_item.data_format = uuid4().hex
+        expected_channel_item.transport = uuid4().hex
+        expected_channel_item.params_pri = uuid4().hex
+        
+        expected_worker_store = Bunch()
+        expected_worker_store.broker_client = uuid4().hex
+        
+        expected_channel_params = uuid4().hex
+        
+        def _create_channel_params(url_match, channel_item, wsgi_environ, raw_request):
+            eq_(url_match, expected_url_match)
+            eq_(channel_item, expected_channel_item)
+            eq_(wsgi_environ, expected_wsgi_environ)
+            eq_(raw_request, expected_raw_request)
+            return expected_channel_params
+        
+        for merge_url_params_req in(True, False):
+            expected_channel_item.merge_url_params_req = merge_url_params_req
+
+            rh = channel.RequestHandler()
+
+            class _Service:
+                def update_handle(_self, _set_response_data, service, raw_request,
+                        channel, data_format, transport, server, broker_client,
+                        worker_store, cid, simple_io_config, wsgi_environ, 
+                        url_match, channel_item, channel_params,
+                        merge_channel_params, params_priority):
+                    
+                    eq_(_set_response_data, rh._set_response_data)
+                    eq_(_self, service)
+                    eq_(raw_request, expected_raw_request)
+                    eq_(channel, expected_channel)
+                    eq_(data_format, expected_channel_item.data_format)
+                    eq_(transport, expected_channel_item.transport)
+                    eq_(server, rh.server)
+                    eq_(broker_client, expected_worker_store.broker_client)
+                    eq_(sorted(worker_store.items()), sorted(expected_worker_store.items()))
+                    eq_(cid, expected_cid)
+                    eq_(simple_io_config, expected_simple_io_config)
+                    eq_(wsgi_environ, expected_wsgi_environ)
+                    eq_(url_match, expected_url_match)
+                    eq_(sorted(channel_item.items()), sorted(expected_channel_item.items()))
+
+                    if merge_url_params_req:
+                        eq_(channel_params, expected_channel_params)
+                    else:
+                        eq_(channel_params, None)
+                        
+                    eq_(merge_channel_params, merge_url_params_req)
+                    eq_(params_priority, expected_channel_item.params_pri)
+            
+            class _server:
+                class service_store:
+                    @staticmethod
+                    def new_instance(service_impl_name):
+                        _server.service_impl_name = service_impl_name
+                        return _Service()
+
+            rh.server = _server
+            rh.create_channel_params = _create_channel_params
+            rh.handle(expected_cid, expected_url_match, expected_channel_item, 
+                expected_wsgi_environ, expected_raw_request, expected_worker_store,
+                expected_simple_io_config)
+
+    def test_create_channel_params(self):
+
+        url_match = Bunch()
+        url_match.named = Bunch()
+        url_match.named.url_key1 = 'path-{}'.format(uuid4().hex)
+        url_match.named.url_key2 = 'path-{}'.format(uuid4().hex)
+        
+        qs_key1, qs_value1 = 'url_key1', 'qs-aaa-{}'.format(uuid4().hex)
+        qs_key2, qs_value2 = 'url_key2', 'qs-bbbb-{}'.format(uuid4().hex)
+        
+        post_key1, post_value1 = 'post_key1', uuid4().hex
+        post_key2, post_value2 = 'post_key2', uuid4().hex
+        
+        raw_request = '{}={}&{}={}'.format(post_key1, post_value1, post_key2, post_value2)
+        
+        wsgi_environ = {}
+        wsgi_environ['QUERY_STRING'] = '{}={}&{}={}'.format(qs_key1, qs_value1, qs_key2, qs_value2)
+        
+        for data_format in DATA_FORMAT:
+            for url_params_pri in URL_PARAMS_PRIORITY:
+                
+                channel_item = Bunch()
+                channel_item.data_format = data_format
+                channel_item.url_params_pri = url_params_pri
+                
+                rh = channel.RequestHandler()
+                channel_params = rh.create_channel_params(url_match, channel_item, wsgi_environ, raw_request)
+                
+                eq_(sorted(wsgi_environ['zato.http.GET'].items()), [(qs_key1, qs_value1), (qs_key2, qs_value2)])
+                
+                if data_format == DATA_FORMAT.POST:
+                    eq_(sorted(wsgi_environ['zato.http.POST'].items()), [(post_key1, post_value1), (post_key2, post_value2)])
+
+                if url_params_pri == URL_PARAMS_PRIORITY.PATH_OVER_QS:
+                    eq_(sorted(channel_params.items()), sorted(url_match.named.items()))
+                else:
+                    eq_(sorted(channel_params.items()), [(qs_key1, qs_value1), (qs_key2, qs_value2)])

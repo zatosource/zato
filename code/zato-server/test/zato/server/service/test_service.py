@@ -15,6 +15,9 @@ from time import time
 from unittest import TestCase
 from uuid import uuid4
 
+# Bunch
+from bunch import Bunch
+
 # nose
 from nose.tools import eq_
 
@@ -22,9 +25,9 @@ from nose.tools import eq_
 from retools.lock import LockTimeout
 
 # Zato
-from zato.common import CHANNEL, KVDB, SCHEDULER_JOB_TYPE
+from zato.common import CHANNEL, KVDB, PARAMS_PRIORITY, SCHEDULER_JOB_TYPE, URL_TYPE
 from zato.common.test import FakeKVDB, rand_string, rand_int, ServiceTestCase
-from zato.server.service import HTTPRequestData, Service
+from zato.server.service import HTTPRequestData, Request, Service
 
 # ##############################################################################
 
@@ -173,20 +176,112 @@ class TestHTTPRequestData(TestCase):
         self.assertEquals(data.method, None)
         
     def test_non_empty(self):
-        get1, get2, get3, get4 = uuid4().hex, uuid4().hex, uuid4().hex, uuid4().hex
+        get1, get2 = uuid4().hex, uuid4().hex
+        post1, post2 = uuid4().hex, uuid4().hex
+        request_method = uuid4().hex
         
-        # Note that 'a' in query string is given twice
         wsgi_environ = {
-            'QUERY_STRING':'a={}&a={}&b={}&c={}'.format(get1, get2, get3, get4),
-            'REQUEST_METHOD': uuid4().hex
+            'REQUEST_METHOD': request_method,
+            'zato.http.GET': {'get1':get1, 'get2':get2},
+            'zato.http.POST': {'post1':post1, 'post2':post2},
         }
         
-        post1, post2 = uuid4().hex, uuid4().hex
-        raw_request = 'post1={}&post2={}'.format(post1, post2)
-        
         data = HTTPRequestData()
-        data.init(wsgi_environ, raw_request)
+        data.init(wsgi_environ)
         
-        self.assertEquals(data.method, wsgi_environ['REQUEST_METHOD'])
-        self.assertEquals(sorted(data.GET.items()), [('a', get2), ('b', get3), ('c', get4)])
+        self.assertEquals(data.method, request_method)
+        self.assertEquals(sorted(data.GET.items()), [('get1', get1), ('get2', get2)])
         self.assertEquals(sorted(data.POST.items()), [('post1', post1), ('post2', post2)])
+
+# ##############################################################################
+
+class TestRequest(TestCase):
+    def test_init_no_sio(self):
+        is_sio = False
+        cid = uuid4().hex
+        data_format = uuid4().hex
+        io = uuid4().hex
+        
+        wsgi_environ = {
+            'zato.http.GET': {uuid4().hex:uuid4().hex}, 
+            'zato.http.POST': {uuid4().hex:uuid4().hex}, 
+            'REQUEST_METHOD': uuid4().hex, 
+        }
+        
+        for transport in(None, URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP):
+            r = Request(None)
+            r.init(is_sio, cid, io, data_format, transport, wsgi_environ)
+            
+            if transport is None:
+                eq_(r.http.method, None)
+                eq_(r.http.GET, None)
+                eq_(r.http.POST, None)
+            else:
+                eq_(r.http.method, wsgi_environ['REQUEST_METHOD'])
+                eq_(sorted(r.http.GET.items()), sorted(wsgi_environ['zato.http.GET'].items()))
+                eq_(sorted(r.http.POST.items()), sorted(wsgi_environ['zato.http.POST'].items()))
+
+    def test_init_sio(self):
+
+        is_sio = True
+        cid = uuid4().hex
+        data_format = uuid4().hex
+        transport = uuid4().hex
+        
+        io_default = {}
+        io_custom = Bunch({
+            'request_elem': uuid4().hex,
+            'input_required': ['a', 'b', 'c'],
+            'input_optional': ['d', 'e', 'f'],
+            'default_value': uuid4().hex,
+            'use_text': uuid4().hex,
+        })
+        
+        wsgi_environ = {
+            'zato.http.GET': {uuid4().hex:uuid4().hex}, 
+            'zato.http.POST': {uuid4().hex:uuid4().hex}, 
+            'REQUEST_METHOD': uuid4().hex, 
+        }
+        
+        def _get_params(request_params, *ignored):
+            # 'g' is never overridden
+            if request_params is io_custom['input_required']:
+                return {'a':'a-req', 'b':'b-req', 'c':'c-req', 'g':'g-msg'}
+            else:
+                return {'d':'d-opt', 'e':'e-opt', 'f':'f-opt', 'g':'g-msg'}
+        
+        r = Request(None)
+        r.payload = None
+        r.get_params = _get_params
+        
+        r.channel_params['a'] = 'channel_param_a'
+        r.channel_params['b'] = 'channel_param_b'
+        r.channel_params['c'] = 'channel_param_c'
+        r.channel_params['d'] = 'channel_param_d'
+        r.channel_params['e'] = 'channel_param_e'
+        r.channel_params['f'] = 'channel_param_f'
+        r.channel_params['h'] = 'channel_param_h' # Never overridden
+        
+        for io in(io_default, io_custom):
+            for params_priority in PARAMS_PRIORITY:
+                r.params_priority = params_priority
+                r.init(is_sio, cid, io, data_format, transport, wsgi_environ)
+
+                if io is io_default:
+                    eq_(sorted(r.input.items()), 
+                        sorted({'a': 'channel_param_a', 'b': 'channel_param_b', 'c': 'channel_param_c',
+                         'd': 'channel_param_d', 'e': 'channel_param_e', 'f': 'channel_param_f',
+                         'h':'channel_param_h'}.items()))
+                else:
+                    if params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG:
+                        eq_(sorted(r.input.items()), 
+                            sorted({'a': 'channel_param_a', 'b': 'channel_param_b', 'c': 'channel_param_c',
+                             'd': 'channel_param_d', 'e': 'channel_param_e', 'f': 'channel_param_f',
+                             'g': 'g-msg',
+                             'h':'channel_param_h'}.items()))
+                    else:
+                        eq_(sorted(r.input.items()), 
+                            sorted({'a': 'a-req', 'b': 'b-req', 'c': 'c-req',
+                             'd': 'd-opt', 'e': 'e-opt', 'f': 'f-opt',
+                             'g': 'g-msg',
+                             'h':'channel_param_h'}.items()))

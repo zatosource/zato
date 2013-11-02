@@ -503,7 +503,7 @@ class WorkerStore(BrokerMessageReceiver):
         # into smaller one day-long batches.
         if(stop-start).days:
             for elem1, elem2 in pairwise(elem for elem in rrule(DAILY, dtstart=start, until=stop)):
-                self.broker_client.async_invoke({'action':STATS.DELETE_DAY, 'start':elem1.isoformat(), 'stop':elem2.isoformat()})
+                self.broker_client.invoke_async({'action':STATS.DELETE_DAY, 'start':elem1.isoformat(), 'stop':elem2.isoformat()})
                    
                 # So as not to drown the broker with a sudden surge of messages
                 sleep(0.02)

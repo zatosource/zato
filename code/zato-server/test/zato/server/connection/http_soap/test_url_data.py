@@ -846,7 +846,8 @@ class URLDataTestCase(TestCase):
             for name in('connection', 'data_format', 'host', 'id', 'is_active',
                 'is_internal', 'method', 'name', 'ping_method', 'pool_size', 
                 'service_id',  'impl_name', 'service_name',
-                'soap_action', 'soap_version', 'transport', 'url_path'):
+                'soap_action', 'soap_version', 'transport', 'url_path',
+                'merge_url_params_req', 'url_params_pri', 'params_pri'):
                 msg[name] = uuid4().hex
                 
             if needs_security_id:
@@ -864,15 +865,16 @@ class URLDataTestCase(TestCase):
             for name in('connection', 'data_format', 'host', 'id', 'is_active',
                 'is_internal', 'method', 'name', 'ping_method', 'pool_size', 
                 'service_id',  'impl_name', 'service_name',
-                'soap_action', 'soap_version', 'transport', 'url_path'):
+                'soap_action', 'soap_version', 'transport', 'url_path',
+                'merge_url_params_req', 'url_params_pri', 'params_pri'):
                 eq_(msg[name], channel_item[name])
             
             if needs_security_id:
-                eq_(len(channel_item.keys()), 23)
+                eq_(len(channel_item.keys()), 26)
                 for name in('sec_type', 'security_id', 'security_name'):
                     eq_(msg[name], channel_item[name])
             else:
-                eq_(len(channel_item.keys()), 20)
+                eq_(len(channel_item.keys()), 23)
                     
         for needs_security_id in(True, False):
             msg = get_msg(needs_security_id)
