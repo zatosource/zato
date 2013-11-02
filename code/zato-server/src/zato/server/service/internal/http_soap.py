@@ -16,7 +16,8 @@ from traceback import format_exc
 from json import dumps
 
 # Zato
-from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, URL_TYPE, ZATO_NONE
+from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, PARAMS_PRIORITY,\
+     URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
 from zato.common.odb.query import http_soap_list
@@ -68,7 +69,7 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type', 
                            'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method',
-                           'pool_size')
+                           'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri')
         output_repeated = True
         
     def get_data(self, session):
@@ -87,7 +88,7 @@ class Create(AdminService, _HTTPSOAPService):
         response_elem = 'zato_http_soap_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
-                          'host', 'ping_method', 'pool_size')
+            'host', 'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri')
         output_required = ('id', 'name')
     
     def handle(self):
@@ -145,6 +146,9 @@ class Create(AdminService, _HTTPSOAPService):
                 item.service = service
                 item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
                 item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
+                item.merge_url_params_req = input.get('merge_url_params_req') or True
+                item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
+                item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
 
                 session.add(item)
                 session.commit()
@@ -181,7 +185,7 @@ class Edit(AdminService, _HTTPSOAPService):
         response_elem = 'zato_http_soap_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 
-                          'host', 'ping_method', 'pool_size')
+            'host', 'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri')
         output_required = ('id', 'name')
     
     def handle(self):
@@ -241,6 +245,9 @@ class Edit(AdminService, _HTTPSOAPService):
                 item.service = service
                 item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
                 item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
+                item.merge_url_params_req = input.get('merge_url_params_req') or True
+                item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
+                item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
 
                 session.add(item)
                 session.commit()
@@ -249,6 +256,12 @@ class Edit(AdminService, _HTTPSOAPService):
                     input.impl_name = service.impl_name
                     input.service_id = service.id
                     input.service_name = service.name
+                    input.merge_url_params_req = item.merge_url_params_req
+                    input.url_params_pri = item.url_params_pri
+                    input.params_pri = item.params_pri
+                else:
+                    input.ping_method = item.ping_method
+                    input.pool_size = item.pool_size
                 
                 input.is_internal = item.is_internal
                 input.old_name = old_name

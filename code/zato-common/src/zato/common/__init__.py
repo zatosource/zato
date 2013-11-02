@@ -180,6 +180,12 @@ class Attrs(type):
 class DATA_FORMAT(Attrs):
     XML = 'xml'
     JSON = 'json'
+    CSV = 'csv'
+    POST = 'post'
+    
+    class __metaclass__(type):
+        def __iter__(self):
+            return iter((self.XML, self.JSON, self.CSV, self.POST))
 
 # TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
 class SIMPLE_IO:
@@ -319,6 +325,24 @@ class BROKER:
     
 class MISC:
     SEPARATOR = ':::'
+    
+class URL_PARAMS_PRIORITY:
+    PATH_OVER_QS = 'path-over-qs'
+    QS_OVER_PATH = 'qs-over-path'
+    DEFAULT = QS_OVER_PATH
+    
+    class __metaclass__(type):
+        def __iter__(self):
+            return iter((self.PATH_OVER_QS, self.QS_OVER_PATH, self.DEFAULT))
+    
+class PARAMS_PRIORITY:
+    CHANNEL_PARAMS_OVER_MSG = 'channel-params-over-msg'
+    MSG_OVER_CHANNEL_PARAMS = 'msg-over-channel-params'
+    DEFAULT = CHANNEL_PARAMS_OVER_MSG
+    
+    class __metaclass__(type):
+        def __iter__(self):
+            return iter((self.CHANNEL_PARAMS_OVER_MSG, self.MSG_OVER_CHANNEL_PARAMS))
 
 #
 # Version

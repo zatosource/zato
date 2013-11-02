@@ -13,6 +13,8 @@ down_revision = ${repr(down_revision)}
 from alembic import op
 import sqlalchemy as sa
 ${imports if imports else ""}
+# Zato
+from zato.common.odb import model
 
 def upgrade():
     ${upgrades if upgrades else "pass"}
