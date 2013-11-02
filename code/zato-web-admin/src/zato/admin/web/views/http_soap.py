@@ -22,8 +22,9 @@ from anyjson import dumps
 # Zato
 from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
 from zato.admin.web.views import method_allowed
-from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, SECURITY_TYPES, \
-     SOAP_CHANNEL_VERSIONS,SOAP_VERSIONS, URL_TYPE, ZatoException, ZATO_NONE
+from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+     PARAMS_PRIORITY, SECURITY_TYPES, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, \
+     URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util import security_def_type as _security_def_type
 
@@ -64,6 +65,9 @@ def _get_edit_create_message(params, prefix=''):
         'is_active': bool(params.get(prefix + 'is_active')),
         'host': params.get(prefix + 'host'),
         'url_path': params[prefix + 'url_path'],
+        '': bool(params.get(prefix + 'merge_url_params_req')),
+        'url_params_pri': params.get(prefix + 'url_params_pri', URL_PARAMS_PRIORITY.DEFAULT),
+        'params_pri': params.get(prefix + 'params_pri', PARAMS_PRIORITY.DEFAULT),
         'method': params.get(prefix + 'method'),
         'soap_action': params.get(prefix + 'soap_action', ''),
         'soap_version': params.get(prefix + 'soap_version', ''),
@@ -148,8 +152,10 @@ def index(req):
             
             item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection, 
                     transport, item.host, item.url_path, item.method, item.soap_action,
-                    item.soap_version, item.data_format, item.ping_method, item.pool_size, service_id=item.service_id,
-                    service_name=item.service_name, security_id=security_id, security_name=security_name)
+                    item.soap_version, item.data_format, item.ping_method, 
+                    item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri, 
+                    service_id=item.service_id, service_name=item.service_name,
+                    security_id=security_id, security_name=security_name)
             items.append(item)
 
     return_data = {'zato_clusters':req.zato.clusters,

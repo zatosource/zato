@@ -21,8 +21,12 @@ from anyjson import dumps
 # Bunch
 from bunch import Bunch
 
+# Django
+from django.http import QueryDict
+
 # Zato
-from zato.common import CHANNEL, SIMPLE_IO, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
+from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO, URL_PARAMS_PRIORITY, \
+     URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.util import security_def_type, TRACE1
 from zato.server.connection.http_soap import BadRequest, ClientHTTPError, \
      NotFound, Unauthorized
@@ -149,8 +153,8 @@ class RequestDispatcher(object):
 
                 # OK, no security exception at that point means we can finally
                 # invoke the service.
-                response = self.request_handler.handle(cid, channel_item, wsgi_environ, 
-                    payload, worker_store, self.simple_io_config, path_info)
+                response = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ, 
+                    payload, worker_store, self.simple_io_config)
                 
                 # Got response from the service so we can construct response headers now
                 self.add_response_headers(wsgi_environ, response)
@@ -229,14 +233,48 @@ class RequestHandler(object):
         
         return service.response
     
-    def handle(self, cid, url_match, wsgi_environ, raw_request, worker_store, simple_io_config, path_info):
+    def create_channel_params(self, url_match, channel_item, wsgi_environ, raw_request):
+        """ Collects parameters specific to this channel (HTTP) and updates wsgi_environ
+        with HTTP-specific data.
+        """
+        path_params = url_match.named
+        
+        qs = wsgi_environ.get('QUERY_STRING')
+        qs = QueryDict(qs, encoding='utf-8')
+            
+        if channel_item.data_format == DATA_FORMAT.POST:
+            post = QueryDict(raw_request, encoding='utf-8')
+        else:
+            post = QueryDict(None, encoding='utf-8')
+            
+        wsgi_environ['zato.http.GET'] = qs
+        wsgi_environ['zato.http.POST'] = post
+        
+        if channel_item.url_params_pri == URL_PARAMS_PRIORITY.QS_OVER_PATH:
+            path_params.update((key, value) for key, value in qs.items())
+            channel_params = path_params
+        else:
+            channel_params = dict((key, value) for key, value in qs.items())
+            channel_params.update(path_params)
+            
+        return channel_params
+    
+    def handle(self, cid, url_match, channel_item, wsgi_environ, raw_request, worker_store, simple_io_config):
         """ Create a new instance of a service and invoke it.
         """
-        service = self.server.service_store.new_instance(url_match.service_impl_name)
+        service = self.server.service_store.new_instance(channel_item.service_impl_name)
+        
+        if channel_item.merge_url_params_req:
+            channel_params = self.create_channel_params(url_match, channel_item, wsgi_environ, raw_request)
+        else:
+            channel_params = None
         
         response = service.update_handle(self._set_response_data, service, raw_request,
-            CHANNEL.HTTP_SOAP, url_match.data_format, url_match.transport, self.server, worker_store.broker_client,
-            worker_store, cid, simple_io_config, wsgi_environ=wsgi_environ, url_match=url_match)
+            CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server, worker_store.broker_client,
+            worker_store, cid, simple_io_config, wsgi_environ=wsgi_environ, 
+            url_match=url_match, channel_item=channel_item, channel_params=channel_params,
+            merge_channel_params=channel_item.merge_url_params_req,
+            params_priority=channel_item.params_pri)
                 
         return response
 
