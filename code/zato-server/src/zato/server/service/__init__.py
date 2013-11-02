@@ -43,8 +43,8 @@ from retools.lock import Lock, LockTimeout as RetoolsLockTimeout
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import BROKER, CHANNEL, KVDB, ParsingException, path, SIMPLE_IO, \
-     URL_TYPE, ZatoException, ZATO_NONE, ZATO_OK
+from zato.common import BROKER, CHANNEL, KVDB, PARAMS_PRIORITY, ParsingException, \
+     path, SIMPLE_IO, URL_TYPE, ZatoException, ZATO_NONE, ZATO_OK
 from zato.common.broker_message import SERVICE
 from zato.common.util import uncamelify, make_repr, new_cid, payload_from_request, service_name_from_impl, TRACE1
 from zato.server.connection import request_response, slow_response
@@ -172,12 +172,12 @@ class HTTPRequestData(object):
         self.GET = None
         self.POST = None
         
-    def init(self, wsgi_environ, raw_request):
+    def init(self, wsgi_environ):
         self.method = wsgi_environ.get('REQUEST_METHOD')
         
         # Note tht we always require UTF-8
-        self.GET = QueryDict(wsgi_environ.get('QUERY_STRING'), encoding='utf-8')
-        self.POST = QueryDict(raw_request, encoding='utf-8')
+        self.GET = wsgi_environ.get('zato.http.GET', {})
+        self.POST = wsgi_environ.get('zato.http.POST', {})
         
     def __repr__(self):
         return make_repr(self)
@@ -190,7 +190,7 @@ class Request(ValueConverter):
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
                  'simple_io_config', 'bool_parameter_prefixes', 'int_parameters', 
                  'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
-                 '_wsgi_environ')
+                 '_wsgi_environ', 'channel_params', 'merge_channel_params')
 
     def __init__(self, logger, simple_io_config={}, data_format=None, transport=None):
         self.logger = logger
@@ -208,39 +208,55 @@ class Request(ValueConverter):
         self.transport = transport
         self.http = HTTPRequestData()
         self._wsgi_environ = None
+        self.channel_params = {}
+        self.merge_channel_params = True
+        self.params_priority = PARAMS_PRIORITY.DEFAULT
 
-    def init(self, cid, io, data_format, transport, wsgi_environ):
+    def init(self, is_sio, cid, io, data_format, transport, wsgi_environ):
         """ Initializes the object with an invocation-specific data.
         """
-        self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
-        self.data_format = data_format
-        self.transport = transport
-        self._wsgi_environ = wsgi_environ
+        if transport in(URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP):
+            self.http.init(wsgi_environ)
         
-        path_prefix = getattr(io, 'request_elem', 'request')
-        required_list = getattr(io, 'input_required', [])
-        optional_list = getattr(io, 'input_optional', [])
-        default_value = getattr(io, 'default_value', None)
-        use_text = getattr(io, 'use_text', True)
-        
-        if self.simple_io_config:
-            self.has_simple_io_config = True
-            self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
-            self.int_parameters = self.simple_io_config.get('int_parameters', [])
-            self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
-        else:
-            self.payload = self.raw_request
+        if is_sio:
+            self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
+            self.data_format = data_format
+            self.transport = transport
+            self._wsgi_environ = wsgi_environ
             
-        if required_list:
-            params = self.get_params(required_list, path_prefix, default_value, use_text)
-            self.input.update(params)
+            path_prefix = getattr(io, 'request_elem', 'request')
+            required_list = getattr(io, 'input_required', [])
+            optional_list = getattr(io, 'input_optional', [])
+            default_value = getattr(io, 'default_value', None)
+            use_text = getattr(io, 'use_text', True)
             
-        if optional_list:
-            params = self.get_params(optional_list, path_prefix, default_value, use_text, False)
-            self.input.update(params)
-
-        if self.transport in(URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP):
-            self.http.init(self._wsgi_environ, self.raw_request)
+            if self.simple_io_config:
+                self.has_simple_io_config = True
+                self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
+                self.int_parameters = self.simple_io_config.get('int_parameters', [])
+                self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
+            else:
+                self.payload = self.raw_request
+                
+            if required_list:
+                required_params = self.get_params(required_list, path_prefix, default_value, use_text)
+            else:
+                required_params = {}
+                
+            if optional_list:
+                optional_params = self.get_params(optional_list, path_prefix, default_value, use_text, False)
+            else:
+                optional_params = {}
+                
+                
+            if self.params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG:
+                self.input.update(required_params)
+                self.input.update(optional_params)
+                self.input.update(self.channel_params)
+            else:
+                self.input.update(self.channel_params)
+                self.input.update(required_params)
+                self.input.update(optional_params)
             
     def get_params(self, request_params, path_prefix='', default_value=ZATO_NO_DEFAULT_VALUE, use_text=True, is_required=True):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
@@ -383,8 +399,8 @@ class Response(object):
         self.outgoing_declared = True if required_list or optional_list else False
         
         if required_list or optional_list:
-            self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, self.simple_io_config, 
-                                              response_elem, namespace)
+            self._payload = SimpleIOPayload(cid, self.logger, data_format, 
+                required_list, optional_list, self.simple_io_config, response_elem, namespace)
 
 # ##############################################################################
             
@@ -706,8 +722,12 @@ class Service(object):
         out_ftp, out_plain_http, out_soap = self.worker_store.worker_config.outgoing_connections()
         self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap)
         
-        if hasattr(self, 'SimpleIO'):
-            self.request.init(self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ)
+        is_sio = hasattr(self, 'SimpleIO')
+        
+        self.request.init(is_sio, self.cid, getattr(self, 'SimpleIO', None),
+            self.data_format, self.transport, self.wsgi_environ)
+        
+        if is_sio:
             self.response.init(self.cid, self.SimpleIO, self.data_format)
             
     def set_response_data(self, service, **kwargs):
@@ -728,7 +748,10 @@ class Service(object):
         service.update(service, channel, server, broker_client, 
             worker_store, cid, payload, raw_request, transport, 
             simple_io_config, data_format, kwargs.get('wsgi_environ', {}), 
-            job_type=kwargs.get('job_type'))
+            job_type=kwargs.get('job_type'),
+            channel_params=kwargs.get('channel_params', {}),
+            merge_channel_params=kwargs.get('merge_channel_params', True),
+            params_priority=kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT))
             
         service.pre_handle()
         service.call_hooks('before')
@@ -1033,7 +1056,8 @@ class Service(object):
     @staticmethod
     def update(service, channel, server, broker_client, worker_store, cid, payload,
                raw_request, transport=None, simple_io_config=None, data_format=None,
-               wsgi_environ=None, job_type=None, init=True):
+               wsgi_environ=None, job_type=None, channel_params=None,
+               merge_channel_params=True, params_priority=None, init=True):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
@@ -1052,6 +1076,12 @@ class Service(object):
         service.job_type = job_type
         service.translate = server.kvdb.translate
         service.delivery_store = server.delivery_store
+        
+        if channel_params:
+            service.request.channel_params.update(channel_params)
+            
+        service.request.merge_channel_params = merge_channel_params
+        service.request.params_priority = params_priority
         
         if init:
             service._init()

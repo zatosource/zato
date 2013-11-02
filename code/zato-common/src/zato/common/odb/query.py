@@ -16,7 +16,8 @@ from sqlalchemy import func
 from sqlalchemy.sql.expression import case
 
 # Zato
-from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE
+from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
+     PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.odb.model import(
     ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster,
     ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ,
@@ -359,6 +360,9 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.connection,
         case([(HTTPSOAP.ping_method != None, HTTPSOAP.ping_method)], else_=DEFAULT_HTTP_PING_METHOD).label('ping_method'), # noqa
         case([(HTTPSOAP.pool_size != None, HTTPSOAP.pool_size)], else_=DEFAULT_HTTP_POOL_SIZE).label('pool_size'),
+        case([(HTTPSOAP.merge_url_params_req != None, HTTPSOAP.merge_url_params_req)], else_=True).label('merge_url_params_req'),
+        case([(HTTPSOAP.url_params_pri != None, HTTPSOAP.url_params_pri)], else_=URL_PARAMS_PRIORITY.DEFAULT).label('url_params_pri'),
+        case([(HTTPSOAP.params_pri != None, HTTPSOAP.params_pri)], else_=PARAMS_PRIORITY.DEFAULT).label('params_pri'),
         SecurityBase.sec_type,
         Service.name.label('service_name'),
         Service.id.label('service_id'),

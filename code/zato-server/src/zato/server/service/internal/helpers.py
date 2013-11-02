@@ -25,3 +25,9 @@ class InputLogger(Service):
     
     def finalize_handle(self):
         self.log_input()
+
+class SIOInputLogger(Service):
+    """ Writes out all SIO input parameters to server logs.
+    """
+    def handle(self):
+        self.logger.info('%r', self.request.input)
