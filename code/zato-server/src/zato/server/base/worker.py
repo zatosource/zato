@@ -134,7 +134,8 @@ class WorkerStore(BrokerMessageReceiver):
         wrapper_config = {'id':config.id, 
             'is_active':config.is_active, 'method':config.method, 
             'name':config.name, 'transport':config.transport, 
-            'address':config.host + config.url_path, 
+            'address_host':config.host, 
+            'address_url_path':config.url_path,
             'soap_action':config.soap_action, 'soap_version':config.soap_version,
             'ping_method':config.ping_method, 'pool_size':config.pool_size,}
         wrapper_config.update(sec_config)
