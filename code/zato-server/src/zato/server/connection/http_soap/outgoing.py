@@ -13,6 +13,10 @@ import logging
 from copy import deepcopy
 from cStringIO import StringIO
 from datetime import datetime
+from traceback import format_exc
+
+# parse
+from parse import PARSE_RE
 
 # Requests
 import requests
@@ -70,7 +74,20 @@ class HTTPSOAPWrapper(object):
         </s12:Header>
         """
         
+        self.address = None
+        self.path_params = []
+        
+        self.set_address_data()
         self.set_auth()
+
+# ##############################################################################
+        
+    def __str__(self):
+        return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
+    
+    __repr__ = __str__
+    
+# ##############################################################################
         
     def set_auth(self):
         """ Configures the security for requests, if any is to be configured at all.
@@ -79,12 +96,42 @@ class HTTPSOAPWrapper(object):
         if self.config['sec_type'] == security_def_type.wss:
             self.soap[self.config['soap_version']]['header'] = self.soap[self.config['soap_version']]['header_template'].format(
                 Username=self.config['username'], Password=self.config['password'])
+            
+    def set_address_data(self):
+        """	Sets the full address to invoke and parses input URL's configuration, 
+        to extract any named parameters that will have to be passed in by users
+        during actual calls to the resource.
+        """
+        self.address = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
+        groups = PARSE_RE.split(self.config['address_url_path'])
         
-    def __str__(self):
-        return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
+        for group in groups:
+            if group and group[0] == '{':
+                self.path_params.append(group[1:-1])
     
-    __repr__ = __str__
-    
+    def format_address(self, cid, params):
+        """ Formats a URL path to an external resource. Note that exception raised
+        do not contain anything except for CID. This is in order to keep any potentially
+        sensitive data from leaking to clients.
+        """
+        if not params:
+            logger.warn('CID:[%s] No parameters given for URL path:[%s]', cid, self.config['address_url_path'])
+            raise ValueError('CID:[{}] No parameters given for URL path'.format(cid))
+        
+        path_params = {}
+        try:
+            for name in self.path_params:
+                path_params[name] = params.pop(name)
+            
+            return self.address.format(**path_params), params
+        except KeyError, e:
+            logger.warn('CID:[%s] Could not build URL path:[%s] with params:[%s], e:[%s]', 
+                cid, self.config['address_url_path'], params, format_exc(e))
+            
+            raise ValueError('CID:[{}] Could not build URL path'.format(cid))
+            
+# ##############################################################################
+
     def _impl(self):
         """ Returns the self.session object through which access to HTTP/SOAP
         resources is mediated.
@@ -142,7 +189,7 @@ class HTTPSOAPWrapper(object):
             verbose.write(entry)
         
         # .. invoke the other end ..
-        response = self.session.request(self.config['ping_method'], self.config['address'], 
+        response = self.session.request(self.config['ping_method'], self.address, 
                 auth=self.requests_auth, headers=self._create_headers(cid, {}),
                 hooks={'zato_pre_request':zato_pre_request_hook})
         
@@ -153,15 +200,6 @@ class HTTPSOAPWrapper(object):
         verbose.close()
         
         return value
-    
-    def get(self, cid, params=None, prefetch=True, *args, **kwargs):
-        """ Invokes a resource using the GET method.
-        """
-        self._enforce_is_active()
-        
-        headers = self._create_headers(cid, kwargs.pop('headers', {}))
-        return self.session.get(self.config['address'], params=params or {}, 
-            auth=self.requests_auth, headers=headers, *args, **kwargs)
     
     def _soap_data(self, data, headers):
         """ Wraps the data in a SOAP-specific messages and adds the headers required.
@@ -181,16 +219,50 @@ class HTTPSOAPWrapper(object):
             
         return soap_config['message'].format(header=soap_header, data=data), headers
     
-    def post(self, cid, data='', prefetch=True, *args, **kwargs):
-        """ Invokes a resource using the POST method.
-        """
+# ##############################################################################
+    
+    def http_request(self, method, cid, data='', params=None, *args, **kwargs):
         self._enforce_is_active()
         
         headers = self._create_headers(cid, kwargs.pop('headers', {}))
         if self.config['transport'] == 'soap':
             data, headers = self._soap_data(data, headers)
-
-        return self.session.post(self.config['address'], data=data, 
+            
+        params = params or {}
+        address, non_path_params = self.format_address(params) if self.path_params else self.address, params
+        
+        return self.session.request(method, address, data=data, 
             auth=self.requests_auth, headers=headers, *args, **kwargs)
+
+# ##############################################################################
+    
+    def get(self, cid, params=None, *args, **kwargs):
+        return self.http_request('GET', cid, '', params, *args, **kwargs)
+    
+    def delete(self, cid, params=None, *args, **kwargs):
+        return self.http_request('DELETE', cid, '', params, *args, **kwargs)
+    
+    def options(self, cid, params=None, *args, **kwargs):
+        return self.http_request('OPTIONS', cid, '', params, *args, **kwargs)
+    
+# ##############################################################################
+
+    
+    def post(self, cid, data='', params=None, *args, **kwargs):
+        return self.http_request('POST', cid, data, params, *args, **kwargs)
     
     send = post
+    
+    def put(self, cid, data='', params=None, *args, **kwargs):
+        return self.http_request('PUT', cid, data, params, *args, **kwargs)
+    
+    def patch(self, cid, data='', params=None, *args, **kwargs):
+        return self.http_request('PATCH', cid, data, params, *args, **kwargs)
+
+# ##############################################################################
+
+# ##############################################################################
+
+# ##############################################################################
+
+# ##############################################################################
