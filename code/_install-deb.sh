@@ -32,6 +32,15 @@ sudo apt-get install git bzr gfortran haproxy  \
     openssl python2.7-dev python-m2crypto python-numpy python-pip \
     python-scipy python-zdaemon swig uuid-dev uuid-runtime
 
+# On Debian Wheezy the binary goes to /usr/sbin/haproxy so we need to symlink it 
+# to a directory that can be easily found on PATH so that starting the load-balancer
+# is possible without tweaking its configuration file.
+
+out=$(lsb_release -si)
+if [ $out == "Debian" ]; then
+    sudo ln -sf /usr/sbin/haproxy /usr/bin/haproxy
+fi
+
 mkdir $CURDIR/zato_extra_paths
 
 symlink_py 'M2Crypto'
