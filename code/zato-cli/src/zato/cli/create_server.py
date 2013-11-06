@@ -43,6 +43,10 @@ token={token}
 service_sources=./service-sources.txt
 
 [crypto]
+use_tls=False
+tls_protocol=TLSv1
+tls_ciphers=AES256
+tls_client_certs=optional
 priv_key_location=zato-server-priv-key.pem
 pub_key_location=zato-server-pub-key.pem
 cert_location=zato-server-cert.pem

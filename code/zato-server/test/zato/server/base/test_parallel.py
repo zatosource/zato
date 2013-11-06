@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from hashlib import sha1
 from unittest import TestCase
 
 # Bunch
@@ -59,3 +60,45 @@ class ParallelServerTestCase(TestCase):
             eq_(msg.service, expected_service)
             ok_(msg.cid.startswith('K'))
             self.assertEquals(len(msg.cid), 40)
+            
+    def test_set_tls_info(self):
+
+        expected_cert_dict = rand_string()
+        expected_cert_der = rand_string()
+        expected_cert_sha1 = sha1(expected_cert_der).hexdigest().upper()
+            
+        class FakeRequestDispatcher(object):
+            def dispatch(self, *ignored_args, **ignored_kwargs):
+                return rand_string()
+            
+        class FakeWorkerStore(object):
+            request_dispatcher = FakeRequestDispatcher()
+            
+        class FakeGunicornSocket(object):
+            def getpeercert(self, needs_der=False):
+                if needs_der:
+                    return expected_cert_der
+                return expected_cert_dict
+            
+        def start_response(*ignored_args, **ignored_kwargs):
+            pass
+        
+        for wsgi_url_scheme in('https', 'http'):
+            wsgi_environ = {
+                'wsgi.url_scheme': wsgi_url_scheme,
+                'gunicorn.socket': FakeGunicornSocket(),
+                'zato.http.response.status': rand_string()
+            }
+    
+            ps = ParallelServer()
+            ps.worker_store = FakeWorkerStore()
+            ps.on_wsgi_request(wsgi_environ, start_response)
+            
+            if wsgi_url_scheme == 'https':
+                eq_(wsgi_environ['zato.tls.client_cert.dict'], expected_cert_dict)
+                eq_(wsgi_environ['zato.tls.client_cert.der'], expected_cert_der)
+                eq_(wsgi_environ['zato.tls.client_cert.sha1'], expected_cert_sha1)
+            else:
+                self.assertTrue('zato.tls.client_cert.dict' not in wsgi_environ)
+                self.assertTrue('zato.tls.client_cert.der' not in wsgi_environ)
+                self.assertTrue('zato.tls.client_cert.sha1' not in wsgi_environ)
