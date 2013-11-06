@@ -27,7 +27,7 @@ new_certs_dir                  = $dir
 certificate                    = $dir/ca-material/ca-cert.pem
 private_key                    = $dir/ca-material/ca-key.pem
 default_days                   = 3650
-default_md                     = md5
+default_md                     = sha1
 preserve                       = no
 email_in_dn                    = no
 nameopt                        = default_ca
@@ -43,7 +43,7 @@ commonName                     = supplied
 
 [ req ]
 default_bits                   = 4096
-default_md                     = md5
+default_md                     = sha1
 string_mask                    = nombstr
 distinguished_name             = req_distinguished_name
 
