@@ -16,7 +16,7 @@ logging.setLoggerClass(ZatoLogger)
 logging.captureWarnings(True)
 
 # stdlib
-import os, sys
+import os, ssl, sys
 import logging.config
 
 # gunicorn
@@ -33,12 +33,15 @@ from repoze.profile import ProfileMiddleware
 
 # Zato
 from zato.common.repo import RepoManager
-from zato.common.util import clear_locks, get_app_context, get_config, get_crypto_manager, TRACE1
+from zato.common.util import absolutize_path, clear_locks, get_app_context, \
+     get_config, get_crypto_manager, TRACE1
 
 class ZatoGunicornApplication(Application):
-    def __init__(self, zato_wsgi_app, config_main, *args, **kwargs):
+    def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
         self.zato_wsgi_app = zato_wsgi_app
+        self.repo_location = repo_location
         self.config_main = config_main
+        self.crypto_config = crypto_config
         self.zato_host = None
         self.zato_port = None
         self.zato_config = {}
@@ -68,6 +71,17 @@ class ZatoGunicornApplication(Application):
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
             
+        # TLS is new in 1.2 and we need to assume it's not enabled. In Zato 1.3
+        # this will be changed to assume that we are always over TLS by default.
+        if asbool(self.crypto_config.get('use_tls', False)):
+            self.cfg.set('ssl_version', getattr(ssl, 'PROTOCOL_{}'.format(self.crypto_config.tls_protocol)))
+            self.cfg.set('ciphers', self.crypto_config.tls_ciphers)
+            self.cfg.set('cert_reqs', getattr(ssl, 'CERT_{}'.format(self.crypto_config.tls_client_certs.upper())))
+            self.cfg.set('ca_certs', absolutize_path(self.repo_location, self.crypto_config.ca_certs_location))
+            self.cfg.set('keyfile', absolutize_path(self.repo_location, self.crypto_config.priv_key_location))
+            self.cfg.set('certfile', absolutize_path(self.repo_location, self.crypto_config.cert_location))
+            self.cfg.set('do_handshake_on_connect', True)
+            
         self.zato_wsgi_app.has_gevent = 'gevent' in self.cfg.settings['worker_class'].value
         
     def load(self):
@@ -95,7 +109,8 @@ def run(base_dir):
     crypto_manager = get_crypto_manager(repo_location, app_context, config)
     parallel_server = app_context.get_object('parallel_server')
     
-    zato_gunicorn_app = ZatoGunicornApplication(parallel_server, config.main)
+    zato_gunicorn_app = ZatoGunicornApplication(
+        parallel_server, repo_location, config.main, config.crypto)
     
     parallel_server.crypto_manager = crypto_manager
     parallel_server.odb_data = config.odb
@@ -112,7 +127,6 @@ def run(base_dir):
         
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
-
 
     # This is new in 1.2 so is optional
     profiler_enabled = config.get('profiler', {}).get('enabled', False)

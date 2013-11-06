@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging, os, time
 from datetime import datetime
+from hashlib import sha1
 from httplib import INTERNAL_SERVER_ERROR, responses
 from threading import Thread
 from traceback import format_exc
@@ -96,6 +97,18 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # The main config store
         self.config = ConfigStore()
         
+    def set_tls_info(self, wsgi_environ):
+        wsgi_environ['zato.tls.client_cert.dict'] = wsgi_environ['gunicorn.socket'].getpeercert()
+        
+        if wsgi_environ['zato.tls.client_cert.dict']:
+            wsgi_environ['zato.tls.client_cert.der'] = wsgi_environ['gunicorn.socket'].getpeercert(True)
+            wsgi_environ['zato.tls.client_cert.sha1'] = sha1(wsgi_environ['zato.tls.client_cert.der']).hexdigest().upper()
+        else:
+            wsgi_environ['zato.tls.client_cert.der'] = None
+            wsgi_environ['zato.tls.client_cert.sha1'] = None
+            
+        return wsgi_environ
+        
     def on_wsgi_request(self, wsgi_environ, start_response):
         """ Handles incoming HTTP requests.
         """
@@ -103,6 +116,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         wsgi_environ['zato.http.response.headers'] = {'X-Zato-CID': cid}
         
         try:
+            # We need to populate all the TLS-related environ keys so that
+            # lower layers can possibly use them for authentication and authorization.
+            # But we're not doing it if we are sure it wasn't an HTTPS call.
+            if wsgi_environ['wsgi.url_scheme'] == 'https':
+                self.set_tls_info(wsgi_environ)
+                
             payload = self.worker_store.request_dispatcher.dispatch(cid, datetime.utcnow(), wsgi_environ, self.worker_store)
             
         # Any exception at this point must be our fault
@@ -112,6 +131,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             error_msg = b'[{0}] Exception caught [{1}]'.format(cid, tb)
             logger.error(error_msg)
             payload = error_msg
+            raise
             
         headers = ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items())
         start_response(wsgi_environ['zato.http.response.status'], headers)
