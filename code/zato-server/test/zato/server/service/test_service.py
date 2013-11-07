@@ -10,13 +10,20 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import ast
-from logging import INFO
+from json import loads
+from logging import getLogger, INFO
 from time import time
 from unittest import TestCase
 from uuid import uuid4
 
 # Bunch
 from bunch import Bunch
+
+# faker
+from faker import Faker
+
+# lxml
+from lxml import etree, objectify
 
 # nose
 from nose.tools import eq_
@@ -25,9 +32,12 @@ from nose.tools import eq_
 from retools.lock import LockTimeout
 
 # Zato
-from zato.common import CHANNEL, KVDB, PARAMS_PRIORITY, SCHEDULER_JOB_TYPE, URL_TYPE
+from zato.common import CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, \
+     SCHEDULER_JOB_TYPE, URL_TYPE
 from zato.common.test import FakeKVDB, rand_string, rand_int, ServiceTestCase
-from zato.server.service import HTTPRequestData, Request, Service
+from zato.server.service import HTTPRequestData, List, Request, Service
+
+faker = Faker()
 
 # ##############################################################################
 
@@ -285,3 +295,110 @@ class TestRequest(TestCase):
                              'd': 'd-opt', 'e': 'e-opt', 'f': 'f-opt',
                              'g': 'g-msg',
                              'h':'channel_param_h'}.items()))
+                        
+# ##############################################################################
+
+class TestSIOListDataType(ServiceTestCase):
+    # https://github.com/zatosource/zato/issues/114    
+    
+    def test_sio_list_data_type_input_json(self):
+        cid = rand_string()
+        data_format = DATA_FORMAT.JSON
+        transport = rand_string()
+        
+        sio_config = {'int_parameters': [rand_string()]} # Not really used but needed
+        
+        service_sio = Bunch()
+        service_sio.input_required = ('first_name', 'last_name', List('emails'))
+        
+        expected_first_name = faker.first_name()
+        expected_last_name = faker.last_name()
+        expected_emails = sorted([faker.email(), faker.email()])
+        
+        r = Request(getLogger(__name__), sio_config)
+        r.payload = {
+            'first_name': expected_first_name,
+            'last_name': expected_last_name,
+            'emails': expected_emails,
+            }
+        
+        r.init(True, cid, service_sio, data_format, transport, {})
+        
+        eq_(r.input.first_name, expected_first_name)
+        eq_(r.input.last_name, expected_last_name)
+        eq_(r.input.emails, expected_emails)
+
+    def test_sio_list_data_type_input_xml(self):
+        cid = rand_string()
+        data_format = DATA_FORMAT.XML
+        transport = rand_string()
+        
+        sio_config = {'int_parameters': [rand_string()]} # Not really used but needed
+        
+        service_sio = Bunch()
+        service_sio.input_required = ('first_name', 'last_name', List('emails'))
+        
+        expected_first_name = faker.first_name()
+        expected_last_name = faker.last_name()
+        expected_emails = sorted([faker.email(), faker.email()])
+        
+        r = Request(getLogger(__name__), sio_config)
+        r.payload = etree.fromstring("""<request>
+          <first_name>{}</first_name>
+          <last_name>{}</last_name>
+          <emails>
+           <item>{}</item>
+           <item>{}</item>
+          </emails>
+        </request>""".format(
+            expected_first_name, expected_last_name, expected_emails[0], expected_emails[1]))
+        
+        r.init(True, cid, service_sio, data_format, transport, {})
+        
+        eq_(r.input.first_name, expected_first_name)
+        eq_(r.input.last_name, expected_last_name)
+        eq_(r.input.emails, expected_emails)
+
+    def test_sio_list_data_type_output_json(self):
+        expected_first_name = faker.first_name()
+        expected_last_name = faker.last_name()
+        expected_emails = sorted([faker.email(), faker.email()])
+
+        class MyService(Service):
+            class SimpleIO:
+                output_required = ('first_name', 'last_name', List('emails'))
+                
+            def handle(self):
+                self.response.payload.first_name = expected_first_name
+                self.response.payload.last_name = expected_last_name
+                self.response.payload.emails = expected_emails
+            
+        instance = self.invoke(MyService, {}, None, data_format=DATA_FORMAT.JSON)
+        response = loads(instance.response.payload.getvalue(True))['response']
+        
+        eq_(response['first_name'], expected_first_name)
+        eq_(response['last_name'], expected_last_name)
+        eq_(response['emails'], expected_emails)
+        
+    def test_sio_list_data_type_output_xml(self):
+        expected_first_name = faker.first_name()
+        expected_last_name = faker.last_name()
+        expected_emails = sorted([faker.email(), faker.email()])
+
+        class MyService(Service):
+            class SimpleIO:
+                output_required = ('first_name', 'last_name', List('emails'))
+                
+            def handle(self):
+                self.response.payload.first_name = expected_first_name
+                self.response.payload.last_name = expected_last_name
+                self.response.payload.emails = expected_emails
+                
+        instance = self.invoke(MyService, {}, None, data_format=DATA_FORMAT.XML)
+        response = instance.response.payload.getvalue(True)
+        
+        data = objectify.fromstring(response).xpath('/response/item')[0]
+        
+        eq_(data.first_name.text, expected_first_name)
+        eq_(data.last_name.text, expected_last_name)
+        eq_(data.emails.xpath('item'), expected_emails)

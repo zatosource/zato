@@ -31,6 +31,7 @@ from django.http import QueryDict
 
 # lxml
 from lxml import etree
+from lxml.etree import _Element as EtreeElement
 from lxml.objectify import deannotate, Element, ElementMaker
 
 # Paste
@@ -67,7 +68,7 @@ class ValueConverter(object):
     """ A class which knows how to convert values into the types defined in
     a service's SimpleIO config.
     """
-    def convert(self, param, param_name, value, has_simple_io_config, date_time_format=None):
+    def convert(self, param, param_name, value, has_simple_io_config, is_xml, date_time_format=None):
         try:
             if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes) or isinstance(param, Boolean):
                 value = asbool(value or None) # value can be an empty string and asbool chokes on that
@@ -75,14 +76,37 @@ class ValueConverter(object):
             if value and value is not None: # Can be a 0
                 if isinstance(param, Boolean):
                     value = asbool(value)
+                    
                 elif isinstance(param, CSV):
                     value = value.split(',')
+                    
+                elif isinstance(param, List):
+                    if is_xml:
+                        # We are parsing XML to create a SIO request
+                        if isinstance(value, EtreeElement):
+                            return [elem.text for elem in value.getchildren()]
+                        
+                        # We are producing XML out of an SIO response
+                        else:
+                            wrapper = Element(param_name)
+                            for item_value in value:
+                                xml_item = Element('item')
+                                wrapper.append(xml_item)
+                                wrapper.item[-1] = item_value
+                            return wrapper
+                            
+                    # This is a JSON list
+                    return value
+                
                 elif isinstance(param, Integer):
                     value = int(value)
+                    
                 elif isinstance(param, Unicode):
                     value = unicode(value)
+                    
                 elif isinstance(param, UTC):
                     value = value.replace('+00:00', '')
+                    
                 else:
                     if value and value != ZATO_NONE and has_simple_io_config:
                         if any(param_name==elem for elem in self.int_parameters) or \
@@ -130,6 +154,10 @@ class CSV(ForceType):
 
 class Integer(ForceType):
     """ Gets transformed into an int object.
+    """
+    
+class List(ForceType):
+    """ Transformed into a list of items in JSON or a list of <item> elems in XML.
     """
     
 class Unicode(ForceType):
@@ -217,7 +245,7 @@ class Request(ValueConverter):
         """
         if transport in(URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP):
             self.http.init(wsgi_environ)
-        
+            
         if is_sio:
             self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
             self.data_format = data_format
@@ -248,7 +276,6 @@ class Request(ValueConverter):
             else:
                 optional_params = {}
                 
-                
             if self.params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG:
                 self.input.update(required_params)
                 self.input.update(optional_params)
@@ -278,13 +305,16 @@ class Request(ValueConverter):
                             etree.tostring(self.payload), format_exc(e))
                         raise ParsingException(self.cid, msg)
                     
-                    if elem is not None:
-                        if use_text:
-                            value = elem.text # We are interested in the text the elem contains ..
-                        else:
-                            return elem # .. or in the elem itself.
+                    if isinstance(param, List):
+                        value = elem#.getchildren()
                     else:
-                        value = default_value
+                        if elem is not None:
+                            if use_text:
+                                value = elem.text # We are interested in the text the elem contains ..
+                            else:
+                                return elem # .. or in the elem itself.
+                        else:
+                            value = default_value
                 else:
                     value = self.payload.get(param_name)
                     
@@ -294,11 +324,11 @@ class Request(ValueConverter):
                     value = default_value
                 else:
                     if value is not None:
-                        value = unicode(value)
-
+                        if not isinstance(param, List):
+                            value = unicode(value)
                 try:
                     if not isinstance(param, AsIs):
-                        params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config)
+                        params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config, self.is_xml)
                     else:
                         params[param_name] = value
                 except Exception, e:
@@ -499,7 +529,7 @@ class SimpleIOPayload(ValueConverter):
         if leave_as_is:
             return elem_value
         else:
-            return self.convert(name, lookup_name, elem_value, True)
+            return self.convert(name, lookup_name, elem_value, True, self.zato_is_xml)
 
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.
@@ -533,7 +563,7 @@ class SimpleIOPayload(ValueConverter):
             output = [dict((name, getattr(self, name)) for name in output)]
             
         if output:
-
+            
             # All elements must be of the same type so it's OK to do it
             is_sa_namedtuple = isinstance(output[0], NamedTuple)
             
