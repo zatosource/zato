@@ -31,7 +31,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
-from zato.common import CHANNEL, SIMPLE_IO
+from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
 from zato.common.odb import model
 from zato.common.util import new_cid
 
@@ -133,7 +133,8 @@ class ForceTypeWrapper(object):
         
 class ServiceTestCase(TestCase):
     
-    def invoke(self, class_, request_data, expected, mock_data={}, channel=CHANNEL.HTTP_SOAP, job_type=None):
+    def invoke(self, class_, request_data, expected, mock_data={}, 
+               channel=CHANNEL.HTTP_SOAP, job_type=None, data_format=DATA_FORMAT.JSON):
         """ Sets up a service's invocation environment, then invokes and returns
         an instance of the service.
         """
@@ -150,7 +151,7 @@ class ServiceTestCase(TestCase):
         
         class_.update(
             instance, channel, FakeServer(), None, worker_store, new_cid(), request_data, request_data,
-            simple_io_config=simple_io_config, data_format=SIMPLE_IO.FORMAT.JSON, job_type=job_type)
+            simple_io_config=simple_io_config, data_format=data_format, job_type=job_type)
 
         def get_data(self, *ignored_args, **ignored_kwargs):
             return expected.get_data()
