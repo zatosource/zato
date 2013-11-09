@@ -100,4 +100,4 @@ index e61bb2c..2ccc7bc 100644
 +    default = 'TLSv1'
 +    desc = """\
 +    Ciphers to use (see stdlib ssl module's)
-+    "
++    """
