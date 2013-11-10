@@ -44,7 +44,7 @@ from retools.lock import Lock, LockTimeout as RetoolsLockTimeout
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import BROKER, CHANNEL, KVDB, PARAMS_PRIORITY, ParsingException, \
+from zato.common import BROKER, CHANNEL, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, \
      path, SIMPLE_IO, URL_TYPE, ZatoException, ZATO_NONE, ZATO_OK
 from zato.common.broker_message import SERVICE
 from zato.common.util import uncamelify, make_repr, new_cid, payload_from_request, service_name_from_impl, TRACE1
@@ -55,12 +55,9 @@ from zato.server.connection.zmq_.outgoing import ZMQFacade
 
 __all__ = ['Service', 'Request', 'Response', 'Outgoing', 'SimpleIOPayload']
 
-# Need to use such a constant because we can sometimes be interested in setting
-# default values which evaluate to boolean False.
-# TODO: Move it to zato.common.
-ZATO_NO_DEFAULT_VALUE = 'ZATO_NO_DEFAULT_VALUE'
-
 logger = logging.getLogger(__name__)
+
+NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
 # ##############################################################################
 
@@ -255,7 +252,7 @@ class Request(ValueConverter):
             path_prefix = getattr(io, 'request_elem', 'request')
             required_list = getattr(io, 'input_required', [])
             optional_list = getattr(io, 'input_optional', [])
-            default_value = getattr(io, 'default_value', None)
+            default_value = getattr(io, 'default_value', NO_DEFAULT_VALUE)
             use_text = getattr(io, 'use_text', True)
             
             if self.simple_io_config:
@@ -285,7 +282,7 @@ class Request(ValueConverter):
                 self.input.update(required_params)
                 self.input.update(optional_params)
             
-    def get_params(self, request_params, path_prefix='', default_value=ZATO_NO_DEFAULT_VALUE, use_text=True, is_required=True):
+    def get_params(self, request_params, path_prefix='', default_value=NO_DEFAULT_VALUE, use_text=True, is_required=True):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
         params = {}
@@ -304,9 +301,9 @@ class Request(ValueConverter):
                         msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
                             etree.tostring(self.payload), format_exc(e))
                         raise ParsingException(self.cid, msg)
-                    
+
                     if isinstance(param, List):
-                        value = elem#.getchildren()
+                        value = elem
                     else:
                         if elem is not None:
                             if use_text:
@@ -316,26 +313,32 @@ class Request(ValueConverter):
                         else:
                             value = default_value
                 else:
-                    value = self.payload.get(param_name)
+                    value = self.payload.get(param_name, NOT_GIVEN)
                     
                 # Use a default value if an element is empty and we're allowed to
                 # substitute its (empty) value with the default one.
-                if default_value != ZATO_NO_DEFAULT_VALUE and value is None:
-                    value = default_value
-                else:
-                    if value is not None:
-                        if not isinstance(param, List):
-                            value = unicode(value)
-                try:
-                    if not isinstance(param, AsIs):
-                        params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config, self.is_xml)
+
+                if value == NOT_GIVEN:
+                    if default_value != NO_DEFAULT_VALUE:
+                        value = default_value
                     else:
-                        params[param_name] = value
-                except Exception, e:
-                    msg = 'Caught an exception, param:[{}], param_name:[{}], value:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
-                        param, param_name, value, self.has_simple_io_config, format_exc(e))
-                    self.logger.error(msg)
-                    raise Exception(msg)
+                        if is_required:
+                            msg = 'Required input element:[{}] not found, value:[{}]'.format(param, value)
+                            raise ParsingException(self.cid, msg)
+                else:
+                    if not isinstance(param, List):
+                        value = unicode(value)
+
+                    try:
+                        if not isinstance(param, AsIs):
+                            params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config, self.is_xml)
+                        else:
+                            params[param_name] = value
+                    except Exception, e:
+                        msg = 'Caught an exception, param:[{}], param_name:[{}], value:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
+                            param, param_name, value, self.has_simple_io_config, format_exc(e))
+                        self.logger.error(msg)
+                        raise Exception(msg)
         else:
             if self.logger.isEnabledFor(TRACE1):
                 msg = 'payload repr=[{}], type=[{}]'.format(repr(self.payload), type(self.payload))
