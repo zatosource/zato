@@ -705,6 +705,7 @@ class Service(object):
         self.name = self.__class__.get_name()
         self.impl_name = self.__class__.get_impl_name()
         self.time = TimeUtil(None)
+        self.from_passthrough = False
         
     @classmethod
     def get_name(class_):
@@ -805,8 +806,9 @@ class Service(object):
         service.call_hooks('before')
 
         if service.passthrough_to:
+            sio = getattr(service, 'SimpleIO', None)
             return self.invoke(service.passthrough_to, raw_request, channel, data_format,
-                    transport, serialize, as_bunch)
+                    transport, serialize, as_bunch, sio=sio, from_passthrough=True)
         else:
             response_service = service
             service.handle()
@@ -828,6 +830,11 @@ class Service(object):
             raise ZatoException(self.cid, msg)
             
         service = self.server.service_store.new_instance(impl_name)
+        service.from_passthrough = kwargs.get('from_passthrough', False)
+
+        if service.from_passthrough and kwargs.get('sio'):
+            service.SimpleIO = kwargs['sio']
+
         return self.update_handle(self.set_response_data, service, payload, channel, 
             data_format, transport, self.server, self.broker_client, self.worker_store,
             self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch,
