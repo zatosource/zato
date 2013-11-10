@@ -677,6 +677,8 @@ class Service(object):
     the transport and protocol, be it plain HTTP, SOAP, WebSphere MQ or any other,
     regardless whether they're built-in or user-defined ones.
     """
+    passthrough_to = ''
+
     def __init__(self, *ignored_args, **ignored_kwargs):
         self.logger = logging.getLogger(self.get_name())
         self.server = None
@@ -773,30 +775,50 @@ class Service(object):
             
         return response
             
-    def update_handle(self, set_response_func, service, raw_request, channel, data_format, 
+    def update_handle(self, set_response_func, service, raw_request, channel, data_format,
             transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
 
         payload = payload_from_request(cid, raw_request, data_format, transport)
+
+        job_type = kwargs.get('job_type')
+        channel_params = kwargs.get('channel_params', {})
+        merge_channel_params = kwargs.get('merge_channel_params', True)
+        params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
+        wsgi_environ = kwargs.get('wsgi_environ', {})
+        serialize = kwargs.get('serialize')
+        as_bunch = kwargs.get('as_bunch')
         
         service.update(service, channel, server, broker_client, 
             worker_store, cid, payload, raw_request, transport, 
-            simple_io_config, data_format, kwargs.get('wsgi_environ', {}), 
-            job_type=kwargs.get('job_type'),
-            channel_params=kwargs.get('channel_params', {}),
-            merge_channel_params=kwargs.get('merge_channel_params', True),
-            params_priority=kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT))
+            simple_io_config, data_format, wsgi_environ,
+            job_type=job_type,
+            channel_params=channel_params,
+            merge_channel_params=merge_channel_params,
+            params_priority=params_priority)
+
+        # Depending on whether this is a pass-through service or not we invoke
+        # the target services or the one we have in hand right now. Note that
+        # hooks are always invoked for the one we have a handle to right now
+        # even if it's a pass-through one.
             
         service.pre_handle()
         service.call_hooks('before')
-        service.handle()
+
+        if service.passthrough_to:
+            return self.invoke(service.passthrough_to, raw_request, channel, data_format,
+                    transport, serialize, as_bunch)
+        else:
+            response_service = service
+            service.handle()
+
         service.call_hooks('after')
         service.post_handle()
         service.call_hooks('finalize')
-        
+
         return set_response_func(service, data_format=data_format, transport=transport, **kwargs)
-            
+
     def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=None,
-            transport=None, serialize=False, as_bunch=False):
+            transport=None, serialize=False, as_bunch=False, **kwargs):
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
             
@@ -808,7 +830,8 @@ class Service(object):
         service = self.server.service_store.new_instance(impl_name)
         return self.update_handle(self.set_response_data, service, payload, channel, 
             data_format, transport, self.server, self.broker_client, self.worker_store,
-            self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch)
+            self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch,
+            **kwargs)
         
     def invoke(self, name, *args, **kwargs):
         """ Invokes a service synchronously by its name.
