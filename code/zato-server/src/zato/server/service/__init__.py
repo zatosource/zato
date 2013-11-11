@@ -353,7 +353,7 @@ class Request(ValueConverter):
                             msg = 'Required input element:[{}] not found, value:[{}]'.format(param, value)
                             raise ParsingException(self.cid, msg)
                 else:
-                    if not isinstance(param, List):
+                    if value is not None and not isinstance(param, List):
                         value = unicode(value)
 
                     try:
@@ -733,6 +733,7 @@ class Service(object):
         self.impl_name = self.__class__.get_impl_name()
         self.time = TimeUtil(None)
         self.from_passthrough = False
+        self.passthrough_request = None
         
     @classmethod
     def get_name(class_):
@@ -787,12 +788,15 @@ class Service(object):
         
         is_sio = hasattr(self, 'SimpleIO')
         
-        self.request.init(is_sio, self.cid, getattr(self, 'SimpleIO', None),
-            self.data_format, self.transport, self.wsgi_environ)
+        if self.passthrough_request:
+            self.request = self.passthrough_request
+        else:
+            self.request.init(is_sio, self.cid, getattr(self, 'SimpleIO', None),
+                self.data_format, self.transport, self.wsgi_environ)
         
         if is_sio:
             self.response.init(self.cid, self.SimpleIO, self.data_format)
-            
+
     def set_response_data(self, service, **kwargs):
         response = service.response.payload
         if not isinstance(response, basestring):
@@ -835,9 +839,9 @@ class Service(object):
         if service.passthrough_to:
             sio = getattr(service, 'SimpleIO', None)
             return self.invoke(service.passthrough_to, raw_request, channel, data_format,
-                    transport, serialize, as_bunch, sio=sio, from_passthrough=True)
+                    transport, serialize, as_bunch, sio=sio, from_passthrough=True,
+                    passthrough_request=self.request, set_response_func=set_response_func)
         else:
-            response_service = service
             service.handle()
 
         service.call_hooks('after')
@@ -858,11 +862,14 @@ class Service(object):
             
         service = self.server.service_store.new_instance(impl_name)
         service.from_passthrough = kwargs.get('from_passthrough', False)
+        service.passthrough_request = kwargs.get('passthrough_request', None)
 
         if service.from_passthrough and kwargs.get('sio'):
             service.SimpleIO = kwargs['sio']
 
-        return self.update_handle(self.set_response_data, service, payload, channel, 
+        set_response_func = kwargs.pop('set_response_func', self.set_response_data)
+
+        return self.update_handle(set_response_func, service, payload, channel, 
             data_format, transport, self.server, self.broker_client, self.worker_store,
             self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch,
             **kwargs)
