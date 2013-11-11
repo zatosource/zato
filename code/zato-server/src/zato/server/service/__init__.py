@@ -349,7 +349,7 @@ class Request(ValueConverter):
                     if default_value != NO_DEFAULT_VALUE:
                         value = default_value
                     else:
-                        if is_required:
+                        if is_required and not self.channel_params.get(param_name):
                             msg = 'Required input element:[{}] not found, value:[{}]'.format(param, value)
                             raise ParsingException(self.cid, msg)
                 else:
