@@ -344,9 +344,13 @@ class PARAMS_PRIORITY:
         def __iter__(self):
             return iter((self.CHANNEL_PARAMS_OVER_MSG, self.MSG_OVER_CHANNEL_PARAMS))
 
-#
+# Need to use such a constant because we can sometimes be interested in setting
+# default values which evaluate to boolean False.
+NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
+
+# ##############################################################################
 # Version
-#
+# ##############################################################################
 
 major = 1
 minor = 1
