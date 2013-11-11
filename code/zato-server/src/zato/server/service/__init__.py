@@ -44,7 +44,7 @@ from retools.lock import Lock, LockTimeout as RetoolsLockTimeout
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import BROKER, CHANNEL, KVDB, PARAMS_PRIORITY, ParsingException, \
+from zato.common import BROKER, CHANNEL, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, \
      path, SIMPLE_IO, URL_TYPE, ZatoException, ZATO_NONE, ZATO_OK
 from zato.common.broker_message import SERVICE
 from zato.common.util import uncamelify, make_repr, new_cid, payload_from_request, service_name_from_impl, TRACE1
@@ -55,12 +55,9 @@ from zato.server.connection.zmq_.outgoing import ZMQFacade
 
 __all__ = ['Service', 'Request', 'Response', 'Outgoing', 'SimpleIOPayload']
 
-# Need to use such a constant because we can sometimes be interested in setting
-# default values which evaluate to boolean False.
-# TODO: Move it to zato.common.
-ZATO_NO_DEFAULT_VALUE = 'ZATO_NO_DEFAULT_VALUE'
-
 logger = logging.getLogger(__name__)
+
+NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
 # ##############################################################################
 
@@ -79,7 +76,7 @@ class ValueConverter(object):
                     
                 elif isinstance(param, CSV):
                     value = value.split(',')
-                    
+
                 elif isinstance(param, List):
                     if is_xml:
                         # We are parsing XML to create a SIO request
@@ -98,6 +95,14 @@ class ValueConverter(object):
                     # This is a JSON list
                     return value
                 
+                elif isinstance(param, ListOfDicts):
+                    if is_xml:
+                        # TODO: Implement it
+                        raise NotImplementedError('XML part of ListOfDicts is not implemented yet')
+                    else:
+                        # This is a JSON of dictionaries
+                        return value
+
                 elif isinstance(param, Integer):
                     value = int(value)
                     
@@ -118,7 +123,7 @@ class ValueConverter(object):
                     
             if isinstance(param, CSV) and not value:
                 value = []
-                
+
             return value
         except Exception, e:
             msg = 'Conversion error, param:[{}], param_name:[{}], repr(value):[{}], e:[{}]'.format(
@@ -159,11 +164,25 @@ class Integer(ForceType):
 class List(ForceType):
     """ Transformed into a list of items in JSON or a list of <item> elems in XML.
     """
-    
+
+class ListOfDicts(ForceType):
+    """ Transformed into a list of dictionaries in JSON or a
+    list of
+      <item>
+        <key>key1</key>
+        <value>value1</value>
+      </item>
+      <item>
+        <key>key2</key>
+        <value>value2</value>
+      </item>
+    elems in XML.
+    """
+
 class Unicode(ForceType):
     """ Gets transformed into a unicode object.
     """
-    
+
 class UTC(ForceType):
     """ Will have the timezone part removed.
     """
@@ -255,7 +274,7 @@ class Request(ValueConverter):
             path_prefix = getattr(io, 'request_elem', 'request')
             required_list = getattr(io, 'input_required', [])
             optional_list = getattr(io, 'input_optional', [])
-            default_value = getattr(io, 'default_value', None)
+            default_value = getattr(io, 'default_value', NO_DEFAULT_VALUE)
             use_text = getattr(io, 'use_text', True)
             
             if self.simple_io_config:
@@ -284,8 +303,13 @@ class Request(ValueConverter):
                 self.input.update(self.channel_params)
                 self.input.update(required_params)
                 self.input.update(optional_params)
-            
-    def get_params(self, request_params, path_prefix='', default_value=ZATO_NO_DEFAULT_VALUE, use_text=True, is_required=True):
+
+        # We merge channel params in if requested even if it's not SIO
+        else:
+            if self.merge_channel_params:
+                self.input.update(self.channel_params)
+
+    def get_params(self, request_params, path_prefix='', default_value=NO_DEFAULT_VALUE, use_text=True, is_required=True):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
         params = {}
@@ -304,9 +328,9 @@ class Request(ValueConverter):
                         msg = 'Caught an exception while parsing, payload:[<![CDATA[{}]]>], e:[{}]'.format(
                             etree.tostring(self.payload), format_exc(e))
                         raise ParsingException(self.cid, msg)
-                    
+
                     if isinstance(param, List):
-                        value = elem#.getchildren()
+                        value = elem
                     else:
                         if elem is not None:
                             if use_text:
@@ -316,26 +340,32 @@ class Request(ValueConverter):
                         else:
                             value = default_value
                 else:
-                    value = self.payload.get(param_name)
+                    value = self.payload.get(param_name, NOT_GIVEN)
                     
                 # Use a default value if an element is empty and we're allowed to
                 # substitute its (empty) value with the default one.
-                if default_value != ZATO_NO_DEFAULT_VALUE and value is None:
-                    value = default_value
-                else:
-                    if value is not None:
-                        if not isinstance(param, List):
-                            value = unicode(value)
-                try:
-                    if not isinstance(param, AsIs):
-                        params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config, self.is_xml)
+
+                if value == NOT_GIVEN:
+                    if default_value != NO_DEFAULT_VALUE:
+                        value = default_value
                     else:
-                        params[param_name] = value
-                except Exception, e:
-                    msg = 'Caught an exception, param:[{}], param_name:[{}], value:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
-                        param, param_name, value, self.has_simple_io_config, format_exc(e))
-                    self.logger.error(msg)
-                    raise Exception(msg)
+                        if is_required:
+                            msg = 'Required input element:[{}] not found, value:[{}]'.format(param, value)
+                            raise ParsingException(self.cid, msg)
+                else:
+                    if value is not None and not isinstance(param, List):
+                        value = unicode(value)
+
+                    try:
+                        if not isinstance(param, AsIs):
+                            params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config, self.is_xml)
+                        else:
+                            params[param_name] = value
+                    except Exception, e:
+                        msg = 'Caught an exception, param:[{}], param_name:[{}], value:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
+                            param, param_name, value, self.has_simple_io_config, format_exc(e))
+                        self.logger.error(msg)
+                        raise Exception(msg)
         else:
             if self.logger.isEnabledFor(TRACE1):
                 msg = 'payload repr=[{}], type=[{}]'.format(repr(self.payload), type(self.payload))
@@ -674,6 +704,8 @@ class Service(object):
     the transport and protocol, be it plain HTTP, SOAP, WebSphere MQ or any other,
     regardless whether they're built-in or user-defined ones.
     """
+    passthrough_to = ''
+
     def __init__(self, *ignored_args, **ignored_kwargs):
         self.logger = logging.getLogger(self.get_name())
         self.server = None
@@ -700,6 +732,8 @@ class Service(object):
         self.name = self.__class__.get_name()
         self.impl_name = self.__class__.get_impl_name()
         self.time = TimeUtil(None)
+        self.from_passthrough = False
+        self.passthrough_request = None
         
     @classmethod
     def get_name(class_):
@@ -754,12 +788,15 @@ class Service(object):
         
         is_sio = hasattr(self, 'SimpleIO')
         
-        self.request.init(is_sio, self.cid, getattr(self, 'SimpleIO', None),
-            self.data_format, self.transport, self.wsgi_environ)
+        if self.passthrough_request:
+            self.request = self.passthrough_request
+        else:
+            self.request.init(is_sio, self.cid, getattr(self, 'SimpleIO', None),
+                self.data_format, self.transport, self.wsgi_environ)
         
         if is_sio:
             self.response.init(self.cid, self.SimpleIO, self.data_format)
-            
+
     def set_response_data(self, service, **kwargs):
         response = service.response.payload
         if not isinstance(response, basestring):
@@ -770,30 +807,51 @@ class Service(object):
             
         return response
             
-    def update_handle(self, set_response_func, service, raw_request, channel, data_format, 
+    def update_handle(self, set_response_func, service, raw_request, channel, data_format,
             transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
 
         payload = payload_from_request(cid, raw_request, data_format, transport)
+
+        job_type = kwargs.get('job_type')
+        channel_params = kwargs.get('channel_params', {})
+        merge_channel_params = kwargs.get('merge_channel_params', True)
+        params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
+        wsgi_environ = kwargs.get('wsgi_environ', {})
+        serialize = kwargs.get('serialize')
+        as_bunch = kwargs.get('as_bunch')
         
         service.update(service, channel, server, broker_client, 
             worker_store, cid, payload, raw_request, transport, 
-            simple_io_config, data_format, kwargs.get('wsgi_environ', {}), 
-            job_type=kwargs.get('job_type'),
-            channel_params=kwargs.get('channel_params', {}),
-            merge_channel_params=kwargs.get('merge_channel_params', True),
-            params_priority=kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT))
+            simple_io_config, data_format, wsgi_environ,
+            job_type=job_type,
+            channel_params=channel_params,
+            merge_channel_params=merge_channel_params,
+            params_priority=params_priority)
+
+        # Depending on whether this is a pass-through service or not we invoke
+        # the target services or the one we have in hand right now. Note that
+        # hooks are always invoked for the one we have a handle to right now
+        # even if it's a pass-through one.
             
         service.pre_handle()
         service.call_hooks('before')
-        service.handle()
+
+        if service.passthrough_to:
+            sio = getattr(service, 'SimpleIO', None)
+            return self.invoke(service.passthrough_to, raw_request, channel, data_format,
+                    transport, serialize, as_bunch, sio=sio, from_passthrough=True,
+                    passthrough_request=self.request, set_response_func=set_response_func)
+        else:
+            service.handle()
+
         service.call_hooks('after')
         service.post_handle()
         service.call_hooks('finalize')
-        
+
         return set_response_func(service, data_format=data_format, transport=transport, **kwargs)
-            
+
     def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=None,
-            transport=None, serialize=False, as_bunch=False):
+            transport=None, serialize=False, as_bunch=False, **kwargs):
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
             
@@ -803,9 +861,18 @@ class Service(object):
             raise ZatoException(self.cid, msg)
             
         service = self.server.service_store.new_instance(impl_name)
-        return self.update_handle(self.set_response_data, service, payload, channel, 
+        service.from_passthrough = kwargs.get('from_passthrough', False)
+        service.passthrough_request = kwargs.get('passthrough_request', None)
+
+        if service.from_passthrough and kwargs.get('sio'):
+            service.SimpleIO = kwargs['sio']
+
+        set_response_func = kwargs.pop('set_response_func', self.set_response_data)
+
+        return self.update_handle(set_response_func, service, payload, channel, 
             data_format, transport, self.server, self.broker_client, self.worker_store,
-            self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch)
+            self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch,
+            **kwargs)
         
     def invoke(self, name, *args, **kwargs):
         """ Invokes a service synchronously by its name.

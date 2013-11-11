@@ -105,15 +105,20 @@ class HTTPSOAPWrapper(object):
         self.address = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
         groups = PARSE_RE.split(self.config['address_url_path'])
         
+        logger.debug('self.address:[%s], groups:[%s]', self.address, groups)
+
         for group in groups:
             if group and group[0] == '{':
                 self.path_params.append(group[1:-1])
+
+        logger.debug('self.address:[%s], self.path_params:[%s]', self.address, self.path_params)
     
     def format_address(self, cid, params):
         """ Formats a URL path to an external resource. Note that exception raised
         do not contain anything except for CID. This is in order to keep any potentially
         sensitive data from leaking to clients.
         """
+
         if not params:
             logger.warn('CID:[%s] No parameters given for URL path:[%s]', cid, self.config['address_url_path'])
             raise ValueError('CID:[{}] No parameters given for URL path'.format(cid))
@@ -123,7 +128,7 @@ class HTTPSOAPWrapper(object):
             for name in self.path_params:
                 path_params[name] = params.pop(name)
             
-            return self.address.format(**path_params), params
+            return (self.address.format(**path_params), dict(params))
         except KeyError, e:
             logger.warn('CID:[%s] Could not build URL path:[%s] with params:[%s], e:[%s]', 
                 cid, self.config['address_url_path'], params, format_exc(e))
@@ -220,19 +225,25 @@ class HTTPSOAPWrapper(object):
         return soap_config['message'].format(header=soap_header, data=data), headers
     
 # ##############################################################################
-    
+
     def http_request(self, method, cid, data='', params=None, *args, **kwargs):
         self._enforce_is_active()
-        
+
         headers = self._create_headers(cid, kwargs.pop('headers', {}))
         if self.config['transport'] == 'soap':
             data, headers = self._soap_data(data, headers)
-            
+
         params = params or {}
-        address, non_path_params = self.format_address(params) if self.path_params else self.address, params
-        
+
+        if self.path_params:
+            address, qs_params = self.format_address(cid, params)
+        else:
+            address, qs_params = self.address, dict(params)
+
+        logger.info('CID:[%s], address:[%s], qs_params:[%s]', cid, address, qs_params)
+
         return self.session.request(method, address, data=data, 
-            auth=self.requests_auth, headers=headers, *args, **kwargs)
+            auth=self.requests_auth, params=qs_params, headers=headers, *args, **kwargs)
 
 # ##############################################################################
     
