@@ -76,7 +76,7 @@ class ValueConverter(object):
                     
                 elif isinstance(param, CSV):
                     value = value.split(',')
-                    
+
                 elif isinstance(param, List):
                     if is_xml:
                         # We are parsing XML to create a SIO request
@@ -95,6 +95,14 @@ class ValueConverter(object):
                     # This is a JSON list
                     return value
                 
+                elif isinstance(param, ListOfDicts):
+                    if is_xml:
+                        # TODO: Implement it
+                        raise NotImplementedError('XML part of ListOfDicts is not implemented yet')
+                    else:
+                        # This is a JSON of dictionaries
+                        return value
+
                 elif isinstance(param, Integer):
                     value = int(value)
                     
@@ -115,7 +123,7 @@ class ValueConverter(object):
                     
             if isinstance(param, CSV) and not value:
                 value = []
-                
+
             return value
         except Exception, e:
             msg = 'Conversion error, param:[{}], param_name:[{}], repr(value):[{}], e:[{}]'.format(
@@ -156,11 +164,25 @@ class Integer(ForceType):
 class List(ForceType):
     """ Transformed into a list of items in JSON or a list of <item> elems in XML.
     """
-    
+
+class ListOfDicts(ForceType):
+    """ Transformed into a list of dictionaries in JSON or a
+    list of
+      <item>
+        <key>key1</key>
+        <value>value1</value>
+      </item>
+      <item>
+        <key>key2</key>
+        <value>value2</value>
+      </item>
+    elems in XML.
+    """
+
 class Unicode(ForceType):
     """ Gets transformed into a unicode object.
     """
-    
+
 class UTC(ForceType):
     """ Will have the timezone part removed.
     """
