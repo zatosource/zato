@@ -303,7 +303,12 @@ class Request(ValueConverter):
                 self.input.update(self.channel_params)
                 self.input.update(required_params)
                 self.input.update(optional_params)
-            
+
+        # We merge channel params in if requested even if it's not SIO
+        else:
+            if self.merge_channel_params:
+                self.input.update(self.channel_params)
+
     def get_params(self, request_params, path_prefix='', default_value=NO_DEFAULT_VALUE, use_text=True, is_required=True):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
