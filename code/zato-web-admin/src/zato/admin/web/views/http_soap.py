@@ -65,7 +65,7 @@ def _get_edit_create_message(params, prefix=''):
         'is_active': bool(params.get(prefix + 'is_active')),
         'host': params.get(prefix + 'host'),
         'url_path': params[prefix + 'url_path'],
-        '': bool(params.get(prefix + 'merge_url_params_req')),
+        'merge_url_params_req': bool(params.get(prefix + 'merge_url_params_req')),
         'url_params_pri': params.get(prefix + 'url_params_pri', URL_PARAMS_PRIORITY.DEFAULT),
         'params_pri': params.get(prefix + 'params_pri', PARAMS_PRIORITY.DEFAULT),
         'method': params.get(prefix + 'method'),

@@ -229,7 +229,7 @@ class RequestHandler(object):
         transport = kwargs.get('transport')
         
         self.set_payload(service.response, data_format, transport, service)
-        self.set_content_type(service.response, data_format, transport, kwargs['url_match'])
+        self.set_content_type(service.response, data_format, transport, kwargs.get('url_match'))
         
         return service.response
     
