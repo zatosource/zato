@@ -190,6 +190,8 @@ class UTC(ForceType):
 class ServiceInput(Bunch):
     """ A Bunch holding the input to the service.
     """
+    def deepcopy(self):
+        return deepcopy(self)
     
 # ##############################################################################
 
