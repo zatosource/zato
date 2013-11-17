@@ -22,7 +22,7 @@ from zato.common.odb.model import(
     ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster,
     ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ,
     Delivery, DeliveryHistory, DeliveryPayload, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob,
-    Job, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ,
+    Job, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ,
     SecurityBase, Service, SQLConnectionPool, TechnicalAccount, WSSDefinition)
 
 def needs_columns(func):
@@ -36,13 +36,13 @@ def needs_columns(func):
         # needs_columns is always the last argument so we don't have to look
         # it up using the 'inspect' module or anything like that.
         needs_columns = args[-1]
-        
+
         q = func(*args)
-        
+
         if needs_columns:
             return q.all(), q.statement.columns
         return q.all()
-    
+
     return inner
 
 # ##############################################################################
@@ -79,7 +79,7 @@ def job_list(session, cluster_id, needs_columns=False):
     """ All the scheduler's jobs defined in the ODB.
     """
     return _job(session, cluster_id)
-    
+
 def job_by_name(session, cluster_id, name):
     """ A scheduler's job fetched by its name.
     """
@@ -117,6 +117,21 @@ def tech_acc_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==TechnicalAccount.cluster_id).\
         filter(SecurityBase.id==TechnicalAccount.id).\
+        order_by('sec_base.name')
+
+@needs_columns
+def oauth_list(session, cluster_id, needs_columns=False):
+    """ All the OAuth definitions.
+    """
+    return session.query(
+        OAuth.id, OAuth.name,
+        OAuth.is_active,
+        OAuth.username, OAuth.password,
+        OAuth.proto_version, OAuth.sig_method,
+        OAuth.max_nonce_log, OAuth.sec_type).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==OAuth.cluster_id).\
+        filter(SecurityBase.id==OAuth.id).\
         order_by('sec_base.name')
 
 @needs_columns
@@ -381,10 +396,10 @@ def http_soap_security_list(session, cluster_id, connection=None):
     """ HTTP/SOAP security definitions.
     """
     q = _http_soap(session, cluster_id)
-    
+
     if connection:
         q = q.filter(HTTPSOAP.connection==connection)
-        
+
     return q
 
 def http_soap(session, cluster_id, id):
@@ -399,13 +414,13 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, needs_c
     """ HTTP/SOAP connections, both channels and outgoing ones.
     """
     q = _http_soap(session, cluster_id)
-    
+
     if connection:
         q = q.filter(HTTPSOAP.connection==connection)
-        
+
     if transport:
         q = q.filter(HTTPSOAP.transport==transport)
-        
+
     return q
 
 # ##############################################################################
@@ -488,11 +503,11 @@ def delivery_definition_list(session, cluster_id, target_type=None):
     """ Returns a list of delivery definitions for a given target type.
     """
     def_list = _delivery_definition(session, cluster_id)
-    
+
     if target_type:
         def_list = def_list.\
             filter(DeliveryDefinitionBase.target_type==target_type)
-        
+
     return def_list
 
 # ##############################################################################
@@ -517,10 +532,10 @@ def delivery_list(session, cluster_id, def_name, state, start=None, stop=None, n
         DeliveryDefinitionBase.check_after,
         DeliveryDefinitionBase.retry_seconds
     ]
-    
+
     if needs_payload:
         columns.extend([DeliveryPayload.payload, Delivery.args, Delivery.kwargs])
-    
+
     q = session.query(*columns).\
         filter(DeliveryDefinitionBase.id==Delivery.definition_id).\
         filter(DeliveryDefinitionBase.cluster_id==cluster_id).\
@@ -529,13 +544,13 @@ def delivery_list(session, cluster_id, def_name, state, start=None, stop=None, n
 
     if needs_payload:
         q = q.filter(DeliveryPayload.task_id==Delivery.task_id)
-    
+
     if start:
         q = q.filter(Delivery.last_used >= start)
-        
+
     if stop:
         q = q.filter(Delivery.last_used <= stop)
-        
+
     q = q.order_by(Delivery.last_used.desc())
 
     return q
