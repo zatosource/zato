@@ -78,6 +78,7 @@ $.namespace('zato.pattern.delivery.in_doubt');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.basic_auth');
+$.namespace('zato.security.oauth');
 $.namespace('zato.security.tech_account');
 $.namespace('zato.security.wss');
 $.namespace('zato.service');
