@@ -43,7 +43,7 @@ class ZatoContext(PythonConfig):
         store.services = {}
 
         return store
-    
+
     @Object
     def internal_service_modules(self):
         return [
@@ -70,6 +70,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.scheduler',
             'zato.server.service.internal.security',
             'zato.server.service.internal.security.basic_auth',
+            'zato.server.service.internal.security.oauth',
             'zato.server.service.internal.security.tech_account',
             'zato.server.service.internal.security.wss',
             'zato.server.service.internal.server',
@@ -78,26 +79,26 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.stats.summary',
             'zato.server.service.internal.stats.trends',
         ]
-    
+
     @Object
     def service_modules(self):
         return []
-    
+
     @Object
     def int_parameters(self):
         return SIMPLE_IO.INT_PARAMETERS.VALUES
-    
+
     @Object
     def int_parameter_suffixes(self):
         return SIMPLE_IO.INT_PARAMETERS.SUFFIXES
-    
+
     @Object
     def bool_parameter_prefixes(self):
         return SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES
-    
+
     # #######################################################
     # Delivery store
-    
+
     @Object
     def delivery_store(self):
         return DeliveryStore(self.kvdb())
@@ -108,18 +109,18 @@ class ZatoContext(PythonConfig):
     @Object
     def odb_manager(self):
         return ODBManager(well_known_data=ZATO_CRYPTO_WELL_KNOWN_DATA)
-    
+
     @Object
     def sql_pool_store(self):
         return PoolStore()
 
     # #######################################################
     # Key-value DB
-    
+
     @Object
     def kvdb(self):
         return KVDB()
-    
+
     # #######################################################
     # Channels
 
@@ -130,7 +131,7 @@ class ZatoContext(PythonConfig):
     @Object
     def soap12_content_type(self):
         return 'application/soap+xml; charset=utf-8' # We always require UTF-8
-    
+
     @Object
     def plain_xml_content_type(self):
         return 'application/xml'
@@ -141,7 +142,7 @@ class ZatoContext(PythonConfig):
 
     # #######################################################
     # Servers
-    
+
     @Object
     def parallel_server(self):
 
@@ -179,37 +180,37 @@ class ZatoContext(PythonConfig):
     @Object
     def startup_jobs(self):
         return [
-            {'name': 'zato.stats.process-raw-times', 'seconds':90, 
-             'service':'zato.stats.process-raw-times', 
+            {'name': 'zato.stats.process-raw-times', 'seconds':90,
+             'service':'zato.stats.process-raw-times',
              'extra':'max_batch_size={}'.format(DEFAULT_STATS_SETTINGS['scheduler_raw_times_batch'])},
-            
-            {'name': 'zato.stats.aggregate-by-minute', 'seconds':60, 
+
+            {'name': 'zato.stats.aggregate-by-minute', 'seconds':60,
              'service':'zato.stats.aggregate-by-minute'},
-            
+
             {'name': 'zato.stats.aggregate-by-hour', 'minutes':10,
              'service':'zato.stats.aggregate-by-hour'},
-            
+
             {'name': 'zato.stats.aggregate-by-day', 'minutes':60,
              'service':'zato.stats.aggregate-by-day'},
-            
+
             {'name': 'zato.stats.aggregate-by-month', 'minutes':60,
              'service':'zato.stats.aggregate-by-month'},
-            
+
             {'name': 'zato.stats.summary.create-summary-by-day', 'minutes':10,
              'service':'zato.stats.summary.create-summary-by-day'},
-            
+
             {'name': 'zato.stats.summary.create-summary-by-week', 'minutes':10,
              'service':'zato.stats.summary.create-summary-by-week'},
-            
+
             {'name': 'zato.stats.summary.create-summary-by-month', 'minutes':60,
              'service':'zato.stats.summary.create-summary-by-month'},
-            
+
             {'name': 'zato.stats.summary.create-summary-by-year', 'minutes':60,
              'service':'zato.stats.summary.create-summary-by-year'},
-            
+
             {'name': 'zato.pattern.delivery.update-counters', 'seconds':30,
              'service':'zato.pattern.delivery.update-counters'},
-            
+
             {'name': 'zato.pattern.delivery.dispatch-auto-resubmit', 'seconds':300,
              'service':'zato.pattern.delivery.dispatch-auto-resubmit'},
         ]
