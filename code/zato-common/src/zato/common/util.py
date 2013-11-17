@@ -87,8 +87,10 @@ random.seed()
 
 ################################################################################
 
+# TODO: Turn it into a class so it auto-completes and move to zato.common
 security_def_type = Bunch()
 security_def_type.basic_auth = 'basic_auth'
+security_def_type.oauth = 'oauth'
 security_def_type.tech_account = 'tech_acc'
 security_def_type.wss = 'wss'
 
@@ -100,7 +102,7 @@ def absolutize_path(base, path):
     """
     if isabs(path):
         return path
-    
+
     return abspath(join(base, path))
 
 def current_host():
@@ -127,10 +129,10 @@ def encrypt(data, priv_key, b64=True):
     priv_key - private key to use (as a PEM string)
     b64 - should the encrypted data be BASE64-encoded before being returned, defaults to True
     """
-    
+
     cm = CryptoManager(priv_key=priv_key)
     cm.load_keys()
-    
+
     return cm.encrypt(data, b64)
 
 def decrypt(data, priv_key, b64=True):
@@ -139,10 +141,10 @@ def decrypt(data, priv_key, b64=True):
     priv_key - private key to use (as a PEM string)
     b64 - should the data be BASE64-decoded before being decrypted, defaults to True
     """
-    
+
     cm = CryptoManager(priv_key=priv_key)
     cm.load_keys()
-    
+
     return cm.decrypt(data, b64)
 
 def get_executable():
@@ -261,7 +263,7 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
         transport = Python27CompatTransport
     else:
         transport = None
-    
+
     return LoadBalancerAgentClient(
         agent_uri, ssl_ca_certs, ssl_key_file, ssl_cert_file, transport=transport, timeout=timeout)
 
@@ -273,7 +275,7 @@ def new_cid():
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     """
-    
+
     # The number below (39) needs to be kept in sync with zato.common.log_message.CID_LENGTH.
     # There is nothing special in the 'K' prefix, it's just so that a CID always
     # begins with a letter and 'K' seems like something
@@ -312,22 +314,22 @@ def get_crypto_manager(repo_location, app_context, config, load_keys=True):
     """ Returns a tool for crypto manipulations.
     """
     crypto_manager = app_context.get_object('crypto_manager')
-    
+
     priv_key_location = config['crypto']['priv_key_location']
     cert_location = config['crypto']['cert_location']
     ca_certs_location = config['crypto']['ca_certs_location']
-    
+
     priv_key_location = absolutize_path(repo_location, priv_key_location)
     cert_location = absolutize_path(repo_location, cert_location)
     ca_certs_location = absolutize_path(repo_location, ca_certs_location)
-    
+
     crypto_manager.priv_key_location = priv_key_location
     crypto_manager.cert_location = cert_location
     crypto_manager.ca_certs_location = ca_certs_location
-    
+
     if load_keys:
         crypto_manager.load_keys()
-        
+
     return crypto_manager
 
 def get_current_user():
@@ -386,6 +388,8 @@ def payload_from_request(cid, request, data_format, transport):
                 else:
                     payload = objectify.fromstring(request)
         elif data_format == DATA_FORMAT.JSON:
+            if not request:
+                return ''
             if isinstance(request, basestring):
                 payload = loads(request)
             else:
@@ -403,7 +407,7 @@ def is_python_file(name):
     for suffix in('py', 'pyw'):
         if name.endswith(suffix):
             return True
-        
+
 def fs_safe_now():
     """ Returns a UTC timestamp with any characters unsafe for filesystem names
     removed.
@@ -436,13 +440,13 @@ def visit_py_source_from_distribution(dir_name):
         msg = "Could not find setup.cfg in [{}], path:[{}] doesn't exist".format(dir_name, path)
         logger.debug(msg)
         raise NoDistributionFound(path)
-    
+
     dist = Distribution()
     config = Config(dist)
     config.parse_config_files([path])
-    
+
     logger.debug('dist.packages:[%s]' % dist.packages)
-    
+
     for package in dist.packages:
         package_dir = os.path.abspath(os.path.join(dir_name, package.replace('.', os.path.sep)))
         yield visit_py_source(package_dir)
@@ -457,7 +461,7 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True):
     which might contain a Distutils2 distribution.
     """
     if is_python_file(file_name) or is_archive_file(file_name):
-        
+
         logger.debug('About to hot-deploy [{}]'.format(path))
         now = datetime.utcnow()
         di = dumps(deployment_info('hot-deploy', file_name, now.isoformat(), path))
@@ -468,12 +472,12 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True):
 
         # .. and notify all the servers they're to pick up a delivery
         parallel_server.notify_new_package(package_id)
-        
+
         if delete_path:
             _os_remove(path)
-        
+
         return True
-        
+
     else:
         logger.warn('Ignoring {}'.format(path))
 
@@ -481,7 +485,7 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True):
 # As taken from http://wiki.python.org/moin/SortingListsOfDictionaries
 def multikeysort(items, columns):
     comparers = [((itemgetter(col[1:].strip()), -1) if col.startswith('-') else (itemgetter(col.strip()), 1)) for col in columns]
-    
+
     def comparer(left, right):
         for fn, mult in comparers:
             result = cmp(fn(left), fn(right))
@@ -502,7 +506,7 @@ def translation_name(system1, key1, value1, system2, key2):
 
 def dict_item_name(system, key, value):
     return KVDB.SEPARATOR.join((system, key, value))
-    
+
 # From http://docs.python.org/release/2.7/library/itertools.html#recipes
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
@@ -515,7 +519,7 @@ def from_local_to_utc(dt, tz_name, dayfirst=True):
     """
     if not isinstance(dt, datetime):
         dt = parse(dt, dayfirst=dayfirst)
-        
+
     dt = pytz.timezone(tz_name).localize(dt)
     utc_dt = pytz.utc.normalize(dt.astimezone(pytz.utc))
     return utc_dt
@@ -566,20 +570,20 @@ def clear_locks(kvdb, server_token, kvdb_config=None, decrypt_func=None):
     """
     if kvdb_config:
         kvdb.config = kvdb_config
-        
+
     if decrypt_func:
         kvdb.decrypt_func = decrypt_func
-        
+
     kvdb.init()
-    
+
     for name in kvdb.conn.keys('{}*{}*'.format(KVDB.LOCK_PREFIX, server_token)):
         value = kvdb.conn.get(name)
         logger.debug('Deleting lock:[{}], value:[{}]'.format(name, value))
         kvdb.conn.delete(name)
-        
+
     kvdb.close()
-    
-    
+
+
 # Inspired by http://stackoverflow.com/a/9283563
 def uncamelify(s, separator='-', elem_func=unicode.lower):
     """ Converts a CamelCaseName into a more readable one, e.g.
@@ -612,21 +616,21 @@ def add_startup_jobs(cluster_id, odb, stats_jobs):
     """
     with closing(odb.session()) as session:
         for item in stats_jobs:
-            
+
             try:
                 service_id = get_service_by_name(session, cluster_id, item['service'])[0]
-                
+
                 now = datetime.utcnow().strftime(scheduler_date_time_format)
                 job = Job(None, item['name'], True, 'interval_based', now, item.get('extra', '').encode('utf-8'),
                           cluster_id=cluster_id, service_id=service_id)
-                          
+
                 kwargs = {}
                 for name in('seconds', 'minutes'):
                     if name in item:
                         kwargs[name] = item[name]
-                        
+
                 ib_job = IntervalBasedJob(None, job, **kwargs)
-                
+
                 session.add(job)
                 session.add(ib_job)
                 session.commit()
@@ -634,7 +638,7 @@ def add_startup_jobs(cluster_id, odb, stats_jobs):
                 session.rollback()
                 msg = 'Caught an IntegrityError, carrying on anyway, e:[{}]]'.format(format_exc(e))
                 logger.debug(msg)
-                
+
 def hexlify(item):
     """ Returns a nice hex version of a string given on input.
     """
@@ -647,6 +651,6 @@ def validate_input_dict(cid, *validation_info):
         if not source.has(key):
             msg = 'Invalid {}:[{}]'.format(key_name, key)
             log_msg = '{} (attrs: {})'.format(msg, source.attrs)
-            
+
             logger.warn(log_msg)
             raise ZatoException(cid, msg)

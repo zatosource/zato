@@ -140,7 +140,12 @@ ZATO_ODB_POOL_NAME = 'ZATO_ODB'
 SOAP_VERSIONS = ('1.1', '1.2')
 SOAP_CHANNEL_VERSIONS = ('1.1',)
 
-SECURITY_TYPES = {'basic_auth':'HTTP Basic Auth', 'tech_acc':'Tech account', 'wss':'WS-Security'}
+SECURITY_TYPES = {
+    'basic_auth':'HTTP Basic Auth',
+    'oauth': 'OAuth 1.0',
+    'tech_acc':'Tech account',
+    'wss':'WS-Security'
+}
 
 # Name of the scheduler's job that will ensure a singleton server is always
 # available in a cluster.
@@ -174,7 +179,7 @@ class Attrs(type):
             for cls_attr in dir(cls):
                 if cls_attr == cls_attr.upper():
                     cls.attrs.append(getattr(cls, cls_attr))
-                    
+
         return attr in cls.attrs
 
 class DATA_FORMAT(Attrs):
@@ -182,7 +187,7 @@ class DATA_FORMAT(Attrs):
     JSON = 'json'
     CSV = 'csv'
     POST = 'post'
-    
+
     class __metaclass__(type):
         def __iter__(self):
             return iter((self.XML, self.JSON, self.CSV, self.POST))
@@ -192,50 +197,50 @@ class SIMPLE_IO:
     class FORMAT(Attrs):
         XML = DATA_FORMAT.XML
         JSON = DATA_FORMAT.JSON
-        
+
     class INT_PARAMETERS:
         VALUES = ['id']
         SUFFIXES = ['_id', '_count', '_size', '_timeout']
-        
+
     class BOOL_PARAMETERS:
         SUFFIXES = ['is_', 'needs_', 'should_']
-        
+
 class DEPLOYMENT_STATUS(Attrs):
     DEPLOYED = 'deployed'
     AWAITING_DEPLOYMENT = 'awaiting-deployment'
     IGNORED = 'ignored'
-    
+
 class SERVER_JOIN_STATUS(Attrs):
     ACCEPTED = 'accepted'
-    
+
 class SERVER_UP_STATUS(Attrs):
     RUNNING = 'running'
     CLEAN_DOWN = 'clean-down'
-    
+
 class KVDB(Attrs):
     SEPARATOR = ':::'
-    
+
     DICTIONARY_ITEM = 'zato:kvdb:data-dict:item'
     DICTIONARY_ITEM_ID = DICTIONARY_ITEM + ':id' # ID of the last created dictionary ID, always increasing.
 
     LOCK_PREFIX = 'zato:lock:'
-    
+
     LOCK_SERVER_PREFIX = '{}server:'.format(LOCK_PREFIX)
     LOCK_SERVER_ALREADY_DEPLOYED = '{}already-deployed:'.format(LOCK_SERVER_PREFIX)
     LOCK_SERVER_STARTING = '{}starting:'.format(LOCK_SERVER_PREFIX)
-    
+
     LOCK_PACKAGE_PREFIX = '{}package:'.format(LOCK_PREFIX)
     LOCK_PACKAGE_UPLOADING = '{}uploading:'.format(LOCK_PACKAGE_PREFIX)
     LOCK_PACKAGE_ALREADY_UPLOADED = '{}already-uploaded:'.format(LOCK_PACKAGE_PREFIX)
-    
+
     LOCK_DELIVERY = '{}delivery:'.format(LOCK_PREFIX)
     LOCK_DELIVERY_AUTO_RESUBMIT = '{}auto-resubmit:'.format(LOCK_DELIVERY)
-    
+
     LOCK_SERVICE_PREFIX = '{}service:'.format(LOCK_PREFIX)
-    
+
     TRANSLATION = 'zato:kvdb:data-dict:translation'
     TRANSLATION_ID = TRANSLATION + ':id'
-    
+
     SERVICE_USAGE = 'zato:stats:service:usage:'
     SERVICE_TIME_BASIC = 'zato:stats:service:time:basic:'
     SERVICE_TIME_RAW = 'zato:stats:service:time:raw:'
@@ -245,16 +250,16 @@ class KVDB(Attrs):
     SERVICE_TIME_AGGREGATED_BY_DAY = 'zato:stats:service:time:aggr-by-day:'
     SERVICE_TIME_AGGREGATED_BY_MONTH = 'zato:stats:service:time:aggr-by-month:'
     SERVICE_TIME_SLOW = 'zato:stats:service:time:slow:'
-    
+
     SERVICE_SUMMARY_PREFIX_PATTERN = 'zato:stats:service:summary:{}:'
     SERVICE_SUMMARY_BY_DAY = 'zato:stats:service:summary:by-day:'
     SERVICE_SUMMARY_BY_WEEK = 'zato:stats:service:summary:by-week:'
     SERVICE_SUMMARY_BY_MONTH = 'zato:stats:service:summary:by-month:'
     SERVICE_SUMMARY_BY_YEAR = 'zato:stats:service:summary:by-year:'
-    
+
     REQ_RESP_SAMPLE = 'zato:req-resp:sample:'
     RESP_SLOW = 'zato:resp:slow:'
-    
+
     DELIVERY_PREFIX = 'zato:delivery:'
     DELIVERY_BY_TARGET_PREFIX = '{}by-target:'.format(DELIVERY_PREFIX)
 
@@ -262,7 +267,7 @@ class SCHEDULER_JOB_TYPE(Attrs):
     ONE_TIME = 'one_time'
     INTERVAL_BASED = 'interval_based'
     CRON_STYLE = 'cron_style'
-    
+
 class CHANNEL(Attrs):
     AMQP = 'amqp'
     DELIVERY = 'delivery' # New in 1.2
@@ -296,7 +301,7 @@ class DELIVERY_HISTORY_ENTRY(Attrs):
     TARGET_OK = b'target-ok'
     TARGET_FAILURE = b'target-failure'
     UPDATED = b'updated'
-    
+
 class DELIVERY_STATE(Attrs):
     IN_DOUBT = 'in-doubt'
     IN_PROGRESS_ANY = 'in-progress-any' # A wrapper for all in-progress-* states
@@ -308,45 +313,55 @@ class DELIVERY_STATE(Attrs):
     CONFIRMED = 'confirmed'
     FAILED = 'failed'
     UNKNOWN = 'unknown'
-    
+
 class DELIVERY_COUNTERS(Attrs):
     IN_DOUBT = 'in_doubt_count'
     IN_PROGRESS = 'in_progress_count'
     CONFIRMED = 'confirmed_count'
     FAILED = 'failed_count'
     TOTAL = 'total_count'
-    
+
 class DELIVERY_CALLBACK_INVOKER(Attrs):
     SOURCE = 'source'
     TARGET = 'target'
-    
+
 class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds
-    
+
 class MISC:
     SEPARATOR = ':::'
-    
+    OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
+
 class URL_PARAMS_PRIORITY:
     PATH_OVER_QS = 'path-over-qs'
     QS_OVER_PATH = 'qs-over-path'
     DEFAULT = QS_OVER_PATH
-    
+
     class __metaclass__(type):
         def __iter__(self):
             return iter((self.PATH_OVER_QS, self.QS_OVER_PATH, self.DEFAULT))
-    
+
 class PARAMS_PRIORITY:
     CHANNEL_PARAMS_OVER_MSG = 'channel-params-over-msg'
     MSG_OVER_CHANNEL_PARAMS = 'msg-over-channel-params'
     DEFAULT = CHANNEL_PARAMS_OVER_MSG
-    
+
     class __metaclass__(type):
         def __iter__(self):
             return iter((self.CHANNEL_PARAMS_OVER_MSG, self.MSG_OVER_CHANNEL_PARAMS))
 
-#
+class NONCE_STORE:
+    KEY_PATTERN = 'zato:nonce-store:{}:{}' # E.g. zato:nonce-store:oauth:27
+    DEFAULT_MAX_LOG = 25000
+
+
+# Need to use such a constant because we can sometimes be interested in setting
+# default values which evaluate to boolean False.
+NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
+
+# ##############################################################################
 # Version
-#
+# ##############################################################################
 
 major = 1
 minor = 1
@@ -355,7 +370,7 @@ class VersionInfo(object):
     def __init__(self, major, minor):
         self.major = major
         self.minor = minor
-    
+
 version_info = VersionInfo(major, minor)
 version_raw = '{}.{}'.format(version_info.major, version_info.minor)
 version = 'Zato {}'.format(version_raw)
@@ -410,7 +425,7 @@ class ClientSecurityException(ZatoException):
 class ConnectionException(ZatoException):
     """ Encountered a problem with an external connections, such as to AMQP brokers.
     """
-    
+
 class HTTPException(ZatoException):
     """ Raised when the underlying error condition can be easily expressed
     as one of the HTTP status codes.
@@ -419,26 +434,26 @@ class HTTPException(ZatoException):
         super(HTTPException, self).__init__(cid, msg)
         self.status = status
         self.reason = responses[status]
-        
+
 class ParsingException(ZatoException):
     """ Raised when the error is to do with parsing of documents, such as an input
     XML document.
     """
-    
+
 class NoDistributionFound(ZatoException):
     """ Raised when an attempt is made to import services from a Distutils2 archive
     or directory but they don't contain a proper Distutils2 distribution.
     """
     def __init__(self, path):
         super(NoDistributionFound, self).__init__(None, 'No Disutils distribution in path:[{}]'.format(path))
-        
+
 class Inactive(ZatoException):
     """ Raised when an attempt was made to use an inactive resource, such
     as an outgoing connection or a channel.
     """
     def __init__(self, name):
         super(Inactive, self).__init__(None, '[{}] is inactive'.format(name))
-    
+
 class SourceInfo(object):
     """ A bunch of attributes dealing the service's source code.
     """
@@ -457,7 +472,7 @@ class StatsElem(object):
     the last hour yet in a different period the 'min_resp_time' may be a completely
     different value. Likewise, 'all' in the description of parameters below means
     'all that matched given query criteria' rather than 'all that ever existed'.
-    
+
     service_name - name of the service this element describes
     usage - how many times the service has been invoked
     mean - an arithmetical average of all the mean response times  (in ms)
@@ -498,13 +513,13 @@ class StatsElem(object):
         self.temp_rate = 0
         self.temp_mean = 0
         self.temp_mean_count = 0
-        
+
     def get_attrs(self, ignore=[]):
         for attr in dir(self):
             if attr.startswith('__') or attr.startswith('temp_') or callable(getattr(self, attr)) or attr in ignore:
                 continue
             yield attr
-    
+
     def to_dict(self, ignore=None):
         if not ignore:
             ignore = ['expected_time_elems', 'mean_trend_int', 'usage_trend_int']
@@ -515,37 +530,37 @@ class StatsElem(object):
         stats_elem = StatsElem()
         for k, v in item.items():
             setattr(stats_elem, k, v)
-            
+
         return stats_elem
-    
+
     @staticmethod
     def from_xml(item):
         stats_elem = StatsElem()
         for child in item.getchildren():
             setattr(stats_elem, child.xpath('local-name()'), child.pyval)
-            
+
         return stats_elem
-    
+
     def __repr__(self):
         buff = StringIO()
         buff.write('<{} at {} '.format(self.__class__.__name__, hex(id(self))))
-        
+
         attrs = ('{}=[{}]'.format(attr, getattr(self, attr)) for attr in self.get_attrs())
         buff.write(', '.join(attrs))
-        
+
         buff.write('>')
-        
+
         value = buff.getvalue()
         buff.close()
-        
+
         return value
 
     def __iadd__(self, other):
         self.max_resp_time = max(self.max_resp_time, other.max_resp_time)
         self.min_resp_time = min(self.min_resp_time, other.min_resp_time)
         self.usage += other.usage
-        
+
         return self
-    
+
     def __bool__(self):
         return bool(self.service_name) # Empty stats_elems won't have a service name set

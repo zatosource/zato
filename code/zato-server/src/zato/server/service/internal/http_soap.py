@@ -314,7 +314,7 @@ class Delete(AdminService, _HTTPSOAPService):
                     action = OUTGOING.HTTP_SOAP_DELETE
                 
                 self.notify_worker_threads({'name':old_name, 'transport':old_transport,
-                    'url_path':old_url_path, 'soap_action':old_soap_action}, action)
+                    'old_url_path':old_url_path, 'old_soap_action':old_soap_action}, action)
 
             except Exception, e:
                 session.rollback()

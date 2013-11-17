@@ -26,12 +26,15 @@ from bunch import Bunch
 # Zato
 from zato.common import DEPLOYMENT_STATUS, MISC, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, \
-     DeploymentStatus, HTTPBasicAuth, Server, Service, TechnicalAccount, WSSDefinition
-from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_wmq, \
-    channel_jms_wmq_list, channel_zmq, channel_zmq_list, def_amqp, def_amqp_list, \
-    def_jms_wmq, def_jms_wmq_list, basic_auth_list, http_soap_list, http_soap_security_list, \
-    internal_channel_list, job_list, out_amqp, out_amqp_list, out_ftp, out_ftp_list, \
-    out_jms_wmq, out_jms_wmq_list, out_sql, out_sql_list, out_zmq, out_zmq_list, tech_acc_list, wss_list
+     DeploymentStatus, HTTPBasicAuth, OAuth, Server, Service, TechnicalAccount, \
+     WSSDefinition
+from zato.common.odb.query import channel_amqp, channel_amqp_list, \
+     channel_jms_wmq, channel_jms_wmq_list, channel_zmq, channel_zmq_list, \
+     def_amqp, def_amqp_list, def_jms_wmq, def_jms_wmq_list, basic_auth_list, \
+     http_soap_list, http_soap_security_list, internal_channel_list, job_list, \
+     oauth_list, out_amqp, out_amqp_list, out_ftp, out_ftp_list, out_jms_wmq, \
+     out_jms_wmq_list, out_sql, out_sql_list, out_zmq, out_zmq_list, \
+     tech_acc_list, wss_list
 from zato.common.util import current_host, security_def_type, TRACE1
 from zato.server.connection.sql import SessionWrapper
 
@@ -40,7 +43,7 @@ logger = logging.getLogger(__name__)
 class ODBManager(SessionWrapper):
     """ Manages connections to the server's Operational Database.
     """
-    def __init__(self, well_known_data=None, token=None, crypto_manager=None, 
+    def __init__(self, well_known_data=None, token=None, crypto_manager=None,
                  server=None, cluster=None, pool=None):
         super(ODBManager, self).__init__()
         self.well_known_data = well_known_data
@@ -49,14 +52,14 @@ class ODBManager(SessionWrapper):
         self.server = server
         self.cluster = cluster
         self.pool = pool
-        
+
     def fetch_server(self, odb_config):
         """ Fetches the server from the ODB. Also sets the 'cluster' attribute
         to the value pointed to by the server's .cluster attribute.
         """
         if not self.session_initialized:
             self.init_session(ZATO_ODB_POOL_NAME, odb_config, self.pool, False)
-            
+
         try:
             self.server = self._session.query(Server).\
                    filter(Server.token == self.token).\
@@ -68,7 +71,7 @@ class ODBManager(SessionWrapper):
                 self.token)
             logger.error(msg)
             raise
-        
+
     def server_up_down(self, token, status, update_host=False, bind_host=None, bind_port=None):
         """ Updates the information regarding the server is RUNNING or CLEAN_DOWN etc.
         and what host it's running on.
@@ -80,12 +83,12 @@ class ODBManager(SessionWrapper):
 
             server.up_status = status
             server.up_mod_date = datetime.utcnow()
-            
+
             if update_host:
                 server.host = current_host()
                 server.bind_host = bind_host
                 server.bind_port = bind_port
-            
+
             session.add(server)
             session.commit()
 
@@ -95,8 +98,9 @@ class ODBManager(SessionWrapper):
 
         # What DB class to fetch depending on the string value of the security type.
         sec_type_db_class = {
-            'tech_acc': TechnicalAccount,
             'basic_auth': HTTPBasicAuth,
+            'oauth': OAuth,
+            'tech_acc': TechnicalAccount,
             'wss': WSSDefinition
             }
 
@@ -104,14 +108,14 @@ class ODBManager(SessionWrapper):
 
         query = http_soap_security_list(self._session, cluster_id, connection)
         columns = Bunch()
-        
+
         # So ConfigDict has its data in the format it expects
         for c in query.statement.columns:
             columns[c.name] = None
-            
+
         for item in query.all():
             target = '{}{}{}'.format(item.soap_action, MISC.SEPARATOR, item.url_path)
-            
+
             result[target] = Bunch()
             result[target].is_active = item.is_active
             result[target].transport = item.transport
@@ -119,19 +123,19 @@ class ODBManager(SessionWrapper):
 
             if item.security_id:
                 result[target].sec_def = Bunch()
-                
+
                 # Will raise KeyError if the DB gets somehow misconfigured.
                 db_class = sec_type_db_class[item.sec_type]
-    
+
                 sec_def = self._session.query(db_class).\
                         filter(db_class.id==item.security_id).\
                         one()
 
                 # Common things first
-                result[target].sec_def.name = sec_def.name    
+                result[target].sec_def.name = sec_def.name
                 result[target].sec_def.password = sec_def.password
                 result[target].sec_def.sec_type = item.sec_type
-    
+
                 if item.sec_type == security_def_type.tech_account:
                     result[target].sec_def.salt = sec_def.salt
                 elif item.sec_type == security_def_type.basic_auth:
@@ -162,7 +166,7 @@ class ODBManager(SessionWrapper):
             except IntegrityError, e:
                 logger.log(TRACE1, 'IntegrityError (Service), e:[{e}]'.format(e=format_exc(e)))
                 self._session.rollback()
-                
+
                 service = self._session.query(Service).\
                     join(Cluster, Service.cluster_id==Cluster.id).\
                     filter(Service.name==name).\
@@ -170,7 +174,7 @@ class ODBManager(SessionWrapper):
                     one()
 
             self.add_deployed_service(deployment_time, details, service, source_info)
-            
+
             return service.id, service.is_active, service.slow_threshold
 
         except Exception, e:
@@ -185,18 +189,18 @@ class ODBManager(SessionWrapper):
             filter(DeployedService.server_id==server_id).\
             delete()
         self._session.commit()
-        
+
     def add_deployed_service(self, deployment_time, details, service, source_info):
         """ Adds information about the server's deployed service into the ODB.
         """
         try:
-            ds = DeployedService(deployment_time, details, self.server, service, 
+            ds = DeployedService(deployment_time, details, self.server, service,
                 source_info.source, source_info.path, source_info.hash, source_info.hash_method)
             self._session.add(ds)
             try:
                 self._session.commit()
             except IntegrityError, e:
-                
+
                 logger.log(TRACE1, 'IntegrityError (DeployedService), e:[{e}]'.format(e=format_exc(e)))
                 self._session.rollback()
 
@@ -204,7 +208,7 @@ class ODBManager(SessionWrapper):
                     filter(DeployedService.service_id==service.id).\
                     filter(DeployedService.server_id==self.server.id).\
                     one()
-                
+
                 ds.deployment_time = deployment_time
                 ds.details = details
                 ds.source = source_info.source
@@ -212,21 +216,21 @@ class ODBManager(SessionWrapper):
                 ds.source_hash = source_info.hash
                 ds.source_hash_method = source_info.hash_method
 
-                self._session.add(ds)                
+                self._session.add(ds)
                 self._session.commit()
-                
+
         except Exception, e:
             msg = 'Could not add the DeployedService, e:[{e}]'.format(e=format_exc(e))
             logger.error(msg)
             self._session.rollback()
-            
+
     def is_service_active(self, service_id):
         """ Returns whether the given service is active or not.
         """
         return self._session.query(Service.is_active).\
             filter(Service.id==service_id).\
             one()[0]
-            
+
     def hot_deploy(self, deployment_time, details, payload_name, payload, server_id):
         """ Inserts a hot-deployed data into the DB along with setting the preliminary
         AWAITING_DEPLOYMENT status for each of the servers this server's cluster
@@ -239,7 +243,7 @@ class ODBManager(SessionWrapper):
         dp.payload_name = payload_name
         dp.payload = payload
         dp.server_id = server_id
-        
+
         # .. add it to the session ..
         self._session.add(dp)
 
@@ -248,18 +252,18 @@ class ODBManager(SessionWrapper):
         servers = self._session.query(Cluster).\
                filter(Cluster.id == self.server.cluster_id).\
                one().servers
-        
+
         for server in servers:
             ds = DeploymentStatus()
             ds.package_id = dp.id
             ds.server_id = server.id
             ds.status = DEPLOYMENT_STATUS.AWAITING_DEPLOYMENT
             ds.status_change_time = datetime.utcnow()
-            
+
             self._session.add(ds)
-        
+
         self._session.commit()
-        
+
         return dp.id
 
     def _become_cluster_wide(self, cluster, session):
@@ -270,13 +274,13 @@ class ODBManager(SessionWrapper):
 
         session.add(cluster)
         session.commit()
-        
+
         msg = 'Server id:[{}], name:[{}] is now a connector server for cluster id:[{}], name:[{}]'.format(
             self.server.id, self.server.name, cluster.id, cluster.name)
         logger.info(msg)
-        
+
         return True
-    
+
     def conn_server_past_grace_time(self, cluster, grace_time):
         """ Whether it's already past the grace time the connector server had
         for updating its keep-alive timestamp.
@@ -284,7 +288,7 @@ class ODBManager(SessionWrapper):
         last_keep_alive = cluster.cw_srv_keep_alive_dt
         max_allowed = last_keep_alive + timedelta(seconds=grace_time)
         now = datetime.utcnow()
-        
+
         msg = 'last_keep_alive:[{}], grace_time:[{}], max_allowed:[{}], now:[{}]'.format(
             last_keep_alive, grace_time, max_allowed, now)
         logger.info(msg)
@@ -301,7 +305,7 @@ class ODBManager(SessionWrapper):
                 with_lockmode('update').\
                 filter(Cluster.id == self.server.cluster_id).\
                 one()
-            
+
             # No cluster-wide singleton server at all so we made it first
             if not cluster.cw_srv_id:
                 return self._become_cluster_wide(cluster, session)
@@ -313,7 +317,7 @@ class ODBManager(SessionWrapper):
                 'cluster id:[{}], name:[{}], cluster.cw_srv_id:[{}], cluster.cw_srv_keep_alive_dt:[{}]').format(
                     self.server.id, self.server.name, cluster.id, cluster.name, cluster.cw_srv_id, cluster.cw_srv_keep_alive_dt)
                 logger.debug(msg)
-            
+
     def clear_cluster_wide(self):
         """ Invoked when the cluster-wide singleton server is making a clean shutdown, sets
         all the relevant data to NULL in the ODB.
@@ -323,13 +327,13 @@ class ODBManager(SessionWrapper):
                 with_lockmode('update').\
                 filter(Cluster.id == self.server.cluster_id).\
                 one()
-            
+
             cluster.cw_srv_id = None
             cluster.cw_srv_keep_alive_dt = None
-    
+
             session.add(cluster)
             session.commit()
-            
+
     def add_delivery(self, deployment_time, details, service, source_info):
         """ Adds information about the server's deployed service into the ODB.
         """
@@ -340,11 +344,11 @@ class ODBManager(SessionWrapper):
 # ##############################################################################
 
     def get_internal_channel_list(self, cluster_id, needs_columns=False):
-        """ Returns the list of internal HTTP/SOAP channels, that is, 
+        """ Returns the list of internal HTTP/SOAP channels, that is,
         channels pointing to internal services.
         """
         return internal_channel_list(self._session, cluster_id, needs_columns)
-    
+
     def get_http_soap_list(self, cluster_id, connection=None, transport=None, needs_columns=False):
         """ Returns the list of all HTTP/SOAP channels.
         """
@@ -363,6 +367,11 @@ class ODBManager(SessionWrapper):
         """ Returns a list of HTTP Basic Auth definitions existing on the given cluster.
         """
         return basic_auth_list(self._session, cluster_id, needs_columns)
+
+    def get_oauth_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of OAuth accounts existing on the given cluster.
+        """
+        return oauth_list(self._session, cluster_id, needs_columns)
 
     def get_tech_acc_list(self, cluster_id, needs_columns=False):
         """ Returns a list of technical accounts existing on the given cluster.
