@@ -28,7 +28,7 @@ from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pattern import delivery as pattern_delivery
 from zato.admin.web.views.pattern.delivery import definition as pattern_delivery_def
-from zato.admin.web.views.security import basic_auth, tech_account, wss
+from zato.admin.web.views.security import basic_auth, oauth, tech_account, wss
 
 
 urlpatterns = patterns('',
@@ -116,12 +116,23 @@ urlpatterns = patterns('',
 
     # .. HTTP Basic Auth
     url(r'^zato/security/basic-auth/$', basic_auth.Index(), name=basic_auth.Index.url_name),
+    url(r'^zato/security/basic-auth/$', basic_auth.Index(), name=basic_auth.Index.url_name),
     url(r'^zato/security/basic-auth/create/$', basic_auth.Create(), name=basic_auth.Create.url_name),
     url(r'^zato/security/basic-auth/edit/$', basic_auth.Edit(), name=basic_auth.Edit.url_name),
     url(r'^zato/security/basic-auth/change-password/$', 
         basic_auth.change_password, name='security-basic-auth-change-password'),
     url(r'^zato/security/basic-auth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', 
         basic_auth.Delete(), name=basic_auth.Delete.url_name),
+    
+    # .. OAuth
+    url(r'^zato/security/oauth/$', oauth.Index(), name=oauth.Index.url_name),
+    url(r'^zato/security/oauth/$', oauth.Index(), name=oauth.Index.url_name),
+    url(r'^zato/security/oauth/create/$', oauth.Create(), name=oauth.Create.url_name),
+    url(r'^zato/security/oauth/edit/$', oauth.Edit(), name=oauth.Edit.url_name),
+    url(r'^zato/security/oauth/change-password/$', 
+        oauth.change_secret, name='security-oauth-change-secret'),
+    url(r'^zato/security/oauth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', 
+        oauth.Delete(), name=oauth.Delete.url_name),
 
     # .. Technical accounts
     url(r'^zato/security/tech-account/$', tech_account.Index(), name=tech_account.Index.url_name),

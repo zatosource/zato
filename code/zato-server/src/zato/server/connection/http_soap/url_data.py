@@ -18,6 +18,11 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
+# oauth
+from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, \
+     OAuthServer, OAuthSignatureMethod_HMAC_SHA1, OAuthSignatureMethod_PLAINTEXT, \
+     OAuthToken
+
 # parse
 from parse import compile as parse_compile
 
@@ -32,70 +37,155 @@ from zato.server.connection.http_soap import Unauthorized
 
 logger = logging.getLogger(__name__)
 
-class URLData(object):
+class OAuthStore(object):
+    def __init__(self, oauth_config):
+        self.oauth_config = oauth_config
+
+class URLData(OAuthDataStore):
     """ Performs URL matching and all the HTTP/SOAP-related security checks.
     """
     def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None,
-                 tech_acc_config=None, wss_config=None):
+                 oauth_config=None, tech_acc_config=None, wss_config=None, kvdb=None):
         self.channel_data = channel_data
-        self.url_sec = url_sec 
+        self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
+        self.oauth_config = oauth_config
         self.tech_acc_config = tech_acc_config
         self.wss_config = wss_config
+        self.kvdb = kvdb
+
         self.url_sec_lock = RLock()
         self._wss = WSSE()
         self._target_separator = MISC.SEPARATOR
 
-    def _handle_security_basic_auth(self, cid, sec_def, path_info, body, headers):
+        self._oauth_server = OAuthServer(self)
+        self._oauth_server.add_signature_method(OAuthSignatureMethod_HMAC_SHA1())
+        self._oauth_server.add_signature_method(OAuthSignatureMethod_PLAINTEXT())
+
+# ##############################################################################
+
+    # OAuth data store API
+
+    def _lookup_oauth(self, username, class_):
+        # usernames are unique so we know the first match is ours
+        for sec_config in self.oauth_config.values():
+            if sec_config.config.username == username:
+                return class_(sec_config.config.username, sec_config.config.password)
+
+    def lookup_consumer(self, key):
+        return self._lookup_oauth(key, OAuthConsumer)
+
+    def lookup_token(self, token_type, token_field):
+        return self._lookup_oauth(token_field, OAuthToken)
+
+    def lookup_nonce(self, oauth_consumer, oauth_token, nonce):
+        for sec_config in self.oauth_config.values():
+            if sec_config.config.username == oauth_consumer.key:
+
+                # The nonce was reused
+                if self.kvdb.has_oauth_nonce(oauth_consumer.key, nonce):
+                    return True
+
+                # No such nonce so we add it to the store
+                self.kvdb.add_oauth_nonce(
+                    oauth_consumer.key, nonce, 10)#sec_config.config.max_nonce_log)
+
+    def fetch_request_token(self, oauth_consumer, oauth_callback):
+        """-> OAuthToken."""
+        raise NotImplementedError
+
+    def fetch_access_token(self, oauth_consumer, oauth_token, oauth_verifier):
+        """-> OAuthToken."""
+        raise NotImplementedError
+
+    def authorize_request_token(self, oauth_token, user):
+        """-> OAuthToken."""
+        raise NotImplementedError
+
+# ##############################################################################
+
+    def _handle_security_basic_auth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
         """ Performs the authentication using HTTP Basic Auth.
         """
-        env = {'HTTP_AUTHORIZATION':headers.get('HTTP_AUTHORIZATION')}
+        env = {'HTTP_AUTHORIZATION':wsgi_environ.get('HTTP_AUTHORIZATION')}
         url_config = {'basic-auth-username':sec_def.username, 'basic-auth-password':sec_def.password}
-        
+
         result = on_basic_auth(env, url_config, False)
-        
+
         if not result:
             msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
                 path_info, cid, result.code, result.description)
             logger.error(msg)
             raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
-        
-    def _handle_security_wss(self, cid, sec_def, path_info, body, headers):
+
+    def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ):
         """ Performs the authentication using WS-Security.
         """
         if not body:
             raise Unauthorized(cid, 'No message body found in [{}]'.format(body), 'zato-wss')
-            
+
         url_config = {}
-        
+
         url_config['wsse-pwd-password'] = sec_def['password']
         url_config['wsse-pwd-username'] = sec_def['username']
         url_config['wsse-pwd-reject-empty-nonce-creation'] = sec_def['reject_empty_nonce_creat']
         url_config['wsse-pwd-reject-stale-tokens'] = sec_def['reject_stale_tokens']
         url_config['wsse-pwd-reject-expiry-limit'] = sec_def['reject_expiry_limit']
         url_config['wsse-pwd-nonce-freshness-time'] = sec_def['nonce_freshness_time']
-        
+
         try:
             result = on_wsse_pwd(self._wss, url_config, body, False)
         except Exception, e:
             msg = 'Could not parse the WS-Security data, body:[{}], e:[{}]'.format(body, format_exc(e))
             raise Unauthorized(cid, msg, 'zato-wss')
-        
+
         if not result:
             msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
                 path_info, cid, result.code, result.description)
             logger.error(msg)
             raise Unauthorized(cid, msg, 'zato-wss')
-        
-    def _handle_security_tech_acc(self, cid, sec_def, path_info, body, headers):
+
+    def _handle_security_oauth(self, cid, sec_def, path_info, body, wsgi_environ, post_data):
+        """ Performs the authentication using OAuth.
+        """
+        http_url = '{}://{}{}'.format(wsgi_environ['wsgi.url_scheme'],
+            wsgi_environ['HTTP_HOST'], wsgi_environ['RAW_URI'])
+
+        # The underlying library needs Authorization instead of HTTP_AUTHORIZATION
+        http_auth_header = wsgi_environ.get('HTTP_AUTHORIZATION')
+
+        if not http_auth_header:
+            msg = 'No Authorization header in wsgi_environ:[%r]'
+            logger.error(msg, wsgi_environ)
+            raise Unauthorized(cid, 'No Authorization header found', 'OAuth')
+
+        wsgi_environ['Authorization'] = http_auth_header
+
+        oauth_request = OAuthRequest.from_request(
+            wsgi_environ['REQUEST_METHOD'], http_url, wsgi_environ, post_data.copy(),
+            wsgi_environ['QUERY_STRING'])
+
+        if oauth_request is None:
+            msg = 'No sig could be built using wsgi_environ:[%r], post_data:[%r]'
+            logger.error(msg, wsgi_environ, post_data)
+            raise Unauthorized(cid, 'No parameters to build signature found', 'OAuth')
+
+        try:
+            self._oauth_server.verify_request(oauth_request)
+        except Exception, e:
+            msg = 'Signature verification failed, wsgi_environ:[%r], e:[%r]'
+            logger.error(msg, wsgi_environ, format_exc(e))
+            raise Unauthorized(cid, 'Signature verification failed', 'OAuth')
+
+    def _handle_security_tech_acc(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
         """ Performs the authentication using technical accounts.
         """
         zato_headers = ('HTTP_X_ZATO_USER', 'HTTP_X_ZATO_PASSWORD')
-        
+
         for header in zato_headers:
-            if not headers.get(header, None):
-                error_msg = ("[{}] The header [{}] doesn't exist or is empty, URI:[{}, headers:[{}]]").\
-                    format(cid, header, path_info, headers)
+            if not wsgi_environ.get(header, None):
+                error_msg = ("[{}] The header [{}] doesn't exist or is empty, URI:[{}, wsgi_environ:[{}]]").\
+                    format(cid, header, path_info, wsgi_environ)
                 logger.error(error_msg)
                 raise Unauthorized(cid, error_msg, 'zato-tech-acc')
 
@@ -103,24 +193,24 @@ class URLData(object):
         # user gets a generic 'username or password' message
         msg_template = '[{}] The {} is incorrect, URI:[{}], X_ZATO_USER:[{}]'
 
-        if headers['HTTP_X_ZATO_USER'] != sec_def.name:
-            error_msg = msg_template.format(cid, 'username', path_info, headers['HTTP_X_ZATO_USER'])
-            user_msg = msg_template.format(cid, 'username or password', path_info, headers['HTTP_X_ZATO_USER'])
+        if wsgi_environ['HTTP_X_ZATO_USER'] != sec_def.name:
+            error_msg = msg_template.format(cid, 'username', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
+            user_msg = msg_template.format(cid, 'username or password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
             logger.error(error_msg)
             raise Unauthorized(cid, user_msg, 'zato-tech-acc')
-        
-        incoming_password = sha256(headers['HTTP_X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
-        
+
+        incoming_password = sha256(wsgi_environ['HTTP_X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
+
         if incoming_password != sec_def.password:
-            error_msg = msg_template.format(cid, 'password', path_info, headers['HTTP_X_ZATO_USER'])
-            user_msg = msg_template.format(cid, 'username or password', path_info, headers['HTTP_X_ZATO_USER'])
+            error_msg = msg_template.format(cid, 'password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
+            user_msg = msg_template.format(cid, 'username or password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
             logger.error(error_msg)
             raise Unauthorized(cid, user_msg, 'zato-tech-acc')
-        
+
 # ##############################################################################
 
     def match(self, url_path, soap_action):
-        """ Attemps to match the combination of SOAP Action and URL path against 
+        """ Attemps to match the combination of SOAP Action and URL path against
         the list of HTTP channel targets.
         """
         target = '{}{}{}'.format(soap_action, self._target_separator, url_path)
@@ -132,20 +222,20 @@ class URLData(object):
                 return match, item
 
         return None, None
-            
-    def check_security(self, cid, channel_item, path_info, payload, wsgi_environ):
+
+    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data):
         """ Authenticates and authorizes a given request. Returns None on success
         or raises an exception otherwise.
         """
-        sec = self.url_sec[channel_item.match_target]
         if sec.sec_def != ZATO_NONE:
             sec_def, sec_def_type = sec.sec_def, sec.sec_def.sec_type
             handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
-            getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ)
-        
+            getattr(self, handler_name)(
+                cid, sec_def, path_info, payload, wsgi_environ, post_data)
+
     def _update_url_sec(self, msg, sec_def_type, delete=False):
         """ Updates URL security definitions that use the security configuration
-        of the name and type given in 'msg' so that existing definitions use 
+        of the name and type given in 'msg' so that existing definitions use
         the new configuration or, optionally, deletes the URL security definition
         altogether if 'delete' is True.
         """
@@ -168,7 +258,7 @@ class URLData(object):
         for item in self.channel_data:
             if item.sec_type == sec_type and item.security_name == sec_name:
                 match_idx = self.channel_data.index(item)
-                
+
         # No error, let's delete channel info
         if match_idx != ZATO_NONE:
             self.channel_data.pop(match_idx)
@@ -189,7 +279,7 @@ class URLData(object):
         """
         with self.url_sec_lock:
             self._update_basic_auth(msg.name, msg)
-        
+
     def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
         """
@@ -197,7 +287,7 @@ class URLData(object):
             del self.basic_auth_config[msg.old_name]
             self._update_basic_auth(msg.name, msg)
             self._update_url_sec(msg, security_def_type.basic_auth)
-            
+
     def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
         """
@@ -205,13 +295,54 @@ class URLData(object):
             self._delete_channel_data('basic_auth', msg.name)
             del self.basic_auth_config[msg.name]
             self._update_url_sec(msg, security_def_type.basic_auth, True)
-        
+
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
             self.basic_auth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.basic_auth)
+
+# ##############################################################################
+
+    def _update_oauth(self, name, config):
+        self.oauth_config[name] = Bunch()
+        self.oauth_config[name].config = config
+
+    def oauth_get(self, name):
+        """ Returns the configuration of the OAuth account of the given name.
+        """
+        with self.url_sec_lock:
+            return self.oauth_config.get(name)
+
+    def on_broker_msg_SECURITY_OAUTH_CREATE(self, msg, *args):
+        """ Creates a new OAuth account.
+        """
+        with self.url_sec_lock:
+            self._update_oauth(msg.name, msg)
+
+    def on_broker_msg_SECURITY_OAUTH_EDIT(self, msg, *args):
+        """ Updates an existing OAuth account.
+        """
+        with self.url_sec_lock:
+            del self.oauth_config[msg.old_name]
+            self._update_oauth(msg.name, msg)
+            self._update_url_sec(msg, security_def_type.oauth)
+
+    def on_broker_msg_SECURITY_OAUTH_DELETE(self, msg, *args):
+        """ Deletes an OAuth account.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('oauth', msg.name)
+            del self.oauth_config[msg.name]
+            self._update_url_sec(msg, security_def_type.oauth, True)
+
+    def on_broker_msg_SECURITY_OAUTH_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes the password of an OAuth account.
+        """
+        with self.url_sec_lock:
+            self.oauth_config[msg.name]['config']['password'] = msg.password
+            self._update_url_sec(msg, security_def_type.oauth)
 
 # ##############################################################################
 
@@ -230,7 +361,7 @@ class URLData(object):
         """
         with self.url_sec_lock:
             self._update_tech_acc(msg.name, msg)
-        
+
     def on_broker_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
         """ Updates an existing technical account.
         """
@@ -238,7 +369,7 @@ class URLData(object):
             del self.tech_acc_config[msg.old_name]
             self._update_tech_acc(msg.name, msg)
             self._update_url_sec(msg, security_def_type.tech_account)
-        
+
     def on_broker_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
         """
@@ -246,22 +377,22 @@ class URLData(object):
             self._delete_channel_data('tech_acc', msg.name)
             del self.tech_acc_config[msg.name]
             self._update_url_sec(msg, security_def_type.tech_account, True)
-        
+
     def on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
         """
         with self.url_sec_lock:
-            # The message's 'password' attribute already takes the salt 
+            # The message's 'password' attribute already takes the salt
             # into account (pun intended ;-))
             self.tech_acc_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.tech_account)
-            
+
 # ##############################################################################
 
     def _update_wss(self, name, config):
         if name in self.wss_config:
             self.wss_config[name].clear()
-            
+
         self.wss_config[name] = Bunch()
         self.wss_config[name].config = config
 
@@ -276,7 +407,7 @@ class URLData(object):
         """
         with self.url_sec_lock:
             self._update_wss(msg.name, msg)
-        
+
     def on_broker_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
         """
@@ -284,7 +415,7 @@ class URLData(object):
             del self.wss_config[msg.old_name]
             self._update_wss(msg.name, msg)
             self._update_url_sec(msg, security_def_type.wss)
-        
+
     def on_broker_msg_SECURITY_WSS_DELETE(self, msg, *args):
         """ Deletes a WS-Security definition.
         """
@@ -292,16 +423,16 @@ class URLData(object):
             self._delete_channel_data('wss', msg.name)
             del self.wss_config[msg.name]
             self._update_url_sec(msg, security_def_type.wss, True)
-        
+
     def on_broker_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a WS-Security definition.
         """
         with self.url_sec_lock:
-            # The message's 'password' attribute already takes the salt 
+            # The message's 'password' attribute already takes the salt
             # into account.
             self.wss_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.wss)
-            
+
 # ##############################################################################
 
     def _channel_item_from_msg(self, msg, match_target):
@@ -309,24 +440,24 @@ class URLData(object):
         """
         channel_item = Bunch()
         for name in('connection', 'data_format', 'host', 'id', 'is_active',
-            'is_internal', 'method', 'name', 'ping_method', 'pool_size', 
+            'is_internal', 'method', 'name', 'ping_method', 'pool_size',
             'service_id',  'impl_name', 'service_name',
             'soap_action', 'soap_version', 'transport', 'url_path',
             'merge_url_params_req', 'url_params_pri', 'params_pri'):
-            
+
             channel_item[name] = msg[name]
-            
+
         if msg.get('security_id'):
             channel_item['sec_type'] = msg['sec_type']
             channel_item['security_id'] = msg['security_id']
             channel_item['security_name'] = msg['security_name']
-        
+
         channel_item.service_impl_name = msg.impl_name
         channel_item.match_target = match_target
         channel_item.match_target_compiled = parse_compile(channel_item.match_target)
-        
+
         return channel_item
-        
+
     def _sec_info_from_msg(self, msg):
         """ Creates a security info bunch out of an incoming CREATE_EDIT message.
         """
@@ -334,42 +465,42 @@ class URLData(object):
         sec_info.is_active = msg.is_active
         sec_info.data_format = msg.data_format
         sec_info.transport = msg.transport
-        
+
         if msg.get('security_name'):
             sec_info.sec_def = Bunch()
             sec_config = getattr(self, '{}_config'.format(msg['sec_type']))
             config_item = sec_config[msg['security_name']]
-            
+
             for k, v in config_item['config'].items():
                 sec_info.sec_def[k] = config_item['config'][k]
         else:
             sec_info.sec_def = ZATO_NONE
-        
+
         return sec_info
-    
+
     def _create_channel(self, msg):
         """ Creates a new channel, both its core data and the related security definition.
         """
         match_target = '{}{}{}'.format(msg.soap_action, MISC.SEPARATOR, msg.url_path)
         self.channel_data.append(self._channel_item_from_msg(msg, match_target))
         self.url_sec[match_target] = self._sec_info_from_msg(msg)
-        
+
     def _delete_channel(self, msg):
         """ Deletes a channel, both its core data and the related security definition.
         """
         old_match_target = '{}{}{}'.format(
             msg.get('old_soap_action'), MISC.SEPARATOR, msg.get('old_url_path'))
-        
+
         # In case of an internal error, we won't have the match all
         match_idx = ZATO_NONE
         for item in self.channel_data:
             if item.match_target == old_match_target:
                 match_idx = self.channel_data.index(item)
-                
+
         # No error, let's delete channel info
         if match_idx != ZATO_NONE:
             self.channel_data.pop(match_idx)
-            
+
         # Channel's security now
         del self.url_sec[old_match_target]
 
@@ -382,9 +513,9 @@ class URLData(object):
             # get to creation only.
             if msg.get('old_name'):
                 self._delete_channel(msg)
-                
+
             self._create_channel(msg)
-            
+
     def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
         """
