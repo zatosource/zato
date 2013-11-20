@@ -50,10 +50,10 @@ NS_MAP = {
 class DummyPayload(object):
     def __init__(self, value):
         self.value = value
-        
+
     def getvalue(self, *ignored_args, **ignored_kwargs):
         return self.value
-    
+
 class DummyResponse(object):
     def __init__(self, payload, result=ZATO_OK, result_details=''):
         self.payload = payload
@@ -69,11 +69,11 @@ class DummyAdminService(DummyService, AdminService):
     class SimpleIO:
         response_elem = 'zzz'
         namespace = zato_namespace
-        
+
 class DummySecurity(object):
     def url_sec_get(self, *ignored_args, **ignored_kwargs):
         pass
-    
+
 class DummyURLData(object):
     def __init__(self, match_return_value, channel_item_return_value):
         self.match_return_value = match_return_value
@@ -83,16 +83,19 @@ class DummyURLData(object):
         self.path_info = None
         self.payload = None
         self.wsgi_environ = None
-        
+        self.url_sec = {}
+
     def match(self, *ignored_args, **ignored_kwargs):
         return self.match_return_value, self.channel_item_return_value
-    
-    def check_security(self, cid, channel_item, path_info, payload, wsgi_environ):
+
+    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data):
+        self.sec = sec
         self.cid = cid
         self.channel_item = channel_item
         self.path_info = path_info
         self.payload = payload
         self.wsgi_environ = wsgi_environ
+        self.post_data = post_data
 
 # ##############################################################################
 
@@ -102,7 +105,7 @@ class MessageHandlingBase(TestCase):
     def get_data(self, data_format, transport, add_string=NON_ASCII_STRING, needs_payload=True,
             payload='', service_class=DummyAdminService):
         handler = channel.RequestHandler()
-        
+
         expected = {
             'key': 'a' + uuid4().hex + add_string,
             'value': uuid4().hex + NON_ASCII_STRING,
@@ -111,7 +114,7 @@ class MessageHandlingBase(TestCase):
             'cid': new_cid(),
             'zato':zato_namespace
         }
-        
+
         if needs_payload:
             if not payload:
                 if data_format == SIMPLE_IO.FORMAT.JSON:
@@ -132,19 +135,19 @@ class MessageHandlingBase(TestCase):
         service = service_class(response, expected['cid'])
 
         handler.set_payload(response, data_format, transport, service)
-        
+
         return expected, service
-    
+
 # ##############################################################################
 
 class TestSetPayloadAdminServiceTestCase(MessageHandlingBase):
-    
+
     def _test_xml(self, url_type, needs_payload):
         expected, service = self.get_data(SIMPLE_IO.FORMAT.XML, url_type, '', needs_payload)
         payload = etree.fromstring(service.response.payload)
-        
+
         parent_path = '/soap:Envelope/soap:Body' if url_type == URL_TYPE.SOAP else ''
-        
+
         if needs_payload:
             path = parent_path + '/zato:{}/text()'.format(expected['key'])
             xpath = etree.XPath(path, namespaces=NS_MAP)
@@ -157,11 +160,11 @@ class TestSetPayloadAdminServiceTestCase(MessageHandlingBase):
             eq_(value.text.strip(), '')
 
         zato_env_path_elem = expected['key'] if needs_payload else DummyAdminService.SimpleIO.response_elem
-            
+
         for name in('cid', 'result', 'details'):
             if not needs_payload and name == 'details':
                 continue
-            
+
             path = parent_path + '/zato:{}/zato:zato_env/zato:{}/text()'.format(zato_env_path_elem, name)
             xpath = etree.XPath(path, namespaces=NS_MAP)
 
@@ -178,13 +181,13 @@ class TestSetPayloadAdminServiceTestCase(MessageHandlingBase):
     def test_payload_provided_json_plain_http(self):
         expected, service = self.get_data(SIMPLE_IO.FORMAT.JSON, URL_TYPE.PLAIN_HTTP)
         payload = loads(service.response.payload)
-        
+
         # Will fail with KeyError so it's a good indicator whether it worked at all or not
         payload[expected['key']]
         eq_(payload[expected['key']], expected['value'])
-        
+
         zato_env = payload['zato_env']
-        
+
         for name in('cid', 'result', 'details'):
             eq_(zato_env[name], expected[name])
 
@@ -196,19 +199,19 @@ class TestSetPayloadAdminServiceTestCase(MessageHandlingBase):
 
     def test_no_payload_xml_plain_http(self):
         self._test_xml(URL_TYPE.PLAIN_HTTP, False)
-        
+
     def test_no_payload_xml_soap(self):
         self._test_xml(URL_TYPE.SOAP, False)
 
 # ##############################################################################
-        
+
 class TestSetPayloadNonAdminServiceTestCase(MessageHandlingBase):
-    
+
     def test_payload_provided_basestring(self):
         payload = uuid4().hex
         ignored, service = self.get_data(None, None, '', payload=payload, service_class=DummyService)
         eq_(payload, service.response.payload)
-        
+
     def test_payload_provided_non_basestring(self):
         payload = DummyPayload(uuid4().hex)
         ignored, service = self.get_data(None, None, '', payload=payload, service_class=DummyService)
@@ -219,43 +222,43 @@ class TestSetPayloadNonAdminServiceTestCase(MessageHandlingBase):
 class TestRequestDispatcher(MessageHandlingBase):
     def test_soap_quotes(self):
         rd = channel.RequestDispatcher()
-        
+
         soap_action = '"aaa"'
         soap_action = rd._handle_quotes_soap_action(soap_action)
         self.assertEquals(soap_action, 'aaa')
-        
+
         soap_action = 'aaa"'
         soap_action = rd._handle_quotes_soap_action(soap_action)
         self.assertEquals(soap_action, 'aaa"')
-        
+
         soap_action = '"aaa'
         soap_action = rd._handle_quotes_soap_action(soap_action)
         self.assertEquals(soap_action, '"aaa')
-        
+
         soap_action = 'aaa'
         soap_action = rd._handle_quotes_soap_action(soap_action)
         self.assertEquals(soap_action, 'aaa')
-        
+
     def test_dispatch_no_url_data(self):
         rd = channel.RequestDispatcher(DummyURLData(False, None))
         rd.security = DummySecurity()
-        
+
         cid = uuid4().hex
         ts = arrow.now()
-        
+
         path_info = uuid4().hex
         wsgi_input = StringIO()
         wsgi_input.write('zzz')
-        
+
         wsgi_environ = {'PATH_INFO':path_info, 'wsgi.input': wsgi_input}
-        
+
         response = rd.dispatch(cid, ts, wsgi_environ, None)
-        
+
         self.assertEquals(wsgi_environ['zato.http.response.status'], '404 Not Found')
         self.assertEquals(
             response, "[{}] Unknown URL:[{}] or SOAP action:[{}]".format(
                 cid, path_info, ''))
-        
+
     def test_check_security_request_handler_handle_are_called(self):
 
         class DummyRequestHandler(object):
@@ -267,8 +270,9 @@ class TestRequestDispatcher(MessageHandlingBase):
                 self.payload = None
                 self.worker_store = None
                 self.simple_io_config = None
-            
-            def handle(self, cid, url_match, channel_item, wsgi_environ, payload, worker_store, simple_io_config):
+
+            def handle(self, cid, url_match, channel_item, wsgi_environ, payload,
+                    worker_store, simple_io_config, post_data):
                 self.cid = cid
                 self.url_match = url_match
                 self.channel_item = channel_item
@@ -276,49 +280,52 @@ class TestRequestDispatcher(MessageHandlingBase):
                 self.payload = payload
                 self.worker_store = worker_store
                 self.simple_io_config = simple_io_config
-        
+
         cid = uuid4().hex
         req_timestamp = uuid4().hex
         path_info = uuid4().hex
         soap_action = uuid4().hex
         worker_store = uuid4().hex
         simple_io_config = uuid4().hex
-        
+
         match_return_value = Bunch()
         match_return_value.is_active = True
         match_return_value.transport = uuid4().hex
         match_return_value.data_format = uuid4().hex
-        
+
         channel_item_return_value = Bunch()
         channel_item_return_value.is_active = True
         channel_item_return_value.transport = uuid4().hex
         channel_item_return_value.data_format = uuid4().hex
-        
+        channel_item_return_value.match_target = uuid4().hex
+
         payload = uuid4().hex
-        
+
         wsgi_input = StringIO()
         wsgi_input.write(payload)
         wsgi_input.seek(0)
-        
+
         wsgi_environ = {
             'PATH_INFO':path_info,
             'HTTP_SOAPACTION':soap_action,
             'wsgi.input':wsgi_input,
             'zato.http.response.headers': {},
         }
-        
+
         ud = DummyURLData(match_return_value, channel_item_return_value)
+        ud.url_sec[channel_item_return_value.match_target] = Bunch(sec_def=ZATO_NONE)
+
         rd = channel.RequestDispatcher(ud)
         rd.simple_io_config = simple_io_config
         rd.request_handler = DummyRequestHandler()
         rd.dispatch(cid, req_timestamp, wsgi_environ, worker_store)
-        
+
         eq_(ud.cid, cid)
         eq_(ud.channel_item, channel_item_return_value)
         eq_(ud.path_info, path_info)
         eq_(ud.payload, payload)
         eq_(sorted(ud.wsgi_environ.items()), sorted(wsgi_environ.items()))
-        
+
         eq_(rd.request_handler.cid, cid)
         eq_(sorted(rd.request_handler.url_match.items()), sorted(match_return_value.items()))
         eq_(rd.request_handler.channel_item, channel_item_return_value)
@@ -326,7 +333,7 @@ class TestRequestDispatcher(MessageHandlingBase):
         eq_(rd.request_handler.payload, payload)
         eq_(rd.request_handler.worker_store, worker_store)
         eq_(rd.request_handler.simple_io_config, simple_io_config)
-        
+
 # ##############################################################################
 
 class TestRequestHandler(TestCase):
@@ -337,25 +344,25 @@ class TestRequestHandler(TestCase):
         expected_raw_request = uuid4().hex
         expected_simple_io_config = uuid4().hex
         expected_channel = CHANNEL.HTTP_SOAP
-        
+
         expected_channel_item = Bunch()
         expected_channel_item.service_impl_name = Bunch()
         expected_channel_item.data_format = uuid4().hex
         expected_channel_item.transport = uuid4().hex
         expected_channel_item.params_pri = uuid4().hex
-        
+
         expected_worker_store = Bunch()
         expected_worker_store.broker_client = uuid4().hex
-        
+
         expected_channel_params = uuid4().hex
-        
-        def _create_channel_params(url_match, channel_item, wsgi_environ, raw_request):
+
+        def _create_channel_params(url_match, channel_item, wsgi_environ, raw_request, post_data=None):
             eq_(url_match, expected_url_match)
             eq_(channel_item, expected_channel_item)
             eq_(wsgi_environ, expected_wsgi_environ)
             eq_(raw_request, expected_raw_request)
             return expected_channel_params
-        
+
         for merge_url_params_req in(True, False):
             expected_channel_item.merge_url_params_req = merge_url_params_req
 
@@ -364,10 +371,10 @@ class TestRequestHandler(TestCase):
             class _Service:
                 def update_handle(_self, _set_response_data, service, raw_request,
                         channel, data_format, transport, server, broker_client,
-                        worker_store, cid, simple_io_config, wsgi_environ, 
+                        worker_store, cid, simple_io_config, wsgi_environ,
                         url_match, channel_item, channel_params,
                         merge_channel_params, params_priority):
-                    
+
                     eq_(_set_response_data, rh._set_response_data)
                     eq_(_self, service)
                     eq_(raw_request, expected_raw_request)
@@ -387,10 +394,10 @@ class TestRequestHandler(TestCase):
                         eq_(channel_params, expected_channel_params)
                     else:
                         eq_(channel_params, None)
-                        
+
                     eq_(merge_channel_params, merge_url_params_req)
                     eq_(params_priority, expected_channel_item.params_pri)
-            
+
             class _server:
                 class service_store:
                     @staticmethod
@@ -400,9 +407,9 @@ class TestRequestHandler(TestCase):
 
             rh.server = _server
             rh.create_channel_params = _create_channel_params
-            rh.handle(expected_cid, expected_url_match, expected_channel_item, 
+            rh.handle(expected_cid, expected_url_match, expected_channel_item,
                 expected_wsgi_environ, expected_raw_request, expected_worker_store,
-                expected_simple_io_config)
+                expected_simple_io_config, None)
 
     def test_create_channel_params(self):
 
@@ -410,30 +417,30 @@ class TestRequestHandler(TestCase):
         url_match.named = Bunch()
         url_match.named.url_key1 = 'path-{}'.format(uuid4().hex)
         url_match.named.url_key2 = 'path-{}'.format(uuid4().hex)
-        
+
         qs_key1, qs_value1 = 'url_key1', 'qs-aaa-{}'.format(uuid4().hex)
         qs_key2, qs_value2 = 'url_key2', 'qs-bbbb-{}'.format(uuid4().hex)
-        
+
         post_key1, post_value1 = 'post_key1', uuid4().hex
         post_key2, post_value2 = 'post_key2', uuid4().hex
-        
+
         raw_request = '{}={}&{}={}'.format(post_key1, post_value1, post_key2, post_value2)
-        
+
         wsgi_environ = {}
         wsgi_environ['QUERY_STRING'] = '{}={}&{}={}'.format(qs_key1, qs_value1, qs_key2, qs_value2)
-        
+
         for data_format in DATA_FORMAT:
             for url_params_pri in URL_PARAMS_PRIORITY:
-                
+
                 channel_item = Bunch()
                 channel_item.data_format = data_format
                 channel_item.url_params_pri = url_params_pri
-                
+
                 rh = channel.RequestHandler()
                 channel_params = rh.create_channel_params(url_match, channel_item, wsgi_environ, raw_request)
-                
+
                 eq_(sorted(wsgi_environ['zato.http.GET'].items()), [(qs_key1, qs_value1), (qs_key2, qs_value2)])
-                
+
                 if data_format == DATA_FORMAT.POST:
                     eq_(sorted(wsgi_environ['zato.http.POST'].items()), [(post_key1, post_value1), (post_key2, post_value2)])
 
