@@ -264,14 +264,21 @@ class RequestHandler(object):
             else:
                 post = QueryDict(None, encoding='utf-8')
 
-        wsgi_environ['zato.http.GET'] = qs
+        _qs = {}
+        for key, value in qs.iterlists():
+            if len(value) > 1:
+                _qs[key] = value
+            else:
+                _qs[key] = value[0]
+
+        wsgi_environ['zato.http.GET'] = _qs
         wsgi_environ['zato.http.POST'] = post
 
         if channel_item.url_params_pri == URL_PARAMS_PRIORITY.QS_OVER_PATH:
-            path_params.update((key, value) for key, value in qs.items())
+            path_params.update((key, value) for key, value in _qs.items())
             channel_params = path_params
         else:
-            channel_params = dict((key, value) for key, value in qs.items())
+            channel_params = dict((key, value) for key, value in _qs.items())
             channel_params.update(path_params)
 
         return channel_params

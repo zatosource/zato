@@ -421,13 +421,19 @@ class TestRequestHandler(TestCase):
         qs_key1, qs_value1 = 'url_key1', 'qs-aaa-{}'.format(uuid4().hex)
         qs_key2, qs_value2 = 'url_key2', 'qs-bbbb-{}'.format(uuid4().hex)
 
+        # Same key, different values
+        qs_key3_1, qs_value3_1 = 'url_key3', 'qs-key3_1-{}'.format(uuid4().hex)
+        qs_key3_2, qs_value3_2 = 'url_key3', 'qs-key3_2-{}'.format(uuid4().hex)
+
         post_key1, post_value1 = 'post_key1', uuid4().hex
         post_key2, post_value2 = 'post_key2', uuid4().hex
 
         raw_request = '{}={}&{}={}'.format(post_key1, post_value1, post_key2, post_value2)
 
         wsgi_environ = {}
-        wsgi_environ['QUERY_STRING'] = '{}={}&{}={}'.format(qs_key1, qs_value1, qs_key2, qs_value2)
+        wsgi_environ['QUERY_STRING'] = '{}={}&{}={}&{}={}&{}={}'.format(
+            qs_key1, qs_value1, qs_key2, qs_value2, qs_key3_1, qs_value3_1,
+            qs_key3_2, qs_value3_2)
 
         for data_format in DATA_FORMAT:
             for url_params_pri in URL_PARAMS_PRIORITY:
@@ -439,12 +445,19 @@ class TestRequestHandler(TestCase):
                 rh = channel.RequestHandler()
                 channel_params = rh.create_channel_params(url_match, channel_item, wsgi_environ, raw_request)
 
-                eq_(sorted(wsgi_environ['zato.http.GET'].items()), [(qs_key1, qs_value1), (qs_key2, qs_value2)])
+                get = wsgi_environ['zato.http.GET']
+
+                eq_(get[qs_key1], qs_value1)
+                eq_(get[qs_key2], qs_value2)
+                eq_(get[qs_key3_1], [qs_value3_1, qs_value3_2])
+                eq_(get[qs_key3_2], [qs_value3_1, qs_value3_2])
 
                 if data_format == DATA_FORMAT.POST:
                     eq_(sorted(wsgi_environ['zato.http.POST'].items()), [(post_key1, post_value1), (post_key2, post_value2)])
 
                 if url_params_pri == URL_PARAMS_PRIORITY.PATH_OVER_QS:
-                    eq_(sorted(channel_params.items()), sorted(url_match.named.items()))
+                    eq_(channel_params['url_key1'], url_match.named.url_key1)
+                    eq_(channel_params['url_key2'], url_match.named.url_key2)
                 else:
-                    eq_(sorted(channel_params.items()), [(qs_key1, qs_value1), (qs_key2, qs_value2)])
+                    eq_(channel_params['url_key1'], qs_value1)
+                    eq_(channel_params['url_key2'], qs_value2)
