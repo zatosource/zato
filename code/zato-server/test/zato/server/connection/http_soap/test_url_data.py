@@ -67,7 +67,7 @@ Dummy_create_channel = Dummy_delete_channel
 
 class URLDataTestCase(TestCase):
 
-    def xtest_match(self):
+    def test_match(self):
         ud = url_data.URLData([])
 
         soap_action1 = uuid4().hex
@@ -118,7 +118,7 @@ class URLDataTestCase(TestCase):
 
 # ##############################################################################
 
-    def xtest_check_security(self):
+    def test_check_security(self):
 
         match_target1 = uuid4().hex
         match_target2 = uuid4().hex
@@ -142,12 +142,13 @@ class URLDataTestCase(TestCase):
                 self.payload = ZATO_NONE
                 self.wsgi_environ = ZATO_NONE
 
-            def __call__(self, cid, sec_def, path_info, payload, wsgi_environ):
+            def __call__(self, cid, sec_def, path_info, payload, wsgi_environ, post_data):
                 self.cid = cid
                 self.sec_def = sec_def
                 self.path_info = path_info
                 self.payload = payload
                 self.wsgi_environ = wsgi_environ
+                self.post_data = post_data
 
         # ######################################################################
 
@@ -157,6 +158,7 @@ class URLDataTestCase(TestCase):
         expected_path_info = uuid4().hex
         expected_payload = uuid4().hex
         expected_wsgi_environ = uuid4().hex
+        expected_post_data = uuid4().hex
 
         match1 = DummyMatch(match_target1)
         match2 = DummyMatch(match_target2)
@@ -165,7 +167,6 @@ class URLDataTestCase(TestCase):
 
         wrapper1 = DummySecWrapper(sec_def1)
         wrapper2 = DummySecWrapper(ZATO_NONE)
-
 
         url_sec = {
             match_target1: wrapper1,
@@ -176,13 +177,15 @@ class URLDataTestCase(TestCase):
         ud._handle_security_basic_auth = dummy_basic_auth
 
         ud.check_security(
-            expected_cid, match1, expected_path_info, expected_payload, expected_wsgi_environ)
+            wrapper1, expected_cid, match1, expected_path_info,
+            expected_payload, expected_wsgi_environ, expected_post_data)
 
         eq_(dummy_basic_auth.cid, expected_cid)
         eq_(dummy_basic_auth.sec_def, sec_def1)
         eq_(dummy_basic_auth.path_info, expected_path_info)
         eq_(dummy_basic_auth.payload, expected_payload)
         eq_(dummy_basic_auth.wsgi_environ, expected_wsgi_environ)
+        eq_(dummy_basic_auth.post_data, expected_post_data)
 
         # ######################################################################
 
@@ -192,7 +195,8 @@ class URLDataTestCase(TestCase):
         ud._handle_security_basic_auth = dummy_basic_auth
 
         ud.check_security(
-            expected_cid, match2, expected_path_info, expected_payload, expected_wsgi_environ)
+            wrapper2, expected_cid, match2, expected_path_info, expected_payload,
+            expected_wsgi_environ, None)
 
         eq_(dummy_basic_auth.cid, ZATO_NONE)
         eq_(dummy_basic_auth.sec_def, ZATO_NONE)
@@ -202,7 +206,7 @@ class URLDataTestCase(TestCase):
 
 # ##############################################################################
 
-    def xtest_update_url_sec(self):
+    def test_update_url_sec(self):
 
         for name_attr in('name', 'old_name'):
 
@@ -283,7 +287,7 @@ class URLDataTestCase(TestCase):
 
 # ##############################################################################
 
-    def xtest_delete_channel_data(self):
+    def test_delete_channel_data(self):
 
         sec1 = Bunch()
         sec1.sec_type = uuid4().hex
@@ -313,7 +317,7 @@ class URLDataTestCase(TestCase):
 
 # ##############################################################################
 
-    def xtest_update_basic_auth(self):
+    def test_update_basic_auth(self):
         ud = url_data.URLData()
         ud.basic_auth_config = {}
 
@@ -334,7 +338,7 @@ class URLDataTestCase(TestCase):
         self.assertTrue(name1 in ud.basic_auth_config)
         eq_(sorted(ud.basic_auth_config[name1].config.items()), [(u'value1', value1), (u'value2', value2)])
 
-    def xtest_basic_auth_get(self):
+    def test_basic_auth_get(self):
 
         name1, value1 = uuid4().hex, uuid4().hex
 
@@ -351,7 +355,7 @@ class URLDataTestCase(TestCase):
         value = ud.basic_auth_get(uuid4().hex)
         eq_(value, None)
 
-    def xtest_on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self):
+    def test_on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self):
 
         dummy_lock = DummyLock()
         dummy_update_basic_auth = Dummy_update_basic_auth()
@@ -374,7 +378,7 @@ class URLDataTestCase(TestCase):
         eq_(dummy_update_basic_auth.msg.key2, msg.key2)
         eq_(dummy_update_basic_auth.msg.key3, msg.key3)
 
-    def xtest_on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self):
+    def test_on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self):
 
         dummy_lock = DummyLock()
         dummy_update_basic_auth = Dummy_update_basic_auth()
@@ -414,7 +418,7 @@ class URLDataTestCase(TestCase):
 
         self.assertNotIn(old_name, ud.basic_auth_config)
 
-    def xtest_on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self):
+    def test_on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self):
 
         dummy_lock = DummyLock()
         dummy_update_basic_auth = Dummy_update_basic_auth()
@@ -452,7 +456,7 @@ class URLDataTestCase(TestCase):
         eq_(dummy_delete_channel_data.name, name)
         eq_(dummy_delete_channel_data.security_def_type, 'basic_auth')
 
-    def xtest_on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self):
+    def test_on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self):
 
         dummy_lock = DummyLock()
         dummy_update_url_sec = Dummy_update_url_sec()
@@ -488,7 +492,7 @@ class URLDataTestCase(TestCase):
 
 # ##############################################################################
 
-    def xtest_update_tech_acc(self):
+    def test_update_tech_acc(self):
         ud = url_data.URLData()
         ud.tech_acc_config = {}
 
@@ -509,7 +513,7 @@ class URLDataTestCase(TestCase):
         self.assertTrue(name1 in ud.tech_acc_config)
         eq_(sorted(ud.tech_acc_config[name1].config.items()), [(u'value1', value1), (u'value2', value2)])
 
-    def xtest_tech_acc_get(self):
+    def test_tech_acc_get(self):
 
         name1, value1 = uuid4().hex, uuid4().hex
 
@@ -526,7 +530,7 @@ class URLDataTestCase(TestCase):
         value = ud.tech_acc_get(uuid4().hex)
         eq_(value, None)
 
-    def xtest_on_broker_msg_SECURITY_TECH_ACC_CREATE(self):
+    def test_on_broker_msg_SECURITY_TECH_ACC_CREATE(self):
 
         dummy_lock = DummyLock()
         dummy_update_tech_acc = Dummy_update_tech_acc()
@@ -549,7 +553,7 @@ class URLDataTestCase(TestCase):
         eq_(dummy_update_tech_acc.msg.key2, msg.key2)
         eq_(dummy_update_tech_acc.msg.key3, msg.key3)
 
-    def xtest_on_broker_msg_SECURITY_TECH_ACC_EDIT(self):
+    def test_on_broker_msg_SECURITY_TECH_ACC_EDIT(self):
 
         dummy_lock = DummyLock()
         dummy_update_tech_acc = Dummy_update_tech_acc()
@@ -589,7 +593,7 @@ class URLDataTestCase(TestCase):
 
         self.assertNotIn(old_name, ud.tech_acc_config)
 
-    def xtest_on_broker_msg_SECURITY_TECH_ACC_DELETE(self):
+    def test_on_broker_msg_SECURITY_TECH_ACC_DELETE(self):
 
         dummy_lock = DummyLock()
         dummy_update_tech_acc = Dummy_update_tech_acc()
@@ -627,7 +631,7 @@ class URLDataTestCase(TestCase):
         eq_(dummy_delete_channel_data.name, name)
         eq_(dummy_delete_channel_data.security_def_type, 'tech_acc')
 
-    def xtest_on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self):
+    def test_on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self):
 
         dummy_lock = DummyLock()
         dummy_update_url_sec = Dummy_update_url_sec()
@@ -663,7 +667,7 @@ class URLDataTestCase(TestCase):
 
     # ##############################################################################
 
-    def xtest_update_wss(self):
+    def test_update_wss(self):
         ud = url_data.URLData()
         ud.wss_config = {}
 
@@ -684,7 +688,7 @@ class URLDataTestCase(TestCase):
         self.assertTrue(name1 in ud.wss_config)
         eq_(sorted(ud.wss_config[name1].config.items()), [(u'value1', value1), (u'value2', value2)])
 
-    def xtest_wss_get(self):
+    def test_wss_get(self):
 
         name1, value1 = uuid4().hex, uuid4().hex
 
@@ -701,7 +705,7 @@ class URLDataTestCase(TestCase):
         value = ud.wss_get(uuid4().hex)
         eq_(value, None)
 
-    def xtest_on_broker_msg_SECURITY_WSS_CREATE(self):
+    def test_on_broker_msg_SECURITY_WSS_CREATE(self):
 
         dummy_lock = DummyLock()
         dummy_update_wss = Dummy_update_wss()
@@ -724,7 +728,7 @@ class URLDataTestCase(TestCase):
         eq_(dummy_update_wss.msg.key2, msg.key2)
         eq_(dummy_update_wss.msg.key3, msg.key3)
 
-    def xtest_on_broker_msg_SECURITY_WSS_EDIT(self):
+    def test_on_broker_msg_SECURITY_WSS_EDIT(self):
 
         dummy_lock = DummyLock()
         dummy_update_wss = Dummy_update_wss()
@@ -764,7 +768,7 @@ class URLDataTestCase(TestCase):
 
         self.assertNotIn(old_name, ud.wss_config)
 
-    def xtest_on_broker_msg_SECURITY_WSS_DELETE(self):
+    def test_on_broker_msg_SECURITY_WSS_DELETE(self):
 
         dummy_lock = DummyLock()
         dummy_update_wss = Dummy_update_wss()
@@ -802,7 +806,7 @@ class URLDataTestCase(TestCase):
         eq_(dummy_delete_channel_data.name, name)
         eq_(dummy_delete_channel_data.security_def_type, 'wss')
 
-    def xtest_on_broker_msg_SECURITY_WSS_CHANGE_PASSWORD(self):
+    def test_on_broker_msg_SECURITY_WSS_CHANGE_PASSWORD(self):
 
         dummy_lock = DummyLock()
         dummy_update_url_sec = Dummy_update_url_sec()
@@ -838,7 +842,7 @@ class URLDataTestCase(TestCase):
 
 # ##############################################################################
 
-    def xtest_channel_item_from_msg(self):
+    def test_channel_item_from_msg(self):
 
         def get_msg(needs_security_id):
             msg = Bunch()
@@ -882,7 +886,7 @@ class URLDataTestCase(TestCase):
             channel_item = url_data.URLData()._channel_item_from_msg(msg, match_target)
             check_channel_item(match_target, msg, channel_item, needs_security_id)
 
-    def xtest_sec_info_from_msg(self):
+    def test_sec_info_from_msg(self):
 
         security_name = uuid4().hex
         basic_auth_config = {
@@ -913,7 +917,7 @@ class URLDataTestCase(TestCase):
             else:
                 eq_(sec_info.sec_def, ZATO_NONE)
 
-    def xtest_create_channel(self):
+    def test_create_channel(self):
 
         channel_item = uuid4().hex
         sec_info = uuid4().hex
@@ -945,7 +949,7 @@ class URLDataTestCase(TestCase):
         eq_(len(ud.channel_data), 1)
         eq_(ud.channel_data[0], channel_item)
 
-    def xtest_delete_channel(self):
+    def test_delete_channel(self):
 
         old_soap_action = uuid4().hex
         old_url_path = uuid4().hex
@@ -975,7 +979,7 @@ class URLDataTestCase(TestCase):
         self.assertNotIn(item2, ud.channel_data)
         self.assertNotIn(item2.match_target, ud.url_sec)
 
-    def xtest_on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self):
+    def test_on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self):
 
         no_old_name_msg = uuid4().hex
         dummy_lock = DummyLock()
@@ -1007,7 +1011,7 @@ class URLDataTestCase(TestCase):
             eq_(sorted(dummy_create_channel.msg.items()), sorted(msg.items()))
             eq_(dummy_lock.enter_called, True)
 
-    def xtest_on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self):
+    def test_on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self):
 
         dummy_lock = DummyLock()
         dummy_delete_channel = Dummy_delete_channel()
