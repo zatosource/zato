@@ -458,11 +458,11 @@ class URLDataTestCase(TestCase):
         dummy_update_url_sec = Dummy_update_url_sec()
 
         name = uuid4().hex
-        old_pasword = uuid4().hex
+        old_password = uuid4().hex
         new_pasword = uuid4().hex
 
         ud = url_data.URLData()
-        ud.basic_auth_config = {name: {'config':{'password':old_pasword}}}
+        ud.basic_auth_config = {name: {'config':{'password':old_password}}}
         ud.url_sec_lock = dummy_lock
         ud._update_url_sec = dummy_update_url_sec
 
@@ -633,11 +633,11 @@ class URLDataTestCase(TestCase):
         dummy_update_url_sec = Dummy_update_url_sec()
 
         name = uuid4().hex
-        old_pasword = uuid4().hex
+        old_password = uuid4().hex
         new_pasword = uuid4().hex
 
         ud = url_data.URLData()
-        ud.tech_acc_config = {name: {'config':{'password':old_pasword}}}
+        ud.tech_acc_config = {name: {'config':{'password':old_password}}}
         ud.url_sec_lock = dummy_lock
         ud._update_url_sec = dummy_update_url_sec
 
@@ -808,11 +808,11 @@ class URLDataTestCase(TestCase):
         dummy_update_url_sec = Dummy_update_url_sec()
 
         name = uuid4().hex
-        old_pasword = uuid4().hex
+        old_password = uuid4().hex
         new_pasword = uuid4().hex
 
         ud = url_data.URLData()
-        ud.wss_config = {name: {'config':{'password':old_pasword}}}
+        ud.wss_config = {name: {'config':{'password':old_password}}}
         ud.url_sec_lock = dummy_lock
         ud._update_url_sec = dummy_update_url_sec
 
@@ -835,14 +835,6 @@ class URLDataTestCase(TestCase):
         eq_(dummy_update_url_sec.delete, False)
 
         eq_(ud.wss_config[name]['config']['password'], new_pasword)
-
-# ##############################################################################
-
-    def test_handle_security_oauth(self):
-        ud = url_data.URLData()
-        ud.wss_config = {name: {'config':{'password':old_pasword}}}
-        ud.url_sec_lock = dummy_lock
-        ud._update_url_sec = dummy_update_url_sec
 
 # ##############################################################################
 
