@@ -69,11 +69,11 @@ class ValueConverter(object):
         try:
             if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes) or isinstance(param, Boolean):
                 value = asbool(value or None) # value can be an empty string and asbool chokes on that
-                
+
             if value and value is not None: # Can be a 0
                 if isinstance(param, Boolean):
                     value = asbool(value)
-                    
+
                 elif isinstance(param, CSV):
                     value = value.split(',')
 
@@ -82,7 +82,7 @@ class ValueConverter(object):
                         # We are parsing XML to create a SIO request
                         if isinstance(value, EtreeElement):
                             return [elem.text for elem in value.getchildren()]
-                        
+
                         # We are producing XML out of an SIO response
                         else:
                             wrapper = Element(param_name)
@@ -91,10 +91,10 @@ class ValueConverter(object):
                                 wrapper.append(xml_item)
                                 wrapper.item[-1] = item_value
                             return wrapper
-                            
+
                     # This is a JSON list
                     return value
-                
+
                 elif isinstance(param, ListOfDicts):
                     if is_xml:
                         # TODO: Implement it
@@ -105,22 +105,22 @@ class ValueConverter(object):
 
                 elif isinstance(param, Integer):
                     value = int(value)
-                    
+
                 elif isinstance(param, Unicode):
                     value = unicode(value)
-                    
+
                 elif isinstance(param, UTC):
                     value = value.replace('+00:00', '')
-                    
+
                 else:
                     if value and value != ZATO_NONE and has_simple_io_config:
                         if any(param_name==elem for elem in self.int_parameters) or \
                            any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
                             value = int(value)
-                            
+
                 if date_time_format and isinstance(value, datetime):
                     value = value.strftime(date_time_format)
-                    
+
             if isinstance(param, CSV) and not value:
                 value = []
 
@@ -129,20 +129,20 @@ class ValueConverter(object):
             msg = 'Conversion error, param:[{}], param_name:[{}], repr(value):[{}], e:[{}]'.format(
                 param, param_name, repr(value), format_exc(e))
             logger.error(msg)
-            
+
             raise ZatoException(msg=msg)
 
 # ##############################################################################
-    
+
 class ForceType(object):
     """ Forces a SimpleIO element to use a specific data type.
     """
     def __init__(self, name):
         self.name = name
-        
+
     def __repr__(self):
         return '<{} at {} name:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.name)
-    
+
 class AsIs(ForceType):
     """ The object won't be converted by SimpleIO machinery even though normally
     it would've been, for instance, because its name is 'user_id' and should've
@@ -151,16 +151,20 @@ class AsIs(ForceType):
 
 class Boolean(ForceType):
     """ Gets transformed into a bool object.
-    """ 
+    """
 
 class CSV(ForceType):
     """ Gets transformed into an int object.
     """
 
+class Dict(ForceType):
+    """ JSON dictionary or a key/value in XML.
+    """
+
 class Integer(ForceType):
     """ Gets transformed into an int object.
     """
-    
+
 class List(ForceType):
     """ Transformed into a list of items in JSON or a list of <item> elems in XML.
     """
@@ -192,7 +196,7 @@ class ServiceInput(Bunch):
     """
     def deepcopy(self):
         return deepcopy(self)
-    
+
 # ##############################################################################
 
 class Outgoing(object):
@@ -201,7 +205,7 @@ class Outgoing(object):
     """
     __slots__ = ('ftp', 'amqp', 'zmq', 'jms_wmq', 'sql', 'plain_http', 'soap')
 
-    def __init__(self, ftp=None, amqp=None, zmq=None, jms_wmq=None, sql=None, 
+    def __init__(self, ftp=None, amqp=None, zmq=None, jms_wmq=None, sql=None,
                  plain_http=None, soap=None):
         self.ftp = ftp
         self.amqp = amqp
@@ -220,24 +224,24 @@ class HTTPRequestData(object):
         self.method = None
         self.GET = None
         self.POST = None
-        
+
     def init(self, wsgi_environ):
         self.method = wsgi_environ.get('REQUEST_METHOD')
-        
+
         # Note tht we always require UTF-8
         self.GET = wsgi_environ.get('zato.http.GET', {})
         self.POST = wsgi_environ.get('zato.http.POST', {})
-        
+
     def __repr__(self):
         return make_repr(self)
-        
+
 # ##############################################################################
 
 class Request(ValueConverter):
     """ Wraps a service request and adds some useful meta-data.
     """
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
-                 'simple_io_config', 'bool_parameter_prefixes', 'int_parameters', 
+                 'simple_io_config', 'bool_parameter_prefixes', 'int_parameters',
                  'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
                  '_wsgi_environ', 'channel_params', 'merge_channel_params')
 
@@ -266,19 +270,19 @@ class Request(ValueConverter):
         """
         if transport in(URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP):
             self.http.init(wsgi_environ)
-            
+
         if is_sio:
             self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
             self.data_format = data_format
             self.transport = transport
             self._wsgi_environ = wsgi_environ
-            
+
             path_prefix = getattr(io, 'request_elem', 'request')
             required_list = getattr(io, 'input_required', [])
             optional_list = getattr(io, 'input_optional', [])
             default_value = getattr(io, 'default_value', NO_DEFAULT_VALUE)
             use_text = getattr(io, 'use_text', True)
-            
+
             if self.simple_io_config:
                 self.has_simple_io_config = True
                 self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
@@ -286,17 +290,17 @@ class Request(ValueConverter):
                 self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
             else:
                 self.payload = self.raw_request
-                
+
             if required_list:
                 required_params = self.get_params(required_list, path_prefix, default_value, use_text)
             else:
                 required_params = {}
-                
+
             if optional_list:
                 optional_params = self.get_params(optional_list, path_prefix, default_value, use_text, False)
             else:
                 optional_params = {}
-                
+
             if self.params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG:
                 self.input.update(required_params)
                 self.input.update(optional_params)
@@ -317,12 +321,12 @@ class Request(ValueConverter):
         params = {}
         if not isinstance(self.payload, basestring):
             for param in request_params:
-                
+
                 if isinstance(param, ForceType):
                     param_name = param.name
                 else:
                     param_name = param
-    
+
                 if self.is_xml:
                     try:
                         elem = path('{}.{}'.format(path_prefix, param_name), is_required).get_from(self.payload)
@@ -343,7 +347,7 @@ class Request(ValueConverter):
                             value = default_value
                 else:
                     value = self.payload.get(param_name, NOT_GIVEN)
-                    
+
                 # Use a default value if an element is empty and we're allowed to
                 # substitute its (empty) value with the default one.
 
@@ -374,19 +378,19 @@ class Request(ValueConverter):
                 self.logger.log(TRACE1, msg)
 
         return params
-    
+
     def deepcopy(self):
         """ Returns a deep copy of self.
         """
         request = Request(None)
         request.logger = logging.getLogger(self.logger.getName())
-        
+
         for name in Request.__slots__:
             if name == 'logger':
                 continue
             setattr(request, name, deepcopy(getattr(self, name)))
-            
-    
+
+
     def bunchified(self):
         """ Returns a bunchified (converted into bunch.Bunch) version of self.raw_request,
         deep copied if it's a dict (or a subclass). Note that it makes to use this method
@@ -395,21 +399,21 @@ class Request(ValueConverter):
         # We have a dict
         if isinstance(self.raw_request, dict):
             return bunchify(deepcopy(self.raw_request))
-        
+
         # Must be a JSON input, raises exception when attempting to load it if it's not
         return bunchify(loads(self.raw_request))
 
 # ##############################################################################
-        
+
 class Response(object):
     """ A response from the service's invocation.
     """
-    __slots__ = ('logger', 'result', 'result_details', '_payload', 'payload', 
-        '_content_type', 'content_type', 'content_type_changed', 'content_encoding', 
+    __slots__ = ('logger', 'result', 'result_details', '_payload', 'payload',
+        '_content_type', 'content_type', 'content_type_changed', 'content_encoding',
         'headers', 'status_code', 'data_format', 'simple_io_config', 'outgoing_declared')
 
-    def __init__(self, logger, result=ZATO_OK, result_details='', payload='', 
-            _content_type='text/plain', content_encoding=None, data_format=None, headers=None, 
+    def __init__(self, logger, result=ZATO_OK, result_details='', payload='',
+            _content_type='text/plain', content_encoding=None, data_format=None, headers=None,
             status_code=OK, status_message='OK', simple_io_config={}):
         self.logger = logger
         self.result = ZATO_OK
@@ -423,20 +427,20 @@ class Response(object):
         # Specific to HTTP/SOAP probably?
         self.headers = headers or Bunch()
         self.status_code = status_code
-        
+
         self.simple_io_config = simple_io_config
         self.outgoing_declared = False
 
     def __len__(self):
         return len(self._payload)
-    
+
     def _get_content_type(self):
         return self._content_type
-    
+
     def _set_content_type(self, value):
         self._content_type = value
         self.content_type_changed = True
-        
+
     content_type = property(_get_content_type, _set_content_type)
 
     def _get_payload(self):
@@ -459,13 +463,13 @@ class Response(object):
         response_elem = getattr(io, 'response_elem', 'response')
         namespace = getattr(io, 'namespace', '')
         self.outgoing_declared = True if required_list or optional_list else False
-        
+
         if required_list or optional_list:
-            self._payload = SimpleIOPayload(cid, self.logger, data_format, 
+            self._payload = SimpleIOPayload(cid, self.logger, data_format,
                 required_list, optional_list, self.simple_io_config, response_elem, namespace)
 
 # ##############################################################################
-            
+
 class SimpleIOPayload(ValueConverter):
     """ Produces the actual response - XML or JSON - out of the user-provided
     SimpleIO abstract data. All of the attributes are prefixed with zato_ so that
@@ -491,7 +495,7 @@ class SimpleIOPayload(ValueConverter):
             if isinstance(name, ForceType):
                 name = name.name
             self.zato_all_attrs.add(name)
-        
+
         self.set_expected_attrs(required_list, optional_list)
 
     def __setslice__(self, i, j, seq):
@@ -501,7 +505,7 @@ class SimpleIOPayload(ValueConverter):
         """
         self.zato_output[i:j] = seq
         self.zato_is_repeated = True
-        
+
     def _is_sqlalchemy(self, item):
         return hasattr(item, '_sa_class_manager')
 
@@ -522,7 +526,7 @@ class SimpleIOPayload(ValueConverter):
             names = attrs.keys()
         elif self._is_sqlalchemy(attrs):
             names = attrs._sa_class_manager.keys()
-            
+
         if not names:
             raise Exception('Could not get the keys out of attrs:[{}]'.format(attrs))
 
@@ -593,12 +597,12 @@ class SimpleIOPayload(ValueConverter):
         else:
             output = set(dir(self)) & self.zato_all_attrs
             output = [dict((name, getattr(self, name)) for name in output)]
-            
+
         if output:
-            
+
             # All elements must be of the same type so it's OK to do it
             is_sa_namedtuple = isinstance(output[0], NamedTuple)
-            
+
             for item in output:
                 if self.zato_is_xml:
                     out_item = Element('item')
@@ -607,23 +611,23 @@ class SimpleIOPayload(ValueConverter):
                 for is_required, name in chain(self.zato_required, self.zato_optional):
                     leave_as_is = isinstance(name, AsIs)
                     elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
-                    
+
                     if isinstance(name, ForceType):
                         name = name.name
-                        
+
                     if isinstance(elem_value, basestring):
                         elem_value = elem_value.decode('utf-8')
-                    
+
                     if self.zato_is_xml:
                         setattr(out_item, name, elem_value)
                     else:
                         out_item[name] = elem_value
-    
+
                 if self.zato_is_repeated:
                     value.append(out_item)
                 else:
                     value = out_item
-                        
+
         if self.zato_is_xml:
             em = ElementMaker(annotate=False, namespace=self.namespace, nsmap={None:self.namespace})
             zato_env = em.zato_env(em.cid(self.zato_cid), em.result(ZATO_OK))
@@ -650,9 +654,9 @@ class TimeUtil(object):
     """
     def __init__(self, kvdb):
         self.kvdb = kvdb
-        
+
     def get_format_from_kvdb(self, format):
-        """ Returns format stored under a key pointed to by 'format' or raises 
+        """ Returns format stored under a key pointed to by 'format' or raises
         ValueError if the key is missing/has no value.
         """
         key = 'zato:date-format:{}'.format(format[5:])
@@ -661,48 +665,48 @@ class TimeUtil(object):
             msg = 'Key [{}] does not exist'.format(key)
             logger.error(msg)
             raise ValueError(msg)
-        
+
         return format
-        
+
     def utcnow(self, format='YYYY-MM-DD HH:mm:ss'):
         """ Returns now in UTC formatted as given in 'format'.
         """
         return arrow.utcnow().format(format)
-    
+
     def today(self, format='YYYY-MM-DD', tz='UTC'):
         """ Returns current day in a given timezone.
         """
         now = arrow.utcnow()
-        
+
         if tz != 'UTC':
             now = now.to(tz)
-            
+
         if format.startswith('zato:'):
             format = self.get_format_from_kvdb(format)
-            
+
         return now.format(format)
-    
+
     def reformat(self, value, from_, to):
         """ Reformats value from one datetime format to another, for instance
         from 23-03-2013 to 03/23/13 (MM-DD-YYYY to DD/MM/YY).
         """
         if from_.startswith('zato:'):
             from_ = self.get_format_from_kvdb(from_)
-            
+
         if to.startswith('zato:'):
             to = self.get_format_from_kvdb(to)
-            
+
         try:
             return arrow.get(value, from_).format(to)
         except Exception, e:
             logger.error('Could not reformat value:[%s] from_:[%s] to:[%s]',
                 value, from_, to)
             raise
-        
+
 # ##############################################################################
 
 class Service(object):
-    """ A base class for all services deployed on Zato servers, no matter 
+    """ A base class for all services deployed on Zato servers, no matter
     the transport and protocol, be it plain HTTP, SOAP, WebSphere MQ or any other,
     regardless whether they're built-in or user-defined ones.
     """
@@ -736,7 +740,7 @@ class Service(object):
         self.time = TimeUtil(None)
         self.from_passthrough = False
         self.passthrough_request = None
-        
+
     @classmethod
     def get_name(class_):
         """ Returns a service's name, settings its .name attribute along. This will
@@ -747,9 +751,9 @@ class Service(object):
             if not name:
                 name = service_name_from_impl(class_.get_impl_name())
                 name = class_.convert_impl_name(name)
-                    
+
             class_.__name = name
-            
+
         return class_.__name
 
     @classmethod
@@ -757,29 +761,29 @@ class Service(object):
         if not hasattr(class_, '__impl_name'):
             class_.__impl_name = '{}.{}'.format(class_.__module__, class_.__name__)
         return class_.__impl_name
-    
+
     @staticmethod
     def convert_impl_name(name):
         # TODO: Move the replace functionality over to uncamelify, possibly modifying its regexp
         split = uncamelify(name).split('.')
-        
+
         path, class_name = split[:-1], split[-1]
         path = [elem.replace('_', '-') for elem in path]
-        
+
         class_name = class_name[1:] if class_name.startswith('-') else class_name
         class_name = class_name.replace('.-', '.').replace('_-', '_')
-        
+
         return '{}.{}'.format('.'.join(path), class_name)
-        
+
     def _init(self):
         """ Actually initializes the service.
         """
         self.odb = self.worker_store.odb
         self.kvdb = self.worker_store.kvdb
         self.time.kvdb = self.kvdb
-        
+
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
-        
+
         out_amqp = PublisherFacade(self.broker_client, self.server.delivery_store)
         out_jms_wmq = WMQFacade(self.broker_client, self.server.delivery_store)
         out_zmq = ZMQFacade(self.broker_client, self.server.delivery_store)
@@ -787,15 +791,15 @@ class Service(object):
 
         out_ftp, out_plain_http, out_soap = self.worker_store.worker_config.outgoing_connections()
         self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap)
-        
+
         is_sio = hasattr(self, 'SimpleIO')
-        
+
         if self.passthrough_request:
             self.request = self.passthrough_request
         else:
             self.request.init(is_sio, self.cid, getattr(self, 'SimpleIO', None),
                 self.data_format, self.transport, self.wsgi_environ)
-        
+
         if is_sio:
             self.response.init(self.cid, self.SimpleIO, self.data_format)
 
@@ -806,9 +810,9 @@ class Service(object):
             if kwargs['as_bunch']:
                 response = bunchify(response)
             service.response.payload = response
-            
+
         return response
-            
+
     def update_handle(self, set_response_func, service, raw_request, channel, data_format,
             transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
 
@@ -821,9 +825,9 @@ class Service(object):
         wsgi_environ = kwargs.get('wsgi_environ', {})
         serialize = kwargs.get('serialize')
         as_bunch = kwargs.get('as_bunch')
-        
-        service.update(service, channel, server, broker_client, 
-            worker_store, cid, payload, raw_request, transport, 
+
+        service.update(service, channel, server, broker_client,
+            worker_store, cid, payload, raw_request, transport,
             simple_io_config, data_format, wsgi_environ,
             job_type=job_type,
             channel_params=channel_params,
@@ -834,7 +838,7 @@ class Service(object):
         # the target services or the one we have in hand right now. Note that
         # hooks are always invoked for the one we have a handle to right now
         # even if it's a pass-through one.
-            
+
         service.pre_handle()
         service.call_hooks('before')
 
@@ -856,12 +860,12 @@ class Service(object):
             transport=None, serialize=False, as_bunch=False, **kwargs):
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
-            
+
         if self.impl_name == impl_name:
             msg = 'A service cannot invoke itself, name:[{}]'.format(self.name)
             self.logger.error(msg)
             raise ZatoException(self.cid, msg)
-            
+
         service = self.server.service_store.new_instance(impl_name)
         service.from_passthrough = kwargs.get('from_passthrough', False)
         service.passthrough_request = kwargs.get('passthrough_request', None)
@@ -871,22 +875,22 @@ class Service(object):
 
         set_response_func = kwargs.pop('set_response_func', self.set_response_data)
 
-        return self.update_handle(set_response_func, service, payload, channel, 
+        return self.update_handle(set_response_func, service, payload, channel,
             data_format, transport, self.server, self.broker_client, self.worker_store,
             self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch,
             **kwargs)
-        
+
     def invoke(self, name, *args, **kwargs):
         """ Invokes a service synchronously by its name.
         """
         return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[name], *args, **kwargs)
-        
+
     def invoke_by_id(self, service_id, *args, **kwargs):
         """ Invokes a service synchronously by its ID.
         """
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
-        
-    def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=None, 
+
+    def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=None,
             transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False):
         """ Invokes a service asynchronously by its name.
         """
@@ -914,60 +918,60 @@ class Service(object):
         """
         task_id = task_id or new_cid()
         self.delivery_store.deliver(
-            self.server.cluster_id, def_name, payload, task_id, self.invoke, 
-            kwargs.pop('is_resubmit', False), 
-            kwargs.pop('is_auto', False), 
+            self.server.cluster_id, def_name, payload, task_id, self.invoke,
+            kwargs.pop('is_resubmit', False),
+            kwargs.pop('is_auto', False),
             *args, **kwargs)
-        
+
         return task_id
-            
+
     def pre_handle(self):
         """ An internal method run just before the service sets to process the payload.
         Used for incrementing the service's usage count and storing the service invocation time.
         """
         self.usage = self.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, self.name))
         self.invocation_time = datetime.utcnow()
-        
+
     def post_handle(self):
         """ An internal method executed after the service has completed and has
         a response ready to return. Updates its statistics and, optionally, stores
         a sample request/response pair.
         """
-        
+
         #
         # Statistics
         #
-        
+
         self.handle_return_time = datetime.utcnow()
         self.processing_time_raw = self.handle_return_time - self.invocation_time
-        
+
         proc_time = self.processing_time_raw.total_seconds() * 1000.0
         proc_time = proc_time if proc_time > 1 else 0
-        
+
         self.processing_time = int(round(proc_time))
 
         self.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIME_BASIC, self.name), 'last', self.processing_time)
         self.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIME_RAW, self.name), self.processing_time)
 
-        key = '{}{}:{}'.format(KVDB.SERVICE_TIME_RAW_BY_MINUTE, 
+        key = '{}{}:{}'.format(KVDB.SERVICE_TIME_RAW_BY_MINUTE,
             self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
         self.kvdb.conn.rpush(key, self.processing_time)
-        
-        # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds) 
+
+        # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds)
         # to aggregate processing times for a given minute and then it will expire
-        
+
         # Note that we need Redis 2.1.3+ otherwise the key has just been overwritten
         self.kvdb.conn.expire(key, 300)
-        
-        # 
+
+        #
         # Sample requests/responses
         #
         key, freq = request_response.should_store(self.kvdb, self.usage, self.name)
         if freq:
 
             # TODO: Don't parse it here and a moment later below
-            resp = (self.response.payload.getvalue() if hasattr(self.response.payload, 'getvalue') else self.response.payload) or ''            
-            
+            resp = (self.response.payload.getvalue() if hasattr(self.response.payload, 'getvalue') else self.response.payload) or ''
+
             data = {
                 'cid': self.cid,
                 'req_ts': self.invocation_time.isoformat(),
@@ -976,15 +980,15 @@ class Service(object):
                 'resp':resp,
             }
             request_response.store(self.kvdb, key, self.usage, freq, **data)
-            
+
         #
         # Slow responses
         #
         if self.processing_time > self.slow_threshold:
 
             # TODO: Don't parse it here and a moment earlier above
-            resp = (self.response.payload.getvalue() if hasattr(self.response.payload, 'getvalue') else self.response.payload) or ''            
-            
+            resp = (self.response.payload.getvalue() if hasattr(self.response.payload, 'getvalue') else self.response.payload) or ''
+
             data = {
                 'cid': self.cid,
                 'proc_time': self.processing_time,
@@ -995,19 +999,19 @@ class Service(object):
                 'resp': resp,
             }
             slow_response.store(self.kvdb, self.name, **data)
-            
+
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')
-        
+
     def handle(self):
         """ The only method Zato services need to implement in order to process
         incoming requests.
         """
         raise NotImplementedError('Should be overridden by subclasses')
-    
+
     def lock(self, name=None, expires=20, timeout=0, backend=None):
         """ Creates a Redis-backed distributed lock.
-        
+
         name - defaults to self.name effectively making access to this service serialized
         expires - defaults to 20 seconds and is the max time the lock will be held
         timeout - how long (in seconds) we will wait to acquire the lock before giving up and raising LockTimeout
@@ -1016,7 +1020,7 @@ class Service(object):
         name = '{}{}'.format(KVDB.LOCK_SERVICE_PREFIX, name or self.name)
         backend = backend or self.kvdb.conn
         return Lock(name, expires, timeout, backend)
-    
+
 # ##############################################################################
 
     def call_job_hooks(self, prefix):
@@ -1046,7 +1050,7 @@ class Service(object):
         else:
             self.call_handle(prefix)
             self.call_job_hooks(prefix)
-            
+
     @classmethod
     def before_add_to_store(cls, logger):
         """ Invoked right before the class is added to the service store.
@@ -1067,12 +1071,12 @@ class Service(object):
         """ Invoked if the service has been defined as an interval-based job's
         invocation target.
         """
-        
+
     def before_cron_style_job(self):
         """ Invoked if the service has been defined as a cron-style job's
         invocation target.
         """
-        
+
     def before_handle(self, *args, **kwargs):
         """ Invoked just before the actual service receives the request data.
         """
@@ -1091,17 +1095,17 @@ class Service(object):
         """ Invoked if the service has been defined as an interval-based job's
         invocation target.
         """
-        
+
     def after_cron_style_job(self):
         """ Invoked if the service has been defined as a cron-style job's
         invocation target.
         """
-        
+
     def after_handle(self):
         """ Invoked right after the actual service has been invoked, regardless
         of whether the service raised an exception or not.
         """
-        
+
     def finalize_handle(self):
         """ Offers the last chance to influence the service's operations.
         """
@@ -1110,30 +1114,30 @@ class Service(object):
     def after_add_to_store(logger):
         """ Invoked right after the class has been added to the service store.
         """
-        
+
 # ##############################################################################
 
     def _log_input_output(self, user_msg, level, suppress_keys, is_response):
-    
+
         suppress_keys = suppress_keys or []
         suppressed_msg = '(suppressed)'
         container = 'response' if is_response else 'request'
         payload_key = '{}.payload'.format(container)
         user_msg = '{} '.format(user_msg) if user_msg else user_msg
-        
+
         msg = {}
         if payload_key not in suppress_keys:
             msg[payload_key] = getattr(self, container).payload
         else:
             msg[payload_key] = suppressed_msg
-        
-        attrs = ('channel', 'cid', 'data_format', 'environ', 'impl_name', 
+
+        attrs = ('channel', 'cid', 'data_format', 'environ', 'impl_name',
              'invocation_time', 'job_type', 'name', 'slow_threshold', 'usage', 'wsgi_environ')
-             
+
         if is_response:
             attrs += ('handle_return_time', 'processing_time', 'processing_time_raw',
                 'zato.http.response.headers')
-            
+
         for attr in attrs:
             if attr not in suppress_keys:
                 msg[attr] = getattr(self, attr, '(None)')
@@ -1141,17 +1145,17 @@ class Service(object):
                 msg[attr] = suppressed_msg
 
         self.logger.log(level, '{}{}'.format(user_msg, msg))
-        
+
         return msg
-        
+
     def log_input(self, user_msg='', level=logging.INFO, suppress_keys=None):
         return self._log_input_output(user_msg, level, suppress_keys, False)
-        
+
     def log_output(self, user_msg='', level=logging.INFO, suppress_keys=('wsgi_environ',)):
         return self._log_input_output(user_msg, level, suppress_keys, True)
-        
+
 # ##############################################################################
-        
+
     @staticmethod
     def update(service, channel, server, broker_client, worker_store, cid, payload,
                raw_request, transport=None, simple_io_config=None, data_format=None,
@@ -1175,13 +1179,13 @@ class Service(object):
         service.job_type = job_type
         service.translate = server.kvdb.translate
         service.delivery_store = server.delivery_store
-        
+
         if channel_params:
             service.request.channel_params.update(channel_params)
-            
+
         service.request.merge_channel_params = merge_channel_params
         service.request.params_priority = params_priority
-        
+
         if init:
             service._init()
 
