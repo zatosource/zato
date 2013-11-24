@@ -40,18 +40,18 @@ MESSAGE_TYPE.USER_DEFINED_START = b'5000'
 
 TOPICS = {
     MESSAGE_TYPE.TO_SINGLETON: b'/zato/to-singleton',
-    
+
     MESSAGE_TYPE.TO_PARALLEL_ANY: b'/zato/to-parallel/any',
     MESSAGE_TYPE.TO_PARALLEL_ALL: b'/zato/to-parallel/all',
-    
+
     MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL: b'/zato/connector/amqp/publishing/all',
     MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL: b'/zato/connector/amqp/consuming/all',
     MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL: b'/zato/connector/amqp/all',
-    
+
     MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL: b'/zato/connector/jms-wmq/publishing/all',
     MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL: b'/zato/connector/jms-wmq/consuming/all',
     MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: b'/zato/connector/jms-wmq/all',
-    
+
     MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL: b'/zato/connector/zmq/publishing/all',
     MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL: b'/zato/connector/zmq/consuming/all',
     MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL: b'/zato/connector/zmq/all',
@@ -78,12 +78,6 @@ SECURITY.BASIC_AUTH_CREATE = b'10200'
 SECURITY.BASIC_AUTH_EDIT = b'10201'
 SECURITY.BASIC_AUTH_DELETE = b'10202'
 SECURITY.BASIC_AUTH_CHANGE_PASSWORD = b'10203'
-
-# New in 1.2
-SECURITY.OAUTH_CREATE = b'11300'
-SECURITY.OAUTH_EDIT = b'11301'
-SECURITY.OAUTH_DELETE = b'11302'
-SECURITY.OAUTH_CHANGE_PASSWORD = b'11303'
 
 SECURITY.TECH_ACC_CREATE = b'10300'
 SECURITY.TECH_ACC_EDIT = b'10301'
@@ -176,6 +170,30 @@ STATS.DELETE_DAY = '11101'
 SINGLETON = Bunch()
 SINGLETON.CLOSE = b'11200'
 
+# New in 1.2
+SECURITY.OAUTH_CREATE = b'11300'
+SECURITY.OAUTH_EDIT = b'11301'
+SECURITY.OAUTH_DELETE = b'11302'
+SECURITY.OAUTH_CHANGE_PASSWORD = b'11303'
+
+# New in 1.2
+MSG_NS = Bunch()
+MSG_NS.CREATE = b'11400'
+MSG_NS.EDIT = b'11401'
+MSG_NS.DELETE = b'11402'
+
+# New in 1.2
+MSG_XPATH = Bunch()
+MSG_XPATH.CREATE = b'11450'
+MSG_XPATH.EDIT = b'11451'
+MSG_XPATH.DELETE = b'11452'
+
+# New in 1.2
+MSG_ELEM_PATH = Bunch()
+MSG_ELEM_PATH.CREATE = b'11500'
+MSG_ELEM_PATH.EDIT = b'11501'
+MSG_ELEM_PATH.DELETE = b'11502'
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'
@@ -187,5 +205,5 @@ for bunch_name, bunch in globals().items():
             for code_name, code_value in bunch.items():
                 code_name = bunch_name + '_' + code_name
                 code_to_name[code_value] = code_name
-                
+
 del bunch_name, bunch, code_name, code_value

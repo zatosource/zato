@@ -22,7 +22,7 @@ from zato.common.odb.model import(
     ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster,
     ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ,
     Delivery, DeliveryHistory, DeliveryPayload, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob,
-    Job, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ,
+    Job, MsgNamespace, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ,
     SecurityBase, Service, SQLConnectionPool, TechnicalAccount, WSSDefinition)
 
 def needs_columns(func):
@@ -587,5 +587,19 @@ def delivery_history_list(session, task_id, needs_columns=True):
         DeliveryHistory.resubmit_count).\
         filter(DeliveryHistory.task_id==task_id).\
         order_by(DeliveryHistory.entry_time.desc())
+
+# ##############################################################################
+
+@needs_columns
+def namespace_list(session, cluster_id, needs_columns=False):
+    """ All the namespaces.
+    """
+    return session.query(
+        MsgNamespace.id, MsgNamespace.name,
+        MsgNamespace.value).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==MsgNamespace.cluster_id).\
+        filter(SecurityBase.id==MsgNamespace.id).\
+        order_by('msg_ns.name')
 
 # ##############################################################################

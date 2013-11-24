@@ -1031,3 +1031,60 @@ class DeliveryHistory(Base):
 
     delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)
     delivery = relationship(Delivery, backref=backref('history_list', order_by=entry_time, cascade='all, delete, delete-orphan'))
+
+# ##############################################################################
+
+class MsgNamespace(Base):
+    """ A message namespace, used in XPath, for instance.
+    """
+    __tablename__ = 'msg_ns'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('msg_ns_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    value = Column(String(500), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('namespaces', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, value=None, cluster_id=None):
+        self.id = id
+        self.name = name
+        self.value = value
+        self.cluster_id = cluster_id
+
+class XPath(Base):
+    """ An XPath expression to run against XML messages.
+    """
+    __tablename__ = 'msg_xpath'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('msg_xpath_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    value = Column(String(1500), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('xpaths', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, value=None):
+        self.id = id
+        self.name = name
+        self.value = value
+
+class ElemPath(Base):
+    """ An XPath-list expression to run against JSON messages.
+    """
+    __tablename__ = 'msg_elem_path'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('msg_elem_path_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    value = Column(String(1500), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('elem_paths', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, value=None):
+        self.id = id
+        self.name = name
+        self.value = value
