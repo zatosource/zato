@@ -42,6 +42,7 @@ from zato.server.connection.http_soap.channel import RequestDispatcher, RequestH
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.sql import PoolStore, SessionWrapper
+from zato.server.message import ElemPathStore, NamespaceStore, XPathStore
 from zato.server.stats import MaintenanceTool
 
 logger = logging.getLogger(__name__)
@@ -93,6 +94,15 @@ class WorkerStore(BrokerMessageReceiver):
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
+        self.msg_ns_store = NamespaceStore()
+        self.elem_path_store = ElemPathStore()
+        self.xpath_store = XPathStore()
+
+        # Message-related config
+        self.init_msg_ns_store()
+        #self.init_elem_path_store()
+        #self.init_xpath_store()
+
         # Create all the expected connections
         self.init_sql()
         self.init_ftp()
@@ -143,6 +153,8 @@ class WorkerStore(BrokerMessageReceiver):
         wrapper_config.update(sec_config)
         return HTTPSOAPWrapper(wrapper_config)
 
+# ##############################################################################
+
     def init_sql(self):
         """ Initializes SQL connections, first to ODB and then any user-defined ones.
         """
@@ -180,6 +192,14 @@ class WorkerStore(BrokerMessageReceiver):
 
                 # To make the API consistent with that of SQL connection pools
                 config_dict[name].ping = wrapper.ping
+
+# ##############################################################################
+
+    def init_msg_ns_store(self):
+        for k, v in self.worker_config.msg_ns.items():
+            self.msg_ns_store.create(k, v)
+
+# ##############################################################################
 
     def _update_auth(self, msg, action_name, sec_type, visit_wrapper, keys=None):
         """ A common method for updating auth-related configuration.
@@ -570,5 +590,22 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_SERVICE_PUBLISH(self, msg, args=None):
         return self._on_message_invoke_service(msg, CHANNEL.INVOKE_ASYNC, 'SERVICE_PUBLISH', args)
+
+# ##############################################################################
+
+    def on_broker_msg_MSG_NS_CREATE(self, msg, *args):
+        """ Creates a new namespace.
+        """
+        self.msg_ns_store.on_broker_msg_MSG_NS_CREATE(msg, *args)
+
+    def on_broker_msg_MSG_NS_EDIT(self, msg, *args):
+        """ Updates an existing namespace.
+        """
+        self.msg_ns_store.on_broker_msg_MSG_NS_EDIT(msg, *args)
+
+    def on_broker_msg_MSG_NS_DELETE(self, msg, *args):
+        """ Deletes a namespace.
+        """
+        self.msg_ns_store.on_broker_msg_MSG_NS_DELETE(msg, *args)
 
 # ##############################################################################

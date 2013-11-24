@@ -52,6 +52,7 @@ from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.zmq_.outgoing import ZMQFacade
+from zato.server.message import MessageFacade
 
 __all__ = ['Service', 'Request', 'Response', 'Outgoing', 'SimpleIOPayload']
 
@@ -802,6 +803,9 @@ class Service(object):
 
         if is_sio:
             self.response.init(self.cid, self.SimpleIO, self.data_format)
+
+        self.msg = MessageFacade(self.worker_store.msg_ns_store,
+            self.worker_store.elem_path_store, self.worker_store.xpath_store)
 
     def set_response_data(self, service, **kwargs):
         response = service.response.payload

@@ -29,7 +29,7 @@
 
     {% comment %} Our CSS must come last {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
-    
+
     {% block extra_css %}{% endblock %}
 
     {% block extra_js %}
@@ -54,6 +54,7 @@
             <div id="main-menu">
                 <ul class="sf-menu" >
                 <li><a href="{% url cluster %}">Clusters</a></li>
+
                 <li><span class="like-a">Services &darr;</span>
                     <ul>
                         <li><a href="{% url service %}?cluster={{ cluster_id|default:'' }}">List services</a></li>
@@ -66,6 +67,14 @@
                                 <!-- <li class='wide'><a href="?cluster={{ cluster_id|default:'' }}">Serialize access</a></li> -->
                             </ul>
                         </li>
+                    </ul>
+                </li>
+
+                <li><span class="like-a">Messages &darr;</span>
+                    <ul>
+                        <li><a href="{% url message-namespace %}?cluster={{ cluster_id|default:'' }}">Namespaces</a></li>
+                        <li><a href="{% url message-xpath %}?cluster={{ cluster_id|default:'' }}">XPath</a></li>
+                        <li><a href="{% url message-elem-path %}?cluster={{ cluster_id|default:'' }}">ElemPath (JSON)</a></li>
                     </ul>
                 </li>
 
@@ -119,14 +128,14 @@
                 <li><a href="{% url scheduler %}?cluster={{ cluster_id }}">Scheduler</a></li>
                 <li><a href="#">Statistics &darr;</a>
                     <ul>
-                    
+
                         <li>
                             <span class="like-a">Trends &rarr;</span>
                             <ul>
                                 <li class='wide'><a href="{% url stats-trends 'last_hour' %}?cluster={{ cluster_id|default:'' }}">Last hour</a></li>
                             </ul>
                         </li>
-                    
+
                         <li>
                             <span class="like-a">Summary &rarr;</span>
                             <ul>
@@ -137,8 +146,8 @@
                                 <li class='wide'><a href="{% url stats-summary 'this_year' %}?cluster={{ cluster_id|default:'' }}">This year</a></li>
                             </ul>
                         </li>
-                        
-                        
+
+
                         <li>
 
                         <li>
@@ -156,7 +165,7 @@
                     </ul>
                 </li>
                 -->
-                
+
                 </ul>
 
                 <ul class="sf-menu" style="float:right">
@@ -168,7 +177,7 @@
                 </ul>
                 <br style="clear:left"/>
             </div>
-            <div id="cluster_color_div" 
+            <div id="cluster_color_div"
                 {% if cluster_color %}
                     style="background-color:#{{ cluster_color }}"
                 {% else %}
@@ -176,7 +185,7 @@
                 {% endif %}
                 >&nbsp;</div>
         </div>
-        
+
         {% endif %}
 
         <div id="bd">

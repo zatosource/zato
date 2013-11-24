@@ -374,6 +374,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         self.config.http_soap = http_soap
 
+        # Namespaces
+        query = self.odb.get_namespace_list(server.cluster.id, True)
+        self.config.msg_ns = ConfigDict.from_query('msg_ns', query)
+
         # SimpleIO
         self.config.simple_io = ConfigDict('simple_io', Bunch())
         self.config.simple_io['int_parameters'] = self.int_parameters
