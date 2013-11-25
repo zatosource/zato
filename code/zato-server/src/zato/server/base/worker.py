@@ -618,16 +618,16 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_MSG_XPATH_CREATE(self, msg, *args):
         """ Creates a new XPath.
         """
-        self.xpath_store.on_broker_msg_MSG_XPATH_CREATE(msg, self.msg_ns_store.ns_map)
+        self.xpath_store.on_broker_msg_create(msg, self.msg_ns_store.ns_map)
 
     def on_broker_msg_MSG_XPATH_EDIT(self, msg, *args):
         """ Updates an existing XPath.
         """
-        self.xpath_store.on_broker_msg_MSG_XPATH_EDIT(msg, self.msg_ns_store.ns_map)
+        self.xpath_store.on_broker_msg_edit(msg, self.msg_ns_store.ns_map)
 
     def on_broker_msg_MSG_XPATH_DELETE(self, msg, *args):
         """ Deletes an XPath.
         """
-        self.xpath_store.on_broker_msg_MSG_XPATH_DELETE(msg, *args)
+        self.xpath_store.on_broker_msg_delete(msg, *args)
 
 # ##############################################################################

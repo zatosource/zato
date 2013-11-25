@@ -12,10 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
-from zato.admin.web.forms import ChangePasswordForm
-from zato.admin.web.forms.security.basic_auth import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.odb.model import HTTPBasicAuth
+from zato.admin.web.forms.message.elem_path import CreateForm, EditForm
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.common.odb.model import ElemPath
 
 logger = logging.getLogger(__name__)
 
@@ -24,25 +23,24 @@ class Index(_Index):
     url_name = 'message-elem-path'
     template = 'zato/message/elem_path.html'
     service_name = 'zato.message.elem-path.get-list'
-    output_class = HTTPBasicAuth
+    output_class = ElemPath
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'username', 'realm')
+        output_required = ('id', 'name', 'value')
         output_repeated = True
 
     def handle(self):
         return {
             'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
-            'change_password_form': ChangePasswordForm()
+            'edit_form': EditForm(prefix='edit')
         }
 
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'username', 'realm')
+        input_required = ('name', 'value')
         output_required = ('id', 'name')
 
     def success_message(self, item):
@@ -59,5 +57,5 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'message-elem-path-delete'
-    error_message = 'Could not delete the elem-path'
+    error_message = 'Could not delete the ElemPath'
     service_name = 'zato.message.elem-path.delete'
