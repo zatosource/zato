@@ -20,10 +20,11 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.odb.model import(
     ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster,
-    ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ,
-    Delivery, DeliveryHistory, DeliveryPayload, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob,
-    Job, MsgNamespace, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ,
-    SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition)
+    ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase,
+    DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload,
+    ElemPath, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, MsgNamespace,
+    OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, SecurityBase,
+    Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition)
 
 def needs_columns(func):
     """ A decorator for queries which works out whether a given query function
@@ -611,5 +612,11 @@ def xpath_list(session, cluster_id, needs_columns=False):
     """ All the XPaths.
     """
     return _msg_list(XPath, 'msg_xpath.name', session, cluster_id, needs_columns)
+
+@needs_columns
+def elem_path_list(session, cluster_id, needs_columns=False):
+    """ All the ElemPaths.
+    """
+    return _msg_list(ElemPath, 'msg_elem_path.name', session, cluster_id, needs_columns)
 
 # ##############################################################################

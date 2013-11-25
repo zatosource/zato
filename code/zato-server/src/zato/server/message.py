@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from copy import deepcopy
+from json import loads
 from threading import RLock
 from traceback import format_exc
 
@@ -82,13 +83,9 @@ class NamespaceStore(object):
 
 # ##############################################################################
 
-class ElemPathStore(object):
-    pass
-
-# ##############################################################################
-
-class XPathStore(object):
-    """ Keeps config of and evaluates XPath expressions.
+class _BaseXPathStore(object):
+    """ Both XPath and ElemPath stores have common functionality that is kept
+    in this class.
     """
     def __init__(self, data={}):
         self.data = Bunch.fromDict(data)
@@ -104,6 +101,7 @@ class XPathStore(object):
 
     def _update(self, name, item, ns_map):
         with self.update_lock:
+
             # Sanity check hence in a separate line and first
             compiled = self.compile(item.value, ns_map)
 
@@ -113,37 +111,112 @@ class XPathStore(object):
 
     create = _update
 
-    def on_broker_msg_MSG_XPATH_CREATE(self, msg, ns_map):
+    def _compile(self, expr, ns_map={}):
+        """ Compiles an XPath expression using a namespace map provided, if any,
+        and evaluates it against a dummy document to check that all the namespace
+        prefixes are valid.
+        """
+        try:
+            compiled = etree.XPath(expr, namespaces=ns_map)
+            compiled.evaluate(self.dummy_doc)
+        except Exception, e:
+            logger.warn('Failed to compile expr:[%s] with ns_map:[%s]', expr, ns_map)
+            raise
+        else:
+            return compiled
+
+    def on_broker_msg_create(self, msg, ns_map):
         """ Creates a new XPath.
         """
         self.create(msg.name, msg, ns_map)
 
-    def on_broker_msg_MSG_XPATH_EDIT(self, msg, ns_map):
+    def on_broker_msg_edit(self, msg, ns_map):
         """ Updates an existing XPath.
         """
         with self.update_lock:
             del self.data[msg.old_name]
         self._update(msg.name, msg, ns_map)
 
-    def on_broker_msg_MSG_XPATH_DELETE(self, msg, *args):
+    def on_broker_msg_delete(self, msg, *args):
         """ Deletes an XPath.
         """
         with self.update_lock:
             del self.data[msg.name]
 
+# ##############################################################################
+
+class ElemPathStore(_BaseXPathStore):
+    def _elem_path_to_xpath(self, expr):
+        logger.debug('Original expr:[%s]', expr)
+
+        if expr[:2] == '*.':
+            expr = '//{}'.format(expr[2:])
+        else:
+            expr = '/data/{}'.format(expr)
+
+        if expr.endswith('.text'):
+            expr = expr[:-5]
+
+        expr = expr.replace('.*.', '//').replace('.', '/')
+        expr = '{}/text()'.format(expr)
+
+        logger.debug('Returning expr:[%s]', expr)
+
+        return expr
+
+    def compile(self, expr, ns_map={}):
+        return self._compile(self._elem_path_to_xpath(expr), ns_map)
+
+    def convert_dict_to_xml(self, d, name='data', seq_elem='list'):
+        tree = etree.Element(name)
+        return self._to_xml(tree, d, seq_elem)
+
+    def _to_xml(self, tree, d, seq_elem):
+
+        if isinstance(d, dict):
+            for k, v in d.iteritems():
+                s = etree.SubElement(tree, k)
+                self._to_xml(s, v, seq_elem)
+
+        elif isinstance(d, tuple) or isinstance(d, list):
+            for v in d:
+                s = etree.SubElement(tree, seq_elem)
+                self._to_xml(s, v, seq_elem)
+
+        elif isinstance(d, basestring):
+            tree.text = d
+        else:
+            tree.text = str(d) if d else ''
+
+        return tree
+
+    def invoke(self, msg, expr_name):
+        logger.debug('ElemPath expr_name:[%s], msg:[%s]', expr_name, msg)
+
+        xml = self.convert_dict_to_xml(msg)
+        logger.debug('ElemPath xml:[%s]', xml)
+
+        expr = self.data[expr_name]
+        logger.debug('ElemPath compiled:[%s]', expr.compiled)
+
+        result = expr.compiled(xml)
+
+        if expr.config.value.endswith('.text') and len(result) == 1:
+            return result[0]
+        else:
+            return result
+
+# ##############################################################################
+
+class XPathStore(_BaseXPathStore):
+    """ Keeps config of and evaluates XPath expressions.
+    """
+    def compile(self, expr, ns_map={}):
+        return self._compile(expr, ns_map)
+
     def invoke(self, msg, expr_name):
         """ Runs a given XPath expression against the message.
         """
         return self.data[expr_name].compiled(msg)
-
-    def compile(self, expr, ns_map={}):
-        """ Compiles an XPath expression using a namespace map provided, if any,
-        and evaluates it against a dummy document to check that all the namespace
-        prefixes are valid.
-        """
-        compiled = etree.XPath(expr, namespaces=ns_map)
-        compiled.evaluate(self.dummy_doc)
-
-        return compiled
 
 # ##############################################################################

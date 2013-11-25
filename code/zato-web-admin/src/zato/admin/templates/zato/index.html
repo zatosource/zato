@@ -72,9 +72,19 @@
 
                 <li><span class="like-a">Messages &darr;</span>
                     <ul>
-                        <li><a href="{% url message-namespace %}?cluster={{ cluster_id|default:'' }}">Namespaces</a></li>
-                        <li><a href="{% url message-xpath %}?cluster={{ cluster_id|default:'' }}">XPath</a></li>
-                        <li><a href="{% url message-elem-path %}?cluster={{ cluster_id|default:'' }}">ElemPath (JSON)</a></li>
+                        <li>
+                            <span class="like-a">JSON &rarr;</span>
+                            <ul>
+                                <li><a href="{% url message-elem-path %}?cluster={{ cluster_id|default:'' }}">ElemPath</a></li>
+                            </ul>
+                        </li>
+                        <li>
+                            <span class="like-a">XML &rarr;</span>
+                            <ul>
+                                <li><a href="{% url message-namespace %}?cluster={{ cluster_id|default:'' }}">Namespaces</a></li>
+                                <li><a href="{% url message-xpath %}?cluster={{ cluster_id|default:'' }}">XPath</a></li>
+                            </ul>
+                        </li>
                     </ul>
                 </li>
 
