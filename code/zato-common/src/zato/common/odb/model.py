@@ -1066,10 +1066,11 @@ class XPath(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('xpaths', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, name=None, value=None):
+    def __init__(self, id=None, name=None, value=None, cluster_id=None):
         self.id = id
         self.name = name
         self.value = value
+        self.cluster_id = cluster_id
 
 class ElemPath(Base):
     """ An XPath-list expression to run against JSON messages.
@@ -1084,7 +1085,8 @@ class ElemPath(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('elem_paths', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, name=None, value=None):
+    def __init__(self, id=None, name=None, value=None, cluster_id=None):
         self.id = id
         self.name = name
         self.value = value
+        self.cluster_id = cluster_id

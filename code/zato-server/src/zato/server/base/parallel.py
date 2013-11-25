@@ -378,6 +378,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_namespace_list(server.cluster.id, True)
         self.config.msg_ns = ConfigDict.from_query('msg_ns', query)
 
+        # XPath
+        query = self.odb.get_xpath_list(server.cluster.id, True)
+        self.config.xpath = ConfigDict.from_query('msg_xpath', query)
+
         # SimpleIO
         self.config.simple_io = ConfigDict('simple_io', Bunch())
         self.config.simple_io['int_parameters'] = self.int_parameters
