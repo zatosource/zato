@@ -34,7 +34,7 @@ from zato.common.odb.query import channel_amqp, channel_amqp_list, \
      http_soap_list, http_soap_security_list, internal_channel_list, job_list, \
      namespace_list, oauth_list, out_amqp, out_amqp_list, out_ftp, out_ftp_list, \
      out_jms_wmq, out_jms_wmq_list, out_sql, out_sql_list, out_zmq, out_zmq_list, \
-     tech_acc_list, wss_list
+     tech_acc_list, wss_list, xpath_list
 from zato.common.util import current_host, security_def_type, TRACE1
 from zato.server.connection.sql import SessionWrapper
 
@@ -499,5 +499,10 @@ class ODBManager(SessionWrapper):
         """ Returns a list of XML namespaces.
         """
         return namespace_list(self._session, cluster_id, needs_columns)
+
+    def get_xpath_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of XPath expressions.
+        """
+        return xpath_list(self._session, cluster_id, needs_columns)
 
 # ##############################################################################

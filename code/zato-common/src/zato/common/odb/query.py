@@ -23,7 +23,7 @@ from zato.common.odb.model import(
     ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ,
     Delivery, DeliveryHistory, DeliveryPayload, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob,
     Job, MsgNamespace, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ,
-    SecurityBase, Service, SQLConnectionPool, TechnicalAccount, WSSDefinition)
+    SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition)
 
 def needs_columns(func):
     """ A decorator for queries which works out whether a given query function
@@ -590,16 +590,26 @@ def delivery_history_list(session, task_id, needs_columns=True):
 
 # ##############################################################################
 
+def _msg_list(class_, order_by, session, cluster_id, needs_columns=False):
+    """ All the namespaces.
+    """
+    return session.query(
+        class_.id, class_.name,
+        class_.value).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==class_.cluster_id).\
+        order_by(order_by)
+
 @needs_columns
 def namespace_list(session, cluster_id, needs_columns=False):
     """ All the namespaces.
     """
-    return session.query(
-        MsgNamespace.id, MsgNamespace.name,
-        MsgNamespace.value).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==MsgNamespace.cluster_id).\
-        filter(SecurityBase.id==MsgNamespace.id).\
-        order_by('msg_ns.name')
+    return _msg_list(MsgNamespace, 'msg_ns.name', session, cluster_id, needs_columns)
+
+@needs_columns
+def xpath_list(session, cluster_id, needs_columns=False):
+    """ All the XPaths.
+    """
+    return _msg_list(XPath, 'msg_xpath.name', session, cluster_id, needs_columns)
 
 # ##############################################################################

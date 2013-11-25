@@ -98,10 +98,11 @@ class WorkerStore(BrokerMessageReceiver):
         self.elem_path_store = ElemPathStore()
         self.xpath_store = XPathStore()
 
-        # Message-related config
+        # Message-related config - init_msg_ns_store must come before init_xpath_store
+        # so the latter has access to the former's namespace map.
         self.init_msg_ns_store()
         #self.init_elem_path_store()
-        #self.init_xpath_store()
+        self.init_xpath_store()
 
         # Create all the expected connections
         self.init_sql()
@@ -197,7 +198,11 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init_msg_ns_store(self):
         for k, v in self.worker_config.msg_ns.items():
-            self.msg_ns_store.create(k, v)
+            self.msg_ns_store.create(k, v.config)
+
+    def init_xpath_store(self):
+        for k, v in self.worker_config.xpath.items():
+            self.xpath_store.create(k, v.config, self.msg_ns_store.ns_map)
 
 # ##############################################################################
 
@@ -607,5 +612,22 @@ class WorkerStore(BrokerMessageReceiver):
         """ Deletes a namespace.
         """
         self.msg_ns_store.on_broker_msg_MSG_NS_DELETE(msg, *args)
+
+# ##############################################################################
+
+    def on_broker_msg_MSG_XPATH_CREATE(self, msg, *args):
+        """ Creates a new XPath.
+        """
+        self.xpath_store.on_broker_msg_MSG_XPATH_CREATE(msg, self.msg_ns_store.ns_map)
+
+    def on_broker_msg_MSG_XPATH_EDIT(self, msg, *args):
+        """ Updates an existing XPath.
+        """
+        self.xpath_store.on_broker_msg_MSG_XPATH_EDIT(msg, self.msg_ns_store.ns_map)
+
+    def on_broker_msg_MSG_XPATH_DELETE(self, msg, *args):
+        """ Deletes an XPath.
+        """
+        self.xpath_store.on_broker_msg_MSG_XPATH_DELETE(msg, *args)
 
 # ##############################################################################
