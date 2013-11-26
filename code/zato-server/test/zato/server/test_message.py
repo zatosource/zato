@@ -9,6 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from copy import deepcopy
+from json import dumps
 from unittest import TestCase
 from uuid import uuid4
 
@@ -26,6 +28,8 @@ from zato.server.message import ElemPathStore
 
 class TestElemPathStore(TestCase):
     def setUp(self):
+        self.eps = ElemPathStore()
+
         self.cust_id = uuid4().hex
 
         self.street_name1 = 'street-1-{}'.format(uuid4().hex)
@@ -55,24 +59,32 @@ class TestElemPathStore(TestCase):
             }
         )
 
+        self.expr1 = 'request.customer.id.text'
+        self.expr2 = '*.id'
+        self.expr3 = 'request.customer.id'
+        self.expr4 = 'request.customer.address.street_name'
+        self.expr5 = '*.address.street_name'
+        self.expr6 = 'request.customer.*.street_name'
+        self.expr7 = 'request.customer.address.street_name[1]'
+        self.expr8 = 'request.customer.address.street_name'
+        self.expr9 = 'request.customer.address.elems'
+
+        self.expressions = [self.expr1, self.expr2, self.expr3, self.expr4,
+            self.expr5, self.expr6, self.expr7, self.expr8, self.expr9]
+
+        for idx, expr in enumerate(self.expressions, 1):
+
+            config = Bunch()
+            config.name = str(idx)
+            config.value = expr
+
+            self.eps.create(config.name, config, {})
+
     def test_invoke(self):
-        eps = ElemPathStore()
-
-        # Note that 3-7 return the same information
-        expr1 = 'request.customer.id'
-        expr2 = '*.id'
-        expr3 = 'request.customer.id.text'
-        expr4 = 'request.customer.address.street_name'
-        expr5 = '*.address.street_name'
-        expr6 = 'request.customer.*.street_name'
-        expr7 = 'request.customer.address.street_name[1]'
-        expr8 = 'request.customer.address.street_name'
-        expr9 = 'request.customer.address.elems'
-
         expected = {
-            '1': [self.cust_id],
+            '1': self.cust_id,
             '2': [self.cust_id],
-            '3': self.cust_id,
+            '3': [self.cust_id],
             '4': [self.street_name1, self.street_name2],
             '5': [self.street_name1, self.street_name2],
             '6': [self.street_name1, self.street_name2],
@@ -82,21 +94,30 @@ class TestElemPathStore(TestCase):
                   self.street_elems2_1, self.street_elems2_2],
         }
 
-        for idx, expr in enumerate(
-            [expr1, expr2, expr3, expr4, expr5, expr6, expr7, expr8]):
-
-            config = Bunch()
-            config.name = str(idx+1)
-            config.value = expr
-
-            eps.create(config.name, config, {})
-            result = eps.invoke(self.msg, config.name)
-
-            self.assertEquals(expected[config.name], result)
+        for idx, expr in enumerate(self.expressions, 1):
+            name = str(idx)
+            result = self.eps.invoke(self.msg, name)
+            self.assertEquals(expected[name], result)
 
     def test_conversion_roundtrip(self):
-        eps = ElemPathStore()
-        xml = eps.convert_dict_to_xml(self.msg)
-        msg = eps.convert_xml_to_dict(xml)
+        xml = self.eps.convert_dict_to_xml(self.msg)
+        msg = self.eps.convert_xml_to_dict(xml)
 
         self.assertEquals(msg, self.msg)
+
+    def test_replace(self):
+
+        for idx, expr in enumerate(self.expressions, 1):
+
+            msg = deepcopy(self.msg)
+            new_value = uuid4().hex
+            name = str(idx)
+
+            replaced = self.eps.replace(msg, name, new_value)
+            result = self.eps.invoke(replaced, name)
+
+            if isinstance(result, basestring):
+                self.assertEquals(result, new_value)
+            else:
+                for item in result:
+                    self.assertEquals(item, new_value)
