@@ -24,7 +24,7 @@ from lxml import etree
 from xmltodict import parse, unparse
 
 # Zato
-from zato.server.message import ElemPathStore
+from zato.server.message import ElemPathStore, XPathStore
 
 class TestElemPathStore(TestCase):
     def setUp(self):
@@ -78,7 +78,7 @@ class TestElemPathStore(TestCase):
             config.name = str(idx)
             config.value = expr
 
-            self.eps.create(config.name, config, {})
+            self.eps.create(config.name, config, {}, False)
 
     def test_invoke(self):
         expected = {
@@ -121,3 +121,43 @@ class TestElemPathStore(TestCase):
             else:
                 for item in result:
                     self.assertEquals(item, new_value)
+
+class TestXPathStore(TestCase):
+    def test_replace(self):
+        msg = """
+            <root>
+              <elem1>elem1</elem1>
+              <elem2 xmlns="just-testing">elem2</elem2>
+              <list1>
+                  <item1>item</item1>
+                  <item1>item</item1>
+                  <item2>
+                      <key>key</key>
+                  </item2>
+              </list1>
+            </root>
+        """.encode('utf-8')
+
+        expr1 = '/root/elem1'
+        expr2 = '//jt:elem2'
+        expr3 = '//list1/item1'
+        expr4 = '//item2/key'
+
+        for idx, expr in enumerate([expr1, expr2, expr3, expr4]):
+
+            new_value = uuid4().hex
+
+            config = Bunch()
+            config.name = str(idx)
+            config.value = expr
+
+            xps = XPathStore()
+            xps.create(config.name, config, ns_map={'jt':'just-testing'})
+
+            replaced = xps.replace(msg, config.name, new_value)
+            result = xps.invoke(replaced, config.name, False)
+
+            self.assertTrue(len(result) > 0)
+
+            for item in result:
+                self.assertEquals(item.text, new_value)

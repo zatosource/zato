@@ -102,16 +102,20 @@ class _BaseXPathStore(object):
     def __getitem__(self, name):
         return self.data[name].config.value
 
-    def _update(self, name, item, ns_map):
+    def _update(self, name, item, ns_map, is_xml=True):
         with self.update_lock:
 
-            # Sanity check hence in a separate line and first
-            compiled_elem, compiled_text = self.compile(item.value, ns_map)
+            if is_xml:
+                compiled_elem = self.compile(item.value, ns_map)
+            else:
+                compiled_elem, compiled_text = self.compile(item.value, ns_map)
 
             self.data[name] = Bunch()
             self.data[name].config = item
-            self.data[name].compiled_text = compiled_text
             self.data[name].compiled_elem = compiled_elem
+
+            if not is_xml:
+                self.data[name].compiled_text = compiled_text
 
     create = _update
 
@@ -146,30 +150,6 @@ class _BaseXPathStore(object):
         """
         with self.update_lock:
             del self.data[msg.name]
-
-# ##############################################################################
-
-class ElemPathStore(_BaseXPathStore):
-    def _elem_path_to_xpath(self, expr):
-        logger.debug('Original expr:[%s]', expr)
-
-        if expr[:2] == '*.':
-            expr = '//{}'.format(expr[2:])
-        else:
-            expr = '/{}'.format(expr)
-
-        if expr.endswith('.text'):
-            expr = expr[:-5]
-
-        expr = expr.replace('.*.', '//').replace('.', '/')
-
-        logger.debug('Reformatted expr:[%s]', expr)
-
-        return expr, '{}/text()'.format(expr)
-
-    def compile(self, expr, ns_map={}):
-        elem_path, text_path = self._elem_path_to_xpath(expr)
-        return self._compile(elem_path, ns_map), self._compile(text_path, ns_map)
 
     def convert_dict_to_xml(self, d):
         return unparse(d).encode('utf-8')
@@ -234,15 +214,34 @@ class ElemPathStore(_BaseXPathStore):
 
 # ##############################################################################
 
+class ElemPathStore(_BaseXPathStore):
+    def _elem_path_to_xpath(self, expr):
+        logger.debug('Original expr:[%s]', expr)
+
+        if expr[:2] == '*.':
+            expr = '//{}'.format(expr[2:])
+        else:
+            expr = '/{}'.format(expr)
+
+        if expr.endswith('.text'):
+            expr = expr[:-5]
+
+        expr = expr.replace('.*.', '//').replace('.', '/')
+
+        logger.debug('Reformatted expr:[%s]', expr)
+
+        return expr, '{}/text()'.format(expr)
+
+    def compile(self, expr, ns_map={}):
+        elem_path, text_path = self._elem_path_to_xpath(expr)
+        return self._compile(elem_path, ns_map), self._compile(text_path, ns_map)
+
+# ##############################################################################
+
 class XPathStore(_BaseXPathStore):
     """ Keeps config of and evaluates XPath expressions.
     """
     def compile(self, expr, ns_map={}):
         return self._compile(expr, ns_map)
-
-    def invoke(self, msg, expr_name):
-        """ Runs a given XPath expression against the message.
-        """
-        return self.data[expr_name].compiled(msg)
 
 # ##############################################################################
