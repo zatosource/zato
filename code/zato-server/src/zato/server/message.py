@@ -21,6 +21,9 @@ from bunch import Bunch
 # lxml
 from lxml import etree
 
+# xmldict
+from xmltodict import parse, unparse
+
 logger = logging.getLogger(__name__)
 
 # ##############################################################################
@@ -152,7 +155,7 @@ class ElemPathStore(_BaseXPathStore):
         if expr[:2] == '*.':
             expr = '//{}'.format(expr[2:])
         else:
-            expr = '/data/{}'.format(expr)
+            expr = '/{}'.format(expr)
 
         if expr.endswith('.text'):
             expr = expr[:-5]
@@ -167,30 +170,16 @@ class ElemPathStore(_BaseXPathStore):
     def compile(self, expr, ns_map={}):
         return self._compile(self._elem_path_to_xpath(expr), ns_map)
 
-    def convert_dict_to_xml(self, d, name='data', seq_elem='list'):
-        tree = etree.Element(name)
-        return self._to_xml(tree, d, seq_elem)
+    def convert_dict_to_xml(self, d):
+        return unparse(d).encode('utf-8')
 
-    def _to_xml(self, tree, d, seq_elem):
-
-        if isinstance(d, dict):
-            for k, v in d.iteritems():
-                s = etree.SubElement(tree, k)
-                self._to_xml(s, v, seq_elem)
-
-        elif isinstance(d, tuple) or isinstance(d, list):
-            for v in d:
-                s = etree.SubElement(tree, seq_elem)
-                self._to_xml(s, v, seq_elem)
-
-        elif isinstance(d, basestring):
-            tree.text = d
-        else:
-            tree.text = str(d) if d else ''
-
-        return tree
+    def convert_xml_to_dict(self, xml):
+        return parse(xml)
 
     def invoke(self, msg, expr_name):
+        """ Invokes an expression of expr_name against the msg and returns
+        results.
+        """
         logger.debug('ElemPath expr_name:[%s], msg:[%s]', expr_name, msg)
 
         xml = self.convert_dict_to_xml(msg)
@@ -199,12 +188,16 @@ class ElemPathStore(_BaseXPathStore):
         expr = self.data[expr_name]
         logger.debug('ElemPath compiled:[%s]', expr.compiled)
 
-        result = expr.compiled(xml)
+        result = expr.compiled(etree.fromstring(xml))
 
         if expr.config.value.endswith('.text') and len(result) == 1:
             return result[0]
         else:
             return result
+
+    def replace(self, msg, expr_name, new_value):
+        """ Replaces the text in elements expr_name evalutates to with new_value.
+        """
 
 # ##############################################################################
 
