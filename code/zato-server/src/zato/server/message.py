@@ -106,11 +106,12 @@ class _BaseXPathStore(object):
         with self.update_lock:
 
             # Sanity check hence in a separate line and first
-            compiled = self.compile(item.value, ns_map)
+            compiled_elem, compiled_text = self.compile(item.value, ns_map)
 
             self.data[name] = Bunch()
             self.data[name].config = item
-            self.data[name].compiled = compiled
+            self.data[name].compiled_text = compiled_text
+            self.data[name].compiled_elem = compiled_elem
 
     create = _update
 
@@ -161,14 +162,14 @@ class ElemPathStore(_BaseXPathStore):
             expr = expr[:-5]
 
         expr = expr.replace('.*.', '//').replace('.', '/')
-        expr = '{}/text()'.format(expr)
 
-        logger.debug('Returning expr:[%s]', expr)
+        logger.debug('Reformatted expr:[%s]', expr)
 
-        return expr
+        return expr, '{}/text()'.format(expr)
 
     def compile(self, expr, ns_map={}):
-        return self._compile(self._elem_path_to_xpath(expr), ns_map)
+        elem_path, text_path = self._elem_path_to_xpath(expr)
+        return self._compile(elem_path, ns_map), self._compile(text_path, ns_map)
 
     def convert_dict_to_xml(self, d):
         return unparse(d).encode('utf-8')
@@ -176,28 +177,60 @@ class ElemPathStore(_BaseXPathStore):
     def convert_xml_to_dict(self, xml):
         return parse(xml)
 
-    def invoke(self, msg, expr_name):
+    def invoke(self, msg, expr_name, needs_text=True, needs_tree=False):
         """ Invokes an expression of expr_name against the msg and returns
         results.
         """
-        logger.debug('ElemPath expr_name:[%s], msg:[%s]', expr_name, msg)
+        logger.debug('ElemPath expr_name:[%s], msg:[%s], needs_text:[%s]', 
+            expr_name, msg, needs_text)
 
-        xml = self.convert_dict_to_xml(msg)
-        logger.debug('ElemPath xml:[%s]', xml)
+        if isinstance(msg, dict):
+            msg = self.convert_dict_to_xml(msg)
+
+        logger.debug('ElemPath msg:[%s]', msg)
 
         expr = self.data[expr_name]
-        logger.debug('ElemPath compiled:[%s]', expr.compiled)
 
-        result = expr.compiled(etree.fromstring(xml))
+        if needs_text:
+            compile_func = expr.compiled_text
+        else:
+            compile_func = expr.compiled_elem
+
+        logger.debug('ElemPath compile_func:[%s]', compile_func)
+
+        tree = etree.fromstring(msg)
+        result = compile_func(tree)
 
         if expr.config.value.endswith('.text') and len(result) == 1:
-            return result[0]
+            result = result[0]
+
+        if needs_tree:
+            return result, tree
         else:
             return result
 
     def replace(self, msg, expr_name, new_value):
-        """ Replaces the text in elements expr_name evalutates to with new_value.
+        """ Evaluates expr_name against a msg which can be either a dictionary
+        or an XML string. Text value of all  the elements returned is replaced
+        with new_value.
         """
+        orig_msg = msg
+
+        if isinstance(msg, dict):
+            msg = self.convert_dict_to_xml(msg)
+
+        result, tree = self.invoke(msg, expr_name, False, True)
+
+        if isinstance(result, list):
+            for elem in result:
+                elem.text = new_value
+        else:
+            result.text = new_value
+
+        if isinstance(orig_msg, dict):
+            return self.convert_xml_to_dict(etree.tostring(tree))
+
+        return etree.tostring(tree)
 
 # ##############################################################################
 
