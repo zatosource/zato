@@ -90,7 +90,7 @@ class WorkerStore(BrokerMessageReceiver):
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.oauth,
             self.worker_config.tech_acc, self.worker_config.wss,
-            self.kvdb)
+            self.kvdb, self.broker_client, self.server.odb)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
@@ -629,5 +629,8 @@ class WorkerStore(BrokerMessageReceiver):
         """ Deletes an XPath.
         """
         self.xpath_store.on_broker_msg_delete(msg, *args)
+        
+    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_RESPONSE(self, msg, *args):
+        return self._on_message_invoke_service(msg, CHANNEL.AUDIT, 'SCHEDULER_JOB_EXECUTED', args)
 
 # ##############################################################################

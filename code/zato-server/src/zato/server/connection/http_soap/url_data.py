@@ -11,7 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from copy import deepcopy
+from datetime import datetime
 from hashlib import sha256
+from json import dumps
 from threading import RLock
 from traceback import format_exc
 
@@ -31,7 +33,8 @@ from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import MISC, URL_TYPE, ZATO_NONE
+from zato.common import DATA_FORMAT, MISC, URL_TYPE, ZATO_NONE
+from zato.common.broker_message import CHANNEL
 from zato.common.util import security_def_type, TRACE1
 from zato.server.connection.http_soap import Unauthorized
 
@@ -45,7 +48,8 @@ class URLData(OAuthDataStore):
     """ Performs URL matching and all the HTTP/SOAP-related security checks.
     """
     def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None,
-                 oauth_config=None, tech_acc_config=None, wss_config=None, kvdb=None):
+                 oauth_config=None, tech_acc_config=None, wss_config=None, kvdb=None,
+                 broker_client=None, odb=None):
         self.channel_data = channel_data
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -53,6 +57,8 @@ class URLData(OAuthDataStore):
         self.tech_acc_config = tech_acc_config
         self.wss_config = wss_config
         self.kvdb = kvdb
+        self.broker_client = broker_client
+        self.odb = odb
 
         self.url_sec_lock = RLock()
         self._wss = WSSE()
@@ -521,5 +527,34 @@ class URLData(OAuthDataStore):
         """
         with self.url_sec_lock:
             self._delete_channel(msg)
+
+# ##############################################################################
+
+    def _dump_wsgi_environ(self, wsgi_environ):
+        return dumps({repr(key): repr(value) for key, value in wsgi_environ.items()})
+
+    def audit_set_request(self, cid, channel_item, payload, wsgi_environ):
+        self.odb.audit_set_request_http_soap(channel_item.name, cid, 
+            channel_item.transport, channel_item.connection, datetime.utcnow(),
+            channel_item.get('username'), wsgi_environ.get('REMOTE_ADDR', '(None)'),
+            self._dump_wsgi_environ(wsgi_environ), payload)
+        
+    def audit_set_response(self, cid, response, wsgi_environ):
+        payload = dumps({
+            'cid': cid,
+            'invoke_ok': wsgi_environ['zato.http.response.status'][0] not in ('4', '5'),
+            'auth_ok':  wsgi_environ['zato.http.response.status'][0] != '4',
+            'resp_time': datetime.utcnow().isoformat(),
+            'resp_headers': self._dump_wsgi_environ(wsgi_environ),
+            'resp_payload': response,
+        })
+
+        self.broker_client.publish({
+            'cid': cid,
+            'data_format':DATA_FORMAT.JSON, 
+            'action': CHANNEL.HTTP_SOAP_AUDIT_RESPONSE,
+            'payload': payload,
+            'service': 'zato.http-soap.set-audit-response-data'
+        })
 
 # ##############################################################################

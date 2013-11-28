@@ -10,18 +10,21 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from json import dumps, loads
 from traceback import format_exc
 
-# anyjson
-from json import dumps
+# Paste
+from paste.util.converters import asbool
 
 # Zato
-from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, PARAMS_PRIORITY,\
-     URL_PARAMS_PRIORITY, URL_TYPE, ZATO_NONE
+from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, MSG_PATTERN_TYPE, PARAMS_PRIORITY,\
+     URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
-from zato.common.odb.model import Cluster, HTTPSOAP, SecurityBase, Service
+from zato.common.odb.model import Cluster, ElemPath, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, \
+     HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, XPath
 from zato.common.odb.query import http_soap_list
 from zato.common.util import security_def_type
+from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO
 
 class _HTTPSOAPService(object):
@@ -349,3 +352,128 @@ class GetURLSecurity(AdminService):
         response['soap_handler.http_soap'] = sorted(self.worker_store.request_handler.soap_handler.http_soap.items())
         self.response.payload = dumps(response, sort_keys=True, indent=4)
         self.response.content_type = 'application/json'
+
+# ################################################################################################################################
+        
+class GetAuditConfig(AdminService):
+    """ Returns audit configuration for a given HTTP/SOAP object.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_get_audit_config_request'
+        response_elem = 'zato_http_soap_get_audit_config_response'
+        input_required = ('id',)
+        output_required = (Boolean('audit_enabled'), Integer('audit_back_log'), 
+            Integer('audit_max_payload'), 'audit_repl_patt_type')
+    
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = session.query(HTTPSOAP).\
+                filter(HTTPSOAP.id==self.request.input.id).\
+                one()
+            
+            self.response.payload.audit_enabled = item.audit_enabled
+            self.response.payload.audit_back_log = item.audit_back_log
+            self.response.payload.audit_max_payload = item.audit_max_payload
+            self.response.payload.audit_repl_patt_type = item.audit_repl_patt_type
+
+# ################################################################################################################################
+            
+class GetAuditReplacePatterns(AdminService):
+    """ Returns audit replace patterns for a given connection, both ElemPath and XPath.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_get_audit_replace_patterns_request'
+        response_elem = 'zato_http_soap_get_audit_replace_patterns_response'
+        input_required = ('id',)
+        output_required = (List('patterns_elem_path'), List('patterns_xpath'))
+    
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = session.query(HTTPSOAP).\
+                filter(HTTPSOAP.id==self.request.input.id).\
+                one()
+
+            self.response.payload.patterns_elem_path = item.replace_patterns_elem_path
+            self.response.payload.patterns_xpath = item.replace_patterns_xpath
+            
+class SetAuditReplacePatterns(AdminService):
+    """ Set audit replace patterns for a given HTTP/SOAP connection.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_set_replace_patterns_request'
+        response_elem = 'zato_http_soap_set_replace_patterns_response'
+        input_required = ('id', 'audit_repl_patt_type')
+        input_optional = (List('pattern_list'),)
+    
+    def handle(self):
+        conn_id = self.request.input.id
+        patt_type = self.request.input.audit_repl_patt_type
+        
+        with closing(self.odb.session()) as session:
+            conn = session.query(HTTPSOAP).\
+                filter(HTTPSOAP.id==conn_id).\
+                one()
+            
+            if not self.request.input.pattern_list:
+                # OK, no patterns at all so we indiscriminately delete existing ones, if any, for the connection.
+                
+                conn.replace_patterns_elem_path[:] = []
+                conn.replace_patterns_xpath[:] = []
+                
+                session.commit()
+                
+            else:
+                pattern_class = ElemPath if patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id else XPath
+                
+                all_patterns = session.query(pattern_class).\
+                    filter(pattern_class.cluster_id==self.server.cluster_id).\
+                    all()
+                
+                missing = set(self.request.input.pattern_list) - set([elem.name for elem in all_patterns])
+                if missing:
+                    msg = 'Could not find one or more pattern(s) {}'.format(sorted(missing))
+                    self.logger.warn(msg)
+                    raise ZatoException(self.cid, msg)
+
+# ################################################################################################################################
+
+class SetAuditState(AdminService):
+    """ Enables or disables audit for a given HTTP/SOAP object.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_set_audit_state_request'
+        response_elem = 'zato_http_soap_set_audit_state_response'
+        input_required = ('id', Boolean('audit_enabled'))
+    
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = session.query(HTTPSOAP).\
+                filter(HTTPSOAP.id==self.request.input.id).\
+                one()
+            
+            item.audit_enabled = self.request.input.audit_enabled
+            
+            session.add(item)
+            session.commit()
+            
+# ################################################################################################################################
+
+class SetAuditResponseData(AdminService):
+    """ Updates information regarding a response of a channel/outconn invocation.
+    """
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            
+            payload_req = self.request.payload
+            item = session.query(HTTSOAPAudit).filter_by(cid=payload_req['cid']).one()
+            
+            item.invoke_ok = asbool(payload_req['invoke_ok'])
+            item.auth_ok = asbool(payload_req['auth_ok'])
+            item.resp_time = payload_req['resp_time']
+            item.resp_headers = payload_req['resp_headers']
+            item.resp_payload = payload_req['resp_payload']
+            
+            session.add(item)
+            session.commit()
+
+# ################################################################################################################################
