@@ -132,10 +132,15 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             logger.error(error_msg)
             payload = error_msg
             raise
+        
+        # Note that this call is asynchronous and we do it the last possible moment.
+        if wsgi_environ['zato.http.channel_item'].audit_enabled:
+            self.worker_store.request_dispatcher.url_data.audit_set_response(
+                cid, payload, wsgi_environ)
 
         headers = ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items())
         start_response(wsgi_environ['zato.http.response.status'], headers)
-
+        
         return [payload]
 
     def maybe_on_first_worker(self, server, redis_conn, deployment_key):

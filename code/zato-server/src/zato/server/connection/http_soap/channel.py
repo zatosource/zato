@@ -136,6 +136,16 @@ class RequestDispatcher(object):
         # we still haven't validated credentials, only matched the URL.
         # Credentials are checked in a call to self.url_data.check_security
         url_match, channel_item = self.url_data.match(path_info, soap_action)
+        
+        # This is needed in parallel.py's on_wsgi_request
+        wsgi_environ['zato.http.channel_item'] = channel_item
+
+        payload = wsgi_environ['wsgi.input'].read()
+        
+        # This is a synchronous call so that whatever happens next we are always
+        # able to have at least initial audit log of requests.
+        if channel_item.audit_enabled:
+            self.url_data.audit_set_request(cid, channel_item, payload, wsgi_environ)
 
         # OK, we can possibly handle it
         if url_match:
@@ -144,10 +154,6 @@ class RequestDispatcher(object):
             if not channel_item.is_active:
                 logger.warn('url_data:[%s] is not active, raising NotFound', sorted(url_match.items()))
                 raise NotFound(cid, 'Channel inactive')
-
-            # Read payload only now, right before it's needed the first time,
-            # possibly, by security checks.
-            payload = wsgi_environ['wsgi.input'].read()
 
             try:
 
@@ -210,6 +216,7 @@ class RequestDispatcher(object):
                     response = error_wrapper(cid, response)
 
                 wsgi_environ['zato.http.response.status'] = status
+                
                 return response
 
         # This is 404, no such URL path and SOAP action is known.

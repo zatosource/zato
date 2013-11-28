@@ -26,8 +26,8 @@ from bunch import Bunch
 # Zato
 from zato.common import DEPLOYMENT_STATUS, MISC, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, \
-     DeploymentStatus, HTTPBasicAuth, OAuth, Server, Service, TechnicalAccount, \
-     WSSDefinition
+     DeploymentStatus, HTTPBasicAuth, HTTSOAPAudit, OAuth, Server, Service, \
+     TechnicalAccount, WSSDefinition
 from zato.common.odb.query import channel_amqp, channel_amqp_list, \
      channel_jms_wmq, channel_jms_wmq_list, channel_zmq, channel_zmq_list, \
      def_amqp, def_amqp_list, def_jms_wmq, def_jms_wmq_list, basic_auth_list, \
@@ -504,5 +504,28 @@ class ODBManager(SessionWrapper):
         """ Returns a list of XPath expressions.
         """
         return xpath_list(self._session, cluster_id, needs_columns)
+
+# ##############################################################################
+
+    def audit_set_request_http_soap(self, name, cid, transport, 
+            connection, req_time, user_token, remote_addr, req_headers,
+            req_payload):
+        
+        with closing(self.session()) as session:
+            
+            audit = HTTSOAPAudit()
+            audit.cluster_id = self.cluster.id
+            audit.name = name
+            audit.cid = cid
+            audit.transport = transport
+            audit.connection = connection
+            audit.req_time = req_time
+            audit.user_token = user_token
+            audit.remote_addr = remote_addr
+            audit.req_headers = req_headers
+            audit.req_payload = req_payload
+            
+            session.add(audit)
+            session.commit()
 
 # ##############################################################################

@@ -15,7 +15,8 @@ from django import forms
 from zato.admin.web.forms import ChooseClusterForm as _ChooseClusterForm
 from zato.admin.web.forms import DataFormatForm
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
+     MSG_PATTERN_TYPE, PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY, \
+     ZATO_NONE
 
 params_priority = (
     (PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG, 'URL over message'),
@@ -77,3 +78,17 @@ class EditForm(CreateForm):
 class ChooseClusterForm(_ChooseClusterForm):
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
+
+class ReplacePatternsForm(forms.Form):
+    audit_repl_patt_type = forms.ChoiceField(widget=forms.Select())
+    pattern_list = forms.CharField(widget=forms.Textarea(attrs={'rows':13, 'cols':70}), required=False)
+    audit_max_payload = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    
+    def __init__(self, initial=None):
+        super(ReplacePatternsForm, self).__init__(initial=initial)
+        
+        self.fields['audit_repl_patt_type'].choices = []
+        self.fields['audit_repl_patt_type'].choices.append(['', '----------'])
+        
+        for item in MSG_PATTERN_TYPE:
+            self.fields['audit_repl_patt_type'].choices.append([item.id, item.name])

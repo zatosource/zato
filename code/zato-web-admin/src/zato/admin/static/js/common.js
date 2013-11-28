@@ -66,6 +66,7 @@ $.namespace('zato.kvdb.data_dict.dictionary');
 $.namespace('zato.kvdb.data_dict.translation');
 $.namespace('zato.kvdb.data_dict.system');
 $.namespace('zato.http_soap');
+$.namespace('zato.http_soap.details');
 $.namespace('zato.load_balancer');
 $.namespace('zato.message');
 $.namespace('zato.message.elem_path');
