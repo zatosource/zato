@@ -393,8 +393,8 @@ class GetAuditReplacePatterns(AdminService):
                 filter(HTTPSOAP.id==self.request.input.id).\
                 one()
 
-            self.response.payload.patterns_elem_path = item.replace_patterns_elem_path
-            self.response.payload.patterns_xpath = item.replace_patterns_xpath
+            self.response.payload.patterns_elem_path = [elem.pattern.name for elem in item.replace_patterns_elem_path]
+            self.response.payload.patterns_xpath = [elem.pattern.name for elem in item.replace_patterns_xpath]
             
 class SetAuditReplacePatterns(AdminService):
     """ Set audit replace patterns for a given HTTP/SOAP connection.
@@ -404,7 +404,11 @@ class SetAuditReplacePatterns(AdminService):
         response_elem = 'zato_http_soap_set_replace_patterns_response'
         input_required = ('id', 'audit_repl_patt_type')
         input_optional = (List('pattern_list'),)
-    
+
+    def _clear_patterns(self, conn):
+        conn.replace_patterns_elem_path[:] = []
+        conn.replace_patterns_xpath[:] = []
+
     def handle(self):
         conn_id = self.request.input.id
         patt_type = self.request.input.audit_repl_patt_type
@@ -416,14 +420,13 @@ class SetAuditReplacePatterns(AdminService):
             
             if not self.request.input.pattern_list:
                 # OK, no patterns at all so we indiscriminately delete existing ones, if any, for the connection.
-                
-                conn.replace_patterns_elem_path[:] = []
-                conn.replace_patterns_xpath[:] = []
-                
+                self._clear_patterns(conn)
                 session.commit()
                 
             else:
                 pattern_class = ElemPath if patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id else XPath
+                conn_pattern_list_class = HTTSOAPAuditReplacePatternsElemPath if patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id else \
+                    HTTSOAPAuditReplacePatternsXPath
                 
                 all_patterns = session.query(pattern_class).\
                     filter(pattern_class.cluster_id==self.server.cluster_id).\
@@ -434,6 +437,20 @@ class SetAuditReplacePatterns(AdminService):
                     msg = 'Could not find one or more pattern(s) {}'.format(sorted(missing))
                     self.logger.warn(msg)
                     raise ZatoException(self.cid, msg)
+
+                # Clears but doesn't commit yet
+                self._clear_patterns(conn)
+
+                for name in self.request.input.pattern_list:
+                    for pattern in all_patterns:
+                        if name == pattern.name:
+                            item = conn_pattern_list_class()
+                            item.conn_id = conn.id
+                            item.pattern_id = pattern.id
+                            item.cluster_id = self.server.cluster_id
+                            session.add(item)
+
+                session.commit()
 
 # ################################################################################################################################
 

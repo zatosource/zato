@@ -1171,6 +1171,8 @@ class HTTSOAPAuditReplacePatternsElemPath(Base):
     
     replace_patterns_elem_path = relationship(HTTPSOAP, 
         backref=backref('replace_patterns_elem_path', order_by=id, cascade='all, delete, delete-orphan'))
+
+    pattern = relationship(ElemPath)
     
 class HTTSOAPAuditReplacePatternsXPath(Base):
     """ XPath replace patterns for HTTP/SOAP connections.
@@ -1185,5 +1187,7 @@ class HTTSOAPAuditReplacePatternsXPath(Base):
     
     replace_patterns_xpath = relationship(HTTPSOAP, 
         backref=backref('replace_patterns_xpath', order_by=id, cascade='all, delete, delete-orphan'))
+
+    pattern = relationship(XPath)
 
 # ##############################################################################
