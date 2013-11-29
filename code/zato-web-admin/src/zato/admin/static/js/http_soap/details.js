@@ -49,7 +49,7 @@ $.fn.zato.http_soap.details.audit_set_state = function(e) {
 }
 
 $.fn.zato.http_soap.details.audit_set_patterns = function(e) {
-	$.fn.zato.http_soap.details.submit(e, '#audit-set-patterns',
+	$.fn.zato.http_soap.details.submit(e, '#audit-set-config',
 		$.fn.zato.http_soap.details.audit_set_patterns_callback);
 }
 
@@ -60,8 +60,10 @@ $.fn.zato.http_soap.details.audit_set_patterns = function(e) {
 $(document).ready(function() { 
 
 	$.fn.zato.data_table.set_field_required('#id_msg_pattern_type_id');
-	$("#audit-set-patterns").bValidator();
+	$.fn.zato.data_table.set_field_required('#id_audit_max_payload');
+
+	$("#audit-set-config").bValidator();
 
     $("#audit-set-state").submit($.fn.zato.http_soap.details.audit_set_state);
-    $("#audit-set-patterns").submit($.fn.zato.http_soap.details.audit_set_patterns);
+    $("#audit-set-config").submit($.fn.zato.http_soap.details.audit_set_patterns);
 })
