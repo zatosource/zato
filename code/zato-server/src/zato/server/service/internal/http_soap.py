@@ -376,6 +376,23 @@ class GetAuditConfig(AdminService):
             self.response.payload.audit_max_payload = item.audit_max_payload
             self.response.payload.audit_repl_patt_type = item.audit_repl_patt_type
 
+class SetAuditConfig(AdminService):
+    """ Sets audit configuration for a given HTTP/SOAP connection. Everything except for replace patterns.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_set_audit_config_request'
+        response_elem = 'zato_http_soap_set_audit_config_response'
+        input_required = ('id', Integer('audit_max_payload'))
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = session.query(HTTPSOAP).\
+                filter(HTTPSOAP.id==self.request.input.id).\
+                one()
+
+            item.audit_max_payload = self.request.input.audit_max_payload
+            session.commit()
+
 # ################################################################################################################################
             
 class GetAuditReplacePatterns(AdminService):

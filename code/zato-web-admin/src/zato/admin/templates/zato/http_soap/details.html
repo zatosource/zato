@@ -53,10 +53,16 @@
 
                     <tr>
                         <td class="inline_header" style="vertical-align:top; padding-top:9px">
+
+                        <form id="audit-set-config"
+                            action="{% url http-soap-audit-set-config connection transport id name cluster_id %}" 
+                            method="post">
+
                             Max. payload size
                             <br/>
                             <span class="form_hint">(0 = no limits)</span>
                         </td>
+
                         <td>{{ replace_patterns_form.audit_max_payload }}</td>
                     </tr>
                     <tr>
@@ -64,10 +70,6 @@
                             Replace patterns
                         </td>
                         <td>
-
-                        <form id="audit-set-patterns"
-                            action="{% url http-soap-audit-set-patterns connection transport id name cluster_id %}" 
-                            method="post">
                             <table>
                                 <tr>
                                     <td><span class="form_hint">{{ replace_patterns_form.audit_repl_patt_type }} </span></td>

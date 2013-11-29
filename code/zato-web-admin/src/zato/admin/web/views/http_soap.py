@@ -263,17 +263,25 @@ def audit_set_state(req, **kwargs):
         return HttpResponseServerError(msg)
 
 @method_allowed('POST')
-def audit_set_patterns(req, **kwargs):
+def audit_set_config(req, **kwargs):
     try:
-        request = {
+        args = {
             'id':kwargs['id'],
             'pattern_list': req.POST['pattern_list'].splitlines(), 
-            'audit_repl_patt_type':req.POST['audit_repl_patt_type']
+            'audit_repl_patt_type': req.POST['audit_repl_patt_type'],
+            'audit_max_payload': req.POST['audit_max_payload'],
         }
         
-        response = req.zato.client.invoke('zato.http-soap.set-audit-replace-patterns', request)
-        if not response.ok:
-            raise Exception(response.details)
+        calls = (
+            ('zato.http-soap.set-audit-replace-patterns', ('id', 'pattern_list', 'audit_repl_patt_type')),
+            ('zato.http-soap.set-audit-config', ('id', 'audit_max_payload')),
+        )
+
+        for service_name, keys in calls:
+            request = {key: args[key] for key in keys}
+            response = req.zato.client.invoke(service_name, request)
+            if not response.ok:
+                raise Exception(response.details)
         
         return HttpResponse('OK')
     except Exception, e:
