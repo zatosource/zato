@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import logging
 from functools import wraps
 
 # SQLAlchemy
@@ -18,13 +19,12 @@ from sqlalchemy.sql.expression import case
 # Zato
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      PARAMS_PRIORITY, URL_PARAMS_PRIORITY
-from zato.common.odb.model import(
-    ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster,
-    ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase,
-    DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload,
-    ElemPath, HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, MsgNamespace,
-    OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, SecurityBase,
-    Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition)
+from zato.common.odb.model import ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
+     DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, HTTPBasicAuth, \
+     HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, \
+     SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
+
+logger = logging.getLogger(__name__)
 
 def needs_columns(func):
     """ A decorator for queries which works out whether a given query function
@@ -623,4 +623,46 @@ def elem_path_list(session, cluster_id, needs_columns=False):
     """
     return _msg_list(ElemPath, 'msg_elem_path.name', session, cluster_id, needs_columns)
 
-# ##############################################################################
+# ################################################################################################################################
+
+def http_soap_audit_item_list(session, cluster_id, conn_id, start=None, stop=None, query=None, needs_req_payload=False):
+    columns = [
+        HTTSOAPAudit.id,
+        HTTSOAPAudit.name.label('conn_name'),
+        HTTSOAPAudit.cid,
+        HTTSOAPAudit.transport,
+        HTTSOAPAudit.connection,
+        HTTSOAPAudit.req_time.label('req_time_utc'),
+        HTTSOAPAudit.resp_time.label('resp_time_utc'),
+        HTTSOAPAudit.user_token,
+        HTTSOAPAudit.invoke_ok,
+        HTTSOAPAudit.auth_ok,
+        HTTSOAPAudit.remote_addr,
+    ]
+
+    if needs_req_payload:
+        columns.extend([
+            HTTSOAPAudit.req_headers, HTTSOAPAudit.req_payload, HTTSOAPAudit.resp_headers, HTTSOAPAudit.resp_payload
+        ])
+
+    q = session.query(*columns).filter(HTTSOAPAudit.conn_id==conn_id)
+    
+    if query:
+        query = '%{}%'.format(query)
+        q = q.filter(
+            HTTSOAPAudit.cid.ilike(query) | \
+            HTTSOAPAudit.req_headers.ilike(query) | HTTSOAPAudit.req_payload.ilike(query) | \
+            HTTSOAPAudit.resp_headers.ilike(query) | HTTSOAPAudit.resp_payload.ilike(query)
+        )
+
+    if start:
+        q = q.filter(HTTSOAPAudit.req_time >= start)
+
+    if stop:
+        q = q.filter(HTTSOAPAudit.req_time <= start)
+
+    q = q.order_by(HTTSOAPAudit.req_time.desc())
+
+    return q
+
+# ################################################################################################################################

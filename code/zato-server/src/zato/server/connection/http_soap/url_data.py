@@ -574,7 +574,7 @@ class URLData(OAuthDataStore):
         if not remote_addr:
             remote_addr = wsgi_environ.get('REMOTE_ADDR', '(None)')
 
-        self.odb.audit_set_request_http_soap(channel_item.name, cid, 
+        self.odb.audit_set_request_http_soap(channel_item.id, channel_item.name, cid, 
             channel_item.transport, channel_item.connection, datetime.utcnow(),
             channel_item.get('username'), remote_addr, self._dump_wsgi_environ(wsgi_environ), payload)
 

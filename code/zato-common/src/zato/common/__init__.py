@@ -159,9 +159,10 @@ DEFAULT_STATS_SETTINGS = {
     'atttention_top_threshold':10,
 }
 
-DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_NO = 1
-DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE = 25
-MAX_DELIVERY_INSTANCE_LIST_BATCH_SIZE = 1000
+class BATCH_DEFAULTS:
+    PAGE_NO = 1
+    SIZE = 25
+    MAX_SIZE = 1000
 
 class NameId(object):
     """ Wraps both an attribute's name and its ID.

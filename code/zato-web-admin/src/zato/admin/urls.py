@@ -43,13 +43,6 @@ urlpatterns = patterns('',
     # User accounts
     url(r'^account/settings/basic/$', account.settings_basic, name='account-settings-basic'),
     url(r'^account/settings/basic/save/$', account.settings_basic_save, name='account-settings-basic-save'),
-    
-    # Audit
-    #url(r'^zato/messages/elem_path/$', elem_path.Index(), name=elem_path.Index.url_name),
-    #url(r'^zato/messages/elem_path/create/$', elem_path.Create(), name=elem_path.Create.url_name),
-    #url(r'^zato/messages/elem_path/edit/$', elem_path.Edit(), name=elem_path.Edit.url_name),
-    #url(r'^zato/messages/elem_path/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-    #    elem_path.Delete(), name=elem_path.Delete.url_name),
 
     # Clusters
     url(r'^zato/cluster/$', cluster.index, name='cluster'),
@@ -276,12 +269,19 @@ urlpatterns = patterns('',
 
     # HTTP/SOAP
     url(r'^zato/http-soap/$', http_soap.index, name='http-soap'),
+    
+    url(r'^zato/http-soap/details/(?P<connection>.*)/(?P<transport>.*)/(?P<id>.*)/(?P<name>.*)/(?P<cluster_id>.*)/$', 
+        http_soap.details, name='http-soap-details'),
+    
     url(r'^zato/http-soap/audit/set-state/(?P<connection>.*)/(?P<transport>.*)/(?P<id>.*)/(?P<name>.*)/(?P<cluster_id>.*)/$', 
         http_soap.audit_set_state, name='http-soap-audit-set-state'),
     url(r'^zato/http-soap/audit/set-config/(?P<connection>.*)/(?P<transport>.*)/(?P<id>.*)/(?P<name>.*)/(?P<cluster_id>.*)/$', 
         http_soap.audit_set_config, name='http-soap-audit-set-config'),
-    url(r'^zato/http-soap/details/(?P<connection>.*)/(?P<transport>.*)/(?P<id>.*)/(?P<name>.*)/(?P<cluster_id>.*)/$', 
-        http_soap.details, name='http-soap-details'),
+    url(r'^zato/http-soap/audit/log/(?P<connection>.*)/(?P<transport>.*)/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<cluster_id>.*)/$', 
+        http_soap.audit_log, name='http-soap-audit-log'),
+    url(r'^zato/http-soap/audit/item/(?P<connection>.*)/(?P<transport>.*)/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<cluster_id>.*)/item/(?P<item_id>.*)/$',
+        http_soap.audit_item, name='http-soap-audit-item'),
+    
     url(r'^zato/http-soap/create/$', http_soap.create, name='http-soap-create'),
     url(r'^zato/http-soap/edit/$', http_soap.edit, name='http-soap-edit'),
     url(r'^zato/http-soap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', http_soap.delete, name='http-soap-delete'),

@@ -1125,12 +1125,13 @@ class HTTSOAPAudit(Base):
     auth_ok = Column(Boolean(), nullable=True)
     remote_addr = Column(String(), nullable=False, index=True)
     
-    req_headers = Column(String(), nullable=True, index=True)
-    req_payload = Column(String(), nullable=True, index=True)
-    resp_headers = Column(String(), nullable=True, index=True)
-    resp_payload = Column(String(), nullable=True, index=True)
+    req_headers = Column(String(), nullable=True)
+    req_payload = Column(String(), nullable=True)
+    resp_headers = Column(String(), nullable=True)
+    resp_payload = Column(String(), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    conn_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
 
     def __init__(self, id=None, name=None, cid=None, transport=None, 
             connection=None, req_time=None, resp_time=None, user_token=None, 
