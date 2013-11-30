@@ -452,7 +452,7 @@ class URLData(OAuthDataStore):
             'is_internal', 'method', 'name', 'ping_method', 'pool_size',
             'service_id',  'impl_name', 'service_name',
             'soap_action', 'soap_version', 'transport', 'url_path',
-            'merge_url_params_req', 'url_params_pri', 'params_pri',
+            'merge_url_params_req', 'url_params_pri', 'params_pri', 'audit_max_payload',
             'audit_repl_patt_type', 'replace_patterns_elem_path', 'replace_patterns_xpath'):
 
             channel_item[name] = msg[name]
@@ -566,6 +566,9 @@ class URLData(OAuthDataStore):
 
         if channel_item.audit_repl_patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id:
             payload = dumps(payload['root'])
+
+        if channel_item.audit_max_payload:
+            payload = payload[:channel_item.audit_max_payload]
 
         self.odb.audit_set_request_http_soap(channel_item.name, cid, 
             channel_item.transport, channel_item.connection, datetime.utcnow(),
