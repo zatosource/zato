@@ -508,6 +508,13 @@ class SetAuditState(AdminService):
             session.add(item)
             session.commit()
             
+            params = {
+                'action': CHANNEL.HTTP_SOAP_AUDIT_STATE,
+                'id': item.id,
+                'audit_enabled': item.audit_enabled,
+            }
+            self.broker_client.publish(params)
+
 # ################################################################################################################################
 
 class SetAuditResponseData(AdminService):
