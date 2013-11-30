@@ -24,17 +24,15 @@ from paste.util.multidict import MultiDict
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, MISC, ZATO_NONE, ZATO_ODB_POOL_NAME
-from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, \
-     DeploymentStatus, HTTPBasicAuth, HTTSOAPAudit, OAuth, Server, Service, \
+from zato.common import DEPLOYMENT_STATUS, MISC, MSG_PATTERN_TYPE, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, HTTPSOAP, \
+     HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, HTTSOAPAuditReplacePatternsXPath, OAuth, Server, Service, \
      TechnicalAccount, WSSDefinition
-from zato.common.odb.query import channel_amqp, channel_amqp_list, \
-     channel_jms_wmq, channel_jms_wmq_list, channel_zmq, channel_zmq_list, \
-     def_amqp, def_amqp_list, def_jms_wmq, def_jms_wmq_list, basic_auth_list, \
-     http_soap_list, http_soap_security_list, internal_channel_list, job_list, \
-     namespace_list, oauth_list, out_amqp, out_amqp_list, out_ftp, out_ftp_list, \
-     out_jms_wmq, out_jms_wmq_list, out_sql, out_sql_list, out_zmq, out_zmq_list, \
-     tech_acc_list, wss_list, xpath_list
+from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_wmq, channel_jms_wmq_list, channel_zmq, \
+     channel_zmq_list, def_amqp, def_amqp_list, def_jms_wmq, def_jms_wmq_list, basic_auth_list, elem_path_list, http_soap_list, \
+     http_soap_security_list, internal_channel_list, job_list, namespace_list, oauth_list, out_amqp, out_amqp_list, out_ftp, \
+     out_ftp_list, out_jms_wmq, out_jms_wmq_list, out_sql, out_sql_list, out_zmq, out_zmq_list, tech_acc_list, wss_list, \
+     xpath_list
 from zato.common.util import current_host, security_def_type, TRACE1
 from zato.server.connection.sql import SessionWrapper
 
@@ -350,9 +348,19 @@ class ODBManager(SessionWrapper):
         return internal_channel_list(self._session, cluster_id, needs_columns)
 
     def get_http_soap_list(self, cluster_id, connection=None, transport=None, needs_columns=False):
-        """ Returns the list of all HTTP/SOAP channels.
+        """ Returns the list of all HTTP/SOAP connections.
         """
-        return http_soap_list(self._session, cluster_id, connection, transport, needs_columns)
+        item_list = http_soap_list(self._session, cluster_id, connection, transport, needs_columns)
+
+        if connection == 'channel':
+            for item in item_list:
+                item.replace_patterns_elem_path = [elem.pattern.name for elem in self._session.query(HTTPSOAP).\
+                    filter(HTTPSOAP.id == item.id).one().replace_patterns_elem_path]
+
+                item.replace_patterns_xpath = [elem.pattern.name for elem in self._session.query(HTTPSOAP).\
+                    filter(HTTPSOAP.id == item.id).one().replace_patterns_xpath]
+
+        return item_list
 
 # ##############################################################################
 
@@ -504,6 +512,11 @@ class ODBManager(SessionWrapper):
         """ Returns a list of XPath expressions.
         """
         return xpath_list(self._session, cluster_id, needs_columns)
+
+    def get_elem_path_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of ElemPath expressions.
+        """
+        return elem_path_list(self._session, cluster_id, needs_columns)
 
 # ##############################################################################
 

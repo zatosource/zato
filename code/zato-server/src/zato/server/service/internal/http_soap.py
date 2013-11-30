@@ -393,8 +393,15 @@ class SetAuditConfig(AdminService):
             item.audit_max_payload = self.request.input.audit_max_payload
             session.commit()
 
+            params = {
+                'action': CHANNEL.HTTP_SOAP_AUDIT_CONFIG,
+                'audit_max_payload': item.audit_max_payload,
+                'id': item.id
+            }
+            self.broker_client.publish(params)
+
 # ################################################################################################################################
-            
+
 class GetAuditReplacePatterns(AdminService):
     """ Returns audit replace patterns for a given connection, both ElemPath and XPath.
     """
@@ -403,7 +410,7 @@ class GetAuditReplacePatterns(AdminService):
         response_elem = 'zato_http_soap_get_audit_replace_patterns_response'
         input_required = ('id',)
         output_required = (List('patterns_elem_path'), List('patterns_xpath'))
-    
+
     def handle(self):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).\
@@ -412,7 +419,7 @@ class GetAuditReplacePatterns(AdminService):
 
             self.response.payload.patterns_elem_path = [elem.pattern.name for elem in item.replace_patterns_elem_path]
             self.response.payload.patterns_xpath = [elem.pattern.name for elem in item.replace_patterns_xpath]
-            
+
 class SetAuditReplacePatterns(AdminService):
     """ Set audit replace patterns for a given HTTP/SOAP connection.
     """
@@ -429,12 +436,12 @@ class SetAuditReplacePatterns(AdminService):
     def handle(self):
         conn_id = self.request.input.id
         patt_type = self.request.input.audit_repl_patt_type
-        
+
         with closing(self.odb.session()) as session:
             conn = session.query(HTTPSOAP).\
                 filter(HTTPSOAP.id==conn_id).\
                 one()
-            
+
             if not self.request.input.pattern_list:
                 # OK, no patterns at all so we indiscriminately delete existing ones, if any, for the connection.
                 self._clear_patterns(conn)
@@ -468,6 +475,14 @@ class SetAuditReplacePatterns(AdminService):
                             session.add(item)
 
                 session.commit()
+
+                params = {
+                    'action': CHANNEL.HTTP_SOAP_AUDIT_PATTERNS,
+                    'id': conn_id,
+                    'audit_repl_patt_type': self.request.input.audit_repl_patt_type,
+                    'pattern_list': self.request.input.pattern_list,
+                }
+                self.broker_client.publish(params)
 
 # ################################################################################################################################
 
