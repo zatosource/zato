@@ -570,10 +570,13 @@ class URLData(OAuthDataStore):
         if channel_item.audit_max_payload:
             payload = payload[:channel_item.audit_max_payload]
 
+        remote_addr = wsgi_environ.get('HTTP_X_FORWARDED_FOR')
+        if not remote_addr:
+            remote_addr = wsgi_environ.get('REMOTE_ADDR', '(None)')
+
         self.odb.audit_set_request_http_soap(channel_item.name, cid, 
             channel_item.transport, channel_item.connection, datetime.utcnow(),
-            channel_item.get('username'), wsgi_environ.get('REMOTE_ADDR', '(None)'),
-            self._dump_wsgi_environ(wsgi_environ), payload)
+            channel_item.get('username'), remote_addr, self._dump_wsgi_environ(wsgi_environ), payload)
 
     def audit_set_response(self, cid, response, wsgi_environ):
         """ Stores audit info regarding a response to a previous request.
