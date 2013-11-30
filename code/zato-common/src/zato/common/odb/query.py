@@ -382,6 +382,7 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.audit_enabled,
         HTTPSOAP.audit_back_log,
         HTTPSOAP.audit_max_payload,
+        HTTPSOAP.audit_repl_patt_type,
         SecurityBase.sec_type,
         Service.name.label('service_name'),
         Service.id.label('service_id'),

@@ -56,13 +56,11 @@ class NamespaceStore(object):
     def __getitem__(self, name):
         return self.data[name].config.value
 
-    def _update(self, name, item):
+    def create(self, name, item):
         with self.update_lock:
             self.data[name] = Bunch()
             self.data[name].config = item
             self.ns_map[name] = self.data[name].config.value
-
-    create = _update
 
     def on_broker_msg_MSG_NS_CREATE(self, msg, *args):
         """ Creates a new namespace.
@@ -75,7 +73,7 @@ class NamespaceStore(object):
         with self.update_lock:
             del self.data[msg.old_name]
             del self.ns_map[msg.old_name]
-        self._update(msg.name, msg)
+        self.create(msg.name, msg)
 
     def on_broker_msg_MSG_NS_DELETE(self, msg, *args):
         """ Deletes a namespace.
@@ -102,13 +100,13 @@ class _BaseXPathStore(object):
     def __getitem__(self, name):
         return self.data[name].config.value
 
-    def _update(self, name, item, ns_map, is_xml=True):
+    def create(self, name, item, ns_map, is_xml=True):
         with self.update_lock:
 
             if is_xml:
-                compiled_elem = self.compile(item.value, ns_map)
-            else:
                 compiled_elem, compiled_text = self.compile(item.value, ns_map)
+            else:
+                compiled_elem = self.compile(item.value, ns_map)
 
             self.data[name] = Bunch()
             self.data[name].config = item
@@ -116,8 +114,6 @@ class _BaseXPathStore(object):
 
             if not is_xml:
                 self.data[name].compiled_text = compiled_text
-
-    create = _update
 
     def _compile(self, expr, ns_map={}):
         """ Compiles an XPath expression using a namespace map provided, if any,
@@ -143,7 +139,7 @@ class _BaseXPathStore(object):
         """
         with self.update_lock:
             del self.data[msg.old_name]
-        self._update(msg.name, msg, ns_map)
+        self.create(msg.name, msg, ns_map)
 
     def on_broker_msg_delete(self, msg, *args):
         """ Deletes an XPath.

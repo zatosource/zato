@@ -13,7 +13,7 @@ import logging
 from copy import deepcopy
 from datetime import datetime
 from hashlib import sha256
-from json import dumps
+from json import dumps, loads
 from threading import RLock
 from traceback import format_exc
 
@@ -33,7 +33,7 @@ from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import DATA_FORMAT, MISC, URL_TYPE, ZATO_NONE
+from zato.common import DATA_FORMAT, MISC, MSG_PATTERN_TYPE, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL
 from zato.common.util import security_def_type, TRACE1
 from zato.server.connection.http_soap import Unauthorized
@@ -49,7 +49,7 @@ class URLData(OAuthDataStore):
     """
     def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None,
                  oauth_config=None, tech_acc_config=None, wss_config=None, kvdb=None,
-                 broker_client=None, odb=None):
+                 broker_client=None, odb=None, elem_path_store=None, xpath_store=None):
         self.channel_data = channel_data
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -59,6 +59,9 @@ class URLData(OAuthDataStore):
         self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
+
+        self.elem_path_store = elem_path_store
+        self.xpath_store = xpath_store
 
         self.url_sec_lock = RLock()
         self._wss = WSSE()
@@ -449,7 +452,8 @@ class URLData(OAuthDataStore):
             'is_internal', 'method', 'name', 'ping_method', 'pool_size',
             'service_id',  'impl_name', 'service_name',
             'soap_action', 'soap_version', 'transport', 'url_path',
-            'merge_url_params_req', 'url_params_pri', 'params_pri'):
+            'merge_url_params_req', 'url_params_pri', 'params_pri',
+            'audit_repl_patt_type', 'replace_patterns_elem_path', 'replace_patterns_xpath'):
 
             channel_item[name] = msg[name]
 
@@ -530,16 +534,47 @@ class URLData(OAuthDataStore):
 
 # ##############################################################################
 
+    def replace_payload(self, payload, pattern, pattern_type):
+        """ Replaces elements in a given payload using either ElemPath or XPath
+        """
+        store = self.elem_path_store if pattern_type == MSG_PATTERN_TYPE.ELEM_PATH.id else self.xpath_store
+
+        logger.debug('Replacing [%r], pattern:[%r], store:[%r], pattern_type:[%r]', payload, pattern, store, pattern_type)
+
+        return store.replace(payload, pattern, '******')
+
+# ################################################################################################################################
+
     def _dump_wsgi_environ(self, wsgi_environ):
+        """ A convenience method to dump WSGI environment with all the element repr'ed.
+        """
         return dumps({repr(key): repr(value) for key, value in wsgi_environ.items()})
 
     def audit_set_request(self, cid, channel_item, payload, wsgi_environ):
+        """ Stores initial audit information, right after receiving a request.
+        """
+        if channel_item.audit_repl_patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id:
+            payload = {'root': loads(payload)}
+            pattern_list = channel_item.replace_patterns_elem_path
+        else:
+            pattern_list = channel_item.replace_patterns_xpath
+
+        for pattern in pattern_list:
+            logger.debug('Before:[%r]', payload)
+            payload = self.replace_payload(payload, pattern, channel_item.audit_repl_patt_type)
+            logger.debug('After:[%r]', payload)
+
+        if channel_item.audit_repl_patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id:
+            payload = dumps(payload['root'])
+
         self.odb.audit_set_request_http_soap(channel_item.name, cid, 
             channel_item.transport, channel_item.connection, datetime.utcnow(),
             channel_item.get('username'), wsgi_environ.get('REMOTE_ADDR', '(None)'),
             self._dump_wsgi_environ(wsgi_environ), payload)
-        
+
     def audit_set_response(self, cid, response, wsgi_environ):
+        """ Stores audit info regarding a response to a previous request.
+        """
         payload = dumps({
             'cid': cid,
             'invoke_ok': wsgi_environ['zato.http.response.status'][0] not in ('4', '5'),
@@ -556,5 +591,27 @@ class URLData(OAuthDataStore):
             'payload': payload,
             'service': 'zato.http-soap.set-audit-response-data'
         })
+
+    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_CONFIG(self, msg):
+        for item in self.channel_data:
+            if item.id == msg.id:
+                item.audit_max_payload = msg.audit_max_payload
+
+    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_STATE(self, msg):
+        for item in self.channel_data:
+            if item.id == msg.id:
+                item.audit_enabled = msg.audit_enabled
+
+    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(self, msg):
+        for item in self.channel_data:
+            if item.id == msg.id:
+                item.audit_repl_patt_type = msg.audit_repl_patt_type
+
+                if item.audit_repl_patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id:
+                    item.replace_patterns_elem_path = msg.pattern_list
+                else:
+                    item.replace_patterns_xpath = msg.pattern_list
+
+                break
 
 # ##############################################################################

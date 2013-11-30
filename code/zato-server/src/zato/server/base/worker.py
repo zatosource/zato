@@ -82,6 +82,16 @@ class WorkerStore(BrokerMessageReceiver):
         # Statistics maintenance
         self.stats_maint = MaintenanceTool(self.kvdb.conn)
 
+        self.msg_ns_store = NamespaceStore()
+        self.elem_path_store = ElemPathStore()
+        self.xpath_store = XPathStore()
+
+        # Message-related config - init_msg_ns_store must come before init_xpath_store
+        # so the latter has access to the former's namespace map.
+        self.init_msg_ns_store()
+        self.init_elem_path_store()
+        self.init_xpath_store()
+
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
@@ -90,19 +100,9 @@ class WorkerStore(BrokerMessageReceiver):
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.oauth,
             self.worker_config.tech_acc, self.worker_config.wss,
-            self.kvdb, self.broker_client, self.server.odb)
+            self.kvdb, self.broker_client, self.server.odb, self.elem_path_store, self.xpath_store)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
-
-        self.msg_ns_store = NamespaceStore()
-        self.elem_path_store = ElemPathStore()
-        self.xpath_store = XPathStore()
-
-        # Message-related config - init_msg_ns_store must come before init_xpath_store
-        # so the latter has access to the former's namespace map.
-        self.init_msg_ns_store()
-        #self.init_elem_path_store()
-        self.init_xpath_store()
 
         # Create all the expected connections
         self.init_sql()
@@ -203,6 +203,10 @@ class WorkerStore(BrokerMessageReceiver):
     def init_xpath_store(self):
         for k, v in self.worker_config.xpath.items():
             self.xpath_store.create(k, v.config, self.msg_ns_store.ns_map)
+
+    def init_elem_path_store(self):
+        for k, v in self.worker_config.elem_path.items():
+            self.elem_path_store.create(k, v.config, {})
 
 # ##############################################################################
 
@@ -596,7 +600,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SERVICE_PUBLISH(self, msg, args=None):
         return self._on_message_invoke_service(msg, CHANNEL.INVOKE_ASYNC, 'SERVICE_PUBLISH', args)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def on_broker_msg_MSG_NS_CREATE(self, msg, *args):
         """ Creates a new namespace.
@@ -613,7 +617,7 @@ class WorkerStore(BrokerMessageReceiver):
         """
         self.msg_ns_store.on_broker_msg_MSG_NS_DELETE(msg, *args)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def on_broker_msg_MSG_XPATH_CREATE(self, msg, *args):
         """ Creates a new XPath.
@@ -629,8 +633,36 @@ class WorkerStore(BrokerMessageReceiver):
         """ Deletes an XPath.
         """
         self.xpath_store.on_broker_msg_delete(msg, *args)
-        
+
+# ################################################################################################################################
+
+    def on_broker_msg_MSG_ELEM_PATH_CREATE(self, msg, *args):
+        """ Creates a new XPath.
+        """
+        self.elem_path_store.on_broker_msg_create(msg, self.msg_ns_store.ns_map)
+
+    def on_broker_msg_MSG_ELEM_PATH_EDIT(self, msg, *args):
+        """ Updates an existing XPath.
+        """
+        self.elem_path_store.on_broker_msg_edit(msg, self.msg_ns_store.ns_map)
+
+    def on_broker_msg_MSG_ELEM_PATH_DELETE(self, msg, *args):
+        """ Deletes an XPath.
+        """
+        self.elem_path_store.on_broker_msg_delete(msg, *args)
+
+# ################################################################################################################################
+
     def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_RESPONSE(self, msg, *args):
         return self._on_message_invoke_service(msg, CHANNEL.AUDIT, 'SCHEDULER_JOB_EXECUTED', args)
 
-# ##############################################################################
+    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_CONFIG(self, msg, *args):
+        return self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_CONFIG(msg)
+
+    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_STATE(self, msg, *args):
+        return self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_STATE(msg)
+
+    def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(self, msg, *args):
+        return self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(msg)
+
+# ################################################################################################################################
