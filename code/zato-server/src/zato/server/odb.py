@@ -520,13 +520,14 @@ class ODBManager(SessionWrapper):
 
 # ##############################################################################
 
-    def audit_set_request_http_soap(self, name, cid, transport, 
+    def audit_set_request_http_soap(self, conn_id, name, cid, transport, 
             connection, req_time, user_token, remote_addr, req_headers,
             req_payload):
-        
+
         with closing(self.session()) as session:
-            
+
             audit = HTTSOAPAudit()
+            audit.conn_id = conn_id
             audit.cluster_id = self.cluster.id
             audit.name = name
             audit.cid = cid
@@ -537,7 +538,7 @@ class ODBManager(SessionWrapper):
             audit.remote_addr = remote_addr
             audit.req_headers = req_headers
             audit.req_payload = req_payload
-            
+
             session.add(audit)
             session.commit()
 

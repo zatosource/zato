@@ -36,7 +36,7 @@ class AdminService(Service):
                 if 'password' in k:
                     request[k] = '*****'
     
-            self.logger.debug('cid:[%s], name:[%s], SIO request:[%s]', self.cid, self.name, request)
+            self.logger.info('cid:[%s], name:[%s], SIO request:[%s]', self.cid, self.name, request)
         
     def handle(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')

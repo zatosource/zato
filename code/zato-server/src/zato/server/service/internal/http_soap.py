@@ -16,13 +16,16 @@ from traceback import format_exc
 # Paste
 from paste.util.converters import asbool
 
+# WebHelpers
+from webhelpers.paginate import Page
+
 # Zato
-from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, MSG_PATTERN_TYPE, PARAMS_PRIORITY,\
+from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, MSG_PATTERN_TYPE, PARAMS_PRIORITY,\
      URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, ElemPath, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, \
      HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, XPath
-from zato.common.odb.query import http_soap_list
+from zato.common.odb.query import http_soap_list, http_soap_audit_item_list
 from zato.common.util import security_def_type
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO
@@ -524,5 +527,60 @@ class SetAuditResponseData(AdminService):
             
             session.add(item)
             session.commit()
+
+# ################################################################################################################################
+
+class _BaseAuditService(AdminService):
+    def get_page(self, session):
+        current_batch = self.request.input.get('current_batch', BATCH_DEFAULTS.PAGE_NO)
+        batch_size = self.request.input.get('batch_size', BATCH_DEFAULTS.SIZE)
+        batch_size = min(batch_size, BATCH_DEFAULTS.MAX_SIZE)
+        
+        q = http_soap_audit_item_list(session, self.server.cluster_id, self.request.input.conn_id, 
+            self.request.input.get('start'), self.request.input.get('stop'), self.request.input.get('query'), False)
+        
+        return Page(q, page=current_batch, items_per_page=batch_size)
+
+class GetAuditItemList(_BaseAuditService):
+    """ Returns a list of audit items for a particular HTTP/SOAP object.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_get_audit_item_list_request'
+        response_elem = 'zato_http_soap_get_audit_item_list_response'
+        input_required = ('conn_id', )
+        input_optional = ('start', 'stop', Integer('current_batch'), Integer('batch_size'), 'query')
+        output_required = ('id', 'cid', 'req_time_utc', 'remote_addr',)
+        output_optional = ('resp_time_utc', 'user_token', 'invoke_ok', 'auth_ok', )
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload[:] = self.get_page(session)
+            
+        for item in self.response.payload.zato_output:
+            item.req_time_utc = item.req_time_utc.isoformat()
+            if item.resp_time_utc:
+                item.resp_time_utc = item.resp_time_utc.isoformat()
+                
+class GetAuditBatchInfo(_BaseAuditService):
+    """ Returns pagination information for audit log for a specified object and from/to dates.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_get_batch_info_request'
+        response_elem = 'zato_http_soap_get_batch_info_response'
+        input_required = ('conn_id',)
+        input_optional = ('start', 'stop', Integer('current_batch'), Integer('batch_size'), 'query')
+        output_required = ('total_results', 'num_batches', 'has_previous', 'has_next', 'next_batch_number', 'previous_batch_number')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            page = self.get_page(session)
+            self.response.payload = {
+                'total_results': page.item_count,
+                'num_batches': page.page_count,
+                'has_previous': page.previous_page is not None,
+                'has_next': page.next_page is not None,
+                'next_batch_number': page.next_page,
+                'previous_batch_number': page.previous_page,
+            }
 
 # ################################################################################################################################

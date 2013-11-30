@@ -24,14 +24,14 @@
 <h2 class="zato">{{ name }} - Details</h2>
 
 <div class='page_prompt'>
-    <a href="{% url service-overview service.name %}?cluster={{ cluster_id }}" class="common current">Overview</a>
-    <a href="{% url service-overview service.name %}?cluster={{ cluster_id }}" class="common">Audit trail log</a>
+    <a href="{% url http-soap-details connection transport id name cluster_id %}" class="common current">Overview</a>
+    <a href="{% url http-soap-audit-log connection transport id name cluster_id %}" class="common">Audit log</a>
 </div>
 
 <div id="markup">
     <table id="data-table">
         <tr>
-            <td class='inline_header'>Audit trail</td>
+            <td class='inline_header'>Audit log</td>
         </tr>
         <tr>
             <td style="padding-top:10px;padding-bottom:10px">

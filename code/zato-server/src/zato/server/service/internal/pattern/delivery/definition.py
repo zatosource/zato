@@ -18,7 +18,7 @@ from traceback import format_exc
 from dateutil.parser import parse
 
 # Zato
-from zato.common import DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
+from zato.common import BATCH_DEFAULTS, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
 from zato.common.odb.model import DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, OutgoingWMQ, to_json
 from zato.common.odb.query import delivery_definition_list, out_jms_wmq, out_jms_wmq_by_name
 from zato.common.util import datetime_to_seconds, validate_input_dict
@@ -57,10 +57,10 @@ class _DeliveryService(AdminService):
         """
         try:
             batch_size = self.request.input.get('batch_size')
-            batch_size = int(batch_size) or DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE
+            batch_size = int(batch_size) or BATCH_DEFAULTS.SIZE
         except(TypeError, ValueError), e:
             self.logger.debug('Invalid batch_size in:[%s], e:[%s]', batch_size, format_exc(e))
-            batch_size = DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE
+            batch_size = BATCH_DEFAULTS.SIZE
             
         return batch_size
     
