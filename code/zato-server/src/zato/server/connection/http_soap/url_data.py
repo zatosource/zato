@@ -607,6 +607,7 @@ class URLData(OAuthDataStore):
         for item in self.channel_data:
             if item.id == msg.id:
                 item.audit_enabled = msg.audit_enabled
+                break
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(self, msg):
         for item in self.channel_data:
