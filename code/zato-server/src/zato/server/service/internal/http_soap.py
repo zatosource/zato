@@ -25,7 +25,7 @@ from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_P
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, ElemPath, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, \
      HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, XPath
-from zato.common.odb.query import http_soap_list, http_soap_audit_item_list
+from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap_list
 from zato.common.util import security_def_type
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO
@@ -589,5 +589,25 @@ class GetAuditBatchInfo(_BaseAuditService):
                 'next_batch_number': page.next_page,
                 'previous_batch_number': page.previous_page,
             }
+            
+class GetAuditItem(_BaseAuditService):
+    """ Returns a particular audit item by its ID.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_get_audit_item_request'
+        response_elem = 'zato_http_soap_get_audit_item_response'
+        input_required = ('id',)
+        output_required = ('id', 'cid', 'req_time_utc', 'remote_addr',)
+        output_optional = ('resp_time_utc', 'user_token', 'invoke_ok', 'auth_ok', 'req_headers', 'req_payload', 
+            'resp_headers', 'resp_payload')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = http_soap_audit_item(session, self.server.cluster_id, self.request.input.id).one()
+            item.req_time_utc = item.req_time_utc.isoformat()
+            if item.resp_time_utc:
+                item.resp_time_utc = item.resp_time_utc.isoformat()
+                
+            self.response.payload = item
 
 # ################################################################################################################################

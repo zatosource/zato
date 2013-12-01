@@ -10,10 +10,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from cStringIO import StringIO
+from pprint import pprint
 from traceback import format_exc
 
 # anyjson
-from anyjson import dumps
+from anyjson import dumps, loads
 
 # Django
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
@@ -300,7 +302,6 @@ def audit_log(req, **kwargs):
         if value:
             out[key] = value
 
-    out['total_results'] = 0
     out['form'] = AuditLogEntryList(initial=out)
     
     request = {
@@ -327,4 +328,23 @@ def audit_log(req, **kwargs):
 
 @method_allowed('GET')
 def audit_item(req, **kwargs):
-    return TemplateResponse(req, 'zato/http_soap/audit/item.html', out)
+    try:
+        out = kwargs
+        response = req.zato.client.invoke('zato.http-soap.get-audit-item', {'id':kwargs['id']})
+        if response.ok:
+            out.update(**response.data)
+            
+            for name in('req', 'resp'):
+                headers = '{}_headers'.format(name)
+                if out.get(headers):
+                    buff = StringIO()
+                    pprint(loads(out[headers]), buff, width=160)
+                    out['{}_pp'.format(headers)] = buff.getvalue()
+                    buff.close()
+        else:
+            raise Exception(response.details)
+        return TemplateResponse(req, 'zato/http_soap/audit/item.html', out)
+    except Exception, e:
+        msg = format_exc(e)
+        logger.error(msg)
+        return HttpResponseServerError(msg)
