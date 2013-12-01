@@ -548,7 +548,13 @@ class URLData(OAuthDataStore):
     def _dump_wsgi_environ(self, wsgi_environ):
         """ A convenience method to dump WSGI environment with all the element repr'ed.
         """
-        return dumps({repr(key): repr(value) for key, value in wsgi_environ.items()})
+        # TODO: There should be another copy of WSGI environ added with password masked out
+        env = wsgi_environ.items()
+        for elem in env:
+            if elem[0] == 'zato.http.channel_item':
+                elem[1]['password'] = '******'
+
+        return dumps({repr(key): repr(value) for key, value in env})
 
     def audit_set_request(self, cid, channel_item, payload, wsgi_environ):
         """ Stores initial audit information, right after receiving a request.
