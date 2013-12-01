@@ -87,7 +87,8 @@ class ParallelServerTestCase(TestCase):
             wsgi_environ = {
                 'wsgi.url_scheme': wsgi_url_scheme,
                 'gunicorn.socket': FakeGunicornSocket(),
-                'zato.http.response.status': rand_string()
+                'zato.http.response.status': rand_string(),
+                'zato.http.channel_item': Bunch(audit_enabled=False),
             }
     
             ps = ParallelServer()
