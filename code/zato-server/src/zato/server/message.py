@@ -104,9 +104,9 @@ class _BaseXPathStore(object):
         with self.update_lock:
 
             if is_xml:
-                compiled_elem, compiled_text = self.compile(item.value, ns_map)
-            else:
                 compiled_elem = self.compile(item.value, ns_map)
+            else:
+                compiled_elem, compiled_text = self.compile(item.value, ns_map)
 
             self.data[name] = Bunch()
             self.data[name].config = item
