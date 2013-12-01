@@ -279,7 +279,7 @@ urlpatterns = patterns('',
         http_soap.audit_set_config, name='http-soap-audit-set-config'),
     url(r'^zato/http-soap/audit/log/(?P<connection>.*)/(?P<transport>.*)/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<cluster_id>.*)/$', 
         http_soap.audit_log, name='http-soap-audit-log'),
-    url(r'^zato/http-soap/audit/item/(?P<connection>.*)/(?P<transport>.*)/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<cluster_id>.*)/item/(?P<item_id>.*)/$',
+    url(r'^zato/http-soap/audit/item/(?P<connection>.*)/(?P<transport>.*)/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<cluster_id>.*)/(?P<id>.*)/$',
         http_soap.audit_item, name='http-soap-audit-item'),
     
     url(r'^zato/http-soap/create/$', http_soap.create, name='http-soap-create'),

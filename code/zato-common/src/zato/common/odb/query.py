@@ -625,7 +625,7 @@ def elem_path_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def http_soap_audit_item_list(session, cluster_id, conn_id, start=None, stop=None, query=None, needs_req_payload=False):
+def _http_soap_audit(session, cluster_id, conn_id=None, start=None, stop=None, query=None, id=None, needs_req_payload=False):
     columns = [
         HTTSOAPAudit.id,
         HTTSOAPAudit.name.label('conn_name'),
@@ -645,7 +645,7 @@ def http_soap_audit_item_list(session, cluster_id, conn_id, start=None, stop=Non
             HTTSOAPAudit.req_headers, HTTSOAPAudit.req_payload, HTTSOAPAudit.resp_headers, HTTSOAPAudit.resp_payload
         ])
 
-    q = session.query(*columns).filter(HTTSOAPAudit.conn_id==conn_id)
+    q = session.query(*columns)
     
     if query:
         query = '%{}%'.format(query)
@@ -654,6 +654,12 @@ def http_soap_audit_item_list(session, cluster_id, conn_id, start=None, stop=Non
             HTTSOAPAudit.req_headers.ilike(query) | HTTSOAPAudit.req_payload.ilike(query) | \
             HTTSOAPAudit.resp_headers.ilike(query) | HTTSOAPAudit.resp_payload.ilike(query)
         )
+
+    if id:
+        q = q.filter(HTTSOAPAudit.id == id)
+
+    if conn_id:
+        q = q.filter(HTTSOAPAudit.conn_id == conn_id)
 
     if start:
         q = q.filter(HTTSOAPAudit.req_time >= start)
@@ -664,5 +670,11 @@ def http_soap_audit_item_list(session, cluster_id, conn_id, start=None, stop=Non
     q = q.order_by(HTTSOAPAudit.req_time.desc())
 
     return q
+
+def http_soap_audit_item_list(session, cluster_id, conn_id, start, stop, query, needs_req_payload):
+    return _http_soap_audit(session, cluster_id, conn_id, start, stop, query)
+
+def http_soap_audit_item(session, cluster_id, id):
+    return _http_soap_audit(session, cluster_id, id=id, needs_req_payload=True)
 
 # ################################################################################################################################
