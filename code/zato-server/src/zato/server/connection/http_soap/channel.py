@@ -78,7 +78,18 @@ def get_client_error_wrapper(transport, data_format):
     except KeyError:
         # Any KeyError must be caught by the caller
         return client_error_wrapper[data_format] 
-                
+
+def handle_quotes_soap_action(soap_action):
+    """ Make sure quotes around SOAP actions are ignored so these two
+    are equivalent:
+    - SOAPAction: "my.soap.action"
+    - SOAPAction: my.soap.action
+    """
+    if soap_action[0] == '"' and soap_action[-1] == '"':
+        soap_action = soap_action[1:-1]
+
+    return soap_action
+
 # ##############################################################################
 
 class RequestDispatcher(object):
@@ -101,17 +112,6 @@ class RequestDispatcher(object):
         # to use.
         return msg
     
-    def _handle_quotes_soap_action(self, soap_action):
-        """ Make sure quotes around SOAP actions are ignored so these two
-        are equivalent:
-        - SOAPAction: "my.soap.action"
-        - SOAPAction: my.soap.action
-        """
-        if soap_action[0] == '"' and soap_action[-1] == '"':
-            soap_action = soap_action[1:-1]
-            
-        return soap_action
-    
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store):
         """ Base method for dispatching incoming HTTP/SOAP messages. If the security
         configuration is one of the technical account or HTTP basic auth, 
@@ -122,7 +122,7 @@ class RequestDispatcher(object):
         soap_action = wsgi_environ.get('HTTP_SOAPACTION', '')
         
         if soap_action:
-            soap_action = self._handle_quotes_soap_action(soap_action)
+            soap_action = handle_quotes_soap_action(soap_action)
             
         url_data = self.security.url_sec_get(path_info, soap_action)
         payload = wsgi_environ['wsgi.input'].read()
@@ -219,7 +219,7 @@ class _BaseMessageHandler(object):
             if not soap_action:
                 raise BadRequest(cid, 'Client did not send the SOAPAction header')
             
-            soap_action = self._handle_quotes_soap_action(soap_action)
+            soap_action = handle_quotes_soap_action(soap_action)
 
             if not soap_action:
                 raise BadRequest(cid, 'Client sent an empty SOAPAction header')
