@@ -34,7 +34,7 @@ from repoze.profile import ProfileMiddleware
 # Zato
 from zato.common.repo import RepoManager
 from zato.common.util import absolutize_path, clear_locks, get_app_context, \
-     get_config, get_crypto_manager, TRACE1
+     get_config, get_crypto_manager, make_psycopg_green, TRACE1
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
@@ -96,6 +96,9 @@ def run(base_dir):
     # TODO: Make sure it's registered for each of the subprocess
     psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
     psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
+
+    # Makes queries against Postgres asynchronous
+    make_psycopg_green()
 
     repo_location = os.path.join(base_dir, 'config', 'repo')
 

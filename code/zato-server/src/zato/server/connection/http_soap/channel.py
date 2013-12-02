@@ -137,24 +137,32 @@ class RequestDispatcher(object):
         # Credentials are checked in a call to self.url_data.check_security
         url_match, channel_item = self.url_data.match(path_info, soap_action)
 
+        logger.debug('url_match:[%r], channel_item:[%r]', url_match, sorted(channel_item.items()))
+
+        # This is needed in parallel.py's on_wsgi_request
+        wsgi_environ['zato.http.channel_item'] = channel_item
+
+        payload = wsgi_environ['wsgi.input'].read()
+        
+        # This is a synchronous call so that whatever happens next we are always
+        # able to have at least initial audit log of requests.
+        if channel_item['audit_enabled']:
+            self.url_data.audit_set_request(cid, channel_item, payload, wsgi_environ)
+
         # OK, we can possibly handle it
         if url_match:
 
             # Raise 404 if the channel is inactive
-            if not channel_item.is_active:
+            if not channel_item['is_active']:
                 logger.warn('url_data:[%s] is not active, raising NotFound', sorted(url_match.items()))
                 raise NotFound(cid, 'Channel inactive')
-
-            # Read payload only now, right before it's needed the first time,
-            # possibly, by security checks.
-            payload = wsgi_environ['wsgi.input'].read()
 
             try:
 
                 # Need to read security info here so we know if POST needs to be
                 # parsed. If so, we do it here and reuse it in other places
                 # so it doesn't have to be parsed two or more times.
-                sec = self.url_data.url_sec[channel_item.match_target]
+                sec = self.url_data.url_sec[channel_item['match_target']]
                 if sec.sec_def != ZATO_NONE and sec.sec_def.sec_type == security_def_type.oauth:
                     post_data = QueryDict(payload, encoding='utf-8')
                 else:
@@ -199,17 +207,18 @@ class RequestDispatcher(object):
                 logger.error('Caught an exception, cid:[%s], status_code:[%s], _format_exc:[%s]', cid, status_code, _format_exc)
 
                 try:
-                    error_wrapper = get_client_error_wrapper(channel_item.transport, channel_item.data_format)
+                    error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'])
                 except KeyError:
                     # It's OK. Apparently it's neither 'soap' nor json'
                     if logger.isEnabledFor(TRACE1):
                         msg = 'No client error wrapper for transport:[{}], data_format:[{}]'.format(
-                            channel_item.transport, channel_item.data_format)
+                            channel_item['transport'], channel_item['data_format'])
                         logger.log(TRACE1, msg)
                 else:
                     response = error_wrapper(cid, response)
 
                 wsgi_environ['zato.http.response.status'] = status
+                
                 return response
 
         # This is 404, no such URL path and SOAP action is known.

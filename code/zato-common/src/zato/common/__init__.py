@@ -159,9 +159,17 @@ DEFAULT_STATS_SETTINGS = {
     'atttention_top_threshold':10,
 }
 
-DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_NO = 1
-DEFAULT_DELIVERY_INSTANCE_LIST_BATCH_SIZE = 25
-MAX_DELIVERY_INSTANCE_LIST_BATCH_SIZE = 1000
+class BATCH_DEFAULTS:
+    PAGE_NO = 1
+    SIZE = 25
+    MAX_SIZE = 1000
+
+class NameId(object):
+    """ Wraps both an attribute's name and its ID.
+    """
+    def __init__(self, name, id):
+        self.name = name
+        self.id = id
 
 class NotGiven(object):
     pass # A marker for lazily-initialized attributes
@@ -270,6 +278,7 @@ class SCHEDULER_JOB_TYPE(Attrs):
 
 class CHANNEL(Attrs):
     AMQP = 'amqp'
+    AUDIT = 'audit' # New in 1.2
     DELIVERY = 'delivery' # New in 1.2
     HTTP_SOAP = 'http-soap'
     INVOKE = 'invoke'
@@ -331,6 +340,8 @@ class BROKER:
 class MISC:
     SEPARATOR = ':::'
     OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
+    DEFAULT_AUDIT_BACK_LOG = 24 * 60 # 24 hours * 60 days ≅ 2 months
+    DEFAULT_AUDIT_MAX_PAYLOAD = 0 # Using 0 means there's no limit
 
 class URL_PARAMS_PRIORITY:
     PATH_OVER_QS = 'path-over-qs'
@@ -354,6 +365,13 @@ class NONCE_STORE:
     KEY_PATTERN = 'zato:nonce-store:{}:{}' # E.g. zato:nonce-store:oauth:27
     DEFAULT_MAX_LOG = 25000
 
+class MSG_PATTERN_TYPE:
+    ELEM_PATH = NameId('ElemPath', 'elem-path')
+    XPATH = NameId('XPath', 'xpath')
+    
+    class __metaclass__(type):
+        def __iter__(self):
+            return iter((self.ELEM_PATH, self.XPATH))
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
