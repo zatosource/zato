@@ -109,10 +109,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         return wsgi_environ
 
-    def on_wsgi_request(self, wsgi_environ, start_response):
+    def on_wsgi_request(self, wsgi_environ, start_response, **kwargs):
         """ Handles incoming HTTP requests.
         """
-        cid = new_cid()
+        cid = kwargs.get('cid', new_cid())
         wsgi_environ['zato.http.response.headers'] = {'X-Zato-CID': cid}
 
         try:
@@ -132,9 +132,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             logger.error(error_msg)
             payload = error_msg
             raise
-        
+
         # Note that this call is asynchronous and we do it the last possible moment.
-        if wsgi_environ['zato.http.channel_item'].audit_enabled:
+        if wsgi_environ['zato.http.channel_item']['audit_enabled']:
             self.worker_store.request_dispatcher.url_data.audit_set_response(
                 cid, payload, wsgi_environ)
 

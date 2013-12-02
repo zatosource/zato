@@ -1151,7 +1151,6 @@ class HTTSOAPAudit(Base):
         self.user_token = user_token
         self.invoke_ok = invoke_ok
         self.auth_ok = auth_ok
-        self.user_token = user_token
         self.remote_addr = remote_addr
         
         self.req_headers = req_headers

@@ -554,34 +554,34 @@ class URLData(OAuthDataStore):
             if elem[0] == 'zato.http.channel_item':
                 elem[1]['password'] = '******'
 
-        return dumps({repr(key): repr(value) for key, value in env})
+        return dumps({key: repr(value) for key, value in env})
 
     def audit_set_request(self, cid, channel_item, payload, wsgi_environ):
         """ Stores initial audit information, right after receiving a request.
         """
-        if channel_item.audit_repl_patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id:
+        if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.ELEM_PATH.id:
             payload = {'root': loads(payload)}
-            pattern_list = channel_item.replace_patterns_elem_path
+            pattern_list = channel_item['replace_patterns_elem_path']
         else:
-            pattern_list = channel_item.replace_patterns_xpath
+            pattern_list = channel_item['replace_patterns_xpath']
 
         for pattern in pattern_list:
             logger.debug('Before:[%r]', payload)
             payload = self.replace_payload(payload, pattern, channel_item.audit_repl_patt_type)
             logger.debug('After:[%r]', payload)
 
-        if channel_item.audit_repl_patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id:
+        if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.ELEM_PATH.id:
             payload = dumps(payload['root'])
 
-        if channel_item.audit_max_payload:
-            payload = payload[:channel_item.audit_max_payload]
+        if channel_item['audit_max_payload']:
+            payload = payload[:channel_item['audit_max_payload']]
 
         remote_addr = wsgi_environ.get('HTTP_X_FORWARDED_FOR')
         if not remote_addr:
             remote_addr = wsgi_environ.get('REMOTE_ADDR', '(None)')
 
-        self.odb.audit_set_request_http_soap(channel_item.id, channel_item.name, cid, 
-            channel_item.transport, channel_item.connection, datetime.utcnow(),
+        self.odb.audit_set_request_http_soap(channel_item['id'], channel_item['name'], cid, 
+            channel_item['transport'], channel_item['connection'], datetime.utcnow(),
             channel_item.get('username'), remote_addr, self._dump_wsgi_environ(wsgi_environ), payload)
 
     def audit_set_response(self, cid, response, wsgi_environ):
