@@ -66,7 +66,13 @@ $.namespace('zato.kvdb.data_dict.dictionary');
 $.namespace('zato.kvdb.data_dict.translation');
 $.namespace('zato.kvdb.data_dict.system');
 $.namespace('zato.http_soap');
+$.namespace('zato.http_soap.audit');
+$.namespace('zato.http_soap.details');
 $.namespace('zato.load_balancer');
+$.namespace('zato.message');
+$.namespace('zato.message.elem_path');
+$.namespace('zato.message.namespace');
+$.namespace('zato.message.xpath');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.ftp');
@@ -90,19 +96,19 @@ $.fn.zato.post = function(url, callback, data, data_type, suppress_user_message,
     if(!data) {
         data = '';
     }
-    
+
     if(!data_type) {
         data_type = 'json';
     }
-    
+
     if(!suppress_user_message) {
         $.fn.zato.user_message(false, '', true);
     }
-    
+
     if(!context) {
         context = {};
     }
-    
+
     $.ajax({
         type: 'POST',
         url: url,
@@ -485,7 +491,7 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
 
     var item = new $.fn.zato.data_table.class_();
     var form = $(String.format('#{0}-form', action));
-    
+
     var prefix;
     if(action == 'edit') {
         prefix = action + '-';
@@ -493,26 +499,26 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     else {
         prefix = '';
     }
-    
+
     var name = '';
     var id = '';
     var tag_name = '';
 	var html_elem;
     var _columns = $.fn.zato.data_table.get_columns();
-	
+
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');
 		html_elem = $('#id_' + prefix + name);
         tag_name = html_elem.prop('tagName');
-		
+
         if(tag_name && html_elem.prop('type') == 'checkbox') {
             item[name] = html_elem.is(':checked');
         }
-		
+
 		else {
 			item[name] = elem.value;
 		}
-		
+
         if(tag_name && tag_name.toLowerCase() == 'select') {
             item[name + '_select'] = $('#id_' + prefix + name + ' :selected').text();
         }
@@ -522,9 +528,9 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     if(!item.id) {
         item.id = data.id;
     }
-	
+
     $.fn.zato.data_table.data[item.id] = item;
-	
+
     return new_row_func(item, data, include_tr);
 }
 
@@ -572,7 +578,7 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
             else {
                 field_id = String.format('#id_{0}-{1}', action, attr);
             }
-            
+
             $.fn.zato.data_table.set_field_required(field_id);
 
         });
@@ -614,7 +620,7 @@ $.fn.zato.data_table.on_submit_complete = function(data, status,
         var json = $.parseJSON(data.responseText);
         var include_tr = true ? action == 'create' : false;
         var row = $.fn.zato.data_table.add_row(json, action, $.fn.zato.data_table.new_row_func, include_tr);
-		
+
         if($('#data-table').data('is_empty')) {
             $('#data-table tr:last').remove();
         }
@@ -634,11 +640,11 @@ $.fn.zato.data_table.on_submit_complete = function(data, status,
 
     if($.fn.zato.data_table.on_submit_complete_callback) {
         $.fn.zato.data_table.on_submit_complete_callback($.fn.zato.data_table.on_submit_complete_callback_args);
-        
+
         $.fn.zato.data_table.on_submit_complete_callback = null;
         $.fn.zato.data_table.on_submit_complete_callback_args = null;
     }
-    
+
 }
 
 $.fn.zato.data_table.service_text = function(service, cluster_id) {
@@ -696,7 +702,7 @@ $.fn.zato.toggle_visible_hidden = function(id, is_visible) {
 	var elem = $('#'+ id);
 	var remove_class = '';
 	var add_class = '';
-	
+
     if(is_visible) {
 		remove_class = 'hidden';
 		add_class = 'visible';

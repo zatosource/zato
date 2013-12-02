@@ -109,10 +109,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         return wsgi_environ
 
-    def on_wsgi_request(self, wsgi_environ, start_response):
+    def on_wsgi_request(self, wsgi_environ, start_response, **kwargs):
         """ Handles incoming HTTP requests.
         """
-        cid = new_cid()
+        cid = kwargs.get('cid', new_cid())
         wsgi_environ['zato.http.response.headers'] = {'X-Zato-CID': cid}
 
         try:
@@ -133,9 +133,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             payload = error_msg
             raise
 
+        # Note that this call is asynchronous and we do it the last possible moment.
+        if wsgi_environ['zato.http.channel_item']['audit_enabled']:
+            self.worker_store.request_dispatcher.url_data.audit_set_response(
+                cid, payload, wsgi_environ)
+
         headers = ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items())
         start_response(wsgi_environ['zato.http.response.status'], headers)
-
+        
         return [payload]
 
     def maybe_on_first_worker(self, server, redis_conn, deployment_key):
@@ -367,12 +372,27 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             for key in item.keys():
                 hs_item[key] = getattr(item, key)
 
+            hs_item.replace_patterns_elem_path = item.replace_patterns_elem_path
+            hs_item.replace_patterns_xpath = item.replace_patterns_xpath
+
             hs_item.match_target = '{}{}{}'.format(hs_item.soap_action, MISC.SEPARATOR, hs_item.url_path)
             hs_item.match_target_compiled = parse_compile(hs_item.match_target)
 
             http_soap.append(hs_item)
 
         self.config.http_soap = http_soap
+
+        # Namespaces
+        query = self.odb.get_namespace_list(server.cluster.id, True)
+        self.config.msg_ns = ConfigDict.from_query('msg_ns', query)
+
+        # XPath
+        query = self.odb.get_xpath_list(server.cluster.id, True)
+        self.config.xpath = ConfigDict.from_query('msg_xpath', query)
+
+        # ElemPath
+        query = self.odb.get_elem_path_list(server.cluster.id, True)
+        self.config.elem_path = ConfigDict.from_query('elem_path', query)
 
         # SimpleIO
         self.config.simple_io = ConfigDict('simple_io', Bunch())

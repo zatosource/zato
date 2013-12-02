@@ -19,7 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import INVOCATION_TARGET, SCHEDULER_JOB_TYPE
+from zato.common import INVOCATION_TARGET, MISC, MSG_PATTERN_TYPE, SCHEDULER_JOB_TYPE
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -309,6 +309,18 @@ class HTTPSOAP(Base):
 
     # New in 1.2
     params_pri = Column(String(200), nullable=True, default='channel-params-over-msg')
+    
+    # New in 1.2
+    audit_enabled = Column(Boolean, nullable=False, default=False)
+    
+    # New in 1.2
+    audit_back_log = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_BACK_LOG)
+    
+    # New in 1.2
+    audit_max_payload = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_MAX_PAYLOAD)
+    
+    # New in 1.2
+    audit_repl_patt_type = Column(String(), nullable=False, default=MSG_PATTERN_TYPE.ELEM_PATH.id)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1031,3 +1043,151 @@ class DeliveryHistory(Base):
 
     delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)
     delivery = relationship(Delivery, backref=backref('history_list', order_by=entry_time, cascade='all, delete, delete-orphan'))
+
+# ##############################################################################
+
+class MsgNamespace(Base):
+    """ A message namespace, used in XPath, for instance.
+    """
+    __tablename__ = 'msg_ns'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('msg_ns_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    value = Column(String(500), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('namespaces', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, value=None, cluster_id=None):
+        self.id = id
+        self.name = name
+        self.value = value
+        self.cluster_id = cluster_id
+
+class XPath(Base):
+    """ An XPath expression to run against XML messages.
+    """
+    __tablename__ = 'msg_xpath'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('msg_xpath_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    value = Column(String(1500), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('xpaths', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, value=None, cluster_id=None):
+        self.id = id
+        self.name = name
+        self.value = value
+        self.cluster_id = cluster_id
+
+class ElemPath(Base):
+    """ An XPath-list expression to run against JSON messages.
+    """
+    __tablename__ = 'msg_elem_path'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('msg_elem_path_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    value = Column(String(1500), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('elem_paths', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, value=None, cluster_id=None):
+        self.id = id
+        self.name = name
+        self.value = value
+        self.cluster_id = cluster_id
+
+# ##############################################################################
+
+class HTTSOAPAudit(Base):
+    """ An audit log for HTTP/SOAP channels and outgoing connections.
+    """
+    __tablename__ = 'http_soap_audit'
+
+    id = Column(Integer, Sequence('http_soap_audit_seq'), primary_key=True)
+    name = Column(String(), nullable=False, index=True)
+    cid = Column(String(), nullable=False, index=True)
+    
+    transport = Column(String(), nullable=False, index=True)
+    connection = Column(String(), nullable=False, index=True)
+    
+    req_time = Column(DateTime(), nullable=False)
+    resp_time = Column(DateTime(), nullable=True)
+    
+    user_token = Column(String(), nullable=True, index=True)
+    invoke_ok = Column(Boolean(), nullable=True)
+    auth_ok = Column(Boolean(), nullable=True)
+    remote_addr = Column(String(), nullable=False, index=True)
+    
+    req_headers = Column(String(), nullable=True)
+    req_payload = Column(String(), nullable=True)
+    resp_headers = Column(String(), nullable=True)
+    resp_payload = Column(String(), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    conn_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
+
+    def __init__(self, id=None, name=None, cid=None, transport=None, 
+            connection=None, req_time=None, resp_time=None, user_token=None, 
+            invoke_ok=None, auth_ok=None, remote_addr=None, req_headers=None,
+            req_payload=None, resp_headers=None, resp_payload=None):
+        
+        self.id = id
+        self.name = name
+        self.cid = cid
+        
+        self.transport = transport
+        self.connection = connection
+        
+        self.req_time = req_time
+        self.resp_time = resp_time
+        
+        self.user_token = user_token
+        self.invoke_ok = invoke_ok
+        self.auth_ok = auth_ok
+        self.remote_addr = remote_addr
+        
+        self.req_headers = req_headers
+        self.req_payload = req_payload
+        self.resp_headers = resp_headers
+        self.resp_payload = resp_payload
+
+class HTTSOAPAuditReplacePatternsElemPath(Base):
+    """ ElemPath replace patterns for HTTP/SOAP connections.
+    """
+    __tablename__ = 'http_soap_au_rpl_p_ep'
+    __table_args__ = (UniqueConstraint('conn_id', 'pattern_id'), {})
+    
+    id = Column(Integer, Sequence('htp_sp_ad_rpl_p_ep_seq'), primary_key=True)
+    conn_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
+    pattern_id = Column(Integer, ForeignKey('msg_elem_path.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    
+    replace_patterns_elem_path = relationship(HTTPSOAP, 
+        backref=backref('replace_patterns_elem_path', order_by=id, cascade='all, delete, delete-orphan'))
+
+    pattern = relationship(ElemPath)
+    
+class HTTSOAPAuditReplacePatternsXPath(Base):
+    """ XPath replace patterns for HTTP/SOAP connections.
+    """
+    __tablename__ = 'http_soap_au_rpl_p_xp'
+    __table_args__ = (UniqueConstraint('conn_id', 'pattern_id'), {})
+    
+    id = Column(Integer, Sequence('htp_sp_ad_rpl_p_xp_seq'), primary_key=True)
+    conn_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
+    pattern_id = Column(Integer, ForeignKey('msg_xpath.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    
+    replace_patterns_xpath = relationship(HTTPSOAP, 
+        backref=backref('replace_patterns_xpath', order_by=id, cascade='all, delete, delete-orphan'))
+
+    pattern = relationship(XPath)
+
+# ##############################################################################
