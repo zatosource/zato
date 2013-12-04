@@ -10,21 +10,26 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from cStringIO import StringIO
+from pprint import pprint
 from traceback import format_exc
+
+# anyjson
+from anyjson import dumps, loads
 
 # Django
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerError
 from django.template.response import TemplateResponse
 
-# anyjson
-from anyjson import dumps
+# Paste
+from paste.util.converters import asbool
 
 # Zato
-from zato.admin.web.forms.http_soap import ChooseClusterForm, CreateForm, EditForm
-from zato.admin.web.views import method_allowed
-from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     PARAMS_PRIORITY, SECURITY_TYPES, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, \
-     URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
+from zato.admin.web import from_utc_to_user
+from zato.admin.web.forms.http_soap import AuditLogEntryList, ChooseClusterForm, CreateForm, EditForm, ReplacePatternsForm
+from zato.admin.web.views import get_js_dt_format, method_allowed
+from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, MSG_PATTERN_TYPE, PARAMS_PRIORITY, \
+     SECURITY_TYPES, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util import security_def_type as _security_def_type
 
@@ -174,7 +179,7 @@ def index(req):
         'default_http_pool_size':DEFAULT_HTTP_POOL_SIZE,
         }
 
-    return TemplateResponse(req, 'zato/http_soap.html', return_data)
+    return TemplateResponse(req, 'zato/http_soap/index.html', return_data)
 
 @method_allowed('POST')
 def create(req):
@@ -223,3 +228,123 @@ def ping(req, id, cluster_id):
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse(ret.data.info)
+
+@method_allowed('GET')
+def details(req, **kwargs):
+    return_data = kwargs
+    
+    audit_config = req.zato.client.invoke('zato.http-soap.get-audit-config', {'id': kwargs['id']})
+    return_data.update(audit_config.data)
+    
+    patterns_response = req.zato.client.invoke('zato.http-soap.get-audit-replace-patterns', {'id': kwargs['id']})
+    
+    if audit_config.data.audit_repl_patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id:
+        pattern_list = patterns_response.data.patterns_elem_path
+    else:
+        pattern_list = patterns_response.data.patterns_xpath
+    
+    return_data['pattern_list'] = '\n'.join(pattern_list)
+    return_data['replace_patterns_form'] = ReplacePatternsForm(initial=return_data)
+    
+    return TemplateResponse(req, 'zato/http_soap/details.html', return_data)
+
+@method_allowed('POST')
+def audit_set_state(req, **kwargs):
+    try:
+        request = {'id':kwargs['id'], 'audit_enabled': not asbool(req.POST['audit_enabled'])}
+        
+        response = req.zato.client.invoke('zato.http-soap.set-audit-state', request)
+        if not response.ok:
+            raise Exception(response.details)
+        
+        return HttpResponse('OK')
+    except Exception, e:
+        msg = format_exc(e)
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+
+@method_allowed('POST')
+def audit_set_config(req, **kwargs):
+    try:
+        args = {
+            'id':kwargs['id'],
+            'pattern_list': req.POST['pattern_list'].splitlines(), 
+            'audit_repl_patt_type': req.POST['audit_repl_patt_type'],
+            'audit_max_payload': req.POST['audit_max_payload'],
+        }
+
+        calls = (
+            ('zato.http-soap.set-audit-replace-patterns', ('id', 'pattern_list', 'audit_repl_patt_type')),
+            ('zato.http-soap.set-audit-config', ('id', 'audit_max_payload')),
+        )
+
+        for service_name, keys in calls:
+            request = {key: args[key] for key in keys}
+            response = req.zato.client.invoke(service_name, request)
+            if not response.ok:
+                raise Exception(response.details)
+        
+        return HttpResponse('OK')
+    except Exception, e:
+        msg = format_exc(e)
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+
+@method_allowed('GET')
+def audit_log(req, **kwargs):
+    out = kwargs
+    out['req'] = req
+
+    out.update(get_js_dt_format(req.zato.user_profile))
+
+    for key in('batch_size', 'current_batch', 'start', 'stop', 'state', 'query'):
+        value = req.GET.get(key)
+        if value:
+            out[key] = value
+
+    out['form'] = AuditLogEntryList(initial=out)
+    
+    request = {
+        'conn_id': out['conn_id'],
+        'start': out.get('start', ''),
+        'stop': out.get('stop'),
+        'current_batch': out.get('current_batch', BATCH_DEFAULTS.PAGE_NO),
+        'batch_size': out.get('batch_size', BATCH_DEFAULTS.SIZE),
+        'query': out.get('query', ''),
+    }
+
+    out['items'] = []
+    
+    response = req.zato.client.invoke('zato.http-soap.get-audit-item-list', request)
+    if response.ok:
+        for item in response.data:
+            item.req_time = from_utc_to_user(item.req_time_utc+'+00:00', req.zato.user_profile)
+            item.resp_time = from_utc_to_user(item.resp_time_utc+'+00:00', req.zato.user_profile) if item.resp_time_utc else '(None)'
+            out['items'].append(item)
+        
+    out.update(**req.zato.client.invoke('zato.http-soap.get-audit-batch-info', request).data)
+    
+    return TemplateResponse(req, 'zato/http_soap/audit/log.html', out)
+
+@method_allowed('GET')
+def audit_item(req, **kwargs):
+    try:
+        out = kwargs
+        response = req.zato.client.invoke('zato.http-soap.get-audit-item', {'id':kwargs['id']})
+        if response.ok:
+            out.update(**response.data)
+            
+            for name in('req', 'resp'):
+                headers = '{}_headers'.format(name)
+                if out.get(headers):
+                    buff = StringIO()
+                    pprint(loads(out[headers]), buff, width=160)
+                    out['{}_pp'.format(headers)] = buff.getvalue()
+                    buff.close()
+        else:
+            raise Exception(response.details)
+        return TemplateResponse(req, 'zato/http_soap/audit/item.html', out)
+    except Exception, e:
+        msg = format_exc(e)
+        logger.error(msg)
+        return HttpResponseServerError(msg)

@@ -84,17 +84,24 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.humanize',
+    'django_openid_auth',
     'debug_toolbar',
     'django_settings',
     'zato.admin.web',
 )
 
-# A list of prefixes pointing to resources (such as CSS or JS) which may be
-# accessed by anonymous users
-DONT_REQUIRE_LOGIN = [
-    '/static/',
-    '/favicon.ico',
-]
+AUTHENTICATION_BACKENDS = (
+    'django_openid_auth.auth.OpenIDBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+# Its value is injected from web-admin.conf zato.admin.zato_settings.update_globals
+if OPENID_SSO_SERVER_URL:
+    LOGIN_URL = '/openid/login/'
+else:
+    LOGIN_URL = '/accounts/login/'
+
+LOGIN_REDIRECT_URL = '/'
 
 # Some values below, e.g. db_type, DATABASE_USER and others are magically injected
 # here by the 'zato start /path/to/zato/admin' command. The command in turn

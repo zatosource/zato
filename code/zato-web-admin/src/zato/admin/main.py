@@ -20,14 +20,11 @@ from logging import getLogger
 from wsgiref.simple_server import make_server
 
 # Django
-from django.core.handlers.wsgi import WSGIHandler
-from django.core.management import call_command
+from django.core.management import call_command, execute_manager
 
 # Zato
 from zato.admin.zato_settings import update_globals
 from zato.common.repo import RepoManager
-
-logger = getLogger(__name__)
 
 def main():
     
@@ -46,8 +43,10 @@ def main():
     
     RepoManager(repo_dir).ensure_repo_consistency()
 
-    app = WSGIHandler()
-    make_server(config['host'], config['port'], app).serve_forever()
+    # Cannot be imported before update_globals does its job of updating settings' configuration
+    from zato.admin import settings
+
+    execute_manager(settings, ['zato-web-admin', 'runserver', '--noreload', '{host}:{port}'.format(**config)])
 
 if __name__ == '__main__':
     main()
