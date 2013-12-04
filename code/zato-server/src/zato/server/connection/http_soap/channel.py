@@ -137,7 +137,8 @@ class RequestDispatcher(object):
         # Credentials are checked in a call to self.url_data.check_security
         url_match, channel_item = self.url_data.match(path_info, soap_action)
 
-        logger.debug('url_match:[%r], channel_item:[%r]', url_match, sorted(channel_item.items()))
+        if channel_item:
+            logger.debug('url_match:[%r], channel_item:[%r]', url_match, sorted(channel_item.items()))
 
         # This is needed in parallel.py's on_wsgi_request
         wsgi_environ['zato.http.channel_item'] = channel_item
