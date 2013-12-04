@@ -96,7 +96,7 @@ AUTHENTICATION_BACKENDS = (
 )
 
 # Its value is injected from web-admin.conf zato.admin.zato_settings.update_globals
-if OPENID_SSO_SERVER_URL:
+if globals().get('OPENID_SSO_SERVER_URL'):
     LOGIN_URL = '/openid/login/'
 else:
     LOGIN_URL = '/accounts/login/'
