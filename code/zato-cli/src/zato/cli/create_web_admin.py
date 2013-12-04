@@ -54,8 +54,10 @@ config_template = """{{
   
   "ADMIN_INVOKE_NAME": "{ADMIN_INVOKE_NAME}",
   "ADMIN_INVOKE_PASSWORD": "{ADMIN_INVOKE_PASSWORD}",
-  "ADMIN_INVOKE_PATH": "/zato/admin/invoke"
-}}
+  "ADMIN_INVOKE_PATH": "/zato/admin/invoke",
+
+  "OPENID_SSO_SERVER_URL": ""
+}
 """
 
 initial_data_json = """[{{

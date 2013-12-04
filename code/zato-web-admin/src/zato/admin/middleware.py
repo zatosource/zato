@@ -14,6 +14,9 @@ from django.contrib.auth.views import login
 from django.core.urlresolvers import resolve
 from django.http import HttpResponseRedirect
 
+# Django-OpenID
+from django_openid_auth.views import login_complete
+
 # Bunch
 from bunch import Bunch
 
@@ -59,28 +62,9 @@ from zato.common.odb.model import Cluster
 ###
 
 class ZatoMiddleware(object):
-    """
-    Require Login middleware. If enabled, each Django-powered page will
-    require authentication.
-
-    If an anonymous user requests a page, he/she is redirected to the login
-    page set by REQUIRE_LOGIN_PATH or /accounts/login/ by default.
-    """
-    def __init__(self):
-        self.require_login_path = getattr(settings, 'REQUIRE_LOGIN_PATH', '/accounts/login/')
-        self.dont_require_login = settings.DONT_REQUIRE_LOGIN
 
     def process_request(self, req):
-        for dont_require_login in self.dont_require_login:
-            if req.path.startswith(dont_require_login):
-                return None
 
-        if req.path != self.require_login_path and req.user.is_anonymous():
-            if req.POST:
-                return login(req)
-            else:
-                return HttpResponseRedirect('{}?next={}'.format(self.require_login_path, req.path))
-            
         # Makes each Django view have an access to a 'zato.odb' attribute of the
         # request object. The attribute is an SQLAlchemy session to the database
         # defined in app's settings.py

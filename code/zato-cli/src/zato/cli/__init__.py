@@ -157,6 +157,7 @@ def run_command(args):
         ('stop', 'zato.cli.stop.Stop'),
         ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),
         ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
+        ('update_open_id', 'zato.cli.web_admin_auth.UpdateOpenID'),
     )
     for k, v in command_imports:
         command_class[k] = importString(v)
@@ -192,6 +193,7 @@ class ZatoCommand(object):
         NO_SUCH_CLUSTER = 8
         COMPONENT_ALREADY_RUNNING = 9
         NO_PID_FOUND = 10
+        NO_SUCH_WEB_ADMIN_USER = 11
         
     class COMPONENTS(object):
         class _ComponentName(object):

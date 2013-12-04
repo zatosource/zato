@@ -27,11 +27,8 @@
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
-    {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
-
-    {% comment %} HTTP Basic Auth {% endcomment %}
-    <script type="text/javascript" src="/static/js/http_soap.js"></script>
+    <script type="text/javascript" src="/static/js/http_soap/index.js"></script>
 
 
     <script>
@@ -156,7 +153,19 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>{{ item.name }}</td>
+                        
+                        <td>
+                            {% comment %}
+                                No audit for outconns yet
+                            {% endcomment %}
+                            
+                            {% ifequal connection 'channel' %}
+                                <a href="{% url http-soap-details connection transport item.id item.name cluster_id %}">{{ item.name }}</a>
+                            {% else %}
+                                {{ item.name }}
+                            {% endifequal %}
+                        </td>
+                        
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         
                         {% ifequal connection 'outgoing' %}
