@@ -213,17 +213,28 @@ def get_parser():
     #
     update = subs.add_parser('update', description='Updates Zato components and users')
     update_subs = update.add_subparsers()
+
+    # .. update crypto
     
     update_crypto = update_subs.add_parser('crypto', description=crypto_mod.UpdateCrypto.__doc__, parents=[base_parser])
     update_crypto.add_argument('path', help='Path to a Zato component')
     update_crypto.set_defaults(command='update_crypto')
     add_opts(update_crypto, crypto_mod.UpdateCrypto.opts)
+
+    # .. update password
     
     update_password = update_subs.add_parser('password', description=web_admin_auth_mod.UpdatePassword.__doc__, parents=[base_parser])
     update_password.add_argument('path', help='Path to a web admin directory')
     update_password.set_defaults(command='update_password')
     add_opts(update_password, web_admin_auth_mod.UpdatePassword.opts)
+
+    # .. update password
     
+    update_open_id = update_subs.add_parser('open-id', description=web_admin_auth_mod.UpdateOpenID.__doc__, parents=[base_parser])
+    update_open_id.add_argument('path', help='Path to a web admin directory')
+    update_open_id.set_defaults(command='update_open_id')
+    add_opts(update_open_id, web_admin_auth_mod.UpdateOpenID.opts)
+
     return parser
 
 def main():
