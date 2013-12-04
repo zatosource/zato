@@ -452,8 +452,7 @@ class URLData(OAuthDataStore):
             'is_internal', 'method', 'name', 'ping_method', 'pool_size',
             'service_id',  'impl_name', 'service_name',
             'soap_action', 'soap_version', 'transport', 'url_path',
-            'merge_url_params_req', 'url_params_pri', 'params_pri', 'audit_max_payload',
-            'audit_repl_patt_type', 'replace_patterns_elem_path', 'replace_patterns_xpath'):
+            'merge_url_params_req', 'url_params_pri', 'params_pri'):
 
             channel_item[name] = msg[name]
 
@@ -461,6 +460,12 @@ class URLData(OAuthDataStore):
             channel_item['sec_type'] = msg['sec_type']
             channel_item['security_id'] = msg['security_id']
             channel_item['security_name'] = msg['security_name']
+
+        channel_item.audit_enabled = msg.get('audit_enabled', False)
+        channel_item.audit_max_payload = msg.get('audit_max_payload', 0)
+        channel_item.audit_repl_patt_type = msg.get('audit_repl_patt_type', None)
+        channel_item.replace_patterns_elem_path = msg.get('replace_patterns_elem_path', [])
+        channel_item.replace_patterns_xpath = msg.get('replace_patterns_xpath', [])
 
         channel_item.service_impl_name = msg.impl_name
         channel_item.match_target = match_target
