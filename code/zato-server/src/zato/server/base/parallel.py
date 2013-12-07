@@ -134,7 +134,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             raise
 
         # Note that this call is asynchronous and we do it the last possible moment.
-        if wsgi_environ['zato.http.channel_item']['audit_enabled']:
+        if wsgi_environ['zato.http.channel_item'] and wsgi_environ['zato.http.channel_item'].get('audit_enabled'):
             self.worker_store.request_dispatcher.url_data.audit_set_response(
                 cid, payload, wsgi_environ)
 
