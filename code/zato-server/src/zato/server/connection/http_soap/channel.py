@@ -145,13 +145,13 @@ class RequestDispatcher(object):
 
         payload = wsgi_environ['wsgi.input'].read()
         
-        # This is a synchronous call so that whatever happens next we are always
-        # able to have at least initial audit log of requests.
-        if channel_item['audit_enabled']:
-            self.url_data.audit_set_request(cid, channel_item, payload, wsgi_environ)
-
         # OK, we can possibly handle it
         if url_match:
+
+            # This is a synchronous call so that whatever happens next we are always
+            # able to have at least initial audit log of requests.            
+            if channel_item['audit_enabled']:
+                self.url_data.audit_set_request(cid, channel_item, payload, wsgi_environ)            
 
             # Raise 404 if the channel is inactive
             if not channel_item['is_active']:
