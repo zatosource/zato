@@ -48,6 +48,7 @@ class ZatoContext(PythonConfig):
     def internal_service_modules(self):
         return [
             'zato.server.service.internal',
+            'zato.server.service.internal.checks.sio',
             'zato.server.service.internal.channel.amqp',
             'zato.server.service.internal.channel.jms_wmq',
             'zato.server.service.internal.channel.zmq',
