@@ -281,6 +281,7 @@ class CHANNEL(Attrs):
     AUDIT = 'audit' # New in 1.2
     DELIVERY = 'delivery' # New in 1.2
     HTTP_SOAP = 'http-soap'
+    INTERNAL_CHECK = 'internal-check' # New in 1.2
     INVOKE = 'invoke'
     INVOKE_ASYNC = 'invoke-async'
     JMS_WMQ = 'jms-wmq'
