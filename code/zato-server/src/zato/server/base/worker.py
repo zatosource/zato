@@ -146,6 +146,7 @@ class WorkerStore(BrokerMessageReceiver):
 
         wrapper_config = {'id':config.id,
             'is_active':config.is_active, 'method':config.method,
+            'data_format':config.get('data_format'),
             'name':config.name, 'transport':config.transport,
             'address_host':config.host,
             'address_url_path':config.url_path,

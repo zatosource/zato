@@ -13,6 +13,7 @@ import logging
 from copy import deepcopy
 from cStringIO import StringIO
 from datetime import datetime
+from json import dumps, loads
 from traceback import format_exc
 
 # parse
@@ -22,7 +23,7 @@ from parse import PARSE_RE
 import requests
 
 # Zato
-from zato.common import Inactive, URL_TYPE
+from zato.common import DATA_FORMAT, Inactive, URL_TYPE
 from zato.common.util import get_component_name, security_def_type
 
 logger = logging.getLogger(__name__)
@@ -229,6 +230,13 @@ class HTTPSOAPWrapper(object):
     def http_request(self, method, cid, data='', params=None, *args, **kwargs):
         self._enforce_is_active()
 
+        # We never touch strings/unicode because apparently the user already serialized outgoing data
+        needs_serialize = not isinstance(data, basestring)
+
+        if needs_serialize:
+            if self.config['data_format'] == DATA_FORMAT.JSON:
+                data = dumps(data)
+
         headers = self._create_headers(cid, kwargs.pop('headers', {}))
         if self.config['transport'] == 'soap':
             data, headers = self._soap_data(data, headers)
@@ -242,8 +250,14 @@ class HTTPSOAPWrapper(object):
 
         logger.info('CID:[%s], address:[%s], qs_params:[%s]', cid, address, qs_params)
 
-        return self.session.request(method, address, data=data, 
+        response = self.session.request(method, address, data=data,
             auth=self.requests_auth, params=qs_params, headers=headers, *args, **kwargs)
+
+        if needs_serialize:
+            if self.config['data_format'] == DATA_FORMAT.JSON:
+                response.data = loads(response.text)
+
+        return response
 
 # ##############################################################################
     
@@ -269,11 +283,5 @@ class HTTPSOAPWrapper(object):
     
     def patch(self, cid, data='', params=None, *args, **kwargs):
         return self.http_request('PATCH', cid, data, params, *args, **kwargs)
-
-# ##############################################################################
-
-# ##############################################################################
-
-# ##############################################################################
 
 # ##############################################################################
