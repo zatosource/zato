@@ -62,14 +62,17 @@ class BooleanService(Service):
 class DictService(Service):
     class SimpleIO:
         input_required = (Dict('dict1'), Dict('dict2'))
-        #output_required = (Dict('dict3'), Dict('dict4'))
+        output_required = (Dict('dict3'), Dict('dict4'))
 
     def handle(self):
-        eq_(sorted(self.request.input.dict1.items()) [1])
-        #eq_(self.request.input.bool2, False)
+        eq_(self.request.input.dict1['key1_1'], 'value1_1')
+        eq_(self.request.input.dict1['key1_2'], 'value1_2')
 
-        #self.response.payload.bool1 = False
-        #self.response.payload.bool2 = True
+        eq_(self.request.input.dict2['key2_1'], 'value2_1')
+        eq_(self.request.input.dict2['key2_2'], 'value2_2')
+
+        self.response.payload.dict3 = {'key3_1': 'value3_1', 'key3_2':'value3_2'}
+        self.response.payload.dict4 = {'key4_1': 'value4_1', 'key4_2':'value4_2'}
 
 # ################################################################################################################################
 
@@ -84,6 +87,21 @@ class IntegerService(Service):
 
         self.response.payload.int3 = 3
         self.response.payload.int4 = 4
+
+# ################################################################################################################################
+
+class ListService(Service):
+
+    class SimpleIO:
+        input_required = (List('list1'), List('list2'))
+        output_required = (List('list3'), List('list4'))
+
+    def handle(self):
+        eq_(self.request.input.list1, [1, 2, 3])
+        eq_(self.request.input.list2, [4, 5, 6])
+
+        self.response.payload.list3 = [7, 8, 9]
+        self.response.payload.list4 = [10, 11, 12]
 
 # ################################################################################################################################
 
@@ -119,16 +137,12 @@ class CheckSIO(CheckService):
 
     def check_list(self):
         response = self.invoke_check('zato.checks.sio.list-service', {
-            'non_list_item1': '1',
-            'non_list_item2': '2',
-            'list_item1': ['1', '2', '3'],
-            'list_item2': ['4', '5', '6'],
+            'list1': [1, 2, 3],
+            'list2': [4, 5, 6],
         })
 
-        eq_(response.non_list_item1, '1')
-        eq_(response.non_list_item2, '2')
-        eq_(response.list_item1, ['1', '2', '3'])
-        eq_(response.list_item2, ['4', '5', '6'])
+        eq_(response.list3, [7, 8, 9])
+        eq_(response.list4, [10, 11, 12])
 
     def check_as_is(self):
         response = self.invoke_check('zato.checks.sio.as-is-service', {
@@ -166,8 +180,8 @@ class CheckSIO(CheckService):
             'dict2': {'key2_1': 'value2_1', 'key2_2':'value2_2'},
         })
 
-        #eq_(response.bool1, False)
-        #eq_(response.bool2, True)
+        eq_(response.dict3['key3_1'], 'value3_1')
+        eq_(response.dict3['key3_2'], 'value3_2')
 
     def check_integer(self):
         response = self.invoke_check('zato.checks.sio.integer-service', {
@@ -199,12 +213,13 @@ class CheckSIO(CheckService):
     def handle(self):
         # TODO: Add XML checks everywhere
 
-        self.check_list() # TODO
         self.check_as_is()
         self.check_boolean()
-        #self.check_csv() TODO: CSV is not implemened yet
-        #self.check_dict() TODO: Dict is not implemened yet
+        #self.check_csv() # TODO: CSV is not implemened yet
+        self.check_dict()
         self.check_integer()
+        self.check_list()
+        #self.check_list_of_dicts() # TODO
         self.check_unicode()
         self.check_utc()
 
