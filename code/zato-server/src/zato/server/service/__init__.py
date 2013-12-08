@@ -155,7 +155,7 @@ class Boolean(ForceType):
     """
 
 class CSV(ForceType):
-    """ Gets transformed into an int object.
+    """ Gets transformed into a comma separated list of items.
     """
 
 class Dict(ForceType):
@@ -779,7 +779,7 @@ class Service(object):
     def _init(self):
         """ Actually initializes the service.
         """
-        self.odb = self.worker_store.odb
+        self.odb = self.worker_store.server.odb
         self.kvdb = self.worker_store.kvdb
         self.time.kvdb = self.kvdb
 
