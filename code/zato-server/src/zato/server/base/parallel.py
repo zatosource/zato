@@ -122,7 +122,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             if wsgi_environ['wsgi.url_scheme'] == 'https':
                 self.set_tls_info(wsgi_environ)
 
-            payload = self.worker_store.request_dispatcher.dispatch(cid, datetime.utcnow(), wsgi_environ, self.worker_store)
+            payload = self.worker_store.request_dispatcher.dispatch(
+                cid, datetime.utcnow(), wsgi_environ, self.worker_store) or b''
 
         # Any exception at this point must be our fault
         except Exception, e:
