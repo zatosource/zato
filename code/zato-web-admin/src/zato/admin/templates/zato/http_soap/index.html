@@ -38,44 +38,51 @@
             '_selection',
             'name',
             '_is_active',
+
             {% ifequal connection 'outgoing' %}
                 'host',
             {% endifequal %}
+
             'url_path',
+
+            {% ifequal connection 'channel' %}
+                '_service',
+            {% endifequal %}
+
+            '_security',
+
             {% ifequal transport 'soap' %}
                 'soap_action',
                 'soap_version',
             {% endifequal %}
-            {% ifequal connection 'channel' %}
-                '_service',
-            {% endifequal %}
-            '_security',
+
             {% ifequal connection 'channel' %}
                 'method',
+                'service',
             {% endifequal %}
-            '_edit',
-            '_delete',
-            {% ifequal connection 'outgoing' %}
-                '_ping',
-            {% endifequal %}
-            
+
             'id',
             'is_active',
             'security',
-            'service',
             'data_format',
-            
+
             {% comment %} New in 1.2 {% endcomment %}
 
             {% ifequal connection 'outgoing' %}
                 'ping_method',
                 'pool_size',
             {% endifequal %}
-            
+
             {% ifequal connection 'channel' %}
                 'merge_url_params_req',
                 'url_params_pri',
-                'params_pri'
+                'params_pri',
+            {% endifequal %}
+
+            '_edit',
+            '_delete',
+            {% ifequal connection 'outgoing' %}
+                '_ping',
             {% endifequal %}
         ]
     }
@@ -124,27 +131,40 @@
                             <th><a href="#">Host</a></th>
                         {% endifequal %}
                         <th><a href="#">URL path</a></th>
+                        {% ifequal connection 'channel' %}
+                            <th><a href="#">Service</a></th>
+                        {% endifequal %}
+                        <th><a href="#">Security</a></th>
                         {% ifequal transport 'soap' %}
                             <th><a href="#">SOAP action</a></th>
                             <th><a href="#">SOAP version</a></th>
                         {% endifequal %}
                         {% ifequal connection 'channel' %}
-                            <th><a href="#">Service</a></th>
-                        {% endifequal %}
-                        <th><a href="#">Security</a></th>
-                        {% ifequal connection 'channel' %}
                             <th><a href="#">Method</a></th>
+                            <th class='ignore'>&nbsp;</th>
                         {% endifequal %}
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% ifequal connection 'outgoing' %}
+                            <th class='ignore'>&nbsp;</th>
+                            <th class='ignore'>&nbsp;</th>
+                        {% endifequal %}
+
+                        {% ifequal connection 'channel' %}
+                            <th class='ignore'>&nbsp;</th>
+                            <th class='ignore'>&nbsp;</th>
+                            <th class='ignore'>&nbsp;</th>
+                        {% endifequal %}
+
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         {% ifequal connection 'outgoing' %}
                             <th>&nbsp;</th>
                         {% endifequal %}
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -165,57 +185,45 @@
                                 {{ item.name }}
                             {% endifequal %}
                         </td>
-                        
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        
                         {% ifequal connection 'outgoing' %}
                             <td>{{ item.host }}</td>
                         {% endifequal %}
-                        
                         <td>{{ item.url_path }}</td>
-                        
+                        {% ifequal connection 'channel' %}
+                            <td><a href="{% url service-overview item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                        {% endifequal %}
+                        <td>{{ item.security_name|safe }}</td>
                         {% ifequal transport 'soap' %}
                             <td>{{ item.soap_action }}</td>
                             <td>{{ item.soap_version }}</td>
                         {% endifequal %}
-                        
-                        {% ifequal connection 'channel' %}
-                            <td><a href="{% url service-overview item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
-                        {% endifequal %}
-                        
-                        <td>{{ item.security_name|safe }}</td>
-                        
                         {% ifequal connection 'channel' %}
                             <td>{{ item.method|default:'' }}</td>
+                            <td class='ignore'>{{ item.service_name }}</td>
                         {% endifequal %}
-                        
-                        <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
-                        
-                        {% ifequal connection 'outgoing' %}
-                            <td><a href="javascript:$.fn.zato.http_soap.ping('{{ item.id }}')">Ping</a></td>
-                        {% endifequal %}
-                        
+
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.security_id }}</td>
-                        
-                        {% ifequal connection 'channel' %}
-                            <td class='ignore'>{{ item.service_name }}</td>
-                            <td class='ignore'>{{ item.data_format }}</td>
-                        {% endifequal %}
-                        
+                        <td class='ignore'>{{ item.data_format }}</td>
+
                         {% ifequal connection 'outgoing' %}
                             <td class='ignore'>{{ item.ping_method }}</td>
                             <td class='ignore'>{{ item.pool_size }}</td>
                         {% endifequal %}
-                        
+
                         {% ifequal connection 'channel' %}
                             <td class='ignore'>{{ item.merge_url_params_req }}</td>
                             <td class='ignore'>{{ item.url_params_pri }}</td>
                             <td class='ignore'>{{ item.params_pri }}</td>
                         {% endifequal %}
-                        
+
+                        <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
+                        {% ifequal connection 'outgoing' %}
+                            <td><a href="javascript:$.fn.zato.http_soap.ping('{{ item.id }}')">Ping</a></td>
+                        {% endifequal %}
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -279,12 +287,10 @@
                         
                         {% endifequal %}
                         
-                        {% ifequal connection 'channel' %}
                         <tr>
                             <td style="vertical-align:middle">Data format</td>
                             <td>{{ create_form.data_format }}</td>
                         </tr>
-                        {% endifequal %}
                         
                         {% ifequal transport 'soap' %}
                         <tr>
@@ -391,12 +397,10 @@
                         </tr>
                         {% endifequal %}
                         
-                        {% ifequal connection 'channel' %}
                         <tr>
                             <td style="vertical-align:middle">Data format</td>
                             <td>{{ edit_form.data_format }}</td>
                         </tr>
-                        {% endifequal %}
                         
                         {% ifequal transport 'soap' %}
                         <tr>
