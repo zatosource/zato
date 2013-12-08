@@ -255,7 +255,7 @@ class Invoke(AdminService):
         if name and id:
             raise ZatoException('Cannot accept both id:[{}] and name:[{}]'.format(id, name))
 
-        if self.request.input.async:
+        if self.request.input.get('async'):
             if id:
                 impl_name = self.server.service_store.id_to_impl_name[id]
                 self.logger.warn(self.server.service_store.service_data(impl_name))
