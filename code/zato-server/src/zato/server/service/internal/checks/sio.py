@@ -12,12 +12,23 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from nose.tools import eq_
 
 # Zato
-from zato.server.service import AsIs, CSV, Boolean, Dict, Integer, List, Service, Unicode, UTC
+from zato.common import DATA_FORMAT
+from zato.server.service import AsIs, CSV, Boolean, Dict, Integer, List, ListOfDicts, Service, Unicode, UTC
 from zato.server.service.internal.checks import CheckService
 
 # ################################################################################################################################
 
-class AsIsService(Service):
+class CheckTargetService(Service):
+    def set_payload(self):
+        raise NotImplementedError()
+
+    def after_handle(self):
+        self.set_payload()
+
+# ################################################################################################################################
+
+class AsIsService(CheckTargetService):
+
     class SimpleIO:
         input_required = (AsIs('id'), AsIs('a_id'), AsIs('b_count'), AsIs('c_size'), AsIs('d_timeout'),
                           AsIs('is_e'), AsIs('needs_f'), AsIs('should_g'))
@@ -25,27 +36,29 @@ class AsIsService(Service):
                           AsIs('is_e'), AsIs('needs_f'), AsIs('should_g'))
 
     def handle(self):
-        eq_(self.request.input.id, 'id')
-        eq_(self.request.input.a_id, 'a')
-        eq_(self.request.input.b_count, 'b')
-        eq_(self.request.input.c_size, 'c')
-        eq_(self.request.input.d_timeout, 'd')
-        eq_(self.request.input.is_e, 'e')
-        eq_(self.request.input.needs_f, 'f')
-        eq_(self.request.input.should_g, 'g')
+        eq_(self.request.input.id, 'id1')
+        eq_(self.request.input.a_id, 'a1')
+        eq_(self.request.input.b_count, 'b1')
+        eq_(self.request.input.c_size, 'c1')
+        eq_(self.request.input.d_timeout, 'd1')
+        eq_(self.request.input.is_e, 'e1')
+        eq_(self.request.input.needs_f, 'f1')
+        eq_(self.request.input.should_g, 'g1')
 
-        self.response.payload.id = 'id'
-        self.response.payload.a_id = 'a'
-        self.response.payload.b_count = 'b'
-        self.response.payload.c_size = 'c'
-        self.response.payload.d_timeout = 'd'
-        self.response.payload.is_e = 'e'
-        self.response.payload.needs_f = 'f'
-        self.response.payload.should_g = 'g'
+    def set_payload(self):
+        self.response.payload.id = 'id2'
+        self.response.payload.a_id = 'a2'
+        self.response.payload.b_count = 'b2'
+        self.response.payload.c_size = 'c2'
+        self.response.payload.d_timeout = 'd2'
+        self.response.payload.is_e = 'e2'
+        self.response.payload.needs_f = 'f2'
+        self.response.payload.should_g = 'g2'
 
 # ################################################################################################################################
 
-class BooleanService(Service):
+class BooleanService(CheckTargetService):
+
     class SimpleIO:
         input_required = (Boolean('bool1'), Boolean('bool2'))
         output_required = (Boolean('bool1'), Boolean('bool2'))
@@ -54,12 +67,30 @@ class BooleanService(Service):
         eq_(self.request.input.bool1, True)
         eq_(self.request.input.bool2, False)
 
+    def set_payload(self):
         self.response.payload.bool1 = False
         self.response.payload.bool2 = True
 
 # ################################################################################################################################
 
-class DictService(Service):
+class CSVService(CheckTargetService):
+
+    class SimpleIO:
+        input_required = (CSV('csv1'), CSV('csv2'))
+        output_required = (CSV('csv3'), CSV('csv4'))
+
+    def handle(self):
+        eq_(self.request.input.csv1, ['1', '11', '111', '1111'])
+        eq_(self.request.input.csv2, ['2', '22', '222', '2222'])
+
+    def set_payload(self):
+        self.response.payload.csv3 = ['3', '33', '333', '3333']
+        self.response.payload.csv4 = ['4', '44', '444', '4444']
+
+# ################################################################################################################################
+
+class DictService(CheckTargetService):
+
     class SimpleIO:
         input_required = (Dict('dict1'), Dict('dict2'))
         output_required = (Dict('dict3'), Dict('dict4'))
@@ -71,12 +102,14 @@ class DictService(Service):
         eq_(self.request.input.dict2['key2_1'], 'value2_1')
         eq_(self.request.input.dict2['key2_2'], 'value2_2')
 
+    def set_payload(self):
         self.response.payload.dict3 = {'key3_1': 'value3_1', 'key3_2':'value3_2'}
         self.response.payload.dict4 = {'key4_1': 'value4_1', 'key4_2':'value4_2'}
 
 # ################################################################################################################################
 
-class IntegerService(Service):
+class IntegerService(CheckTargetService):
+
     class SimpleIO:
         input_required = (Integer('int1'), Integer('int2'))
         output_required = (Integer('int3'), Integer('int4'))
@@ -85,27 +118,87 @@ class IntegerService(Service):
         eq_(self.request.input.int1, 1)
         eq_(self.request.input.int2, 2)
 
+    def set_payload(self):
         self.response.payload.int3 = 3
         self.response.payload.int4 = 4
 
 # ################################################################################################################################
 
-class ListService(Service):
+class ListService(CheckTargetService):
 
     class SimpleIO:
         input_required = (List('list1'), List('list2'))
         output_required = (List('list3'), List('list4'))
 
     def handle(self):
-        eq_(self.request.input.list1, [1, 2, 3])
-        eq_(self.request.input.list2, [4, 5, 6])
+        eq_(self.request.input.list1, ['1', '2', '3'])
+        eq_(self.request.input.list2, ['4', '5', '6'])
 
-        self.response.payload.list3 = [7, 8, 9]
-        self.response.payload.list4 = [10, 11, 12]
+    def set_payload(self):
+        self.response.payload.list3 = ['7', '8', '9']
+        self.response.payload.list4 = ['10', '11', '12']
 
 # ################################################################################################################################
 
-class UnicodeService(Service):
+class ListOfDictsService(CheckTargetService):
+
+    class SimpleIO:
+        input_required = (ListOfDicts('lod1'), ListOfDicts('lod2'))
+        output_required = (ListOfDicts('lod3'), ListOfDicts('lod4'))
+
+    def handle(self):
+        eq_(self.request.input.lod1[0]['key111'], 'value111')
+        eq_(self.request.input.lod1[0]['key112'], 'value112')
+        eq_(self.request.input.lod1[1]['key121'], 'value121')
+        eq_(self.request.input.lod1[1]['key122'], 'value122')
+
+        eq_(self.request.input.lod2[0]['key211'], 'value211')
+        eq_(self.request.input.lod2[0]['key212'], 'value212')
+        eq_(self.request.input.lod2[1]['key221'], 'value221')
+        eq_(self.request.input.lod2[1]['key222'], 'value222')
+
+    def set_payload(self):
+        self.response.payload.lod3 = [{'key311':'value311', 'key312':'value312'}, {'key321':'value321', 'key322':'value322'}]
+        self.response.payload.lod4 = [{'key411':'value411', 'key412':'value412'}, {'key421':'value421', 'key422':'value422'}]
+
+# ################################################################################################################################
+
+class NoForceTypeService(CheckTargetService):
+
+    class SimpleIO:
+        input_required = ('aa1', 'bb1', 'a_id', 'a_count', 'a_size', 'a_timeout', 'is_b', 'needs_b', 'should_b')
+        output_required = ('aa2', 'bb2', 'c_id', 'c_count', 'c_size', 'c_timeout', 'is_d', 'needs_d', 'should_d')
+
+    def handle(self):
+        eq_(self.request.input.aa1, 'aa1-value')
+        eq_(self.request.input.bb1, 'bb1-value')
+
+        eq_(self.request.input.a_id, 1)
+        eq_(self.request.input.a_count, 2)
+        eq_(self.request.input.a_size, 3)
+        eq_(self.request.input.a_timeout, 4)
+
+        eq_(self.request.input.is_b, True)
+        eq_(self.request.input.needs_b, False)
+        eq_(self.request.input.should_b, True)
+
+    def set_payload(self):
+        self.response.payload.aa2 = 11
+        self.response.payload.bb2 = 22
+
+        self.response.payload.c_id = 33
+        self.response.payload.c_count = 44
+        self.response.payload.c_size = 55
+        self.response.payload.c_timeout = 66
+
+        self.response.payload.is_d = False
+        self.response.payload.needs_d = True
+        self.response.payload.should_d = False
+
+# ################################################################################################################################
+
+class UnicodeService(CheckTargetService):
+
     class SimpleIO:
         input_required = (Unicode('uni_a'), Unicode('uni_b'))
         output_required = (Unicode('uni_c'), Unicode('uni_d'))
@@ -114,12 +207,14 @@ class UnicodeService(Service):
         eq_(self.request.input.uni_a, 'a')
         eq_(self.request.input.uni_b, 'b')
 
+    def set_payload(self):
         self.response.payload.uni_c = 'c'
         self.response.payload.uni_d = 'd'
 
 # ################################################################################################################################
 
-class UTCService(Service):
+class UTCService(CheckTargetService):
+
     class SimpleIO:
         input_required = (UTC('utc1'), UTC('utc2'))
         output_required = (UTC('utc1'), UTC('utc2'))
@@ -128,6 +223,7 @@ class UTCService(Service):
         eq_(self.request.input.utc1, '2019-01-26T22:33:44')
         eq_(self.request.input.utc2, '2023-12-19T21:31:41')
 
+    def set_payload(self):
         self.response.payload.utc1 = '1234-11-22T01:02:03+00:00'
         self.response.payload.utc2 = '2918-03-19T21:22:23+00:00'
 
@@ -135,38 +231,29 @@ class UTCService(Service):
 
 class CheckSIO(CheckService):
 
-    def check_list(self):
-        response = self.invoke_check('zato.checks.sio.list-service', {
-            'list1': [1, 2, 3],
-            'list2': [4, 5, 6],
+    def json_check_as_is(self):
+        response = self.invoke_check_json('zato.checks.sio.as-is-service', {
+            'id': 'id1',
+            'a_id': 'a1',
+            'b_count': 'b1',
+            'c_size': 'c1',
+            'd_timeout': 'd1',
+            'is_e': 'e1',
+            'needs_f': 'f1',
+            'should_g': 'g1',
         })
 
-        eq_(response.list3, [7, 8, 9])
-        eq_(response.list4, [10, 11, 12])
+        eq_(response.id, 'id2')
+        eq_(response.a_id, 'a2')
+        eq_(response.b_count, 'b2')
+        eq_(response.c_size, 'c2')
+        eq_(response.d_timeout, 'd2')
+        eq_(response.is_e, 'e2')
+        eq_(response.needs_f, 'f2')
+        eq_(response.should_g, 'g2')
 
-    def check_as_is(self):
-        response = self.invoke_check('zato.checks.sio.as-is-service', {
-            'id': 'id',
-            'a_id': 'a',
-            'b_count': 'b',
-            'c_size': 'c',
-            'd_timeout': 'd',
-            'is_e': 'e',
-            'needs_f': 'f',
-            'should_g': 'g',
-        })
-
-        eq_(response.id, 'id')
-        eq_(response.a_id, 'a')
-        eq_(response.b_count, 'b')
-        eq_(response.c_size, 'c')
-        eq_(response.d_timeout, 'd')
-        eq_(response.is_e, 'e')
-        eq_(response.needs_f, 'f')
-        eq_(response.should_g, 'g')
-
-    def check_boolean(self):
-        response = self.invoke_check('zato.checks.sio.boolean-service', {
+    def json_check_boolean(self):
+        response = self.invoke_check_json('zato.checks.sio.boolean-service', {
             'bool1': True,
             'bool2': False,
         })
@@ -174,8 +261,17 @@ class CheckSIO(CheckService):
         eq_(response.bool1, False)
         eq_(response.bool2, True)
 
-    def check_dict(self):
-        response = self.invoke_check('zato.checks.sio.dict-service', {
+    def json_check_csv(self):
+        response = self.invoke_check_json('zato.checks.sio.csv-service', {
+            'csv1': '1,11,111,1111',
+            'csv2': '2,22,222,2222',
+        })
+
+        eq_(response.csv3, '3,33,333,3333')
+        eq_(response.csv4, '4,44,444,4444')
+
+    def json_check_dict(self):
+        response = self.invoke_check_json('zato.checks.sio.dict-service', {
             'dict1': {'key1_1': 'value1_1', 'key1_2':'value1_2'},
             'dict2': {'key2_1': 'value2_1', 'key2_2':'value2_2'},
         })
@@ -183,8 +279,8 @@ class CheckSIO(CheckService):
         eq_(response.dict3['key3_1'], 'value3_1')
         eq_(response.dict3['key3_2'], 'value3_2')
 
-    def check_integer(self):
-        response = self.invoke_check('zato.checks.sio.integer-service', {
+    def json_check_integer(self):
+        response = self.invoke_check_json('zato.checks.sio.integer-service', {
             'int1': 1,
             'int2': 2,
         })
@@ -192,8 +288,58 @@ class CheckSIO(CheckService):
         eq_(response.int3, 3)
         eq_(response.int4, 4)
 
-    def check_unicode(self):
-        response = self.invoke_check('zato.checks.sio.unicode-service', {
+    def json_check_list(self):
+        response = self.invoke_check_json('zato.checks.sio.list-service', {
+            'list1': ['1', '2', '3'],
+            'list2': ['4', '5', '6'],
+        })
+
+        eq_(response.list3, ['7', '8', '9'])
+        eq_(response.list4, ['10', '11', '12'])
+
+    def json_check_list_of_dicts(self):
+        response = self.invoke_check_json('zato.checks.sio.list-of-dicts-service', {
+            'lod1': [{'key111':'value111', 'key112':'value112'}, {'key121':'value121', 'key122':'value122'}],
+            'lod2': [{'key211':'value211', 'key212':'value212'}, {'key221':'value221', 'key222':'value222'}],
+        })
+
+        eq_(response.lod3[0]['key311'], 'value311')
+        eq_(response.lod3[0]['key312'], 'value312')
+        eq_(response.lod3[1]['key321'], 'value321')
+        eq_(response.lod3[1]['key322'], 'value322')
+
+        eq_(response.lod4[0]['key411'], 'value411')
+        eq_(response.lod4[0]['key412'], 'value412')
+        eq_(response.lod4[1]['key421'], 'value421')
+        eq_(response.lod4[1]['key422'], 'value422')
+
+    def json_check_no_force_type(self):
+        response = self.invoke_check_json('zato.checks.sio.no-force-type-service', {
+            'aa1': 'aa1-value',
+            'bb1': 'bb1-value',
+            'a_id': '1',
+            'a_count': '2',
+            'a_size': '3',
+            'a_timeout': '4',
+            'is_b': True,
+            'needs_b': False,
+            'should_b': True,
+        })
+
+        eq_(response.aa2, 11)
+        eq_(response.bb2, 22)
+
+        eq_(response.c_id, 33)
+        eq_(response.c_count, 44)
+        eq_(response.c_size, 55)
+        eq_(response.c_timeout, 66)
+
+        eq_(response.is_d, False)
+        eq_(response.needs_d, True)
+        eq_(response.should_d, False)
+
+    def json_check_unicode(self):
+        response = self.invoke_check_json('zato.checks.sio.unicode-service', {
             'uni_a': 'a',
             'uni_b': 'b',
         })
@@ -201,8 +347,8 @@ class CheckSIO(CheckService):
         eq_(response.uni_c, 'c')
         eq_(response.uni_d, 'd')
 
-    def check_utc(self):
-        response = self.invoke_check('zato.checks.sio.utc-service', {
+    def json_check_utc(self):
+        response = self.invoke_check_json('zato.checks.sio.utc-service', {
             'utc1': '2019-01-26T22:33:44+00:00',
             'utc2': '2023-12-19T21:31:41+00:00',
         })
@@ -210,17 +356,280 @@ class CheckSIO(CheckService):
         eq_(response.utc1, '1234-11-22T01:02:03')
         eq_(response.utc2, '2918-03-19T21:22:23')
 
-    def handle(self):
-        # TODO: Add XML checks everywhere
+# ################################################################################################################################
 
-        self.check_as_is()
-        self.check_boolean()
-        #self.check_csv() # TODO: CSV is not implemened yet
-        self.check_dict()
-        self.check_integer()
-        self.check_list()
-        #self.check_list_of_dicts() # TODO
-        self.check_unicode()
-        self.check_utc()
+    def xml_check_as_is(self):
+        request = """
+            <request>
+             <id>id1</id>
+             <a_id>a1</a_id>
+             <b_count>b1</b_count>
+             <c_size>c1</c_size>
+             <d_timeout>d1</d_timeout>
+             <is_e>e1</is_e>
+             <needs_f>f1</needs_f>
+             <should_g>g1</should_g>
+            </request>
+            """
+
+        response = self.invoke_check_xml('zato.checks.sio.as-is-service', request)
+
+        eq_(response.item.id, 'id2')
+        eq_(response.item.a_id, 'a2')
+        eq_(response.item.b_count, 'b2')
+        eq_(response.item.c_size, 'c2')
+        eq_(response.item.d_timeout, 'd2')
+        eq_(response.item.is_e, 'e2')
+        eq_(response.item.needs_f, 'f2')
+        eq_(response.item.should_g, 'g2')
+
+    def xml_check_boolean(self):
+
+        # Note that booleans are case-insensitive
+        request = """
+            <request>
+             <bool1>true</bool1>
+             <bool2>False</bool2>
+            </request>
+            """
+
+        response = self.invoke_check_xml('zato.checks.sio.boolean-service', request)
+
+        eq_(response.item.bool1, False)
+        eq_(response.item.bool2, True)
+
+    def xml_check_csv(self):
+        request = """
+            <request>
+             <csv1>1,11,111,1111</csv1>
+             <csv2>2,22,222,2222</csv2>
+            </request>
+            """
+
+        response = self.invoke_check_xml('zato.checks.sio.csv-service', request)
+
+        eq_(response.item.csv3, '3,33,333,3333')
+        eq_(response.item.csv4, '4,44,444,4444')
+
+    def xml_check_dict(self):
+        request = """
+            <request>
+             <dict1>
+              <item><key>key1_1</key><value>value1_1</value></item>
+              <item><key>key1_2</key><value>value1_2</value></item>
+             </dict1>
+
+             <dict2>
+              <item><key>key2_1</key><value>value2_1</value></item>
+              <item><key>key2_2</key><value>value2_2</value></item>
+             </dict2>
+            </request>
+            """
+
+        response = self.invoke_check_xml('zato.checks.sio.dict-service', request)
+
+        # The order of dict items is unspecified so we cannot assume any concrete indexes
+
+        dict3_key = response.item.dict3.item[0].key
+
+        if dict3_key == 'key3_1':
+            eq_(response.item.dict3.item[0].value, 'value3_1')
+            eq_(response.item.dict3.item[1].key, 'key3_2')
+            eq_(response.item.dict3.item[1].value, 'value3_2')
+
+        elif dict3_key == 'key3_2':
+            eq_(response.item.dict3.item[0].value, 'value3_2')
+            eq_(response.item.dict3.item[1].key, 'key3_1')
+            eq_(response.item.dict3.item[1].value, 'value3_1')
+        else:
+            raise ValueError('Unexpected key:[{}]'.format(dict3_key))
+
+        dict4_key = response.item.dict4.item[0].key
+
+        if dict4_key == 'key4_1':
+            eq_(response.item.dict4.item[0].value, 'value4_1')
+            eq_(response.item.dict4.item[1].key, 'key4_2')
+            eq_(response.item.dict4.item[1].value, 'value4_2')
+
+        elif dict4_key == 'key4_2':
+            eq_(response.item.dict4.item[0].value, 'value4_2')
+            eq_(response.item.dict4.item[1].key, 'key4_1')
+            eq_(response.item.dict4.item[1].value, 'value4_1')
+        else:
+            raise ValueError('Unexpected key:[{}]'.format(dict4_key))
+
+    def xml_check_integer(self):
+        request = """
+            <request>
+             <int1>1</int1>
+             <int2>2</int2>
+            </request>
+            """
+
+        response = self.invoke_check_xml('zato.checks.sio.integer-service', request)
+
+        eq_(response.item.int3, 3)
+        eq_(response.item.int4, 4)
+
+    def xml_check_list(self):
+        request = """
+            <request>
+             <list1>
+              <item>1</item>
+              <item>2</item>
+              <item>3</item>
+             </list1>
+             <list2>
+              <item>4</item>
+              <item>5</item>
+              <item>6</item>
+             </list2>
+            </request>
+            """
+
+        response = self.invoke_check_xml('zato.checks.sio.list-service', request)
+
+        eq_(response.item.list3.item[0], 7)
+        eq_(response.item.list3.item[1], 8)
+        eq_(response.item.list3.item[2], 9)
+
+        eq_(response.item.list4.item[0], 10)
+        eq_(response.item.list4.item[1], 11)
+        eq_(response.item.list4.item[2], 12)
+
+    def xml_check_list_of_dicts(self):
+        request = """
+        <request>
+
+         <lod1>
+           <dict>
+            <item><key>key111</key><value>value111</value></item>
+            <item><key>key112</key><value>value112</value></item>
+           </dict>
+           <dict>
+            <item><key>key121</key><value>value121</value></item>
+            <item><key>key122</key><value>value122</value></item>
+           </dict>
+         </lod1>
+
+         <lod2>
+           <dict>
+            <item><key>key211</key><value>value211</value></item>
+            <item><key>key212</key><value>value212</value></item>
+           </dict>
+           <dict>
+            <item><key>key221</key><value>value221</value></item>
+            <item><key>key222</key><value>value222</value></item>
+           </dict>
+         </lod2>
+
+        </request>
+        """
+
+        response = self.invoke_check_xml('zato.checks.sio.list-of-dicts-service', request)
+
+        lod_dict = {}
+
+        for name in('lod3', 'lod4'):
+            lod_dict[name] = []
+            lod = getattr(response.item, name)
+            for _dict in lod.dict:
+                d = {}
+                for item in _dict.item:
+                    d[item.key.text] = item.value.text
+                lod_dict[name].append(d)
+
+        lod3_0 = sorted(lod_dict['lod3'][0])
+        lod3_1 = sorted(lod_dict['lod3'][1])
+
+        lod4_0 = sorted(lod_dict['lod4'][0])
+        lod4_1 = sorted(lod_dict['lod4'][1])
+
+        eq_(lod3_0, ['key311', 'key312'])
+        eq_(lod3_1, ['key321', 'key322'])
+
+        eq_(lod4_0, ['key411', 'key412'])
+        eq_(lod4_1, ['key421', 'key422'])
+
+    def xml_check_no_force_type(self):
+        request = """
+            <request>
+             <aa1>aa1-value</aa1>
+             <bb1>bb1-value</bb1>
+             <a_id>1</a_id>
+             <a_count>2</a_count>
+             <a_size>3</a_size>
+             <a_timeout>4</a_timeout>
+             <is_b>True</is_b>
+             <needs_b>false</needs_b>
+             <should_b>true</should_b>
+            </request>
+            """
+
+        response = self.invoke_check_xml('zato.checks.sio.no-force-type-service', request)
+
+        eq_(response.item.aa2, 11)
+        eq_(response.item.bb2, 22)
+
+        eq_(response.item.c_id, 33)
+        eq_(response.item.c_count, 44)
+        eq_(response.item.c_size, 55)
+        eq_(response.item.c_timeout, 66)
+
+        eq_(response.item.is_d, False)
+        eq_(response.item.needs_d, True)
+        eq_(response.item.should_d, False)
+
+    def xml_check_unicode(self):
+        request = """
+            <request>
+             <uni_a>a</uni_a>
+             <uni_b>b</uni_b>
+            </request>
+            """
+
+        response = self.invoke_check_xml('zato.checks.sio.unicode-service', request)
+
+        eq_(response.item.uni_c, 'c')
+        eq_(response.item.uni_d, 'd')
+
+    def xml_check_utc(self):
+        request = """
+            <request>
+             <utc1>2019-01-26T22:33:44+00:00</utc1>
+             <utc2>2023-12-19T21:31:41+00:00</utc2>
+            </request>
+            """
+
+        response = self.invoke_check_xml('zato.checks.sio.utc-service', request)
+
+        eq_(response.item.utc1, '1234-11-22T01:02:03')
+        eq_(response.item.utc2, '2918-03-19T21:22:23')
+
+# ################################################################################################################################
+
+    def handle(self):
+
+        self.json_check_as_is()
+        self.json_check_boolean()
+        self.json_check_csv()
+        self.json_check_dict()
+        self.json_check_integer()
+        self.json_check_list()
+        self.json_check_list_of_dicts()
+        self.json_check_no_force_type()
+        self.json_check_unicode()
+        self.json_check_utc()
+
+        self.xml_check_as_is()
+        self.xml_check_boolean()
+        self.xml_check_csv()
+        self.xml_check_dict()
+        self.xml_check_integer()
+        self.xml_check_list()
+        self.xml_check_list_of_dicts()
+        self.xml_check_no_force_type()
+        self.xml_check_unicode()
+        self.xml_check_utc()
 
 # ################################################################################################################################
