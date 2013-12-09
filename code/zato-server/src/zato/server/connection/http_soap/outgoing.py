@@ -253,6 +253,8 @@ class HTTPSOAPWrapper(object):
         response = self.session.request(method, address, data=data,
             auth=self.requests_auth, params=qs_params, headers=headers, *args, **kwargs)
 
+        logger.debug('CID:[%s], response:[%s]', cid, response.text)
+
         if needs_serialize:
             if self.config['data_format'] == DATA_FORMAT.JSON:
                 response.data = loads(response.text)
