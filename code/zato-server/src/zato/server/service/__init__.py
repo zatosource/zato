@@ -125,7 +125,7 @@ class ServiceInput(Bunch):
     def deepcopy(self):
         return deepcopy(self)
 
-SKIP_UNICODE_REQUEST_CONVERSION = (Dict, List, ListOfDicts)
+COMPLEX_VALUE = (Dict, List, ListOfDicts)
 
 # ##############################################################################
 
@@ -134,6 +134,7 @@ class ValueConverter(object):
     a service's SimpleIO config.
     """
     def convert(self, param, param_name, value, has_simple_io_config, is_xml, date_time_format=None):
+
         try:
             if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes) or isinstance(param, Boolean):
                 value = asbool(value or None) # value can be an empty string and asbool chokes on that
@@ -143,12 +144,44 @@ class ValueConverter(object):
                     value = asbool(value)
 
                 elif isinstance(param, CSV):
-                    value = value.split(',')
+                    # Incoming request that is converted into a list
+                    if isinstance(value, basestring):
+                        return value.split(',')
+
+                    # We're producing a response and a list is converted into a CSV
+                    else:
+                        return ','.join(value)
 
                 elif isinstance(param, Dict):
-                    if is_xml:
-                        raise NotImplementedError('Dict/XML not ready yet')
 
+                    if is_xml:
+
+                        # We are parsing XML to create a SIO request
+                        if isinstance(value, EtreeElement):
+                            _dict = {}
+                            for item in value.iterchildren():
+                                _dict[item.find('key').text] = item.find('value').text
+                            return _dict
+
+                        # We are producing XML out of an SIO response
+                        else:
+                            wrapper = Element(param_name)
+
+                            for k, v in value.items():
+                                xml_item = Element('item')
+
+                                key = Element('key')
+                                value = Element('value')
+
+                                xml_item.key = key
+                                xml_item.value = value
+
+                                xml_item.key[-1] = k
+                                xml_item.value[-1] = v
+
+                                wrapper.append(xml_item)
+
+                            return wrapper
                     else:
                         # This is a JSON dictionary
                         return value
@@ -158,9 +191,10 @@ class ValueConverter(object):
 
                 elif isinstance(param, List):
                     if is_xml:
+
                         # We are parsing XML to create a SIO request
                         if isinstance(value, EtreeElement):
-                            return [elem.text for elem in value.getchildren()]
+                            return [elem.text for elem in value.iterchildren()]
 
                         # We are producing XML out of an SIO response
                         else:
@@ -176,8 +210,43 @@ class ValueConverter(object):
 
                 elif isinstance(param, ListOfDicts):
                     if is_xml:
-                        # TODO: Implement it
-                        raise NotImplementedError('XML part of ListOfDicts is not implemented yet')
+
+                        # We are parsing XML to create a SIO request
+                        if isinstance(value, EtreeElement):
+                            list_of_dicts = []
+
+                            for xml_dict in value.iterchildren():
+                                _dict = {}
+                                for item in xml_dict.iterchildren():
+                                    _dict[item.find('key').text] = item.find('value').text
+                                list_of_dicts.append(_dict)
+
+                            return list_of_dicts
+
+                        else:
+                            wrapper = Element(param_name)
+
+                            for _dict in value:
+                                xml_dict = Element('dict')
+
+                                for k, v in _dict.items():
+                                    xml_item = Element('item')
+
+                                    key = Element('key')
+                                    value = Element('value')
+
+                                    xml_item.key = key
+                                    xml_item.value = value
+
+                                    xml_item.key[-1] = k
+                                    xml_item.value[-1] = v
+
+                                    xml_dict.append(xml_item)
+
+                                wrapper.append(xml_dict)
+
+                            return wrapper
+
                     else:
                         # This is a JSON of dictionaries
                         return value
@@ -346,7 +415,7 @@ class Request(ValueConverter):
                             etree.tostring(self.payload), format_exc(e))
                         raise ParsingException(self.cid, msg)
 
-                    if isinstance(param, List):
+                    if isinstance(param, COMPLEX_VALUE):
                         value = elem
                     else:
                         if elem is not None:
@@ -370,7 +439,7 @@ class Request(ValueConverter):
                             msg = 'Required input element:[{}] not found, value:[{}]'.format(param, value)
                             raise ParsingException(self.cid, msg)
                 else:
-                    if value is not None and not isinstance(param, SKIP_UNICODE_REQUEST_CONVERSION):
+                    if value is not None and not isinstance(param, COMPLEX_VALUE):
                         value = unicode(value)
 
                     try:
