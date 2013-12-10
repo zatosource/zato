@@ -283,32 +283,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
     def _after_init_accepted(self, server, deployment_key):
 
-        if self.singleton_server:
-
-            # Let's see if we can become a connector server, the one to start all
-            # the connectors, and start the connectors only once throughout the whole cluster.
-            self.connector_server_keep_alive_job_time = int(
-                self.fs_server_config.singleton.connector_server_keep_alive_job_time)
-            self.connector_server_grace_time = int(
-                self.fs_server_config.singleton.grace_time_multiplier) * self.connector_server_keep_alive_job_time
-
-            if self.singleton_server.become_cluster_wide(
-                    self.connector_server_keep_alive_job_time, self.connector_server_grace_time,
-                    server.id, server.cluster_id, True):
-                self.init_connectors()
-
-                for(_, name, is_active, job_type, start_date, extra, service_name, _,
-                    _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
-                        in self.odb.get_job_list(server.cluster.id):
-                    if is_active:
-                        job_data = Bunch({'name':name, 'is_active':is_active,
-                            'job_type':job_type, 'start_date':start_date,
-                            'extra':extra, 'service':service_name, 'weeks':weeks,
-                            'days':days, 'hours':hours, 'minutes':minutes,
-                            'seconds':seconds, 'repeats':repeats,
-                            'cron_definition':cron_definition})
-                        self.singleton_server.scheduler.create_edit('create', job_data)
-
         # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.
         self.config.repo_location = self.repo_location
@@ -404,6 +378,34 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.worker_store.worker_config = self.config
         self.worker_store.broker_client = self.broker_client
         self.worker_store.init()
+
+        if self.singleton_server:
+
+            self.singleton_server.wait_for_worker()
+
+            # Let's see if we can become a connector server, the one to start all
+            # the connectors, and start the connectors only once throughout the whole cluster.
+            self.connector_server_keep_alive_job_time = int(
+                self.fs_server_config.singleton.connector_server_keep_alive_job_time)
+            self.connector_server_grace_time = int(
+                self.fs_server_config.singleton.grace_time_multiplier) * self.connector_server_keep_alive_job_time
+
+            if self.singleton_server.become_cluster_wide(
+                    self.connector_server_keep_alive_job_time, self.connector_server_grace_time,
+                    server.id, server.cluster_id, True):
+                self.init_connectors()
+
+                for(_, name, is_active, job_type, start_date, extra, service_name, _,
+                    _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
+                        in self.odb.get_job_list(server.cluster.id):
+                    if is_active:
+                        job_data = Bunch({'name':name, 'is_active':is_active,
+                            'job_type':job_type, 'start_date':start_date,
+                            'extra':extra, 'service':service_name, 'weeks':weeks,
+                            'days':days, 'hours':hours, 'minutes':minutes,
+                            'seconds':seconds, 'repeats':repeats,
+                            'cron_definition':cron_definition})
+                        self.singleton_server.scheduler.create_edit('create', job_data)
 
     def init_connectors(self):
         """ Starts all the connector subprocesses.
