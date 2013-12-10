@@ -71,6 +71,7 @@ class WorkerStore(BrokerMessageReceiver):
     """
     def __init__(self, worker_config=None, server=None):
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.is_ready = False
         self.worker_config = worker_config
         self.server = server
         self.update_lock = RLock()
@@ -108,6 +109,9 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_sql()
         self.init_ftp()
         self.init_http_soap()
+
+        # All set, whoever is waiting for us, if anyone at all, can now proceed
+        self.is_ready = True
 
     def filter(self, msg):
         # TODO: Fix it, worker doesn't need to accept all the messages
