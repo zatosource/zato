@@ -60,80 +60,7 @@ logger = logging.getLogger(__name__)
 
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
-# ##############################################################################
-
-class ValueConverter(object):
-    """ A class which knows how to convert values into the types defined in
-    a service's SimpleIO config.
-    """
-    def convert(self, param, param_name, value, has_simple_io_config, is_xml, date_time_format=None):
-        try:
-            if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes) or isinstance(param, Boolean):
-                value = asbool(value or None) # value can be an empty string and asbool chokes on that
-
-            if value and value is not None: # Can be a 0
-                if isinstance(param, Boolean):
-                    value = asbool(value)
-
-                elif isinstance(param, CSV):
-                    value = value.split(',')
-
-                elif isinstance(param, List):
-                    if is_xml:
-                        # We are parsing XML to create a SIO request
-                        if isinstance(value, EtreeElement):
-                            return [elem.text for elem in value.getchildren()]
-
-                        # We are producing XML out of an SIO response
-                        else:
-                            wrapper = Element(param_name)
-                            for item_value in value:
-                                xml_item = Element('item')
-                                wrapper.append(xml_item)
-                                wrapper.item[-1] = item_value
-                            return wrapper
-
-                    # This is a JSON list
-                    return value
-
-                elif isinstance(param, ListOfDicts):
-                    if is_xml:
-                        # TODO: Implement it
-                        raise NotImplementedError('XML part of ListOfDicts is not implemented yet')
-                    else:
-                        # This is a JSON of dictionaries
-                        return value
-
-                elif isinstance(param, Integer):
-                    value = int(value)
-
-                elif isinstance(param, Unicode):
-                    value = unicode(value)
-
-                elif isinstance(param, UTC):
-                    value = value.replace('+00:00', '')
-
-                else:
-                    if value and value != ZATO_NONE and has_simple_io_config:
-                        if any(param_name==elem for elem in self.int_parameters) or \
-                           any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
-                            value = int(value)
-
-                if date_time_format and isinstance(value, datetime):
-                    value = value.strftime(date_time_format)
-
-            if isinstance(param, CSV) and not value:
-                value = []
-
-            return value
-        except Exception, e:
-            msg = 'Conversion error, param:[{}], param_name:[{}], repr(value):[{}], e:[{}]'.format(
-                param, param_name, repr(value), format_exc(e))
-            logger.error(msg)
-
-            raise ZatoException(msg=msg)
-
-# ##############################################################################
+# ################################################################################################################################
 
 class ForceType(object):
     """ Forces a SimpleIO element to use a specific data type.
@@ -197,6 +124,158 @@ class ServiceInput(Bunch):
     """
     def deepcopy(self):
         return deepcopy(self)
+
+COMPLEX_VALUE = (Dict, List, ListOfDicts)
+
+# ##############################################################################
+
+class ValueConverter(object):
+    """ A class which knows how to convert values into the types defined in
+    a service's SimpleIO config.
+    """
+    def convert(self, param, param_name, value, has_simple_io_config, is_xml, date_time_format=None):
+
+        try:
+            if any(param_name.startswith(prefix) for prefix in self.bool_parameter_prefixes) or isinstance(param, Boolean):
+                value = asbool(value or None) # value can be an empty string and asbool chokes on that
+
+            if value and value is not None: # Can be a 0
+                if isinstance(param, Boolean):
+                    value = asbool(value)
+
+                elif isinstance(param, CSV):
+                    # Incoming request that is converted into a list
+                    if isinstance(value, basestring):
+                        return value.split(',')
+
+                    # We're producing a response and a list is converted into a CSV
+                    else:
+                        return ','.join(value)
+
+                elif isinstance(param, Dict):
+
+                    if is_xml:
+
+                        # We are parsing XML to create a SIO request
+                        if isinstance(value, EtreeElement):
+                            _dict = {}
+                            for item in value.iterchildren():
+                                _dict[item.find('key').text] = item.find('value').text
+                            return _dict
+
+                        # We are producing XML out of an SIO response
+                        else:
+                            wrapper = Element(param_name)
+
+                            for k, v in value.items():
+                                xml_item = Element('item')
+
+                                key = Element('key')
+                                value = Element('value')
+
+                                xml_item.key = key
+                                xml_item.value = value
+
+                                xml_item.key[-1] = k
+                                xml_item.value[-1] = v
+
+                                wrapper.append(xml_item)
+
+                            return wrapper
+                    else:
+                        # This is a JSON dictionary
+                        return value
+
+                elif isinstance(param, Integer):
+                    value = int(value)
+
+                elif isinstance(param, List):
+                    if is_xml:
+
+                        # We are parsing XML to create a SIO request
+                        if isinstance(value, EtreeElement):
+                            return [elem.text for elem in value.iterchildren()]
+
+                        # We are producing XML out of an SIO response
+                        else:
+                            wrapper = Element(param_name)
+                            for item_value in value:
+                                xml_item = Element('item')
+                                wrapper.append(xml_item)
+                                wrapper.item[-1] = item_value
+                            return wrapper
+
+                    # This is a JSON list
+                    return value
+
+                elif isinstance(param, ListOfDicts):
+                    if is_xml:
+
+                        # We are parsing XML to create a SIO request
+                        if isinstance(value, EtreeElement):
+                            list_of_dicts = []
+
+                            for xml_dict in value.iterchildren():
+                                _dict = {}
+                                for item in xml_dict.iterchildren():
+                                    _dict[item.find('key').text] = item.find('value').text
+                                list_of_dicts.append(_dict)
+
+                            return list_of_dicts
+
+                        else:
+                            wrapper = Element(param_name)
+
+                            for _dict in value:
+                                xml_dict = Element('dict')
+
+                                for k, v in _dict.items():
+                                    xml_item = Element('item')
+
+                                    key = Element('key')
+                                    value = Element('value')
+
+                                    xml_item.key = key
+                                    xml_item.value = value
+
+                                    xml_item.key[-1] = k
+                                    xml_item.value[-1] = v
+
+                                    xml_dict.append(xml_item)
+
+                                wrapper.append(xml_dict)
+
+                            return wrapper
+
+                    else:
+                        # This is a JSON of dictionaries
+                        return value
+
+                elif isinstance(param, Unicode):
+                    value = unicode(value)
+
+                elif isinstance(param, UTC):
+                    value = value.replace('+00:00', '')
+
+                else:
+                    if value and value != ZATO_NONE and has_simple_io_config:
+                        if any(param_name==elem for elem in self.int_parameters) or \
+                           any(param_name.endswith(suffix) for suffix in self.int_parameter_suffixes):
+                            value = int(value)
+
+                if date_time_format and isinstance(value, datetime):
+                    value = value.strftime(date_time_format)
+
+            if isinstance(param, CSV) and not value:
+                value = []
+
+            return value
+        except Exception, e:
+            msg = 'Conversion error, param:[{}], param_name:[{}], repr(value):[{}], e:[{}]'.format(
+                param, param_name, repr(value), format_exc(e))
+            logger.error(msg)
+
+            raise ZatoException(msg=msg)
 
 # ##############################################################################
 
@@ -336,7 +415,7 @@ class Request(ValueConverter):
                             etree.tostring(self.payload), format_exc(e))
                         raise ParsingException(self.cid, msg)
 
-                    if isinstance(param, List):
+                    if isinstance(param, COMPLEX_VALUE):
                         value = elem
                     else:
                         if elem is not None:
@@ -360,7 +439,7 @@ class Request(ValueConverter):
                             msg = 'Required input element:[{}] not found, value:[{}]'.format(param, value)
                             raise ParsingException(self.cid, msg)
                 else:
-                    if value is not None and not isinstance(param, List):
+                    if value is not None and not isinstance(param, COMPLEX_VALUE):
                         value = unicode(value)
 
                     try:
