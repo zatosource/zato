@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from json import dumps, loads
 
 # Bunch
-from bunch import Bunch
+from bunch import Bunch, bunchify
 
 # lxml
 from lxml import objectify
@@ -45,13 +45,19 @@ class CheckService(Service):
         if invoke_response['zato_env']['result'] == ZATO_OK:
             invoke_response = invoke_response['zato_service_invoke_response']
             response = invoke_response['response'].decode('base64')
-            self.logger.info('response [%s]', response)
             return response
         else:
             return invoke_response
 
     def invoke_check_json(self, service, payload=None):
-        return Bunch(loads(self.invoke_check(service, payload, DATA_FORMAT.JSON))['response'])
+        r = loads(self.invoke_check(service, payload, DATA_FORMAT.JSON))
+        if 'response' in r:
+            out = r['response']
+        else:
+            out = r
+
+        self.logger.info('Returning [%s]', out)
+        return bunchify(out)
 
     def invoke_check_xml(self, service, payload=None):
         return objectify.fromstring(self.invoke_check(service, payload, DATA_FORMAT.XML))
