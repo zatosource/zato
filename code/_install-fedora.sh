@@ -25,6 +25,10 @@ mkdir $CURDIR/zato_extra_paths
 symlink_py 'numpy'
 symlink_py 'scipy'
 
+if [ ! -f /usr/bin/pip-python ];  then
+ln -s /usr/bin/pip /usr/bin/pip-python
+fi
+
 sudo pip-python install distribute==0.6.49
 sudo pip-python install virtualenv==1.9.1
 

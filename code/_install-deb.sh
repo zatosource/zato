@@ -17,7 +17,19 @@ bash $CURDIR/clean.sh
 # comes to fetching the packages from repositories.
 sudo apt-get update
 
-sudo apt-get install git bzr gfortran haproxy  \
+out=$(lsb_release -si)
+arch=$(dpkg --print-architecture)
+
+
+if grep -q wheezy /etc/*-release; then
+    lhaproxy=`curl --silent http://packages.debian.org/wheezy-backports/$arch/haproxy/download | grep -o "http://[[:print:]]*_$arch.deb" | head -1`
+    curl -O $lhaproxy
+    sudo dpkg -i haproxy_*.deb
+else
+    sudo apt-get install haproxy
+fi
+
+sudo apt-get install git bzr gfortran  \
     libatlas-dev libatlas3gf-base libblas3gf \
     libevent-dev libgfortran3 liblapack-dev liblapack3gf \
     libpq-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack5.4.0 \
@@ -28,7 +40,6 @@ sudo apt-get install git bzr gfortran haproxy  \
 # to a directory that can be easily found on PATH so that starting the load-balancer
 # is possible without tweaking its configuration file.
 
-out=$(lsb_release -si)
 if [ $out == "Debian" ]; then
     sudo ln -sf /usr/sbin/haproxy /usr/bin/haproxy
 fi
