@@ -214,7 +214,8 @@ class SimpleIOPayload(SIOConverter):
     def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config, response_elem, namespace):
         self.zato_cid = zato_cid
         self.zato_logger = logger
-        self.zato_is_xml = data_format == SIMPLE_IO.FORMAT.XML
+        self.zato_data_format = data_format
+        self.zato_is_xml = self.zato_data_format == SIMPLE_IO.FORMAT.XML
         self.zato_output = []
         self.zato_required = [(True, name) for name in required_list]
         self.zato_optional = [(False, name) for name in optional_list]
@@ -302,7 +303,7 @@ class SimpleIOPayload(SIOConverter):
             return elem_value
         else:
             return self.convert(name, lookup_name, elem_value, True, self.zato_is_xml, self.bool_parameter_prefixes,
-                                self.int_parameters, self.int_parameter_suffixes)
+                self.int_parameters, self.int_parameter_suffixes, None, self.zato_data_format, True)
 
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.
