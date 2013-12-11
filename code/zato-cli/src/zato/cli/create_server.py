@@ -75,7 +75,7 @@ backup_work_dir=./hot-deploy/backup
 last_backup_work_dir=./hot-deploy/backup/last
 
 [singleton]
-initial_sleep_time=500
+initial_sleep_time=2500
 
 # If a server doesn't update its keep alive data in
 # connector_server_keep_alive_job_time * grace_time_multiplier seconds
