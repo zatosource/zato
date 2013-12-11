@@ -35,7 +35,8 @@ from retools.lock import LockTimeout
 from zato.common import CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, \
      SCHEDULER_JOB_TYPE, URL_TYPE
 from zato.common.test import FakeKVDB, rand_string, rand_int, ServiceTestCase
-from zato.server.service import HTTPRequestData, List, Request, Service
+from zato.server.service import List, Service
+from zato.server.service.reqresp import HTTPRequestData, Request
 
 faker = Faker()
 

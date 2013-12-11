@@ -258,7 +258,6 @@ class Invoke(AdminService):
         if self.request.input.get('async'):
             if id:
                 impl_name = self.server.service_store.id_to_impl_name[id]
-                self.logger.warn(self.server.service_store.service_data(impl_name))
                 name = self.server.service_store.service_data(impl_name)['name']
             response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
         else:
