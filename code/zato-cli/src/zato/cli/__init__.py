@@ -149,6 +149,7 @@ def run_command(args):
         ('delete_odb', 'zato.cli.delete_odb.Delete'),
         ('decrypt', 'zato.cli.crypto.Decrypt'),
         ('encrypt', 'zato.cli.crypto.Encrypt'),
+        ('enmasse', 'zato.cli.enmasse.EnMasse'),
         ('from_config', 'zato.cli.FromConfig'),
         ('info', 'zato.cli.info.Info'),
         ('quickstart_create', 'zato.cli.quickstart.Create'),
@@ -194,6 +195,10 @@ class ZatoCommand(object):
         COMPONENT_ALREADY_RUNNING = 9
         NO_PID_FOUND = 10
         NO_SUCH_WEB_ADMIN_USER = 11
+        NO_INPUT = 12
+        CONFLICTING_OPTIONS = 13
+        NO_OPTIONS = 14
+        INVALID_INPUT = 15
         
     class COMPONENTS(object):
         class _ComponentName(object):
