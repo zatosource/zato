@@ -41,12 +41,15 @@ from zato.common.odb.model import ConnDefAMQP, ConnDefWMQ, HTTPBasicAuth, \
      to_json, WSSDefinition
 from zato.common.util import get_config
 from zato.server.service import ForceType
+from zato.server.service.internal import http_soap as http_soap_mod
 from zato.server.service.internal.channel import amqp as channel_amqp_mod
 from zato.server.service.internal.channel import jms_wmq as channel_jms_wmq_mod
 from zato.server.service.internal.channel import zmq as channel_zmq_mod
 from zato.server.service.internal.definition import amqp as definition_amqp_mod
 from zato.server.service.internal.definition import jms_wmq as definition_jms_wmq_mod
-from zato.server.service.internal import http_soap as http_soap_mod
+from zato.server.service.internal.message import elem_path as elem_path_mod
+from zato.server.service.internal.message import namespace as namespace_mod
+from zato.server.service.internal.message import xpath as xpath_mod
 from zato.server.service.internal.outgoing import amqp as outgoing_amqp_mod
 from zato.server.service.internal.outgoing import ftp as outgoing_ftp_mod
 from zato.server.service.internal.outgoing import jms_wmq as outgoing_jms_wmq_mod
@@ -135,7 +138,7 @@ class EnMasse(ManageCommand):
         {'name':'--import', 'help':'Import definitions from a local JSON (excludes --export-*)', 'action':'store_true'},
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to JSON', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
-        {'name':'--input', 'help':'Path to an input JSON document', 'action':'store_true'},
+        {'name':'--input', 'help':'Path to an input JSON document'},
         {'name':'--cols_width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH), 'action':'store_true'},
     ]
 
@@ -473,7 +476,7 @@ class EnMasse(ManageCommand):
                 odb_key = json_key
 
             if odb_key not in merged:
-                sorted_merged = sorted(merged)
+                sorted_merged = sorted(gggvvvvvcccc)
                 raw = (json_key, odb_key, sorted_merged)
                 value = "JSON key '{}' not one of '{}'".format(odb_key, sorted_merged)
                 errors.append(Error(raw, value, ERROR_INVALID_KEY))
@@ -562,6 +565,9 @@ class EnMasse(ManageCommand):
             'zato.channel.amqp.get-list':'channel_amqp',
             'zato.channel.jms-wmq.get-list':'channel_jms_wmq',
             'zato.channel.zmq.get-list':'channel_zmq',
+            'zato.message.elem-path.get-list':'elem_path',
+            'zato.message.namespace.get-list':'def_namespace',
+            'zato.message.xpath.get-list':'xpath',
             'zato.definition.jms-wmq.get-list':'def_jms_wmq',
             'zato.outgoing.amqp.get-list':'outconn_amqp',
             'zato.outgoing.ftp.get-list':'outconn_ftp',
@@ -719,7 +725,9 @@ class EnMasse(ManageCommand):
             'channel_zmq':channel_zmq_mod.Create,
             'def_amqp':definition_amqp_mod.Create,
             'def_jms_wmq':definition_jms_wmq_mod.Create,
+            'elem_path': elem_path_mod.Create,
             'http_soap':http_soap_mod.Create,
+            'def_namespace': namespace_mod.Create,
             'outconn_amqp':outgoing_amqp_mod.Create,
             'outconn_ftp':outgoing_ftp_mod.Create,
             'outconn_jms_wmq':outgoing_jms_wmq_mod.Create,
@@ -728,6 +736,7 @@ class EnMasse(ManageCommand):
             'outconn_sql':outgoing_sql_mod.Create,
             'outconn_zmq':outgoing_zmq_mod.Create,
             'scheduler':scheduler_mod.Create,
+            'xpath': xpath_mod.Create,
         }
 
         def_sec_services = {
@@ -925,7 +934,7 @@ class EnMasse(ManageCommand):
         new_defs = []
         new_other = []
 
-        # FTP definition may use a password but are not forced to.
+        # FTP definition may use a password but are not required to.
         MAYBE_NEEDS_PASSWORD = 'MAYBE_NEEDS_PASSWORD'
 
         self.json_to_import = Bunch(deepcopy(self.json))
@@ -945,13 +954,16 @@ class EnMasse(ManageCommand):
             'channel_zmq':ImportInfo(channel_zmq_mod),
             'def_amqp':ImportInfo(definition_amqp_mod, True),
             'def_jms_wmq':ImportInfo(definition_jms_wmq_mod),
+            'elem_path':ImportInfo(elem_path_mod),
             'http_soap':ImportInfo(http_soap_mod),
+            'def_namespace':ImportInfo(namespace_mod),
             'outconn_amqp':ImportInfo(outgoing_amqp_mod),
             'outconn_ftp':ImportInfo(outgoing_ftp_mod, MAYBE_NEEDS_PASSWORD),
             'outconn_jms_wmq':ImportInfo(outgoing_jms_wmq_mod),
             'outconn_sql':ImportInfo(outgoing_sql_mod, True),
             'outconn_zmq':ImportInfo(outgoing_zmq_mod),
             'scheduler':ImportInfo(scheduler_mod),
+            'xpath':ImportInfo(xpath_mod),
         }
 
         def_sec_info = {
