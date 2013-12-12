@@ -26,7 +26,8 @@ class GetList(AdminService):
         request_elem = 'zato_channel_zmq_get_list_request'
         response_elem = 'zato_channel_zmq_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'sub_key', 'service_name', 'data_format')
+        output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'service_name', 'data_format')
+        output_optional = ('sub_key',)
         
     def get_data(self, session):
         return channel_zmq_list(session, self.request.input.cluster_id, False)
@@ -72,7 +73,7 @@ class Create(AdminService):
                 item.is_active = input.is_active
                 item.address = input.address
                 item.socket_type = input.socket_type
-                item.sub_key = input.sub_key
+                item.sub_key = input.get('sub_key', b'')
                 item.cluster_id = input.cluster_id
                 item.service = service
                 item.data_format = input.data_format
@@ -127,7 +128,6 @@ class Edit(AdminService):
             
             try:
                 item = session.query(ChannelZMQ).filter_by(id=input.id).one()
-                old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
                 item.address = input.address
