@@ -231,52 +231,15 @@ class EnMasse(ManageCommand):
 # ##############################################################################
 
     def set_client(self):
-        #
-        # TODO: Much of it is copy/pasted from 'zato invoke', this needs to be refactored
-        #       before 'zato enmasse' gets into the core.
-        #
 
         repo_dir = os.path.join(os.path.abspath(os.path.join(self.args.path)), 'config', 'repo')
         config = get_config(repo_dir, 'server.conf')
 
-        priv_key_location = os.path.abspath(os.path.join(repo_dir, config.crypto.priv_key_location))
-
-        cm = CryptoManager(priv_key_location=priv_key_location)
-        cm.load_keys()
-
-        engine_args = Bunch()
-        engine_args.odb_type = config.odb.engine
-        engine_args.odb_user = config.odb.username
-        engine_args.odb_password = cm.decrypt(config.odb.password)
-        engine_args.odb_host = config.odb.host
-        engine_args.odb_port = config.odb.port
-        engine_args.odb_db_name = config.odb.db_name
-
-        engine = self._get_engine(engine_args)
-        session = self._get_session(engine)
-
-        auth = None
-        with closing(session) as session:
-            cluster = session.query(Server).\
-                filter(Server.token == config.main.token).\
-                one().cluster
-
-            channel = session.query(HTTPSOAP).\
-                filter(HTTPSOAP.cluster_id == cluster.id).\
-                filter(HTTPSOAP.url_path == '/zato/admin/invoke').\
-                filter(HTTPSOAP.connection== 'channel').\
-                one()
-
-            if channel.security_id:
-                security = session.query(HTTPBasicAuth).\
-                    filter(HTTPBasicAuth.id == channel.security_id).\
-                    first()
-
-                if security:
-                    auth = (security.username, security.password)
-
         self.client = ZatoClient('http://{}'.format(config.main.gunicorn_bind),
-            '/zato/admin/invoke', auth, max_response_repr=15000)
+            '/zato/admin/invoke', self.get_server_client_auth(config, repo_dir), max_response_repr=15000)
+
+        session = self.get_odb_session_from_server_config(
+            config, self.get_crypto_manager_from_server_config(config, repo_dir))
 
         self.client.cluster_id = session.query(Server).\
             filter(Server.token == config.main.token).\
