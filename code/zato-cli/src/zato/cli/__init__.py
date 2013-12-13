@@ -22,7 +22,11 @@ lazy_import(globals(), """
 
     # stdlib
     import argparse, glob, json, logging, os, subprocess, sys, tempfile, time
+    from contextlib import closing
     from datetime import datetime
+
+    # Bunch
+    from bunch import Bunch
 
     # SQLAlchemy
     import sqlalchemy
@@ -32,6 +36,7 @@ lazy_import(globals(), """
     from zato import common
     from zato.common import odb #.odb import engine_def, version_raw
     from zato.common import util #.util import fs_safe_now
+    from zato.common.crypto import CryptoManager
 """)
 
 ################################################################################
@@ -381,7 +386,55 @@ class ZatoCommand(object):
         for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'), ('ca_certs_path', 'ca-certs')):
             file_name = os.path.join(repo_dir, 'web-admin-{}.pem'.format(name))
             shutil.copyfile(os.path.abspath(getattr(args, attr)), file_name)
-            
+
+    def get_crypto_manager_from_server_config(self, config, repo_dir):
+
+        priv_key_location = os.path.abspath(os.path.join(repo_dir, config.crypto.priv_key_location))
+
+        cm = CryptoManager(priv_key_location=priv_key_location)
+        cm.load_keys()
+
+        return cm
+
+    def get_odb_session_from_server_config(self, config, cm):
+
+        engine_args = Bunch()
+        engine_args.odb_type = config.odb.engine
+        engine_args.odb_user = config.odb.username
+        engine_args.odb_password = cm.decrypt(config.odb.password)
+        engine_args.odb_host = config.odb.host
+        engine_args.odb_port = config.odb.port
+        engine_args.odb_db_name = config.odb.db_name
+
+        engine = self._get_engine(engine_args)
+
+        return self._get_session(engine)
+
+    def get_server_client_auth(self, config, repo_dir):
+        """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
+        """
+        session = self.get_odb_session_from_server_config(config, self.get_crypto_manager_from_server_config(config, repo_dir))
+
+        auth = None
+        with closing(session) as session:
+            cluster = session.query(odb.model.Server).\
+                filter(odb.model.Server.token == config.main.token).\
+                one().cluster
+
+            channel = session.query(odb.model.HTTPSOAP).\
+                filter(odb.model.HTTPSOAP.cluster_id == cluster.id).\
+                filter(odb.model.HTTPSOAP.url_path == '/zato/admin/invoke').\
+                filter(odb.model.HTTPSOAP.connection== 'channel').\
+                one()
+
+            if channel.security_id:
+                security = session.query(odb.model.HTTPBasicAuth).\
+                    filter(odb.model.HTTPBasicAuth.id == channel.security_id).\
+                    first()
+
+                if security:
+                    return (security.username, security.password)
+
 class FromConfig(ZatoCommand):
     """ Executes commands from a command config file.
     """
