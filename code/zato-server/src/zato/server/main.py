@@ -16,8 +16,11 @@ logging.setLoggerClass(ZatoLogger)
 logging.captureWarnings(True)
 
 # stdlib
-import os, ssl, sys
+import os, signal, ssl, sys
 import logging.config
+
+# faulthandler
+import faulthandler
 
 # gunicorn
 from gunicorn.app.base import Application
@@ -46,11 +49,11 @@ class ZatoGunicornApplication(Application):
         self.zato_port = None
         self.zato_config = {}
         super(ZatoGunicornApplication, self).__init__(*args, **kwargs)
-        
+
     def init(self, *ignored_args, **ignored_kwargs):
         self.cfg.set('post_fork', self.zato_wsgi_app.post_fork) # Initializes a worker
         self.cfg.set('on_starting', self.zato_wsgi_app.on_starting) # Generates the deployment key
-        
+
         for k, v in self.config_main.items():
             if k.startswith('gunicorn') and v:
                 k = k.replace('gunicorn_', '')
@@ -65,12 +68,12 @@ class ZatoGunicornApplication(Application):
             else:
                 if 'deployment_lock' in k:
                     v = int(v)
-                    
+
                 self.zato_config[k] = v
-                
+
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
-            
+
         # TLS is new in 1.2 and we need to assume it's not enabled. In Zato 1.3
         # this will be changed to assume that we are always over TLS by default.
         if asbool(self.crypto_config.get('use_tls', False)):
@@ -81,7 +84,7 @@ class ZatoGunicornApplication(Application):
             self.cfg.set('keyfile', absolutize_path(self.repo_location, self.crypto_config.priv_key_location))
             self.cfg.set('certfile', absolutize_path(self.repo_location, self.crypto_config.cert_location))
             self.cfg.set('do_handshake_on_connect', True)
-            
+
         self.zato_wsgi_app.has_gevent = 'gevent' in self.cfg.settings['worker_class'].value
         
     def load(self):
@@ -89,8 +92,11 @@ class ZatoGunicornApplication(Application):
 
 def run(base_dir):
 
+    faulthandler.enable(all_threads=True)
+    faulthandler.register(signal.SIGUSR1, all_threads=True)
+
     os.chdir(base_dir)
-    
+
     # We're doing it here even if someone doesn't use PostgreSQL at all
     # so we're not suprised when someone suddenly starts using PG.
     # TODO: Make sure it's registered for each of the subprocess
@@ -106,6 +112,8 @@ def run(base_dir):
     logging.addLevelName('TRACE1', TRACE1)
     logging.config.fileConfig(os.path.join(repo_location, 'logging.conf'))
 
+    logger = logging.getLogger(__name__)
+
     config = get_config(repo_location, 'server.conf')
     app_context = get_app_context(config)
 
@@ -114,7 +122,7 @@ def run(base_dir):
     
     zato_gunicorn_app = ZatoGunicornApplication(
         parallel_server, repo_location, config.main, config.crypto)
-    
+
     parallel_server.crypto_manager = crypto_manager
     parallel_server.odb_data = config.odb
     parallel_server.host = zato_gunicorn_app.zato_host
@@ -127,7 +135,7 @@ def run(base_dir):
 
     # Remove all locks possibly left over by previous server instances
     clear_locks(app_context.get_object('kvdb'), config.main.token, config.kvdb, crypto_manager.decrypt)
-        
+
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
 
