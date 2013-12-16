@@ -45,7 +45,7 @@ from zato.common import CHANNEL, KVDB, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATU
      ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
      JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
-from zato.common.util import add_startup_jobs, make_psycopg_green, new_cid
+from zato.common.util import add_startup_jobs, make_psycopg_green, new_cid, register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore
@@ -560,10 +560,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
         """
-        faulthandler.enable(all_threads=True)
-        faulthandler.register(signal.SIGUSR1, all_threads=True)
-
         parallel_server = worker.app.zato_wsgi_app
+
+        register_diag_handlers(parallel_server.base_dir, logger)
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         parallel_server.config.odb_data = parallel_server.get_config_odb_data(parallel_server)

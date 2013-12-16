@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os, random, re, sys
+import logging, os, random, re, signal, threading, traceback, sys
 from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
@@ -47,6 +47,9 @@ from configobj import ConfigObj
 
 # dateutil
 from dateutil.parser import parse
+
+# faulthandler
+import faulthandler
 
 # gevent
 from gevent.socket import wait_read, wait_write
@@ -714,4 +717,26 @@ def gevent_wait_callback(conn, timeout=None):
             raise psycopg2.OperationalError(
                 "Bad result from poll: %r" % state)
 
-# ##############################################################################
+# ################################################################################################################################
+
+def dumpstacks(signal, frame):
+    id2name = dict([(th.ident, th.name) for th in threading.enumerate()])
+    code = []
+    for threadId, stack in sys._current_frames().items():
+        code.append("\n# Thread: %s(%d)" % (id2name.get(threadId,""), threadId))
+        for filename, lineno, name, line in traceback.extract_stack(stack):
+            code.append('File: "%s", line %d, in %s' % (filename, lineno, name))
+            if line:
+                code.append("  %s" % (line.strip()))
+    print('n'.join(code))
+
+def register_diag_handlers(base_dir, logger):
+    """ Registers diagnostic handlers dumping stacks, threads and greenlets on receiving a signal.
+    """
+    now = fs_safe_now()
+    fh_log_file_sys = open(os.path.join(base_dir, 'logs', 'diag', 'fh.sys.{}.{}'.format(now, os.getpid())), 'w')
+
+    faulthandler.enable(all_threads=True)
+    signal.signal(signal.SIGPROF, dumpstacks)
+
+# ################################################################################################################################
