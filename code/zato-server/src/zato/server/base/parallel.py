@@ -562,7 +562,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         """
         parallel_server = worker.app.zato_wsgi_app
 
-        register_diag_handlers(parallel_server.base_dir, logger)
+        register_diag_handlers()
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         parallel_server.config.odb_data = parallel_server.get_config_odb_data(parallel_server)

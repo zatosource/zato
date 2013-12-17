@@ -88,6 +88,7 @@ class ZatoGunicornApplication(Application):
         return self.zato_wsgi_app.on_wsgi_request
 
 def run(base_dir):
+    register_diag_handlers()
 
     os.chdir(base_dir)
 
@@ -107,8 +108,6 @@ def run(base_dir):
     logging.config.fileConfig(os.path.join(repo_location, 'logging.conf'))
 
     logger = logging.getLogger(__name__)
-
-    #register_diag_handlers(base_dir, logger)
 
     config = get_config(repo_location, 'server.conf')
     app_context = get_app_context(config)
