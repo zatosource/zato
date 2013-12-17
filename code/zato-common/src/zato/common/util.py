@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os, random, re, sys
+import gc, inspect, linecache, logging, os, random, re, signal, threading, traceback, sys
 from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
@@ -20,7 +20,7 @@ from itertools import ifilter, izip, izip_longest, tee
 from operator import itemgetter
 from os import getuid
 from os.path import abspath, isabs, join
-from pprint import pprint as _pprint
+from pprint import pprint as _pprint, PrettyPrinter
 from pwd import getpwuid
 from random import getrandbits
 from socket import gethostname, getfqdn
@@ -49,6 +49,8 @@ from configobj import ConfigObj
 from dateutil.parser import parse
 
 # gevent
+from gevent.greenlet import Greenlet
+from gevent.hub import Hub
 from gevent.socket import wait_read, wait_write
 
 # lxml
@@ -71,6 +73,12 @@ from springpython.remoting.xmlrpc import SSLClientTransport
 
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
+
+# Texttable
+from texttable import Texttable
+
+# tripod
+from tripod.sampler import stack as get_stack
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
@@ -714,4 +722,49 @@ def gevent_wait_callback(conn, timeout=None):
             raise psycopg2.OperationalError(
                 "Bad result from poll: %r" % state)
 
-# ##############################################################################
+# ################################################################################################################################
+
+def get_threads_traceback(pid):
+    result = {}
+    id_name = dict([(th.ident, th.name) for th in threading.enumerate()])
+
+    for thread_id, frame in sys._current_frames().items():
+        key = '{}:{}'.format(pid, id_name.get(thread_id, '(No name)'))
+        result[key] = get_stack(frame, True)
+
+    return result
+
+def get_greenlets_traceback(pid):
+    result = {}
+    for item in gc.get_objects():
+        if not isinstance(item, (Greenlet, Hub)):
+            continue
+        if not item:
+            continue
+
+        key = '{}:{}'.format(pid, repr(item))
+        result[key] = ''.join(get_stack(item.gr_frame, True))
+
+    return result
+
+def dump_stacks(*ignored):
+    pid = os.getpid()
+
+    table = Texttable()
+    table.set_cols_width((30, 90))
+    table.set_cols_dtype(['t', 't'])
+
+    rows = [['Proc:Thread/Greenlet', 'Traceback']]
+
+    rows.extend(sorted(get_threads_traceback(pid).items()))
+    rows.extend(sorted(get_greenlets_traceback(pid).items()))
+
+    table.add_rows(rows)
+    logger.info('\n' + table.draw())
+
+def register_diag_handlers():
+    """ Registers diagnostic handlers dumping stacks, threads and greenlets on receiving a signal.
+    """
+    signal.signal(signal.SIGURG, dump_stacks)
+
+# ################################################################################################################################
