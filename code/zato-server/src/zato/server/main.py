@@ -16,11 +16,8 @@ logging.setLoggerClass(ZatoLogger)
 logging.captureWarnings(True)
 
 # stdlib
-import os, signal, ssl, sys
+import os, ssl, sys
 import logging.config
-
-# faulthandler
-import faulthandler
 
 # gunicorn
 from gunicorn.app.base import Application
@@ -36,8 +33,8 @@ from repoze.profile import ProfileMiddleware
 
 # Zato
 from zato.common.repo import RepoManager
-from zato.common.util import absolutize_path, clear_locks, get_app_context, \
-     get_config, get_crypto_manager, make_psycopg_green, TRACE1
+from zato.common.util import absolutize_path, clear_locks, get_app_context, get_config, get_crypto_manager, \
+     make_psycopg_green, register_diag_handlers, TRACE1
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
@@ -91,9 +88,7 @@ class ZatoGunicornApplication(Application):
         return self.zato_wsgi_app.on_wsgi_request
 
 def run(base_dir):
-
-    faulthandler.enable(all_threads=True)
-    faulthandler.register(signal.SIGUSR1, all_threads=True)
+    register_diag_handlers()
 
     os.chdir(base_dir)
 
@@ -119,9 +114,8 @@ def run(base_dir):
 
     crypto_manager = get_crypto_manager(repo_location, app_context, config)
     parallel_server = app_context.get_object('parallel_server')
-    
-    zato_gunicorn_app = ZatoGunicornApplication(
-        parallel_server, repo_location, config.main, config.crypto)
+
+    zato_gunicorn_app = ZatoGunicornApplication(parallel_server, repo_location, config.main, config.crypto)
 
     parallel_server.crypto_manager = crypto_manager
     parallel_server.odb_data = config.odb
@@ -141,7 +135,7 @@ def run(base_dir):
 
     # This is new in 1.2 so is optional
     profiler_enabled = config.get('profiler', {}).get('enabled', False)
-    
+
     if asbool(profiler_enabled):
         profiler_dir = os.path.abspath(os.path.join(base_dir, config.profiler.profiler_dir))
         parallel_server.on_wsgi_request = ProfileMiddleware(
