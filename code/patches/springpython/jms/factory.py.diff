@@ -1,5 +1,5 @@
---- springpython/jms/factory.py.orig	2013-10-11 01:35:18.823043098 +0200
-+++ springpython/jms/factory.py	2013-10-13 00:41:07.353768082 +0200
+--- springpython/jms/factory.py.orig	2013-12-20 01:00:03.539102337 +0100
++++ springpython/jms/factory.py	2013-12-20 01:12:31.286810230 +0100
 @@ -99,7 +99,8 @@
      def __init__(self, queue_manager=None, channel=None, host=None, listener_port=None,
              cache_open_send_queues=True, cache_open_receive_queues=True,
@@ -112,6 +112,15 @@
  
          if md.Persistence == self.CMQC.MQPER_NOT_PERSISTENT:
              text_message.jms_delivery_mode = DELIVERY_MODE_NON_PERSISTENT
+@@ -516,7 +533,7 @@
+ 
+         # .. and its payload too.
+         if mqrfh2.payload:
+-            text_message.text = mqrfh2.payload
++            text_message.text = mqrfh2.payload.decode('utf-8', 'replace')
+ 
+         return text_message
+ 
 @@ -533,18 +550,19 @@
      def _build_md(self, message):
          md = self.mq.md()
