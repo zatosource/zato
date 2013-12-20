@@ -57,11 +57,24 @@ NOT_GIVEN = 'ZATO_NOT_GIVEN'
 
 # ################################################################################################################################
 
+class ValidationException(ZatoException):
+    def __init__(self, name, value, missing_elem, template):
+        self.name = name
+        self.value = value
+        self.missing_elem = missing_elem
+        super(ValidationException, self).__init__(None, template.format(self.name, self.value, self.missing_elem))
+
+# ################################################################################################################################
+
 class ForceType(object):
     """ Forces a SimpleIO element to use a specific data type.
     """
-    def __init__(self, name):
+    def __init__(self, name, *args, **kwargs):
         self.name = name
+        self.args = args
+        self.kwargs = kwargs
+
+        self.default = kwargs.get('default', NO_DEFAULT_VALUE)
 
         #
         # Key - bool/data_type,
@@ -154,7 +167,18 @@ class Dict(ForceType):
     """ JSON dictionary or a key/value in XML.
     """
     def from_json(self, value, *ignored):
-        return value
+        if self.args:
+            out = {}
+            for key in self.args:
+                v = value.get(key, self.default)
+                if v == NO_DEFAULT_VALUE:
+                    raise ValidationException(self.name, value, key, 'Dict [{}] [{}]  has no key [{}]')
+                else:
+                    out[key] = v
+
+            return out
+        else:
+            return value
 
     to_json = from_json
 
