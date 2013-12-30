@@ -135,7 +135,7 @@
                         <li><a href="{% url kvdb-remote-command %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></li>
                     </ul>
                 </li>
-                <li><a href="{% url scheduler %}?cluster={{ cluster_id }}">Scheduler</a></li>
+                <li><a href="{% url scheduler %}?cluster={{ cluster_id|default:'' }}">Scheduler</a></li>
                 <li><a href="#">Statistics &darr;</a>
                     <ul>
 
