@@ -152,4 +152,6 @@ def run(base_dir):
  
 if __name__ == '__main__':
     base_dir = sys.argv[1]
+    if not os.path.isabs(base_dir):
+        base_dir = os.path.abspath(os.path.join(os.getcwd(), base_dir))
     run(base_dir)
