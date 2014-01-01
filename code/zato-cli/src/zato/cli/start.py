@@ -11,11 +11,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os
 
+# Bunch
+from bunch import Bunch
+
 # ConfigObj
 from configobj import ConfigObj
 
 # Zato
 from zato.cli import ManageCommand
+from zato.cli.check_config import CheckConfig
 from zato.common.util import get_executable
 
 zdaemon_conf_name_contents = """<runner>
@@ -50,8 +54,12 @@ Examples:
         # server, in which case we refrain from starting new processes now.
         if os.path.exists(socket_name):
             msg = 'Server at {0} is already running'.format(self.component_dir)
-            self.logger.debug(msg)
+            self.logger.info(msg)
             return self.SYS_ERROR.COMPONENT_ALREADY_RUNNING
+
+        cc = CheckConfig(self.args)
+        cc.show_output = False
+        cc.execute(Bunch(path='.'))
 
         zdaemon_conf_name = 'zdaemon-{0}.conf'.format(port)
         socket_prefix = 'server-{0}'.format(port)
