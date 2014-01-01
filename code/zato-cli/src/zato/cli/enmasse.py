@@ -145,7 +145,7 @@ class EnMasse(ManageCommand):
     def _on_server(self, args):
 
         self.args = args
-        self.curdir = abspath(os.getcwd())
+        self.curdir = abspath(self.original_dir)
         self.replace_odb_objects = self.args.replace_odb_objects
         self.has_import = getattr(args, 'import')
         self.ignore_missing_defs = args.ignore_missing_defs
@@ -171,7 +171,10 @@ class EnMasse(ManageCommand):
             # Checks if connections to ODB/Redis are configured properly
             cc = CheckConfig(self.args)
             cc.show_output = False
-            cc.execute(self.args)
+            cc.execute(Bunch(path='.'))
+
+            # Get back to the directory we started in so following commands start afresh as well
+            os.chdir(self.curdir)
 
             # Get client and issue a sanity check as quickly as possible
             self.set_client()
