@@ -565,7 +565,8 @@ class URLData(OAuthDataStore):
         """ Stores initial audit information, right after receiving a request.
         """
         if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.ELEM_PATH.id:
-            payload = {'root': loads(payload)}
+            payload = loads(payload) if payload else ''
+            payload = {'root': payload}
             pattern_list = channel_item['replace_patterns_elem_path']
         else:
             pattern_list = channel_item['replace_patterns_xpath']
