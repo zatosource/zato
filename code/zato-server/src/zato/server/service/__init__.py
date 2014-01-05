@@ -56,11 +56,16 @@ from zato.server.message import MessageFacade
 from zato.server.service.reqresp import Outgoing, Request, Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
-from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, ForceType, Integer, List, ListOfDicts, Unicode, UTC
+from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, ForceType, Integer, List, ListOfDicts, Nested, Unicode, \
+     UTC
 
 logger = logging.getLogger(__name__)
 
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
+
+# Back compat
+Bool = Boolean
+Int = Integer
 
 # ################################################################################################################################
 
