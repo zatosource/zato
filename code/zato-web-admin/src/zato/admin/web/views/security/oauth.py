@@ -69,4 +69,4 @@ class Delete(_Delete):
     
 @method_allowed('POST')
 def change_secret(req):
-    return _change_password(req, 'zato.security.oauth.change-secret')
+    return _change_password(req, 'zato.security.oauth.change-password')
