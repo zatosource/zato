@@ -97,7 +97,7 @@ class URLData(OAuthDataStore):
 
                 # No such nonce so we add it to the store
                 self.kvdb.add_oauth_nonce(
-                    oauth_consumer.key, nonce, 10)#sec_config.config.max_nonce_log)
+                    oauth_consumer.key, nonce, sec_config.config.max_nonce_log)
 
     def fetch_request_token(self, oauth_consumer, oauth_callback):
         """-> OAuthToken."""
