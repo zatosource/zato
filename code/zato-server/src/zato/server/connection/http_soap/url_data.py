@@ -182,8 +182,8 @@ class URLData(OAuthDataStore):
         try:
             self._oauth_server.verify_request(oauth_request)
         except Exception, e:
-            msg = 'Signature verification failed, wsgi_environ:[%r], e:[%r]'
-            logger.error(msg, wsgi_environ, format_exc(e))
+            msg = 'Signature verification failed, wsgi_environ:[%r], e:[%s], e.message:[%s]'
+            logger.error(msg, wsgi_environ, format_exc(e), e.message)
             raise Unauthorized(cid, 'Signature verification failed', 'OAuth')
 
     def _handle_security_tech_acc(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
