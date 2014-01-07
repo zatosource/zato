@@ -41,8 +41,10 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var is_active = item.is_active == true;
     var merge_url_params_req = item.merge_url_params_req == true;
 
-    var is_channel = $(document).getUrlParam('connection') == 'channel';
-    var is_outgoing = $(document).getUrlParam('connection') == 'outgoing';
+    var cluster_id = $(document).getUrlParam('cluster');
+    var connection = $(document).getUrlParam('connection');
+    var is_channel = connection == 'channel';
+    var is_outgoing = connection == 'outgoing';
     var is_soap = data.transport == 'soap';
 
     var method_tr = '';
@@ -60,7 +62,6 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     }
 
     if(is_channel) {
-        var cluster_id = $(document).getUrlParam('cluster');
         service_tr += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
         method_tr += String.format('<td>{0}</td>', item.method);
 
@@ -76,7 +77,16 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', item.name);
+
+    if(is_channel) {
+        row += String.format('<td>{0}</td>',
+            String.format("<a href='/zato/http-soap/details/{3}/{4}/{1}/{0}/{2}/'>{0}</a>", 
+            item.name, item.id, cluster_id, connection, data.transport));
+    }
+    else {
+        row += String.format('<td>{0}</td>', item.name);
+    }
+
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
 
     if(is_outgoing) {
