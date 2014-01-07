@@ -444,7 +444,7 @@ class URLData(OAuthDataStore):
 
 # ##############################################################################
 
-    def _channel_item_from_msg(self, msg, match_target):
+    def _channel_item_from_msg(self, msg, match_target, old_data={}):
         """ Creates a channel info bunch out of an incoming CREATE_EDIT message.
         """
         channel_item = Bunch()
@@ -461,11 +461,11 @@ class URLData(OAuthDataStore):
             channel_item['security_id'] = msg['security_id']
             channel_item['security_name'] = msg['security_name']
 
-        channel_item.audit_enabled = msg.get('audit_enabled', False)
-        channel_item.audit_max_payload = msg.get('audit_max_payload', 0)
-        channel_item.audit_repl_patt_type = msg.get('audit_repl_patt_type', None)
-        channel_item.replace_patterns_elem_path = msg.get('replace_patterns_elem_path', [])
-        channel_item.replace_patterns_xpath = msg.get('replace_patterns_xpath', [])
+        channel_item.audit_enabled = old_data.get('audit_enabled', False)
+        channel_item.audit_max_payload = old_data.get('audit_max_payload', 0)
+        channel_item.audit_repl_patt_type = old_data.get('audit_repl_patt_type', None)
+        channel_item.replace_patterns_elem_path = old_data.get('replace_patterns_elem_path', [])
+        channel_item.replace_patterns_xpath = old_data.get('replace_patterns_xpath', [])
 
         channel_item.service_impl_name = msg.impl_name
         channel_item.match_target = match_target
@@ -493,15 +493,15 @@ class URLData(OAuthDataStore):
 
         return sec_info
 
-    def _create_channel(self, msg):
+    def _create_channel(self, msg, old_data):
         """ Creates a new channel, both its core data and the related security definition.
         """
         match_target = '{}{}{}'.format(msg.soap_action, MISC.SEPARATOR, msg.url_path)
-        self.channel_data.append(self._channel_item_from_msg(msg, match_target))
+        self.channel_data.append(self._channel_item_from_msg(msg, match_target, old_data))
         self.url_sec[match_target] = self._sec_info_from_msg(msg)
 
     def _delete_channel(self, msg):
-        """ Deletes a channel, both its core data and the related security definition.
+        """ Deletes a channel, both its core data and the related security definition. Returns the deleted data.
         """
         old_match_target = '{}{}{}'.format(
             msg.get('old_soap_action'), MISC.SEPARATOR, msg.get('old_url_path'))
@@ -514,10 +514,14 @@ class URLData(OAuthDataStore):
 
         # No error, let's delete channel info
         if match_idx != ZATO_NONE:
-            self.channel_data.pop(match_idx)
+            old_data = self.channel_data.pop(match_idx)
+        else:
+            old_data = {}
 
         # Channel's security now
         del self.url_sec[old_match_target]
+
+        return old_data
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
@@ -527,9 +531,11 @@ class URLData(OAuthDataStore):
             # the channel and later recreate it while creates, obviously,
             # get to creation only.
             if msg.get('old_name'):
-                self._delete_channel(msg)
+                old_data = self._delete_channel(msg)
+            else:
+                old_data = {}
 
-            self._create_channel(msg)
+            self._create_channel(msg, old_data)
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an HTTP/SOAP channel.
