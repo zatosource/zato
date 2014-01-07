@@ -265,6 +265,20 @@ class ListOfDicts(ForceType):
 
 # ################################################################################################################################
 
+class Nested(ForceType):
+    """ Allows for embedding arbitrary sub-elements, including simple strings, ForceType or other Nested elements.
+    """
+
+    def from_json(self, value, *ignored):
+        return value
+
+    to_json = from_json
+
+    def __iter__(self):
+        return iter(self.args)
+
+# ################################################################################################################################
+
 class Unicode(ForceType):
     """ Gets transformed into a unicode object.
     """
@@ -293,7 +307,7 @@ class ServiceInput(Bunch):
 
 # ################################################################################################################################
 
-COMPLEX_VALUE = (Dict, List, ListOfDicts)
+COMPLEX_VALUE = (Dict, List, ListOfDicts, Nested)
 
 # ################################################################################################################################
 
