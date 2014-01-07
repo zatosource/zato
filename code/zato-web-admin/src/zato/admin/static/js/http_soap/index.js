@@ -7,9 +7,9 @@ $.fn.zato.data_table.HTTPSOAP = new Class({
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)',
-								this.merge_url_params_req ? this.merge_url_params_req : '(none)',
-								this.data_format ? this.data_format : '(none)'
-								);
+                                this.merge_url_params_req ? this.merge_url_params_req : '(none)',
+                                this.data_format ? this.data_format : '(none)'
+                                );
     }
 });
 
@@ -39,37 +39,37 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     }
 
     var is_active = item.is_active == true;
-	var merge_url_params_req = item.merge_url_params_req == true;
-	
-	var is_channel = $(document).getUrlParam('connection') == 'channel';
-	var is_outgoing = $(document).getUrlParam('connection') == 'outgoing';
-	var is_soap = data.transport == 'soap';
+    var merge_url_params_req = item.merge_url_params_req == true;
 
-	var method_tr = '';
+    var is_channel = $(document).getUrlParam('connection') == 'channel';
+    var is_outgoing = $(document).getUrlParam('connection') == 'outgoing';
+    var is_soap = data.transport == 'soap';
+
+    var method_tr = '';
     var soap_action_tr = '';
     var soap_version_tr = '';
     var service_tr = '';
     var host_tr = '';
-	var merge_url_params_req_tr = '';
-	var url_params_pri_tr = '';
-	var params_pri_tr = '';
+    var merge_url_params_req_tr = '';
+    var url_params_pri_tr = '';
+    var params_pri_tr = '';
 
     if(is_soap) {
         soap_action_tr += String.format('<td>{0}</td>', item.soap_action);
         soap_version_tr += String.format('<td>{0}</td>', item.soap_version);
     }
-    
+
     if(is_channel) {
         var cluster_id = $(document).getUrlParam('cluster');
         service_tr += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
-		method_tr += String.format('<td>{0}</td>', item.method);
-		
-		merge_url_params_req_tr += String.format('<td class="ignore">{0}</td>', merge_url_params_req);
-		url_params_pri_tr += String.format('<td class="ignore">{0}</td>', item.url_params_pri);
-		params_pri_tr += String.format('<td class="ignore">{0}</td>', item.params_pri);
-		
+        method_tr += String.format('<td>{0}</td>', item.method);
+
+        merge_url_params_req_tr += String.format('<td class="ignore">{0}</td>', merge_url_params_req);
+        url_params_pri_tr += String.format('<td class="ignore">{0}</td>', item.url_params_pri);
+        params_pri_tr += String.format('<td class="ignore">{0}</td>', item.params_pri);
+
     }
-    
+
     if(is_outgoing) {
         host_tr += String.format('<td>{0}</td>', item.host);
     }
@@ -78,51 +78,51 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-	
-	if(is_outgoing) {
-		row += host_tr;
-	}
+
+    if(is_outgoing) {
+        row += host_tr;
+    }
 
     row += String.format('<td>{0}</td>', item.url_path);
-	
-	if(is_channel) {
-		row += service_tr;
-	}
 
-	row += String.format('<td>{0}</td>', item.security_select);
+    if(is_channel) {
+        row += service_tr;
+    }
 
-	if(is_soap) {
-		row += soap_action_tr;
-		row += soap_version_tr;
-	}
-	
-	if(is_channel) {
-		row += method_tr;
-		row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.service);
-	}
+    row += String.format('<td>{0}</td>', item.security_select);
+
+    if(is_soap) {
+        row += soap_action_tr;
+        row += soap_version_tr;
+    }
+
+    if(is_channel) {
+        row += method_tr;
+        row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.service);
+    }
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
-	row += String.format("<td class='ignore'>{0}</td>", '');
-	row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.data_format);
+    row += String.format("<td class='ignore'>{0}</td>", '');
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.data_format);
 
-	if(is_outgoing) {
-		row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.ping_method);
-		row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.pool_size);
-	}
+    if(is_outgoing) {
+        row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.ping_method);
+        row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.pool_size);
+    }
 
-	if(is_channel) {
-		row += merge_url_params_req_tr;
-		row += url_params_pri_tr;
-		row += params_pri_tr;
-	}
+    if(is_channel) {
+        row += merge_url_params_req_tr;
+        row += url_params_pri_tr;
+        row += params_pri_tr;
+    }
 
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.http_soap.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.delete_({0});'>Delete</a>", item.id));
 
-	if(is_outgoing) {
-		row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.ping({0});'>Ping</a>", item.id));
-	}
+    if(is_outgoing) {
+        row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.ping({0});'>Ping</a>", item.id));
+    }
 
     if(include_tr) {
         row += '</tr>';
@@ -140,12 +140,12 @@ $.fn.zato.http_soap.delete_ = function(id) {
 
 $.fn.zato.http_soap.ping = function(id) {
 
-	var callback = function(data, status) {
-		var success = status == 'success';
-		$.fn.zato.user_message(success, data.responseText);
-	}
+    var callback = function(data, status) {
+        var success = status == 'success';
+        $.fn.zato.user_message(success, data.responseText);
+    }
 
-	var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
-	$.fn.zato.post(url, callback, '', 'text');
+    var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+    $.fn.zato.post(url, callback, '', 'text');
 
 }
