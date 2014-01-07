@@ -1,0 +1,36 @@
+--- oauth/oauth.py.orig	2014-01-07 16:11:52.684354208 +0100
++++ oauth/oauth.py	2014-01-07 16:17:31.284650086 +0100
+@@ -423,13 +423,21 @@
+         new_token = self.data_store.fetch_access_token(consumer, token, verifier)
+         return new_token
+ 
+-    def verify_request(self, oauth_request):
++    def verify_request(self, oauth_request, allow_missing_oauth_token=True):
+         """Verifies an api call and checks all the parameters."""
+         # -> consumer and token
+         version = self._get_version(oauth_request)
+         consumer = self._get_consumer(oauth_request)
++
+         # Get the access token.
+-        token = self._get_token(oauth_request, 'access')
++        try:
++            token = self._get_token(oauth_request, 'access')
++        except OAuthError, e:
++            if e.message == 'Parameter not found: oauth_token' and allow_missing_oauth_token:
++                token = ''
++            else:
++                raise
++
+         self._check_signature(oauth_request, consumer, token)
+         parameters = oauth_request.get_nonoauth_parameters()
+         return consumer, token, parameters
+@@ -625,6 +633,9 @@
+         key, raw = self.build_signature_base_string(oauth_request, consumer,
+             token)
+ 
++        key = key.encode('utf-8')
++        raw = raw.encode('utf-8')
++
+         # HMAC object.
+         try:
+             import hashlib # 2.5
