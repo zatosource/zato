@@ -13,8 +13,144 @@ from nose.tools import eq_
 
 # Zato
 from zato.common import DATA_FORMAT
-from zato.server.service import AsIs, CSV, Boolean, Dict, Integer, List, ListOfDicts, Service, Unicode, UTC
+from zato.server.service import AsIs, CSV, Bool, Boolean, Dict, Int, Integer, List, ListOfDicts, Nested, Service, Unicode, UTC
 from zato.server.service.internal.checks import CheckService
+
+# ################################################################################################################################
+
+def _test_nested(msg):
+    eq_(msg.meta.limit, 111)
+    eq_(msg.meta.next, 'abc')
+    eq_(msg.meta.offset, 30)
+    eq_(msg.meta.previous, 'zxc')
+    eq_(msg.meta.total_count, 9090)
+
+    eq_(msg.objects.also_known_as, [1, 22, 333, 444])
+    eq_(msg.objects.catchment, 'my-catchment')
+    eq_(msg.objects.description, 'my-description')
+    eq_(msg.objects.emails, [
+        {'comment':'comment', 'confidential':'confidential', 'email':'email'},
+        {'comment':'comment2', 'confidential':'confidential2', 'email':'email2'}])
+    eq_(msg.objects.id, 123)
+    eq_(msg.objects.is_mobile, True)
+    eq_(msg.objects.last_updated, '2013-12-15')
+    eq_(msg.objects.location.building, 'my-building')
+    eq_(msg.objects.location.confidential, True)
+    eq_(msg.objects.location.flat_number, '12')
+    eq_(msg.objects.location.level, '5')
+    eq_(msg.objects.location.point.lat, '90.0')
+    eq_(msg.objects.location.point.non, '10.0')
+    eq_(msg.objects.location.postcode, '123456')
+    eq_(msg.objects.location.state, 'my-state')
+    eq_(msg.objects.location.street_name, 'my-street_name')
+    eq_(msg.objects.location.street_number, '23')
+    eq_(msg.objects.location.street_suffix, 'my-street_suffix')
+    eq_(msg.objects.location.street_type, 'my-street_type')
+    eq_(msg.objects.location.suburb, 'my-suburb')
+    eq_(msg.objects.location.unit, 'my-unit')
+    eq_(msg.objects.name, 'my-name')
+    eq_(msg.objects.ndis_approved, False)
+    eq_(msg.objects.organisation.id, 123)
+    eq_(msg.objects.organisation.name, 'my-org-name')
+    eq_(msg.objects.parking_info, 'my-parking_info')
+    eq_(msg.objects.phones, [
+        {'comment': 'comment1', 'confidential': True, 'kind': 'kind1', 'number': 'number1'},
+        {'comment': 'comment2', 'confidential': False, 'kind': 'kind2', 'number': 'number2'}])
+    eq_(msg.objects.postal_address.confidential, True)
+    eq_(msg.objects.postal_address.line1, 'my-line1')
+    eq_(msg.objects.postal_address.line2, 'my-line2')
+    eq_(msg.objects.postal_address.postcode, 'my-postcode')
+    eq_(msg.objects.postal_address.state, 'my-state')
+    eq_(msg.objects.postal_address.suburb, 'my-suburb')
+    eq_(msg.objects.provider_type, 'my-provider_type')
+    eq_(msg.objects.public_transport_info, 'my-public_transport_info')
+    eq_(msg.objects.type, 'my-type')
+    eq_(msg.objects.web, 'example.org')
+
+def _get_nested_msg():
+    return {
+        'meta': {
+            'limit': 111,
+            'next': 'abc',
+            'offset': 30,
+            'previous': 'zxc',
+            'total_count': 9090
+        },
+        'objects': {
+            'also_known_as': [1, 22, 333, 444],
+            'catchment': 'my-catchment',
+            'description': 'my-description',
+            'emails': [{'comment':'comment', 'confidential':'confidential', 'email':'email'},
+                       {'comment':'comment2', 'confidential':'confidential2', 'email':'email2'}],
+            'id': 123,
+            'is_mobile': True,
+            'last_updated': '2013-12-15',
+            'location': {
+                'building': 'my-building',
+                'confidential': True,
+                'flat_number': '12',
+                'level': '5',
+                'point': {
+                    'lat': '90.0',
+                    'non': '10.0',
+                },
+                'postcode': '123456',
+                'state': 'my-state',
+                'street_name': 'my-street_name',
+                'street_number': '23',
+                'street_suffix': 'my-street_suffix',
+                'street_type': 'my-street_type',
+                'suburb': 'my-suburb',
+                'unit': 'my-unit',
+            },
+            'name': 'my-name',
+            'ndis_approved': False,
+            'organisation': {
+                'id': 123,
+                'name': 'my-org-name'
+            },
+            'parking_info': 'my-parking_info',
+            'phones': [{'comment': 'comment1', 'confidential': True, 'kind': 'kind1', 'number': 'number1'},
+                       {'comment': 'comment2', 'confidential': False, 'kind': 'kind2', 'number': 'number2'}],
+            'postal_address': {
+                'confidential': True,
+                'line1': 'my-line1',
+                'line2': 'my-line2',
+                'postcode': 'my-postcode',
+                'state': 'my-state',
+                'suburb': 'my-suburb'
+            },
+            'provider_type': 'my-provider_type',
+            'public_transport_info': 'my-public_transport_info',
+            'type': 'my-type',
+            'web': 'example.org',
+        }
+    }
+
+def _get_sio_msg():
+
+    meta = (Int('limit'), 'next', Int('offset'), 'previous',
+            Int('total_count'))
+
+    location = Nested('location', 'building', Bool('confidential'),
+        'flat_number', 'level', Dict('point', 'lat', 'non'), 'postcode',
+        'state','street_name','street_number', 'street_suffix',
+        'street_type', 'suburb', 'unit')
+
+    phones = ListOfDicts('phones', 'comment', Bool('confidential'),
+        'kind', 'number')
+
+    postal_address = Dict('postal_address', Bool('confidential'),
+        'line1', 'line2', 'postcode', 'state', 'suburb')
+
+    objects = (List('also_known_as'), 'catchment', 'description',
+            ListOfDicts('emails'), Int('id'), Bool('is_mobile'),
+            'last_updated', location, 'name', Bool('ndis_approved'),
+            Dict('organisation', 'id', 'name'), 'parking_info', phones,
+            postal_address, 'provider_type', 'public_transport_info',
+            'type', 'web')
+
+    return [Nested('meta', meta), Nested('objects', objects)]
 
 # ################################################################################################################################
 
@@ -229,6 +365,20 @@ class UTCService(CheckTargetService):
 
 # ################################################################################################################################
 
+class NestedService(CheckTargetService):
+
+    class SimpleIO:
+        input_required = _get_sio_msg()
+        output_required = _get_sio_msg()
+
+    def handle(self):
+        _test_nested(self.request.bunchified())
+
+    def set_payload(self):
+        self.response.payload = _get_nested_msg()
+
+# ################################################################################################################################
+
 class CheckSIO(CheckService):
 
     def json_check_as_is(self):
@@ -355,6 +505,10 @@ class CheckSIO(CheckService):
 
         eq_(response.utc1, '1234-11-22T01:02:03')
         eq_(response.utc2, '2918-03-19T21:22:23')
+
+    def json_check_nested(self):
+        response = self.invoke_check_json('zato.checks.sio.nested-service', _get_nested_msg())
+        _test_nested(response)
 
 # ################################################################################################################################
 
@@ -620,6 +774,7 @@ class CheckSIO(CheckService):
         self.json_check_no_force_type()
         self.json_check_unicode()
         self.json_check_utc()
+        self.json_check_nested()
 
         self.xml_check_as_is()
         self.xml_check_boolean()
