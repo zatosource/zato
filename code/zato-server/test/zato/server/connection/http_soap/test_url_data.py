@@ -58,7 +58,7 @@ class Dummy_delete_channel(object):
     def __init__(self, msg=None):
         self.msg = msg
 
-    def __call__(self, msg):
+    def __call__(self, msg, *args):
         self.msg = msg
 
 Dummy_create_channel = Dummy_delete_channel
@@ -940,7 +940,7 @@ class URLDataTestCase(TestCase):
         ud.channel_data = []
         ud.url_sec = {}
 
-        ud._create_channel(msg)
+        ud._create_channel(msg, {})
 
         self.assertIn(match_target, ud.url_sec)
         eq_(ud.url_sec[match_target], sec_info)
