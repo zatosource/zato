@@ -156,7 +156,7 @@ class Create(ZatoCommand):
     opts = deepcopy(common_odb_opts)
     opts.extend(kvdb_opts)
     
-    opts.append({'name':'priv_key_path', 'help':"Path to the server's public key in PEM"})
+    opts.append({'name':'pub_key_path', 'help':"Path to the server's public key in PEM"})
     opts.append({'name':'priv_key_path', 'help':"Path to the server's private key in PEM"})
     opts.append({'name':'cert_path', 'help':"Path to the server's certificate in PEM"})
     opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
