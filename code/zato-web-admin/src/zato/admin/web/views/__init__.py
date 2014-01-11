@@ -257,9 +257,12 @@ class CreateEdit(_BaseView):
         try:
             super(CreateEdit, self).__call__(req, *args, **kwargs)
             input_dict = {
-                'id': self.req.POST.get('id'),
                 'cluster_id': self.cluster_id
             }
+            post_id = self.req.POST.get('id')
+            if post_id:
+                input_dict = {'id': post_id}
+
             input_dict.update(initial_input_dict)
     
             
