@@ -98,13 +98,13 @@ def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
 
 common_logging_conf_contents = """
 [loggers]
-keys=root,zato
+keys=root, zato, zato_access_log
 
 [handlers]
-keys=rotating_file_handler, stdout_handler
+keys=rotating_file_handler, rotating_file_handler_access_log, stdout_handler
 
 [formatters]
-keys=default_formatter, colour_formatter
+keys=default_formatter, default_formatter_access_log, colour_formatter
 
 [logger_root]
 level=INFO
@@ -132,6 +132,22 @@ format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lin
 [formatter_colour_formatter]
 format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
 class=zato.common.util.ColorFormatter
+
+# ################################################################################################################################
+
+[logger_zato_access_log]
+level=INFO
+handlers=rotating_file_handler_access_log
+qualname=zato_access_log
+propagate=0
+
+[handler_rotating_file_handler_access_log]
+class=logging.handlers.RotatingFileHandler
+formatter=default_formatter_access_log
+args=('./logs/http_access.log', 'a', 20000000, 10)
+
+[formatter_default_formatter_access_log]
+format=%(remote_ip)s %(cid)s "%(channel_name)s" [%(req_timestamp)s] "%(method)s %(path)s %(http_version)s" %(status_code)s %(response_size)s "-" "%(user_agent)s"
 """
 
 ################################################################################
