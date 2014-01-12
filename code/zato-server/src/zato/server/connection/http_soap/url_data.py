@@ -216,6 +216,8 @@ class URLData(OAuthDataStore):
             logger.error(error_msg)
             raise Unauthorized(cid, user_msg, 'zato-tech-acc')
 
+        return wsgi_environ['HTTP_X_ZATO_USER']
+
 # ##############################################################################
 
     def match(self, url_path, soap_action):
