@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import httplib, os
 from ast import literal_eval
 from cStringIO import StringIO
 from datetime import datetime
@@ -16,7 +17,6 @@ from hashlib import sha1
 from json import loads
 from pprint import pprint
 from unittest import TestCase
-import httplib
 
 # Bunch
 from bunch import Bunch
@@ -28,7 +28,10 @@ from mock import patch
 from nose.tools import eq_, ok_
 
 # pytz
-from pytz import UTC
+from pytz import timezone, UTC
+
+# tzlocal
+from tzlocal import get_localzone
 
 # Zato
 from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, DATA_FORMAT, ZATO_NONE
@@ -363,8 +366,15 @@ class HTTPAccessLogTestCase(TestCase):
         def _utcnow(self):
             return datetime(year=2014, month=1, day=12, hour=16, minute=22, second=12, tzinfo=UTC)
 
-        with patch('arrow.factory.ArrowFactory.utcnow', _utcnow):
+        local_tz = get_localzone()
+        _now = _utcnow(None)
 
+        local_dt = _now.replace(tzinfo=UTC).astimezone(local_tz)
+        local_dt = local_tz.normalize(local_dt)
+
+        request_timestamp = local_dt.strftime(ACCESS_LOG_DT_FORMAT)
+
+        with patch('arrow.factory.ArrowFactory.utcnow', _utcnow):
             response = rand_string() * rand_int()
             cid = new_cid()
             cluster_id = 1
@@ -375,7 +385,7 @@ class HTTPAccessLogTestCase(TestCase):
             http_version = rand_string()
             request_method = rand_string()
             remote_ip = '10.{}.{}.{}'.format(rand_int(), rand_int(), rand_int())
-            req_timestamp = utcnow()
+            req_timestamp_utc = utcnow()
 
             channel_item = {
                 'name': channel_name,
@@ -393,7 +403,7 @@ class HTTPAccessLogTestCase(TestCase):
 
                 'zato.http.response.status': httplib.OK,
                 'zato.http.channel_item': channel_item,
-                'zato.request_timestamp_access_log': req_timestamp,
+                'zato.request_timestamp_utc': req_timestamp_utc,
 
                 'HTTP_X_FORWARDED_FOR': remote_ip,
                 'PATH_INFO': url_path,
@@ -462,6 +472,7 @@ class HTTPAccessLogTestCase(TestCase):
             eq_(extra.path, url_path)
             eq_(extra.method, request_method)
             eq_(extra.remote_ip, remote_ip)
-            eq_(extra.req_timestamp, '12/Jan/2014:16:22:12 +0000')
+            eq_(extra.req_timestamp_utc, '12/Jan/2014:16:22:12 +0000')
+            eq_(extra.req_timestamp, request_timestamp)
 
 # ################################################################################################################################
