@@ -230,7 +230,7 @@ class Create(ZatoCommand):
         except IntegrityError, e:
             msg = 'Cluster name [{}] already exists'.format(cluster.name)
             if self.verbose:
-                msg += '. Caught an exception:[{}]'.format(format_exc(e))
+                msg += '. Caught an exception:[{}]'.format(format_exc(e).decode('utf-8'))
                 self.logger.error(msg)
             self.logger.error(msg)
             session.rollback()

@@ -162,7 +162,7 @@ class ODBManager(SessionWrapper):
             try:
                 self._session.commit()
             except IntegrityError, e:
-                logger.log(TRACE1, 'IntegrityError (Service), e:[{e}]'.format(e=format_exc(e)))
+                logger.log(TRACE1, 'IntegrityError (Service), e:[%s]', format_exc(e).decode('utf-8'))
                 self._session.rollback()
                 
                 service = self._session.query(Service).\
@@ -199,7 +199,7 @@ class ODBManager(SessionWrapper):
                 self._session.commit()
             except IntegrityError, e:
                 
-                logger.log(TRACE1, 'IntegrityError (DeployedService), e:[{e}]'.format(e=format_exc(e)))
+                logger.log(TRACE1, 'IntegrityError (DeployedService), e:[%s]', format_exc(e).decode('utf-8'))
                 self._session.rollback()
 
                 ds = self._session.query(DeployedService).\
