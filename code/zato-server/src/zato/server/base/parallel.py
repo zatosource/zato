@@ -37,11 +37,17 @@ from parse import compile as parse_compile
 from paste.util.converters import asbool
 from paste.util.multidict import MultiDict
 
+# pytz
+from pytz import UTC
+
 # Spring Python
 from springpython.context import DisposableObject
 
 # retools
 from retools.lock import Lock
+
+# tzlocal
+from tzlocal import get_localzone
 
 # Zato
 from zato.broker.client import BrokerClient
@@ -122,9 +128,13 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         """ Handles incoming HTTP requests.
         """
         cid = kwargs.get('cid', new_cid())
+
+        wsgi_environ['zato.local_tz'] = get_localzone()
         wsgi_environ['zato.request_timestamp_utc'] = utcnow()
-        wsgi_environ['zato.request_timestamp_access_log'] = wsgi_environ['zato.request_timestamp_utc'].strftime(
-            ACCESS_LOG_DT_FORMAT)
+
+        local_dt = wsgi_environ['zato.request_timestamp_utc'].replace(tzinfo=UTC).astimezone(wsgi_environ['zato.local_tz'])
+        wsgi_environ['zato.request_timestamp'] = wsgi_environ['zato.local_tz'].normalize(local_dt)
+
         wsgi_environ['zato.http.response.headers'] = {'X-Zato-CID': cid}
         wsgi_environ['zato.http.remote_addr'] = wsgi_environ.get('HTTP_X_FORWARDED_FOR') or wsgi_environ.get('REMOTE_ADDR')
 
@@ -167,7 +177,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 'remote_ip': wsgi_environ['zato.http.remote_addr'],
                 'cid': cid,
                 'channel_name': channel_name,
-                'req_timestamp': wsgi_environ['zato.request_timestamp_access_log'],
+                'req_timestamp_utc': wsgi_environ['zato.request_timestamp_utc'].strftime(ACCESS_LOG_DT_FORMAT),
+                'req_timestamp': wsgi_environ['zato.request_timestamp'].strftime(ACCESS_LOG_DT_FORMAT),
                 'method': wsgi_environ['REQUEST_METHOD'],
                 'path': wsgi_environ['PATH_INFO'],
                 'http_version': wsgi_environ['SERVER_PROTOCOL'],
