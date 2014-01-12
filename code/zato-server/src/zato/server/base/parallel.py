@@ -13,12 +13,16 @@ import logging, os, time, signal
 from datetime import datetime
 from hashlib import sha1
 from httplib import INTERNAL_SERVER_ERROR, responses
+from logging import INFO
 from threading import Thread
 from traceback import format_exc
 from uuid import uuid4
 
 # anyjson
 from anyjson import dumps
+
+# arrow
+from arrow import utcnow
 
 # Bunch
 from bunch import Bunch
@@ -41,7 +45,7 @@ from retools.lock import Lock
 
 # Zato
 from zato.broker.client import BrokerClient
-from zato.common import CHANNEL, KVDB, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS,\
+from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, KVDB, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS,\
      ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
      JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
@@ -97,6 +101,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.has_gevent = None
         self.delivery_store = None
 
+        self.access_logger = logging.getLogger('zato_access_log')
+
         # The main config store
         self.config = ConfigStore()
 
@@ -116,7 +122,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         """ Handles incoming HTTP requests.
         """
         cid = kwargs.get('cid', new_cid())
+        wsgi_environ['zato.request_timestamp_utc'] = utcnow()
+        wsgi_environ['zato.request_timestamp_access_log'] = wsgi_environ['zato.request_timestamp_utc'].strftime(
+            ACCESS_LOG_DT_FORMAT)
         wsgi_environ['zato.http.response.headers'] = {'X-Zato-CID': cid}
+        wsgi_environ['zato.http.remote_addr'] = wsgi_environ.get('HTTP_X_FORWARDED_FOR') or wsgi_environ.get('REMOTE_ADDR')
 
         try:
             # We need to populate all the TLS-related environ keys so that
@@ -144,7 +154,28 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         headers = ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items())
         start_response(wsgi_environ['zato.http.response.status'], headers)
-        
+
+        if self.access_logger.isEnabledFor(INFO):
+
+            channel_item = wsgi_environ.get('zato.http.channel_item')
+            if channel_item:
+                channel_name = channel_item.get('name', '-')
+            else:
+                channel_name = '-'
+
+            self.access_logger.info('', extra = {
+                'remote_ip': wsgi_environ['zato.http.remote_addr'],
+                'cid': cid,
+                'channel_name': channel_name,
+                'req_timestamp': wsgi_environ['zato.request_timestamp_access_log'],
+                'method': wsgi_environ['REQUEST_METHOD'],
+                'path': wsgi_environ['PATH_INFO'],
+                'http_version': wsgi_environ['SERVER_PROTOCOL'],
+                'status_code': wsgi_environ['zato.http.response.status'].split()[0],
+                'response_size': len(payload),
+                'user_agent': wsgi_environ['HTTP_USER_AGENT'],
+                })
+
         return [payload]
 
     def maybe_on_first_worker(self, server, redis_conn, deployment_key):

@@ -27,11 +27,14 @@ from mock import patch
 # nose
 from nose.tools import eq_, ok_
 
+# pytz
+from pytz import UTC
+
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, ZATO_NONE
+from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, DATA_FORMAT, ZATO_NONE
 from zato.common.broker_message import CHANNEL as CHANNEL_BROKER_MESSAGE, SERVICE
 from zato.common.test import rand_int, rand_string
-from zato.common.util import make_repr, new_cid
+from zato.common.util import make_repr, new_cid, utcnow
 from zato.server.connection.http_soap.channel import RequestDispatcher
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.base.parallel import ParallelServer
@@ -116,6 +119,10 @@ class ParallelServerTestCase(TestCase):
                 'gunicorn.socket': FakeGunicornSocket(expected_cert_der, expected_cert_dict),
                 'zato.http.response.status': rand_string(),
                 'zato.http.channel_item': Bunch(audit_enabled=False),
+                'PATH_INFO': rand_string(),
+                'REQUEST_METHOD': rand_string(),
+                'SERVER_PROTOCOL': rand_string(),
+                'HTTP_USER_AGENT': rand_string(),
             }
     
             ps = ParallelServer()
@@ -190,6 +197,9 @@ class AuditTestCase(TestCase):
                         'zato.http.channel_item': channel_item,
                         'PATH_INFO': rand_string(),
                         'wsgi.input': StringIO(expected_request),
+                        'REQUEST_METHOD': rand_string(),
+                        'SERVER_PROTOCOL': rand_string(),
+                        'HTTP_USER_AGENT': rand_string(),
                     }
 
                     expected_remote_addr = rand_string()
@@ -344,5 +354,114 @@ class AuditTestCase(TestCase):
                     else:
                         # Audit not enabled so no response audit message was published on the broker
                         self.assertTrue(bc.msg is None)
+
+# ################################################################################################################################
+
+class HTTPAccessLogTestCase(TestCase):
+    def test_access_log(self):
+
+        def _utcnow(self):
+            return datetime(year=2014, month=1, day=12, hour=16, minute=22, second=12, tzinfo=UTC)
+
+        with patch('arrow.factory.ArrowFactory.utcnow', _utcnow):
+
+            response = rand_string() * rand_int()
+            cid = new_cid()
+            cluster_id = 1
+
+            channel_name = rand_string()
+            url_path = '/{}'.format(rand_string())
+            user_agent = rand_string()
+            http_version = rand_string()
+            request_method = rand_string()
+            remote_ip = '10.{}.{}.{}'.format(rand_int(), rand_int(), rand_int())
+            req_timestamp = utcnow()
+
+            channel_item = {
+                'name': channel_name,
+                'audit_enabled': False,
+                'is_active': True,
+                'transport': 'plain_http',
+                'data_format': None,
+                'match_target': url_path
+            }
+
+            wsgi_environ = {
+                'gunicorn.socket': FakeGunicornSocket(None, None),
+                'wsgi.url_scheme': 'http',
+                'wsgi.input': StringIO(response),
+
+                'zato.http.response.status': httplib.OK,
+                'zato.http.channel_item': channel_item,
+                'zato.request_timestamp_access_log': req_timestamp,
+
+                'HTTP_X_FORWARDED_FOR': remote_ip,
+                'PATH_INFO': url_path,
+                'REQUEST_METHOD': request_method,
+                'SERVER_PROTOCOL': http_version,
+                'HTTP_USER_AGENT': user_agent,
+            }
+
+            class FakeBrokerClient(object):
+                def __init__(self):
+                    self.msg = None
+
+                def publish(self, msg):
+                    self.msg = msg
+
+            class FakeODB(ODBManager):
+                def __init__(self):
+                    self.msg = None
+                    self.cluster = Bunch(id=cluster_id)
+
+                def session(self):
+                    return fake_session
+
+            class FakeURLData(URLData):
+                def __init__(self):
+                    self.url_sec = {url_path: Bunch(sec_def=ZATO_NONE)}
+
+                def match(self, *ignored_args, **ignored_kwargs):
+                    return True, channel_item
+
+            class FakeRequestHandler(object):
+                def handle(self, *ignored_args, **ignored_kwargs):
+                    return Bunch(payload=response, content_type='text/plain', headers={}, status_code=httplib.OK)
+
+            class FakeAccessLogger(object):
+                def __init__(self):
+                    self.extra = {}
+
+                def info(self, msg, extra):
+                    self.extra = extra
+
+                def isEnabledFor(self, ignored):
+                    return True
+
+            bc = FakeBrokerClient()
+            ws = FakeWorkerStore()
+            ws.request_dispatcher = RequestDispatcher()
+            ws.request_dispatcher.request_handler = FakeRequestHandler()
+            ws.request_dispatcher.url_data = FakeURLData()
+            ws.request_dispatcher.url_data.broker_client = bc
+            ws.request_dispatcher.url_data.odb = FakeODB()
+
+            ps = ParallelServer()
+            ps.worker_store = ws
+            ps.access_logger = FakeAccessLogger()
+            ps.on_wsgi_request(wsgi_environ, StartResponse(), cid=cid)
+
+            extra = Bunch(ps.access_logger.extra)
+
+            eq_(extra.channel_name, channel_name)
+            eq_(extra.user_agent, user_agent)
+            eq_(extra.status_code, '200')
+            eq_(extra.http_version, http_version)
+            eq_(extra.response_size, len(response))
+            eq_(extra.cid, cid)
+            eq_(extra.path, url_path)
+            eq_(extra.method, request_method)
+            eq_(extra.remote_ip, remote_ip)
+            eq_(extra.req_timestamp, '12/Jan/2014:16:22:12 +0000')
 
 # ################################################################################################################################
