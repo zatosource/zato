@@ -157,8 +157,7 @@ class Create(ZatoCommand):
         except IntegrityError, e:
             admin_created = False
             connection._rollback()
-            msg = 'Ignoring IntegrityError e:[{}]'.format(format_exc(e))
-            self.logger.info(msg)
+            self.logger.info('Ignoring IntegrityError e:[%s]', format_exc(e).decode('utf-8'))
             
         # Needed because Django took over our logging config
         self.reset_logger(args, True)
