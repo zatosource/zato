@@ -648,8 +648,7 @@ def add_startup_jobs(cluster_id, odb, stats_jobs):
                 session.commit()
             except IntegrityError, e:
                 session.rollback()
-                msg = 'Caught an IntegrityError, carrying on anyway, e:[{}]]'.format(format_exc(e))
-                logger.debug(msg)
+                logger.debug('Caught an IntegrityError, carrying on anyway, e:[%s]', format_exc(e).decode('utf-8'))
 
 def hexlify(item):
     """ Returns a nice hex version of a string given on input.
