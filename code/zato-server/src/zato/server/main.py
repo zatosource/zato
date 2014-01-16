@@ -98,9 +98,6 @@ def run(base_dir):
     psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
     psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
 
-    # Makes queries against Postgres asynchronous
-    make_psycopg_green()
-
     repo_location = os.path.join(base_dir, 'config', 'repo')
 
     # Configure the logging first, before configuring the actual server.
@@ -111,6 +108,10 @@ def run(base_dir):
 
     config = get_config(repo_location, 'server.conf')
     app_context = get_app_context(config)
+
+    # Makes queries against Postgres asynchronous
+    if asbool(config.odb.use_async_driver) and config.odb.engine == 'postgresql':
+        make_psycopg_green()
 
     crypto_manager = get_crypto_manager(repo_location, app_context, config)
     parallel_server = app_context.get_object('parallel_server')
