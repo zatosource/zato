@@ -38,6 +38,7 @@ from zato.common.test import FakeKVDB, rand_string, rand_int, ServiceTestCase
 from zato.server.service import List, Service
 from zato.server.service.reqresp import HTTPRequestData, Request
 
+logger = getLogger(__name__)
 faker = Faker()
 
 # ##############################################################################
@@ -220,17 +221,13 @@ class TestRequest(TestCase):
         }
         
         for transport in(None, URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP):
-            r = Request(None)
-            r.init(is_sio, cid, io, data_format, transport, wsgi_environ)
-            
-            if transport is None:
-                eq_(r.http.method, None)
-                eq_(r.http.GET, None)
-                eq_(r.http.POST, None)
-            else:
-                eq_(r.http.method, wsgi_environ['REQUEST_METHOD'])
-                eq_(sorted(r.http.GET.items()), sorted(wsgi_environ['zato.http.GET'].items()))
-                eq_(sorted(r.http.POST.items()), sorted(wsgi_environ['zato.http.POST'].items()))
+            request = Request(None)
+            request.http.init(wsgi_environ)
+            request.init(is_sio, cid, io, data_format, transport, wsgi_environ)
+
+            eq_(request.http.method, wsgi_environ['REQUEST_METHOD'])
+            eq_(sorted(request.http.GET.items()), sorted(wsgi_environ['zato.http.GET'].items()))
+            eq_(sorted(request.http.POST.items()), sorted(wsgi_environ['zato.http.POST'].items()))
 
     def test_init_sio(self):
 
@@ -261,37 +258,39 @@ class TestRequest(TestCase):
             else:
                 return {'d':'d-opt', 'e':'e-opt', 'f':'f-opt', 'g':'g-msg'}
         
-        r = Request(None)
-        r.payload = None
-        r.get_params = _get_params
+        request = Request(logger)
+        request.payload = None
+        request.get_params = _get_params
         
-        r.channel_params['a'] = 'channel_param_a'
-        r.channel_params['b'] = 'channel_param_b'
-        r.channel_params['c'] = 'channel_param_c'
-        r.channel_params['d'] = 'channel_param_d'
-        r.channel_params['e'] = 'channel_param_e'
-        r.channel_params['f'] = 'channel_param_f'
-        r.channel_params['h'] = 'channel_param_h' # Never overridden
+        request.channel_params['a'] = 'channel_param_a'
+        request.channel_params['b'] = 'channel_param_b'
+        request.channel_params['c'] = 'channel_param_c'
+        request.channel_params['d'] = 'channel_param_d'
+        request.channel_params['e'] = 'channel_param_e'
+        request.channel_params['f'] = 'channel_param_f'
+        request.channel_params['h'] = 'channel_param_h' # Never overridden
         
         for io in(io_default, io_custom):
             for params_priority in PARAMS_PRIORITY:
-                r.params_priority = params_priority
-                r.init(is_sio, cid, io, data_format, transport, wsgi_environ)
+                request.params_priority = params_priority
+                request.http.init(wsgi_environ)
+                request.payload = io
+                request.init(is_sio, cid, io, data_format, transport, wsgi_environ)
 
                 if io is io_default:
-                    eq_(sorted(r.input.items()), 
+                    eq_(sorted(request.input.items()), 
                         sorted({'a': 'channel_param_a', 'b': 'channel_param_b', 'c': 'channel_param_c',
                          'd': 'channel_param_d', 'e': 'channel_param_e', 'f': 'channel_param_f',
                          'h':'channel_param_h'}.items()))
                 else:
                     if params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG:
-                        eq_(sorted(r.input.items()), 
+                        eq_(sorted(request.input.items()), 
                             sorted({'a': 'channel_param_a', 'b': 'channel_param_b', 'c': 'channel_param_c',
                              'd': 'channel_param_d', 'e': 'channel_param_e', 'f': 'channel_param_f',
                              'g': 'g-msg',
                              'h':'channel_param_h'}.items()))
                     else:
-                        eq_(sorted(r.input.items()), 
+                        eq_(sorted(request.input.items()), 
                             sorted({'a': 'a-req', 'b': 'b-req', 'c': 'c-req',
                              'd': 'd-opt', 'e': 'e-opt', 'f': 'f-opt',
                              'g': 'g-msg',

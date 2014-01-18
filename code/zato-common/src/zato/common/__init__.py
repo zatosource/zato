@@ -193,6 +193,7 @@ class Attrs(type):
         return attr in cls.attrs
 
 class DATA_FORMAT(Attrs):
+    DICT = 'dict'
     XML = 'xml'
     JSON = 'json'
     CSV = 'csv'
@@ -200,6 +201,8 @@ class DATA_FORMAT(Attrs):
 
     class __metaclass__(type):
         def __iter__(self):
+            # Note that DICT isn't included because it's never exposed to external world as-is,
+            # it's only used so that services can invoke each other directly
             return iter((self.XML, self.JSON, self.CSV, self.POST))
 
 # TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
