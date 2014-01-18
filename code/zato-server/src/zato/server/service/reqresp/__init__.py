@@ -182,13 +182,14 @@ class Request(SIOConverter):
         """ Returns a deep copy of self.
         """
         request = Request(None)
-        request.logger = logging.getLogger(self.logger.getName())
+        request.logger = logging.getLogger(self.logger.name)
 
         for name in Request.__slots__:
             if name == 'logger':
                 continue
             setattr(request, name, deepcopy(getattr(self, name)))
 
+        return request
 
     def bunchified(self):
         """ Returns a bunchified (converted into bunch.Bunch) version of self.raw_request,
