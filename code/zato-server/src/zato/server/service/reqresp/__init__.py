@@ -66,7 +66,7 @@ class HTTPRequestData(object):
         self.GET = None
         self.POST = None
 
-    def init(self, wsgi_environ):
+    def init(self, wsgi_environ={}):
         self.method = wsgi_environ.get('REQUEST_METHOD')
 
         # Note tht we always require UTF-8
@@ -131,11 +131,6 @@ class Request(SIOConverter):
                 self.payload = self.raw_request
 
             if required_list:
-                if not self.payload:
-                    msg = 'required_list:[{}] not empty and no payload:[{}]'.format(required_list, self.payload)
-                    self.logger.error(msg)
-                    raise ZatoException(cid, msg)
-
                 required_params = self.get_params(required_list, path_prefix, default_value, use_text)
             else:
                 required_params = {}

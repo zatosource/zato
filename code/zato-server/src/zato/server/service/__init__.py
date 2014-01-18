@@ -584,7 +584,7 @@ class Service(object):
     @staticmethod
     def update(service, channel, server, broker_client, worker_store, cid, payload,
                raw_request, transport=None, simple_io_config=None, data_format=None,
-               wsgi_environ=None, job_type=None, channel_params=None,
+               wsgi_environ={}, job_type=None, channel_params=None,
                merge_channel_params=True, params_priority=None, init=True):
         """ Takes a service instance and updates it with the current request's
         context data.
