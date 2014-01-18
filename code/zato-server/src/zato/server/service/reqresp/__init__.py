@@ -109,8 +109,6 @@ class Request(SIOConverter):
     def init(self, is_sio, cid, io, data_format, transport, wsgi_environ):
         """ Initializes the object with an invocation-specific data.
         """
-        if transport in(URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP):
-            self.http.init(wsgi_environ)
 
         if is_sio:
             self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
@@ -133,6 +131,11 @@ class Request(SIOConverter):
                 self.payload = self.raw_request
 
             if required_list:
+                if not self.payload:
+                    msg = 'required_list:[{}] not empty and no payload:[{}]'.format(required_list, self.payload)
+                    self.logger.error(msg)
+                    raise ZatoException(cid, msg)
+
                 required_params = self.get_params(required_list, path_prefix, default_value, use_text)
             else:
                 required_params = {}
@@ -161,18 +164,18 @@ class Request(SIOConverter):
         """
         params = {}
         if not isinstance(self.payload, basestring):
-                for param in request_params:
-                    try:
-                        param_name, value = convert_param(self.cid, self.payload, param, self.data_format, is_required, default_value,
-                                path_prefix, use_text, self.channel_params, self.has_simple_io_config,
-                                self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes)
-                        params[param_name] = value
-
-                    except Exception, e:
-                        msg = 'Caught an exception, param:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
-                            param, self.has_simple_io_config, format_exc(e))
-                        self.logger.error(msg)
-                        raise Exception(msg)
+            for param in request_params:
+                try:
+                    param_name, value = convert_param(self.cid, self.payload, param, self.data_format, is_required, default_value,
+                            path_prefix, use_text, self.channel_params, self.has_simple_io_config,
+                            self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes)
+                    params[param_name] = value
+    
+                except Exception, e:
+                    msg = 'Caught an exception, param:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
+                        param, self.has_simple_io_config, format_exc(e))
+                    self.logger.error(msg)
+                    raise Exception(msg)
         else:
             if self.logger.isEnabledFor(TRACE1):
                 msg = 'payload repr=[{}], type=[{}]'.format(repr(self.payload), type(self.payload))
@@ -445,7 +448,7 @@ class Response(object):
         return self._payload
 
     def _set_payload(self, value):
-        if isinstance(value, basestring):
+        if isinstance(value, (basestring, dict, list, tuple)):
             self._payload = value
         else:
             if not self.outgoing_declared:
