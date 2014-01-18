@@ -85,9 +85,11 @@ class ForceType(object):
         #
         self.serialize_dispatch = {
             (False, DATA_FORMAT.JSON): self.from_json,
+            (False, DATA_FORMAT.DICT): self.from_json,
             (False, DATA_FORMAT.XML): self.from_xml,
 
             (True, DATA_FORMAT.JSON): self.to_json,
+            (True, DATA_FORMAT.DICT): self.to_json,
             (True, DATA_FORMAT.XML): self.to_xml,
         }
 
@@ -348,8 +350,7 @@ class SIOConverter(object):
 def convert_from_json(payload, param_name, cid, *ignored):
     return payload.get(param_name, NOT_GIVEN)
 
-def convert_from_dict(payload, param_name, cid, *ignored):
-    return payload.get(param_name, NOT_GIVEN)
+convert_from_dict = convert_from_json
 
 def convert_from_xml(payload, param_name, cid, is_required, is_complex, default_value, path_prefix, use_text):
     try:
