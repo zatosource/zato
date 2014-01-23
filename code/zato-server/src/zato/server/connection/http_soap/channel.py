@@ -40,11 +40,11 @@ _status_unauthorized = b'{} {}'.format(UNAUTHORIZED, responses[UNAUTHORIZED])
 
 soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>""" # noqa
 
-zato_message_soap = b"""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
+zato_message_soap = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518">
   <soap:Body>{data}</soap:Body>
 </soap:Envelope>"""
 
-zato_message_plain = b'{data}'
+zato_message_plain = '{data}'
 zato_message_declaration = b"<?xml version='1.0' encoding='UTF-8'?>" + zato_message_plain
 
 # Returned if there has been any exception caught.
