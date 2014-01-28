@@ -75,7 +75,7 @@ def _get_edit_create_message(params, prefix=''):
         'params_pri': params.get(prefix + 'params_pri', PARAMS_PRIORITY.DEFAULT),
         'method': params.get(prefix + 'method'),
         'soap_action': params.get(prefix + 'soap_action', ''),
-        'soap_version': params.get(prefix + 'soap_version', ''),
+        'soap_version': params.get(prefix + 'soap_version', None),
         'data_format': params.get(prefix + 'data_format', None),
         'service': params.get(prefix + 'service'),
         'ping_method': params.get(prefix + 'ping_method'),
