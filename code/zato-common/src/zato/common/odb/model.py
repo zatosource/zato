@@ -269,6 +269,24 @@ class OAuth(SecurityBase):
     def to_json(self):
         return to_json(self)
 
+class NTLM(SecurityBase):
+    """ New in 1.2: Stores NTLM definitions.
+    """
+    __tablename__ = 'sec_ntlm'
+    __mapper_args__ = {'polymorphic_identity': 'ntlm'}
+
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.cluster = cluster
+
+    def to_json(self):
+        return to_json(self)
+
 ################################################################################
 
 class HTTPSOAP(Base):
