@@ -20,8 +20,8 @@ from paste.util.converters import asbool
 from webhelpers.paginate import Page
 
 # Zato
-from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, MSG_PATTERN_TYPE, PARAMS_PRIORITY,\
-     URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
+from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
+     MSG_PATTERN_TYPE, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, ElemPath, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, \
      HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, XPath
@@ -75,7 +75,7 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type', 
                            'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method',
-                           'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri')
+                           'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type')
         output_repeated = True
         
     def get_data(self, session):
@@ -94,7 +94,7 @@ class Create(AdminService, _HTTPSOAPService):
         response_elem = 'zato_http_soap_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
-            'host', 'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri')
+            'host', 'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type')
         output_required = ('id', 'name')
     
     def handle(self):
@@ -155,6 +155,7 @@ class Create(AdminService, _HTTPSOAPService):
                 item.merge_url_params_req = input.get('merge_url_params_req') or True
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
+                item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
 
                 session.add(item)
                 session.commit()
@@ -191,7 +192,7 @@ class Edit(AdminService, _HTTPSOAPService):
         response_elem = 'zato_http_soap_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 
-            'host', 'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri')
+            'host', 'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type')
         output_required = ('id', 'name')
     
     def handle(self):
@@ -254,6 +255,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 item.merge_url_params_req = input.get('merge_url_params_req') or True
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
+                item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
 
                 session.add(item)
                 session.commit()
