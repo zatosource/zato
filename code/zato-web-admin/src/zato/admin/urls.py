@@ -30,7 +30,7 @@ from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pattern import delivery as pattern_delivery
 from zato.admin.web.views.pattern.delivery import definition as pattern_delivery_def
-from zato.admin.web.views.security import basic_auth, oauth, tech_account, wss
+from zato.admin.web.views.security import basic_auth, ntlm, oauth, tech_account, wss
 
 
 urlpatterns = patterns('',
@@ -197,6 +197,20 @@ urlpatterns = patterns('',
         login_required(basic_auth.change_password), name='security-basic-auth-change-password'),
     url(r'^zato/security/basic-auth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(basic_auth.Delete()), name=basic_auth.Delete.url_name),
+
+    # .. NTLM
+    url(r'^zato/security/ntlm/$',
+        login_required(ntlm.Index()), name=ntlm.Index.url_name),
+    url(r'^zato/security/ntlm/$',
+        login_required(ntlm.Index()), name=ntlm.Index.url_name),
+    url(r'^zato/security/ntlm/create/$',
+        login_required(ntlm.Create()), name=ntlm.Create.url_name),
+    url(r'^zato/security/ntlm/edit/$',
+        login_required(ntlm.Edit()), name=ntlm.Edit.url_name),
+    url(r'^zato/security/ntlm/change-password/$',
+        login_required(ntlm.change_password), name='security-ntlm-change-password'),
+    url(r'^zato/security/ntlm/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(ntlm.Delete()), name=ntlm.Delete.url_name),
 
     # .. OAuth
     url(r'^zato/security/oauth/$',
