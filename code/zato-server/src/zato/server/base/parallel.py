@@ -372,6 +372,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_basic_auth_list(server.cluster.id, True)
         self.config.basic_auth = ConfigDict.from_query('basic_auth', query)
 
+        # NTLM
+        query = self.odb.get_ntlm_list(server.cluster.id, True)
+        self.config.ntlm = ConfigDict.from_query('ntlm', query)
+
         # OAuth
         query = self.odb.get_oauth_list(server.cluster.id, True)
         self.config.oauth = ConfigDict.from_query('oauth', query)
