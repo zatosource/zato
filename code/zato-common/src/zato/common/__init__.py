@@ -113,7 +113,7 @@ DEFAULT_HTTP_PING_METHOD = 'HEAD'
 
 # Default size of an outgoing HTTP connection's pool (plain, SOAP, any).
 # This is a per-outconn setting
-DEFAULT_HTTP_POOL_SIZE = 200
+DEFAULT_HTTP_POOL_SIZE = 20
 
 # Used when there's a need for encrypting/decrypting a well-known data.
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
@@ -378,6 +378,15 @@ class MSG_PATTERN_TYPE:
     class __metaclass__(type):
         def __iter__(self):
             return iter((self.ELEM_PATH, self.XPATH))
+
+class HTTP_SOAP_SERIALIZATION_TYPE:
+    STRING_VALUE = NameId('String', 'string')
+    SUDS = NameId('Suds', 'suds')
+    DEFAULT = SUDS
+
+    class __metaclass__(type):
+        def __iter__(self):
+            return iter((self.STRING_VALUE, self.SUDS))
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
