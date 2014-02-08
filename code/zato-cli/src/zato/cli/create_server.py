@@ -93,6 +93,7 @@ internal_services_may_be_deleted=False
 initial_cluster_name = {initial_cluster_name}
 initial_server_name = {initial_server_name}
 delivery_lock_timeout = 2
+suds_soap_queue_build_cap = 30 # All Suds SOAP clients must be ready in that many seconds
 
 [kvdb]
 host={kvdb_host}
