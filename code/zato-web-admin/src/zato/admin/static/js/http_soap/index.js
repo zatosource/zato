@@ -3,12 +3,13 @@
 
 $.fn.zato.data_table.HTTPSOAP = new Class({
     toString: function() {
-        var s = '<HTTPSOAP id:{0} name:{1} is_active:{2} merge_url_params_req:{3} data_format:{4}>';
+        var s = '<HTTPSOAP id:{0} name:{1} is_active:{2} merge_url_params_req:{3} data_format:{4} serialization_type:{5}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)',
                                 this.merge_url_params_req ? this.merge_url_params_req : '(none)',
-                                this.data_format ? this.data_format : '(none)'
+                                this.data_format ? this.data_format : '(none)',
+                                this.serialization_type ? this.serialization_type : '(none)'
                                 );
     }
 });
