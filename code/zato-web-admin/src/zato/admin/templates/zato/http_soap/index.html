@@ -213,6 +213,7 @@
                         {% ifequal connection 'outgoing' %}
                             <td class='ignore'>{{ item.ping_method }}</td>
                             <td class='ignore'>{{ item.pool_size }}</td>
+                            <td class='ignore'>{{ item.serialization_type }}</td>
                         {% endifequal %}
 
                         {% ifequal connection 'channel' %}
