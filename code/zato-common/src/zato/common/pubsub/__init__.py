@@ -415,6 +415,7 @@ if __name__ == '__main__':
 
         for id_idx, id in ipairs(ids) do
             redis.pcall('hset', cons_in_flight, id, now)
+            redis.pcall('lrem', cons_queue, 0, id)
         end
 
        return values
@@ -465,8 +466,12 @@ if __name__ == '__main__':
     # Get
     get_ctx1 = GetCtx()
     get_ctx1.sub_key = sub_key1
-    ps.get(get_ctx1)
+
+    for msg in ps.get(get_ctx1):
+        logging.info(msg)
 
     get_ctx2 = GetCtx()
     get_ctx2.sub_key = sub_key2
-    ps.get(get_ctx2)
+
+    for msg in ps.get(get_ctx2):
+        logging.info(msg)
