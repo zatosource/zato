@@ -63,7 +63,7 @@ class Message(object):
     def __repr__(self):
         return make_repr(self)
 
-    def dumps(self):
+    def to_json(self):
         return dumps({
             'msg_id': self.msg_id,
             'payload': self.payload,
@@ -108,6 +108,15 @@ class AckCtx(object):
     """
     def __init__(self, msg_id=None):
         self.msg_id = msg_id
+
+# ################################################################################################################################
+
+class RejectCtx(object):
+    """ A set of data describing a rejection of one or more messages.
+    """
+    def __init__(self, sub_key=None, msg_ids=[]):
+        self.sub_key = sub_key
+        self.msg_ids = msg_ids
 
 # ################################################################################################################################
 
@@ -174,7 +183,8 @@ class RedisPubSub(PubSub):
     MSG_VALUES_KEY = 'zato:pubsub:msg-values'
 
     LUA_MOVE_TO_TARGET_QUEUES = 'move-to-target-queues'
-    LUA_GET_FROM_CONS_QUEUE = 'get-from-cons-queue'
+    LUA_GET_FROM_CONSUMER_QUEUE = 'get-from-consumer-queue'
+    LUA_REJECT = 'reject'
 
     # ############################################################################################################################
 
@@ -182,6 +192,20 @@ class RedisPubSub(PubSub):
         super(RedisPubSub, self).__init__()
         self.kvdb = kvdb
         self.lua_programs = {}
+
+    # ############################################################################################################################
+
+    def validate_sub_key(self, sub_key):
+        """ Returns a client_id by its matching subscription key or raises ValueError if sub_key could not be found.
+        Must be called with self.update_lock held.
+        """
+        # Grab the client's ID, if it's a valid subscription key.
+        if not self.sub_to_cons.get(sub_key):
+            msg = 'Invalid sub_key `{}`'.format(sub_key)
+            self.logger.warn(msg)
+            raise ValueError(msg)
+
+        return True
 
     # ############################################################################################################################
 
@@ -231,7 +255,7 @@ class RedisPubSub(PubSub):
         with self.kvdb.pipeline() as p:
 
             p.zadd(id_key, score, ctx.msg.msg_id)
-            p.hset(self.MSG_VALUES_KEY, ctx.msg.msg_id, ctx.msg.dumps())
+            p.hset(self.MSG_VALUES_KEY, ctx.msg.msg_id, ctx.msg.to_json())
 
             try:
                 p.execute()
@@ -263,13 +287,9 @@ class RedisPubSub(PubSub):
 
         with self.in_flight_lock:
             with self.update_lock:
-    
-                # Grab the client's ID, if it's a valid subscription key.
-                client_id = self.sub_to_cons.get(ctx.sub_key)
-                if not client_id:
-                    msg = 'Invalid sub_key `{}`'.format(ctx.sub_key)
-                    self.logger.warn(msg)
-                    raise ValueError(msg)
+
+                # Ignoring the result, we just check if this sub_key is valid
+                self.validate_sub_key(ctx.sub_key)
 
                 # Now that the client is known to be a valid one we can get all their messages
                 cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
@@ -278,7 +298,7 @@ class RedisPubSub(PubSub):
                 # TODO: Make it run using 'with self.lock(cons_queue)'
     
                 messages = self.run_lua(
-                    self.LUA_GET_FROM_CONS_QUEUE,
+                    self.LUA_GET_FROM_CONSUMER_QUEUE,
                     [cons_queue, cons_in_flight, self.MSG_VALUES_KEY],
                     [ctx.max_batch_size, datetime.utcnow().isoformat()])
 
@@ -299,8 +319,27 @@ class RedisPubSub(PubSub):
 
             p.execute()
 
-    def reject(self, msg_id):
-        pass
+    def reject(self, ctx):
+        """ Rejects a set of messages for a given consumer.
+        """
+        # TODO: This should be called with this consumer's in-flight key used by self.lock
+        # so it's an atomic operation. If the lock is already held an exception should be
+        # raised and a Server Busy kind of message returned.
+
+        # We only validate that this subscription key is valid. Each consumer has its own
+        # hashmap of on-flight messages so if they know the sub key, meaning they know the username/password,
+        # if any, the worst they can do is to attempt to reject IDs that don't exist.
+        # But as long as they don't know each other's subscription keys they can't reject each other's messages.
+        self.validate_sub_key(ctx.sub_key)
+
+        cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
+        cons_in_flight = self.CONSUMER_IN_FLIGHT_PREFIX.format(ctx.sub_key)
+
+        result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight], args=ctx.msg_ids)
+
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(
+                'Reject result `%s` for `%s` with `%s`', result, ctx.sub_key, ', '.join(ctx.msg_ids))
 
     # ############################################################################################################################
 
@@ -421,10 +460,24 @@ if __name__ == '__main__':
        return values
     """
 
+    lua_reject = """
+
+       local cons_queue = KEYS[1]
+       local cons_in_flight = KEYS[2]
+       local ids = ARGV
+
+       redis.pcall('hdel', cons_in_flight, unpack(ids))
+
+        for id_idx, id in ipairs(ids) do
+            redis.call('lpush', cons_queue, id)
+        end
+    """
+
     ps = RedisPubSub(kvdb)
 
     ps.add_lua_program(ps.LUA_MOVE_TO_TARGET_QUEUES, lua_move_to_target_queues)
-    ps.add_lua_program(ps.LUA_GET_FROM_CONS_QUEUE, lua_get_from_cons_queue)
+    ps.add_lua_program(ps.LUA_GET_FROM_CONSUMER_QUEUE, lua_get_from_cons_queue)
+    ps.add_lua_program(ps.LUA_REJECT, lua_reject)
 
     ps.add_topic(topic1)
     ps.add_topic(topic2)
@@ -453,7 +506,7 @@ if __name__ == '__main__':
     pub_ctx.client_id = client_id
 
     for topic in(topic1, topic2):
-        for x in range(10):
+        for x in range(2):
             pub_ctx.topic = topic.name
             pub_ctx.msg = Message(new_cid())
     
@@ -467,11 +520,20 @@ if __name__ == '__main__':
     get_ctx1 = GetCtx()
     get_ctx1.sub_key = sub_key1
 
+    to_be_rejected = []
+
     for msg in ps.get(get_ctx1):
-        logging.info(msg)
+        to_be_rejected.append(msg.msg_id)
 
     get_ctx2 = GetCtx()
     get_ctx2.sub_key = sub_key2
 
     for msg in ps.get(get_ctx2):
-        logging.info(msg)
+        pass
+
+    # Reject one of the messages
+    reject_ctx = RejectCtx()
+    reject_ctx.sub_key = sub_key1
+    reject_ctx.msg_ids.extend(to_be_rejected)
+
+    ps.reject(reject_ctx)
