@@ -39,6 +39,9 @@ except ImportError:
 # anyjson
 from anyjson import dumps, loads
 
+# base32_crockford
+from base32_crockford import encode as b32_crockford_encode
+
 # Bunch
 from bunch import Bunch, bunchify
 
@@ -238,7 +241,7 @@ def make_repr(_object, ignore_double_underscore=True, to_avoid_list='repr_to_avo
         attr_obj = getattr(_object, attr)
         if not callable(attr_obj):
             buff.write(' ')
-            buff.write('%s:[%r]' % (attr, attr_obj))
+            buff.write('%s:`%r`' % (attr, attr_obj))
 
     out = _repr_template.safe_substitute(
         class_name=_object.__class__.__name__, mem_loc=hex(id(_object)), attrs=buff.getvalue())
@@ -286,13 +289,13 @@ def new_cid():
     """ Returns a new 128-bit correlation identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
+    Changed in 1.2: The number is now 28 characters long not 40, like in previous versions.
     """
-
-    # The number below (39) needs to be kept in sync with zato.common.log_message.CID_LENGTH.
+    # The number below (27) needs to be kept in sync with zato.common.log_message.CID_LENGTH.
     # There is nothing special in the 'K' prefix, it's just so that a CID always
     # begins with a letter and 'K' seems like something
     # that can't be taken for some other ASCII letter (e.g. is it Z or 2 etc.)
-    return 'K{0:0>39}'.format(getrandbits(128))
+    return 'K{0:0>27}'.format(b32_crockford_encode(getrandbits(128)))
 
 def get_config(repo_location, config_name, bunchified=True):
     """ Returns the configuration object.
