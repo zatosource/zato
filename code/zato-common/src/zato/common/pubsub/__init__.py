@@ -11,8 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Core publish/subscribe features
 
 # Monkey patch first
-from gevent.monkey import patch_all
-patch_all()
 
 # stdlib
 from datetime import datetime
@@ -31,6 +29,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common import ZATO_NONE
+from zato.common.pubsub.lua import lua_move_to_target_queues, lua_get_from_cons_queue, lua_reject, lua_ack
 from zato.common.util import datetime_to_seconds, make_repr, new_cid
 
 # ################################################################################################################################
@@ -106,8 +105,9 @@ class GetCtx(object):
 class AckCtx(object):
     """ A set of data describing an acknowledge of a message fetched.
     """
-    def __init__(self, msg_id=None):
-        self.msg_id = msg_id
+    def __init__(self, sub_key=None, msg_ids=[]):
+        self.sub_key = sub_key
+        self.msg_ids = msg_ids
 
 # ################################################################################################################################
 
@@ -166,6 +166,16 @@ class PubSub(object):
         clients = self.topic_to_cons.setdefault(topic, set())
         clients.add(client_id)
 
+    def add_producer(self, client_id, topic):
+        """ Adds information that this client can publish to the topic. 
+        """
+        with self.update_lock:
+            topics = self.prod_to_topic.setdefault(client_id, set())
+            topics.add(topic.name)
+
+            producers = self.topic_to_prod.setdefault(topic.name, set())
+            producers.add(client_id)
+
     def _not_implemented(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Must be overridden in subclasses')
 
@@ -181,10 +191,13 @@ class RedisPubSub(PubSub):
     CONSUMER_MSG_IDS_PREFIX = 'zato:pubsub:consumer:msg-ids:{}'
     CONSUMER_IN_FLIGHT_PREFIX = 'zato:pubsub:consumer:in-flight:{}'
     MSG_VALUES_KEY = 'zato:pubsub:msg-values'
+    UNACK_COUNTER_KEY = 'zato:pubsub:unack-counter'
+    ACK_TO_DELETE_KEY = 'zato:pubsub:ack-to-delete'
 
-    LUA_MOVE_TO_TARGET_QUEUES = 'move-to-target-queues'
-    LUA_GET_FROM_CONSUMER_QUEUE = 'get-from-consumer-queue'
-    LUA_REJECT = 'reject'
+    LUA_MOVE_TO_TARGET_QUEUES = 'lua-move-to-target-queues'
+    LUA_GET_FROM_CONSUMER_QUEUE = 'lua-get-from-consumer-queue'
+    LUA_REJECT = 'lua-reject'
+    LUA_ACK = 'lua-ack'
 
     # ############################################################################################################################
 
@@ -192,6 +205,11 @@ class RedisPubSub(PubSub):
         super(RedisPubSub, self).__init__()
         self.kvdb = kvdb
         self.lua_programs = {}
+
+        self.add_lua_program(self.LUA_MOVE_TO_TARGET_QUEUES, lua_move_to_target_queues)
+        self.add_lua_program(self.LUA_GET_FROM_CONSUMER_QUEUE, lua_get_from_cons_queue)
+        self.add_lua_program(self.LUA_REJECT, lua_reject)
+        self.add_lua_program(self.LUA_ACK, lua_ack)
 
     # ############################################################################################################################
 
@@ -267,11 +285,11 @@ class RedisPubSub(PubSub):
 
     # ############################################################################################################################
 
-    def subscribe(self, ctx):
+    def subscribe(self, ctx, sub_key=None):
         """ Subscribes the client to one or more topics, or topic patterns. Returns subscription key
         to use in subsequent calls to fetch messages by.
         """
-        sub_key = new_cid()
+        sub_key = sub_key or new_cid()
         with self.update_lock:
             for topic in ctx.topics:
                 # TODO: Resolve topic here - it can be a pattern instead of a concrete name
@@ -308,16 +326,25 @@ class RedisPubSub(PubSub):
     # ############################################################################################################################
 
     def acknowledge(self, ctx):
-        topic = self.kvdb.hget(self.ID_TO_TOPIC_KEY, ctx.msg_id)
-        self.logger.info('Ack msg_id:`%s`, topic:`%s`', ctx.msg_id, topic)
+        """ Consumer confirms and accepts one or more message.
+        """
+        # TODO: This should be called with this consumer's in-flight key used by self.lock
+        # so it's an atomic operation. If the lock is already held an exception should be
+        # raised and a Server Busy kind of message returned.
 
-        with self.kvdb.pipeline() as p:
+        # Check comment in self.reject on why validating sub_key alone suffices.
+        self.validate_sub_key(ctx.sub_key)
 
-            p.zrem(self.MSG_IDS_PREFIX.format(topic), ctx.msg_id)
-            p.hdel(self.ID_TO_TOPIC_KEY, ctx.msg_id)
-            p.delete(self.ID_EXP_PREFIX.format(topic, ctx.msg_id))
+        cons_in_flight = self.CONSUMER_IN_FLIGHT_PREFIX.format(ctx.sub_key)
 
-            p.execute()
+        result = self.run_lua(
+            self.LUA_ACK,
+            keys=[cons_in_flight, self.UNACK_COUNTER_KEY, self.ACK_TO_DELETE_KEY],
+            args=ctx.msg_ids) 
+
+        if self.logger.isEnabledFor(logging.INFO):
+            self.logger.info(
+                'Reject result `%s` for `%s` with `%s`', result, ctx.sub_key, ', '.join(ctx.msg_ids))
 
     def reject(self, ctx):
         """ Rejects a set of messages for a given consumer.
@@ -335,7 +362,7 @@ class RedisPubSub(PubSub):
         cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
         cons_in_flight = self.CONSUMER_IN_FLIGHT_PREFIX.format(ctx.sub_key)
 
-        result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight], args=ctx.msg_ids)
+        result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight], args=ctx.msg_ids) 
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(
@@ -362,6 +389,7 @@ class RedisPubSub(PubSub):
                 keys = []
                 keys.append(source_queue)
                 keys.append(self.BACKLOG_FULL_KEY)
+                keys.append(self.UNACK_COUNTER_KEY)
 
                 # Lua program's args
                 args = []
@@ -399,95 +427,14 @@ if __name__ == '__main__':
     topic1 = Topic('/state/vic/alerts')
     topic2 = Topic('/state/vic/news')
 
-    lua_move_to_target_queues = """
-
-        -- A function to copy Redis keys we operate over to a table which skips the first one, the source queue.
-        local function get_target_queues(keys)
-            local target_queues = {}
-            if #keys == 2 then
-              target_queues = {keys[2]}
-            else
-                for idx = 1, #KEYS do
-                    -- Note - the whole point is that we're skipping the first few items which are not target queues
-                    target_queues[idx] = KEYS[idx+2]
-                end
-            end
-            return target_queues
-        end
-
-        local source_queue = KEYS[1]
-        local is_fifo = tonumber(ARGV[1])
-        local max_depth = tonumber(ARGV[2])
-        local zset_command
-
-        if is_fifo then
-            zset_command = 'zrevrange'
-        else
-            zset_command = 'zrange'
-        end
-
-        local target_queues = get_target_queues(KEYS)
-        local ids = redis.pcall(zset_command, source_queue, 0, max_depth)
-
-        for queue_idx, target_queue in ipairs(target_queues) do
-            for id_idx, id in ipairs(ids) do
-                redis.call('lpush', target_queue, id)
-            end
-        end
-
-        for id_idx, id in ipairs(ids) do
-            redis.pcall('zrem', source_queue, id)
-        end
-        """
-
-    lua_get_from_cons_queue = """
-
-       local cons_queue = KEYS[1]
-       local cons_in_flight = KEYS[2]
-       local msg_key = KEYS[3]
-
-       local max_batch_size = tonumber(ARGV[1])
-       local now = ARGV[2]
-        
-       local ids = redis.pcall('lrange', cons_queue, 0, max_batch_size)
-       local values = redis.pcall('hmget', msg_key, unpack(ids))
-
-        for id_idx, id in ipairs(ids) do
-            redis.pcall('hset', cons_in_flight, id, now)
-            redis.pcall('lrem', cons_queue, 0, id)
-        end
-
-       return values
-    """
-
-    lua_reject = """
-
-       local cons_queue = KEYS[1]
-       local cons_in_flight = KEYS[2]
-       local ids = ARGV
-
-       redis.pcall('hdel', cons_in_flight, unpack(ids))
-
-        for id_idx, id in ipairs(ids) do
-            redis.call('lpush', cons_queue, id)
-        end
-    """
-
     ps = RedisPubSub(kvdb)
-
-    ps.add_lua_program(ps.LUA_MOVE_TO_TARGET_QUEUES, lua_move_to_target_queues)
-    ps.add_lua_program(ps.LUA_GET_FROM_CONSUMER_QUEUE, lua_get_from_cons_queue)
-    ps.add_lua_program(ps.LUA_REJECT, lua_reject)
 
     ps.add_topic(topic1)
     ps.add_topic(topic2)
 
     # TODO: This will done from GUI
-    ps.prod_to_topic[client_id] = set()
-    ps.prod_to_topic[client_id].add(topic1.name)
-
-    ps.topic_to_prod[topic1.name] = set()
-    ps.topic_to_prod[topic1.name].add(client_id)
+    ps.add_producer(client_id, topic1)
+    ps.add_producer(client_id, topic2)
 
     # Subscribe
     sub_ctx1 = SubCtx()
@@ -509,7 +456,7 @@ if __name__ == '__main__':
         for x in range(2):
             pub_ctx.topic = topic.name
             pub_ctx.msg = Message(new_cid())
-    
+
             ps.publish(pub_ctx)
 
     # Move messages to target queues
@@ -521,19 +468,26 @@ if __name__ == '__main__':
     get_ctx1.sub_key = sub_key1
 
     to_be_rejected = []
+    to_be_ackd = []
 
     for msg in ps.get(get_ctx1):
-        to_be_rejected.append(msg.msg_id)
+        to_be_ackd.append(msg.msg_id)
 
     get_ctx2 = GetCtx()
     get_ctx2.sub_key = sub_key2
 
     for msg in ps.get(get_ctx2):
-        pass
+        to_be_ackd.append(msg.msg_id)
 
-    # Reject one of the messages
+    # Reject some messages
     reject_ctx = RejectCtx()
     reject_ctx.sub_key = sub_key1
     reject_ctx.msg_ids.extend(to_be_rejected)
-
     ps.reject(reject_ctx)
+
+    # Now acknowledge some of them
+    ack_ctx = AckCtx()
+    ack_ctx.sub_key = sub_key1
+    ack_ctx.msg_ids.extend(to_be_ackd)
+    ps.acknowledge(ack_ctx)
+    
