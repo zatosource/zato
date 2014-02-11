@@ -85,6 +85,9 @@
             {% ifequal connection 'outgoing' %}
                 '_ping',
             {% endifequal %}
+            {% ifequal connection 'outgoing' %}
+                '_reload_wsdl',
+            {% endifequal %}
         ]
     }
     </script>
@@ -167,6 +170,10 @@
                         {% ifequal connection 'outgoing' %}
                             <th>&nbsp;</th>
                         {% endifequal %}
+
+                        {% ifequal connection 'outgoing' %}
+                            <th>&nbsp;</th>
+                        {% endifequal %}
                 </thead>
 
                 <tbody>
@@ -226,6 +233,10 @@
                         <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
                         {% ifequal connection 'outgoing' %}
                             <td><a href="javascript:$.fn.zato.http_soap.ping('{{ item.id }}')">Ping</a></td>
+                        {% endifequal %}
+
+                        {% ifequal connection 'outgoing' %}
+                            <td>{% ifequal item.serialization_type 'suds' %}<a href="javascript:$.fn.zato.http_soap.reload_wsdl('{{ item.id }}')">Reload WSDL</a>{% endifequal %}</td>
                         {% endifequal %}
                     </tr>
                 {% endfor %}

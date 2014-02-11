@@ -24,7 +24,7 @@ from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_P
      MSG_PATTERN_TYPE, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, ElemPath, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, \
-     HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, XPath
+     HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, to_json, XPath
 from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap_list
 from zato.common.util import security_def_type
 from zato.server.service import Boolean, Integer, List
@@ -345,6 +345,21 @@ class Ping(AdminService):
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             config_dict = getattr(self.outgoing, item.transport)
             self.response.payload.info = config_dict.get(item.name).ping(self.cid)
+
+class ReloadWSDL(AdminService, _HTTPSOAPService):
+    """ Reloads WSDL by recreating the whole underlying queue of SOAP clients.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_reload_wsdl_request'
+        response_elem = 'zato_http_soap_reload_wsdl_response'
+        input_required = ('id',)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
+
+        action = OUTGOING.HTTP_SOAP_CREATE_EDIT
+        self.notify_worker_threads(to_json(item, True)['fields'], action)
 
 class GetURLSecurity(AdminService):
     """ Returns a JSON document describing the security configuration of all
