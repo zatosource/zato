@@ -89,7 +89,7 @@ def _edit_create_response(id, verb, transport, connection, name):
 
     return_data = {'id': id,
                    'transport': transport,
-                   'message': 'Successfully {0} the {1} {2} [{3}]'.format(
+                   'message': 'Successfully {0} the {1} {2} [{3}], check server logs for details'.format(
                        verb,
                        TRANSPORT[transport],
                        CONNECTION[connection],

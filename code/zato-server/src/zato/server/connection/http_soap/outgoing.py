@@ -372,10 +372,10 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
                 now = datetime.utcnow()
                 if  now >= build_until:
     
-                    msg = 'Built {}/{} Suds SOAP clients to {} within {} seconds, cannot continue'
-                    logger.critical(
-                        msg.format(self.client.queue.qsize(), self.client.queue.maxsize, url, self.config['queue_build_cap']))
-                    raise Exception(msg)
+                    msg = 'Built {}/{} Suds SOAP clients to {} within {} seconds, cannot continue'.format(
+                        self.client.queue.qsize(), self.client.queue.maxsize, url, self.config['queue_build_cap'])
+                    logger.error(msg)
+                    return
     
                 logger.info('%d/%d Suds SOAP clients connected to [%s] after %s (cap: %ss)',
                     self.client.queue.qsize(), self.client.queue.maxsize, url, now - start, self.config['queue_build_cap'])
