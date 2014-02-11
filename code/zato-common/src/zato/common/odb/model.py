@@ -26,7 +26,7 @@ Base = declarative_base()
 
 ################################################################################
 
-def to_json(model):
+def to_json(model, return_as_dict=False):
     """ Returns a JSON representation of an SQLAlchemy-backed object.
     """
     json = {}
@@ -36,7 +36,10 @@ def to_json(model):
     for col in model._sa_class_manager.mapper.mapped_table.columns:
         json['fields'][col.name] = getattr(model, col.name)
 
-    return dumps([json])
+    if return_as_dict:
+        return json
+    else:
+        return dumps([json])
 
 class ZatoInstallState(Base):
     """ Contains a row for each Zato installation belonging to that particular

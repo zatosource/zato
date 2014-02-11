@@ -398,6 +398,8 @@ urlpatterns = patterns('',
         login_required(http_soap.delete), name='http-soap-delete'),
     url(r'^zato/http-soap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(http_soap.ping), name='http-soap-ping'),
+    url(r'^zato/http-soap/reload-wsdl/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(http_soap.reload_wsdl), name='http-soap-reload-wsdl'),
 
     # Key/value DB
     url(r'^zato/kvdb/remote-command/$',

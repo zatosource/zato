@@ -161,3 +161,15 @@ $.fn.zato.http_soap.ping = function(id) {
     $.fn.zato.post(url, callback, '', 'text');
 
 }
+
+$.fn.zato.http_soap.reload_wsdl = function(id) {
+
+    var callback = function(data, status) {
+        var success = status == 'success';
+        $.fn.zato.user_message(success, data.responseText);
+    }
+
+    var url = String.format('./reload-wsdl/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+    $.fn.zato.post(url, callback, '', 'text');
+
+}
