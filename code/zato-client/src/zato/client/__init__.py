@@ -34,7 +34,7 @@ from zato.common.log_message import CID_LENGTH
 
 # Set max_cid_repr to CID_NO_CLIP if it's desired to return the whole of a CID
 # in a response's __repr__ method.
-CID_NO_CLIP = int(CID_LENGTH / 2)
+CID_NO_CLIP = int(CID_LENGTH / 2) + 1
 
 DEFAULT_MAX_RESPONSE_REPR = 2500
 DEFAULT_MAX_CID_REPR = 5
