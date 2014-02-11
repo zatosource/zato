@@ -18,7 +18,8 @@ from traceback import format_exc
 
 # gevent
 import gevent
-from gevent.queue import Queue
+from gevent.lock import RLock
+from gevent.queue import Empty, Queue
 
 # parse
 from parse import PARSE_RE
@@ -27,8 +28,8 @@ from parse import PARSE_RE
 import requests
 
 # Zato
-from zato.common import DATA_FORMAT, Inactive, URL_TYPE
-from zato.common.util import get_component_name, security_def_type
+from zato.common import DATA_FORMAT, Inactive, URL_TYPE, ZatoException
+from zato.common.util import get_component_name, new_cid, security_def_type
 
 logger = logging.getLogger(__name__)
 
@@ -302,52 +303,81 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
+class _SudsClient(object):
+    def __init__(self, client_queue, conn_name):
+        self.queue = client_queue
+        self.conn_name = conn_name
+        self.client = None
+
+    def __enter__(self):
+        try:
+            self.client = self.queue.get(block=False)
+        except Empty:
+            self.client = None
+            msg = 'No free connections to `{}`'.format(self.conn_name)
+            logger.error(msg)
+            raise Exception(msg)
+        else:
+            return self.client
+
+    def __exit__(self, type, value, traceback):
+        if self.client:
+            self.queue.put(self.client)
+
+class _SudsClientQueue(object):
+    def __init__(self, queue, conn_name):
+        self.queue = queue
+        self.conn_name = conn_name
+
+    def __call__(self):
+        return _SudsClient(self.queue, self.conn_name)
+
 class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
     """ A thin wrapper around the suds SOAP library
     """
     def __init__(self, config):
         super(SudsSOAPWrapper, self).__init__(config)
+        self.update_lock = RLock()
         self.config = config
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
-        self.client_queue = Queue(self.config['pool_size'])
+        self.client = _SudsClientQueue(Queue(self.config['pool_size']), self.config['name'])
 
     def build_client_queue(self):
 
-        logger.warn(self.config)
-        logger.warn(self.config_no_sensitive)
+        with self.update_lock:
 
-        # Lazily-imported here to make sure gevent monkey patches everything well in advance
-        from suds.client import Client
-        from suds.transport.http import HttpAuthenticated
-        from suds.transport.https import WindowsHttpAuthenticated
-        from suds.wsse import UsernameToken
+            # Lazily-imported here to make sure gevent monkey patches everything well in advance
+            from suds.client import Client
+            from suds.transport.http import HttpAuthenticated
+            from suds.transport.https import WindowsHttpAuthenticated
+            from suds.wsse import UsernameToken
 
-        url = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
-
-        def add_client():
-            client = Client(url, autoblend=True)
-            self.client_queue.put(client)
-            logger.debug('Adding Suds SOAP client to [%s]', url)
-
-        for x in range(self.client_queue.maxsize):
-            gevent.spawn(add_client)
-
-        start = datetime.utcnow()
-        build_until = start + timedelta(seconds=self.config['queue_build_cap'])
-
-        while not self.client_queue.full():
-            gevent.sleep(0.5)
-
-            now = datetime.utcnow()
-            if  now >= build_until:
-
-                msg = 'Built {}/{} Suds SOAP clients to {} within {} seconds, cannot continue'
-                logger.critical(
-                    msg.format(self.client_queue.qsize(), self.client_queue.maxsize, url, self.config['queue_build_cap']))
-                raise Exception(msg)
-
-            logger.info('%d/%d Suds SOAP clients connected to [%s] after %s (cap: %ss)',
-                self.client_queue.qsize(), self.client_queue.maxsize, url, now - start, self.config['queue_build_cap'])
-
-        logger.info('Obtained %d Suds SOAP clients to [%s]', self.client_queue.maxsize, url)
+            url = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
+    
+            def add_client():
+                client = Client(url, autoblend=True)
+                self.client.queue.put(client)
+                logger.debug('Adding Suds SOAP client to [%s]', url)
+    
+            for x in range(self.client.queue.maxsize):
+                gevent.spawn(add_client)
+    
+            start = datetime.utcnow()
+            build_until = start + timedelta(seconds=self.config['queue_build_cap'])
+    
+            while not self.client.queue.full():
+                gevent.sleep(0.5)
+    
+                now = datetime.utcnow()
+                if  now >= build_until:
+    
+                    msg = 'Built {}/{} Suds SOAP clients to {} within {} seconds, cannot continue'
+                    logger.critical(
+                        msg.format(self.client.queue.qsize(), self.client.queue.maxsize, url, self.config['queue_build_cap']))
+                    raise Exception(msg)
+    
+                logger.info('%d/%d Suds SOAP clients connected to [%s] after %s (cap: %ss)',
+                    self.client.queue.qsize(), self.client.queue.maxsize, url, now - start, self.config['queue_build_cap'])
+    
+            logger.info('Obtained %d Suds SOAP clients to [%s]', self.client.queue.maxsize, url)
