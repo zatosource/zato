@@ -353,8 +353,6 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
             from suds.transport.https import WindowsHttpAuthenticated
             from suds.wsse import UsernameToken
 
-            logger.warn(self.config)
-
             url = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
 
             def add_client():
