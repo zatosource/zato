@@ -144,6 +144,7 @@ SOAP_CHANNEL_VERSIONS = ('1.1',)
 
 SECURITY_TYPES = {
     'basic_auth':'HTTP Basic Auth',
+    'ntlm':'NTLM',
     'oauth': 'OAuth 1.0',
     'tech_acc':'Tech account',
     'wss':'WS-Security'

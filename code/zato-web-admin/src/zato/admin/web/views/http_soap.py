@@ -126,7 +126,7 @@ def index(req):
                 if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type != _security_def_type.basic_auth:
                     continue
                 elif transport == URL_TYPE.SOAP and def_item.sec_type \
-                     not in(_security_def_type.basic_auth, _security_def_type.wss):
+                     not in(_security_def_type.basic_auth, _security_def_type.ntlm, _security_def_type.wss):
                     continue
             
             value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
