@@ -122,6 +122,9 @@ class RequestDispatcher(object):
         is postponed until a concrete transport-specific handler is invoked.
         """
 
+        for k, v in sorted(wsgi_environ.items()):
+            logger.warn('%s %s', k, v)
+
         # Needed in later steps
         path_info = wsgi_environ['PATH_INFO']
         soap_action = wsgi_environ.get('HTTP_SOAPACTION', '')

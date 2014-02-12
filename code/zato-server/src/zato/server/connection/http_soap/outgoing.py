@@ -28,7 +28,7 @@ from parse import PARSE_RE
 import requests
 
 # Zato
-from zato.common import DATA_FORMAT, Inactive, URL_TYPE, ZatoException
+from zato.common import DATA_FORMAT, Inactive, SECURITY_TYPES, URL_TYPE, ZatoException
 from zato.common.util import get_component_name, new_cid, security_def_type
 
 logger = logging.getLogger(__name__)
@@ -353,31 +353,47 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
             from suds.transport.https import WindowsHttpAuthenticated
             from suds.wsse import UsernameToken
 
+            logger.warn(self.config)
+
             url = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
-    
+
             def add_client():
-                client = Client(url, autoblend=True)
+
+                sec_type = self.config['sec_type']
+                credentials = {'username':self.config['username'], 'password':self.config['password']}
+
+                if sec_type == security_def_type.ntlm:
+                    transport = WindowsHttpAuthenticated(**credentials)
+
+                elif sec_type == security_def_type.basic_auth:
+                    transport = HttpAuthenticated(**credentials)
+
+                else:
+                    transport = None
+
+                client = Client(url, autoblend=True, transport=transport)
+
                 self.client.queue.put(client)
                 logger.debug('Adding Suds SOAP client to [%s]', url)
-    
+
             for x in range(self.client.queue.maxsize):
                 gevent.spawn(add_client)
-    
+
             start = datetime.utcnow()
             build_until = start + timedelta(seconds=self.config['queue_build_cap'])
     
             while not self.client.queue.full():
                 gevent.sleep(0.5)
-    
+
                 now = datetime.utcnow()
                 if  now >= build_until:
-    
-                    msg = 'Built {}/{} Suds SOAP clients to {} within {} seconds, cannot continue'.format(
+
+                    msg = 'Built {}/{} Suds SOAP clients to {} within {} seconds, giving up'.format(
                         self.client.queue.qsize(), self.client.queue.maxsize, url, self.config['queue_build_cap'])
                     logger.error(msg)
                     return
-    
-                logger.info('%d/%d Suds SOAP clients connected to [%s] after %s (cap: %ss)',
+
+                logger.info('%d/%d Suds SOAP clients connected to `%s` after %s (cap: %ss)',
                     self.client.queue.qsize(), self.client.queue.maxsize, url, now - start, self.config['queue_build_cap'])
-    
+
             logger.info('Obtained %d Suds SOAP clients to `%s` for `%s`', self.client.queue.maxsize, url, self.config['name'])
