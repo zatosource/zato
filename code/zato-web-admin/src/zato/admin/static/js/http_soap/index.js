@@ -134,6 +134,9 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     if(is_outgoing) {
         row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.ping({0});'>Ping</a>", item.id));
+        if(item.serialization_type == 'suds') {
+            row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.reload_wsdl({0});'>Reload WSDL</a>", item.id));
+        }
     }
 
     if(include_tr) {
