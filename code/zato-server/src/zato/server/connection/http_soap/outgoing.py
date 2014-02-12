@@ -28,7 +28,7 @@ from parse import PARSE_RE
 import requests
 
 # Zato
-from zato.common import DATA_FORMAT, Inactive, SECURITY_TYPES, URL_TYPE, ZatoException
+from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SECURITY_TYPES, URL_TYPE, ZatoException
 from zato.common.util import get_component_name, new_cid, security_def_type
 
 logger = logging.getLogger(__name__)
@@ -99,10 +99,18 @@ class BaseHTTPSOAPWrapper(object):
     def set_auth(self):
         """ Configures the security for requests, if any is to be configured at all.
         """
-        self.requests_auth = self.auth if self.config['sec_type'] == security_def_type.basic_auth else None
-        if self.config['sec_type'] == security_def_type.wss:
-            self.soap[self.config['soap_version']]['header'] = self.soap[self.config['soap_version']]['header_template'].format(
-                Username=self.config['username'], Password=self.config['password'])
+
+        # Suds SOAP requests
+        if self.config['serialization_type'] == HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id:
+            self.suds_auth = {'username':self.config['username'], 'password':self.config['password']}
+
+        # Everything else
+        else:
+            self.requests_auth = self.auth if self.config['sec_type'] == security_def_type.basic_auth else None
+            if self.config['sec_type'] == security_def_type.wss:
+                self.soap[self.config['soap_version']]['header'] = \
+                    self.soap[self.config['soap_version']]['header_template'].format(
+                        Username=self.config['username'], Password=self.config['password'])
 
 
     def set_address_data(self):
@@ -349,27 +357,35 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
 
             # Lazily-imported here to make sure gevent monkey patches everything well in advance
             from suds.client import Client
-            from suds.transport.http import HttpAuthenticated
+            from suds.transport.https import HttpAuthenticated
             from suds.transport.https import WindowsHttpAuthenticated
-            from suds.wsse import UsernameToken
+            from suds.wsse import Security, UsernameToken
 
             url = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
 
             def add_client():
 
                 sec_type = self.config['sec_type']
-                credentials = {'username':self.config['username'], 'password':self.config['password']}
 
-                if sec_type == security_def_type.ntlm:
-                    transport = WindowsHttpAuthenticated(**credentials)
+                if sec_type == security_def_type.basic_auth:
+                    transport = HttpAuthenticated(**self.suds_auth)
 
-                elif sec_type == security_def_type.basic_auth:
-                    transport = HttpAuthenticated(**credentials)
+                elif sec_type == security_def_type.ntlm:
+                    transport = WindowsHttpAuthenticated(**self.suds_auth)
 
-                else:
-                    transport = None
+                elif sec_type == security_def_type.wss:
+                    security = Security()
+                    token = UsernameToken(self.suds_auth['username'], self.suds_auth['password'])
+                    security.tokens.append(token)
 
-                client = Client(url, autoblend=True, transport=transport)
+                    client = Client(url, autoblend=True, wsse=security)
+
+                if sec_type in(security_def_type.basic_auth, security_def_type.ntlm):
+                    client = Client(url, autoblend=True, transport=transport)
+
+                # Still could be either none at all or WSS
+                if not sec_type:
+                    client = Client(url, autoblend=True)
 
                 self.client.queue.put(client)
                 logger.debug('Adding Suds SOAP client to [%s]', url)

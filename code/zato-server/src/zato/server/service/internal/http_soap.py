@@ -358,9 +358,14 @@ class ReloadWSDL(AdminService, _HTTPSOAPService):
     def handle(self):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
+            sec_info = self._handle_security_info(session, item.security_id, item.connection, item.transport)
+
+        fields = to_json(item, True)['fields']
+        fields['sec_type'] = sec_info['sec_type']
+        fields['security_name'] = sec_info['security_name']
 
         action = OUTGOING.HTTP_SOAP_CREATE_EDIT
-        self.notify_worker_threads(to_json(item, True)['fields'], action)
+        self.notify_worker_threads(fields, action)
 
 class GetURLSecurity(AdminService):
     """ Returns a JSON document describing the security configuration of all
