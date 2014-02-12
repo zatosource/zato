@@ -380,4 +380,4 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
                 logger.info('%d/%d Suds SOAP clients connected to [%s] after %s (cap: %ss)',
                     self.client.queue.qsize(), self.client.queue.maxsize, url, now - start, self.config['queue_build_cap'])
     
-            logger.info('Obtained %d Suds SOAP clients to [%s]', self.client.queue.maxsize, url)
+            logger.info('Obtained %d Suds SOAP clients to `%s` for `%s`', self.client.queue.maxsize, url, self.config['name'])
