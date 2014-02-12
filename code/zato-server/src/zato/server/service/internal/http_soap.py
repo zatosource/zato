@@ -57,8 +57,9 @@ class _HTTPSOAPService(object):
                 if transport == URL_TYPE.PLAIN_HTTP and security.sec_type != security_def_type.basic_auth:
                     raise Exception('Only HTTP Basic Auth is supported, not [{}]'.format(security.sec_type))
                 elif transport == URL_TYPE.SOAP and security.sec_type \
-                     not in(security_def_type.basic_auth, security_def_type.wss):
-                    raise Exception('Security type must be HTTP Basic Auth or WS-Security, not [{}]'.format(security.sec_type))
+                     not in(security_def_type.basic_auth, security_def_type.ntlm, security_def_type.wss):
+                    raise Exception('Security type must be HTTP Basic Auth, NTLM or WS-Security, not [{}]'.format(
+                        security.sec_type))
             
             info['security_name'] = security.name
             info['sec_type'] = security.sec_type
