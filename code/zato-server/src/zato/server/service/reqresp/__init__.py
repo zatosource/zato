@@ -66,7 +66,7 @@ class HTTPRequestData(object):
         self.GET = None
         self.POST = None
 
-    def init(self, wsgi_environ):
+    def init(self, wsgi_environ={}):
         self.method = wsgi_environ.get('REQUEST_METHOD')
 
         # Note tht we always require UTF-8
@@ -109,8 +109,6 @@ class Request(SIOConverter):
     def init(self, is_sio, cid, io, data_format, transport, wsgi_environ):
         """ Initializes the object with an invocation-specific data.
         """
-        if transport in(URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP):
-            self.http.init(wsgi_environ)
 
         if is_sio:
             self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
@@ -161,18 +159,18 @@ class Request(SIOConverter):
         """
         params = {}
         if not isinstance(self.payload, basestring):
-                for param in request_params:
-                    try:
-                        param_name, value = convert_param(self.cid, self.payload, param, self.data_format, is_required, default_value,
-                                path_prefix, use_text, self.channel_params, self.has_simple_io_config,
-                                self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes)
-                        params[param_name] = value
-
-                    except Exception, e:
-                        msg = 'Caught an exception, param:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
-                            param, self.has_simple_io_config, format_exc(e))
-                        self.logger.error(msg)
-                        raise Exception(msg)
+            for param in request_params:
+                try:
+                    param_name, value = convert_param(self.cid, self.payload, param, self.data_format, is_required, default_value,
+                            path_prefix, use_text, self.channel_params, self.has_simple_io_config,
+                            self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes)
+                    params[param_name] = value
+    
+                except Exception, e:
+                    msg = 'Caught an exception, param:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
+                        param, self.has_simple_io_config, format_exc(e))
+                    self.logger.error(msg)
+                    raise Exception(msg)
         else:
             if self.logger.isEnabledFor(TRACE1):
                 msg = 'payload repr=[{}], type=[{}]'.format(repr(self.payload), type(self.payload))
@@ -184,13 +182,14 @@ class Request(SIOConverter):
         """ Returns a deep copy of self.
         """
         request = Request(None)
-        request.logger = logging.getLogger(self.logger.getName())
+        request.logger = logging.getLogger(self.logger.name)
 
         for name in Request.__slots__:
             if name == 'logger':
                 continue
             setattr(request, name, deepcopy(getattr(self, name)))
 
+        return request
 
     def bunchified(self):
         """ Returns a bunchified (converted into bunch.Bunch) version of self.raw_request,
@@ -445,7 +444,7 @@ class Response(object):
         return self._payload
 
     def _set_payload(self, value):
-        if isinstance(value, basestring):
+        if isinstance(value, (basestring, dict, list, tuple)):
             self._payload = value
         else:
             if not self.outgoing_declared:

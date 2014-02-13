@@ -44,7 +44,7 @@ from retools.lock import Lock, LockTimeout as RetoolsLockTimeout
 from sqlalchemy.util import NamedTuple
 
 # Zato
-from zato.common import BROKER, CHANNEL, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, \
+from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, \
      path, SIMPLE_IO, URL_TYPE, ZatoException, ZATO_NONE, ZATO_OK
 from zato.common.broker_message import SERVICE
 from zato.common.util import uncamelify, make_repr, new_cid, payload_from_request, service_name_from_impl, TRACE1
@@ -218,11 +218,11 @@ class Service(object):
 
         if self.passthrough_request:
             self.request = self.passthrough_request
-        else:
-            self.request.init(is_sio, self.cid, getattr(self, 'SimpleIO', None),
-                self.data_format, self.transport, self.wsgi_environ)
+
+        self.request.http.init(self.wsgi_environ)
 
         if is_sio:
+            self.request.init(is_sio, self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
 
         self.msg = MessageFacade(self.worker_store.msg_ns_store,
@@ -230,7 +230,7 @@ class Service(object):
 
     def set_response_data(self, service, **kwargs):
         response = service.response.payload
-        if not isinstance(response, basestring):
+        if not isinstance(response, (basestring, dict, list, tuple)):
             response = response.getvalue(serialize=kwargs['serialize'])
             if kwargs['as_bunch']:
                 response = bunchify(response)
@@ -281,7 +281,7 @@ class Service(object):
 
         return set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
-    def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=None,
+    def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=DATA_FORMAT.DICT,
             transport=None, serialize=False, as_bunch=False, **kwargs):
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
@@ -584,7 +584,7 @@ class Service(object):
     @staticmethod
     def update(service, channel, server, broker_client, worker_store, cid, payload,
                raw_request, transport=None, simple_io_config=None, data_format=None,
-               wsgi_environ=None, job_type=None, channel_params=None,
+               wsgi_environ={}, job_type=None, channel_params=None,
                merge_channel_params=True, params_priority=None, init=True):
         """ Takes a service instance and updates it with the current request's
         context data.
