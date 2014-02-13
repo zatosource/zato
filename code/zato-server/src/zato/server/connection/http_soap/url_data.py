@@ -47,12 +47,13 @@ class OAuthStore(object):
 class URLData(OAuthDataStore):
     """ Performs URL matching and all the HTTP/SOAP-related security checks.
     """
-    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None,
+    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None,
                  oauth_config=None, tech_acc_config=None, wss_config=None, kvdb=None,
                  broker_client=None, odb=None, elem_path_store=None, xpath_store=None):
         self.channel_data = channel_data
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
+        self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
         self.tech_acc_config = tech_acc_config
         self.wss_config = wss_config
@@ -274,6 +275,8 @@ class URLData(OAuthDataStore):
         if match_idx != ZATO_NONE:
             self.channel_data.pop(match_idx)
 
+# ##############################################################################
+
     def _update_basic_auth(self, name, config):
         self.basic_auth_config[name] = Bunch()
         self.basic_auth_config[name].config = config
@@ -313,6 +316,47 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             self.basic_auth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.basic_auth)
+
+# ##############################################################################
+
+    def _update_ntlm(self, name, config):
+        self.ntlm_config[name] = Bunch()
+        self.ntlm_config[name].config = config
+
+    def ntlm_get(self, name):
+        """ Returns the configuration of the NTLM security definition of the given name.
+        """
+        with self.url_sec_lock:
+            return self.ntlm_config.get(name)
+
+    def on_broker_msg_SECURITY_NTLM_CREATE(self, msg, *args):
+        """ Creates a new NTLM security definition
+        """
+        with self.url_sec_lock:
+            self._update_ntlm(msg.name, msg)
+
+    def on_broker_msg_SECURITY_NTLM_EDIT(self, msg, *args):
+        """ Updates an existing NTLM security definition.
+        """
+        with self.url_sec_lock:
+            del self.ntlm_config[msg.old_name]
+            self._update_ntlm(msg.name, msg)
+            self._update_url_sec(msg, security_def_type.ntlm)
+
+    def on_broker_msg_SECURITY_NTLM_DELETE(self, msg, *args):
+        """ Deletes an NTLM security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('ntlm', msg.name)
+            del self.ntlm_config[msg.name]
+            self._update_url_sec(msg, security_def_type.ntlm, True)
+
+    def on_broker_msg_SECURITY_NTLM_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an NTLM security definition.
+        """
+        with self.url_sec_lock:
+            self.ntlm_config[msg.name]['config']['password'] = msg.password
+            self._update_url_sec(msg, security_def_type.ntlm)
 
 # ##############################################################################
 

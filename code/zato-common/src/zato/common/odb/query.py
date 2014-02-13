@@ -21,8 +21,8 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
      PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.odb.model import ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
      DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, \
-     SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
+     HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NTLM, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, \
+     OutgoingZMQ, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +103,21 @@ def basic_auth_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==HTTPBasicAuth.cluster_id).\
         filter(SecurityBase.id==HTTPBasicAuth.id).\
+        order_by('sec_base.name')
+
+@needs_columns
+def ntlm_list(session, cluster_id, needs_columns=False):
+    """ All the NTLM definitions.
+    """
+    return session.query(
+        NTLM.id, NTLM.name,
+        NTLM.is_active,
+        NTLM.username,
+        NTLM.password, NTLM.sec_type,
+        NTLM.password_type).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==NTLM.cluster_id).\
+        filter(SecurityBase.id==NTLM.id).\
         order_by('sec_base.name')
 
 @needs_columns

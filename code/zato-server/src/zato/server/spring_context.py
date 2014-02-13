@@ -74,6 +74,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.scheduler',
             'zato.server.service.internal.security',
             'zato.server.service.internal.security.basic_auth',
+            'zato.server.service.internal.security.ntlm',
             'zato.server.service.internal.security.oauth',
             'zato.server.service.internal.security.tech_account',
             'zato.server.service.internal.security.wss',
