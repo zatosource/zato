@@ -28,4 +28,4 @@ class Create(CACreateCommand):
         return args.cluster_name + ':' + args.server_name
 
     def execute(self, args, show_output=True):
-        return self._execute(args, 'v3_client_server', show_output)
+        self._execute(args, 'v3_client_server', show_output)
