@@ -379,6 +379,11 @@ class MSG_PATTERN_TYPE:
         def __iter__(self):
             return iter((self.ELEM_PATH, self.XPATH))
 
+class PUB_SUB:
+    PRIORITY_MIN = 1
+    PRIORITY_MAX = 9
+    PRIORITY_DEFAULT = 5
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
