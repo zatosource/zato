@@ -344,9 +344,9 @@ class RedisPubSub(PubSub):
             keys=[cons_in_flight, self.UNACK_COUNTER_KEY, self.ACK_TO_DELETE_KEY],
             args=ctx.msg_ids) 
 
-        if self.logger.isEnabledFor(logging.INFO):
-            self.logger.info(
-                'Reject result `%s` for `%s` with `%s`', result, ctx.sub_key, ', '.join(ctx.msg_ids))
+        if self.logger.isEnabledFor(logging.DEBUG):
+            self.logger.debug(
+                'Acknowledge result `%s` for `%s` with `%s`', result, ctx.sub_key, ', '.join(ctx.msg_ids))
 
     def reject(self, ctx):
         """ Rejects a set of messages for a given consumer. The messages will be placed back onto consumer's queue
