@@ -10,8 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Core publish/subscribe features
 
-# Monkey patch first
-
 # stdlib
 from datetime import datetime
 from json import dumps, loads
@@ -28,8 +26,8 @@ from bunch import Bunch
 from gevent.lock import RLock
 
 # Zato
-from zato.common import ZATO_NONE
-from zato.common.pubsub.lua import lua_move_to_target_queues, lua_get_from_cons_queue, lua_reject, lua_ack
+from zato.common import PUB_SUB, ZATO_NONE
+from zato.common.pubsub.lua import lua_move_to_target_queues, lua_get_from_cons_queue, lua_publish, lua_reject, lua_ack
 from zato.common.util import datetime_to_seconds, make_repr, new_cid
 
 # ################################################################################################################################
@@ -45,17 +43,19 @@ class Topic(object):
 class Message(object):
     """ A published or received message.
     """
-    def __init__(self, payload='', msg_id=None, mime_type='text/plain', priority=5, expiration=60, expire_at=None, topic=None):
+    def __init__(self, payload='', topic=None, mime_type='text/plain', priority=PUB_SUB.PRIORITY_DEFAULT, \
+                     expiration=60.0, msg_id=None, expire_at=None):
         self.payload = payload
-        self.msg_id = msg_id or new_cid()
+        self.topic = topic
         self.mime_type = mime_type
         self.priority = priority # In 1-9 range where 9 is top priority
-        self.topic = topic
+
+        self.msg_id = msg_id or new_cid()
 
         # expiration -> how many seconds a message should live
         # expire_at -> a datetime, in UTC, when it should expire
+        
         # Either of these is required.
-
         self.expiration = expiration
         self.expire_at = expire_at
 
@@ -64,11 +64,12 @@ class Message(object):
 
     def to_json(self):
         return dumps({
-            'msg_id': self.msg_id,
             'payload': self.payload,
+            'topic': self.topic,
             'mime_type': self.mime_type,
             'priority': self.priority,
-            'topic': self.topic
+            'msg_id': self.msg_id,
+            'expiration': self.expiration
         })
 
 # ################################################################################################################################
@@ -86,9 +87,9 @@ class PubCtx(object):
 class SubCtx(object):
     """ Subscription context - what to subscribe to.
     """
-    def __init__(self, client_id=None, topics=[]):
+    def __init__(self, client_id=None, topics=None):
         self.client_id = None
-        self.topics = topics
+        self.topics = topics or []
 
 # ################################################################################################################################
 
@@ -105,18 +106,24 @@ class GetCtx(object):
 class AckCtx(object):
     """ A set of data describing an acknowledge of a message fetched.
     """
-    def __init__(self, sub_key=None, msg_ids=[]):
+    def __init__(self, sub_key=None, msg_ids=None):
         self.sub_key = sub_key
-        self.msg_ids = msg_ids
+        self.msg_ids = msg_ids or []
+
+    def append(self, msg_id):
+        self.msg_ids.append(msg_id)
 
 # ################################################################################################################################
 
 class RejectCtx(object):
     """ A set of data describing a rejection of one or more messages.
     """
-    def __init__(self, sub_key=None, msg_ids=[]):
+    def __init__(self, sub_key=None, msg_ids=None):
         self.sub_key = sub_key
-        self.msg_ids = msg_ids
+        self.msg_ids = msg_ids or []
+
+    def append(self, msg_id):
+        self.msg_ids.append(msg_id)
 
 # ################################################################################################################################
 
@@ -186,14 +193,7 @@ class PubSub(object):
 class RedisPubSub(PubSub):
     """ Publish/subscribe based on Redis.
     """
-    MSG_IDS_PREFIX = 'zato:pubsub:msg-ids:{}'
-    BACKLOG_FULL_KEY = 'zato:pubsub:backlog-full'
-    CONSUMER_MSG_IDS_PREFIX = 'zato:pubsub:consumer:msg-ids:{}'
-    CONSUMER_IN_FLIGHT_PREFIX = 'zato:pubsub:consumer:in-flight:{}'
-    MSG_VALUES_KEY = 'zato:pubsub:msg-values'
-    UNACK_COUNTER_KEY = 'zato:pubsub:unack-counter'
-    ACK_TO_DELETE_KEY = 'zato:pubsub:ack-to-delete'
-
+    LUA_PUBLISH = 'lua-publish'
     LUA_MOVE_TO_TARGET_QUEUES = 'lua-move-to-target-queues'
     LUA_GET_FROM_CONSUMER_QUEUE = 'lua-get-from-consumer-queue'
     LUA_REJECT = 'lua-reject'
@@ -201,11 +201,20 @@ class RedisPubSub(PubSub):
 
     # ############################################################################################################################
 
-    def __init__(self, kvdb):
+    def __init__(self, kvdb, key_prefix='zato:pubsub:'):
         super(RedisPubSub, self).__init__()
         self.kvdb = kvdb
         self.lua_programs = {}
 
+        self.MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'zato:pubsub:zset:msg-ids:{}')
+        self.BACKLOG_FULL_KEY = '{}{}'.format(key_prefix, 'zato:pubsub:backlog-full')
+        self.CONSUMER_MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'zato:pubsub:list:consumer:msg-ids:{}')
+        self.CONSUMER_IN_FLIGHT_PREFIX = '{}{}'.format(key_prefix, 'zato:pubsub:hash:consumer:in-flight:{}')
+        self.MSG_VALUES_KEY = '{}{}'.format(key_prefix, 'zato:pubsub:hash:msg-values')
+        self.UNACK_COUNTER_KEY = '{}{}'.format(key_prefix, 'zato:pubsub:hash:unack-counter')
+        self.ACK_TO_DELETE_KEY = '{}{}'.format(key_prefix, 'zato:pubsub:list:ack-to-delete')
+
+        self.add_lua_program(self.LUA_PUBLISH, lua_publish)
         self.add_lua_program(self.LUA_MOVE_TO_TARGET_QUEUES, lua_move_to_target_queues)
         self.add_lua_program(self.LUA_GET_FROM_CONSUMER_QUEUE, lua_get_from_cons_queue)
         self.add_lua_program(self.LUA_REJECT, lua_reject)
@@ -267,21 +276,14 @@ class RedisPubSub(PubSub):
         now_seconds = datetime_to_seconds(datetime.utcnow())
         score = '{}{}'.format(ctx.msg.priority, now_seconds)
 
-        # Below, hset on ID_TO_TOPIC_KEY will have to be set for each topic resolved from a pattern, eventually,
-        # when we have patterns on publish.
-
-        with self.kvdb.pipeline() as p:
-
-            p.zadd(id_key, score, ctx.msg.msg_id)
-            p.hset(self.MSG_VALUES_KEY, ctx.msg.msg_id, ctx.msg.to_json())
-
-            try:
-                p.execute()
-            except Exception, e:
-                self.logger.error('Pub error `%s`', format_exc(e))
-                raise
-            else:
-                self.logger.debug('Published: `%s` to `%s', ctx.msg.msg_id, ctx.topic)
+        try:
+            self.run_lua(self.LUA_PUBLISH, [id_key, self.MSG_VALUES_KEY], [score, ctx.msg.msg_id, ctx.msg.to_json()])
+        except Exception, e:
+            self.logger.error('Pub error `%s`', format_exc(e))
+            raise
+        else:
+            self.logger.debug('Published: `%s` to `%s', ctx.msg.msg_id, ctx.topic)
+            return ctx.msg.msg_id
 
     # ############################################################################################################################
 
@@ -347,7 +349,8 @@ class RedisPubSub(PubSub):
                 'Reject result `%s` for `%s` with `%s`', result, ctx.sub_key, ', '.join(ctx.msg_ids))
 
     def reject(self, ctx):
-        """ Rejects a set of messages for a given consumer.
+        """ Rejects a set of messages for a given consumer. The messages will be placed back onto consumer's queue
+        and delivered again at a later time.
         """
         # TODO: This should be called with this consumer's in-flight key used by self.lock
         # so it's an atomic operation. If the lock is already held an exception should be
@@ -362,7 +365,7 @@ class RedisPubSub(PubSub):
         cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
         cons_in_flight = self.CONSUMER_IN_FLIGHT_PREFIX.format(ctx.sub_key)
 
-        result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight], args=ctx.msg_ids) 
+        result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight, self.UNACK_COUNTER_KEY], args=ctx.msg_ids) 
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(
@@ -409,85 +412,3 @@ class RedisPubSub(PubSub):
 
                 move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
                 self.logger.debug('move_result `%s` `%s`', move_result, type(move_result))
-
-# ################################################################################################################################
-
-if __name__ == '__main__':
-
-    import logging
-
-    log_format = '%(asctime)s - %(levelname)s - %(name)s:%(lineno)d - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=log_format)
-
-    from redis import StrictRedis
-    kvdb = StrictRedis()
-
-    client_id = 1
-
-    topic1 = Topic('/state/vic/alerts')
-    topic2 = Topic('/state/vic/news')
-
-    ps = RedisPubSub(kvdb)
-
-    ps.add_topic(topic1)
-    ps.add_topic(topic2)
-
-    # TODO: This will done from GUI
-    ps.add_producer(client_id, topic1)
-    ps.add_producer(client_id, topic2)
-
-    # Subscribe
-    sub_ctx1 = SubCtx()
-    sub_ctx1.client_id = 1
-    sub_ctx1.topics = [topic1.name, topic2.name]
-
-    sub_ctx2 = SubCtx()
-    sub_ctx2.client_id = 2
-    sub_ctx2.topics = [topic1.name]
-
-    sub_key1 = ps.subscribe(sub_ctx1)
-    sub_key2 = ps.subscribe(sub_ctx2)
-
-    # Publish
-    pub_ctx = PubCtx()
-    pub_ctx.client_id = client_id
-
-    for topic in(topic1, topic2):
-        for x in range(2):
-            pub_ctx.topic = topic.name
-            pub_ctx.msg = Message(new_cid())
-
-            ps.publish(pub_ctx)
-
-    # Move messages to target queues
-    # TODO: This will be done in background
-    ps.move_to_target_queues()
-
-    # Get
-    get_ctx1 = GetCtx()
-    get_ctx1.sub_key = sub_key1
-
-    to_be_rejected = []
-    to_be_ackd = []
-
-    for msg in ps.get(get_ctx1):
-        to_be_ackd.append(msg.msg_id)
-
-    get_ctx2 = GetCtx()
-    get_ctx2.sub_key = sub_key2
-
-    for msg in ps.get(get_ctx2):
-        to_be_ackd.append(msg.msg_id)
-
-    # Reject some messages
-    reject_ctx = RejectCtx()
-    reject_ctx.sub_key = sub_key1
-    reject_ctx.msg_ids.extend(to_be_rejected)
-    ps.reject(reject_ctx)
-
-    # Now acknowledge some of them
-    ack_ctx = AckCtx()
-    ack_ctx.sub_key = sub_key1
-    ack_ctx.msg_ids.extend(to_be_ackd)
-    ps.acknowledge(ack_ctx)
-    

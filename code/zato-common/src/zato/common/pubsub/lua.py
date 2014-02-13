@@ -8,6 +8,19 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+lua_publish = """
+
+   local id_key = KEYS[1]
+   local msg_values_key = KEYS[2]
+
+   local score = ARGV[1]
+   local msg_id = ARGV[2]
+   local msg_value = ARGV[3]
+
+   redis.pcall('zadd', id_key, score, msg_id)
+   redis.pcall('hset', msg_values_key, msg_id, msg_value)
+"""
+
 lua_move_to_target_queues = """
 
     -- A function to copy Redis keys we operate over to a table which skips the first one, the source queue.
@@ -95,7 +108,7 @@ lua_ack = """
    local unack_id_count = 0
 
     for id_idx, id in ipairs(ids) do
-        redis.pcall('lrem', cons_in_flight, 0, id)
+        redis.pcall('hdel', cons_in_flight, id)
         unack_id_count = redis.pcall('hincrby', unack_counter, id, -1)
 
         -- It was the last confirmation we were waiting for so let's  add it to a list of IDs whose messages
