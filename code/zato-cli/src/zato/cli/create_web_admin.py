@@ -89,7 +89,7 @@ class Create(ZatoCommand):
         self.target_dir = os.path.abspath(args.path)
         super(Create, self).__init__(args)
 
-    def execute(self, args, show_output=True, password=None):
+    def execute(self, args, show_output=True, password=None, needs_admin_created_flag=False):
         os.chdir(self.target_dir)
 
         repo_dir = os.path.join(self.target_dir, 'config', 'repo')
@@ -171,4 +171,7 @@ class Create(ZatoCommand):
             else:
                 self.logger.info('OK')
 
-        return admin_created
+        # We return it only when told to explicitly so when the command runs from CLI
+        # it doesn't return a non-zero exit code.
+        if needs_admin_created_flag:
+            return admin_created
