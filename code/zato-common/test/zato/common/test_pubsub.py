@@ -33,7 +33,7 @@ logger = getLogger(__name__)
 class RedisPubSubTestCase(TestCase):
 
     def setUp(self):
-        self.key_prefix = '{}:'.format(new_cid())
+        self.key_prefix = 'zato:pubsub:{}:'.format(new_cid())
         self.kvdb = Redis()
 
         try:
@@ -44,8 +44,10 @@ class RedisPubSubTestCase(TestCase):
             self.has_redis = True
 
     def tearDown(self):
-        for key in self.kvdb.keys('{}*'.format(self.key_prefix)):
-            self.kvdb.delete(key)
+        #for key in self.kvdb.keys('{}*'.format(self.key_prefix)):
+        #    self.kvdb.delete(key)
+        #
+        pass
 
     def test_sub_key_generation(self):
         """ Checks whether a sub_key is generated if none is provided on input during subscribing.
@@ -86,11 +88,11 @@ class RedisPubSubTestCase(TestCase):
 
         - Publications are:
 
-          - CRM publishes Msg-CRM1 to /cust/new
-          - CRM publishes Msg-CRM2 to /cust/update
+          - CRM publishes Msg-CRM1 to /cust/new -------------- TTL of 1s
+          - CRM publishes Msg-CRM2 to /cust/update ----------- TTL of 1s
 
-          - Billing publishes Msg-Billing1 to /adsl/new
-          - Billing publishes Msg-Billing2 to /adsl/update
+          - Billing publishes Msg-Billing1 to /adsl/new ------ TTL of 1s
+          - Billing publishes Msg-Billing2 to /adsl/update --- TTL of 3600s
 
           - (ERP doesn't publish anything)
 
@@ -115,6 +117,22 @@ class RedisPubSubTestCase(TestCase):
 
           - ERP rejects Msg-Billing1
           - ERP acks Msg-Billing2
+
+        - Clean up tasks are
+
+          - Msg-CRM1 is deleted because it's confirmed by its only recipient of Billing
+          - Msg-CRM2 is deleted because it's confirmed by its only recipient of Billing
+
+          - Msg-Billing1 is deleted because:
+
+            - CRM confirms it
+            - ERP doesn't confirm it but the message's TTL is 1s so it times out
+
+          - Msg-Billing2 is not deleted because:
+
+            - CRM confirms it
+            - ERP doesn't confirm it and the message's TTL is 3600s so it's still around when a clean up task runs
+
         """
 
         ps = RedisPubSub(self.kvdb, self.key_prefix)
@@ -253,7 +271,7 @@ class RedisPubSubTestCase(TestCase):
         # ready for subscribers to get their messages.
 
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        eq_(len(keys), 5)
+        eq_(len(keys), 9)
 
         self.assertIn(ps.UNACK_COUNTER_KEY, keys)
         self.assertIn(ps.MSG_VALUES_KEY, keys)

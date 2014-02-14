@@ -382,7 +382,12 @@ class MSG_PATTERN_TYPE:
 class PUB_SUB:
     PRIORITY_MIN = 1
     PRIORITY_MAX = 9
-    PRIORITY_DEFAULT = 5
+
+    DEFAULT_PRIORITY = 5
+    DEFAULT_MIME_TYPE = 'text/plain'
+    DEFAULT_EXPIRATION = 60.0 # In seconds
+    DEFAULT_GET_MAX_BATCH_SIZE = 100
+    DEFAULT_IS_FIFO = True
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

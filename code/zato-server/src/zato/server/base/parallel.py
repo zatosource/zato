@@ -55,6 +55,7 @@ from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, KVDB, MISC, SERVER_JOIN_S
      ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
      JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
+from zato.common.pubsub import PubSubAPI, RedisPubSub
 from zato.common.util import add_startup_jobs, make_psycopg_green, new_cid, register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
@@ -328,6 +329,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
     def _after_init_accepted(self, server, deployment_key):
 
+        # Pub/sub
+        self.pubsub = PubSubAPI(RedisPubSub(self.kvdb.conn))
+
         # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.
         self.config.repo_location = self.repo_location
@@ -422,6 +426,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         self.worker_store.worker_config = self.config
         self.worker_store.broker_client = self.broker_client
+        self.worker_store.pubsub = self.pubsub
         self.worker_store.init()
 
         if self.singleton_server:

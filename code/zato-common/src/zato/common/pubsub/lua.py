@@ -62,7 +62,7 @@ lua_move_to_target_queues = """
     end
 
     for id_idx, id in ipairs(ids) do
-        redis.pcall('zrem', source_queue, id)
+        --redis.pcall('zrem', source_queue, id)
     end
     """
 
@@ -76,14 +76,20 @@ lua_get_from_cons_queue = """
    local now = ARGV[2]
     
    local ids = redis.pcall('lrange', cons_queue, 0, max_batch_size)
-   local values = redis.pcall('hmget', msg_key, unpack(ids))
 
-    for id_idx, id in ipairs(ids) do
-        redis.pcall('hset', cons_in_flight, id, now)
-        redis.pcall('lrem', cons_queue, 0, id)
+   -- It may well be the case that there are no messages for this client
+   if #ids > 0 then
+       local values = redis.pcall('hmget', msg_key, unpack(ids))
+
+       for id_idx, id in ipairs(ids) do
+           redis.pcall('hset', cons_in_flight, id, now)
+           redis.pcall('lrem', cons_queue, 0, id)
+       end
+
+       return values
+    else
+        return {}
     end
-
-   return values
 """
 
 lua_reject = """
