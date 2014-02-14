@@ -77,6 +77,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.update_lock = RLock()
         self.kvdb = server.kvdb
         self.broker_client = None
+        self.pubsub = None
 
     def init(self):
 

@@ -43,14 +43,15 @@ class Topic(object):
 class Message(object):
     """ A published or received message.
     """
-    def __init__(self, payload='', topic=None, mime_type='text/plain', priority=PUB_SUB.PRIORITY_DEFAULT, \
-                     expiration=60.0, msg_id=None, expire_at=None):
+    def __init__(self, payload='', topic=None, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY, \
+                     expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, expire_at=None, **kwargs):
         self.payload = payload
         self.topic = topic
         self.mime_type = mime_type
         self.priority = priority # In 1-9 range where 9 is top priority
 
         self.msg_id = msg_id or new_cid()
+        self.creation_time_utc = datetime.utcnow().isoformat()
 
         # expiration -> how many seconds a message should live
         # expire_at -> a datetime, in UTC, when it should expire
@@ -69,6 +70,7 @@ class Message(object):
             'mime_type': self.mime_type,
             'priority': self.priority,
             'msg_id': self.msg_id,
+            'creation_time_utc': self.creation_time_utc,
             'expiration': self.expiration
         })
 
@@ -96,7 +98,7 @@ class SubCtx(object):
 class GetCtx(object):
     """ A set of data describing where to fetch messages from.
     """
-    def __init__(self, sub_key=None, max_batch_size=100, is_fifo=True):
+    def __init__(self, sub_key=None, max_batch_size=PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE, is_fifo=PUB_SUB.DEFAULT_IS_FIFO):
         self.sub_key = sub_key
         self.max_batch_size = max_batch_size
         self.is_fifo = is_fifo # Fetch in FIFO or LIFO order
@@ -173,6 +175,8 @@ class PubSub(object):
         clients = self.topic_to_cons.setdefault(topic, set())
         clients.add(client_id)
 
+        self.logger.debug('Added subscription: `%s`, `%s`, `%s`', sub_key, client_id, topic)
+
     def add_producer(self, client_id, topic):
         """ Adds information that this client can publish to the topic. 
         """
@@ -206,19 +210,26 @@ class RedisPubSub(PubSub):
         self.kvdb = kvdb
         self.lua_programs = {}
 
-        self.MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'zato:pubsub:zset:msg-ids:{}')
-        self.BACKLOG_FULL_KEY = '{}{}'.format(key_prefix, 'zato:pubsub:backlog-full')
-        self.CONSUMER_MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'zato:pubsub:list:consumer:msg-ids:{}')
-        self.CONSUMER_IN_FLIGHT_PREFIX = '{}{}'.format(key_prefix, 'zato:pubsub:hash:consumer:in-flight:{}')
-        self.MSG_VALUES_KEY = '{}{}'.format(key_prefix, 'zato:pubsub:hash:msg-values')
-        self.UNACK_COUNTER_KEY = '{}{}'.format(key_prefix, 'zato:pubsub:hash:unack-counter')
-        self.ACK_TO_DELETE_KEY = '{}{}'.format(key_prefix, 'zato:pubsub:list:ack-to-delete')
+        self.MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'zset:msg-ids:{}')
+        self.BACKLOG_FULL_KEY = '{}{}'.format(key_prefix, 'backlog-full')
+        self.CONSUMER_MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'list:consumer:msg-ids:{}')
+        self.CONSUMER_IN_FLIGHT_PREFIX = '{}{}'.format(key_prefix, 'hash:consumer:in-flight:{}')
+        self.MSG_VALUES_KEY = '{}{}'.format(key_prefix, 'hash:msg-values')
+        self.UNACK_COUNTER_KEY = '{}{}'.format(key_prefix, 'hash:unack-counter')
+        self.ACK_TO_DELETE_KEY = '{}{}'.format(key_prefix, 'list:ack-to-delete')
 
         self.add_lua_program(self.LUA_PUBLISH, lua_publish)
         self.add_lua_program(self.LUA_MOVE_TO_TARGET_QUEUES, lua_move_to_target_queues)
         self.add_lua_program(self.LUA_GET_FROM_CONSUMER_QUEUE, lua_get_from_cons_queue)
         self.add_lua_program(self.LUA_REJECT, lua_reject)
         self.add_lua_program(self.LUA_ACK, lua_ack)
+
+    # ############################################################################################################################
+
+    def ping(self):
+        """ Pings the pub/sub backend.
+        """
+        self.kvdb.ping()
 
     # ############################################################################################################################
 
@@ -259,8 +270,8 @@ class RedisPubSub(PubSub):
             if not ctx.topic in self.topics:
 
                 # Note that in the exception we don't make it know which client_id it was
-                self.logger.warn('Producer `%s` cannot publish to `%s`', ctx.client_id, ctx.topic)
-                raise ValueError("Can't publish to `{}`".format(ctx.topic))
+                self.logger.warn('Permision denied. Producer `%s` cannot publish to `%s`', ctx.client_id, ctx.topic)
+                raise ValueError("Permision denied. Can't publish to `{}`".format(ctx.topic))
 
         id_key = self.MSG_IDS_PREFIX.format(ctx.topic)
 
@@ -314,9 +325,9 @@ class RedisPubSub(PubSub):
                 # Now that the client is known to be a valid one we can get all their messages
                 cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
                 cons_in_flight = self.CONSUMER_IN_FLIGHT_PREFIX.format(ctx.sub_key)
-    
+
                 # TODO: Make it run using 'with self.lock(cons_queue)'
-    
+
                 messages = self.run_lua(
                     self.LUA_GET_FROM_CONSUMER_QUEUE,
                     [cons_queue, cons_in_flight, self.MSG_VALUES_KEY],
@@ -400,15 +411,56 @@ class RedisPubSub(PubSub):
                 args.append(topic_info.max_depth)
                 args.append(maxint)
 
-                consumers = self.topic_to_cons[topic]
-                for consumer in consumers:
-                    sub_key = self.cons_to_sub[consumer]
-                    self.logger.debug('Sub `%s` for topic `%s` to consumer `%s`', sub_key, topic, consumer)
+                consumers = self.topic_to_cons.get(topic, [])
+                if consumers:
+                    for consumer in consumers:
+                        sub_key = self.cons_to_sub[consumer]
+                        self.logger.debug('Sub `%s` for topic `%s` to consumer `%s`', sub_key, topic, consumer)
+    
+                        keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
+    
+                    if self.logger.isEnabledFor(logging.DEBUG):
+                        self.logger.debug('keys `%s`', ', '.join(keys))
+    
+                    move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
+                    self.logger.debug('move_result `%s` `%s`', move_result, type(move_result))
 
-                    keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
+# ################################################################################################################################
 
-                if self.logger.isEnabledFor(logging.DEBUG):
-                    self.logger.debug('keys `%s`', ', '.join(keys))
+class PubSubAPI(object):
+    """ Provides an API for pub/sub users to publish or subscribe to messages through.
+    """
+    def __init__(self, impl):
+        self.impl = impl
 
-                move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
-                self.logger.debug('move_result `%s` `%s`', move_result, type(move_result))
+    def publish(self, client_id, payload, topic, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY,
+            expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, expire_at=None):
+        """ Publishes a message by a given to a given topic using a set of parameters provided.
+        """
+        pub_ctx = PubCtx()
+        pub_ctx.client_id = client_id
+        pub_ctx.topic = topic
+        pub_ctx.msg = Message(payload, topic, mime_type, priority, expiration, msg_id, expire_at)
+
+        self.impl.publish(pub_ctx)
+
+    def subscribe(self, client_id, topics, sub_key=None):
+        """ Subscribes a client to one or more topic. Returns a subscription key assigned.
+        """
+        if isinstance(topics, basestring):
+            topics = [topics]
+
+        # Sanity check - at this point 'topics' must be something we can iterate over
+        # instead of, say, an integer.
+        iter(topics)
+
+        sub_ctx = SubCtx()
+        sub_ctx.client_id = client_id
+        sub_ctx.topics = topics
+
+        return self.impl.subscribe(sub_ctx, sub_key)
+
+    def get(self, sub_key, max_batch_size=PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE, is_fifo=PUB_SUB.DEFAULT_IS_FIFO):
+        """ Gets one or more message, if any are available, for the given subscription key.
+        """
+        return self.impl.get(GetCtx(sub_key, max_batch_size, is_fifo))
