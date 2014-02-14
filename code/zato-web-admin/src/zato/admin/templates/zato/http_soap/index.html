@@ -71,6 +71,7 @@
             {% ifequal connection 'outgoing' %}
                 'ping_method',
                 'pool_size',
+                'serialization_type',
             {% endifequal %}
 
             {% ifequal connection 'channel' %}
@@ -83,6 +84,9 @@
             '_delete',
             {% ifequal connection 'outgoing' %}
                 '_ping',
+            {% endifequal %}
+            {% ifequal connection 'outgoing' %}
+                '_reload_wsdl',
             {% endifequal %}
         ]
     }
@@ -152,6 +156,7 @@
                         {% ifequal connection 'outgoing' %}
                             <th class='ignore'>&nbsp;</th>
                             <th class='ignore'>&nbsp;</th>
+                            <th class='ignore'>&nbsp;</th>
                         {% endifequal %}
 
                         {% ifequal connection 'channel' %}
@@ -162,6 +167,10 @@
 
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        {% ifequal connection 'outgoing' %}
+                            <th>&nbsp;</th>
+                        {% endifequal %}
+
                         {% ifequal connection 'outgoing' %}
                             <th>&nbsp;</th>
                         {% endifequal %}
@@ -211,6 +220,7 @@
                         {% ifequal connection 'outgoing' %}
                             <td class='ignore'>{{ item.ping_method }}</td>
                             <td class='ignore'>{{ item.pool_size }}</td>
+                            <td class='ignore'>{{ item.serialization_type }}</td>
                         {% endifequal %}
 
                         {% ifequal connection 'channel' %}
@@ -223,6 +233,10 @@
                         <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
                         {% ifequal connection 'outgoing' %}
                             <td><a href="javascript:$.fn.zato.http_soap.ping('{{ item.id }}')">Ping</a></td>
+                        {% endifequal %}
+
+                        {% ifequal connection 'outgoing' %}
+                            <td>{% ifequal item.serialization_type 'suds' %}<a href="javascript:$.fn.zato.http_soap.reload_wsdl('{{ item.id }}')">Reload WSDL</a>{% endifequal %}</td>
                         {% endifequal %}
                     </tr>
                 {% endfor %}
@@ -327,6 +341,13 @@
                             </td>
                             <td>{{ create_form.pool_size }}</td>
                         </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Serialization type
+                            </td>
+                            <td>{{ create_form.serialization_type }}</td>
+                        </tr>
+
                         {% endifequal %}
                         
                         <tr>
@@ -437,6 +458,14 @@
                             </td>
                             <td>{{ edit_form.pool_size }}</td>
                         </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Serialization type
+                            </td>
+                            <td>{{ edit_form.serialization_type }}</td>
+                        </tr>
+
+
                         {% endifequal %}
                         
                         <tr>

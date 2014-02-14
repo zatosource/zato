@@ -14,8 +14,8 @@ from django import forms
 # Zato
 from zato.admin.web.forms import ChooseClusterForm as _ChooseClusterForm
 from zato.admin.web.forms import DataFormatForm
-from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, MSG_PATTERN_TYPE, PARAMS_PRIORITY, \
-     SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
+from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
+     MSG_PATTERN_TYPE, PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
 
 params_priority = (
     (PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG, 'URL over message'),
@@ -35,6 +35,7 @@ class CreateForm(DataFormatForm):
     merge_url_params_req = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     url_params_pri = forms.ChoiceField(widget=forms.Select())
     params_pri = forms.ChoiceField(widget=forms.Select())
+    serialization_type = forms.ChoiceField(widget=forms.Select())
     method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     soap_version = forms.ChoiceField(widget=forms.Select())
@@ -55,6 +56,10 @@ class CreateForm(DataFormatForm):
         self.fields['params_pri'].choices = []
         for value, label in params_priority:
             self.fields['params_pri'].choices.append([value, label])
+
+        self.fields['serialization_type'].choices = []
+        for item in HTTP_SOAP_SERIALIZATION_TYPE:
+            self.fields['serialization_type'].choices.append([item.id, item.name])
 
         self.fields['soap_version'].choices = []
         for name in sorted(soap_versions):

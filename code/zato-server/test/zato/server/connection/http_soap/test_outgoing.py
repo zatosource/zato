@@ -46,7 +46,7 @@ class HTTPSOAPWrapperTestCase(TestCase):
     def _get_config(self):
         return {'sec_type':rand_string(), 'address_host':rand_string(), 
             'address_url_path':rand_string(), 'ping_method':rand_string(), 
-            'pool_size':rand_int()}
+            'pool_size':rand_int(), 'serialization_type':'string'}
     
     def test_ping_method(self):
         """ https://github.com/zatosource/zato/issues/44 (outconn HTTP/SOAP ping method)
