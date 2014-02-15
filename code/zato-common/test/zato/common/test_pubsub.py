@@ -46,7 +46,6 @@ class RedisPubSubTestCase(TestCase):
     def tearDown(self):
         #for key in self.kvdb.keys('{}*'.format(self.key_prefix)):
         #    self.kvdb.delete(key)
-        #
         pass
 
     def test_sub_key_generation(self):
@@ -139,7 +138,7 @@ class RedisPubSubTestCase(TestCase):
 
         # Check all the Lua programs are loaded
 
-        eq_(len(ps.lua_programs), 5)
+        eq_(len(ps.lua_programs), 7)
 
         for attr in dir(ps):
             if attr.startswith('LUA'):
@@ -261,7 +260,7 @@ class RedisPubSubTestCase(TestCase):
             self.assertIn(key, keys)
 
         # Check values of messages published
-        self._check_msg_values(ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id)
+        self._check_msg_values(ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id, True)
 
         # Now move the messages just published to each of the subscriber's queue.
         # In a real environment this is done by a background job.
@@ -283,7 +282,7 @@ class RedisPubSubTestCase(TestCase):
         self._check_unack_counter(ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id, 1, 1, 2, 2)
 
         # Check values of messages published are still there
-        self._check_msg_values(ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id)
+        self._check_msg_values(ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id, True)
 
         # Check that each recipient has expected message IDs in its respective message queue
         keys = self.kvdb.keys(ps.CONSUMER_MSG_IDS_PREFIX.format('*'))
@@ -335,13 +334,13 @@ class RedisPubSubTestCase(TestCase):
         self._assert_has_msg(msgs_erp, 'msg_billing2', 'text/plain', 5, 60)
 
         # Check in-flight status for each message got
-        keys = self.kvdb.keys(ps.CONSUMER_IN_FLIGHT_PREFIX.format('*'))
+        keys = self.kvdb.keys(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format('*'))
         eq_(len(keys), 3)
 
         now = arrow.utcnow()
 
-        #self._check_in_flight(ps, now, sub_key_crm, sub_key_billing, sub_key_erp, msg_crm1_id, msg_crm2_id,
-        #        msg_billing1_id, msg_billing2_id, True, True, True, True, True, True)
+        self._check_in_flight(ps, now, sub_key_crm, sub_key_billing, sub_key_erp, msg_crm1_id, msg_crm2_id,
+                msg_billing1_id, msg_billing2_id, True, True, True, True, True, True)
 
         # Messages should still be undelivered hence their unack counters are not touched at this point
         self._check_unack_counter(ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id, 1, 1, 2, 2)
@@ -405,7 +404,9 @@ class RedisPubSubTestCase(TestCase):
         self._check_unack_counter(ps, None, None, msg_billing1_id, msg_billing2_id, 1, 1, 1, 1)
 
         # Values should be still there because no background job run to clean them up
-        self._check_msg_values(ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id)
+        self._check_msg_values(ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id, False)
+
+    # ############################################################################################################################
 
     def _check_unack_counter(self, ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id,
             msg_crm1_id_counter, msg_crm2_id_counter, msg_billing1_id_counter, msg_billing2_id_counter
@@ -428,83 +429,106 @@ class RedisPubSubTestCase(TestCase):
 
         eq_(sorted(unack_counter.items()), sorted(expected_counters.items()))
 
+    # ############################################################################################################################
+
     def _check_in_flight(self, ps, now, sub_key_crm, sub_key_billing, sub_key_erp, msg_crm1_id, msg_crm2_id,
             msg_billing1_id, msg_billing2_id, crm_needs_billing1_id, crm_needs_billing2_id,
             billing_needs_crm1_id, billing_needs_crm2_id, erp_needs_billing1_id, erp_needs_billing2_id):
 
         # CRM
-        in_flight_crm = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_PREFIX.format(sub_key_crm))
+        in_flight_crm_ids = self.kvdb.lrange(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_crm), 0, 100)
+        in_flight_crm_data = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key_crm))
 
         if crm_needs_billing1_id:
-            in_flight_crm_msg1 = in_flight_crm[msg_billing1_id]
-            self.assertLess(arrow.get(in_flight_crm_msg1), now)
+            in_flight_crm_data_msg1 = in_flight_crm_data[msg_billing1_id]
+            self.assertLess(arrow.get(in_flight_crm_data_msg1), now)
+            eq_(sorted(in_flight_crm_ids), sorted(in_flight_crm_data.keys()))
         else:
-            self.assertNotIn(msg_billing1_id, in_flight_crm)
+            self.assertNotIn(msg_billing1_id, in_flight_crm_data)
 
         if crm_needs_billing2_id:
-            in_flight_crm_msg2 = in_flight_crm[msg_billing2_id]
-            self.assertLess(arrow.get(in_flight_crm_msg2), now)
+            in_flight_crm_data_msg2 = in_flight_crm_data[msg_billing2_id]
+            self.assertLess(arrow.get(in_flight_crm_data_msg2), now)
+            eq_(sorted(in_flight_crm_ids), sorted(in_flight_crm_data.keys()))
         else:
-            self.assertNotIn(msg_billing2_id, in_flight_crm)
+            self.assertNotIn(msg_billing2_id, in_flight_crm_data)
 
         # Billing
-        in_flight_billing = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_PREFIX.format(sub_key_billing))
+        in_flight_billing_ids = self.kvdb.lrange(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_billing), 0, 100)
+        in_flight_billing_data = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key_billing))
 
         if billing_needs_crm1_id:
-            in_flight_billing_msg1 = in_flight_billing[msg_crm1_id]
-            self.assertLess(arrow.get(in_flight_billing_msg1), now)
+            in_flight_billing_data_msg1 = in_flight_billing_data[msg_crm1_id]
+            self.assertLess(arrow.get(in_flight_billing_data_msg1), now)
+            eq_(sorted(in_flight_billing_ids), sorted(in_flight_billing_data.keys()))
         else:
-            self.assertNotIn(msg_crm1_id, in_flight_billing)
+            self.assertNotIn(msg_crm1_id, in_flight_billing_data)
 
         if billing_needs_crm2_id:
-            in_flight_billing_msg2 = in_flight_billing[msg_crm2_id]
-            self.assertLess(arrow.get(in_flight_billing_msg2), now)
+            in_flight_billing_data_msg2 = in_flight_billing_data[msg_crm2_id]
+            self.assertLess(arrow.get(in_flight_billing_data_msg2), now)
+            eq_(sorted(in_flight_billing_ids), sorted(in_flight_billing_data.keys()))
         else:
-            self.assertNotIn(msg_crm2_id, in_flight_billing)
+            self.assertNotIn(msg_crm2_id, in_flight_billing_data)
 
         # ERP
-        in_flight_erp = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_PREFIX.format(sub_key_erp))
+        in_flight_erp_ids = self.kvdb.lrange(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_erp), 0, 100)
+        in_flight_erp_data = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key_erp))
 
         if erp_needs_billing1_id:
-            in_flight_erp_msg1 = in_flight_erp[msg_billing1_id]
-            self.assertLess(arrow.get(in_flight_erp_msg1), now)
+            in_flight_erp_data_msg1 = in_flight_erp_data[msg_billing1_id]
+            self.assertLess(arrow.get(in_flight_erp_data_msg1), now)
+            eq_(sorted(in_flight_erp_ids), sorted(in_flight_erp_data.keys()))
         else:
-            self.assertNotIn(msg_billing1_id, in_flight_erp)
+            self.assertNotIn(msg_billing1_id, in_flight_erp_data)
 
         if erp_needs_billing2_id:
-            in_flight_erp_msg2 = in_flight_erp[msg_billing2_id]
-            self.assertLess(arrow.get(in_flight_erp_msg2), now)
+            in_flight_erp_data_msg2 = in_flight_erp_data[msg_billing2_id]
+            self.assertLess(arrow.get(in_flight_erp_data_msg2), now)
+            eq_(sorted(in_flight_erp_ids), sorted(in_flight_erp_data.keys()))
         else:
-            self.assertNotIn(msg_billing2_id, in_flight_erp)
+            self.assertNotIn(msg_billing2_id, in_flight_erp_data)
 
-    def _check_msg_values(self, ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id):
+    # ############################################################################################################################
 
-        # 4 messages have been published so far - let's check their payload now.
+    def _check_msg_values(self, ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id, before_last_acknowledge):
+
+        # Out of all messages that are expected to be acknowledged, when the last one actually is, there should be
+        # less messages in Redis because the last acknowledgment deletes a message's key from msg_values.
+        msgs_expected_no = 4 if before_last_acknowledge else 2
+
+        # msgs_expected_no messages have been published so far - let's check their payload now.
         raw_msgs = self.kvdb.hgetall(ps.MSG_VALUES_KEY)
-        eq_(len(raw_msgs), 4)
+        eq_(len(raw_msgs), msgs_expected_no)
 
         msgs = {}
         for msg_id, msg_data in raw_msgs.items():
             msgs[msg_id] = Message(**loads(msg_data))
 
-        for msg_id in(msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id):
+        # After acks only billing messages are not acked yet
+        expected_msg_ids = (
+            msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id) if before_last_acknowledge else \
+                (msg_billing1_id, msg_billing2_id)
+
+        for msg_id in expected_msg_ids:
             self.assertIn(msg_id, msgs)
 
-        msg_crm1 = msgs[msg_crm1_id]
-        msg_crm2 = msgs[msg_crm2_id]
+        if before_last_acknowledge:
+            msg_crm1 = msgs[msg_crm1_id]
+            msg_crm2 = msgs[msg_crm2_id]
+
+            eq_(msg_crm1.payload, 'msg_crm1')
+            eq_(msg_crm1.priority, 1)
+            eq_(msg_crm1.mime_type, 'text/xml')
+            eq_(msg_crm1.expiration, 1)
+    
+            eq_(msg_crm2.payload, 'msg_crm2')
+            eq_(msg_crm2.priority, 2)
+            eq_(msg_crm2.mime_type, 'application/json')
+            eq_(msg_crm2.expiration, 2)
 
         msg_billing1 = msgs[msg_billing1_id]
         msg_billing2 = msgs[msg_billing2_id]
-
-        eq_(msg_crm1.payload, 'msg_crm1')
-        eq_(msg_crm1.priority, 1)
-        eq_(msg_crm1.mime_type, 'text/xml')
-        eq_(msg_crm1.expiration, 1)
-
-        eq_(msg_crm2.payload, 'msg_crm2')
-        eq_(msg_crm2.priority, 2)
-        eq_(msg_crm2.mime_type, 'application/json')
-        eq_(msg_crm2.expiration, 2)
 
         eq_(msg_billing1.payload, 'msg_billing1')
         eq_(msg_billing1.priority, 3)
@@ -516,6 +540,8 @@ class RedisPubSubTestCase(TestCase):
         eq_(msg_billing2.mime_type, 'text/plain')
         eq_(msg_billing2.expiration, 60)
 
+    # ############################################################################################################################
+
     def _assert_has_msg(self, msgs, payload, mime_type, priority, expiration):
         for msg in msgs:
             if msg.payload == payload:
@@ -525,3 +551,5 @@ class RedisPubSubTestCase(TestCase):
                 break
         else:
             raise Exception('Msg with payload `{}` not in `{}`'.format(payload, msgs))
+
+    # ############################################################################################################################

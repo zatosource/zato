@@ -27,7 +27,8 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common import PUB_SUB, ZATO_NONE
-from zato.common.pubsub.lua import lua_move_to_target_queues, lua_get_from_cons_queue, lua_publish, lua_reject, lua_ack
+from zato.common.pubsub.lua import lua_move_to_target_queues, lua_get_from_cons_queue, lua_publish, lua_reject, lua_ack, \
+     lua_delete_acknowledged, lua_delete_expired
 from zato.common.util import datetime_to_seconds, make_repr, new_cid
 
 # ################################################################################################################################
@@ -198,10 +199,14 @@ class RedisPubSub(PubSub):
     """ Publish/subscribe based on Redis.
     """
     LUA_PUBLISH = 'lua-publish'
-    LUA_MOVE_TO_TARGET_QUEUES = 'lua-move-to-target-queues'
     LUA_GET_FROM_CONSUMER_QUEUE = 'lua-get-from-consumer-queue'
     LUA_REJECT = 'lua-reject'
     LUA_ACK = 'lua-ack'
+
+    # Background tasks
+    LUA_DELETE_ACKNOWLEDGED = 'lua-delete-acknowledged'
+    LUA_DELETE_EXPIRED = 'lua-delete-expired'
+    LUA_MOVE_TO_TARGET_QUEUES = 'lua-move-to-target-queues'
 
     # ############################################################################################################################
 
@@ -213,16 +218,18 @@ class RedisPubSub(PubSub):
         self.MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'zset:msg-ids:{}')
         self.BACKLOG_FULL_KEY = '{}{}'.format(key_prefix, 'backlog-full')
         self.CONSUMER_MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'list:consumer:msg-ids:{}')
-        self.CONSUMER_IN_FLIGHT_PREFIX = '{}{}'.format(key_prefix, 'hash:consumer:in-flight:{}')
+        self.CONSUMER_IN_FLIGHT_IDS_PREFIX = '{}{}'.format(key_prefix, 'list:consumer:in-flight:ids:{}')
+        self.CONSUMER_IN_FLIGHT_DATA_PREFIX = '{}{}'.format(key_prefix, 'hash:consumer:in-flight:data:{}')
         self.MSG_VALUES_KEY = '{}{}'.format(key_prefix, 'hash:msg-values')
         self.UNACK_COUNTER_KEY = '{}{}'.format(key_prefix, 'hash:unack-counter')
-        self.ACK_TO_DELETE_KEY = '{}{}'.format(key_prefix, 'list:ack-to-delete')
 
         self.add_lua_program(self.LUA_PUBLISH, lua_publish)
         self.add_lua_program(self.LUA_MOVE_TO_TARGET_QUEUES, lua_move_to_target_queues)
         self.add_lua_program(self.LUA_GET_FROM_CONSUMER_QUEUE, lua_get_from_cons_queue)
         self.add_lua_program(self.LUA_REJECT, lua_reject)
         self.add_lua_program(self.LUA_ACK, lua_ack)
+        self.add_lua_program(self.LUA_DELETE_ACKNOWLEDGED, lua_delete_acknowledged)
+        self.add_lua_program(self.LUA_DELETE_EXPIRED, lua_delete_expired)
 
     # ############################################################################################################################
 
@@ -324,13 +331,14 @@ class RedisPubSub(PubSub):
 
                 # Now that the client is known to be a valid one we can get all their messages
                 cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
-                cons_in_flight = self.CONSUMER_IN_FLIGHT_PREFIX.format(ctx.sub_key)
+                cons_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(ctx.sub_key)
+                cons_in_flight_data = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
 
                 # TODO: Make it run using 'with self.lock(cons_queue)'
 
                 messages = self.run_lua(
                     self.LUA_GET_FROM_CONSUMER_QUEUE,
-                    [cons_queue, cons_in_flight, self.MSG_VALUES_KEY],
+                    [cons_queue, cons_in_flight_ids, cons_in_flight_data, self.MSG_VALUES_KEY],
                     [ctx.max_batch_size, datetime.utcnow().isoformat()])
 
                 for msg in messages:
@@ -348,11 +356,11 @@ class RedisPubSub(PubSub):
         # Check comment in self.reject on why validating sub_key alone suffices.
         self.validate_sub_key(ctx.sub_key)
 
-        cons_in_flight = self.CONSUMER_IN_FLIGHT_PREFIX.format(ctx.sub_key)
+        cons_in_flight = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
 
         result = self.run_lua(
             self.LUA_ACK,
-            keys=[cons_in_flight, self.UNACK_COUNTER_KEY, self.ACK_TO_DELETE_KEY],
+            keys=[cons_in_flight, self.UNACK_COUNTER_KEY, self.MSG_VALUES_KEY],
             args=ctx.msg_ids) 
 
         if self.logger.isEnabledFor(logging.DEBUG):
@@ -374,15 +382,21 @@ class RedisPubSub(PubSub):
         self.validate_sub_key(ctx.sub_key)
 
         cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
-        cons_in_flight = self.CONSUMER_IN_FLIGHT_PREFIX.format(ctx.sub_key)
+        cons_in_flight = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
 
-        result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight, self.UNACK_COUNTER_KEY], args=ctx.msg_ids) 
+        result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight], args=ctx.msg_ids) 
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(
                 'Reject result `%s` for `%s` with `%s`', result, ctx.sub_key, ', '.join(ctx.msg_ids))
 
     # ############################################################################################################################
+
+    def delete_expired(self):
+        """ Deletes expired messages.
+        """
+
+# ############################################################################################################################
 
     def move_to_target_queues(self):
         """ Invoked periodically in order to fetch data sent to a topic and move it to each consumer's queue.
