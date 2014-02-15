@@ -69,8 +69,9 @@ lua_move_to_target_queues = """
 lua_get_from_cons_queue = """
 
    local cons_queue = KEYS[1]
-   local cons_in_flight = KEYS[2]
-   local msg_key = KEYS[3]
+   local cons_in_flight_ids = KEYS[2]
+   local cons_in_flight_data = KEYS[3]
+   local msg_key = KEYS[4]
 
    local max_batch_size = tonumber(ARGV[1])
    local now = ARGV[2]
@@ -82,7 +83,8 @@ lua_get_from_cons_queue = """
        local values = redis.pcall('hmget', msg_key, unpack(ids))
 
        for id_idx, id in ipairs(ids) do
-           redis.pcall('hset', cons_in_flight, id, now)
+           redis.pcall('lpush', cons_in_flight_ids, id)
+           redis.pcall('hset', cons_in_flight_data, id, now)
            redis.pcall('lrem', cons_queue, 0, id)
        end
 
@@ -109,7 +111,7 @@ lua_ack = """
 
    local cons_in_flight = KEYS[1]
    local unack_counter = KEYS[2]
-   local ack_to_delete = KEYS[3]
+   local msg_values = KEYS[3]
    local ids = ARGV
    local unack_id_count = 0
 
@@ -121,9 +123,24 @@ lua_ack = """
         -- can be safely deleted and delete the key from a hashmap of unack'ed IDs.
 
         if unack_id_count == 0 then
-            redis.call('lpush', ack_to_delete, id)
+            redis.pcall('hdel', msg_values, id)
             redis.pcall('hdel', unack_counter, id)
         end
 
     end
+"""
+
+lua_delete_acknowledged = """
+   return {}
+"""
+
+lua_delete_expired = """
+   local ack_to_delete = KEYS[1]
+   local msg_values = KEYS[2]
+
+   local ids = redis.pcall('lrange', ack_to_delete, 0, 100)
+
+   if ids then
+       return redis.pcall('hdel', msg_values, ids)
+   end
 """
