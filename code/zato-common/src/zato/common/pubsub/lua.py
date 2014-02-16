@@ -11,14 +11,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 lua_publish = """
 
    local id_key = KEYS[1]
-   local msg_values_key = KEYS[2]
+   local msg_values = KEYS[2]
+   local msg_expire_at = KEYS[3]
 
    local score = ARGV[1]
    local msg_id = ARGV[2]
-   local msg_value = ARGV[3]
+   local expire_at = ARGV[3]
+   local msg_value = ARGV[4]
 
    redis.pcall('zadd', id_key, score, msg_id)
-   redis.pcall('hset', msg_values_key, msg_id, msg_value)
+   redis.pcall('hset', msg_values, msg_id, msg_value)
+   redis.pcall('hset', msg_expire_at, msg_id, expire_at)
 """
 
 lua_move_to_target_queues = """
@@ -62,7 +65,7 @@ lua_move_to_target_queues = """
     end
 
     for id_idx, id in ipairs(ids) do
-        --redis.pcall('zrem', source_queue, id)
+        redis.pcall('zrem', source_queue, id)
     end
     """
 
@@ -83,7 +86,7 @@ lua_get_from_cons_queue = """
        local values = redis.pcall('hmget', msg_key, unpack(ids))
 
        for id_idx, id in ipairs(ids) do
-           redis.pcall('lpush', cons_in_flight_ids, id)
+           redis.pcall('sadd', cons_in_flight_ids, id)
            redis.pcall('hset', cons_in_flight_data, id, now)
            redis.pcall('lrem', cons_queue, 0, id)
        end
@@ -97,26 +100,32 @@ lua_get_from_cons_queue = """
 lua_reject = """
 
    local cons_queue = KEYS[1]
-   local cons_in_flight = KEYS[2]
+   local cons_in_flight_ids = KEYS[2]
+   local cons_in_flight_data = KEYS[3]
    local ids = ARGV
 
-   redis.pcall('hdel', cons_in_flight, unpack(ids))
+   redis.pcall('hdel', cons_in_flight_data, unpack(ids))
 
     for id_idx, id in ipairs(ids) do
-        redis.call('lpush', cons_queue, id)
+        redis.pcall('srem', cons_in_flight_ids, id)
+        redis.pcall('lpush', cons_queue, id)
     end
 """
 
 lua_ack = """
 
-   local cons_in_flight = KEYS[1]
-   local unack_counter = KEYS[2]
-   local msg_values = KEYS[3]
+   local cons_in_flight_ids = KEYS[1]
+   local cons_in_flight_data = KEYS[2]
+   local unack_counter = KEYS[3]
+   local msg_values = KEYS[4]
+   local msg_expire_at = KEYS[5]
+
    local ids = ARGV
    local unack_id_count = 0
 
     for id_idx, id in ipairs(ids) do
-        redis.pcall('hdel', cons_in_flight, id)
+        redis.pcall('srem', cons_in_flight_ids, id)
+        redis.pcall('hdel', cons_in_flight_data, id)
         unack_id_count = redis.pcall('hincrby', unack_counter, id, -1)
 
         -- It was the last confirmation we were waiting for so let's  add it to a list of IDs whose messages
@@ -125,22 +134,49 @@ lua_ack = """
         if unack_id_count == 0 then
             redis.pcall('hdel', msg_values, id)
             redis.pcall('hdel', unack_counter, id)
+            redis.pcall('hdel', msg_expire_at, id)
         end
 
     end
 """
 
-lua_delete_acknowledged = """
-   return {}
-"""
-
 lua_delete_expired = """
-   local ack_to_delete = KEYS[1]
-   local msg_values = KEYS[2]
+   local consumer_msg_ids = KEYS[1]
+   local cons_in_flight_ids = KEYS[2]
+   local msg_values = KEYS[3]
+   local msg_expire_at = KEYS[4]
+   local unack_counter = KEYS[5]
 
-   local ids = redis.pcall('lrange', ack_to_delete, 0, 100)
+   local now_utc = ARGV[1]
+   local expired = {}
 
-   if ids then
-       return redis.pcall('hdel', msg_values, ids)
+   -- Grab a batch of IDs to check their expiration
+   local ids = redis.pcall('lrange', consumer_msg_ids, 0, 500)
+
+   for id_idx, id in ipairs(ids) do
+
+       -- The message may be expired but the result other than 0 means it's still in flight - we don't do anything with these.
+       -- It's possible they can block the whole consumer queue but in that case a user intervention will be needed.
+
+       if redis.pcall('sismember', id, cons_in_flight_ids) == 0 then
+
+           -- Ok, we know the message is not in-flight so grab the time it expires at and compare it with now.
+           -- Note that we're using ISO-8601 dates in the format of 2014-02-16T02:51:24.013459 so we can always
+           -- compare expiration times lexicographically.
+
+           local expire_at = redis.pcall('hget', msg_expire_at, id)
+
+           -- The message has indeed expired so we can safely delete every piece of information on it.
+           if now_utc > expire_at then
+               redis.pcall('lrem', consumer_msg_ids, 0, id)
+               redis.pcall('hdel', msg_values, id)
+               redis.pcall('hdel', msg_expire_at, id)
+               redis.pcall('hdel', unack_counter, id)
+               table.insert(expired, id)
+           end
+       end
    end
+
+   return expired
+
 """

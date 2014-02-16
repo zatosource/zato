@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Core publish/subscribe features
 
 # stdlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from json import dumps, loads
 from logging import getLogger
 from sys import maxint
@@ -28,7 +28,7 @@ from gevent.lock import RLock
 # Zato
 from zato.common import PUB_SUB, ZATO_NONE
 from zato.common.pubsub.lua import lua_move_to_target_queues, lua_get_from_cons_queue, lua_publish, lua_reject, lua_ack, \
-     lua_delete_acknowledged, lua_delete_expired
+     lua_delete_expired
 from zato.common.util import datetime_to_seconds, make_repr, new_cid
 
 # ################################################################################################################################
@@ -45,35 +45,35 @@ class Message(object):
     """ A published or received message.
     """
     def __init__(self, payload='', topic=None, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY, \
-                     expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, expire_at=None, **kwargs):
+                     expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, **kwargs):
         self.payload = payload
         self.topic = topic
         self.mime_type = mime_type
         self.priority = priority # In 1-9 range where 9 is top priority
 
         self.msg_id = msg_id or new_cid()
-        self.creation_time_utc = datetime.utcnow().isoformat()
 
-        # expiration -> how many seconds a message should live
-        # expire_at -> a datetime, in UTC, when it should expire
-        
-        # Either of these is required.
         self.expiration = expiration
-        self.expire_at = expire_at
+        self.creation_time_utc = datetime.utcnow()
+        self.expire_at_utc = self.creation_time_utc + timedelta(seconds=self.expiration)
 
     def __repr__(self):
         return make_repr(self)
 
-    def to_json(self):
-        return dumps({
+    def to_dict(self):
+        return {
             'payload': self.payload,
             'topic': self.topic,
             'mime_type': self.mime_type,
             'priority': self.priority,
             'msg_id': self.msg_id,
-            'creation_time_utc': self.creation_time_utc,
+            'creation_time_utc': self.creation_time_utc.isoformat(),
+            'expire_at_utc': self.expire_at_utc.isoformat(),
             'expiration': self.expiration
-        })
+        }
+
+    def to_json(self):
+        return dumps(self.to_dict())
 
 # ################################################################################################################################
 
@@ -204,7 +204,6 @@ class RedisPubSub(PubSub):
     LUA_ACK = 'lua-ack'
 
     # Background tasks
-    LUA_DELETE_ACKNOWLEDGED = 'lua-delete-acknowledged'
     LUA_DELETE_EXPIRED = 'lua-delete-expired'
     LUA_MOVE_TO_TARGET_QUEUES = 'lua-move-to-target-queues'
 
@@ -218,9 +217,10 @@ class RedisPubSub(PubSub):
         self.MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'zset:msg-ids:{}')
         self.BACKLOG_FULL_KEY = '{}{}'.format(key_prefix, 'backlog-full')
         self.CONSUMER_MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'list:consumer:msg-ids:{}')
-        self.CONSUMER_IN_FLIGHT_IDS_PREFIX = '{}{}'.format(key_prefix, 'list:consumer:in-flight:ids:{}')
+        self.CONSUMER_IN_FLIGHT_IDS_PREFIX = '{}{}'.format(key_prefix, 'set:consumer:in-flight:ids:{}')
         self.CONSUMER_IN_FLIGHT_DATA_PREFIX = '{}{}'.format(key_prefix, 'hash:consumer:in-flight:data:{}')
         self.MSG_VALUES_KEY = '{}{}'.format(key_prefix, 'hash:msg-values')
+        self.MSG_EXPIRE_AT_KEY = '{}{}'.format(key_prefix, 'hash:msg-expire-at') # In UTC
         self.UNACK_COUNTER_KEY = '{}{}'.format(key_prefix, 'hash:unack-counter')
 
         self.add_lua_program(self.LUA_PUBLISH, lua_publish)
@@ -228,7 +228,6 @@ class RedisPubSub(PubSub):
         self.add_lua_program(self.LUA_GET_FROM_CONSUMER_QUEUE, lua_get_from_cons_queue)
         self.add_lua_program(self.LUA_REJECT, lua_reject)
         self.add_lua_program(self.LUA_ACK, lua_ack)
-        self.add_lua_program(self.LUA_DELETE_ACKNOWLEDGED, lua_delete_acknowledged)
         self.add_lua_program(self.LUA_DELETE_EXPIRED, lua_delete_expired)
 
     # ############################################################################################################################
@@ -295,12 +294,14 @@ class RedisPubSub(PubSub):
         score = '{}{}'.format(ctx.msg.priority, now_seconds)
 
         try:
-            self.run_lua(self.LUA_PUBLISH, [id_key, self.MSG_VALUES_KEY], [score, ctx.msg.msg_id, ctx.msg.to_json()])
+            self.run_lua(
+                self.LUA_PUBLISH, [id_key, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY],
+                    [score, ctx.msg.msg_id, ctx.msg.expire_at_utc.isoformat(), ctx.msg.to_json()])
         except Exception, e:
             self.logger.error('Pub error `%s`', format_exc(e))
             raise
         else:
-            self.logger.debug('Published: `%s` to `%s', ctx.msg.msg_id, ctx.topic)
+            self.logger.debug('Published: `%s` to `%s, exp:`%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
             return ctx.msg.msg_id
 
     # ############################################################################################################################
@@ -356,11 +357,12 @@ class RedisPubSub(PubSub):
         # Check comment in self.reject on why validating sub_key alone suffices.
         self.validate_sub_key(ctx.sub_key)
 
-        cons_in_flight = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
+        cons_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(ctx.sub_key)
+        cons_in_flight_data = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
 
         result = self.run_lua(
             self.LUA_ACK,
-            keys=[cons_in_flight, self.UNACK_COUNTER_KEY, self.MSG_VALUES_KEY],
+            keys=[cons_in_flight_ids, cons_in_flight_data, self.UNACK_COUNTER_KEY, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY],
             args=ctx.msg_ids) 
 
         if self.logger.isEnabledFor(logging.DEBUG):
@@ -382,9 +384,10 @@ class RedisPubSub(PubSub):
         self.validate_sub_key(ctx.sub_key)
 
         cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
-        cons_in_flight = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
+        cons_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(ctx.sub_key)
+        cons_in_flight_data = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
 
-        result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight], args=ctx.msg_ids) 
+        result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight_ids, cons_in_flight_data], args=ctx.msg_ids) 
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.debug(
@@ -393,8 +396,20 @@ class RedisPubSub(PubSub):
     # ############################################################################################################################
 
     def delete_expired(self):
-        """ Deletes expired messages.
+        """ Deletes expired messages. For each topic and its subscribers a Lua program is called to find expired
+        messages and delete all traces of them.
         """
+
+        for consumer in self.cons_to_topic:
+            sub_key = self.cons_to_sub[consumer]
+            consumer_msg_ids = self.CONSUMER_MSG_IDS_PREFIX.format(sub_key)
+            consumer_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key)
+
+            keys = [consumer_msg_ids, consumer_in_flight_ids, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY, 
+                    self.UNACK_COUNTER_KEY]
+            expired = self.run_lua(self.LUA_DELETE_EXPIRED, keys=keys, args=[datetime.utcnow().isoformat()]) 
+
+            self.logger.info('Delete expired `%r` for keys `%s`', expired, keys)
 
 # ############################################################################################################################
 
@@ -430,12 +445,12 @@ class RedisPubSub(PubSub):
                     for consumer in consumers:
                         sub_key = self.cons_to_sub[consumer]
                         self.logger.debug('Sub `%s` for topic `%s` to consumer `%s`', sub_key, topic, consumer)
-    
+
                         keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
-    
+
                     if self.logger.isEnabledFor(logging.DEBUG):
                         self.logger.debug('keys `%s`', ', '.join(keys))
-    
+
                     move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
                     self.logger.debug('move_result `%s` `%s`', move_result, type(move_result))
 
@@ -478,3 +493,5 @@ class PubSubAPI(object):
         """ Gets one or more message, if any are available, for the given subscription key.
         """
         return self.impl.get(GetCtx(sub_key, max_batch_size, is_fifo))
+
+# ################################################################################################################################
