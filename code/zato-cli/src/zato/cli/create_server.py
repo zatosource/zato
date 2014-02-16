@@ -107,6 +107,14 @@ errors=
 [startup_services]
 zato.helpers.input-logger=Sample payload for a startup service
 zato.pattern.delivery.dispatch-auto-resubmit=
+zato.pubsub.move-to-target-queues=
+zato.pubsub.delete-expired=
+zato.pubsub.invoke-callbacks=
+
+[pubsub]
+move_to_target_queues_interval=3 # In seconds
+delete_expired_interval=180 # In seconds
+invoke_callbacks_interval=2 # In seconds
 
 [patterns]
 delivery_auto_lock_timeout=90

@@ -335,8 +335,6 @@ class RedisPubSub(PubSub):
                 cons_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(ctx.sub_key)
                 cons_in_flight_data = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
 
-                # TODO: Make it run using 'with self.lock(cons_queue)'
-
                 messages = self.run_lua(
                     self.LUA_GET_FROM_CONSUMER_QUEUE,
                     [cons_queue, cons_in_flight_ids, cons_in_flight_data, self.MSG_VALUES_KEY],
@@ -350,10 +348,6 @@ class RedisPubSub(PubSub):
     def acknowledge(self, ctx):
         """ Consumer confirms and accepts one or more message.
         """
-        # TODO: This should be called with this consumer's in-flight key used by self.lock
-        # so it's an atomic operation. If the lock is already held an exception should be
-        # raised and a Server Busy kind of message returned.
-
         # Check comment in self.reject on why validating sub_key alone suffices.
         self.validate_sub_key(ctx.sub_key)
 
@@ -373,10 +367,6 @@ class RedisPubSub(PubSub):
         """ Rejects a set of messages for a given consumer. The messages will be placed back onto consumer's queue
         and delivered again at a later time.
         """
-        # TODO: This should be called with this consumer's in-flight key used by self.lock
-        # so it's an atomic operation. If the lock is already held an exception should be
-        # raised and a Server Busy kind of message returned.
-
         # We only validate that this subscription key is valid. Each consumer has its own
         # hashmap of on-flight messages so if they know the sub key, meaning they know the username/password,
         # if any, the worst they can do is to attempt to reject IDs that don't exist.
@@ -411,14 +401,13 @@ class RedisPubSub(PubSub):
 
             self.logger.info('Delete expired `%r` for keys `%s`', expired, keys)
 
+            return expired
+
 # ############################################################################################################################
 
     def move_to_target_queues(self):
         """ Invoked periodically in order to fetch data sent to a topic and move it to each consumer's queue.
         """
-        # TODO: This will have to be run with a service's self.lock held once this is run from gevent so there is only
-        # one such task executed throughout the whole cluster.
-
         # TODO: We currently deliver messages to each consumer. However, we also need to support 
         # the delivery to only one consumer chosen randomly from each of the subscribed ones.
 
