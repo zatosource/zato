@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from json import loads
 from logging import getLogger
 from operator import attrgetter
+from time import sleep
 from unittest import TestCase
 
 # Arrow
@@ -44,9 +45,8 @@ class RedisPubSubTestCase(TestCase):
             self.has_redis = True
 
     def tearDown(self):
-        #for key in self.kvdb.keys('{}*'.format(self.key_prefix)):
-        #    self.kvdb.delete(key)
-        pass
+        for key in self.kvdb.keys('{}*'.format(self.key_prefix)):
+            self.kvdb.delete(key)
 
     def test_sub_key_generation(self):
         """ Checks whether a sub_key is generated if none is provided on input during subscribing.
@@ -87,10 +87,10 @@ class RedisPubSubTestCase(TestCase):
 
         - Publications are:
 
-          - CRM publishes Msg-CRM1 to /cust/new -------------- TTL of 1s
-          - CRM publishes Msg-CRM2 to /cust/update ----------- TTL of 1s
+          - CRM publishes Msg-CRM1 to /cust/new -------------- TTL of 0.1s
+          - CRM publishes Msg-CRM2 to /cust/update ----------- TTL of 0.2s
 
-          - Billing publishes Msg-Billing1 to /adsl/new ------ TTL of 1s
+          - Billing publishes Msg-Billing1 to /adsl/new ------ TTL of 0.3s
           - Billing publishes Msg-Billing2 to /adsl/update --- TTL of 3600s
 
           - (ERP doesn't publish anything)
@@ -125,12 +125,13 @@ class RedisPubSubTestCase(TestCase):
           - Msg-Billing1 is deleted because:
 
             - CRM confirms it
-            - ERP doesn't confirm it but the message's TTL is 1s so it times out
+            - ERP rejects it but the message's TTL is 0.3s so it times out
+              (In real world ERP would have possibly acknowledged it in say, 2s, but it would've been too late)
 
           - Msg-Billing2 is not deleted because:
 
-            - CRM confirms it
-            - ERP doesn't confirm it and the message's TTL is 3600s so it's still around when a clean up task runs
+            - ERP confirms it
+            - CRM rejects it and the message's TTL is 3600s so it's still around when a clean up task runs
 
         """
 
@@ -138,7 +139,7 @@ class RedisPubSubTestCase(TestCase):
 
         # Check all the Lua programs are loaded
 
-        eq_(len(ps.lua_programs), 7)
+        eq_(len(ps.lua_programs), 6)
 
         for attr in dir(ps):
             if attr.startswith('LUA'):
@@ -221,7 +222,7 @@ class RedisPubSubTestCase(TestCase):
         pub_ctx_msg_crm1 = PubCtx()
         pub_ctx_msg_crm1.client_id = client_id_crm
         pub_ctx_msg_crm1.topic = topic_cust_new.name
-        pub_ctx_msg_crm1.msg = Message('msg_crm1', mime_type='text/xml', priority=1, expiration=1)
+        pub_ctx_msg_crm1.msg = Message('msg_crm1', mime_type='text/xml', priority=1, expiration=0.1)
 
         msg_crm1_id = ps.publish(pub_ctx_msg_crm1)
 
@@ -229,7 +230,7 @@ class RedisPubSubTestCase(TestCase):
         pub_ctx_msg_crm2 = PubCtx()
         pub_ctx_msg_crm2.client_id = client_id_crm
         pub_ctx_msg_crm2.topic = topic_cust_update.name
-        pub_ctx_msg_crm2.msg = Message('msg_crm2',  mime_type='application/json', priority=2, expiration=2)
+        pub_ctx_msg_crm2.msg = Message('msg_crm2',  mime_type='application/json', priority=2, expiration=0.2)
 
         msg_crm2_id = ps.publish(pub_ctx_msg_crm2)
 
@@ -237,7 +238,7 @@ class RedisPubSubTestCase(TestCase):
         pub_ctx_msg_billing1 = PubCtx()
         pub_ctx_msg_billing1.client_id = client_id_billing
         pub_ctx_msg_billing1.topic = topic_adsl_new.name
-        pub_ctx_msg_billing1.msg = Message('msg_billing1',  mime_type='application/soap+xml', priority=3, expiration=3)
+        pub_ctx_msg_billing1.msg = Message('msg_billing1',  mime_type='application/soap+xml', priority=3, expiration=0.3)
 
         msg_billing1_id = ps.publish(pub_ctx_msg_billing1)
 
@@ -245,14 +246,17 @@ class RedisPubSubTestCase(TestCase):
         pub_ctx_msg_billing2 = PubCtx()
         pub_ctx_msg_billing2.client_id = client_id_billing
         pub_ctx_msg_billing2.topic = topic_adsl_update.name
-        pub_ctx_msg_billing2.msg = Message('msg_billing2') # Nothing except payload set, defaults should be used
+
+        # Nothing except payload and expiration set, defaults should be used
+        msg_billing2 = Message('msg_billing2', expiration=3600)
+        pub_ctx_msg_billing2.msg = msg_billing2
 
         msg_billing2_id = ps.publish(pub_ctx_msg_billing2)
 
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        eq_(len(keys), 5)
+        eq_(len(keys), 6)
 
-        expected_keys = [ps.MSG_VALUES_KEY]
+        expected_keys = [ps.MSG_VALUES_KEY, ps.MSG_EXPIRE_AT_KEY]
         for topic in topic_cust_new, topic_cust_update, topic_adsl_new, topic_adsl_update:
             expected_keys.append(ps.MSG_IDS_PREFIX.format(topic.name))
 
@@ -270,7 +274,7 @@ class RedisPubSubTestCase(TestCase):
         # ready for subscribers to get their messages.
 
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        eq_(len(keys), 9)
+        eq_(len(keys), 6)
 
         self.assertIn(ps.UNACK_COUNTER_KEY, keys)
         self.assertIn(ps.MSG_VALUES_KEY, keys)
@@ -324,14 +328,14 @@ class RedisPubSubTestCase(TestCase):
         eq_(len(msgs_billing), 2)
         eq_(len(msgs_erp), 2)
 
-        self._assert_has_msg(msgs_crm, 'msg_billing1', 'application/soap+xml', 3, 3)
-        self._assert_has_msg(msgs_crm, 'msg_billing2', 'text/plain', 5, 60)
+        self._assert_has_msg(msgs_crm, 'msg_billing1', 'application/soap+xml', 3, 0.3)
+        self._assert_has_msg(msgs_crm, 'msg_billing2', 'text/plain', 5, 3600)
 
-        self._assert_has_msg(msgs_billing, 'msg_crm1', 'text/xml', 1, 1)
-        self._assert_has_msg(msgs_billing, 'msg_crm2', 'application/json', 2, 2)
+        self._assert_has_msg(msgs_billing, 'msg_crm1', 'text/xml', 1, 0.1)
+        self._assert_has_msg(msgs_billing, 'msg_crm2', 'application/json', 2, 0.2)
 
-        self._assert_has_msg(msgs_erp, 'msg_billing1', 'application/soap+xml', 3, 3)
-        self._assert_has_msg(msgs_erp, 'msg_billing2', 'text/plain', 5, 60)
+        self._assert_has_msg(msgs_erp, 'msg_billing1', 'application/soap+xml', 3, 0.3)
+        self._assert_has_msg(msgs_erp, 'msg_billing2', 'text/plain', 5, 3600)
 
         # Check in-flight status for each message got
         keys = self.kvdb.keys(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format('*'))
@@ -406,6 +410,39 @@ class RedisPubSubTestCase(TestCase):
         # Values should be still there because no background job run to clean them up
         self._check_msg_values(ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id, False)
 
+        # Sleep for half a second to make sure enough time passes for messages to expire
+        sleep(0.5)
+
+        # Deletes everything except for Msg-Billing2 which has a TTL of 3600
+        ps.delete_expired()
+
+        keys = self.kvdb.keys('{}*'.format(self.key_prefix))
+        eq_(len(keys), 4)
+
+        expected_keys = [ps.MSG_VALUES_KEY, ps.MSG_EXPIRE_AT_KEY, ps.UNACK_COUNTER_KEY, 
+                         ps.CONSUMER_MSG_IDS_PREFIX.format(sub_key_crm)]
+        for key in expected_keys:
+            self.assertTrue(key in keys, 'Key not found `{}` in `{}`'.format(key, keys))
+
+        # Check all the remaining keys - still concerning Msg-Billing2 only
+        # because this is the only message that wasn't confirmed nor expired.
+
+        expire_at = self.kvdb.hgetall(ps.MSG_EXPIRE_AT_KEY)
+        eq_(len(expire_at), 1)
+        eq_(expire_at[msg_billing2_id], msg_billing2.expire_at_utc.isoformat())
+
+        unack_counter = self.kvdb.hgetall(ps.UNACK_COUNTER_KEY)
+        eq_(len(unack_counter), 1)
+        eq_(unack_counter[msg_billing2_id], '1')
+
+        crm_messages = self.kvdb.lrange(ps.CONSUMER_MSG_IDS_PREFIX.format(sub_key_crm), 0, 100)
+        eq_(len(crm_messages), 1)
+        eq_(crm_messages[0],msg_billing2_id)
+
+        msg_values = self.kvdb.hgetall(ps.MSG_VALUES_KEY)
+        eq_(len(msg_values), 1)
+        eq_(sorted(loads(msg_values[msg_billing2_id]).items()), sorted(msg_billing2.to_dict().items()))
+
     # ############################################################################################################################
 
     def _check_unack_counter(self, ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id,
@@ -436,7 +473,7 @@ class RedisPubSubTestCase(TestCase):
             billing_needs_crm1_id, billing_needs_crm2_id, erp_needs_billing1_id, erp_needs_billing2_id):
 
         # CRM
-        in_flight_crm_ids = self.kvdb.lrange(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_crm), 0, 100)
+        in_flight_crm_ids = self.kvdb.smembers(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_crm))
         in_flight_crm_data = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key_crm))
 
         if crm_needs_billing1_id:
@@ -454,7 +491,7 @@ class RedisPubSubTestCase(TestCase):
             self.assertNotIn(msg_billing2_id, in_flight_crm_data)
 
         # Billing
-        in_flight_billing_ids = self.kvdb.lrange(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_billing), 0, 100)
+        in_flight_billing_ids = self.kvdb.smembers(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_billing))
         in_flight_billing_data = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key_billing))
 
         if billing_needs_crm1_id:
@@ -472,7 +509,7 @@ class RedisPubSubTestCase(TestCase):
             self.assertNotIn(msg_crm2_id, in_flight_billing_data)
 
         # ERP
-        in_flight_erp_ids = self.kvdb.lrange(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_erp), 0, 100)
+        in_flight_erp_ids = self.kvdb.smembers(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_erp))
         in_flight_erp_data = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key_erp))
 
         if erp_needs_billing1_id:
@@ -520,12 +557,12 @@ class RedisPubSubTestCase(TestCase):
             eq_(msg_crm1.payload, 'msg_crm1')
             eq_(msg_crm1.priority, 1)
             eq_(msg_crm1.mime_type, 'text/xml')
-            eq_(msg_crm1.expiration, 1)
-    
+            eq_(msg_crm1.expiration, 0.1)
+
             eq_(msg_crm2.payload, 'msg_crm2')
             eq_(msg_crm2.priority, 2)
             eq_(msg_crm2.mime_type, 'application/json')
-            eq_(msg_crm2.expiration, 2)
+            eq_(msg_crm2.expiration, 0.2)
 
         msg_billing1 = msgs[msg_billing1_id]
         msg_billing2 = msgs[msg_billing2_id]
@@ -533,12 +570,12 @@ class RedisPubSubTestCase(TestCase):
         eq_(msg_billing1.payload, 'msg_billing1')
         eq_(msg_billing1.priority, 3)
         eq_(msg_billing1.mime_type, 'application/soap+xml')
-        eq_(msg_billing1.expiration, 3)
+        eq_(msg_billing1.expiration, 0.3)
 
         eq_(msg_billing2.payload, 'msg_billing2')
         eq_(msg_billing2.priority, 5)
         eq_(msg_billing2.mime_type, 'text/plain')
-        eq_(msg_billing2.expiration, 60)
+        eq_(msg_billing2.expiration, 3600)
 
     # ############################################################################################################################
 
