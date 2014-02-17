@@ -33,13 +33,13 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 from paste.util.multidict import MultiDict
 
 # Zato
-from zato.common import CHANNEL, SIMPLE_IO, ZATO_ODB_POOL_NAME
+from zato.common import CHANNEL, HTTP_SOAP_SERIALIZATION_TYPE, SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, STATS
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
-from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
+from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.message import ElemPathStore, NamespaceStore, XPathStore
@@ -154,9 +154,16 @@ class WorkerStore(BrokerMessageReceiver):
             'name':config.name, 'transport':config.transport,
             'address_host':config.host,
             'address_url_path':config.url_path,
-            'soap_action':config.soap_action, 'soap_version':config.soap_version,
-            'ping_method':config.ping_method, 'pool_size':config.pool_size,}
+            'soap_action':config.soap_action, 'soap_version':config.soap_version, 'ping_method':config.ping_method,
+            'pool_size':config.pool_size, 'serialization_type':config.serialization_type}
         wrapper_config.update(sec_config)
+
+        if wrapper_config['serialization_type'] == HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id:
+            wrapper_config['queue_build_cap'] = float(self.server.fs_server_config.misc.suds_soap_queue_build_cap)
+            wrapper = SudsSOAPWrapper(wrapper_config)
+            wrapper.build_client_queue()
+            return wrapper
+
         return HTTPSOAPWrapper(wrapper_config)
 
 # ##############################################################################
