@@ -35,6 +35,7 @@ from paste.util.multidict import MultiDict
 # Zato
 from zato.common import CHANNEL, SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, STATS
+from zato.common.pubsub import Topic
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.ftp import FTPStore
@@ -670,5 +671,13 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(self, msg, *args):
         return self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUB_SUB_TOPIC_CREATE(self, msg):
+        self.pubsub.add_topic(Topic(msg.name, msg.is_active, True, msg.max_depth))
+
+    def on_broker_msg_PUB_SUB_TOPIC_EDIT(self, msg):
+        self.pubsub.update_topic(Topic(msg.name, msg.is_active, True, msg.max_depth))
 
 # ################################################################################################################################

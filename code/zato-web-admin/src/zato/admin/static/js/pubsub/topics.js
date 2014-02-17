@@ -37,12 +37,26 @@ $.fn.zato.pubsub.topics.data_table.new_row = function(item, data, include_tr) {
 
     var is_active = item.is_active == true
 
+    var consumers_suffix = (data.consumers_count == 0 || data.consumers_count > 2) ? "s" : "";
+    var producers_suffix = (data.producers_count == 0 || data.producers_count > 2) ? "s" : "";
+
+    var last_pub_time = data.last_pub_time ? data.last_pub_time : "(Never)";
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
+    row += String.format('<td>{0}</td>', data.current_depth);
     row += String.format('<td>{0}</td>', item.max_depth);
-    row += String.format('<td>{0}</td>', item.max_depth);
-    row += String.format('<td>{0}</td>', "<a href='consumers'>Consumers</a>");
+    row += String.format('<td><span class="form_hint">{0}</span></td>', last_pub_time);
+
+    row += String.format(
+        "<td><a href=\'../consumers/cluster/{0}/{1}\'>{2} consumer{3}</a></td>",
+            data.cluster_id, data.name, data.consumers_count, consumers_suffix);
+
+    row += String.format(
+        "<td><a href=\'../producers/cluster/{0}/{1}\'>{2} producer{3}</a></td>",
+            data.cluster_id, data.name, data.producers_count, producers_suffix);
+
     row += String.format('<td>{0}</td>', "<a href='publish'>Publish a message</a>");
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.topics.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.topics.delete_('{0}')\">Delete</a>", item.id));
