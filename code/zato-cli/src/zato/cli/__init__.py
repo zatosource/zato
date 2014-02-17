@@ -341,9 +341,12 @@ class ZatoCommand(object):
         for opt_name, opt_help in check_password:
             opt_name = opt_name.replace('--', '').replace('-', '_')
             password_arg = getattr(args, opt_name, None)
+
+            # It is OK if password is an empty string and empty secrets are allowed
             if not password_arg:
                 if isinstance(password_arg, str) and self.allow_empty_secrets:
                     continue
+
                 password = self._get_secret(opt_help, self.needs_secrets_confirm, self.allow_empty_secrets, opt_name)
                 setattr(args, opt_name, password)
 
