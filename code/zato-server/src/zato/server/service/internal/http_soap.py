@@ -20,11 +20,11 @@ from paste.util.converters import asbool
 from webhelpers.paginate import Page
 
 # Zato
-from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, MSG_PATTERN_TYPE, PARAMS_PRIORITY,\
-     URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
+from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
+     MSG_PATTERN_TYPE, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, ElemPath, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, \
-     HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, XPath
+     HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, to_json, XPath
 from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap_list
 from zato.common.util import security_def_type
 from zato.server.service import Boolean, Integer, List
@@ -57,8 +57,9 @@ class _HTTPSOAPService(object):
                 if transport == URL_TYPE.PLAIN_HTTP and security.sec_type != security_def_type.basic_auth:
                     raise Exception('Only HTTP Basic Auth is supported, not [{}]'.format(security.sec_type))
                 elif transport == URL_TYPE.SOAP and security.sec_type \
-                     not in(security_def_type.basic_auth, security_def_type.wss):
-                    raise Exception('Security type must be HTTP Basic Auth or WS-Security, not [{}]'.format(security.sec_type))
+                     not in(security_def_type.basic_auth, security_def_type.ntlm, security_def_type.wss):
+                    raise Exception('Security type must be HTTP Basic Auth, NTLM or WS-Security, not [{}]'.format(
+                        security.sec_type))
             
             info['security_name'] = security.name
             info['sec_type'] = security.sec_type
@@ -75,7 +76,7 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type', 
                            'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method',
-                           'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri')
+                           'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type')
         output_repeated = True
         
     def get_data(self, session):
@@ -94,7 +95,7 @@ class Create(AdminService, _HTTPSOAPService):
         response_elem = 'zato_http_soap_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
-            'host', 'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri')
+            'host', 'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type')
         output_required = ('id', 'name')
     
     def handle(self):
@@ -155,6 +156,7 @@ class Create(AdminService, _HTTPSOAPService):
                 item.merge_url_params_req = input.get('merge_url_params_req') or True
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
+                item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
 
                 session.add(item)
                 session.commit()
@@ -191,7 +193,7 @@ class Edit(AdminService, _HTTPSOAPService):
         response_elem = 'zato_http_soap_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 
-            'host', 'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri')
+            'host', 'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type')
         output_required = ('id', 'name')
     
     def handle(self):
@@ -254,6 +256,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 item.merge_url_params_req = input.get('merge_url_params_req') or True
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
+                item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
 
                 session.add(item)
                 session.commit()
@@ -343,6 +346,26 @@ class Ping(AdminService):
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             config_dict = getattr(self.outgoing, item.transport)
             self.response.payload.info = config_dict.get(item.name).ping(self.cid)
+
+class ReloadWSDL(AdminService, _HTTPSOAPService):
+    """ Reloads WSDL by recreating the whole underlying queue of SOAP clients.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_http_soap_reload_wsdl_request'
+        response_elem = 'zato_http_soap_reload_wsdl_response'
+        input_required = ('id',)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
+            sec_info = self._handle_security_info(session, item.security_id, item.connection, item.transport)
+
+        fields = to_json(item, True)['fields']
+        fields['sec_type'] = sec_info['sec_type']
+        fields['security_name'] = sec_info['security_name']
+
+        action = OUTGOING.HTTP_SOAP_CREATE_EDIT
+        self.notify_worker_threads(fields, action)
 
 class GetURLSecurity(AdminService):
     """ Returns a JSON document describing the security configuration of all

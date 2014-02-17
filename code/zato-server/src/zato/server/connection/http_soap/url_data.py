@@ -128,7 +128,7 @@ class URLData(OAuthDataStore):
             logger.error(msg)
             raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
 
-    def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ):
+    def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
         """ Performs the authentication using WS-Security.
         """
         if not body:

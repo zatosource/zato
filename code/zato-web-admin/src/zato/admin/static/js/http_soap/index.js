@@ -3,12 +3,13 @@
 
 $.fn.zato.data_table.HTTPSOAP = new Class({
     toString: function() {
-        var s = '<HTTPSOAP id:{0} name:{1} is_active:{2} merge_url_params_req:{3} data_format:{4}>';
+        var s = '<HTTPSOAP id:{0} name:{1} is_active:{2} merge_url_params_req:{3} data_format:{4} serialization_type:{5}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)',
                                 this.merge_url_params_req ? this.merge_url_params_req : '(none)',
-                                this.data_format ? this.data_format : '(none)'
+                                this.data_format ? this.data_format : '(none)',
+                                this.serialization_type ? this.serialization_type : '(none)'
                                 );
     }
 });
@@ -119,6 +120,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     if(is_outgoing) {
         row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.ping_method);
         row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.pool_size);
+        row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.serialization_type);
     }
 
     if(is_channel) {
@@ -132,6 +134,9 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     if(is_outgoing) {
         row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.ping({0});'>Ping</a>", item.id));
+        if(item.serialization_type == 'suds') {
+            row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.reload_wsdl({0});'>Reload WSDL</a>", item.id));
+        }
     }
 
     if(include_tr) {
@@ -156,6 +161,18 @@ $.fn.zato.http_soap.ping = function(id) {
     }
 
     var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+    $.fn.zato.post(url, callback, '', 'text');
+
+}
+
+$.fn.zato.http_soap.reload_wsdl = function(id) {
+
+    var callback = function(data, status) {
+        var success = status == 'success';
+        $.fn.zato.user_message(success, data.responseText);
+    }
+
+    var url = String.format('./reload-wsdl/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
     $.fn.zato.post(url, callback, '', 'text');
 
 }

@@ -19,14 +19,14 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import INVOCATION_TARGET, MISC, MSG_PATTERN_TYPE, SCHEDULER_JOB_TYPE
+from zato.common import HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, MSG_PATTERN_TYPE, SCHEDULER_JOB_TYPE
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
 
 ################################################################################
 
-def to_json(model):
+def to_json(model, return_as_dict=False):
     """ Returns a JSON representation of an SQLAlchemy-backed object.
     """
     json = {}
@@ -36,7 +36,10 @@ def to_json(model):
     for col in model._sa_class_manager.mapper.mapped_table.columns:
         json['fields'][col.name] = getattr(model, col.name)
 
-    return dumps([json])
+    if return_as_dict:
+        return json
+    else:
+        return dumps([json])
 
 class ZatoInstallState(Base):
     """ Contains a row for each Zato installation belonging to that particular
@@ -340,6 +343,9 @@ class HTTPSOAP(Base):
     # New in 1.2
     audit_repl_patt_type = Column(String(), nullable=False, default=MSG_PATTERN_TYPE.ELEM_PATH.id)
 
+    # New in 1.2
+    serialization_type = Column(String(), nullable=False, default=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id)
+
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -353,7 +359,7 @@ class HTTPSOAP(Base):
                  connection=None, transport=None, host=None, url_path=None, method=None,
                  soap_action=None, soap_version=None, data_format=None, ping_method=None,
                  pool_size=None, merge_url_params_req=None, url_params_pri=None,
-                 params_pri=None, service_id=None, service=None, security=None, cluster_id=None,
+                 params_pri=None, serialization_type=None, service_id=None, service=None, security=None, cluster_id=None,
                  cluster=None, service_name=None, security_id=None, security_name=None):
         self.id = id
         self.name = name
@@ -372,6 +378,7 @@ class HTTPSOAP(Base):
         self.merge_url_params_req = merge_url_params_req
         self.url_params_pri = url_params_pri
         self.params_pri = params_pri
+        self.serialization_type = serialization_type
         self.service_id = service_id
         self.service = service
         self.security = security
