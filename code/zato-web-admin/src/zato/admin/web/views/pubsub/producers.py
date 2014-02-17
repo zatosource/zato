@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'pubsub-topics'
+    url_name = 'pubsub-producers'
     template = 'zato/pubsub/topics.html'
     service_name = 'zato.pubsub.topics.get-list'
     output_class = PubSubTopic
@@ -42,34 +42,16 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('cluster_id', 'is_active', 'max_depth')
-        input_optional = ('name',)
+        input_required = ('cluster_id', 'name', 'is_active', 'max_depth')
         output_required = ('id', 'name')
 
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
-
-        edit_name = req.POST.get('edit-name')
-        name = req.POST.get('name', edit_name)
-
         initial_return_data = {
-            'current_depth': 0,
-            'consumers_count': 0,
-            'producers_count': 0,
-            'last_pub_time': None,
-            'cluster_id': req.zato.cluster_id,
-            'name': name,
+            'current_depth': 123,
+            'consumers_count': 1,
+            'producers_count': 789,
+            'last_pub_time': '2010-01-02T03:04:05.0607',
         }
-
-
-        if edit_name:
-            response = req.zato.client.invoke('zato.pubsub.topics.get-info', {
-                'cluster_id': req.zato.cluster_id,
-                'name': edit_name
-            })
-
-            if response.ok:
-                initial_return_data.update(response.data)
-
         return super(_CreateEdit, self).__call__(
             req, initial_input_dict={}, initial_return_data=initial_return_data, *args, **kwargs)
 

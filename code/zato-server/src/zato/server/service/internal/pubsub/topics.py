@@ -44,6 +44,23 @@ class GetList(AdminService):
 
 # ################################################################################################################################
 
+class GetInfo(AdminService):
+    """ Returns basic information regarding a topic
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pubsub_topics_get_info_request'
+        response_elem = 'zato_pubsub_topics_get_info_response'
+        input_required = ('cluster_id', 'name')
+        output_required = (Int('current_depth'), Int('consumers_count'), Int('producers_count'), 'last_pub_time')
+
+    def handle(self):
+        self.response.payload.current_depth = self.pubsub.get_topic_depth(self.request.input.name)
+        self.response.payload.consumers_count = self.pubsub.get_consumers_count(self.request.input.name)
+        self.response.payload.producers_count = self.pubsub.get_producers_count(self.request.input.name)
+        self.response.payload.last_pub_time = self.pubsub.get_last_pub_time(self.request.input.name)
+
+# ################################################################################################################################
+
 class Create(AdminService):
     """ Creates a new topic.
     """
@@ -82,7 +99,6 @@ class Create(AdminService):
                 raise 
             else:
                 input.action = PUB_SUB_TOPIC.CREATE
-                input.sec_type = 'basic_topic'
                 self.broker_client.publish(input)
 
             self.response.payload.id = topic.id
@@ -115,7 +131,6 @@ class Edit(AdminService):
                 topic = session.query(PubSubTopic).filter_by(id=input.id).one()
                 old_name = topic.name
 
-                topic.name = input.name
                 topic.is_active = input.is_active
                 topic.max_depth = input.max_depth
 
@@ -131,6 +146,7 @@ class Edit(AdminService):
             else:
                 input.action = PUB_SUB_TOPIC.EDIT
                 input.old_name = old_name
+                input.name = topic.name
                 self.broker_client.publish(input)
 
                 self.response.payload.id = topic.id

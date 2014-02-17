@@ -254,9 +254,9 @@ class RedisPubSubTestCase(TestCase):
         msg_billing2_id = ps.publish(pub_ctx_msg_billing2)
 
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        eq_(len(keys), 6)
+        eq_(len(keys), 7)
 
-        expected_keys = [ps.MSG_VALUES_KEY, ps.MSG_EXPIRE_AT_KEY]
+        expected_keys = [ps.MSG_VALUES_KEY, ps.MSG_EXPIRE_AT_KEY, ps.LAST_PUB_TIME_KEY]
         for topic in topic_cust_new, topic_cust_update, topic_adsl_new, topic_adsl_update:
             expected_keys.append(ps.MSG_IDS_PREFIX.format(topic.name))
 
@@ -274,7 +274,7 @@ class RedisPubSubTestCase(TestCase):
         # ready for subscribers to get their messages.
 
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        eq_(len(keys), 6)
+        eq_(len(keys), 7)
 
         self.assertIn(ps.UNACK_COUNTER_KEY, keys)
         self.assertIn(ps.MSG_VALUES_KEY, keys)
@@ -417,7 +417,7 @@ class RedisPubSubTestCase(TestCase):
         ps.delete_expired()
 
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        eq_(len(keys), 4)
+        eq_(len(keys), 5)
 
         expected_keys = [ps.MSG_VALUES_KEY, ps.MSG_EXPIRE_AT_KEY, ps.UNACK_COUNTER_KEY, 
                          ps.CONSUMER_MSG_IDS_PREFIX.format(sub_key_crm)]

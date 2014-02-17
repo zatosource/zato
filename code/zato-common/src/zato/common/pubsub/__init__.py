@@ -34,8 +34,9 @@ from zato.common.util import datetime_to_seconds, make_repr, new_cid
 # ################################################################################################################################
 
 class Topic(object):
-    def __init__(self, name, is_fifo=True, max_depth=500):
+    def __init__(self, name, is_active=True, is_fifo=True, max_depth=500):
         self.name = name
+        self.is_active = is_active
         self.is_fifo = is_fifo
         self.max_depth = 500
 
@@ -161,6 +162,8 @@ class PubSub(object):
         with self.update_lock:
             self.topics[topic.name] = topic
 
+    update_topic = add_topic
+
     def add_subscription(self, sub_key, client_id, topic):
         """ Adds subscription for a given sub_id, client and topic. Must be called with self.update_lock held.
         """
@@ -222,6 +225,7 @@ class RedisPubSub(PubSub):
         self.MSG_VALUES_KEY = '{}{}'.format(key_prefix, 'hash:msg-values')
         self.MSG_EXPIRE_AT_KEY = '{}{}'.format(key_prefix, 'hash:msg-expire-at') # In UTC
         self.UNACK_COUNTER_KEY = '{}{}'.format(key_prefix, 'hash:unack-counter')
+        self.LAST_PUB_TIME_KEY = '{}{}'.format(key_prefix, 'hash:last-pub-time') # In UTC
 
         self.add_lua_program(self.LUA_PUBLISH, lua_publish)
         self.add_lua_program(self.LUA_MOVE_TO_TARGET_QUEUES, lua_move_to_target_queues)
@@ -295,8 +299,9 @@ class RedisPubSub(PubSub):
 
         try:
             self.run_lua(
-                self.LUA_PUBLISH, [id_key, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY],
-                    [score, ctx.msg.msg_id, ctx.msg.expire_at_utc.isoformat(), ctx.msg.to_json()])
+                self.LUA_PUBLISH, [id_key, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY, self.LAST_PUB_TIME_KEY],
+                    [score, ctx.msg.msg_id, ctx.msg.expire_at_utc.isoformat(), ctx.msg.to_json(),
+                       ctx.topic, datetime.utcnow().isoformat()])
         except Exception, e:
             self.logger.error('Pub error `%s`', format_exc(e))
             raise
@@ -461,6 +466,11 @@ class RedisPubSub(PubSub):
         """
         return len(self.topic_to_prod.get(topic, []))
 
+    def get_last_pub_time(self, topic):
+        """ Returns timestamp of the last publication to a topic, if any.
+        """
+        return self.kvdb.hget(self.LAST_PUB_TIME_KEY, topic)
+
 # ################################################################################################################################
 
 class PubSubAPI(object):
@@ -503,6 +513,14 @@ class PubSubAPI(object):
 
 # ################################################################################################################################
 
+    # Admin calls below
+
+    def add_topic(self, topic):
+        return self.impl.add_topic(topic)
+
+    def update_topic(self, topic):
+        return self.impl.update_topic(topic)
+
     def get_topic_depth(self, topic):
         return self.impl.get_topic_depth(topic)
 
@@ -511,5 +529,8 @@ class PubSubAPI(object):
 
     def get_producers_count(self, topic):
         return self.impl.get_producers_count(topic)
+
+    def get_last_pub_time(self, topic):
+        return self.impl.get_last_pub_time(topic)
 
 # ################################################################################################################################
