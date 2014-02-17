@@ -30,6 +30,7 @@ from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pattern import delivery as pattern_delivery
 from zato.admin.web.views.pattern.delivery import definition as pattern_delivery_def
+from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.security import basic_auth, oauth, tech_account, wss
 
 
@@ -420,6 +421,16 @@ urlpatterns = patterns('',
         login_required(impexp.import_), name='kvdb-data-dict-impexp-import'),
     url(r'^zato/kvdb/data-dict/impexp/cluster/(?P<cluster_id>.*)/export/$',
         login_required(impexp.export), name='kvdb-data-dict-impexp-export'),
+
+    # Pub/sub
+    url(r'^zato/pubsub/topics/$',
+        login_required(pubsub_topics.Index()), name=pubsub_topics.Index.url_name),
+    url(r'^zato/pubsub/topics/create/$',
+        login_required(pubsub_topics.Create()), name=pubsub_topics.Create.url_name),
+    url(r'^zato/pubsub/topics/edit/$',
+        login_required(pubsub_topics.Edit()), name=pubsub_topics.Edit.url_name),
+    url(r'^zato/pubsub/topics/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(pubsub_topics.Delete()), name=pubsub_topics.Delete.url_name),
 
     # Statistics
     url(r'^zato/stats/trends/data/$',

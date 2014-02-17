@@ -198,6 +198,12 @@ MSG_ELEM_PATH.CREATE = b'11500'
 MSG_ELEM_PATH.EDIT = b'11501'
 MSG_ELEM_PATH.DELETE = b'11502'
 
+# New in 1.2
+PUB_SUB_TOPIC = Bunch()
+PUB_SUB_TOPIC.CREATE = b'11550'
+PUB_SUB_TOPIC.EDIT = b'11551'
+PUB_SUB_TOPIC.DELETE = b'11552'
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

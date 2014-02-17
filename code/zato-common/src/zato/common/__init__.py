@@ -388,6 +388,8 @@ class PUB_SUB:
     DEFAULT_EXPIRATION = 60.0 # In seconds
     DEFAULT_GET_MAX_BATCH_SIZE = 100
     DEFAULT_IS_FIFO = True
+    DEFAULT_MAX_DEPTH = 500
+    DEFAULT_MAX_BACKLOG = 1000
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

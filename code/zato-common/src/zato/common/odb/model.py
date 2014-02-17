@@ -1191,3 +1191,85 @@ class HTTSOAPAuditReplacePatternsXPath(Base):
     pattern = relationship(XPath)
 
 # ##############################################################################
+
+class PubSubTopic(Base):
+    """ A definition of a topic in pub/sub.
+    """
+    __tablename__ = 'pub_sub_topic'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('pub_sub_topic_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    max_depth = Column(Integer, nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pub_sub_topics', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, is_active=None, max_depth=None, cluster_id=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.max_depth = max_depth
+        self.cluster_id = cluster_id
+        self.cur_depth = None # Not used by the database
+        self.cur_consumers = None # Not used by the database
+        self.cur_producers = None # Not used by the database
+
+# ################################################################################################################################
+
+class PubSubConsumer(Base):
+    """ A definition of a topic in pub/sub.
+    """
+    __tablename__ = 'pub_sub_consumer'
+    __table_args__ = (UniqueConstraint('sec_def_id', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('pub_sub_cons_seq'), primary_key=True)
+    is_active = Column(Boolean(), nullable=False)
+    max_backlog = Column(Integer, nullable=False)
+
+    sec_def_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    sec_def = relationship(Cluster, backref=backref('sec_defs', order_by=sec_def_id, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pub_sub_consumers', order_by=sec_def_id, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, is_active=None, name=None, max_backlog=None, cluster_id=None):
+        self.id = id
+        self.is_active = is_active
+        self.name = name
+        self.max_backlog = max_backlog
+        self.cluster_id = cluster_id
+
+# ################################################################################################################################
+
+class PubSubSubscription(Base):
+    """ Currently existing consumer subscriptions to topics.
+    """
+    __tablename__ = 'pub_sub_subscription'
+    __table_args__ = (UniqueConstraint('cons_id', 'topic_id', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('pub_sub_subs_seq'), primary_key=True)
+    is_active = Column(Boolean(), nullable=False)
+    sub_key = Column(String(200), nullable=False)
+    first_used = Column(DateTime(), nullable=True) # There's also last_used kept in Redis
+
+    topic_id = Column(Integer, ForeignKey('pub_sub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic = relationship(PubSubTopic, backref=backref('subscriptions', order_by=first_used, cascade='all, delete, delete-orphan'))
+
+    cons_id = Column(Integer, ForeignKey('pub_sub_consumer.id', ondelete='CASCADE'), nullable=False)
+    consumer = relationship(PubSubConsumer, backref=backref('subscriptions', order_by=first_used, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pub_sub_subscriptions', order_by=first_used, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, is_active=None, sub_key=None, first_used=None, topic_id=None, cons_id=None, cluster_id=None):
+        self.id = id
+        self.is_active = is_active
+        self.sub_key = sub_key
+        self.first_used = first_used
+        self.topic_id = topic_id
+        self.cons_id = cons_id
+        self.cluster_id = cluster_id
+
+# ################################################################################################################################
