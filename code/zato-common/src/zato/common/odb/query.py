@@ -22,7 +22,7 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
 from zato.common.odb.model import ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
      DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, \
-     SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
+     PubSubTopic, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -676,5 +676,26 @@ def http_soap_audit_item_list(session, cluster_id, conn_id, start, stop, query, 
 
 def http_soap_audit_item(session, cluster_id, id):
     return _http_soap_audit(session, cluster_id, id=id, needs_req_payload=True)
+
+# ################################################################################################################################
+
+def _topic(session, cluster_id):
+    return session.query(PubSubTopic.id, PubSubTopic.name, PubSubTopic.is_active, PubSubTopic.max_depth).\
+        filter(Cluster.id==PubSubTopic.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(PubSubTopic.name)
+
+def topic(session, cluster_id, id):
+    """ A pub/sub topic.
+    """
+    return _service(session, cluster_id).\
+        filter(PubSubTopic.id==id).\
+        one()
+
+@needs_columns
+def topic_list(session, cluster_id, needs_columns=False):
+    """ All pub/sub topics.
+    """
+    return _topic(session, cluster_id)
 
 # ################################################################################################################################

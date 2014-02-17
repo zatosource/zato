@@ -445,6 +445,24 @@ class RedisPubSub(PubSub):
 
 # ################################################################################################################################
 
+    def get_topic_depth(self, topic):
+        """ Returns current depth of a topic. Doesn't held onto any locks so by the time the data is returned to the caller
+        the depth may have already changed.
+        """
+        return self.kvdb.zcard(self.MSG_IDS_PREFIX.format(topic))
+
+    def get_consumers_count(self, topic):
+        """ Returns the number of consumers allowed to get messages from a given topic.
+        """
+        return len(self.topic_to_cons.get(topic, []))
+
+    def get_producers_count(self, topic):
+        """ Returns the number of producers allowed to publish messages to a topic.
+        """
+        return len(self.topic_to_prod.get(topic, []))
+
+# ################################################################################################################################
+
 class PubSubAPI(object):
     """ Provides an API for pub/sub users to publish or subscribe to messages through.
     """
@@ -482,5 +500,16 @@ class PubSubAPI(object):
         """ Gets one or more message, if any are available, for the given subscription key.
         """
         return self.impl.get(GetCtx(sub_key, max_batch_size, is_fifo))
+
+# ################################################################################################################################
+
+    def get_topic_depth(self, topic):
+        return self.impl.get_topic_depth(topic)
+
+    def get_consumers_count(self, topic):
+        return self.impl.get_consumers_count(topic)
+
+    def get_producers_count(self, topic):
+        return self.impl.get_producers_count(topic)
 
 # ################################################################################################################################
