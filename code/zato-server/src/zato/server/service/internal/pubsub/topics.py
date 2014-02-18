@@ -17,7 +17,7 @@ from zato.common.broker_message import PUB_SUB_TOPIC
 from zato.common.odb.model import Cluster, PubSubTopic
 from zato.common.odb.query import pubsub_topic_list
 from zato.common.pubsub import Message, PubCtx
-from zato.server.service import AsIs, Int
+from zato.server.service import AsIs, Int, UTC
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -31,12 +31,14 @@ class GetList(AdminService):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', Int('current_depth'), Int('max_depth'),
             Int('consumers_count'), Int('producers_count'))
+        output_optional = (UTC('last_pub_time'),)
 
     def get_data(self, session):
         for item in pubsub_topic_list(session, self.request.input.cluster_id, False):
             item.current_depth = self.pubsub.get_topic_depth(item.name)
             item.consumers_count = self.pubsub.get_consumers_count(item.name)
             item.producers_count = self.pubsub.get_producers_count(item.name)
+            item.last_pub_time = self.pubsub.get_last_pub_time(item.name)
             yield item
 
     def handle(self):
@@ -52,7 +54,7 @@ class GetInfo(AdminService):
         request_elem = 'zato_pubsub_topics_get_info_request'
         response_elem = 'zato_pubsub_topics_get_info_response'
         input_required = ('cluster_id', 'name')
-        output_required = (Int('current_depth'), Int('consumers_count'), Int('producers_count'), 'last_pub_time')
+        output_required = (Int('current_depth'), Int('consumers_count'), Int('producers_count'), UTC('last_pub_time'))
 
     def handle(self):
         self.response.payload.current_depth = self.pubsub.get_topic_depth(self.request.input.name)

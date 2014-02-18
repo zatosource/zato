@@ -18,7 +18,7 @@ from zato.server.service.internal import AdminService, AdminSIO
 
 class GetList(AdminService):
     """ Returns a list of all security definitions available.
-"""
+    """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_get_list_request'
         response_elem = 'zato_security_get_list_response'
@@ -32,7 +32,6 @@ class GetList(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             pairs = (('basic_auth', basic_auth_list),
-                     ('ntlm', ntlm_list),
                      ('oauth', oauth_list),
                      ('tech_acc', tech_acc_list),
                      ('wss', wss_list))

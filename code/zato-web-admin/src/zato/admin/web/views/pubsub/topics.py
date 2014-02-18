@@ -19,6 +19,7 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerEr
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.topics import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common import PUB_SUB
@@ -37,7 +38,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'current_depth', 'max_depth', 'consumers_count', 'producers_count')
+        output_required = ('id', 'name', 'is_active', 'current_depth',\
+            'max_depth', 'consumers_count', 'producers_count', 'last_pub_time')
         output_repeated = True
 
     def handle(self):
@@ -46,6 +48,11 @@ class Index(_Index):
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
         }
+
+    def _handle_item_list(self, item_list):
+        super(Index, self)._handle_item_list(item_list)
+        for item in self.items:
+            item.last_pub_time = from_utc_to_user(item.last_pub_time + '+00:00', self.req.zato.user_profile)
 
 # ################################################################################################################################
 
@@ -71,7 +78,6 @@ class _CreateEdit(CreateEdit):
             'name': name,
         }
 
-
         if edit_name:
             response = req.zato.client.invoke('zato.pubsub.topics.get-info', {
                 'cluster_id': req.zato.cluster_id,
@@ -80,6 +86,8 @@ class _CreateEdit(CreateEdit):
 
             if response.ok:
                 initial_return_data.update(response.data)
+                initial_return_data['last_pub_time'] = from_utc_to_user(
+                    initial_return_data['last_pub_time'] + '+00:00', req.zato.user_profile)
 
         return super(_CreateEdit, self).__call__(
             req, initial_input_dict={}, initial_return_data=initial_return_data, *args, **kwargs)
