@@ -158,6 +158,10 @@ class PubSub(object):
         self.prod_to_topic = {} # String to set, key = client_id, value = topics it can publish to
         self.topic_to_prod = {} # String to set, key = topic, value = clients allowed to publish to it
 
+        # Used by internal services
+        self.default_consumer_id = None
+        self.default_publisher_id = None
+
     def add_topic(self, topic):
         with self.update_lock:
             self.topics[topic.name] = topic
@@ -272,16 +276,25 @@ class RedisPubSub(PubSub):
 
     # ############################################################################################################################
 
+    def _raise_cant_publish_error(self, ctx):
+        raise ValueError("Permision denied. Can't publish to `{}`".format(ctx.topic))
+
     def publish(self, ctx):
-        """ Publishes a message on a selected topic. If topic is a pattern instead of an exact name
-        all topics matching the pattern are published to provided security checks allow for it.
+        """ Publishes a message on a selected topic.
         """
+        # Note that the client always receives the same response but logs contain details
         with self.update_lock:
             if not ctx.topic in self.topics:
+                self.logger.warn('Permision denied. No such topic `%s`, publisher `%s`', ctx.topic, ctx.client_id)
+                self._raise_cant_publish_error(ctx)
 
-                # Note that in the exception we don't make it know which client_id it was
+            if not ctx.client_id in self.topic_to_prod.get(ctx.topic, []):
                 self.logger.warn('Permision denied. Producer `%s` cannot publish to `%s`', ctx.client_id, ctx.topic)
-                raise ValueError("Permision denied. Can't publish to `{}`".format(ctx.topic))
+                self._raise_cant_publish_error(ctx)
+
+            if not self.topics[ctx.topic].is_active:
+                self.logger.warn('Topic `%s` is not active. Producer `%s`.', ctx.topic, ctx.client_id)
+                self._raise_cant_publish_error(ctx)
 
         id_key = self.MSG_IDS_PREFIX.format(ctx.topic)
 
@@ -486,7 +499,7 @@ class PubSubAPI(object):
         pub_ctx = PubCtx()
         pub_ctx.client_id = client_id
         pub_ctx.topic = topic
-        pub_ctx.msg = Message(payload, topic, mime_type, priority, expiration, msg_id, expire_at)
+        pub_ctx.msg = Message(payload, topic, mime_type, priority, expiration, msg_id)
 
         self.impl.publish(pub_ctx)
 
@@ -521,6 +534,8 @@ class PubSubAPI(object):
     def update_topic(self, topic):
         return self.impl.update_topic(topic)
 
+    # ############################################################################################################################
+
     def get_topic_depth(self, topic):
         return self.impl.get_topic_depth(topic)
 
@@ -532,5 +547,19 @@ class PubSubAPI(object):
 
     def get_last_pub_time(self, topic):
         return self.impl.get_last_pub_time(topic)
+
+    # ############################################################################################################################
+
+    def get_default_consumer_id(self):
+        return self.impl.default_consumer_id
+
+    def get_default_producer_id(self):
+        return self.impl.default_producer_id
+
+    def set_default_consumer_id(self, client_id):
+        self.impl.default_consumer_id = client_id
+
+    def set_default_publisher_id(self, client_id):
+        self.impl.default_publisher_id = client_id
 
 # ################################################################################################################################

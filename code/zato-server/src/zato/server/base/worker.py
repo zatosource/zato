@@ -107,10 +107,11 @@ class WorkerStore(BrokerMessageReceiver):
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
-        # Create all the expected connections
+        # Create all the expected connections and objects
         self.init_sql()
         self.init_ftp()
         self.init_http_soap()
+        self.init_pubsub()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
@@ -200,6 +201,15 @@ class WorkerStore(BrokerMessageReceiver):
 
                 # To make the API consistent with that of SQL connection pools
                 config_dict[name].ping = wrapper.ping
+
+    def _add_pubsub_topic(self, data):
+        self.pubsub.add_topic(Topic(data.name, data.is_active, True, data.max_depth))
+
+    def init_pubsub(self):
+        """ Initializes publish/subscribe mechanisms.
+        """
+        for topic_name, topic_data in self.worker_config.pubsub_topics.items():
+            self._add_pubsub_topic(topic_data.config)
 
 # ##############################################################################
 
@@ -675,7 +685,7 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_PUB_SUB_TOPIC_CREATE(self, msg):
-        self.pubsub.add_topic(Topic(msg.name, msg.is_active, True, msg.max_depth))
+        self._add_pubsub_topic(msg)
 
     def on_broker_msg_PUB_SUB_TOPIC_EDIT(self, msg):
         self.pubsub.update_topic(Topic(msg.name, msg.is_active, True, msg.max_depth))

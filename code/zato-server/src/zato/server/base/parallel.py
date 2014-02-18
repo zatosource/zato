@@ -424,6 +424,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.config.simple_io['int_parameter_suffixes'] = self.int_parameter_suffixes
         self.config.simple_io['bool_parameter_prefixes'] = self.bool_parameter_prefixes
 
+        # Pub/sub config
+        query = self.odb.get_pubsub_topic_list(server.cluster.id, True)
+        self.config.pubsub_topics = ConfigDict.from_query('pubsub_topics', query)
+
         self.worker_store.worker_config = self.config
         self.worker_store.broker_client = self.broker_client
         self.worker_store.pubsub = self.pubsub
