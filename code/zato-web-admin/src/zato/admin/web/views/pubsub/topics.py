@@ -133,7 +133,8 @@ def publish_action(req, cluster_id, topic):
         response = req.zato.client.invoke('zato.pubsub.topics.publish', request)
 
         if response.ok:
-            return HttpResponse(dumps({'msg_id': response.data.msg_id}), mimetype='application/javascript')
+            msg = 'Published message `{}` to topic `{}`'.format(response.data.msg_id, req.POST['name'])
+            return HttpResponse(dumps({'msg': msg}), mimetype='application/javascript')
         else:
             raise Exception(response.details)
     except Exception, e:

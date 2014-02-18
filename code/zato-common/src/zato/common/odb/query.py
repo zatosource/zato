@@ -698,4 +698,13 @@ def pubsub_topic_list(session, cluster_id, needs_columns=False):
     """
     return _pubsub_topic(session, cluster_id)
 
+def pubsub_default_client(session, cluster_id, name):
+    """ Returns a client ID of a given name used internally for pub/sub.
+    """
+    return session.query(HTTPBasicAuth.id, HTTPBasicAuth.name).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==HTTPBasicAuth.cluster_id).\
+        filter(HTTPBasicAuth.name==name).\
+        first()
+
 # ################################################################################################################################

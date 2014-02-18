@@ -35,7 +35,7 @@ from paste.util.multidict import MultiDict
 # Zato
 from zato.common import CHANNEL, SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, STATS
-from zato.common.pubsub import Topic
+from zato.common.pubsub import Client, Topic
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.ftp import FTPStore
@@ -202,14 +202,21 @@ class WorkerStore(BrokerMessageReceiver):
                 # To make the API consistent with that of SQL connection pools
                 config_dict[name].ping = wrapper.ping
 
+    def _topic_from_topic_data(self, data):
+        return Topic(data.name, data.is_active, True, data.max_depth)
+
     def _add_pubsub_topic(self, data):
-        self.pubsub.add_topic(Topic(data.name, data.is_active, True, data.max_depth))
+        self.pubsub.add_topic(self._topic_from_topic_data(data))
 
     def init_pubsub(self):
         """ Initializes publish/subscribe mechanisms.
         """
-        for topic_name, topic_data in self.worker_config.pubsub_topics.items():
+        self.pubsub.set_default_consumer(self.worker_config.pubsub.default_consumer)
+        self.pubsub.set_default_producer(self.worker_config.pubsub.default_producer)
+
+        for topic_name, topic_data in self.worker_config.pubsub.topics.items():
             self._add_pubsub_topic(topic_data.config)
+            self.pubsub.add_producer(self.pubsub.get_default_producer(), self._topic_from_topic_data(topic_data.config))
 
 # ##############################################################################
 
