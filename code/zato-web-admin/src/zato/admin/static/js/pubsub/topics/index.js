@@ -57,7 +57,7 @@ $.fn.zato.pubsub.topics.data_table.new_row = function(item, data, include_tr) {
         "<td><a href=\'../producers/cluster/{0}/{1}\'>{2} producer{3}</a></td>",
             data.cluster_id, data.name, data.producers_count, producers_suffix);
 
-    row += String.format('<td>{0}</td>', "<a href='publish'>Publish a message</a>");
+    row += String.format("<td><a href='publish/cluster/{0}/topic/{1}'>Publish a message</a></td>", data.cluster_id, item.name);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.topics.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.topics.delete_('{0}')\">Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);

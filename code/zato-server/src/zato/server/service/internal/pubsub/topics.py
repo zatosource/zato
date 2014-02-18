@@ -15,8 +15,9 @@ from traceback import format_exc
 # Zato
 from zato.common.broker_message import PUB_SUB_TOPIC
 from zato.common.odb.model import Cluster, PubSubTopic
-from zato.common.odb.query import topic_list
-from zato.server.service import Int
+from zato.common.odb.query import pubsub_topic_list
+from zato.common.pubsub import Message, PubCtx
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -32,7 +33,7 @@ class GetList(AdminService):
             Int('consumers_count'), Int('producers_count'))
 
     def get_data(self, session):
-        for item in topic_list(session, self.request.input.cluster_id, False):
+        for item in pubsub_topic_list(session, self.request.input.cluster_id, False):
             item.current_depth = self.pubsub.get_topic_depth(item.name)
             item.consumers_count = self.pubsub.get_consumers_count(item.name)
             item.producers_count = self.pubsub.get_producers_count(item.name)
@@ -58,6 +59,37 @@ class GetInfo(AdminService):
         self.response.payload.consumers_count = self.pubsub.get_consumers_count(self.request.input.name)
         self.response.payload.producers_count = self.pubsub.get_producers_count(self.request.input.name)
         self.response.payload.last_pub_time = self.pubsub.get_last_pub_time(self.request.input.name)
+
+# ################################################################################################################################
+
+class Publish(AdminService):
+    """ Publishes a messages to a topic of choice. If not client_id is given on input the message is published using
+    an internal account.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pubsub_topics_publish_request'
+        response_elem = 'zato_pubsub_topics_publish_response'
+        input_required = ('cluster_id', 'name', 'mime_type', Int('priority'), Int('expiration'))
+        input_optional = ('client_id', 'payload')
+        output_required = (AsIs('msg_id'),)
+
+    def handle(self):
+        # If no client_id is provided we need to look up our own internal client
+        if not self.request.input.client_id:
+            definition = self.invoke('zato.security.get-list', {
+                'cluster_id': self.request.input.cluster_id,
+                'name_filter': 'zato.pubsub.default-publisher'
+            })['zato_security_get_list_response'][0]
+
+            if not definition['id']:
+                raise ValueError('Could not find the `zato.pubsub.default-publisher` account')
+
+            client_id = definition['id']
+        else:
+            client_id = self.request.input.client_id
+
+        self.response.payload.msg_id = self.pubsub.publish(client_id, self.request.input.payload, self.request.input.name,
+            self.request.input.mime_type, self.request.input.priority, self.request.input.expiration)
 
 # ################################################################################################################################
 

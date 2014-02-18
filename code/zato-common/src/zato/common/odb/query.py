@@ -679,23 +679,23 @@ def http_soap_audit_item(session, cluster_id, id):
 
 # ################################################################################################################################
 
-def _topic(session, cluster_id):
+def _pubsub_topic(session, cluster_id):
     return session.query(PubSubTopic.id, PubSubTopic.name, PubSubTopic.is_active, PubSubTopic.max_depth).\
         filter(Cluster.id==PubSubTopic.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(PubSubTopic.name)
 
-def topic(session, cluster_id, id):
+def pubsub_topic(session, cluster_id, id):
     """ A pub/sub topic.
     """
-    return _service(session, cluster_id).\
+    return _pubsub_topic(session, cluster_id).\
         filter(PubSubTopic.id==id).\
         one()
 
 @needs_columns
-def topic_list(session, cluster_id, needs_columns=False):
+def pubsub_topic_list(session, cluster_id, needs_columns=False):
     """ All pub/sub topics.
     """
-    return _topic(session, cluster_id)
+    return _pubsub_topic(session, cluster_id)
 
 # ################################################################################################################################

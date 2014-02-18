@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from copy import deepcopy
+from logging import getLogger
 from threading import RLock
 
 # Paste
@@ -20,6 +21,8 @@ from bunch import Bunch
 
 # Zato
 from zato.common import ZATO_NONE
+
+logger = getLogger(__name__)
 
 class ConfigDict(object):
     """ Stores configuration of a particular item of interest, such as an
@@ -139,7 +142,7 @@ class ConfigStore(object):
             basic_auth=ZATO_NONE, wss=ZATO_NONE, tech_acc=ZATO_NONE,
             url_sec=ZATO_NONE, http_soap=ZATO_NONE, broker_config=ZATO_NONE,
             odb_data=ZATO_NONE, simple_io=ZATO_NONE, msg_ns=ZATO_NONE,
-            elem_path=ZATO_NONE, xpath=ZATO_NONE):
+            elem_path=ZATO_NONE, xpath=ZATO_NONE, pubsub_topics=ZATO_NONE):
 
         # Outgoing connections
         self.out_ftp = out_ftp
@@ -178,6 +181,9 @@ class ConfigStore(object):
 
         # XPath
         self.xpath = xpath
+
+        # Pub/sub
+        self.pubsub_topics = pubsub_topics
 
     def outgoing_connections(self):
         """ Returns all the outgoing connections.
