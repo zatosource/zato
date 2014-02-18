@@ -41,13 +41,14 @@ $.fn.zato.pubsub.topics.data_table.new_row = function(item, data, include_tr) {
     var producers_suffix = (data.producers_count == 0 || data.producers_count > 2) ? "s" : "";
 
     var last_pub_time = data.last_pub_time ? data.last_pub_time : "(Never)";
+    var last_pub_time_css_class = data.last_pub_time ? "" : "form_hint";
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', data.current_depth);
     row += String.format('<td>{0}</td>', item.max_depth);
-    row += String.format('<td><span class="form_hint">{0}</span></td>', last_pub_time);
+    row += String.format('<td><span class="{0}">{1}</span></td>', last_pub_time_css_class, last_pub_time);
 
     row += String.format(
         "<td><a href=\'../consumers/cluster/{0}/{1}\'>{2} consumer{3}</a></td>",
