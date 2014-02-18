@@ -74,19 +74,7 @@ class Publish(AdminService):
         output_required = (AsIs('msg_id'),)
 
     def handle(self):
-        # If no client_id is provided we need to look up our own internal client
-        if not self.request.input.client_id:
-            definition = self.invoke('zato.security.get-list', {
-                'cluster_id': self.request.input.cluster_id,
-                'name_filter': 'zato.pubsub.default-publisher'
-            })['zato_security_get_list_response'][0]
-
-            if not definition['id']:
-                raise ValueError('Could not find the `zato.pubsub.default-publisher` account')
-
-            client_id = definition['id']
-        else:
-            client_id = self.request.input.client_id
+        client_id = self.request.input.get('client_id') or self.pubsub.get_default_producer().id
 
         self.response.payload.msg_id = self.pubsub.publish(client_id, self.request.input.payload, self.request.input.name,
             self.request.input.mime_type, self.request.input.priority, self.request.input.expiration)

@@ -372,7 +372,7 @@ class Create(ZatoCommand):
     def add_default_pubsub_accounts(self, session, cluster):
         """ Adds default accounts used by pub/sub internally.
         """
-        for suffix in('consumer', 'publisher'):
+        for suffix in('consumer', 'producer'):
             name = 'zato.pubsub.default-{}'.format(suffix)
             item = HTTPBasicAuth(None, name, True, name, 'Zato pub/sub', uuid4().hex, cluster)
             session.add(item)

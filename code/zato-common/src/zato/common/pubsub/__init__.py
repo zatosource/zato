@@ -117,6 +117,9 @@ class AckCtx(object):
     def append(self, msg_id):
         self.msg_ids.append(msg_id)
 
+    def __repr__(self):
+        return make_repr(self)
+
 # ################################################################################################################################
 
 class RejectCtx(object):
@@ -128,6 +131,15 @@ class RejectCtx(object):
 
     def append(self, msg_id):
         self.msg_ids.append(msg_id)
+
+# ################################################################################################################################
+
+class Client(object):
+    """ Either a subscriber or publisher.
+    """
+    def __init__(self, id, name):
+        self.id = id
+        self.name = name
 
 # ################################################################################################################################
 
@@ -159,8 +171,8 @@ class PubSub(object):
         self.topic_to_prod = {} # String to set, key = topic, value = clients allowed to publish to it
 
         # Used by internal services
-        self.default_consumer_id = None
-        self.default_publisher_id = None
+        self.default_consumer = Client(None, None)
+        self.default_producer = Client(None, None)
 
     def add_topic(self, topic):
         with self.update_lock:
@@ -185,15 +197,15 @@ class PubSub(object):
 
         self.logger.debug('Added subscription: `%s`, `%s`, `%s`', sub_key, client_id, topic)
 
-    def add_producer(self, client_id, topic):
+    def add_producer(self, client, topic):
         """ Adds information that this client can publish to the topic. 
         """
         with self.update_lock:
-            topics = self.prod_to_topic.setdefault(client_id, set())
+            topics = self.prod_to_topic.setdefault(client.id, set())
             topics.add(topic.name)
 
             producers = self.topic_to_prod.setdefault(topic.name, set())
-            producers.add(client_id)
+            producers.add(client.id)
 
     def _not_implemented(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Must be overridden in subclasses')
@@ -501,7 +513,7 @@ class PubSubAPI(object):
         pub_ctx.topic = topic
         pub_ctx.msg = Message(payload, topic, mime_type, priority, expiration, msg_id)
 
-        self.impl.publish(pub_ctx)
+        return self.impl.publish(pub_ctx)
 
     def subscribe(self, client_id, topics, sub_key=None):
         """ Subscribes a client to one or more topic. Returns a subscription key assigned.
@@ -534,6 +546,9 @@ class PubSubAPI(object):
     def update_topic(self, topic):
         return self.impl.update_topic(topic)
 
+    def add_producer(self, producer, topic):
+        return self.impl.add_producer(producer, topic)
+
     # ############################################################################################################################
 
     def get_topic_depth(self, topic):
@@ -550,16 +565,19 @@ class PubSubAPI(object):
 
     # ############################################################################################################################
 
-    def get_default_consumer_id(self):
-        return self.impl.default_consumer_id
+    def get_default_consumer(self):
+        return self.impl.default_consumer
 
-    def get_default_producer_id(self):
-        return self.impl.default_producer_id
+    def get_default_consumer(self):
+        return self.impl.default_consumer
 
-    def set_default_consumer_id(self, client_id):
-        self.impl.default_consumer_id = client_id
+    def get_default_producer(self):
+        return self.impl.default_producer
 
-    def set_default_publisher_id(self, client_id):
-        self.impl.default_publisher_id = client_id
+    def set_default_consumer(self, client):
+        self.impl.default_consumer = client
+
+    def set_default_producer(self, client):
+        self.impl.default_producer = client
 
 # ################################################################################################################################

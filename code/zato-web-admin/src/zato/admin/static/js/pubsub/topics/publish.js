@@ -2,7 +2,7 @@ $(document).ready(function() {
 
     var _callback = function(data, status, xhr){
         var success = status == 'success';
-        var msg = success ? data : data.responseText;
+        var msg = success ? data.msg : data.responseText;
         $.fn.zato.user_message(success, msg);
     }
 
@@ -10,6 +10,7 @@ $(document).ready(function() {
         success: _callback,
         error:  _callback,
         resetForm: false,
+        'dataType': 'json',
     }; 
 
     $('#publish_message_form').submit(function() { 
