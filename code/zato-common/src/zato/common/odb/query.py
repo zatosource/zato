@@ -738,6 +738,8 @@ def _pubsub_consumer(session, cluster_id, needs_columns=False):
         PubSubConsumer.is_active,
         PubSubConsumer.max_backlog,
         PubSubConsumer.sub_key,
+        PubSubConsumer.delivery_mode,
+        PubSubConsumer.callback,
         SecurityBase.id.label('client_id'),
         SecurityBase.name,
         SecurityBase.sec_type,

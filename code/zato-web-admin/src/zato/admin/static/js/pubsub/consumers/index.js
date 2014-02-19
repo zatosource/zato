@@ -19,7 +19,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Consumer;
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.consumers.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['client_id', 'max_backlog']);
+    $.fn.zato.data_table.setup_forms(['client_id', 'delivery_mode', 'max_backlog']);
 })
 
 $.fn.zato.pubsub.consumers.create = function() {
@@ -51,6 +51,7 @@ $.fn.zato.pubsub.consumers.data_table.new_row = function(item, data, include_tr)
     row += String.format('<td>{0}</td>', data.name);
     row += String.format('<td>{0}</td>', data.sub_key);
     row += String.format('<td>{0}</td>', is_active ? "Yes": "No");
+    row += String.format('<td>{0}</td>', item.delivery_mode);
     row += String.format('<td>{0}</td>', item.max_backlog);
     row += String.format('<td><span class="{0}">{1}</span></td>', last_seen_css_class, last_seen);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.pubsub.consumers.edit('{0}')\">Edit</a>", data.id));

@@ -38,7 +38,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'topic_name')
-        output_required = ('id', 'name', 'is_active', 'last_seen', 'max_backlog', 'sub_key')
+        output_required = ('id', 'name', 'is_active', 'last_seen', 'max_backlog', 'sub_key', 'delivery_mode')
+        output_optional = ('callback',)
         output_repeated = True
 
     def handle(self):
@@ -67,7 +68,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('id', 'cluster_id', 'client_id', 'is_active', 'topic_name', 'max_backlog')
+        input_required = ('id', 'cluster_id', 'client_id', 'is_active', 'topic_name', 'max_backlog', 'delivery_mode')
+        input_optional = ('callback',)
         output_required = ('id', 'name', 'last_seen', 'sub_key')
 
     def success_message(self, item):

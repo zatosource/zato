@@ -391,6 +391,14 @@ class PUB_SUB:
     DEFAULT_MAX_DEPTH = 500
     DEFAULT_MAX_BACKLOG = 1000
 
+class PUB_SUB_DELIVERY_MODE:
+    PULL = NameId('Pull', 'pull')
+    CALLBACK_URL = NameId('Callback URL', 'callback-url')
+
+    class __metaclass__(type):
+        def __iter__(self):
+            return iter((self.PULL, self.CALLBACK_URL))
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
