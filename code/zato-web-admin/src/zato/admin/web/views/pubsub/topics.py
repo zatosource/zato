@@ -52,7 +52,8 @@ class Index(_Index):
     def _handle_item_list(self, item_list):
         super(Index, self)._handle_item_list(item_list)
         for item in self.items:
-            item.last_pub_time = from_utc_to_user(item.last_pub_time + '+00:00', self.req.zato.user_profile)
+            if item.last_pub_time:
+                item.last_pub_time = from_utc_to_user(item.last_pub_time + '+00:00', self.req.zato.user_profile)
 
 # ################################################################################################################################
 

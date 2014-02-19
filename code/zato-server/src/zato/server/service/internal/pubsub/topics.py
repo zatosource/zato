@@ -48,7 +48,7 @@ class GetList(AdminService):
 # ################################################################################################################################
 
 class GetInfo(AdminService):
-    """ Returns basic information regarding a topic
+    """ Returns basic information regarding a topic.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_topics_get_info_request'

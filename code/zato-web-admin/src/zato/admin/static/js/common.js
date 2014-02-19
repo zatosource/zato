@@ -81,6 +81,8 @@ $.namespace('zato.outgoing.sql');
 $.namespace('zato.outgoing.zmq');
 $.namespace('zato.pattern.delivery');
 $.namespace('zato.pattern.delivery.in_doubt');
+$.namespace('zato.pubsub.consumers');
+$.namespace('zato.pubsub.producers');
 $.namespace('zato.pubsub.topics');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
@@ -197,6 +199,8 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
     var form_elem = null;
     var fields = $.fn.zato.form.serialize(form);
     var skip_boolean = ['in_lb']; // A list of boolean fields that should be treated as though they were regular text
+
+    //alert(instance + ' ' + $.fn.zato.dir(fields));
 
     for(field_name in fields) {
         if(field_name.indexOf(name_prefix) === 0 || field_name == 'id') {
@@ -348,7 +352,7 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
 }
 
 $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_pattern,
-                        append_cluster, confirm_challenge) {
+                        append_cluster, confirm_challenge, url_pattern) {
 
     var instance = $.fn.zato.data_table.data[id];
     var name = '';
@@ -381,7 +385,12 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 
     var callback = function(ok) {
         if(ok) {
-            var url = String.format('./delete/{0}/', id);
+            if(url_pattern) {
+                var url = String.format(url_pattern, id);
+            }
+            else {
+                var url = String.format('./delete/{0}/', id);
+            }
             if(append_cluster) {
                 url = url + String.format('cluster/{0}/', $('#cluster_id').val());
             }

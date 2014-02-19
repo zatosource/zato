@@ -72,6 +72,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.pattern.delivery',
             'zato.server.service.internal.pattern.delivery.definition',
             'zato.server.service.internal.pubsub',
+            'zato.server.service.internal.pubsub.producers',
             'zato.server.service.internal.pubsub.topics',
             'zato.server.service.internal.scheduler',
             'zato.server.service.internal.security',

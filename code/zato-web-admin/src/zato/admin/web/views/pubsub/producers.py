@@ -19,10 +19,11 @@ from django.http import HttpResponse, HttpResponseRedirect, HttpResponseServerEr
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web.forms.pubsub.producers import CreateForm
+from zato.admin.web import from_utc_to_user
+from zato.admin.web.forms.pubsub.producers import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common import PUB_SUB
-from zato.common.odb.model import PubSubTopic
+from zato.common.odb.model import PubSubProducer
 
 logger = logging.getLogger(__name__)
 
@@ -33,23 +34,31 @@ class Index(_Index):
     url_name = 'pubsub-producers'
     template = 'zato/pubsub/producers/index.html'
     service_name = 'zato.pubsub.producers.get-list'
-    output_class = PubSubTopic
+    output_class = PubSubProducer
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'last_pub_time')
+        input_required = ('cluster_id', 'topic_name')
+        output_required = ('id', 'name', 'is_active', 'last_seen')
         output_repeated = True
 
     def handle(self):
         create_form = CreateForm()
+        edit_form = EditForm(prefix='edit')
 
         if self.req.zato.cluster_id:
             client_ids = self.req.zato.client.invoke('zato.security.get-list', {'cluster_id': self.req.zato.cluster.id})
             create_form.set_client_id(client_ids.data)
 
         return {
-            'create_form': create_form
+            'create_form': create_form,
+            'edit_form': edit_form
         }
+
+    def _handle_item_list(self, item_list):
+        super(Index, self)._handle_item_list(item_list)
+        for item in self.items:
+            if item.last_seen:
+                item.last_seen = from_utc_to_user(item.last_seen + '+00:00', self.req.zato.user_profile)
 
 # ################################################################################################################################
 
@@ -57,45 +66,43 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('cluster_id', 'is_active', 'max_depth')
-        input_optional = ('name',)
-        output_required = ('id', 'name')
-
-    def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
-
-        edit_name = req.POST.get('edit-name')
-        name = req.POST.get('name', edit_name)
-
-        initial_return_data = {
-            'current_depth': 0,
-            'consumers_count': 0,
-            'producers_count': 0,
-            'last_pub_time': None,
-            'cluster_id': req.zato.cluster_id,
-            'name': name,
-        }
-
-
-        if edit_name:
-            response = req.zato.client.invoke('zato.pubsub.producers.get-info', {
-                'cluster_id': req.zato.cluster_id,
-                'name': edit_name
-            })
-
-            if response.ok:
-                initial_return_data.update(response.data)
-
-        return super(_CreateEdit, self).__call__(
-            req, initial_input_dict={}, initial_return_data=initial_return_data, *args, **kwargs)
+        input_required = ('id', 'cluster_id', 'client_id', 'is_active', 'topic_name')
+        output_required = ('id', 'name', 'last_seen')
 
     def success_message(self, item):
-        return 'Successfully {0} the topic [{1}]'.format(self.verb, item.name)
+        # 'message' is implemented in post_process_return_data so that we know the name of the producer
+        pass
+
+    def post_process_return_data(self, return_data):
+        is_active = False
+        for name in('is_active', 'edit-is_active'):
+            if name in self.req.POST:
+                is_active = True
+                break
+
+        return_data['is_active'] = is_active
+        return_data['topic_name'] = self.req.POST['topic_name']
+        return_data['message'] = 'Successfully {} producer `{}`'.format(self.verb, return_data['name'])
+
+        client_id = self.req.POST.get('id')
+        if client_id:
+            response = self.req.zato.client.invoke('zato.pubsub.producers.get-info', {'id': client_id})
+    
+            if response.ok:
+                if response.data.last_seen:
+                    return_data['last_seen'] = from_utc_to_user(response.data.last_seen + '+00:00', self.req.zato.user_profile)
+
+        return return_data
 
 # ################################################################################################################################
 
 class Create(_CreateEdit):
     url_name = 'pubsub-producers-create'
     service_name = 'zato.pubsub.producers.create'
+
+    def post_process_return_data(self, return_data):
+        return_data['last_seen'] = None
+        return super(Create, self).post_process_return_data(return_data)
 
 # ################################################################################################################################
 
@@ -108,39 +115,7 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'pubsub-producers-delete'
-    error_message = 'Could not delete the topic'
+    error_message = 'Could not delete the producer'
     service_name = 'zato.pubsub.producers.delete'
 
 # ################################################################################################################################
-
-@method_allowed('GET')
-def publish(req, cluster_id, topic):
-
-    return_data = {
-        'cluster_id': cluster_id,
-        'topic': topic,
-        'default_mime_type': PUB_SUB.DEFAULT_MIME_TYPE,
-        'default_priority': PUB_SUB.DEFAULT_PRIORITY,
-        'default_expiration': int(PUB_SUB.DEFAULT_EXPIRATION),
-    }
-
-    return TemplateResponse(req, 'zato/pubsub/producers/publish.html', return_data)
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def publish_action(req, cluster_id, topic):
-
-    try:
-        request = {'cluster_id': req.zato.cluster_id}
-        request.update({k:v for k, v in req.POST.items() if k and v})
-        response = req.zato.client.invoke('zato.pubsub.producers.publish', request)
-
-        if response.ok:
-            return HttpResponse(dumps({'msg_id': response.data.msg_id}), mimetype='application/javascript')
-        else:
-            raise Exception(response.details)
-    except Exception, e:
-        msg = 'Caught an exception, e:`{}`'.format(format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)

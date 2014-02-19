@@ -442,8 +442,14 @@ urlpatterns = patterns('',
     url(r'^zato/pubsub/consumers/cluster/(?P<cluster_id>.*)/topic/(?P<topic>.*)$',
         login_required(pubsub_consumers.Index()), name=pubsub_consumers.Index.url_name),
 
-    url(r'^zato/pubsub/producers/cluster/(?P<cluster_id>.*)/topic/(?P<topic>.*)$',
+    url(r'^zato/pubsub/producers/cluster/(?P<cluster_id>.*)/topic/(?P<topic_name>.*)$',
         login_required(pubsub_producers.Index()), name=pubsub_producers.Index.url_name),
+    url(r'^zato/pubsub/producers/create/$',
+        login_required(pubsub_producers.Create()), name=pubsub_producers.Create.url_name),
+    url(r'^zato/pubsub/producers/edit/$',
+        login_required(pubsub_producers.Edit()), name=pubsub_producers.Edit.url_name),
+    url(r'^zato/pubsub/producers/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(pubsub_producers.Delete()), name=pubsub_producers.Delete.url_name),
 
     # Statistics
     url(r'^zato/stats/trends/data/$',

@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Pub/sub topics{% endblock %}
+{% block html_title %}Pub/sub producers{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -14,7 +14,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/pubsub/topics/index.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/producers/index.js"></script>
 
 
     <script>
@@ -22,13 +22,10 @@
         return [
             '_numbering',
             '_selection',
+            '_topic_name',
             'name',
-            'current_depth',
-            'max_depth',
-            '_consumers_count',
-            '_producers_count',
-            '_last_used',
-            '_publish',
+            '_is_active',
+            'last_seen',
             '_edit',
             '_delete',
             'id',
@@ -40,7 +37,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Pub/sub topics</h2>
+<h2 class="zato">Pub/sub : <a href="{% url pubsub-topics %}?cluster={{ cluster_id }}" class="common">Topics</a> : Producers : {{ input.topic_name }}</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -48,28 +45,22 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/choose-cluster.html" with page_prompt="Show topics"%}
-
-
     {% if cluster_id %}
 
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.pubsub.topics.create()">Create a new topic</a>
+            <a href="javascript:$.fn.zato.pubsub.producers.create()">Create a new producer</a>
         </div>
-        
+
         <div id="markup">
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th><a href="#">Topic</a></th>
                         <th><a href="#">Name</a></th>
-                        <th><a href="#">Current depth</a></th>
-                        <th><a href="#">Max depth</a></th>
-                        <th><a href="#">Last pub time</a></th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        <th><a href="#">Active</a></th>
+                        <th><a href="#">Last seen</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -82,22 +73,19 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
+                        <td>{{ input.topic_name }}</td>
                         <td>{{ item.name }}</td>
-                        <td>{{ item.current_depth }}</td>
-                        <td>{{ item.max_depth }}</td>
-                        <td>{% if item.last_pub_time %}{{ item.last_pub_time }}{% else %}<span class="form_hint">(Never)</span>{% endif %}</td>
-                        <td><a href="{% url pubsub-consumers cluster_id item.name %}">{{ item.consumers_count }} consumer{% if item.consumers_count == 0 or item.consumers_count > 2 %}s{% endif %}</a></td>
-                        <td><a href="{% url pubsub-producers cluster_id item.name %}">{{ item.producers_count }} producer{% if item.producers_count == 0 or item.producers_count > 2 %}s{% endif %}</a></td>
-                        <td><a href="{% url pubsub-topics-publish cluster_id item.name %}">Publish a message</a></td>
-                        <td><a href="javascript:$.fn.zato.pubsub.topics.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.pubsub.topics.delete_('{{ item.id }}')">Delete</a></td>
+                        <td>{{ item.is_active|yesno:"Yes,No" }}</td>
+                        <td>{{ item.last_seen|default:"<span class='form_hint'>(Never)</span>" }}</td>
+                        <td><a href="javascript:$.fn.zato.pubsub.producers.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.producers.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='11'>No results</td>
+                        <td colspan='10'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -107,22 +95,15 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url pubsub-topics-create %}" method="post" id="create-form">
+                <form action="{% url pubsub-producers-create %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
-                            <td>{{ create_form.name }}</td>
+                            <td style="vertical-align:middle">Client</td>
+                            <td>{{ create_form.client_id }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ create_form.is_active }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Max depth
-                            <br/>
-                            <span class="form_hint">(default: {{ default_max_depth }})</span>
-                            </td>
-                            <td>{{ create_form.max_depth }} </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -131,7 +112,7 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" name="is_active" value="on" />
+                    <input type="hidden" id="topic_name" name="topic_name" value="{{ input.topic_name }}" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
@@ -139,17 +120,12 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url pubsub-topics-edit %}" method="post" id="edit-form">
+                <form action="{% url pubsub-producers-edit %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td style="vertical-align:middle;width:10%">Active</td>
                             <td>{{ edit_form.is_active }}</td>
                         </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Max depth</td>
-                            <td>{{ edit_form.max_depth }} </td>
-                        </tr>
-                        <tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -157,8 +133,7 @@
                             </td>
                         </tr>
                     </table>
-                    {{ edit_form.name }}
-                    <input type="hidden" name="is_active" value="on" />
+                    <input type="hidden" id="id_edit-topic_name" name="topic_name" value="{{ input.topic_name }}" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>

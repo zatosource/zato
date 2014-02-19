@@ -216,7 +216,10 @@ class WorkerStore(BrokerMessageReceiver):
 
         for topic_name, topic_data in self.worker_config.pubsub.topics.items():
             self._add_pubsub_topic(topic_data.config)
-            self.pubsub.add_producer(self.pubsub.get_default_producer(), self._topic_from_topic_data(topic_data.config))
+
+        for key, value in self.worker_config.pubsub.producers.items():
+            self.pubsub.add_producer(
+                Client(value.config.client_id, value.config.name), Topic(value.config.topic_name))
 
 # ##############################################################################
 
@@ -696,5 +699,14 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_PUB_SUB_TOPIC_EDIT(self, msg):
         self.pubsub.update_topic(Topic(msg.name, msg.is_active, True, msg.max_depth))
+
+    def on_broker_msg_PUB_SUB_PRODUCER_CREATE(self, msg):
+        self.pubsub.add_producer(Client(msg.client_id, msg.name, msg.is_active), Topic(msg.topic_name))
+
+    def on_broker_msg_PUB_SUB_PRODUCER_EDIT(self, msg):
+        self.pubsub.update_producer(Client(msg.client_id, msg.client_name, msg.is_active), Topic(msg.topic_name))
+
+    def on_broker_msg_PUB_SUB_PRODUCER_DELETE(self, msg):
+        self.pubsub.delete_producer(Client(msg.client_id, msg.client_name), Topic(msg.topic_name))
 
 # ################################################################################################################################
