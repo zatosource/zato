@@ -19,7 +19,7 @@ from zato.common import PUB_SUB
 
 class CreateForm(forms.Form):
     cluster_id = forms.CharField(widget=forms.HiddenInput())
-    topic_name = forms.CharField(widget=forms.HiddenInput())
+    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     client_id = forms.ChoiceField(widget=forms.Select())
 
     def __init__(self, prefix=None, post_data=None):
@@ -32,3 +32,6 @@ class CreateForm(forms.Form):
 
         for item in client_ids:
             self.fields['client_id'].choices.append([item.id, item.name])
+
+class EditForm(CreateForm):
+    is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

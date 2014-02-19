@@ -86,8 +86,8 @@
                         <td>{{ item.current_depth }}</td>
                         <td>{{ item.max_depth }}</td>
                         <td>{% if item.last_pub_time %}{{ item.last_pub_time }}{% else %}<span class="form_hint">(Never)</span>{% endif %}</td>
-                        <td><a href="{% url pubsub-consumers cluster_id item.name %}">{{ item.consumers_count }} consumer{% if item.consumers_count == 0 or item.consumers_count > 2 %}s{% endif %}</a></td>
-                        <td><a href="{% url pubsub-producers cluster_id item.name %}">{{ item.producers_count }} producer{% if item.producers_count == 0 or item.producers_count > 2 %}s{% endif %}</a></td>
+                        <td><a href="{% url pubsub-consumers cluster_id item.name %}">{{ item.consumers_count }} consumer{% if item.consumers_count == 0 or item.consumers_count >= 2 %}s{% endif %}</a></td>
+                        <td><a href="{% url pubsub-producers cluster_id item.name %}">{{ item.producers_count }} producer{% if item.producers_count == 0 or item.producers_count >= 2 %}s{% endif %}</a></td>
                         <td><a href="{% url pubsub-topics-publish cluster_id item.name %}">Publish a message</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topics.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topics.delete_('{{ item.id }}')">Delete</a></td>
@@ -131,7 +131,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
@@ -150,7 +149,6 @@
                             <td>{{ edit_form.max_depth }} </td>
                         </tr>
                         <tr>
-                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -158,7 +156,6 @@
                         </tr>
                     </table>
                     {{ edit_form.name }}
-                    <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>

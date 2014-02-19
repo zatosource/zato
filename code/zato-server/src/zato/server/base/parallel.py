@@ -432,11 +432,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_pubsub_topic_list(server.cluster.id, True)
         self.config.pubsub.topics = ConfigDict.from_query('pubsub_topics', query)
 
-        id, name = self.odb.get_default_client(server.cluster.id, 'zato.pubsub.default-consumer')
+        id, name = self.odb.get_pubsub_default_client(server.cluster.id, 'zato.pubsub.default-consumer')
         self.config.pubsub.default_consumer.id, self.config.pubsub.default_consumer.name = id, name
 
-        id, name = self.odb.get_default_client(server.cluster.id, 'zato.pubsub.default-producer')
+        id, name = self.odb.get_pubsub_default_client(server.cluster.id, 'zato.pubsub.default-producer')
         self.config.pubsub.default_producer.id, self.config.pubsub.default_producer.name = id, name
+
+        query = self.odb.get_pubsub_producer_list(server.cluster.id, True)
+        self.config.pubsub.producers = ConfigDict.from_query('pubsub_producers', query)
 
         # Assign config to worker
         self.worker_store.worker_config = self.config

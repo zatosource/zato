@@ -26,7 +26,7 @@ from redis import ConnectionError, Redis
 
 # Zato
 from zato.common import PUB_SUB
-from zato.common.pubsub import AckCtx, GetCtx, Message, PubCtx, RedisPubSub, RejectCtx, SubCtx, Topic
+from zato.common.pubsub import AckCtx, Client, GetCtx, Message, PubCtx, RedisPubSub, RejectCtx, SubCtx, Topic
 from zato.common.util import new_cid
 
 logger = getLogger(__name__)
@@ -165,9 +165,9 @@ class RedisPubSubTestCase(TestCase):
         for topic in(topic_cust_new, topic_cust_update, topic_adsl_new, topic_adsl_update):
             eq_(ps.topics[topic.name], topic)
 
-        client_id_crm = 'CRM'
-        client_id_billing = 'Billing'
-        client_id_erp = 'ERP'
+        client_id_crm = Client('CRM', 'CRM')
+        client_id_billing = Client('Billing', 'Billing')
+        client_id_erp = Client('ERP', 'ERP')
 
         ps.add_producer(client_id_crm, topic_cust_new)
         ps.add_producer(client_id_crm, topic_cust_update)
@@ -179,28 +179,28 @@ class RedisPubSubTestCase(TestCase):
 
         eq_(len(ps.prod_to_topic), 2)
 
-        self.assertTrue(client_id_crm in ps.prod_to_topic)
-        self.assertTrue(client_id_billing in ps.prod_to_topic)
-        self.assertTrue(client_id_erp not in ps.prod_to_topic)
+        self.assertTrue(client_id_crm.id in ps.prod_to_topic)
+        self.assertTrue(client_id_billing.id in ps.prod_to_topic)
+        self.assertTrue(client_id_erp.id not in ps.prod_to_topic)
 
-        self.assertTrue(isinstance(ps.prod_to_topic[client_id_crm], set))
-        eq_(sorted(ps.prod_to_topic[client_id_crm]), ['/cust/new', '/cust/update'])
+        self.assertTrue(isinstance(ps.prod_to_topic[client_id_crm.id], set))
+        eq_(sorted(ps.prod_to_topic[client_id_crm.id]), ['/cust/new', '/cust/update'])
 
-        self.assertTrue(isinstance(ps.prod_to_topic[client_id_billing], set))
-        eq_(sorted(ps.prod_to_topic[client_id_billing]), ['/adsl/new', '/adsl/update'])
+        self.assertTrue(isinstance(ps.prod_to_topic[client_id_billing.id], set))
+        eq_(sorted(ps.prod_to_topic[client_id_billing.id]), ['/adsl/new', '/adsl/update'])
 
         # Subscribe all the systems
 
         sub_ctx_crm = SubCtx()
-        sub_ctx_crm.client_id = client_id_crm
+        sub_ctx_crm.client_id = client_id_crm.id
         sub_ctx_crm.topics = [topic_adsl_new.name, topic_adsl_update.name]
 
         sub_ctx_billing = SubCtx()
-        sub_ctx_billing.client_id = client_id_billing
+        sub_ctx_billing.client_id = client_id_billing.id
         sub_ctx_billing.topics = [topic_cust_new.name, topic_cust_update.name]
 
         sub_ctx_erp = SubCtx()
-        sub_ctx_erp.client_id = client_id_erp
+        sub_ctx_erp.client_id = client_id_erp.id
         sub_ctx_erp.topics = [topic_adsl_new.name, topic_adsl_update.name]
 
         sub_key_crm = 'sub_key_crm'
@@ -220,7 +220,7 @@ class RedisPubSubTestCase(TestCase):
 
         # CRM publishes Msg-CRM1 to /cust/new
         pub_ctx_msg_crm1 = PubCtx()
-        pub_ctx_msg_crm1.client_id = client_id_crm
+        pub_ctx_msg_crm1.client_id = client_id_crm.id
         pub_ctx_msg_crm1.topic = topic_cust_new.name
         pub_ctx_msg_crm1.msg = Message('msg_crm1', mime_type='text/xml', priority=1, expiration=0.1)
 
@@ -228,7 +228,7 @@ class RedisPubSubTestCase(TestCase):
 
         # CRM publishes Msg-CRM2 to /cust/new
         pub_ctx_msg_crm2 = PubCtx()
-        pub_ctx_msg_crm2.client_id = client_id_crm
+        pub_ctx_msg_crm2.client_id = client_id_crm.id
         pub_ctx_msg_crm2.topic = topic_cust_update.name
         pub_ctx_msg_crm2.msg = Message('msg_crm2',  mime_type='application/json', priority=2, expiration=0.2)
 
@@ -236,7 +236,7 @@ class RedisPubSubTestCase(TestCase):
 
         # Billing publishes Msg-Billing1 to /adsl/new
         pub_ctx_msg_billing1 = PubCtx()
-        pub_ctx_msg_billing1.client_id = client_id_billing
+        pub_ctx_msg_billing1.client_id = client_id_billing.id
         pub_ctx_msg_billing1.topic = topic_adsl_new.name
         pub_ctx_msg_billing1.msg = Message('msg_billing1',  mime_type='application/soap+xml', priority=3, expiration=0.3)
 
@@ -244,7 +244,7 @@ class RedisPubSubTestCase(TestCase):
 
         # Billing publishes Msg-Billing2 to /adsl/update
         pub_ctx_msg_billing2 = PubCtx()
-        pub_ctx_msg_billing2.client_id = client_id_billing
+        pub_ctx_msg_billing2.client_id = client_id_billing.id
         pub_ctx_msg_billing2.topic = topic_adsl_update.name
 
         # Nothing except payload and expiration set, defaults should be used
@@ -254,7 +254,7 @@ class RedisPubSubTestCase(TestCase):
         msg_billing2_id = ps.publish(pub_ctx_msg_billing2)
 
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        eq_(len(keys), 7)
+        eq_(len(keys), 8)
 
         expected_keys = [ps.MSG_VALUES_KEY, ps.MSG_EXPIRE_AT_KEY, ps.LAST_PUB_TIME_KEY]
         for topic in topic_cust_new, topic_cust_update, topic_adsl_new, topic_adsl_update:
@@ -274,7 +274,7 @@ class RedisPubSubTestCase(TestCase):
         # ready for subscribers to get their messages.
 
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        eq_(len(keys), 7)
+        eq_(len(keys), 8)
 
         self.assertIn(ps.UNACK_COUNTER_KEY, keys)
         self.assertIn(ps.MSG_VALUES_KEY, keys)
@@ -417,7 +417,7 @@ class RedisPubSubTestCase(TestCase):
         ps.delete_expired()
 
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        eq_(len(keys), 5)
+        eq_(len(keys), 6)
 
         expected_keys = [ps.MSG_VALUES_KEY, ps.MSG_EXPIRE_AT_KEY, ps.UNACK_COUNTER_KEY, 
                          ps.CONSUMER_MSG_IDS_PREFIX.format(sub_key_crm)]

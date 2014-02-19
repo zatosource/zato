@@ -137,9 +137,10 @@ class RejectCtx(object):
 class Client(object):
     """ Either a subscriber or publisher.
     """
-    def __init__(self, id, name):
+    def __init__(self, id, name, is_active=True):
         self.id = id
         self.name = name
+        self.is_active = is_active
 
 # ################################################################################################################################
 
@@ -158,6 +159,12 @@ class PubSub(object):
 
         # All existing topics, key = topic name, value = topic object
         self.topics = {}
+
+        # All existing consumers, key = client_id, value = client object
+        self.consumers = {}
+
+        # All existing producers, key = client_id, value = client object
+        self.producers = {}
 
         self.sub_to_cons = {}   # String to string, key = sub_id, value = client_id using it
         self.cons_to_sub = {}   # String to string, key = client_id, value = sub_id it has
@@ -207,6 +214,27 @@ class PubSub(object):
             producers = self.topic_to_prod.setdefault(topic.name, set())
             producers.add(client.id)
 
+            self.producers[client.id] = client
+
+    def update_producer(self, client, topic):
+        """ Updates a producer.
+        """
+        # Currently we can only switch is_active flag on/off
+        with self.update_lock:
+            self.producers[client.id].is_active = client.is_active
+
+    def delete_producer(self, client, topic):
+        """ Deletes an association between a producer and a topic.
+        """
+        with self.update_lock:
+            topics = self.prod_to_topic.setdefault(client.id, set())
+            topics.remove(topic.name)
+
+            producers = self.topic_to_prod.setdefault(topic.name, set())
+            producers.remove(client.id)
+
+            del self.producers[client.id]
+
     def _not_implemented(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Must be overridden in subclasses')
 
@@ -242,6 +270,8 @@ class RedisPubSub(PubSub):
         self.MSG_EXPIRE_AT_KEY = '{}{}'.format(key_prefix, 'hash:msg-expire-at') # In UTC
         self.UNACK_COUNTER_KEY = '{}{}'.format(key_prefix, 'hash:unack-counter')
         self.LAST_PUB_TIME_KEY = '{}{}'.format(key_prefix, 'hash:last-pub-time') # In UTC
+        self.LAST_SEEN_CONSUMER_KEY = '{}{}'.format(key_prefix, 'hash:last-seen-consumer') # In UTC
+        self.LAST_SEEN_PRODUCER_KEY = '{}{}'.format(key_prefix, 'hash:last-seen-producer') # In UTC
 
         self.add_lua_program(self.LUA_PUBLISH, lua_publish)
         self.add_lua_program(self.LUA_MOVE_TO_TARGET_QUEUES, lua_move_to_target_queues)
@@ -308,6 +338,10 @@ class RedisPubSub(PubSub):
                 self.logger.warn('Topic `%s` is not active. Producer `%s`.', ctx.topic, ctx.client_id)
                 self._raise_cant_publish_error(ctx)
 
+            if not self.producers[ctx.client_id].is_active:
+                self.logger.warn('Producer `%s` is not active. Producer `%s`.', ctx.client_id, ctx.topic)
+                self._raise_cant_publish_error(ctx)
+
         id_key = self.MSG_IDS_PREFIX.format(ctx.topic)
 
         # Each message will carry information what topic it's intended for
@@ -324,9 +358,10 @@ class RedisPubSub(PubSub):
 
         try:
             self.run_lua(
-                self.LUA_PUBLISH, [id_key, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY, self.LAST_PUB_TIME_KEY],
+                self.LUA_PUBLISH, [
+                    id_key, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY, self.LAST_PUB_TIME_KEY, self.LAST_SEEN_PRODUCER_KEY],
                     [score, ctx.msg.msg_id, ctx.msg.expire_at_utc.isoformat(), ctx.msg.to_json(),
-                       ctx.topic, datetime.utcnow().isoformat()])
+                       ctx.topic, datetime.utcnow().isoformat(), ctx.client_id])
         except Exception, e:
             self.logger.error('Pub error `%s`', format_exc(e))
             raise
@@ -496,6 +531,11 @@ class RedisPubSub(PubSub):
         """
         return self.kvdb.hget(self.LAST_PUB_TIME_KEY, topic)
 
+    def get_producer_last_seen(self, client_id):
+        """ Returns timestamp of the last time a producer published a message, regardless of its topic.
+        """
+        return self.kvdb.hget(self.LAST_SEEN_PRODUCER_KEY, client_id)
+
 # ################################################################################################################################
 
 class PubSubAPI(object):
@@ -549,6 +589,12 @@ class PubSubAPI(object):
     def add_producer(self, producer, topic):
         return self.impl.add_producer(producer, topic)
 
+    def update_producer(self, producer, topic):
+        return self.impl.update_producer(producer, topic)
+
+    def delete_producer(self, producer, topic):
+        return self.impl.delete_producer(producer, topic)
+
     # ############################################################################################################################
 
     def get_topic_depth(self, topic):
@@ -562,6 +608,9 @@ class PubSubAPI(object):
 
     def get_last_pub_time(self, topic):
         return self.impl.get_last_pub_time(topic)
+
+    def get_producer_last_seen(self, client_id):
+        return self.impl.get_producer_last_seen(client_id)
 
     # ############################################################################################################################
 

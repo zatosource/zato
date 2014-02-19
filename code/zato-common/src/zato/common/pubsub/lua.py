@@ -14,18 +14,21 @@ lua_publish = """
    local msg_values = KEYS[2]
    local msg_expire_at = KEYS[3]
    local last_pub_time_key = KEYS[4]
+   local last_seen_producer_key = KEYS[5]
 
    local score = ARGV[1]
    local msg_id = ARGV[2]
    local expire_at = ARGV[3]
    local msg_value = ARGV[4]
    local topic_name = ARGV[5]
-   local last_pub_time = ARGV[6]
+   local utc_now = ARGV[6]
+   local client_id = ARGV[7]
 
    redis.pcall('zadd', id_key, score, msg_id)
    redis.pcall('hset', msg_values, msg_id, msg_value)
    redis.pcall('hset', msg_expire_at, msg_id, expire_at)
-   redis.pcall('hset', last_pub_time_key, topic_name, last_pub_time)
+   redis.pcall('hset', last_pub_time_key, topic_name, utc_now)
+   redis.pcall('hset', last_seen_producer_key, client_id, utc_now)
 """
 
 lua_move_to_target_queues = """

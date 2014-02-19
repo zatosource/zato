@@ -22,7 +22,7 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
 from zato.common.odb.model import ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
      DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, \
-     PubSubTopic, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
+     PubSubProducer, PubSubTopic, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -706,5 +706,27 @@ def pubsub_default_client(session, cluster_id, name):
         filter(Cluster.id==HTTPBasicAuth.cluster_id).\
         filter(HTTPBasicAuth.name==name).\
         first()
+
+# ################################################################################################################################
+
+def _pubsub_producer(session, cluster_id, needs_columns=False):
+    return session.query(
+        PubSubProducer.id,
+        PubSubProducer.is_active,
+        SecurityBase.id.label('client_id'),
+        SecurityBase.name,
+        SecurityBase.sec_type,
+        PubSubTopic.name.label('topic_name')).\
+        filter(Cluster.id==cluster_id).\
+        filter(PubSubProducer.topic_id==PubSubTopic.id).\
+        filter(PubSubProducer.cluster_id==Cluster.id).\
+        filter(PubSubProducer.sec_def_id==SecurityBase.id).\
+        order_by(SecurityBase.sec_type, SecurityBase.name)
+
+@needs_columns
+def pubsub_producer_list(session, cluster_id, topic_name, needs_columns=False):
+    """ All pub/sub producers.
+    """
+    return _pubsub_producer(session, cluster_id, topic_name)
 
 # ################################################################################################################################

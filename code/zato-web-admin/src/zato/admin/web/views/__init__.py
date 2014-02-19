@@ -281,6 +281,7 @@ class Index(_BaseView):
             return_data['req'] = self.req
             return_data['items'] = self.items
             return_data['item'] = self.item
+            return_data['input'] = self.input
             return_data['user_message'] = self.user_message
             return_data['user_message_class'] = self.user_message_class
             return_data['zato_clusters'] = req.zato.clusters
@@ -349,6 +350,8 @@ class CreateEdit(_BaseView):
                                 value = str(value)
                         return_data[name] = value
 
+                self.post_process_return_data(return_data)
+
                 return HttpResponse(dumps(return_data), mimetype='application/javascript')
             else:
                 msg = 'response:[{}], details.response.details:[{}]'.format(response, response.details)
@@ -360,6 +363,9 @@ class CreateEdit(_BaseView):
 
     def success_message(self, item):
         raise NotImplementedError('Must be implemented by a subclass')
+
+    def post_process_return_data(self, return_data):
+        return return_data
 
     @property
     def verb(self):
