@@ -16,7 +16,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # Zato
-from zato.common import PUB_SUB
+from zato.common import PUB_SUB, PUB_SUB_DELIVERY_MODE
 from zato.common.broker_message import PUB_SUB_CONSUMER, PUB_SUB_TOPIC
 from zato.common.odb.model import Cluster, PubSubConsumer, PubSubTopic
 from zato.common.odb.query import pubsub_consumer_list
@@ -34,8 +34,8 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_consumers_get_list_request'
         response_elem = 'zato_pubsub_consumers_get_list_response'
         input_required = ('cluster_id', 'topic_name')
-        output_required = ('id', 'name', 'is_active', 'sec_type', Int('max_backlog'), 'sub_key')
-        output_optional = (UTC('last_seen'),)
+        output_required = ('id', 'name', 'is_active', 'sec_type', Int('max_backlog'), 'sub_key', 'delivery_mode')
+        output_optional = (UTC('last_seen'), 'callback')
 
     def get_data(self, session):
         for item in pubsub_consumer_list(session, self.request.input.cluster_id, self.request.input.topic_name)[0]:
@@ -46,51 +46,6 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             for item in self.get_data(session):
                 self.response.payload.append(item)
-
-# ################################################################################################################################
-
-class Create(AdminService):
-    """ Creates a new pub/sub consumer.
-    """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_consumers_create_request'
-        response_elem = 'zato_pubsub_consumers_create_response'
-        input_required = ('cluster_id', 'client_id', 'topic_name', 'is_active', 'max_backlog')
-        output_required = ('id', 'name', 'sub_key')
-
-    def handle(self):
-        input = self.request.input
-
-        with closing(self.odb.session()) as session:
-            try:
-                # Find a topic by its name so it can be paired with client_id later on
-                topic = session.query(PubSubTopic).\
-                    filter(PubSubTopic.cluster_id==input.cluster_id).\
-                    filter(PubSubTopic.name==input.topic_name).\
-                    one()
-
-                sub_key = new_cid()
-                consumer = PubSubConsumer(
-                    None, input.is_active, sub_key, input.max_backlog, topic.id, input.client_id, input.cluster_id)
-
-                session.add(consumer)
-                session.commit()
-
-            except Exception, e:
-                msg = 'Could not create a consumer, e:`{}`'.format(format_exc(e))
-                self.logger.error(msg)
-                session.rollback()
-
-                raise 
-            else:
-                input.action = PUB_SUB_CONSUMER.CREATE
-                input.client_name = consumer.sec_def.name
-                input.sub_key = sub_key
-                self.broker_client.publish(input)
-
-            self.response.payload.id = consumer.id
-            self.response.payload.name = consumer.sec_def.name
-            self.response.payload.sub_key = sub_key
 
 # ################################################################################################################################
 
@@ -114,20 +69,84 @@ class GetInfo(AdminService):
             self.response.payload.name = consumer.sec_def.name
             self.response.payload.last_seen = self.pubsub.get_consumer_last_seen(consumer.sec_def.id)
             self.response.payload.sub_key = consumer.sub_key
+    
+# ################################################################################################################################
+
+class _CreateEdit(AdminService):
+
+    def _validate_input(self, input):
+
+        if not input.delivery_mode in (elem.id for elem in PUB_SUB_DELIVERY_MODE):
+            msg = 'Invalid delivery_mode `{}`, expected one of `{}`'.format(input.delivery_mode, PUB_SUB_DELIVERY_MODE)
+            raise ValueError(msg)
+
+        if input.delivery_mode == PUB_SUB_DELIVERY_MODE.CALLBACK_URL.id and not input.get('callback'):
+            msg = 'Callback missing on input'
+            raise ValueError(msg)
 
 # ################################################################################################################################
 
-class Edit(AdminService):
+class Create(_CreateEdit):
+    """ Creates a new pub/sub consumer.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pubsub_consumers_create_request'
+        response_elem = 'zato_pubsub_consumers_create_response'
+        input_required = ('cluster_id', 'client_id', 'topic_name', 'is_active', 'max_backlog', 'delivery_mode')
+        input_optional = ('callback',)
+        output_required = ('id', 'name', 'sub_key')
+
+    def handle(self):
+        input = self.request.input
+        self._validate_input(input)
+
+        with closing(self.odb.session()) as session:
+            try:
+                # Find a topic by its name so it can be paired with client_id later on
+                topic = session.query(PubSubTopic).\
+                    filter(PubSubTopic.cluster_id==input.cluster_id).\
+                    filter(PubSubTopic.name==input.topic_name).\
+                    one()
+
+                sub_key = new_cid()
+                consumer = PubSubConsumer(
+                    None, input.is_active, sub_key, input.max_backlog, input.delivery_mode, input.get('callback'),
+                    topic.id, input.client_id, input.cluster_id)
+
+                session.add(consumer)
+                session.commit()
+
+            except Exception, e:
+                msg = 'Could not create a consumer, e:`{}`'.format(format_exc(e))
+                self.logger.error(msg)
+                session.rollback()
+
+                raise 
+            else:
+                input.action = PUB_SUB_CONSUMER.CREATE
+                input.client_name = consumer.sec_def.name
+                input.sub_key = sub_key
+                self.broker_client.publish(input)
+
+            self.response.payload.id = consumer.id
+            self.response.payload.name = consumer.sec_def.name
+            self.response.payload.sub_key = sub_key
+
+# ################################################################################################################################
+
+class Edit(_CreateEdit):
     """ Edits a new pub/sub consumer.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_consumers_edit_request'
         response_elem = 'zato_pubsub_consumers_edit_response'
-        input_required = ('id', 'is_active', 'max_backlog')
+        input_required = ('id', 'is_active', 'max_backlog', 'delivery_mode')
+        input_optional = ('callback',)
         output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
+        self._validate_input(input)
 
         with closing(self.odb.session()) as session:
             try:
@@ -138,6 +157,8 @@ class Edit(AdminService):
 
                 consumer.is_active = input.is_active
                 consumer.max_backlog = input.max_backlog
+                consumer.delivery_mode = input.delivery_mode
+                consumer.callback = input.get('callback')
 
                 client_id = consumer.sec_def.id
                 client_name = consumer.sec_def.name
@@ -159,8 +180,10 @@ class Edit(AdminService):
                 msg.action = PUB_SUB_CONSUMER.EDIT
 
                 msg.is_active = consumer.is_active
-                msg.max_backlog = input.max_backlog
+                msg.max_backlog = consumer.max_backlog
                 msg.sub_key = consumer.sub_key
+                msg.delivery_mode = consumer.delivery_mode
+                msg.callback = consumer.callback
 
                 msg.client_id = client_id
                 msg.client_name = client_name

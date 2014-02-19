@@ -1229,6 +1229,8 @@ class PubSubConsumer(Base):
     is_active = Column(Boolean(), nullable=False)
     sub_key = Column(String(200), nullable=False)
     max_backlog = Column(Integer, nullable=False)
+    delivery_mode = Column(String(200), nullable=False)
+    callback = Column(String(4000), nullable=True)
 
     topic_id = Column(Integer, ForeignKey('pub_sub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(PubSubTopic, backref=backref('consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
@@ -1239,11 +1241,14 @@ class PubSubConsumer(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pub_sub_consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, is_active=None, sub_key=None, max_backlog=None, topic_id=None, sec_def_id=None, cluster_id=None):
+    def __init__(self, id=None, is_active=None, sub_key=None, max_backlog=None, delivery_mode=None, callback=None,
+                topic_id=None, sec_def_id=None, cluster_id=None):
         self.id = id
         self.is_active = is_active
         self.sub_key = sub_key
         self.max_backlog = max_backlog
+        self.delivery_mode = delivery_mode
+        self.callback = callback
         self.topic_id = topic_id
         self.sec_def_id = sec_def_id
         self.cluster_id = cluster_id
