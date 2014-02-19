@@ -441,6 +441,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_pubsub_producer_list(server.cluster.id, True)
         self.config.pubsub.producers = ConfigDict.from_query('pubsub_producers', query)
 
+        query = self.odb.get_pubsub_consumer_list(server.cluster.id, True)
+        self.config.pubsub.consumers = ConfigDict.from_query('pubsub_consumers', query)
+
         # Assign config to worker
         self.worker_store.worker_config = self.config
         self.worker_store.broker_client = self.broker_client

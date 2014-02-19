@@ -22,7 +22,8 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
 from zato.common.odb.model import ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
      DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, \
-     PubSubProducer, PubSubTopic, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
+     PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath,\
+     WSSDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -728,5 +729,29 @@ def pubsub_producer_list(session, cluster_id, topic_name, needs_columns=False):
     """ All pub/sub producers.
     """
     return _pubsub_producer(session, cluster_id, topic_name)
+
+# ################################################################################################################################
+
+def _pubsub_consumer(session, cluster_id, needs_columns=False):
+    return session.query(
+        PubSubConsumer.id,
+        PubSubConsumer.is_active,
+        PubSubConsumer.max_backlog,
+        PubSubConsumer.sub_key,
+        SecurityBase.id.label('client_id'),
+        SecurityBase.name,
+        SecurityBase.sec_type,
+        PubSubTopic.name.label('topic_name')).\
+        filter(Cluster.id==cluster_id).\
+        filter(PubSubConsumer.topic_id==PubSubTopic.id).\
+        filter(PubSubConsumer.cluster_id==Cluster.id).\
+        filter(PubSubConsumer.sec_def_id==SecurityBase.id).\
+        order_by(SecurityBase.sec_type, SecurityBase.name)
+
+@needs_columns
+def pubsub_consumer_list(session, cluster_id, topic_name, needs_columns=False):
+    """ All pub/sub consumers.
+    """
+    return _pubsub_consumer(session, cluster_id, topic_name)
 
 # ################################################################################################################################

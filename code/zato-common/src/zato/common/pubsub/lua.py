@@ -82,11 +82,15 @@ lua_get_from_cons_queue = """
    local cons_in_flight_ids = KEYS[2]
    local cons_in_flight_data = KEYS[3]
    local msg_key = KEYS[4]
+   local last_seen_consumer_key = KEYS[4]
+   local client_id = ARGV[5]
 
    local max_batch_size = tonumber(ARGV[1])
-   local now = ARGV[2]
-    
+   local utc_now = ARGV[2]
+
    local ids = redis.pcall('lrange', cons_queue, 0, max_batch_size)
+
+   redis.pcall('hset', last_seen_consumer_key, client_id, utc_now)
 
    -- It may well be the case that there are no messages for this client
    if #ids > 0 then
@@ -94,7 +98,7 @@ lua_get_from_cons_queue = """
 
        for id_idx, id in ipairs(ids) do
            redis.pcall('sadd', cons_in_flight_ids, id)
-           redis.pcall('hset', cons_in_flight_data, id, now)
+           redis.pcall('hset', cons_in_flight_data, id, utc_now)
            redis.pcall('lrem', cons_queue, 0, id)
        end
 
@@ -154,7 +158,7 @@ lua_delete_expired = """
    local msg_expire_at = KEYS[4]
    local unack_counter = KEYS[5]
 
-   local now_utc = ARGV[1]
+   local now_utc = tostring(ARGV[1])
    local expired = {}
 
    -- Grab a batch of IDs to check their expiration
@@ -171,7 +175,7 @@ lua_delete_expired = """
            -- Note that we're using ISO-8601 dates in the format of 2014-02-16T02:51:24.013459 so we can always
            -- compare expiration times lexicographically.
 
-           local expire_at = redis.pcall('hget', msg_expire_at, id)
+           local expire_at = tostring(redis.pcall('hget', msg_expire_at, id))
 
            -- The message has indeed expired so we can safely delete every piece of information on it.
            if now_utc > expire_at then

@@ -35,7 +35,7 @@ from paste.util.multidict import MultiDict
 # Zato
 from zato.common import CHANNEL, SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, STATS
-from zato.common.pubsub import Client, Topic
+from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.ftp import FTPStore
@@ -219,7 +219,13 @@ class WorkerStore(BrokerMessageReceiver):
 
         for key, value in self.worker_config.pubsub.producers.items():
             self.pubsub.add_producer(
-                Client(value.config.client_id, value.config.name), Topic(value.config.topic_name))
+                Client(value.config.client_id, value.config.name, value.config.is_active), Topic(value.config.topic_name))
+    
+        for key, value in self.worker_config.pubsub.consumers.items():
+            config = value.config
+            self.pubsub.add_consumer(
+                Consumer(config.client_id, config.name, config.is_active, config.sub_key, config.max_backlog),
+                Topic(config.topic_name))
 
 # ##############################################################################
 
@@ -699,6 +705,22 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_PUB_SUB_TOPIC_EDIT(self, msg):
         self.pubsub.update_topic(Topic(msg.name, msg.is_active, True, msg.max_depth))
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUB_SUB_CONSUMER_CREATE(self, msg):
+        self.pubsub.add_consumer(
+            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog), Topic(msg.topic_name))
+
+    def on_broker_msg_PUB_SUB_CONSUMER_EDIT(self, msg):
+        self.pubsub.update_consumer(
+            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog), Topic(msg.topic_name))
+
+    def on_broker_msg_PUB_SUB_CONSUMER_DELETE(self, msg):
+        self.pubsub.delete_consumer(
+            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog), Topic(msg.topic_name))
+
+# ################################################################################################################################
 
     def on_broker_msg_PUB_SUB_PRODUCER_CREATE(self, msg):
         self.pubsub.add_producer(Client(msg.client_id, msg.name, msg.is_active), Topic(msg.topic_name))
