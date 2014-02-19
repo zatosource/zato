@@ -84,6 +84,8 @@ class _CreateEdit(CreateEdit):
         return_data['topic_name'] = self.req.POST['topic_name']
         return_data['message'] = 'Successfully {} producer `{}`'.format(self.verb, return_data['name'])
 
+        return_data['last_seen'] = None
+
         client_id = self.req.POST.get('id')
         if client_id:
             response = self.req.zato.client.invoke('zato.pubsub.producers.get-info', {'id': client_id})

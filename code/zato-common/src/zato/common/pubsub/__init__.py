@@ -142,6 +142,14 @@ class Client(object):
         self.name = name
         self.is_active = is_active
 
+class Consumer(Client):
+    """ Pub/sub consumer.
+    """
+    def __init__(self, id, name, is_active=True, sub_key=None, max_backlog=PUB_SUB.DEFAULT_MAX_BACKLOG):
+        super(Consumer, self).__init__(id, name, is_active)
+        self.sub_key = sub_key
+        self.max_backlog = max_backlog
+
 # ################################################################################################################################
 
 class PubSub(object):
@@ -181,11 +189,15 @@ class PubSub(object):
         self.default_consumer = Client(None, None)
         self.default_producer = Client(None, None)
 
+    # ############################################################################################################################
+
     def add_topic(self, topic):
         with self.update_lock:
             self.topics[topic.name] = topic
 
     update_topic = add_topic
+
+    # ############################################################################################################################
 
     def add_subscription(self, sub_key, client_id, topic):
         """ Adds subscription for a given sub_id, client and topic. Must be called with self.update_lock held.
@@ -203,6 +215,8 @@ class PubSub(object):
         clients.add(client_id)
 
         self.logger.debug('Added subscription: `%s`, `%s`, `%s`', sub_key, client_id, topic)
+
+    # ############################################################################################################################
 
     def add_producer(self, client, topic):
         """ Adds information that this client can publish to the topic. 
@@ -234,6 +248,46 @@ class PubSub(object):
             producers.remove(client.id)
 
             del self.producers[client.id]
+
+    # ############################################################################################################################
+
+    def add_consumer(self, client, topic):
+        """ Adds information that this client can publish to the topic. 
+        """
+        with self.update_lock:
+            topics = self.cons_to_topic.setdefault(client.id, set())
+            topics.add(topic.name)
+
+            consumers = self.topic_to_cons.setdefault(topic.name, set())
+            consumers.add(client.id)
+
+            self.consumers[client.id] = client
+
+            self.sub_to_cons[client.sub_key] = client.id
+            self.cons_to_sub[client.id] = client.sub_key
+
+    def update_consumer(self, client, topic):
+        """ Updates a consumer.
+        """
+        with self.update_lock:
+            self.consumers[client.id].is_active = client.is_active
+            self.consumers[client.id].max_backlog = client.max_backlog
+
+    def delete_consumer(self, client, topic):
+        """ Deletes an association between a consumer and a topic.
+        """
+        with self.update_lock:
+            topics = self.cons_to_topic.setdefault(client.id, set())
+            topics.remove(topic.name)
+
+            consumers = self.topic_to_cons.setdefault(topic.name, set())
+            consumers.remove(client.id)
+
+            del self.consumers[client.id]
+            del self.sub_to_cons[client.sub_key]
+            del self.cons_to_sub[client.id]
+
+    # ############################################################################################################################
 
     def _not_implemented(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Must be overridden in subclasses')
@@ -402,8 +456,8 @@ class RedisPubSub(PubSub):
 
                 messages = self.run_lua(
                     self.LUA_GET_FROM_CONSUMER_QUEUE,
-                    [cons_queue, cons_in_flight_ids, cons_in_flight_data, self.MSG_VALUES_KEY],
-                    [ctx.max_batch_size, datetime.utcnow().isoformat()])
+                    [cons_queue, cons_in_flight_ids, cons_in_flight_data, self.MSG_VALUES_KEY, self.LAST_SEEN_CONSUMER_KEY],
+                    [ctx.max_batch_size, datetime.utcnow().isoformat()], ctx.client_id)
 
                 for msg in messages:
                     yield Message(**loads(msg))
@@ -536,6 +590,11 @@ class RedisPubSub(PubSub):
         """
         return self.kvdb.hget(self.LAST_SEEN_PRODUCER_KEY, client_id)
 
+    def get_consumer_last_seen(self, client_id):
+        """ Returns timestamp of the last time a consumer got a message, regardless of its topic.
+        """
+        return self.kvdb.hget(self.LAST_SEEN_CONSUMER_KEY, client_id)
+
 # ################################################################################################################################
 
 class PubSubAPI(object):
@@ -595,6 +654,15 @@ class PubSubAPI(object):
     def delete_producer(self, producer, topic):
         return self.impl.delete_producer(producer, topic)
 
+    def add_consumer(self, consumer, topic):
+        return self.impl.add_consumer(consumer, topic)
+
+    def update_consumer(self, consumer, topic):
+        return self.impl.update_consumer(consumer, topic)
+
+    def delete_consumer(self, consumer, topic):
+        return self.impl.delete_consumer(consumer, topic)
+
     # ############################################################################################################################
 
     def get_topic_depth(self, topic):
@@ -611,6 +679,9 @@ class PubSubAPI(object):
 
     def get_producer_last_seen(self, client_id):
         return self.impl.get_producer_last_seen(client_id)
+
+    def get_consumer_last_seen(self, client_id):
+        return self.impl.get_consumer_last_seen(client_id)
 
     # ############################################################################################################################
 

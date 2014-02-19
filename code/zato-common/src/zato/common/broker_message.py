@@ -212,6 +212,12 @@ PUB_SUB_PRODUCER.CREATE = b'11600'
 PUB_SUB_PRODUCER.EDIT = b'11601'
 PUB_SUB_PRODUCER.DELETE = b'11602'
 
+# New in 1.2
+PUB_SUB_CONSUMER = Bunch()
+PUB_SUB_CONSUMER.CREATE = b'11650'
+PUB_SUB_CONSUMER.EDIT = b'11651'
+PUB_SUB_CONSUMER.DELETE = b'11652'
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'
