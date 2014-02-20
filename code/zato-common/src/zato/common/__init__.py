@@ -391,13 +391,21 @@ class PUB_SUB:
     DEFAULT_MAX_DEPTH = 500
     DEFAULT_MAX_BACKLOG = 1000
 
-class PUB_SUB_DELIVERY_MODE:
-    PULL = NameId('Pull', 'pull')
-    CALLBACK_URL = NameId('Callback URL', 'callback-url')
+    class DELIVERY_MODE:
+        PULL = NameId('Pull', 'pull')
+        CALLBACK_URL = NameId('Callback URL', 'callback-url')
+    
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.PULL, self.CALLBACK_URL))
 
-    class __metaclass__(type):
-        def __iter__(self):
-            return iter((self.PULL, self.CALLBACK_URL))
+    class MESSAGE_SOURCE:
+        TOPIC = NameId('Topic', 'topic')
+        CONSUMER_QUEUE = NameId('Consumer queue', 'consumer-queue')
+    
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.TOPIC, self.CONSUMER_QUEUE))
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

@@ -12,20 +12,23 @@ lua_publish = """
 
    local id_key = KEYS[1]
    local msg_values = KEYS[2]
-   local msg_expire_at = KEYS[3]
-   local last_pub_time_key = KEYS[4]
-   local last_seen_producer_key = KEYS[5]
+   local msg_metadata_key = KEYS[3]
+   local msg_expire_at = KEYS[4]
+   local last_pub_time_key = KEYS[5]
+   local last_seen_producer_key = KEYS[6]
 
    local score = ARGV[1]
    local msg_id = ARGV[2]
    local expire_at = ARGV[3]
    local msg_value = ARGV[4]
-   local topic_name = ARGV[5]
-   local utc_now = ARGV[6]
-   local client_id = ARGV[7]
+   local msg_metadata = ARGV[5]
+   local topic_name = ARGV[6]
+   local utc_now = ARGV[7]
+   local client_id = ARGV[8]
 
    redis.pcall('zadd', id_key, score, msg_id)
    redis.pcall('hset', msg_values, msg_id, msg_value)
+   redis.pcall('hset', msg_metadata_key, msg_id, msg_metadata)
    redis.pcall('hset', msg_expire_at, msg_id, expire_at)
    redis.pcall('hset', last_pub_time_key, topic_name, utc_now)
    redis.pcall('hset', last_seen_producer_key, client_id, utc_now)
@@ -190,4 +193,21 @@ lua_delete_expired = """
 
    return expired
 
+"""
+
+lua_get_consumer_queue_message_list = """
+"""
+
+lua_get_topic_message_list = """
+   local ids_key = KEYS[1]
+   local msg_values = KEYS[2]
+
+   local data = {}
+   local ids = redis.pcall('zrange', ids_key, 0, -1)
+
+   for id_idx, id in ipairs(ids) do
+       table.insert(data, redis.pcall('hget', msg_values, id))
+   end
+
+   return data
 """

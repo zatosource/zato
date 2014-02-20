@@ -32,6 +32,7 @@ from zato.admin.web.views.pattern import delivery as pattern_delivery
 from zato.admin.web.views.pattern.delivery import definition as pattern_delivery_def
 from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
+from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import producers as pubsub_producers
 from zato.admin.web.views.security import basic_auth, oauth, tech_account, wss
 
@@ -425,19 +426,6 @@ urlpatterns = patterns('',
         login_required(impexp.export), name='kvdb-data-dict-impexp-export'),
 
     # Pub/sub
-    url(r'^zato/pubsub/topics/$',
-        login_required(pubsub_topics.Index()), name=pubsub_topics.Index.url_name),
-    url(r'^zato/pubsub/topics/create/$',
-        login_required(pubsub_topics.Create()), name=pubsub_topics.Create.url_name),
-    url(r'^zato/pubsub/topics/edit/$',
-        login_required(pubsub_topics.Edit()), name=pubsub_topics.Edit.url_name),
-    url(r'^zato/pubsub/topics/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(pubsub_topics.Delete()), name=pubsub_topics.Delete.url_name),
-
-    url(r'^zato/pubsub/topics/publish/cluster/(?P<cluster_id>.*)/topic/(?P<topic>.*)$',
-        login_required(pubsub_topics.publish), name='pubsub-topics-publish'),
-    url(r'^zato/pubsub/topics/publish/action/cluster/(?P<cluster_id>.*)/topic/(?P<topic>.*)$',
-        login_required(pubsub_topics.publish_action), name='pubsub-topics-publish-action'),
 
     url(r'^zato/pubsub/consumers/cluster/(?P<cluster_id>.*)/topic/(?P<topic_name>.*)$',
         login_required(pubsub_consumers.Index()), name=pubsub_consumers.Index.url_name),
@@ -448,6 +436,16 @@ urlpatterns = patterns('',
     url(r'^zato/pubsub/consumers/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(pubsub_consumers.Delete()), name=pubsub_consumers.Delete.url_name),
 
+    url(r'^zato/pubsub/message/cluster/(?P<cluster_id>.*)/topic/(?P<topic_name>.*)$',
+        login_required(pubsub_message.index_topic), name='pubsub-message-topic'),
+    url(r'^zato/pubsub/message/cluster/(?P<cluster_id>.*)/msg/(?P<msg_id>.*)/topic/(?P<topic_name>.*)$',
+        login_required(pubsub_message.details_topic), name='pubsub-message-details-topic'),
+
+    url(r'^zato/pubsub/topics/publish/cluster/(?P<cluster_id>.*)/topic/(?P<topic>.*)$',
+        login_required(pubsub_topics.publish), name='pubsub-topics-publish'),
+    url(r'^zato/pubsub/topics/publish/action/cluster/(?P<cluster_id>.*)/topic/(?P<topic>.*)$',
+        login_required(pubsub_topics.publish_action), name='pubsub-topics-publish-action'),
+
     url(r'^zato/pubsub/producers/cluster/(?P<cluster_id>.*)/topic/(?P<topic_name>.*)$',
         login_required(pubsub_producers.Index()), name=pubsub_producers.Index.url_name),
     url(r'^zato/pubsub/producers/create/$',
@@ -456,6 +454,15 @@ urlpatterns = patterns('',
         login_required(pubsub_producers.Edit()), name=pubsub_producers.Edit.url_name),
     url(r'^zato/pubsub/producers/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(pubsub_producers.Delete()), name=pubsub_producers.Delete.url_name),
+
+    url(r'^zato/pubsub/topics/$',
+        login_required(pubsub_topics.Index()), name=pubsub_topics.Index.url_name),
+    url(r'^zato/pubsub/topics/create/$',
+        login_required(pubsub_topics.Create()), name=pubsub_topics.Create.url_name),
+    url(r'^zato/pubsub/topics/edit/$',
+        login_required(pubsub_topics.Edit()), name=pubsub_topics.Edit.url_name),
+    url(r'^zato/pubsub/topics/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(pubsub_topics.Delete()), name=pubsub_topics.Delete.url_name),
 
     # Statistics
     url(r'^zato/stats/trends/data/$',

@@ -27,8 +27,9 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common import PUB_SUB, ZATO_NONE
-from zato.common.pubsub.lua import lua_move_to_target_queues, lua_get_from_cons_queue, lua_publish, lua_reject, lua_ack, \
-     lua_delete_expired
+from zato.common.pubsub.lua import lua_ack, lua_delete_expired, lua_get_consumer_queue_message_list, lua_get_from_cons_queue, \
+     lua_get_topic_message_list, lua_move_to_target_queues, lua_publish, lua_reject
+     
 from zato.common.util import datetime_to_seconds, make_repr, new_cid
 
 # ################################################################################################################################
@@ -46,31 +47,45 @@ class Message(object):
     """ A published or received message.
     """
     def __init__(self, payload='', topic=None, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY, \
-                     expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, **kwargs):
+                     expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, producer=None, creation_time_utc=None,
+                     expire_at_utc=None, **kwargs):
         self.payload = payload
         self.topic = topic
         self.mime_type = mime_type
         self.priority = priority # In 1-9 range where 9 is top priority
-
         self.msg_id = msg_id or new_cid()
-
+        self.producer = producer
         self.expiration = expiration
-        self.creation_time_utc = datetime.utcnow()
-        self.expire_at_utc = self.creation_time_utc + timedelta(seconds=self.expiration)
+        self.creation_time_utc = creation_time_utc or datetime.utcnow()
+        self.expire_at_utc = expire_at_utc or (self.creation_time_utc + timedelta(seconds=self.expiration))
+
+        # These two, in local timezone, are used by web-admin.
+        self.creation_time = None
+        self.expire_at = None
 
     def __repr__(self):
         return make_repr(self)
 
     def to_dict(self):
+        if isinstance(self.creation_time_utc, basestring):
+            creation_time_utc = self.creation_time_utc
+        else:
+            creation_time_utc = self.creation_time_utc.isoformat()
+
+        if isinstance(self.expire_at_utc, basestring):
+            expire_at_utc = self.expire_at_utc
+        else:
+            expire_at_utc = self.expire_at_utc.isoformat()
+
         return {
-            'payload': self.payload,
             'topic': self.topic,
             'mime_type': self.mime_type,
             'priority': self.priority,
             'msg_id': self.msg_id,
-            'creation_time_utc': self.creation_time_utc.isoformat(),
-            'expire_at_utc': self.expire_at_utc.isoformat(),
-            'expiration': self.expiration
+            'creation_time_utc': creation_time_utc,
+            'expire_at_utc': expire_at_utc,
+            'expiration': self.expiration,
+            'producer': self.producer
         }
 
     def to_json(self):
@@ -299,6 +314,7 @@ class PubSub(object):
 class RedisPubSub(PubSub):
     """ Publish/subscribe based on Redis.
     """
+    # Main public API
     LUA_PUBLISH = 'lua-publish'
     LUA_GET_FROM_CONSUMER_QUEUE = 'lua-get-from-consumer-queue'
     LUA_REJECT = 'lua-reject'
@@ -307,6 +323,10 @@ class RedisPubSub(PubSub):
     # Background tasks
     LUA_DELETE_EXPIRED = 'lua-delete-expired'
     LUA_MOVE_TO_TARGET_QUEUES = 'lua-move-to-target-queues'
+
+    # Message browsing
+    LUA_GET_CONSUMER_QUEUE_MESSAGE_LIST = 'lua-get-consumer-queue-message-list'
+    LUA_GET_TOPIC_MESSAGE_LIST = 'lua-get-topic-message-list'
 
     # ############################################################################################################################
 
@@ -321,6 +341,7 @@ class RedisPubSub(PubSub):
         self.CONSUMER_IN_FLIGHT_IDS_PREFIX = '{}{}'.format(key_prefix, 'set:consumer:in-flight:ids:{}')
         self.CONSUMER_IN_FLIGHT_DATA_PREFIX = '{}{}'.format(key_prefix, 'hash:consumer:in-flight:data:{}')
         self.MSG_VALUES_KEY = '{}{}'.format(key_prefix, 'hash:msg-values')
+        self.MSG_METADATA_KEY = '{}{}'.format(key_prefix, 'hash:msg-metadata')
         self.MSG_EXPIRE_AT_KEY = '{}{}'.format(key_prefix, 'hash:msg-expire-at') # In UTC
         self.UNACK_COUNTER_KEY = '{}{}'.format(key_prefix, 'hash:unack-counter')
         self.LAST_PUB_TIME_KEY = '{}{}'.format(key_prefix, 'hash:last-pub-time') # In UTC
@@ -333,6 +354,8 @@ class RedisPubSub(PubSub):
         self.add_lua_program(self.LUA_REJECT, lua_reject)
         self.add_lua_program(self.LUA_ACK, lua_ack)
         self.add_lua_program(self.LUA_DELETE_EXPIRED, lua_delete_expired)
+        self.add_lua_program(self.LUA_GET_CONSUMER_QUEUE_MESSAGE_LIST, lua_get_consumer_queue_message_list)
+        self.add_lua_program(self.LUA_GET_TOPIC_MESSAGE_LIST, lua_get_topic_message_list)
 
     # ############################################################################################################################
 
@@ -413,8 +436,9 @@ class RedisPubSub(PubSub):
         try:
             self.run_lua(
                 self.LUA_PUBLISH, [
-                    id_key, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY, self.LAST_PUB_TIME_KEY, self.LAST_SEEN_PRODUCER_KEY],
-                    [score, ctx.msg.msg_id, ctx.msg.expire_at_utc.isoformat(), ctx.msg.to_json(),
+                    id_key, self.MSG_VALUES_KEY, self.MSG_METADATA_KEY, self.MSG_EXPIRE_AT_KEY, self.LAST_PUB_TIME_KEY,
+                      self.LAST_SEEN_PRODUCER_KEY],
+                    [score, ctx.msg.msg_id, ctx.msg.expire_at_utc.isoformat(), ctx.msg.payload, ctx.msg.to_json(),
                        ctx.topic, datetime.utcnow().isoformat(), ctx.client_id])
         except Exception, e:
             self.logger.error('Pub error `%s`', format_exc(e))
@@ -559,7 +583,7 @@ class RedisPubSub(PubSub):
                     if self.logger.isEnabledFor(logging.DEBUG):
                         self.logger.debug('keys `%s`', ', '.join(keys))
 
-                    move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
+                    move_result = None#self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
                     self.logger.debug('move_result `%s` `%s`', move_result, type(move_result))
 
 # ################################################################################################################################
@@ -595,6 +619,19 @@ class RedisPubSub(PubSub):
         """
         return self.kvdb.hget(self.LAST_SEEN_CONSUMER_KEY, client_id)
 
+    # ############################################################################################################################
+
+    def get_consumer_queue_message_list(self, source_name):
+        """ Returns all messages from a given consumer queue.
+        """
+        raise NotImplementedError()
+
+    def get_topic_message_list(self, source_name):
+        """ Returns all messages from a given topic.
+        """
+        for item in self.run_lua(self.LUA_GET_TOPIC_MESSAGE_LIST, [self.MSG_IDS_PREFIX.format(source_name), self.MSG_METADATA_KEY]):
+            yield Message(**loads(item))
+
 # ################################################################################################################################
 
 class PubSubAPI(object):
@@ -610,7 +647,8 @@ class PubSubAPI(object):
         pub_ctx = PubCtx()
         pub_ctx.client_id = client_id
         pub_ctx.topic = topic
-        pub_ctx.msg = Message(payload, topic, mime_type, priority, expiration, msg_id)
+        pub_ctx.msg = Message(
+            payload, topic, mime_type, priority, expiration, msg_id, self.impl.producers[client_id].name)
 
         return self.impl.publish(pub_ctx)
 
@@ -699,5 +737,13 @@ class PubSubAPI(object):
 
     def set_default_producer(self, client):
         self.impl.default_producer = client
+
+# ################################################################################################################################
+
+    def get_consumer_queue_message_list(self, source_name):
+        return self.impl.get_consumer_queue_message_list(source_name)
+
+    def get_topic_message_list(self, source_name):
+        return self.impl.get_topic_message_list(source_name)
 
 # ################################################################################################################################
