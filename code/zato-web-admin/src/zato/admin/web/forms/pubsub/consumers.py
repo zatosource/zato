@@ -15,7 +15,7 @@ from operator import attrgetter
 from django import forms
 
 # Zato
-from zato.common import PUB_SUB, PUB_SUB_DELIVERY_MODE
+from zato.common import PUB_SUB
 
 class CreateForm(forms.Form):
     cluster_id = forms.CharField(widget=forms.HiddenInput())
@@ -31,7 +31,7 @@ class CreateForm(forms.Form):
         self.fields['client_id'].choices = []
         self.fields['delivery_mode'].choices = []
 
-        for item in PUB_SUB_DELIVERY_MODE:
+        for item in PUB_SUB.DELIVERY_MODE:
             self.fields['delivery_mode'].choices.append([item.id, item.name])
 
     def set_client_id(self, client_ids):

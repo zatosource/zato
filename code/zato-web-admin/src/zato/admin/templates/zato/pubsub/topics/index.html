@@ -83,7 +83,7 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
-                        <td>{{ item.current_depth }}</td>
+                        <td><a href="{% url pubsub-message-topic cluster_id item.name %}">{{ item.current_depth }}</a></td>
                         <td>{{ item.max_depth }}</td>
                         <td>{% if item.last_pub_time %}{{ item.last_pub_time }}{% else %}<span class="form_hint">(Never)</span>{% endif %}</td>
                         <td><a href="{% url pubsub-consumers cluster_id item.name %}">{{ item.consumers_count }} consumer{% if item.consumers_count == 0 or item.consumers_count >= 2 %}s{% endif %}</a></td>

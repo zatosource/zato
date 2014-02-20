@@ -16,7 +16,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # Zato
-from zato.common import PUB_SUB, PUB_SUB_DELIVERY_MODE
+from zato.common import PUB_SUB
 from zato.common.broker_message import PUB_SUB_CONSUMER, PUB_SUB_TOPIC
 from zato.common.odb.model import Cluster, PubSubConsumer, PubSubTopic
 from zato.common.odb.query import pubsub_consumer_list
@@ -76,11 +76,11 @@ class _CreateEdit(AdminService):
 
     def _validate_input(self, input):
 
-        if not input.delivery_mode in (elem.id for elem in PUB_SUB_DELIVERY_MODE):
-            msg = 'Invalid delivery_mode `{}`, expected one of `{}`'.format(input.delivery_mode, PUB_SUB_DELIVERY_MODE)
+        if not input.delivery_mode in (elem.id for elem in PUB_SUB.DELIVERY_MODE):
+            msg = 'Invalid delivery_mode `{}`, expected one of `{}`'.format(input.delivery_mode, PUB_SUB.DELIVERY_MODE)
             raise ValueError(msg)
 
-        if input.delivery_mode == PUB_SUB_DELIVERY_MODE.CALLBACK_URL.id and not input.get('callback'):
+        if input.delivery_mode == PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id and not input.get('callback'):
             msg = 'Callback missing on input'
             raise ValueError(msg)
 
