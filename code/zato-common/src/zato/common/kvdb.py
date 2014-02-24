@@ -14,11 +14,15 @@ from importlib import import_module
 from string import punctuation
 from time import gmtime
 
+# Paste
+from paste.util.converters import asbool
+
 # PyParsing
 from pyparsing import alphanums, oneOf, OneOrMore, Optional, White, Word
 
 # redis
 from redis import StrictRedis
+from redis.sentinel import Sentinel
 
 # Zato
 from zato.common import KVDB as _KVDB, NONCE_STORE
@@ -45,18 +49,55 @@ class KVDB(object):
         self.conn = conn
         self.config = config
         self.decrypt_func = decrypt_func
+        self.conn_class = None # Introduced so it's easier to test the class
+
+    def _get_connection_class(self, has_sentinel=False):
+        """ Returns a concrete class to create Redis connections off basing on whether we use Redis sentinels or not.
+        Abstracted out to a separate method so it's easier to test the whole class in separation.
+        """
+        return Sentinel if has_sentinel else StrictRedis 
+
+    def _parse_sentinels(self, item):
+        if item:
+            if isinstance(item, basestring):
+                item = [item]
+            out = []
+            for elem in item:
+                elem = elem.split(':')
+                out.append((elem[0], int(elem[1])))
+            return out
 
     def init(self):
         config = {}
 
-        if self.config.get('host'):
-            config['host'] = self.config.host
+        has_sentinel = asbool(self.config.get('use_redis_sentinels', False))
 
-        if self.config.get('port'):
-            config['port'] = int(self.config.port)
+        if has_sentinel:
+            sentinels = self._parse_sentinels(self.config.get('redis_sentinels'))
 
-        if self.config.get('db'):
-            config['db'] = int(self.config.db)
+            if not sentinels:
+                raise ValueError('kvdb.redis_sentinels must be provided')
+
+            sentinel_master = self.config.get('redis_sentinels_master', None)
+            if not sentinel_master:
+                raise ValueError('kvdb.redis_sentinels_master must be provided')
+
+            config['sentinels'] = sentinels
+            config['sentinel_master'] = sentinel_master
+
+        else:
+
+            if self.config.get('host'):
+                config['host'] = self.config.host
+
+            if self.config.get('port'):
+                config['port'] = int(self.config.port)
+
+            if self.config.get('unix_socket_path'):
+                config['unix_socket_path'] = self.config.unix_socket_path
+
+            if self.config.get('db'):
+                config['db'] = int(self.config.db)
 
         if self.config.get('password'):
             config['password'] = self.decrypt_func(self.config.password)
@@ -76,10 +117,13 @@ class KVDB(object):
         if self.config.get('errors'):
             config['errors'] = self.config.errors
 
-        if self.config.get('unix_socket_path'):
-            config['unix_socket_path'] = self.config.unix_socket_path
+        self.conn_class = self._get_connection_class(has_sentinel)
 
-        self.conn = StrictRedis(**config)
+        if has_sentinel:
+            instance = self.conn_class(config['sentinels'], config.get('password'), config.get('socket_timeout'))
+            self.conn = instance.master_for(config['sentinel_master'])
+        else:
+            self.conn = self.conn_class(**config)
 
     def pubsub(self):
         return self.conn.pubsub()
