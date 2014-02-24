@@ -104,6 +104,9 @@ db=0
 socket_timeout=
 charset=
 errors=
+use_redis_sentinels=False
+redis_sentinels=
+redis_sentinels_master=
 
 [startup_services]
 zato.helpers.input-logger=Sample payload for a startup service
