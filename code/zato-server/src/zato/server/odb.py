@@ -32,7 +32,7 @@ from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_w
      channel_zmq_list, def_amqp, def_amqp_list, def_jms_wmq, def_jms_wmq_list, basic_auth_list, elem_path_list, http_soap_list, \
      http_soap_security_list, internal_channel_list, job_list, namespace_list, ntlm_list, oauth_list, out_amqp, out_amqp_list, \
      out_ftp, out_ftp_list, out_jms_wmq, out_jms_wmq_list, out_sql, out_sql_list, out_zmq, out_zmq_list, tech_acc_list, \
-     wss_list, xpath_list
+     wss_list, xpath_list, out_ldap, out_ldap_list
 from zato.common.util import current_host, security_def_type, TRACE1
 from zato.server.connection.sql import SessionWrapper
 
@@ -496,6 +496,18 @@ class ODBManager(SessionWrapper):
 
 # ##############################################################################
 
+    def get_out_ldap(self, cluster_id, out_id):
+        """ Returns an outgoing LDAP connection's details.
+        """
+        return out_ldap(self._session, cluster_id, out_id)
+
+    def get_out_ldap_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of outgoing LDAP connections.
+        """
+        return out_ldap_list(self._session, cluster_id, needs_columns)
+
+# ##############################################################################
+
     def get_out_ftp(self, cluster_id, out_id):
         """ Returns an outgoing FTP connection's details.
         """
@@ -525,7 +537,7 @@ class ODBManager(SessionWrapper):
 
 # ##############################################################################
 
-    def audit_set_request_http_soap(self, conn_id, name, cid, transport, 
+    def audit_set_request_http_soap(self, conn_id, name, cid, transport,
             connection, req_time, user_token, remote_addr, req_headers,
             req_payload):
 

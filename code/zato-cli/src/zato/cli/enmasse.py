@@ -54,6 +54,7 @@ from zato.server.service.internal.outgoing import amqp as outgoing_amqp_mod
 from zato.server.service.internal.outgoing import ftp as outgoing_ftp_mod
 from zato.server.service.internal.outgoing import jms_wmq as outgoing_jms_wmq_mod
 from zato.server.service.internal.outgoing import sql as outgoing_sql_mod
+from zato.server.service.internal.outgoing import ldap as outgoing_ldap_mod
 from zato.server.service.internal.outgoing import zmq as outgoing_zmq_mod
 from zato.server.service.internal import scheduler as scheduler_mod
 from zato.server.service.internal.security import basic_auth as sec_basic_auth_mod
@@ -539,6 +540,7 @@ class EnMasse(ManageCommand):
             'zato.outgoing.ftp.get-list':'outconn_ftp',
             'zato.outgoing.jms-wmq.get-list':'outconn_jms_wmq',
             'zato.outgoing.sql.get-list':'outconn_sql',
+            'zato.outgoing.ldap.get-list':'outconn_ldap',
             'zato.outgoing.zmq.get-list':'outconn_zmq',
             'zato.scheduler.job.get-list':'scheduler',
             }
@@ -700,6 +702,7 @@ class EnMasse(ManageCommand):
             'outconn_plain_http':http_soap_mod.Create,
             'outconn_soap':http_soap_mod.Create,
             'outconn_sql':outgoing_sql_mod.Create,
+            'outconn_ldap':outgoing_ldap_mod.Create,
             'outconn_zmq':outgoing_zmq_mod.Create,
             'scheduler':scheduler_mod.Create,
             'xpath': xpath_mod.Create,
@@ -927,6 +930,7 @@ class EnMasse(ManageCommand):
             'outconn_ftp':ImportInfo(outgoing_ftp_mod, MAYBE_NEEDS_PASSWORD),
             'outconn_jms_wmq':ImportInfo(outgoing_jms_wmq_mod),
             'outconn_sql':ImportInfo(outgoing_sql_mod, True),
+            'outconn_ldap':ImportInfo(outgoing_ldap_mod, True),
             'outconn_zmq':ImportInfo(outgoing_zmq_mod),
             'scheduler':ImportInfo(scheduler_mod),
             'xpath':ImportInfo(xpath_mod),

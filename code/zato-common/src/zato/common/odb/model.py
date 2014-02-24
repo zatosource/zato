@@ -330,16 +330,16 @@ class HTTPSOAP(Base):
 
     # New in 1.2
     params_pri = Column(String(200), nullable=True, default='channel-params-over-msg')
-    
+
     # New in 1.2
     audit_enabled = Column(Boolean, nullable=False, default=False)
-    
+
     # New in 1.2
     audit_back_log = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_BACK_LOG)
-    
+
     # New in 1.2
     audit_max_payload = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_MAX_PAYLOAD)
-    
+
     # New in 1.2
     audit_repl_patt_type = Column(String(), nullable=False, default=MSG_PATTERN_TYPE.ELEM_PATH.id)
 
@@ -387,6 +387,41 @@ class HTTPSOAP(Base):
         self.service_name = service_name # Not used by the DB
         self.security_id = security_id
         self.security_name = security_name
+
+
+################################################################################
+
+class LDAPConnectionPool(Base):
+    """An LDAP connection pool."""
+    __tablename__ = 'ldap_pool'
+    __table_args__ = (UniqueConstraint('cluster_id', 'name'), {})
+
+    id = Column(Integer,  Sequence('ldap_pool_id_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    bind_dn = Column(String(200), nullable=False)
+    password = Column(String(200), nullable=False)
+    extra = Column(LargeBinary(20000), nullable=True)
+    host = Column(String(200), nullable=False)
+    port = Column(Integer(), nullable=False)
+    pool_size = Column(Integer(), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('ldap_pools', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, is_active=None,
+                 bind_dn=None, extra=None, host=None, port=None,
+                 pool_size=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.bind_dn = bind_dn
+        self.extra = extra
+        self.host = host
+        self.port = port
+        self.cluster = cluster
+        self.pool_size = pool_size
+
 
 ################################################################################
 
@@ -1138,18 +1173,18 @@ class HTTSOAPAudit(Base):
     id = Column(Integer, Sequence('http_soap_audit_seq'), primary_key=True)
     name = Column(String(), nullable=False, index=True)
     cid = Column(String(), nullable=False, index=True)
-    
+
     transport = Column(String(), nullable=False, index=True)
     connection = Column(String(), nullable=False, index=True)
-    
+
     req_time = Column(DateTime(), nullable=False)
     resp_time = Column(DateTime(), nullable=True)
-    
+
     user_token = Column(String(), nullable=True, index=True)
     invoke_ok = Column(Boolean(), nullable=True)
     auth_ok = Column(Boolean(), nullable=True)
     remote_addr = Column(String(), nullable=False, index=True)
-    
+
     req_headers = Column(String(), nullable=True)
     req_payload = Column(String(), nullable=True)
     resp_headers = Column(String(), nullable=True)
@@ -1158,26 +1193,26 @@ class HTTSOAPAudit(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     conn_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
 
-    def __init__(self, id=None, name=None, cid=None, transport=None, 
-            connection=None, req_time=None, resp_time=None, user_token=None, 
+    def __init__(self, id=None, name=None, cid=None, transport=None,
+            connection=None, req_time=None, resp_time=None, user_token=None,
             invoke_ok=None, auth_ok=None, remote_addr=None, req_headers=None,
             req_payload=None, resp_headers=None, resp_payload=None):
-        
+
         self.id = id
         self.name = name
         self.cid = cid
-        
+
         self.transport = transport
         self.connection = connection
-        
+
         self.req_time = req_time
         self.resp_time = resp_time
-        
+
         self.user_token = user_token
         self.invoke_ok = invoke_ok
         self.auth_ok = auth_ok
         self.remote_addr = remote_addr
-        
+
         self.req_headers = req_headers
         self.req_payload = req_payload
         self.resp_headers = resp_headers
@@ -1188,29 +1223,29 @@ class HTTSOAPAuditReplacePatternsElemPath(Base):
     """
     __tablename__ = 'http_soap_au_rpl_p_ep'
     __table_args__ = (UniqueConstraint('conn_id', 'pattern_id'), {})
-    
+
     id = Column(Integer, Sequence('htp_sp_ad_rpl_p_ep_seq'), primary_key=True)
     conn_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
     pattern_id = Column(Integer, ForeignKey('msg_elem_path.id', ondelete='CASCADE'), nullable=False)
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    
-    replace_patterns_elem_path = relationship(HTTPSOAP, 
+
+    replace_patterns_elem_path = relationship(HTTPSOAP,
         backref=backref('replace_patterns_elem_path', order_by=id, cascade='all, delete, delete-orphan'))
 
     pattern = relationship(ElemPath)
-    
+
 class HTTSOAPAuditReplacePatternsXPath(Base):
     """ XPath replace patterns for HTTP/SOAP connections.
     """
     __tablename__ = 'http_soap_au_rpl_p_xp'
     __table_args__ = (UniqueConstraint('conn_id', 'pattern_id'), {})
-    
+
     id = Column(Integer, Sequence('htp_sp_ad_rpl_p_xp_seq'), primary_key=True)
     conn_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
     pattern_id = Column(Integer, ForeignKey('msg_xpath.id', ondelete='CASCADE'), nullable=False)
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    
-    replace_patterns_xpath = relationship(HTTPSOAP, 
+
+    replace_patterns_xpath = relationship(HTTPSOAP,
         backref=backref('replace_patterns_xpath', order_by=id, cascade='all, delete, delete-orphan'))
 
     pattern = relationship(XPath)

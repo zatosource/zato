@@ -42,6 +42,7 @@ from zato.server.connection.http_soap.channel import RequestDispatcher, RequestH
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.sql import PoolStore, SessionWrapper
+from zato.server.connection.ldap import LDAPStore
 from zato.server.message import ElemPathStore, NamespaceStore, XPathStore
 from zato.server.stats import MaintenanceTool
 
@@ -108,6 +109,7 @@ class WorkerStore(BrokerMessageReceiver):
         # Create all the expected connections
         self.init_sql()
         self.init_ftp()
+        self.init_ldap()
         self.init_http_soap()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
@@ -191,6 +193,13 @@ class WorkerStore(BrokerMessageReceiver):
         config_list = self.worker_config.out_ftp.get_config_list()
         self.worker_config.out_ftp = FTPStore()
         self.worker_config.out_ftp.add_params(config_list)
+
+    def init_ldap(self):
+        """ Initializes LDAP connections.
+        """
+        config_list = self.worker_config.out_ldap.get_config_list()
+        self.worker_config.out_ldap = LDAPStore()
+        self.worker_config.out_ldap.add_params(config_list)
 
     def init_http_soap(self):
         """ Initializes plain HTTP/SOAP connections.
@@ -585,6 +594,17 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_OUTGOING_FTP_CHANGE_PASSWORD(self, msg, *args):
         self.worker_config.out_ftp.change_password(msg.name, msg.password)
+
+# ##############################################################################
+
+    def on_broker_msg_OUTGOING_LDAP_CREATE_EDIT(self, msg, *args):
+        self.worker_config.out_ldap.create_edit(msg, msg.get('old_name'))
+
+    def on_broker_msg_OUTGOING_LDAP_DELETE(self, msg, *args):
+        self.worker_config.out_ldap.delete(msg.name)
+
+    def on_broker_msg_OUTGOING_LDAP_CHANGE_PASSWORD(self, msg, *args):
+        self.worker_config.out_ldap.change_password(msg.name, msg.password)
 
 # ##############################################################################
 

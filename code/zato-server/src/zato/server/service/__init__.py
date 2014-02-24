@@ -211,8 +211,8 @@ class Service(object):
         out_zmq = ZMQFacade(self.broker_client, self.server.delivery_store)
         out_sql = self.worker_store.sql_pool_store
 
-        out_ftp, out_plain_http, out_soap = self.worker_store.worker_config.outgoing_connections()
-        self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap)
+        out_ftp, out_ldap, out_plain_http, out_soap = self.worker_store.worker_config.outgoing_connections()
+        self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap, out_ldap)
 
         is_sio = hasattr(self, 'SimpleIO')
 

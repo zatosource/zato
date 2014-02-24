@@ -1,0 +1,87 @@
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$.fn.zato.data_table.LDAP = new Class({
+    toString: function() {
+        var s = '<LDAP id:{0} name:{1} is_active:{2}';
+        return String.format(s, this.id ? this.id : '(none)',
+                                this.name ? this.name : '(none)',
+                                this.is_active ? this.is_active : '(none)');
+    }
+});
+
+// /////////////////////////////////////////////////////////////////////////////
+
+$(document).ready(function() {
+    $('#data-table').tablesorter();
+    $.fn.zato.data_table.class_ = $.fn.zato.data_table.LDAP;
+    $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.ldap.data_table.new_row;
+    $.fn.zato.data_table.parse();
+    $.fn.zato.data_table.setup_forms(['name', 'username', 'db_name', 'engine', 'host', 'port', 'pool_size']);
+})
+
+$.fn.zato.outgoing.ldap.create = function() {
+    $.fn.zato.data_table._create_edit('create', 'Create a new outgoing LDAP connection', null);
+}
+
+$.fn.zato.outgoing.ldap.edit = function(id) {
+    $.fn.zato.data_table._create_edit('edit', 'Update the outgoing LDAP connection', id);
+}
+
+$.fn.zato.outgoing.ldap.data_table.new_row = function(item, data, include_tr) {
+    var row = '';
+
+    if(include_tr) {
+        row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
+    }
+
+    var is_active = item.is_active == true;
+    
+    row += "<td class='numbering'>&nbsp;</td>";
+    row += "<td class='impexp'><input type='checkbox' /></td>";
+    row += String.format('<td>{0}</td>', item.name);
+    row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', data.engine_text);
+    row += String.format('<td>{0}</td>', item.host);
+    row += String.format('<td>{0}</td>', item.port);
+    row += String.format('<td>{0}</td>', item.db_name);
+    row += String.format('<td>{0}</td>', item.username);
+    row += String.format('<td>{0}</td>', item.pool_size);
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.ldap.ping('{0}', {1})\">Ping</a>", item.id, data.cluster_id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.ldap.edit('{0}')\">Edit</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.ldap.delete_({0});'>Delete</a>", item.id));
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
+    row += String.format("<td class='ignore'>{0}</td>", is_active);
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.engine);
+
+    if(include_tr) {
+        row += '</tr>';
+    }
+
+    return row;
+}
+
+$.fn.zato.outgoing.ldap.delete_ = function(id) {
+    $.fn.zato.data_table.delete_(id, 'td.item_id_',
+        'Outgoing LDAP connection [{0}] deleted',
+        'Are you sure you want to delete the outgoing LDAP connection [{0}]?',
+        true);
+}
+
+$.fn.zato.outgoing.ldap.ping = function(cluster_id, id) {
+
+    var _callback = function(data, status) {
+        var success = status == 'success';
+        msg = data.responseText;
+        $.fn.zato.user_message(success, msg);
+    }
+
+    $.ajax({
+        type: 'POST',
+        url: String.format('./ping/{0}/cluster/{1}/', cluster_id, id),
+        data: '',
+        headers: {'X-CSRFToken': $.cookie('csrftoken')},
+        complete: _callback
+    });
+}

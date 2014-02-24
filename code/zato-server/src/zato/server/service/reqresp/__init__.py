@@ -165,7 +165,7 @@ class Request(SIOConverter):
                             path_prefix, use_text, self.channel_params, self.has_simple_io_config,
                             self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes)
                     params[param_name] = value
-    
+
                 except Exception, e:
                     msg = 'Caught an exception, param:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
                         param, self.has_simple_io_config, format_exc(e))
@@ -388,10 +388,11 @@ class Outgoing(object):
     """ A container for various outgoing connections a service can access. This
     in fact is a thin wrapper around data fetched from the service's self.worker_store.
     """
-    __slots__ = ('ftp', 'amqp', 'zmq', 'jms_wmq', 'sql', 'plain_http', 'soap')
+    __slots__ = ('ftp', 'amqp', 'zmq', 'jms_wmq', 'sql', 'plain_http', 'soap',
+                 'ldap')
 
     def __init__(self, ftp=None, amqp=None, zmq=None, jms_wmq=None, sql=None,
-                 plain_http=None, soap=None):
+                 plain_http=None, soap=None, ldap=None):
         self.ftp = ftp
         self.amqp = amqp
         self.zmq = zmq
@@ -399,6 +400,7 @@ class Outgoing(object):
         self.sql = sql
         self.plain_http = plain_http
         self.soap = soap
+        self.ldap = ldap
 
 # ################################################################################################################################
 

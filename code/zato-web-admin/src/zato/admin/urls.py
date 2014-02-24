@@ -27,6 +27,7 @@ from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import sql as out_sql
+from zato.admin.web.views.outgoing import ldap as out_ldap
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pattern import delivery as pattern_delivery
 from zato.admin.web.views.pattern.delivery import definition as pattern_delivery_def
@@ -333,6 +334,15 @@ urlpatterns = patterns('',
         login_required(out_sql.Delete()), name=out_sql.Delete.url_name),
     url(r'^zato/outgoing/sql/change-password/$',
         login_required(out_sql.change_password), name='out-sql-change-password'),
+
+    # LDAP connection pools
+    url(r'^zato/outgoing/ldap/$', out_ldap.index, name='out-ldap'),
+    url(r'^zato/outgoing/ldap/create/$', out_ldap.create, name='out-ldap-create'),
+    url(r'^zato/outgoing/ldap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', out_ldap.ping, name='out-ldap-ping'),
+    url(r'^zato/outgoing/ldap/edit/$', out_ldap.edit, name='out-ldap-edit'),
+    url(r'^zato/outgoing/ldap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$', 
+        out_ldap.Delete(), name=out_ldap.Delete.url_name),
+    url(r'^zato/outgoing/ldap/change-password/$', out_ldap.change_password, name='out-ldap-change-password'),
 
     # .. ZeroMQ
     url(r'^zato/outgoing/zmq/$',

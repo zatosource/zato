@@ -139,10 +139,11 @@ class ConfigStore(object):
             basic_auth=ZATO_NONE, wss=ZATO_NONE, tech_acc=ZATO_NONE,
             url_sec=ZATO_NONE, http_soap=ZATO_NONE, broker_config=ZATO_NONE,
             odb_data=ZATO_NONE, simple_io=ZATO_NONE, msg_ns=ZATO_NONE,
-            elem_path=ZATO_NONE, xpath=ZATO_NONE):
+            elem_path=ZATO_NONE, xpath=ZATO_NONE, out_ldap=ZATO_NONE):
 
         # Outgoing connections
         self.out_ftp = out_ftp
+        self.out_ldap = out_ldap
         self.out_plain_http = out_plain_http
         self.out_soap = out_soap
         self.out_sql = out_sql
@@ -182,7 +183,7 @@ class ConfigStore(object):
     def outgoing_connections(self):
         """ Returns all the outgoing connections.
         """
-        return self.out_ftp, self.out_plain_http, self.out_soap
+        return self.out_ftp, self.out_ldap, self.out_plain_http, self.out_soap
 
     def copy(self):
         """ Creates a copy of this ConfigStore. All configuration data is copied

@@ -352,6 +352,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_out_sql_list(server.cluster.id, True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query)
 
+        # LDAP
+        query = self.odb.get_out_ldap_list(server.cluster.id, True)
+        self.config.out_ldap = ConfigDict.from_query('out_ldap', query)
+
         # AMQP
         query = self.odb.get_out_amqp_list(server.cluster.id, True)
         self.config.out_amqp = ConfigDict.from_query('out_amqp', query)

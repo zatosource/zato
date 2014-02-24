@@ -22,7 +22,7 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_S
 from zato.common.odb.model import ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
      DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NTLM, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, \
-     OutgoingZMQ, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
+     OutgoingZMQ, SecurityBase, Service, SQLConnectionPool, LDAPConnectionPool, TechnicalAccount, XPath, WSSDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -395,7 +395,7 @@ def _http_soap(session, cluster_id):
         case([(HTTPSOAP.url_params_pri != None, HTTPSOAP.url_params_pri)], else_=URL_PARAMS_PRIORITY.DEFAULT).label('url_params_pri'),
         case([(HTTPSOAP.params_pri != None, HTTPSOAP.params_pri)], else_=PARAMS_PRIORITY.DEFAULT).label('params_pri'),
         case([(
-            HTTPSOAP.serialization_type != None, HTTPSOAP.serialization_type)], 
+            HTTPSOAP.serialization_type != None, HTTPSOAP.serialization_type)],
              else_=HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id).label('serialization_type'),
         HTTPSOAP.audit_enabled,
         HTTPSOAP.audit_back_log,
@@ -466,6 +466,28 @@ def out_sql_list(session, cluster_id, needs_columns=False):
     """ Outgoing SQL connections.
     """
     return _out_sql(session, cluster_id)
+
+# ##############################################################################
+
+def _out_ldap(session, cluster_id):
+    return session.query(LDAPConnectionPool).\
+        filter(Cluster.id==LDAPConnectionPool.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(LDAPConnectionPool.name)
+
+def out_ldap(session, cluster_id, id):
+    """ An outgoing lDAP connection.
+    """
+    return _out_ldap(session, cluster_id).\
+        filter(LDAPConnectionPool.id==id).\
+        one()
+
+@needs_columns
+def out_ldap_list(session, cluster_id, needs_columns=False):
+    """ Outgoing LDAP connections.
+    """
+    return _out_ldap(session, cluster_id)
+
 
 # ##############################################################################
 
@@ -664,7 +686,7 @@ def _http_soap_audit(session, cluster_id, conn_id=None, start=None, stop=None, q
         ])
 
     q = session.query(*columns)
-    
+
     if query:
         query = '%{}%'.format(query)
         q = q.filter(
