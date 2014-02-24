@@ -53,17 +53,19 @@ class _ClientThread(Thread):
         if self.pubsub == 'sub':
             self.client = self.kvdb.pubsub()
             self.client.subscribe(self.topic_callbacks.keys())
+
             try:
-                while self.keep_running:
-                    for msg in self.client.listen():
-                        self.on_message(Bunch(msg))
+                try:
+                    while self.keep_running:
+                        for msg in self.client.listen():
+                            self.on_message(Bunch(msg))
+                except redis.ConnectionError, e:
+                    if e.message != REMOTE_END_CLOSED_SOCKET:  # Hm, there's no error code, only the message
+                        logger.info('Caught `%s`, will quit now', e.message)
+                        raise
             except KeyboardInterrupt:
                 self.keep_running = False
-            except redis.ConnectionError, e:
-                if e.message != REMOTE_END_CLOSED_SOCKET:  # Hm, there's no error code, only the message
-                    raise
-                msg = 'Caught [{}], will quit now'.format(REMOTE_END_CLOSED_SOCKET)
-                logger.info(msg)
+
         else:
             self.client = self.kvdb
             
