@@ -394,7 +394,7 @@ class PUB_SUB:
     class DELIVERY_MODE:
         PULL = NameId('Pull', 'pull')
         CALLBACK_URL = NameId('Callback URL', 'callback-url')
-    
+
         class __metaclass__(type):
             def __iter__(self):
                 return iter((self.PULL, self.CALLBACK_URL))
