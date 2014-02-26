@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.common.broker_message import PUB_SUB_TOPIC
 from zato.common.odb.model import Cluster, PubSubTopic
@@ -113,6 +116,15 @@ class Create(AdminService):
                 session.add(topic)
                 session.commit()
 
+                # Now that the topic is added we can let our own internal producer publish to it.
+                create_prod_req = Bunch()
+                create_prod_req.cluster_id = input.cluster_id
+                create_prod_req.client_id = self.server.config.pubsub.default_producer.id
+                create_prod_req.topic_name = topic.name
+                create_prod_req.is_active = True
+
+                self.invoke('zato.pubsub.producers.create', create_prod_req)
+
             except Exception, e:
                 msg = 'Could not create a topic, e:`{}`'.format(format_exc(e))
                 self.logger.error(msg)
@@ -193,6 +205,7 @@ class Delete(AdminService):
 
                 session.delete(topic)
                 session.commit()
+
             except Exception, e:
                 msg = 'Could not delete the topic, e:`{}`'.format(format_exc(e))
                 self.logger.error(msg)
