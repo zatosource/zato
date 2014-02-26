@@ -8,7 +8,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from json import dumps
+from traceback import format_exc
+
 # Django
+from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
@@ -31,12 +36,14 @@ def index_topic(req, cluster_id, topic_name):
         _item = Message(**_item)
         _item.creation_time = from_utc_to_user(_item.creation_time_utc+'+00:00', req.zato.user_profile)
         _item.expire_at = from_utc_to_user(_item.expire_at_utc+'+00:00', req.zato.user_profile)
+        _item.id = _item.msg_id
         items.append(_item)
 
     return_data = {
         'topic_name': topic_name,
         'cluster_id': req.zato.cluster_id,
         'items': items,
+        'source_type': PUB_SUB.MESSAGE_SOURCE.TOPIC.id
         }
         
     return TemplateResponse(req, 'zato/pubsub/message/index.html', return_data)
@@ -90,3 +97,18 @@ def details_topic(req, cid, service_name):
         }
         
     return TemplateResponse(req, 'zato/service/slow-response-details.html', return_data)
+
+@method_allowed('POST')
+def delete(req):
+    try:
+        response = req.zato.client.invoke('zato.pubsub.message.delete', {
+            'msg_id': req.POST['id'],
+            'name': req.POST['name'],
+            'source_type': req.POST['source_type'],
+        })
+        if response.ok:
+            return HttpResponse(dumps(''), mimetype='application/javascript')
+        else:
+            raise Exception(response.details)
+    except Exception, e:
+        return HttpResponseServerError(format_exc(e))

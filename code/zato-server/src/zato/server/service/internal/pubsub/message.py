@@ -62,3 +62,22 @@ class Details(AdminService):
         self.response.payload.last_pub_time = self.pubsub.get_last_pub_time(self.request.input.name)
 
 # ################################################################################################################################
+
+class Delete(AdminService):
+    """ Irrevocably deletes a message from a producer's topic or a consumer's queue.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pubsub_message_delete_request'
+        response_elem = 'zato_pubsub_message_delete_response'
+        input_required = (AsIs('msg_id'), 'name', 'source_type')
+
+    def handle(self):
+
+        if self.request.input.source_type == PUB_SUB.MESSAGE_SOURCE.TOPIC.id:
+            func = 'delete_from_topic'
+        else:
+            func = 'delete_from_consumer_queue'
+
+        getattr(self.pubsub, func)(self.request.input.name, self.request.input.msg_id)
+
+# ################################################################################################################################

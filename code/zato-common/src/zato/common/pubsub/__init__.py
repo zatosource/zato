@@ -27,8 +27,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common import PUB_SUB, ZATO_NONE
-from zato.common.pubsub.lua import lua_ack, lua_delete_expired, lua_get_consumer_queue_message_list, lua_get_from_cons_queue, \
-     lua_get_topic_message_list, lua_move_to_target_queues, lua_publish, lua_reject
+from zato.common.pubsub import lua
      
 from zato.common.util import datetime_to_seconds, make_repr, new_cid
 
@@ -62,6 +61,8 @@ class Message(object):
         # These two, in local timezone, are used by web-admin.
         self.creation_time = None
         self.expire_at = None
+
+        self.id = None # Used by frontend only
 
     def __repr__(self):
         return make_repr(self)
@@ -172,7 +173,7 @@ class PubSub(object):
     """
 
     def __init__(self, *ignored_args, **ignored_kwargs):
-        self.logger = getLogger(self.__class__.__name__)
+        self.logger = getLogger('zato_pubsub')
 
         # Held when modifying sets of currently known consumers and producers
         self.update_lock = RLock()
@@ -229,7 +230,7 @@ class PubSub(object):
         clients = self.topic_to_cons.setdefault(topic, set())
         clients.add(client_id)
 
-        self.logger.debug('Added subscription: `%s`, `%s`, `%s`', sub_key, client_id, topic)
+        self.logger.info('Added subscription: `%s`, `%s`, `%s`', sub_key, client_id, topic)
 
     # ############################################################################################################################
 
@@ -318,7 +319,7 @@ class RedisPubSub(PubSub):
     LUA_PUBLISH = 'lua-publish'
     LUA_GET_FROM_CONSUMER_QUEUE = 'lua-get-from-consumer-queue'
     LUA_REJECT = 'lua-reject'
-    LUA_ACK = 'lua-ack'
+    LUA_ACK_DELETE = 'lua-ack-delete'
 
     # Background tasks
     LUA_DELETE_EXPIRED = 'lua-delete-expired'
@@ -327,6 +328,10 @@ class RedisPubSub(PubSub):
     # Message browsing
     LUA_GET_CONSUMER_QUEUE_MESSAGE_LIST = 'lua-get-consumer-queue-message-list'
     LUA_GET_TOPIC_MESSAGE_LIST = 'lua-get-topic-message-list'
+
+    # Message deleting
+    LUA_DELETE_FROM_TOPIC = 'lua-delete-from-topic'
+    LUA_DELETE_FROM_CONSUMER_QUEUE = 'lua-delete-from-consumer-queue'
 
     # ############################################################################################################################
 
@@ -348,14 +353,16 @@ class RedisPubSub(PubSub):
         self.LAST_SEEN_CONSUMER_KEY = '{}{}'.format(key_prefix, 'hash:last-seen-consumer') # In UTC
         self.LAST_SEEN_PRODUCER_KEY = '{}{}'.format(key_prefix, 'hash:last-seen-producer') # In UTC
 
-        self.add_lua_program(self.LUA_PUBLISH, lua_publish)
-        self.add_lua_program(self.LUA_MOVE_TO_TARGET_QUEUES, lua_move_to_target_queues)
-        self.add_lua_program(self.LUA_GET_FROM_CONSUMER_QUEUE, lua_get_from_cons_queue)
-        self.add_lua_program(self.LUA_REJECT, lua_reject)
-        self.add_lua_program(self.LUA_ACK, lua_ack)
-        self.add_lua_program(self.LUA_DELETE_EXPIRED, lua_delete_expired)
-        self.add_lua_program(self.LUA_GET_CONSUMER_QUEUE_MESSAGE_LIST, lua_get_consumer_queue_message_list)
-        self.add_lua_program(self.LUA_GET_TOPIC_MESSAGE_LIST, lua_get_topic_message_list)
+        self.add_lua_program(self.LUA_PUBLISH, lua.lua_publish)
+        self.add_lua_program(self.LUA_MOVE_TO_TARGET_QUEUES, lua.lua_move_to_target_queues)
+        self.add_lua_program(self.LUA_GET_FROM_CONSUMER_QUEUE, lua.lua_get_from_cons_queue)
+        self.add_lua_program(self.LUA_REJECT, lua.lua_reject)
+        self.add_lua_program(self.LUA_ACK_DELETE, lua.lua_ack_delete)
+        self.add_lua_program(self.LUA_DELETE_EXPIRED, lua.lua_delete_expired)
+        self.add_lua_program(self.LUA_GET_CONSUMER_QUEUE_MESSAGE_LIST, lua.lua_get_consumer_queue_message_list)
+        self.add_lua_program(self.LUA_GET_TOPIC_MESSAGE_LIST, lua.lua_get_topic_message_list)
+        self.add_lua_program(self.LUA_DELETE_FROM_TOPIC, lua.lua_delete_from_topic)
+        self.add_lua_program(self.LUA_DELETE_FROM_CONSUMER_QUEUE, lua.lua_delete_from_consumer_queue)
 
     # ############################################################################################################################
 
@@ -444,7 +451,7 @@ class RedisPubSub(PubSub):
             self.logger.error('Pub error `%s`', format_exc(e))
             raise
         else:
-            self.logger.debug('Published: `%s` to `%s, exp:`%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
+            self.logger.info('Published: `%s` to `%s, exp:`%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
             return ctx.msg.msg_id
 
     # ############################################################################################################################
@@ -459,13 +466,13 @@ class RedisPubSub(PubSub):
                 # TODO: Resolve topic here - it can be a pattern instead of a concrete name
                 self.add_subscription(sub_key, ctx.client_id, topic)
 
-        self.logger.debug('Client `%s` sub to topics `%s`', ctx.client_id, ', '.join(ctx.topics))
+        self.logger.info('Client `%s` sub to topics `%s`', ctx.client_id, ', '.join(ctx.topics))
         return sub_key
 
     # ############################################################################################################################
 
     def get(self, ctx):
-        self.logger.debug('Get by sub_key `%s`', ctx.sub_key)
+        self.logger.info('Get by sub_key `%s`', ctx.sub_key)
 
         with self.in_flight_lock:
             with self.update_lock:
@@ -480,15 +487,15 @@ class RedisPubSub(PubSub):
 
                 messages = self.run_lua(
                     self.LUA_GET_FROM_CONSUMER_QUEUE,
-                    [cons_queue, cons_in_flight_ids, cons_in_flight_data, self.MSG_VALUES_KEY, self.LAST_SEEN_CONSUMER_KEY],
-                    [ctx.max_batch_size, datetime.utcnow().isoformat()], ctx.client_id)
+                    [cons_queue, cons_in_flight_ids, cons_in_flight_data, self.MSG_METADATA_KEY, self.LAST_SEEN_CONSUMER_KEY],
+                    [ctx.max_batch_size, datetime.utcnow().isoformat(), self.sub_to_cons[ctx.sub_key]])
 
                 for msg in messages:
                     yield Message(**loads(msg))
 
     # ############################################################################################################################
 
-    def acknowledge(self, ctx):
+    def acknowledge(self, ctx, is_delete=False):
         """ Consumer confirms and accepts one or more message.
         """
         # Check comment in self.reject on why validating sub_key alone suffices.
@@ -496,15 +503,16 @@ class RedisPubSub(PubSub):
 
         cons_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(ctx.sub_key)
         cons_in_flight_data = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
+        cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
 
         result = self.run_lua(
-            self.LUA_ACK,
-            keys=[cons_in_flight_ids, cons_in_flight_data, self.UNACK_COUNTER_KEY, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY],
-            args=ctx.msg_ids) 
+            self.LUA_ACK_DELETE,
+            keys=[cons_in_flight_ids, cons_in_flight_data, self.UNACK_COUNTER_KEY, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY,
+                  cons_queue],
+            args=[int(is_delete)] + ctx.msg_ids) 
 
-        if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug(
-                'Acknowledge result `%s` for `%s` with `%s`', result, ctx.sub_key, ', '.join(ctx.msg_ids))
+        self.logger.info(
+            'Ack: result `%s` for sub_key `%s` with msgs `%s`', result, ctx.sub_key, ', '.join(ctx.msg_ids))
 
     def reject(self, ctx):
         """ Rejects a set of messages for a given consumer. The messages will be placed back onto consumer's queue
@@ -523,7 +531,7 @@ class RedisPubSub(PubSub):
         result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight_ids, cons_in_flight_data], args=ctx.msg_ids) 
 
         if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.debug(
+            self.logger.info(
                 'Reject result `%s` for `%s` with `%s`', result, ctx.sub_key, ', '.join(ctx.msg_ids))
 
     # ############################################################################################################################
@@ -576,15 +584,12 @@ class RedisPubSub(PubSub):
                 if consumers:
                     for consumer in consumers:
                         sub_key = self.cons_to_sub[consumer]
-                        self.logger.debug('Sub `%s` for topic `%s` to consumer `%s`', sub_key, topic, consumer)
+                        self.logger.info('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
 
                         keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
 
-                    if self.logger.isEnabledFor(logging.DEBUG):
-                        self.logger.debug('keys `%s`', ', '.join(keys))
-
-                    move_result = None#self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
-                    self.logger.debug('move_result `%s` `%s`', move_result, type(move_result))
+                    move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
+                    self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
 
 # ################################################################################################################################
 
@@ -631,6 +636,28 @@ class RedisPubSub(PubSub):
         """
         for item in self.run_lua(self.LUA_GET_TOPIC_MESSAGE_LIST, [self.MSG_IDS_PREFIX.format(source_name), self.MSG_METADATA_KEY]):
             yield Message(**loads(item))
+
+    def delete_from_topic(self, source_name, msg_id):
+        """ The message is deleted from a topic and if there are no subscriptions to a topic
+        it's also removed from Redis keys holding the message's metadada and payload.
+        """
+        with self.update_lock:
+            # Let's find subscriptions to this topic. If there aren't any subscriptions, we call a Lua function
+            # that deletes not only the message from topic but also any other piece of information regarding it.
+            has_consumers = True if source_name in self.topic_to_cons else False
+            result = self.run_lua(
+                self.LUA_DELETE_FROM_TOPIC,
+                  [self.MSG_IDS_PREFIX.format(source_name), self.MSG_VALUES_KEY, self.MSG_METADATA_KEY, self.MSG_EXPIRE_AT_KEY],
+                  [int(has_consumers), msg_id])
+
+            self.logger.info(
+                'Del topic: result `%s`, source_name `%s`, msg_id `%s`, has_consumers `%s`',
+                  result, source_name, msg_id, has_consumers)
+
+    def delete_from_consumer_queue(self, sub_key, msg_id):
+        """ Deleting a message from a consumer's queue works exactly like acknowledging it.
+        """
+        return self.acknowledge(AckCtx(sub_key, [msg_id]), True)
 
 # ################################################################################################################################
 
@@ -745,5 +772,11 @@ class PubSubAPI(object):
 
     def get_topic_message_list(self, source_name):
         return self.impl.get_topic_message_list(source_name)
+
+    def delete_from_topic(self, source_name, msg_id):
+        return self.impl.delete_from_topic(source_name)
+
+    def delete_from_consumer_queue(self, source_name, msg_id):
+        return self.impl.delete_from_consumer_queue(source_name)
 
 # ################################################################################################################################

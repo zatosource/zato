@@ -57,6 +57,7 @@ lua_move_to_target_queues = """
     local is_fifo = tonumber(ARGV[1])
     local max_depth = tonumber(ARGV[2])
     local zset_command
+    local moved = {}
 
     if is_fifo then
         zset_command = 'zrevrange'
@@ -71,12 +72,15 @@ lua_move_to_target_queues = """
         for id_idx, id in ipairs(ids) do
             redis.call('lpush', target_queue, id)
             redis.pcall('hincrby', unack_counter, id, 1)
+            table.insert(moved, {target_queue, id})
         end
     end
 
     for id_idx, id in ipairs(ids) do
         redis.pcall('zrem', source_queue, id)
     end
+
+    return moved
     """
 
 lua_get_from_cons_queue = """
@@ -126,18 +130,35 @@ lua_reject = """
     end
 """
 
-lua_ack = """
+lua_ack_delete = """
 
-   local cons_in_flight_ids = KEYS[1]
-   local cons_in_flight_data = KEYS[2]
-   local unack_counter = KEYS[3]
-   local msg_values = KEYS[4]
-   local msg_expire_at = KEYS[5]
+    -- A function to copy IDs to a separate table out of ARGV
+    local function get_ids(argv)
+        local ids = {}
+        for idx = 1, #argv do
+            ids[idx] = argv[idx+1]
+        end
+        return ids
+    end
 
-   local ids = ARGV
-   local unack_id_count = 0
+    local cons_in_flight_ids = KEYS[1]
+    local cons_in_flight_data = KEYS[2]
+    local unack_counter = KEYS[3]
+    local msg_values = KEYS[4]
+    local msg_expire_at = KEYS[5]
+    local cons_queue = KEYS[6]
+ 
+    local is_delete = ARGV[1]
+    local ids = get_ids(ARGV)
+    local unack_id_count = 0
 
     for id_idx, id in ipairs(ids) do
+
+        -- We're deleting a message from a consumer's queue, not merely ack'ing it.
+        if is_delete == '1' then
+            redis.pcall('lrem', cons_queue, 0, id)
+        end
+
         redis.pcall('srem', cons_in_flight_ids, id)
         redis.pcall('hdel', cons_in_flight_data, id)
         unack_id_count = redis.pcall('hincrby', unack_counter, id, -1)
@@ -210,4 +231,33 @@ lua_get_topic_message_list = """
    end
 
    return data
+"""
+
+lua_delete_from_topic = """
+   local ids_key = KEYS[1]
+   local msg_values = KEYS[2]
+   local msg_metadata_key = KEYS[3]
+   local msg_expire_at = KEYS[4]
+
+   local has_consumers = ARGV[1]
+   local msg_id = ARGV[2]
+
+   local result = {has_consumers}
+
+   if has_consumers == '0' then
+       table.insert(result, 'has_consumers_false')
+       table.insert(result, redis.pcall('zrem', ids_key, msg_id))
+       table.insert(result, redis.pcall('hdel', msg_values, msg_id))
+       table.insert(result, redis.pcall('hdel', msg_metadata_key, msg_id))
+       table.insert(result, redis.pcall('hdel', msg_expire_at, msg_id))
+   else
+       table.insert(result, 'has_consumers_true')
+       table.insert(result, redis.pcall('zrem', ids_key, msg_id))
+   end
+
+   return result
+
+"""
+
+lua_delete_from_consumer_queue = """
 """

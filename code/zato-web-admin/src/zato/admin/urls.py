@@ -440,6 +440,8 @@ urlpatterns = patterns('',
         login_required(pubsub_message.index_topic), name='pubsub-message-topic'),
     url(r'^zato/pubsub/message/cluster/(?P<cluster_id>.*)/msg/(?P<msg_id>.*)/topic/(?P<topic_name>.*)$',
         login_required(pubsub_message.details_topic), name='pubsub-message-details-topic'),
+    url(r'^zato/pubsub/message/delete/$',
+        login_required(pubsub_message.delete), name='pubsub-message-delete'),
 
     url(r'^zato/pubsub/topics/publish/cluster/(?P<cluster_id>.*)/topic/(?P<topic>.*)$',
         login_required(pubsub_topics.publish), name='pubsub-topics-publish'),
