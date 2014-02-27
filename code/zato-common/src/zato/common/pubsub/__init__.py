@@ -300,6 +300,12 @@ class PubSub(object):
             consumers = self.topic_to_cons.setdefault(topic.name, set())
             consumers.remove(client.id)
 
+            # That was the last consumer for this topic so let's delete the topic from this dict
+            # so other parts of the code can assume that if a topic doesn't exist in it, it means there is no consumer
+            # for the given topic name.
+            if not consumers:
+                del self.topic_to_cons[topic.name]
+
             del self.consumers[client.id]
             del self.sub_to_cons[client.sub_key]
             del self.cons_to_sub[client.id]
@@ -796,11 +802,11 @@ class PubSubAPI(object):
     def get_topic_message_list(self, source_name):
         return self.impl.get_topic_message_list(source_name)
 
-    def delete_from_topic(self, source_name, msg_id):
-        return self.impl.delete_from_topic(source_name, msg_id)
+    def delete_from_topic(self, topic_name, msg_id, *ignored):
+        return self.impl.delete_from_topic(topic_name, msg_id)
 
-    def delete_from_consumer_queue(self, source_name, msg_id):
-        return self.impl.delete_from_consumer_queue(source_name)
+    def delete_from_consumer_queue(self, sub_key, msg_id):
+        return self.impl.delete_from_consumer_queue(sub_key, msg_id)
 
     def get_message(self, msg_id):
         return self.impl.get_message(msg_id)

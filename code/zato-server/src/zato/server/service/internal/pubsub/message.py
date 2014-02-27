@@ -79,10 +79,10 @@ class Delete(_SourceTypeAware):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_message_delete_request'
         response_elem = 'zato_pubsub_message_delete_response'
-        input_required = ('cluster_id', AsIs('msg_id'), 'name', 'source_type')
+        input_required = ('cluster_id', AsIs('msg_id'), 'source_name', 'source_type')
 
     def handle(self):
         func = self.get_pubsub_api_func('delete', self.request.input.source_type)
-        getattr(self.pubsub, func)(self.request.input.name, self.request.input.msg_id)
+        func(self.request.input.source_name, self.request.input.msg_id)
 
 # ################################################################################################################################
