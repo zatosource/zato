@@ -63,6 +63,7 @@ class Message(object):
         self.expire_at = None
 
         self.id = None # Used by frontend only
+        self.payload_html = None # Used by frontend only
 
     def __repr__(self):
         return make_repr(self)
@@ -584,12 +585,13 @@ class RedisPubSub(PubSub):
                 if consumers:
                     for consumer in consumers:
                         sub_key = self.cons_to_sub[consumer]
-                        self.logger.info('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
+                        self.logger.debug('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
 
                         keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
 
                     move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
-                    self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
+                    if move_result:
+                        self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
 
 # ################################################################################################################################
 
@@ -658,6 +660,14 @@ class RedisPubSub(PubSub):
         """ Deleting a message from a consumer's queue works exactly like acknowledging it.
         """
         return self.acknowledge(AckCtx(sub_key, [msg_id]), True)
+
+    def get_message_from_topic(self, source_name, msg_id):
+        """ Returns payload of a message along with its metadata.
+        """
+        out = {'payload': self.kvdb.hget(self.MSG_VALUES_KEY, msg_id)}
+        out.update(loads(self.kvdb.hget(self.MSG_METADATA_KEY, msg_id)))
+
+        return out
 
 # ################################################################################################################################
 
@@ -774,9 +784,12 @@ class PubSubAPI(object):
         return self.impl.get_topic_message_list(source_name)
 
     def delete_from_topic(self, source_name, msg_id):
-        return self.impl.delete_from_topic(source_name)
+        return self.impl.delete_from_topic(source_name, msg_id)
 
     def delete_from_consumer_queue(self, source_name, msg_id):
         return self.impl.delete_from_consumer_queue(source_name)
+
+    def get_message_from_topic(self, source_name, msg_id):
+        return self.impl.get_message_from_topic(source_name, msg_id)
 
 # ################################################################################################################################

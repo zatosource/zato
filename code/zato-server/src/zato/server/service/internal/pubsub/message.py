@@ -20,7 +20,28 @@ from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
-class GetList(AdminService):
+class _SourceTypeAware(AdminService):
+    ZATO_DONT_DEPLOY = True
+
+    source_type_func = {
+        'get_list': {
+            PUB_SUB.MESSAGE_SOURCE.TOPIC.id: 'get_topic_message_list',
+            PUB_SUB.MESSAGE_SOURCE.CONSUMER_QUEUE.id: 'get_consumer_queue_message_list',
+        },
+        'get_message': {
+            PUB_SUB.MESSAGE_SOURCE.TOPIC.id: 'get_message_from_topic',
+            PUB_SUB.MESSAGE_SOURCE.CONSUMER_QUEUE.id: 'get_message_from_consumer_queue',
+        },
+        'delete': {
+            PUB_SUB.MESSAGE_SOURCE.TOPIC.id: 'delete_from_topic',
+            PUB_SUB.MESSAGE_SOURCE.CONSUMER_QUEUE.id: 'delete_from_consumer_queue',
+        },
+    }
+
+    def get_pubsub_api_func(self, action, source_type):
+        return getattr(self.pubsub, self.source_type_func[action][source_type])
+
+class GetList(_SourceTypeAware):
     """ Returns a list of mesages from a topic or consumer queue.
     """
     class SimpleIO(AdminSIO):
@@ -31,13 +52,7 @@ class GetList(AdminService):
             UTC('creation_time_utc'), UTC('expire_at_utc'), 'producer')
 
     def get_data(self):
-        if self.request.input.source_type == PUB_SUB.MESSAGE_SOURCE.TOPIC.id:
-            func = 'get_topic_message_list'
-        else:
-            func = 'get_consumer_queue_message_list'
-
-        func = getattr(self.pubsub, func)
-
+        func = self.get_pubsub_api_func('get_list', self.request.input.source_type)
         for item in func(self.request.input.source_name):
             yield item.to_dict()
 
@@ -46,38 +61,33 @@ class GetList(AdminService):
 
 # ################################################################################################################################
 
-class Details(AdminService):
+class Get(_SourceTypeAware):
     """ Returns basic information regarding a message from a topic or a consumer queue.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_message_get_info_request'
-        response_elem = 'zato_pubsub_message_get_info_response'
-        input_required = ('cluster_id', 'name')
-        output_required = (Int('current_depth'), Int('consumers_count'), Int('producers_count'), UTC('last_pub_time'))
+        request_elem = 'zato_pubsub_message_get_request'
+        response_elem = 'zato_pubsub_message_get_response'
+        input_required = ('cluster_id', AsIs('msg_id'), 'name', 'source_type')
+        output_required = ('topic', 'producer', 'priority', 'mime_type', 'expiration',
+            UTC('creation_time_utc'), UTC('expire_at_utc'))
+        output_optional = ('payload',)
 
     def handle(self):
-        self.response.payload.current_depth = self.pubsub.get_topic_depth(self.request.input.name)
-        self.response.payload.consumers_count = self.pubsub.get_consumers_count(self.request.input.name)
-        self.response.payload.producers_count = self.pubsub.get_producers_count(self.request.input.name)
-        self.response.payload.last_pub_time = self.pubsub.get_last_pub_time(self.request.input.name)
-
+        func = self.get_pubsub_api_func('get_message', self.request.input.source_type)
+        self.response.payload = func(self.request.input.name, self.request.input.msg_id)
+        
 # ################################################################################################################################
 
-class Delete(AdminService):
+class Delete(_SourceTypeAware):
     """ Irrevocably deletes a message from a producer's topic or a consumer's queue.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_message_delete_request'
         response_elem = 'zato_pubsub_message_delete_response'
-        input_required = (AsIs('msg_id'), 'name', 'source_type')
+        input_required = ('cluster_id', AsIs('msg_id'), 'name', 'source_type')
 
     def handle(self):
-
-        if self.request.input.source_type == PUB_SUB.MESSAGE_SOURCE.TOPIC.id:
-            func = 'delete_from_topic'
-        else:
-            func = 'delete_from_consumer_queue'
-
+        func = self.get_pubsub_api_func('delete', self.request.input.source_type)
         getattr(self.pubsub, func)(self.request.input.name, self.request.input.msg_id)
 
 # ################################################################################################################################
