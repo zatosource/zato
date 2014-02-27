@@ -271,7 +271,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         else:
             address, qs_params = self.address, dict(params)
 
-        logger.info('CID:[%s], address:[%s], qs_params:[%s]', cid, address, qs_params)
+        logger.info('CID:[%s], address:[%s], qs_params:[%s], auth:[%s], kwargs:[%s]', cid, address, qs_params, self.requests_auth, kwargs) 
 
         response = self.session.request(method, address, data=data,
             auth=self.requests_auth, params=qs_params, headers=headers, *args, **kwargs)
