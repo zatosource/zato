@@ -145,12 +145,12 @@ class RedisPubSubTestCase(TestCase):
 
         # Check all the Lua programs are loaded
 
-        eq_(len(ps.lua_programs), 10)
+        eq_(len(ps.lua_programs), 9)
 
         for attr in dir(ps):
             if attr.startswith('LUA'):
                 value = getattr(ps, attr)
-                self.assertTrue(value in ps.lua_programs)
+                self.assertTrue(value in ps.lua_programs, value)
 
         topic_cust_new = Topic('/cust/new')
         topic_cust_update = Topic('/cust/update')
@@ -368,7 +368,7 @@ class RedisPubSubTestCase(TestCase):
         reject_ctx_crm.sub_key = sub_key_crm
         reject_ctx_crm.append(msg_billing2_id)
 
-        ps.acknowledge(ack_ctx_crm)
+        ps.acknowledge_delete(ack_ctx_crm)
         ps.reject(reject_ctx_crm)
 
         # One in-flight less
@@ -384,7 +384,7 @@ class RedisPubSubTestCase(TestCase):
         ack_ctx_billing.append(msg_crm1_id)
         ack_ctx_billing.append(msg_crm2_id)
 
-        ps.acknowledge(ack_ctx_billing)
+        ps.acknowledge_delete(ack_ctx_billing)
 
         # Two in-flight less
         self._check_in_flight(ps, now, sub_key_crm, sub_key_billing, sub_key_erp, msg_crm1_id, msg_crm2_id,
@@ -403,7 +403,7 @@ class RedisPubSubTestCase(TestCase):
         ack_ctx_erp.append(msg_billing2_id)
 
         ps.reject(reject_ctx_erp)
-        ps.acknowledge(ack_ctx_erp)
+        ps.acknowledge_delete(ack_ctx_erp)
 
         # Another in-flight less
         self._check_in_flight(ps, now, sub_key_crm, sub_key_billing, sub_key_erp, msg_crm1_id, msg_crm2_id,
