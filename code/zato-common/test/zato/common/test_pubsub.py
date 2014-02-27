@@ -45,11 +45,10 @@ class RedisPubSubTestCase(TestCase):
             self.has_redis = True
 
     def tearDown(self):
-        #for key in self.kvdb.keys('{}*'.format(self.key_prefix)):
-        #    self.kvdb.delete(key)
-        pass
+        for key in self.kvdb.keys('{}*'.format(self.key_prefix)):
+            self.kvdb.delete(key)
 
-    def xtest_sub_key_generation(self):
+    def test_sub_key_generation(self):
         """ Checks whether a sub_key is generated if none is provided on input during subscribing.
         """
         sub_ctx = SubCtx()
@@ -63,7 +62,7 @@ class RedisPubSubTestCase(TestCase):
         eq_(len(sub_key), 28)
         eq_(sub_key[0], 'K')
 
-    def xtest_full_path(self):
+    def test_full_path(self):
         """ Tests full sub/pub/ack/reject path with 4 topics and 3 clients. Doesn't test background tasks.
         """
         # Give up early if there is no connection to Redis at all
@@ -146,7 +145,7 @@ class RedisPubSubTestCase(TestCase):
 
         # Check all the Lua programs are loaded
 
-        eq_(len(ps.lua_programs), 8)
+        eq_(len(ps.lua_programs), 10)
 
         for attr in dir(ps):
             if attr.startswith('LUA'):
@@ -451,7 +450,7 @@ class RedisPubSubTestCase(TestCase):
 
     # ############################################################################################################################
 
-    def xtest_delete_from_topic_no_subscribers(self):
+    def test_delete_from_topic_no_subscribers(self):
         """ Tests deleting of messages from a topic without subscribers.
         """
         ps = RedisPubSub(self.kvdb, self.key_prefix)
@@ -509,7 +508,7 @@ class RedisPubSubTestCase(TestCase):
 
     # ############################################################################################################################
 
-    def xtest_delete_from_topic_has_subscribers(self):
+    def test_delete_from_topic_has_subscribers(self):
         """ Tests deleting of messages from a topic which has subscribers.
         """
         ps = RedisPubSub(self.kvdb, self.key_prefix)

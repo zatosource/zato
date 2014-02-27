@@ -69,7 +69,7 @@
                         <td>{{ item.expiration }}</td>
                         <td>{{ item.expire_at }}</td>
                         <td>{{ item.producer }}</td>
-                        <td><a href="{% url pubsub-message-details-topic cluster_id item.msg_id topic_name %}" class="common">Details</a></td>
+                        <td><a href="{% url pubsub-message-details-topic item.msg_id cluster_id topic_name %}" class="common">Details</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.message.delete_('{{ item.msg_id }}', '{{ topic_name }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                     </tr>
