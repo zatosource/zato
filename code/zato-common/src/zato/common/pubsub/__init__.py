@@ -125,7 +125,7 @@ class GetCtx(object):
 # ################################################################################################################################
 
 class AckCtx(object):
-    """ A set of data describing an acknowledge of a message fetched.
+    """ A set of data describing an acknowledge_delete of a message fetched.
     """
     def __init__(self, sub_key=None, msg_ids=None):
         self.sub_key = sub_key
@@ -315,7 +315,7 @@ class PubSub(object):
     def _not_implemented(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Must be overridden in subclasses')
 
-    publish = subscribe = get = acknowledge = reject = create = _not_implemented
+    publish = subscribe = get = acknowledge_delete = reject = create = _not_implemented
 
 # ################################################################################################################################
 
@@ -333,7 +333,6 @@ class RedisPubSub(PubSub):
     LUA_MOVE_TO_TARGET_QUEUES = 'lua-move-to-target-queues'
 
     # Message browsing
-    LUA_GET_CONSUMER_QUEUE_MESSAGE_LIST = 'lua-get-consumer-queue-message-list'
     LUA_GET_MESSAGE_LIST = 'lua-get-message-list'
 
     # Message deleting
@@ -501,7 +500,7 @@ class RedisPubSub(PubSub):
 
     # ############################################################################################################################
 
-    def acknowledge(self, ctx, is_delete=False):
+    def acknowledge_delete(self, ctx, is_delete=False):
         """ Consumer confirms and accepts one or more message.
         """
         # Check comment in self.reject on why validating sub_key alone suffices.
@@ -518,7 +517,8 @@ class RedisPubSub(PubSub):
             args=[int(is_delete)] + ctx.msg_ids) 
 
         self.logger.info(
-            'Ack: result `%s` for sub_key `%s` with msgs `%s`', result, ctx.sub_key, ', '.join(ctx.msg_ids))
+            '%s: result `%s` for sub_key `%s` with msgs `%s`',
+              'Del from queue' if is_delete else 'Ack', result, ctx.sub_key, ', '.join(ctx.msg_ids))
 
     def reject(self, ctx):
         """ Rejects a set of messages for a given consumer. The messages will be placed back onto consumer's queue
@@ -669,13 +669,13 @@ class RedisPubSub(PubSub):
                   [int(has_consumers), msg_id])
 
             self.logger.info(
-                'Del topic: result `%s`, source_name `%s`, msg_id `%s`, has_consumers `%s`',
+                'Del from topic: result `%s`, source_name `%s`, msg_id `%s`, has_consumers `%s`',
                   result, source_name, msg_id, has_consumers)
 
     def delete_from_consumer_queue(self, sub_key, msg_id):
         """ Deleting a message from a consumer's queue works exactly like acknowledging it.
         """
-        return self.acknowledge(AckCtx(sub_key, [msg_id]), True)
+        return self.acknowledge_delete(AckCtx(sub_key, [msg_id]), True)
 
     def get_message(self, msg_id):
         """ Returns payload of a message along with its metadata.
