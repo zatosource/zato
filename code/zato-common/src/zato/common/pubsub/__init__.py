@@ -328,7 +328,7 @@ class RedisPubSub(PubSub):
 
     # Message browsing
     LUA_GET_CONSUMER_QUEUE_MESSAGE_LIST = 'lua-get-consumer-queue-message-list'
-    LUA_GET_TOPIC_MESSAGE_LIST = 'lua-get-topic-message-list'
+    LUA_GET_MESSAGE_LIST = 'lua-get-message-list'
 
     # Message deleting
     LUA_DELETE_FROM_TOPIC = 'lua-delete-from-topic'
@@ -360,8 +360,7 @@ class RedisPubSub(PubSub):
         self.add_lua_program(self.LUA_REJECT, lua.lua_reject)
         self.add_lua_program(self.LUA_ACK_DELETE, lua.lua_ack_delete)
         self.add_lua_program(self.LUA_DELETE_EXPIRED, lua.lua_delete_expired)
-        self.add_lua_program(self.LUA_GET_CONSUMER_QUEUE_MESSAGE_LIST, lua.lua_get_consumer_queue_message_list)
-        self.add_lua_program(self.LUA_GET_TOPIC_MESSAGE_LIST, lua.lua_get_topic_message_list)
+        self.add_lua_program(self.LUA_GET_MESSAGE_LIST, lua.lua_get_message_list)
         self.add_lua_program(self.LUA_DELETE_FROM_TOPIC, lua.lua_delete_from_topic)
         self.add_lua_program(self.LUA_DELETE_FROM_CONSUMER_QUEUE, lua.lua_delete_from_consumer_queue)
 
@@ -601,6 +600,12 @@ class RedisPubSub(PubSub):
         """
         return self.kvdb.zcard(self.MSG_IDS_PREFIX.format(topic))
 
+    def get_consumer_queue_current_depth(self, sub_key):
+        """ Returns current depth of a consumer's queue. Doesn't held onto any locks so by the time the data
+        is returned to the caller the depth may have already changed.
+        """
+        return self.kvdb.llen(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
+
     def get_consumers_count(self, topic):
         """ Returns the number of consumers allowed to get messages from a given topic.
         """
@@ -628,15 +633,20 @@ class RedisPubSub(PubSub):
 
     # ############################################################################################################################
 
-    def get_consumer_queue_message_list(self, source_name):
-        """ Returns all messages from a given consumer queue.
+    def get_consumer_queue_message_list(self, sub_key):
+        """ Returns all messages from a given consumer queue by its subscriber's key.
         """
-        raise NotImplementedError()
+        for item in self.run_lua(
+            self.LUA_GET_MESSAGE_LIST, [
+                self.CONSUMER_MSG_IDS_PREFIX.format(sub_key), self.MSG_METADATA_KEY], [PUB_SUB.MESSAGE_SOURCE.CONSUMER_QUEUE.id]):
+            yield Message(**loads(item))
 
     def get_topic_message_list(self, source_name):
         """ Returns all messages from a given topic.
         """
-        for item in self.run_lua(self.LUA_GET_TOPIC_MESSAGE_LIST, [self.MSG_IDS_PREFIX.format(source_name), self.MSG_METADATA_KEY]):
+        for item in self.run_lua(
+            self.LUA_GET_MESSAGE_LIST, [
+                self.MSG_IDS_PREFIX.format(source_name), self.MSG_METADATA_KEY], [PUB_SUB.MESSAGE_SOURCE.TOPIC.id]):
             yield Message(**loads(item))
 
     def delete_from_topic(self, source_name, msg_id):
@@ -661,7 +671,7 @@ class RedisPubSub(PubSub):
         """
         return self.acknowledge(AckCtx(sub_key, [msg_id]), True)
 
-    def get_message_from_topic(self, source_name, msg_id):
+    def get_message(self, msg_id):
         """ Returns payload of a message along with its metadata.
         """
         out = {'payload': self.kvdb.hget(self.MSG_VALUES_KEY, msg_id)}
@@ -743,6 +753,9 @@ class PubSubAPI(object):
     def get_topic_depth(self, topic):
         return self.impl.get_topic_depth(topic)
 
+    def get_consumer_queue_current_depth(self, sub_key):
+        return self.impl.get_consumer_queue_current_depth(sub_key)
+
     def get_consumers_count(self, topic):
         return self.impl.get_consumers_count(topic)
 
@@ -789,7 +802,7 @@ class PubSubAPI(object):
     def delete_from_consumer_queue(self, source_name, msg_id):
         return self.impl.delete_from_consumer_queue(source_name)
 
-    def get_message_from_topic(self, source_name, msg_id):
-        return self.impl.get_message_from_topic(source_name, msg_id)
+    def get_message(self, msg_id):
+        return self.impl.get_message(msg_id)
 
 # ################################################################################################################################

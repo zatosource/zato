@@ -37,7 +37,8 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Pub/sub : <a href="{% url pubsub-topics %}?cluster={{ cluster_id }}" class="common">Topics</a> : Messages : {{ topic_name }}</h2>
+<h2 class="zato">Pub/sub : <a href="{% url pubsub-topics %}?cluster={{ cluster_id }}" class="common">Topics</a> : Messages : {{ topic_name }}
+  {% ifequal source_type 'consumer-queue' %}: Consumer : {{ source_name }}{% endifequal %}</h2>
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
@@ -69,7 +70,7 @@
                         <td>{{ item.expiration }}</td>
                         <td>{{ item.expire_at }}</td>
                         <td>{{ item.producer }}</td>
-                        <td><a href="{% url pubsub-message-details-topic item.msg_id cluster_id topic_name %}" class="common">Details</a></td>
+                        <td><a href="{% url pubsub-message-details source_type item.msg_id cluster_id topic_name %}{% ifequal source_type 'consumer-queue' %}?sub_key={{ source_name }}{% endifequal %}" class="common">Details</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.message.delete_('{{ item.msg_id }}', '{{ topic_name }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                     </tr>

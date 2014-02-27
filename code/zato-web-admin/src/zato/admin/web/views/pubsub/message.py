@@ -53,14 +53,14 @@ def known_data_format(data):
 
     return data_format
 
-@method_allowed('GET')
-def index_topic(req, cluster_id, topic_name):
+# ################################################################################################################################
 
+def _index(req, cluster_id, topic_name, source_name, source_type):
     items = []
     input_dict = {
         'cluster_id': cluster_id,
-        'source_name':topic_name,
-        'source_type': PUB_SUB.MESSAGE_SOURCE.TOPIC.id
+        'source_name':source_name,
+        'source_type': source_type
     }
     
     for _item in req.zato.client.invoke('zato.pubsub.message.get-list', input_dict):
@@ -74,13 +74,28 @@ def index_topic(req, cluster_id, topic_name):
         'topic_name': topic_name,
         'cluster_id': req.zato.cluster_id,
         'items': items,
-        'source_type': PUB_SUB.MESSAGE_SOURCE.TOPIC.id
+        'source_type': source_type,
+        'source_name': source_name
         }
         
     return TemplateResponse(req, 'zato/pubsub/message/index.html', return_data)
-    
+
+# ################################################################################################################################
+
 @method_allowed('GET')
-def details_topic(req, cluster_id, msg_id, topic_name):
+def index_topic(req, cluster_id, topic_name):
+    return _index(req, cluster_id, topic_name, topic_name, PUB_SUB.MESSAGE_SOURCE.TOPIC.id)
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+def index_consumer_queue(req, cluster_id, sub_key, topic_name):
+    return _index(req, cluster_id, topic_name, sub_key, PUB_SUB.MESSAGE_SOURCE.CONSUMER_QUEUE.id)
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+def details(req, source_type, cluster_id, msg_id, topic_name):
 
     item = None
     pretty_print = asbool(req.GET.get('pretty_print'))
@@ -88,8 +103,6 @@ def details_topic(req, cluster_id, msg_id, topic_name):
     input_dict = {
         'cluster_id': cluster_id,
         'msg_id': msg_id,
-        'name': topic_name,
-        'source_type': PUB_SUB.MESSAGE_SOURCE.TOPIC.id
     }
     response = req.zato.client.invoke('zato.pubsub.message.get', input_dict)
 
@@ -106,10 +119,14 @@ def details_topic(req, cluster_id, msg_id, topic_name):
         'item': item,
         'pretty_print': not pretty_print,
         'msg_id': msg_id,
-        'topic_name': topic_name
+        'topic_name': topic_name,
+        'source_type': source_type,
+        'sub_key': req.GET.get('sub_key')
         }
 
     return TemplateResponse(req, 'zato/pubsub/message/details.html', return_data)
+
+# ################################################################################################################################
 
 @method_allowed('POST')
 def delete(req):
@@ -126,3 +143,5 @@ def delete(req):
             raise Exception(response.details)
     except Exception, e:
         return HttpResponseServerError(format_exc(e))
+
+# ################################################################################################################################

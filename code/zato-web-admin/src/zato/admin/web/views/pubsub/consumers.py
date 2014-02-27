@@ -38,7 +38,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'topic_name')
-        output_required = ('id', 'name', 'is_active', 'last_seen', 'max_backlog', 'sub_key', 'delivery_mode')
+        output_required = ('id', 'name', 'is_active', 'last_seen', 'max_backlog', 'current_depth', 'sub_key', 'delivery_mode')
         output_optional = ('callback',)
         output_repeated = True
 
