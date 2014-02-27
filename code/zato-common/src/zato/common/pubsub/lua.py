@@ -216,21 +216,27 @@ lua_delete_expired = """
 
 """
 
-lua_get_consumer_queue_message_list = """
-"""
+lua_get_message_list = """
+    local source_ids_key = KEYS[1]
+    local metadata_key = KEYS[2]
 
-lua_get_topic_message_list = """
-   local ids_key = KEYS[1]
-   local msg_values = KEYS[2]
+    local source_type = ARGV[1]
+    local data = {}
+    local redis_call = ''
 
-   local data = {}
-   local ids = redis.pcall('zrange', ids_key, 0, -1)
+    if source_type == 'topic' then
+       redis_call = 'zrange'
+    else
+       redis_call = 'lrange'
+    end
 
-   for id_idx, id in ipairs(ids) do
-       table.insert(data, redis.pcall('hget', msg_values, id))
-   end
+    local ids = redis.pcall(redis_call, source_ids_key, 0, -1)
 
-   return data
+    for id_idx, id in ipairs(ids) do
+       table.insert(data, redis.pcall('hget', metadata_key, id))
+    end
+
+    return data
 """
 
 lua_delete_from_topic = """

@@ -28,10 +28,6 @@ class _SourceTypeAware(AdminService):
             PUB_SUB.MESSAGE_SOURCE.TOPIC.id: 'get_topic_message_list',
             PUB_SUB.MESSAGE_SOURCE.CONSUMER_QUEUE.id: 'get_consumer_queue_message_list',
         },
-        'get_message': {
-            PUB_SUB.MESSAGE_SOURCE.TOPIC.id: 'get_message_from_topic',
-            PUB_SUB.MESSAGE_SOURCE.CONSUMER_QUEUE.id: 'get_message_from_consumer_queue',
-        },
         'delete': {
             PUB_SUB.MESSAGE_SOURCE.TOPIC.id: 'delete_from_topic',
             PUB_SUB.MESSAGE_SOURCE.CONSUMER_QUEUE.id: 'delete_from_consumer_queue',
@@ -67,14 +63,13 @@ class Get(_SourceTypeAware):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_message_get_request'
         response_elem = 'zato_pubsub_message_get_response'
-        input_required = ('cluster_id', AsIs('msg_id'), 'name', 'source_type')
+        input_required = ('cluster_id', AsIs('msg_id'))
         output_required = ('topic', 'producer', 'priority', 'mime_type', 'expiration',
             UTC('creation_time_utc'), UTC('expire_at_utc'))
         output_optional = ('payload',)
 
     def handle(self):
-        func = self.get_pubsub_api_func('get_message', self.request.input.source_type)
-        self.response.payload = func(self.request.input.name, self.request.input.msg_id)
+        self.response.payload = self.pubsub.get_message(self.request.input.msg_id)
         
 # ################################################################################################################################
 

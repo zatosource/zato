@@ -34,12 +34,14 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_consumers_get_list_request'
         response_elem = 'zato_pubsub_consumers_get_list_response'
         input_required = ('cluster_id', 'topic_name')
-        output_required = ('id', 'name', 'is_active', 'sec_type', Int('max_backlog'), 'sub_key', 'delivery_mode')
+        output_required = ('id', 'name', 'is_active', 'sec_type', Int('max_backlog'), Int('current_depth'), 
+            'sub_key', 'delivery_mode')
         output_optional = (UTC('last_seen'), 'callback')
 
     def get_data(self, session):
         for item in pubsub_consumer_list(session, self.request.input.cluster_id, self.request.input.topic_name)[0]:
             item.last_seen = self.pubsub.get_consumer_last_seen(item.client_id)
+            item.current_depth = self.pubsub.get_consumer_queue_current_depth(item.sub_key)
             yield item
 
     def handle(self):

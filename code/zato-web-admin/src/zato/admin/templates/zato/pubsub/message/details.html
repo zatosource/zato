@@ -4,11 +4,18 @@
 
 
 {% block content %}
-<h2 class="zato">Pub/sub : <a href="{% url pubsub-topics %}?cluster={{ cluster_id }}" class="common">Topics</a> : Messages : {{ topic_name }} : {{ msg_id }}</h2>
+<h2 class="zato">Pub/sub : <a href="{% url pubsub-topics %}?cluster={{ cluster_id }}" class="common">Topics</a> : Messages : {{ topic_name }} : {{ msg_id }}
+    {% ifequal source_type 'consumer-queue' %}: Consumer : {{ sub_key }}{% endifequal %}</h2>
 
 
 <div id="markup">
     <table id="data-table">
+        {% ifequal source_type 'consumer-queue' %}
+        <tr>
+            <td class='inline_header' style="width:90px">Consumer</td>
+            <td style="width:140px" colspan="3">{{ sub_key|default:"(None)" }}</td>
+        </tr>
+        {% endifequal %}
         <tr>
             <td class='inline_header' style="width:90px">Msg ID</td>
             <td style="width:140px">{{ msg_id|default:"(None)" }}</td>
