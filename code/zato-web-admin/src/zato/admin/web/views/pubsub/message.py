@@ -134,7 +134,7 @@ def delete(req):
         response = req.zato.client.invoke('zato.pubsub.message.delete', {
             'cluster_id': req.zato.cluster_id,
             'msg_id': req.POST['id'],
-            'name': req.POST['name'],
+            'source_name': req.POST['source_name'],
             'source_type': req.POST['source_type'],
         })
         if response.ok:

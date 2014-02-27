@@ -74,6 +74,6 @@ $.fn.zato.pubsub.topics.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.pubsub.topics.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Topic [{0}] deleted',
-        'Are you sure you want to delete the topic [{0}]?',
+        'Are you sure you want to delete the message [{0}]?',
         true);
 }

@@ -22,15 +22,16 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
 })
 
-$.fn.zato.pubsub.message.delete_ = function(id, name) {
+$.fn.zato.pubsub.message.delete_ = function(id, source_name) {
     var post_data = {
         'id': id,
-        'name': name,
+        'source_name': source_name,
         'source_type': $('#source_type').val()
     }
+
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Message `{0}` deleted',
-        'Are you sure you want to delete the topic `{0}`?',
+        'Are you sure you want to delete the message `{0}`?',
         false, null,
         String.format('/zato/pubsub/message/delete/?cluster={0}', $('#cluster_id').val()),
         post_data);
