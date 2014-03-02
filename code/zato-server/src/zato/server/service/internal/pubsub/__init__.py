@@ -8,10 +8,19 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from httplib import OK
+from json import dumps
+from traceback import format_exc
+
 # gevent
 from gevent import sleep, spawn
 
+# requests
+import requests
+
 # Zato
+from zato.common import PUB_SUB
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -35,14 +44,41 @@ class DeleteExpired(AdminService):
 class InvokeCallbacks(AdminService):
     """ Invoked when a server is starting - periodically spawns a greenlet invoking consumer URL callbacks.
     """
+    def _reject(self, msg_ids, sub_key, callback, reason):
+        self.pubsub.reject(sub_key, msg_ids)
+        self.logger.error('Could not deliver messages `%s`, sub_key `%s` to `%s`, reason `%s`', msg_ids, sub_key, callback, reason)
+        
     def _invoke_callbacks(self):
-        pass
+        for consumer in self.pubsub.impl.get_callback_consumers():
+            with self.lock(consumer.sub_key):
+                msg_ids = []
+                request = []
+
+                messages = self.pubsub.get(consumer.sub_key, get_format=PUB_SUB.GET_FORMAT.JSON.id)
+
+                for msg in messages:
+                    msg_ids.append(msg['metadata']['msg_id'])
+                    request.append(msg)
+
+                # messages is a generator so we still don't know if we had anything.
+                if msg_ids:
+                    try:
+                        response = requests.post(
+                            consumer.callback, data=dumps(request), headers={'content-type': 'application/json'})
+                    except Exception, e:
+                        self._reject(msg_ids, consumer.sub_key, consumer.callback, format_exc(e))
+                    else:
+                        if response.status_code == OK:
+                            self.pubsub.acknowledge(consumer.sub_key, msg_ids)
+                        else:
+                            self._reject(msg_ids, consumer.sub_key, consumer.callback, 
+                                           '`{}` `{}`'.format(response.status_code, response.text))
 
     def handle(self):
         interval = float(self.server.fs_server_config.pubsub.invoke_callbacks_interval)
 
         while True:
-            self.logger.debug('Invoking callbacks, interval %rs', interval)
+            self.logger.debug('Invoking pub/sub callbacks, interval %rs', interval)
             spawn(self._invoke_callbacks)
             sleep(interval)
 

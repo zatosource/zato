@@ -59,6 +59,7 @@ class Index(_Index):
     def _handle_item_list(self, item_list):
         super(Index, self)._handle_item_list(item_list)
         for item in self.items:
+            item.callback = item.callback or ''
             if item.last_seen:
                 item.last_seen = from_utc_to_user(item.last_seen + '+00:00', self.req.zato.user_profile)
 
@@ -70,7 +71,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('id', 'cluster_id', 'client_id', 'is_active', 'topic_name', 'max_backlog', 'delivery_mode')
         input_optional = ('callback',)
-        output_required = ('id', 'name', 'last_seen', 'sub_key')
+        output_required = ('id', 'name', 'last_seen', 'current_depth', 'sub_key')
 
     def success_message(self, item):
         # 'message' is implemented in post_process_return_data so that we know the name of the consumer
@@ -88,12 +89,14 @@ class _CreateEdit(CreateEdit):
         return_data['message'] = 'Successfully {} consumer `{}`'.format(self.verb, return_data['name'])
 
         return_data['last_seen'] = None
+        return_data['current_depth'] = 0
 
         client_id = self.req.POST.get('id')
         if client_id:
             response = self.req.zato.client.invoke('zato.pubsub.consumers.get-info', {'id': client_id})
 
             if response.ok:
+                return_data['current_depth'] = response.data.current_depth
                 return_data['sub_key'] = response.data.sub_key
                 if response.data.last_seen:
                     return_data['last_seen'] = from_utc_to_user(response.data.last_seen + '+00:00', self.req.zato.user_profile)

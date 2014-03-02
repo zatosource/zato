@@ -44,6 +44,163 @@ class RedisPubSubTestCase(TestCase):
         else:
             self.has_redis = True
 
+
+    def _check_unack_counter(self, ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id,
+            msg_crm1_id_counter, msg_crm2_id_counter, msg_billing1_id_counter, msg_billing2_id_counter
+        ):
+
+        unack_counter = self.kvdb.hgetall(ps.UNACK_COUNTER_KEY)
+        expected_counters = {}
+
+        if msg_crm1_id:
+            expected_counters[msg_crm1_id] = str(msg_crm1_id_counter)
+
+        if msg_crm2_id:
+            expected_counters[msg_crm2_id] = str(msg_crm2_id_counter)
+
+        if msg_billing1_id:
+            expected_counters[msg_billing1_id] = str(msg_billing1_id_counter)
+
+        if msg_billing2_id:
+            expected_counters[msg_billing2_id] = str(msg_billing2_id_counter)
+
+        eq_(sorted(unack_counter.items()), sorted(expected_counters.items()))
+
+    # ############################################################################################################################
+
+    def _check_in_flight(self, ps, now, sub_key_crm, sub_key_billing, sub_key_erp, msg_crm1_id, msg_crm2_id,
+            msg_billing1_id, msg_billing2_id, crm_needs_billing1_id, crm_needs_billing2_id,
+            billing_needs_crm1_id, billing_needs_crm2_id, erp_needs_billing1_id, erp_needs_billing2_id):
+
+        # CRM
+        in_flight_crm_ids = self.kvdb.smembers(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_crm))
+        in_flight_crm_data = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key_crm))
+
+        if crm_needs_billing1_id:
+            in_flight_crm_data_msg1 = in_flight_crm_data[msg_billing1_id]
+            self.assertLess(arrow.get(in_flight_crm_data_msg1), now)
+            eq_(sorted(in_flight_crm_ids), sorted(in_flight_crm_data.keys()))
+        else:
+            self.assertNotIn(msg_billing1_id, in_flight_crm_data)
+
+        if crm_needs_billing2_id:
+            in_flight_crm_data_msg2 = in_flight_crm_data[msg_billing2_id]
+            self.assertLess(arrow.get(in_flight_crm_data_msg2), now)
+            eq_(sorted(in_flight_crm_ids), sorted(in_flight_crm_data.keys()))
+        else:
+            self.assertNotIn(msg_billing2_id, in_flight_crm_data)
+
+        # Billing
+        in_flight_billing_ids = self.kvdb.smembers(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_billing))
+        in_flight_billing_data = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key_billing))
+
+        if billing_needs_crm1_id:
+            in_flight_billing_data_msg1 = in_flight_billing_data[msg_crm1_id]
+            self.assertLess(arrow.get(in_flight_billing_data_msg1), now)
+            eq_(sorted(in_flight_billing_ids), sorted(in_flight_billing_data.keys()))
+        else:
+            self.assertNotIn(msg_crm1_id, in_flight_billing_data)
+
+        if billing_needs_crm2_id:
+            in_flight_billing_data_msg2 = in_flight_billing_data[msg_crm2_id]
+            self.assertLess(arrow.get(in_flight_billing_data_msg2), now)
+            eq_(sorted(in_flight_billing_ids), sorted(in_flight_billing_data.keys()))
+        else:
+            self.assertNotIn(msg_crm2_id, in_flight_billing_data)
+
+        # ERP
+        in_flight_erp_ids = self.kvdb.smembers(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_erp))
+        in_flight_erp_data = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key_erp))
+
+        if erp_needs_billing1_id:
+            in_flight_erp_data_msg1 = in_flight_erp_data[msg_billing1_id]
+            self.assertLess(arrow.get(in_flight_erp_data_msg1), now)
+            eq_(sorted(in_flight_erp_ids), sorted(in_flight_erp_data.keys()))
+        else:
+            self.assertNotIn(msg_billing1_id, in_flight_erp_data)
+
+        if erp_needs_billing2_id:
+            in_flight_erp_data_msg2 = in_flight_erp_data[msg_billing2_id]
+            self.assertLess(arrow.get(in_flight_erp_data_msg2), now)
+            eq_(sorted(in_flight_erp_ids), sorted(in_flight_erp_data.keys()))
+        else:
+            self.assertNotIn(msg_billing2_id, in_flight_erp_data)
+
+    # ############################################################################################################################
+
+    def _check_msg_values_metadata(self, ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id, before_last_acknowledge):
+
+        # Out of all messages that are expected to be acknowledged, when the last one actually is, there should be
+        # less messages in Redis because the last acknowledgment deletes a message's key from msg_values.
+        msgs_expected_no = 4 if before_last_acknowledge else 2
+
+        raw_msgs_metadata = self.kvdb.hgetall(ps.MSG_METADATA_KEY)
+        eq_(len(raw_msgs_metadata), 4)
+
+        raw_msgs_payload = self.kvdb.hgetall(ps.MSG_VALUES_KEY)
+        eq_(len(raw_msgs_payload), msgs_expected_no)
+
+        msgs_metadata = {}
+        msgs_payload = {}
+
+        for msg_id, msg_data in raw_msgs_metadata.items():
+            msgs_metadata[msg_id] = Message(**loads(msg_data))
+
+        msgs_payload = dict(raw_msgs_payload.items())
+
+        if before_last_acknowledge:
+            eq_(msgs_payload[msg_crm1_id], '"msg_crm1"')
+            eq_(msgs_payload[msg_crm2_id], '"msg_crm2"')
+
+        eq_(msgs_payload[msg_billing1_id], '"msg_billing1"')
+        eq_(msgs_payload[msg_billing2_id], '"msg_billing2"')
+
+        # After acks only billing messages are not acked yet
+        expected_msg_ids = (
+            msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id) if before_last_acknowledge else \
+                (msg_billing1_id, msg_billing2_id)
+
+        for msg_id in expected_msg_ids:
+            self.assertIn(msg_id, msgs_metadata)
+
+        if before_last_acknowledge:
+            msg_crm1 = msgs_metadata[msg_crm1_id]
+            msg_crm2 = msgs_metadata[msg_crm2_id]
+
+            eq_(msg_crm1.priority, 1)
+            eq_(msg_crm1.mime_type, 'text/xml')
+            eq_(msg_crm1.expiration, 0.1)
+
+            eq_(msg_crm2.priority, 2)
+            eq_(msg_crm2.mime_type, 'application/json')
+            eq_(msg_crm2.expiration, 0.2)
+
+        msg_billing1 = msgs_metadata[msg_billing1_id]
+        msg_billing2 = msgs_metadata[msg_billing2_id]
+
+        eq_(msg_billing1.priority, 3)
+        eq_(msg_billing1.mime_type, 'application/soap+xml')
+        eq_(msg_billing1.expiration, 0.3)
+
+        eq_(msg_billing2.priority, 5)
+        eq_(msg_billing2.mime_type, 'text/plain')
+        eq_(msg_billing2.expiration, 3600)
+
+    # ############################################################################################################################
+
+    def _assert_has_msg_metadata(self, msgs, msg_id, mime_type, priority, expiration):
+        for msg in msgs:
+            if msg.msg_id == msg_id:
+                eq_(msg.mime_type, mime_type, 'mime_type `{}` `{}`'.format(mime_type, msg))
+                eq_(msg.priority, priority, 'priority `{}` `{}`'.format(priority, msg))
+                eq_(msg.expiration, expiration, 'expiration `{}` `{}`'.format(expiration, msg))
+                break
+        else:
+            raise Exception('Msg with msg_id `{}` not in `{}`'.format(msg_id, msgs))
+
+    # ############################################################################################################################
+
+
     def tearDown(self):
         for key in self.kvdb.keys('{}*'.format(self.key_prefix)):
             self.kvdb.delete(key)
@@ -611,157 +768,33 @@ class RedisPubSubTestCase(TestCase):
 
     # ############################################################################################################################
 
-    def _check_unack_counter(self, ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id,
-            msg_crm1_id_counter, msg_crm2_id_counter, msg_billing1_id_counter, msg_billing2_id_counter
-        ):
+    def test_get_callback_consumers(self):
+        ps = RedisPubSub(self.kvdb, self.key_prefix)
 
-        unack_counter = self.kvdb.hgetall(ps.UNACK_COUNTER_KEY)
-        expected_counters = {}
+        msg_value = '"msg_value"'
 
-        if msg_crm1_id:
-            expected_counters[msg_crm1_id] = str(msg_crm1_id_counter)
+        topic = Topic('/test/delete')
+        ps.add_topic(topic)
 
-        if msg_crm2_id:
-            expected_counters[msg_crm2_id] = str(msg_crm2_id_counter)
+        producer = Client('Producer', 'producer')
+        ps.add_producer(producer, topic)
 
-        if msg_billing1_id:
-            expected_counters[msg_billing1_id] = str(msg_billing1_id_counter)
+        callback_url1 = 'http://{}'.format(new_cid)
+        consumer_cb1 = Consumer(
+            'Consumer CB1', 'consumer-cb1', sub_key=new_cid(), delivery_mode=PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id,
+            callback=callback_url1)
 
-        if msg_billing2_id:
-            expected_counters[msg_billing2_id] = str(msg_billing2_id_counter)
+        callback_url2 = 'http://{}'.format(new_cid)
+        consumer_cb2 = Consumer(
+            'Consumer CB2', 'consumer-cb2', sub_key=new_cid(), delivery_mode=PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id,
+            callback=callback_url2)
 
-        eq_(sorted(unack_counter.items()), sorted(expected_counters.items()))
+        consumer_pull = Consumer('Consumer pull', 'consumer-pull', sub_key=new_cid(), delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id)
 
-    # ############################################################################################################################
+        ps.add_consumer(consumer_cb1, topic)
+        ps.add_consumer(consumer_pull, topic)
+        ps.add_consumer(consumer_cb2, topic)
 
-    def _check_in_flight(self, ps, now, sub_key_crm, sub_key_billing, sub_key_erp, msg_crm1_id, msg_crm2_id,
-            msg_billing1_id, msg_billing2_id, crm_needs_billing1_id, crm_needs_billing2_id,
-            billing_needs_crm1_id, billing_needs_crm2_id, erp_needs_billing1_id, erp_needs_billing2_id):
-
-        # CRM
-        in_flight_crm_ids = self.kvdb.smembers(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_crm))
-        in_flight_crm_data = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key_crm))
-
-        if crm_needs_billing1_id:
-            in_flight_crm_data_msg1 = in_flight_crm_data[msg_billing1_id]
-            self.assertLess(arrow.get(in_flight_crm_data_msg1), now)
-            eq_(sorted(in_flight_crm_ids), sorted(in_flight_crm_data.keys()))
-        else:
-            self.assertNotIn(msg_billing1_id, in_flight_crm_data)
-
-        if crm_needs_billing2_id:
-            in_flight_crm_data_msg2 = in_flight_crm_data[msg_billing2_id]
-            self.assertLess(arrow.get(in_flight_crm_data_msg2), now)
-            eq_(sorted(in_flight_crm_ids), sorted(in_flight_crm_data.keys()))
-        else:
-            self.assertNotIn(msg_billing2_id, in_flight_crm_data)
-
-        # Billing
-        in_flight_billing_ids = self.kvdb.smembers(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_billing))
-        in_flight_billing_data = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key_billing))
-
-        if billing_needs_crm1_id:
-            in_flight_billing_data_msg1 = in_flight_billing_data[msg_crm1_id]
-            self.assertLess(arrow.get(in_flight_billing_data_msg1), now)
-            eq_(sorted(in_flight_billing_ids), sorted(in_flight_billing_data.keys()))
-        else:
-            self.assertNotIn(msg_crm1_id, in_flight_billing_data)
-
-        if billing_needs_crm2_id:
-            in_flight_billing_data_msg2 = in_flight_billing_data[msg_crm2_id]
-            self.assertLess(arrow.get(in_flight_billing_data_msg2), now)
-            eq_(sorted(in_flight_billing_ids), sorted(in_flight_billing_data.keys()))
-        else:
-            self.assertNotIn(msg_crm2_id, in_flight_billing_data)
-
-        # ERP
-        in_flight_erp_ids = self.kvdb.smembers(ps.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key_erp))
-        in_flight_erp_data = self.kvdb.hgetall(ps.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key_erp))
-
-        if erp_needs_billing1_id:
-            in_flight_erp_data_msg1 = in_flight_erp_data[msg_billing1_id]
-            self.assertLess(arrow.get(in_flight_erp_data_msg1), now)
-            eq_(sorted(in_flight_erp_ids), sorted(in_flight_erp_data.keys()))
-        else:
-            self.assertNotIn(msg_billing1_id, in_flight_erp_data)
-
-        if erp_needs_billing2_id:
-            in_flight_erp_data_msg2 = in_flight_erp_data[msg_billing2_id]
-            self.assertLess(arrow.get(in_flight_erp_data_msg2), now)
-            eq_(sorted(in_flight_erp_ids), sorted(in_flight_erp_data.keys()))
-        else:
-            self.assertNotIn(msg_billing2_id, in_flight_erp_data)
-
-    # ############################################################################################################################
-
-    def _check_msg_values_metadata(self, ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id, before_last_acknowledge):
-
-        # Out of all messages that are expected to be acknowledged, when the last one actually is, there should be
-        # less messages in Redis because the last acknowledgment deletes a message's key from msg_values.
-        msgs_expected_no = 4 if before_last_acknowledge else 2
-
-        raw_msgs_metadata = self.kvdb.hgetall(ps.MSG_METADATA_KEY)
-        eq_(len(raw_msgs_metadata), 4)
-
-        raw_msgs_payload = self.kvdb.hgetall(ps.MSG_VALUES_KEY)
-        eq_(len(raw_msgs_payload), msgs_expected_no)
-
-        msgs_metadata = {}
-        msgs_payload = {}
-
-        for msg_id, msg_data in raw_msgs_metadata.items():
-            msgs_metadata[msg_id] = Message(**loads(msg_data))
-
-        msgs_payload = dict(raw_msgs_payload.items())
-
-        if before_last_acknowledge:
-            eq_(msgs_payload[msg_crm1_id], '"msg_crm1"')
-            eq_(msgs_payload[msg_crm2_id], '"msg_crm2"')
-
-        eq_(msgs_payload[msg_billing1_id], '"msg_billing1"')
-        eq_(msgs_payload[msg_billing2_id], '"msg_billing2"')
-
-        # After acks only billing messages are not acked yet
-        expected_msg_ids = (
-            msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id) if before_last_acknowledge else \
-                (msg_billing1_id, msg_billing2_id)
-
-        for msg_id in expected_msg_ids:
-            self.assertIn(msg_id, msgs_metadata)
-
-        if before_last_acknowledge:
-            msg_crm1 = msgs_metadata[msg_crm1_id]
-            msg_crm2 = msgs_metadata[msg_crm2_id]
-
-            eq_(msg_crm1.priority, 1)
-            eq_(msg_crm1.mime_type, 'text/xml')
-            eq_(msg_crm1.expiration, 0.1)
-
-            eq_(msg_crm2.priority, 2)
-            eq_(msg_crm2.mime_type, 'application/json')
-            eq_(msg_crm2.expiration, 0.2)
-
-        msg_billing1 = msgs_metadata[msg_billing1_id]
-        msg_billing2 = msgs_metadata[msg_billing2_id]
-
-        eq_(msg_billing1.priority, 3)
-        eq_(msg_billing1.mime_type, 'application/soap+xml')
-        eq_(msg_billing1.expiration, 0.3)
-
-        eq_(msg_billing2.priority, 5)
-        eq_(msg_billing2.mime_type, 'text/plain')
-        eq_(msg_billing2.expiration, 3600)
-
-    # ############################################################################################################################
-
-    def _assert_has_msg_metadata(self, msgs, msg_id, mime_type, priority, expiration):
-        for msg in msgs:
-            if msg.msg_id == msg_id:
-                eq_(msg.mime_type, mime_type, 'mime_type `{}` `{}`'.format(mime_type, msg))
-                eq_(msg.priority, priority, 'priority `{}` `{}`'.format(priority, msg))
-                eq_(msg.expiration, expiration, 'expiration `{}` `{}`'.format(expiration, msg))
-                break
-        else:
-            raise Exception('Msg with msg_id `{}` not in `{}`'.format(msg_id, msgs))
+        self.fail()
 
     # ############################################################################################################################

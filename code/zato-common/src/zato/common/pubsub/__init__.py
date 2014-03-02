@@ -117,10 +117,12 @@ class SubCtx(object):
 class GetCtx(object):
     """ A set of data describing where to fetch messages from.
     """
-    def __init__(self, sub_key=None, max_batch_size=PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE, is_fifo=PUB_SUB.DEFAULT_IS_FIFO):
+    def __init__(self, sub_key=None, max_batch_size=PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE, is_fifo=PUB_SUB.DEFAULT_IS_FIFO,
+                   get_format=PUB_SUB.GET_FORMAT.OBJECT.id):
         self.sub_key = sub_key
         self.max_batch_size = max_batch_size
         self.is_fifo = is_fifo # Fetch in FIFO or LIFO order
+        self.get_format = get_format
 
 # ################################################################################################################################
 
@@ -162,10 +164,16 @@ class Client(object):
 class Consumer(Client):
     """ Pub/sub consumer.
     """
-    def __init__(self, id, name, is_active=True, sub_key=None, max_backlog=PUB_SUB.DEFAULT_MAX_BACKLOG):
+    def __init__(self, id, name, is_active=True, sub_key=None, max_backlog=PUB_SUB.DEFAULT_MAX_BACKLOG,
+            delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id, callback=''):
         super(Consumer, self).__init__(id, name, is_active)
         self.sub_key = sub_key
         self.max_backlog = max_backlog
+        self.delivery_mode = delivery_mode
+        self.callback = callback
+
+    def __repr__(self):
+        return make_repr(self)
 
 # ################################################################################################################################
 
@@ -289,6 +297,8 @@ class PubSub(object):
         with self.update_lock:
             self.consumers[client.id].is_active = client.is_active
             self.consumers[client.id].max_backlog = client.max_backlog
+            self.consumers[client.id].delivery_mode = client.delivery_mode
+            self.consumers[client.id].callback = client.callback
 
     def delete_consumer(self, client, topic):
         """ Deletes an association between a consumer and a topic.
@@ -477,7 +487,7 @@ class RedisPubSub(PubSub):
     # ############################################################################################################################
 
     def get(self, ctx):
-        self.logger.info('Get by sub_key `%s`', ctx.sub_key)
+        self.logger.debug('Get by sub_key `%s`', ctx.sub_key)
 
         with self.in_flight_lock:
             with self.update_lock:
@@ -492,11 +502,24 @@ class RedisPubSub(PubSub):
 
                 messages = self.run_lua(
                     self.LUA_GET_FROM_CONSUMER_QUEUE,
-                    [cons_queue, cons_in_flight_ids, cons_in_flight_data, self.MSG_METADATA_KEY, self.LAST_SEEN_CONSUMER_KEY],
+                    [cons_queue, cons_in_flight_ids, cons_in_flight_data, self.LAST_SEEN_CONSUMER_KEY,
+                         self.MSG_METADATA_KEY, self.MSG_VALUES_KEY],
                     [ctx.max_batch_size, datetime.utcnow().isoformat(), self.sub_to_cons[ctx.sub_key]])
 
                 for msg in messages:
-                    yield Message(**loads(msg))
+
+                    if self.logger.isEnabledFor(logging.DEBUG):
+                        self.logger.debug('Get result: sub_key `%s`, msg `%s`', ctx.sub_key, msg)
+                    else:
+                        self.logger.info('Get result: sub_key `%s`, metadata `%s`', ctx.sub_key, msg[1])
+
+                    payload = msg[0][0] if msg[0] else None
+                    metadata = loads(msg[1][0])
+
+                    if ctx.get_format == PUB_SUB.GET_FORMAT.JSON.id:
+                        yield {'payload': payload, 'metadata':metadata}
+                    else:
+                        yield Message(payload=payload, **metadata)
 
     # ############################################################################################################################
 
@@ -685,6 +708,17 @@ class RedisPubSub(PubSub):
 
         return out
 
+    def get_callback_consumers(self):
+        """ Returns these consumers who specified their messages should be delivered through callback URLs.
+        """
+        with self.update_lock:
+            for consumer in self.consumers.values():
+                if not consumer.is_active:
+                    continue
+
+                #if consumer.delivery_mode == PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id:
+                yield consumer
+
 # ################################################################################################################################
 
 class PubSubAPI(object):
@@ -697,13 +731,13 @@ class PubSubAPI(object):
             expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, expire_at=None):
         """ Publishes a message by a given to a given topic using a set of parameters provided.
         """
-        pub_ctx = PubCtx()
-        pub_ctx.client_id = client_id
-        pub_ctx.topic = topic
-        pub_ctx.msg = Message(
+        ctx = PubCtx()
+        ctx.client_id = client_id
+        ctx.topic = topic
+        ctx.msg = Message(
             payload, topic, mime_type, priority, expiration, msg_id, self.impl.producers[client_id].name)
 
-        return self.impl.publish(pub_ctx)
+        return self.impl.publish(ctx)
 
     def subscribe(self, client_id, topics, sub_key=None):
         """ Subscribes a client to one or more topic. Returns a subscription key assigned.
@@ -715,16 +749,35 @@ class PubSubAPI(object):
         # instead of, say, an integer.
         iter(topics)
 
-        sub_ctx = SubCtx()
-        sub_ctx.client_id = client_id
-        sub_ctx.topics = topics
+        ctx = SubCtx()
+        ctx.client_id = client_id
+        ctx.topics = topics
 
-        return self.impl.subscribe(sub_ctx, sub_key)
+        return self.impl.subscribe(ctx, sub_key)
 
-    def get(self, sub_key, max_batch_size=PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE, is_fifo=PUB_SUB.DEFAULT_IS_FIFO):
+    def get(self, sub_key, max_batch_size=PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE, is_fifo=PUB_SUB.DEFAULT_IS_FIFO,
+            get_format=PUB_SUB.GET_FORMAT.DEFAULT.id):
         """ Gets one or more message, if any are available, for the given subscription key.
         """
-        return self.impl.get(GetCtx(sub_key, max_batch_size, is_fifo))
+        return self.impl.get(GetCtx(sub_key, max_batch_size, is_fifo, get_format))
+
+    def acknowledge(self, sub_key, msg_ids):
+        """ Acknowledges one or more message IDs for a given subscription key.
+        """
+        ctx = AckCtx()
+        ctx.sub_key = sub_key
+        ctx.msg_ids = [msg_ids] if not isinstance(msg_ids, (list, tuple, dict)) else msg_ids
+
+        return self.impl.acknowledge_delete(ctx)
+
+    def reject(self, sub_key, msg_ids):
+        """ Rejects one or more message IDs for a given subscription key.
+        """
+        ctx = RejectCtx()
+        ctx.sub_key = sub_key
+        ctx.msg_ids = [msg_ids] if not isinstance(msg_ids, (list, tuple, dict)) else msg_ids
+
+        return self.impl.reject(ctx)
 
 # ################################################################################################################################
 
