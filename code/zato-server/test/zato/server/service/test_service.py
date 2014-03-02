@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import ast
+from datetime import datetime, timedelta
 from logging import INFO
 from time import time
 from unittest import TestCase
@@ -190,3 +191,30 @@ class TestHTTPRequestData(TestCase):
         self.assertEquals(data.method, wsgi_environ['REQUEST_METHOD'])
         self.assertEquals(sorted(data.GET.items()), [('a', get2), ('b', get3), ('c', get4)])
         self.assertEquals(sorted(data.POST.items()), [('post1', post1), ('post2', post2)])
+
+# ##############################################################################
+
+class TestTime(TestCase):
+    def test_date(self):
+        s = Service()
+
+        # Sanity check - does the API exist at all?
+        s.time.today()
+        s.time.yesterday()
+        s.time.tomorrow()
+
+        stdlib_now = datetime.utcnow()
+        stdlib_yday = datetime.utcnow() - timedelta(days=1)
+        stdlib_tomorrow = datetime.utcnow() + timedelta(days=1)
+
+        stdlib_today_str = stdlib_now.strftime('%Y-%m-%d')
+        stdlib_yday_str = stdlib_yday.strftime('%Y-%m-%d')
+        stdlib_tomorrow_str = stdlib_tomorrow.strftime('%Y-%m-%d')
+
+        api_today = s.time.today()
+        api_yday = s.time.yesterday()
+        api_tomorrow = s.time.tomorrow()
+
+        eq_(api_today, stdlib_today_str)
+        eq_(api_yday, stdlib_yday_str)
+        eq_(api_tomorrow, stdlib_tomorrow_str)

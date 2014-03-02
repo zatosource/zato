@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timedelta
 from httplib import OK
 from itertools import chain
 from sys import maxint
@@ -590,20 +590,31 @@ class TimeUtil(object):
         """ Returns now in UTC formatted as given in 'format'.
         """
         return arrow.utcnow().format(format)
-    
-    def today(self, format='YYYY-MM-DD', tz='UTC'):
+
+    def _date(self, format, tz, difference=None):
         """ Returns current day in a given timezone.
         """
-        now = arrow.utcnow()
-        
+        date = arrow.utcnow()
+        if difference is not None:
+            date = date + timedelta(days=difference)
+
         if tz != 'UTC':
-            now = now.to(tz)
-            
+            date = date.to(tz)
+
         if format.startswith('zato:'):
             format = self.get_format_from_kvdb(format)
-            
-        return now.format(format)
-    
+
+        return date.format(format)
+
+    def today(self, format='YYYY-MM-DD', tz='UTC'):
+        return self._date(format, tz)
+
+    def yesterday(self, format='YYYY-MM-DD', tz='UTC'):
+        return self._date(format, tz, -1)
+
+    def tomorrow(self, format='YYYY-MM-DD', tz='UTC'):
+        return self._date(format, tz, 1)
+
     def reformat(self, value, from_, to):
         """ Reformats value from one datetime format to another, for instance
         from 23-03-2013 to 03/23/13 (MM-DD-YYYY to DD/MM/YY).
