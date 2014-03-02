@@ -22,7 +22,7 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     client_id = forms.ChoiceField(widget=forms.Select())
     delivery_mode = forms.ChoiceField(widget=forms.Select())
-    callback = forms.CharField(widget=forms.TextInput(attrs={'style':'width:90%'}))
+    callback = forms.CharField(initial='', widget=forms.TextInput(attrs={'style':'width:90%'}))
     max_backlog = forms.CharField(
         initial=PUB_SUB.DEFAULT_MAX_BACKLOG, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
 

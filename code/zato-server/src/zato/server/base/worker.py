@@ -224,7 +224,8 @@ class WorkerStore(BrokerMessageReceiver):
         for key, value in self.worker_config.pubsub.consumers.items():
             config = value.config
             self.pubsub.add_consumer(
-                Consumer(config.client_id, config.name, config.is_active, config.sub_key, config.max_backlog),
+                Consumer(config.client_id, config.name, config.is_active, config.sub_key, config.max_backlog,
+                         config.delivery_mode, config.callback),
                 Topic(config.topic_name))
 
 # ##############################################################################
@@ -710,11 +711,13 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_PUB_SUB_CONSUMER_CREATE(self, msg):
         self.pubsub.add_consumer(
-            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog), Topic(msg.topic_name))
+            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog, msg.delivery_mode, msg.callback),
+            Topic(msg.topic_name))
 
     def on_broker_msg_PUB_SUB_CONSUMER_EDIT(self, msg):
         self.pubsub.update_consumer(
-            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog), Topic(msg.topic_name))
+            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog, msg.delivery_mode, msg.callback),
+            Topic(msg.topic_name))
 
     def on_broker_msg_PUB_SUB_CONSUMER_DELETE(self, msg):
         self.pubsub.delete_consumer(

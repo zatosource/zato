@@ -55,10 +55,10 @@ class GetInfo(AdminService):
     """ Returns basic information regarding a consumer.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_pubsub_topics_get_info_request'
-        response_elem = 'zato_pubsub_topics_get_info_response'
+        request_elem = 'zato_pubsub_consumers_get_info_request'
+        response_elem = 'zato_pubsub_consumers_get_info_response'
         input_required = ('id',)
-        output_required = ('cluster_id', 'name', UTC('last_seen'), 'sub_key')
+        output_required = ('cluster_id', 'name', UTC('last_seen'), Int('current_depth'), 'sub_key')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -70,6 +70,7 @@ class GetInfo(AdminService):
             self.response.payload.cluster_id = consumer.cluster_id
             self.response.payload.name = consumer.sec_def.name
             self.response.payload.last_seen = self.pubsub.get_consumer_last_seen(consumer.sec_def.id)
+            self.response.payload.current_depth = self.pubsub.get_consumer_queue_current_depth(consumer.sub_key)
             self.response.payload.sub_key = consumer.sub_key
     
 # ################################################################################################################################

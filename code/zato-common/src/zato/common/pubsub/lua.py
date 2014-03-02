@@ -88,31 +88,37 @@ lua_get_from_cons_queue = """
    local cons_queue = KEYS[1]
    local cons_in_flight_ids = KEYS[2]
    local cons_in_flight_data = KEYS[3]
-   local msg_key = KEYS[4]
    local last_seen_consumer_key = KEYS[4]
-   local client_id = ARGV[5]
+   local msg_metadata_key = KEYS[5]
+   local msg_key = KEYS[6]
 
    local max_batch_size = tonumber(ARGV[1])
    local utc_now = ARGV[2]
+   local client_id = ARGV[3]
 
    local ids = redis.pcall('lrange', cons_queue, 0, max_batch_size)
+   local values = {}
 
    redis.pcall('hset', last_seen_consumer_key, client_id, utc_now)
 
    -- It may well be the case that there are no messages for this client
    if #ids > 0 then
-       local values = redis.pcall('hmget', msg_key, unpack(ids))
+       --local values = redis.pcall('hmget', msg_key, unpack(ids))
 
        for id_idx, id in ipairs(ids) do
+
+           local msg = redis.pcall('hmget', msg_key, id)
+           local metadata = redis.pcall('hmget', msg_metadata_key, id)
+           table.insert(values, {msg, metadata})
+
            redis.pcall('sadd', cons_in_flight_ids, id)
            redis.pcall('hset', cons_in_flight_data, id, utc_now)
            redis.pcall('lrem', cons_queue, 0, id)
        end
-
-       return values
-    else
-        return {}
     end
+
+    return values
+
 """
 
 lua_reject = """

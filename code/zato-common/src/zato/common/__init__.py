@@ -407,6 +407,16 @@ class PUB_SUB:
             def __iter__(self):
                 return iter((self.TOPIC, self.CONSUMER_QUEUE))
 
+    class GET_FORMAT:
+        OBJECT = NameId('Object', 'object')
+        JSON = NameId('JSON', 'json')
+        XML = NameId('XML', 'xml')
+        DEFAULT = OBJECT
+    
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.OBJECT, self.JSON, self.XML))
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
