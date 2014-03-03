@@ -34,7 +34,7 @@ from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import producers as pubsub_producers
-from zato.admin.web.views.security import basic_auth, oauth, tech_account, wss
+from zato.admin.web.views.security import basic_auth, ntlm, oauth, tech_account, wss
 
 urlpatterns = patterns('',
 
