@@ -28,8 +28,9 @@ from paste.util.converters import asbool
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.http_soap import AuditLogEntryList, ChooseClusterForm, CreateForm, EditForm, ReplacePatternsForm
 from zato.admin.web.views import get_js_dt_format, method_allowed
-from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, MSG_PATTERN_TYPE, PARAMS_PRIORITY, \
-     SECURITY_TYPES, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
+from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
+     MSG_PATTERN_TYPE, PARAMS_PRIORITY, SECURITY_TYPES, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, \
+     ZatoException, ZATO_NONE
 from zato.common.odb.model import HTTPSOAP
 from zato.common.util import security_def_type as _security_def_type
 
@@ -73,6 +74,7 @@ def _get_edit_create_message(params, prefix=''):
         'merge_url_params_req': bool(params.get(prefix + 'merge_url_params_req')),
         'url_params_pri': params.get(prefix + 'url_params_pri', URL_PARAMS_PRIORITY.DEFAULT),
         'params_pri': params.get(prefix + 'params_pri', PARAMS_PRIORITY.DEFAULT),
+        'serialization_type': params.get(prefix + 'serialization_type', HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id),
         'method': params.get(prefix + 'method'),
         'soap_action': params.get(prefix + 'soap_action', ''),
         'soap_version': params.get(prefix + 'soap_version', None),
@@ -87,7 +89,7 @@ def _edit_create_response(id, verb, transport, connection, name):
 
     return_data = {'id': id,
                    'transport': transport,
-                   'message': 'Successfully {0} the {1} {2} [{3}]'.format(
+                   'message': 'Successfully {0} the {1} {2} [{3}], check server logs for details'.format(
                        verb,
                        TRANSPORT[transport],
                        CONNECTION[connection],
@@ -111,7 +113,7 @@ def index(req):
     create_form = None
     edit_form = None
 
-    colspan = 14
+    colspan = 16
     
     if transport == 'soap':
         colspan += 2
@@ -124,7 +126,7 @@ def index(req):
                 if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type != _security_def_type.basic_auth:
                     continue
                 elif transport == URL_TYPE.SOAP and def_item.sec_type \
-                     not in(_security_def_type.basic_auth, _security_def_type.wss):
+                     not in(_security_def_type.basic_auth, _security_def_type.ntlm, _security_def_type.wss):
                     continue
             
             value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
@@ -159,7 +161,7 @@ def index(req):
                     transport, item.host, item.url_path, item.method, item.soap_action,
                     item.soap_version, item.data_format, item.ping_method, 
                     item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri, 
-                    service_id=item.service_id, service_name=item.service_name,
+                    item.serialization_type, service_id=item.service_id, service_name=item.service_name,
                     security_id=security_id, security_name=security_name)
             items.append(item)
 
@@ -209,9 +211,13 @@ def edit(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-def _delete_ping(req, service, id, error_template):
+def _id_only_service(req, service, id, error_template):
     try:
-        return req.zato.client.invoke(service, {'id': id})
+        result = req.zato.client.invoke(service, {'id': id})
+        if not result.ok:
+            raise Exception(result.details)
+        else:
+            return result
     except Exception, e:
         msg = error_template.format(e=format_exc(e))
         logger.error(msg)
@@ -219,15 +225,22 @@ def _delete_ping(req, service, id, error_template):
 
 @method_allowed('POST')
 def delete(req, id, cluster_id):
-    _delete_ping(req, 'zato.http-soap.delete', id, 'Could not delete the object, e:[{e}]')
+    _id_only_service(req, 'zato.http-soap.delete', id, 'Could not delete the object, e:[{e}]')
     return HttpResponse()
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = _delete_ping(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:[{e}]')
+    ret = _id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:[{e}]')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse(ret.data.info)
+
+@method_allowed('POST')
+def reload_wsdl(req, id, cluster_id):
+    ret = _id_only_service(req, 'zato.http-soap.reload-wsdl', id, 'Could not reload the WSDL, e:[{e}]')
+    if isinstance(ret, HttpResponseServerError):
+        return ret
+    return HttpResponse('WSDL reloaded, check server logs for details')
 
 @method_allowed('GET')
 def details(req, **kwargs):

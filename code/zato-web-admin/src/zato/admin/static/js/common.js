@@ -88,6 +88,7 @@ $.namespace('zato.pubsub.topics');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.basic_auth');
+$.namespace('zato.security.ntlm');
 $.namespace('zato.security.oauth');
 $.namespace('zato.security.tech_account');
 $.namespace('zato.security.wss');

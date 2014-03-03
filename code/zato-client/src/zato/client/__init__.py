@@ -160,7 +160,13 @@ class JSONSIOResponse(_Response):
     """ Stores responses from JSON SIO services.
     """
     def init(self):
-        json = loads(self.inner.text)
+        try:
+            json = loads(self.inner.text)
+        except ValueError, e:
+            msg = 'inner.status_code `{}`, JSON parsing error `{}`'.format(self.inner.status_code, self.inner.text)
+            self.logger.error(msg)
+            raise ValueError(msg)
+
         if 'zato_env' in json:
             has_zato_env = True
             self.details = json['zato_env']['details']

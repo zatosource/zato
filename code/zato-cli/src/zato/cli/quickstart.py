@@ -311,7 +311,8 @@ class Create(ZatoCommand):
         create_web_admin_args.admin_invoke_password = admin_invoke_password
         
         password = generate_password()
-        admin_created = create_web_admin.Create(create_web_admin_args).execute(create_web_admin_args, False, password)
+        admin_created = create_web_admin.Create(create_web_admin_args).execute(
+            create_web_admin_args, False, password, True)
         
         # Need to reset the logger here because executing the create_web_admin command
         # loads the web admin's logger which doesn't like that of ours.
