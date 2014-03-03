@@ -30,7 +30,6 @@ from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pattern import delivery as pattern_delivery
 from zato.admin.web.views.pattern.delivery import definition as pattern_delivery_def
-from zato.admin.web.views.security import basic_auth, ntlm, oauth, tech_account, wss
 from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
 from zato.admin.web.views.pubsub import message as pubsub_message
