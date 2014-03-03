@@ -113,7 +113,7 @@ DEFAULT_HTTP_PING_METHOD = 'HEAD'
 
 # Default size of an outgoing HTTP connection's pool (plain, SOAP, any).
 # This is a per-outconn setting
-DEFAULT_HTTP_POOL_SIZE = 200
+DEFAULT_HTTP_POOL_SIZE = 20
 
 # Used when there's a need for encrypting/decrypting a well-known data.
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
@@ -144,6 +144,7 @@ SOAP_CHANNEL_VERSIONS = ('1.1',)
 
 SECURITY_TYPES = {
     'basic_auth':'HTTP Basic Auth',
+    'ntlm':'NTLM',
     'oauth': 'OAuth 1.0',
     'tech_acc':'Tech account',
     'wss':'WS-Security'
@@ -378,6 +379,15 @@ class MSG_PATTERN_TYPE:
     class __metaclass__(type):
         def __iter__(self):
             return iter((self.ELEM_PATH, self.XPATH))
+
+class HTTP_SOAP_SERIALIZATION_TYPE:
+    STRING_VALUE = NameId('String', 'string')
+    SUDS = NameId('Suds', 'suds')
+    DEFAULT = SUDS
+
+    class __metaclass__(type):
+        def __iter__(self):
+            return iter((self.STRING_VALUE, self.SUDS))
 
 class PUB_SUB:
     PRIORITY_MIN = 1

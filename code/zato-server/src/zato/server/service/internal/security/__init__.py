@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 
 # Zato
-from zato.common.odb.query import basic_auth_list, oauth_list, tech_acc_list, wss_list
+from zato.common.odb.query import basic_auth_list, ntlm_list, oauth_list, tech_acc_list, wss_list
 from zato.server.service import Boolean, Integer
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -32,6 +32,7 @@ class GetList(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             pairs = (('basic_auth', basic_auth_list),
+                     ('ntlm', ntlm_list),
                      ('oauth', oauth_list),
                      ('tech_acc', tech_acc_list),
                      ('wss', wss_list))

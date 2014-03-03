@@ -17,13 +17,14 @@ from sqlalchemy import func
 from sqlalchemy.sql.expression import case
 
 # Zato
-from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, \
-     PARAMS_PRIORITY, URL_PARAMS_PRIORITY
+from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
+     URL_PARAMS_PRIORITY
 from zato.common.odb.model import ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
      DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, \
+     HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NTLM, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, \
      PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath,\
      WSSDefinition
+
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,21 @@ def basic_auth_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==HTTPBasicAuth.cluster_id).\
         filter(SecurityBase.id==HTTPBasicAuth.id).\
+        order_by('sec_base.name')
+
+@needs_columns
+def ntlm_list(session, cluster_id, needs_columns=False):
+    """ All the NTLM definitions.
+    """
+    return session.query(
+        NTLM.id, NTLM.name,
+        NTLM.is_active,
+        NTLM.username,
+        NTLM.password, NTLM.sec_type,
+        NTLM.password_type).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==NTLM.cluster_id).\
+        filter(SecurityBase.id==NTLM.id).\
         order_by('sec_base.name')
 
 @needs_columns
@@ -380,6 +396,9 @@ def _http_soap(session, cluster_id):
         case([(HTTPSOAP.merge_url_params_req != None, HTTPSOAP.merge_url_params_req)], else_=True).label('merge_url_params_req'),
         case([(HTTPSOAP.url_params_pri != None, HTTPSOAP.url_params_pri)], else_=URL_PARAMS_PRIORITY.DEFAULT).label('url_params_pri'),
         case([(HTTPSOAP.params_pri != None, HTTPSOAP.params_pri)], else_=PARAMS_PRIORITY.DEFAULT).label('params_pri'),
+        case([(
+            HTTPSOAP.serialization_type != None, HTTPSOAP.serialization_type)], 
+             else_=HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id).label('serialization_type'),
         HTTPSOAP.audit_enabled,
         HTTPSOAP.audit_back_log,
         HTTPSOAP.audit_max_payload,

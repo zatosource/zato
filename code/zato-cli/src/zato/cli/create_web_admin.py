@@ -89,7 +89,7 @@ class Create(ZatoCommand):
         self.target_dir = os.path.abspath(args.path)
         super(Create, self).__init__(args)
 
-    def execute(self, args, show_output=True, password=None):
+    def execute(self, args, show_output=True, password=None, needs_admin_created_flag=False):
         os.chdir(self.target_dir)
 
         repo_dir = os.path.join(self.target_dir, 'config', 'repo')
@@ -157,8 +157,7 @@ class Create(ZatoCommand):
         except IntegrityError, e:
             admin_created = False
             connection._rollback()
-            msg = 'Ignoring IntegrityError e:[{}]'.format(format_exc(e))
-            self.logger.info(msg)
+            self.logger.info('Ignoring IntegrityError e:[%s]', format_exc(e).decode('utf-8'))
             
         # Needed because Django took over our logging config
         self.reset_logger(args, True)
@@ -171,4 +170,7 @@ class Create(ZatoCommand):
             else:
                 self.logger.info('OK')
 
-        return admin_created
+        # We return it only when told to explicitly so when the command runs from CLI
+        # it doesn't return a non-zero exit code.
+        if needs_admin_created_flag:
+            return admin_created

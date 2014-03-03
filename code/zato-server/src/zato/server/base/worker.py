@@ -33,14 +33,14 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 from paste.util.multidict import MultiDict
 
 # Zato
-from zato.common import CHANNEL, SIMPLE_IO, ZATO_ODB_POOL_NAME
+from zato.common import CHANNEL, HTTP_SOAP_SERIALIZATION_TYPE, SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, STATS
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
-from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
+from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.message import ElemPathStore, NamespaceStore, XPathStore
@@ -101,7 +101,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.request_dispatcher.url_data = URLData(
             deepcopy(self.worker_config.http_soap),
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
-            self.worker_config.basic_auth, self.worker_config.oauth,
+            self.worker_config.basic_auth, self.worker_config.ntlm, self.worker_config.oauth,
             self.worker_config.tech_acc, self.worker_config.wss,
             self.kvdb, self.broker_client, self.server.odb, self.elem_path_store, self.xpath_store)
 
@@ -157,9 +157,16 @@ class WorkerStore(BrokerMessageReceiver):
             'name':config.name, 'transport':config.transport,
             'address_host':config.host,
             'address_url_path':config.url_path,
-            'soap_action':config.soap_action, 'soap_version':config.soap_version,
-            'ping_method':config.ping_method, 'pool_size':config.pool_size,}
+            'soap_action':config.soap_action, 'soap_version':config.soap_version, 'ping_method':config.ping_method,
+            'pool_size':config.pool_size, 'serialization_type':config.serialization_type}
         wrapper_config.update(sec_config)
+
+        if wrapper_config['serialization_type'] == HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id:
+            wrapper_config['queue_build_cap'] = float(self.server.fs_server_config.misc.suds_soap_queue_build_cap)
+            wrapper = SudsSOAPWrapper(wrapper_config)
+            wrapper.build_client_queue()
+            return wrapper
+
         return HTTPSOAPWrapper(wrapper_config)
 
 # ##############################################################################
@@ -295,6 +302,37 @@ class WorkerStore(BrokerMessageReceiver):
             wrapper.set_auth()
 
 # ##############################################################################
+
+    def ntlm_get(self, name):
+        """ Returns the configuration of the NTLM security definition
+        of the given name.
+        """
+        self.request_dispatcher.url_data.ntlm_get(name)
+
+    def on_broker_msg_SECURITY_NTLM_CREATE(self, msg, *args):
+        """ Creates a new NTLM security definition
+        """
+        self.request_dispatcher.url_data.on_broker_msg_SECURITY_NTLM_CREATE(msg, *args)
+
+    def on_broker_msg_SECURITY_NTLM_EDIT(self, msg, *args):
+        """ Updates an existing NTLM security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.ntlm,
+                self._visit_wrapper_edit, keys=('is_active', 'username', 'name'))
+
+    def on_broker_msg_SECURITY_NTLM_DELETE(self, msg, *args):
+        """ Deletes an NTLM security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.ntlm,
+                self._visit_wrapper_delete)
+
+    def on_broker_msg_SECURITY_NTLM_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an NTLM security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.ntlm,
+                self._visit_wrapper_change_password)
+
+    # ##############################################################################
 
     def basic_auth_get(self, name):
         """ Returns the configuration of the HTTP Basic Auth security definition
