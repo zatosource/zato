@@ -1216,3 +1216,95 @@ class HTTSOAPAuditReplacePatternsXPath(Base):
     pattern = relationship(XPath)
 
 # ##############################################################################
+
+class PubSubTopic(Base):
+    """ A definition of a topic in pub/sub.
+    """
+    __tablename__ = 'pub_sub_topic'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('pub_sub_topic_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    max_depth = Column(Integer, nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pub_sub_topics', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, is_active=None, max_depth=None, cluster_id=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.max_depth = max_depth
+        self.cluster_id = cluster_id
+        self.last_pub_time = None # Not used by the database
+        self.cur_depth = None # Not used by the database
+        self.cur_consumers = None # Not used by the database
+        self.cur_producers = None # Not used by the database
+
+# ################################################################################################################################
+
+class PubSubConsumer(Base):
+    """ All consumers of a given topic, including ones that are not currently connected.
+    """
+    __tablename__ = 'pub_sub_consumer'
+    __table_args__ = (UniqueConstraint('sec_def_id', 'topic_id', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('pub_sub_cons_seq'), primary_key=True)
+    is_active = Column(Boolean(), nullable=False)
+    sub_key = Column(String(200), nullable=False)
+    max_backlog = Column(Integer, nullable=False)
+    delivery_mode = Column(String(200), nullable=False)
+    callback = Column(String(4000), nullable=True)
+
+    topic_id = Column(Integer, ForeignKey('pub_sub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic = relationship(PubSubTopic, backref=backref('consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
+
+    sec_def_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    sec_def = relationship(SecurityBase, backref=backref('pub_sub_consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pub_sub_consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, is_active=None, sub_key=None, max_backlog=None, delivery_mode=None, callback=None,
+                topic_id=None, sec_def_id=None, cluster_id=None):
+        self.id = id
+        self.is_active = is_active
+        self.sub_key = sub_key
+        self.max_backlog = max_backlog
+        self.delivery_mode = delivery_mode
+        self.callback = callback
+        self.topic_id = topic_id
+        self.sec_def_id = sec_def_id
+        self.cluster_id = cluster_id
+        self.last_seen = None # Not used by the DB
+
+# ################################################################################################################################
+
+class PubSubProducer(Base):
+    """ All producers allowed to publish to a given topic.
+    """
+    __tablename__ = 'pub_sub_producer'
+    __table_args__ = (UniqueConstraint('sec_def_id', 'topic_id', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('pub_sub_cons_seq'), primary_key=True)
+    is_active = Column(Boolean(), nullable=False)
+
+    topic_id = Column(Integer, ForeignKey('pub_sub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic = relationship(PubSubTopic, backref=backref('producers', order_by=is_active, cascade='all, delete, delete-orphan'))
+
+    sec_def_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    sec_def = relationship(SecurityBase, backref=backref('pub_sub_producers', order_by=is_active, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pub_sub_producers', order_by=is_active, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, is_active=None, topic_id=None, sec_def_id=None, cluster_id=None):
+        self.id = id
+        self.is_active = is_active
+        self.topic_id = topic_id
+        self.sec_def_id = sec_def_id
+        self.cluster_id = cluster_id
+        self.last_seen = None # Not used by the DB
+
+# ################################################################################################################################
