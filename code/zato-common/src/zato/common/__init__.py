@@ -383,7 +383,7 @@ class MSG_PATTERN_TYPE:
 class HTTP_SOAP_SERIALIZATION_TYPE:
     STRING_VALUE = NameId('String', 'string')
     SUDS = NameId('Suds', 'suds')
-    DEFAULT = SUDS
+    DEFAULT = STRING_VALUE
 
     class __metaclass__(type):
         def __iter__(self):
