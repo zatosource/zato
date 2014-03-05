@@ -579,7 +579,7 @@ class RedisPubSubTestCase(TestCase):
         ps.delete_expired()
 
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        eq_(len(keys), 7)
+        eq_(len(keys), 8)
 
         expected_keys = [ps.MSG_VALUES_KEY, ps.MSG_EXPIRE_AT_KEY, ps.UNACK_COUNTER_KEY, 
                          ps.CONSUMER_MSG_IDS_PREFIX.format(sub_key_crm)]
@@ -779,22 +779,51 @@ class RedisPubSubTestCase(TestCase):
         producer = Client('Producer', 'producer')
         ps.add_producer(producer, topic)
 
-        callback_url1 = 'http://{}'.format(new_cid)
-        consumer_cb1 = Consumer(
-            'Consumer CB1', 'consumer-cb1', sub_key=new_cid(), delivery_mode=PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id,
+        id1 = 'Consumer CB1'
+        name1 = 'consumer-cb1'
+        sub_key1 = new_cid()
+        callback_url1 = 'http://{}'.format(new_cid())
+
+        id2 = 'Consumer CB2'
+        name2 = 'consumer-cb2'
+        sub_key2 = new_cid()
+        callback_url2 = 'http://{}'.format(new_cid())
+
+        consumer_cb1 = Consumer(id1, name1, sub_key=sub_key1, delivery_mode=PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id,
             callback=callback_url1)
 
-        callback_url2 = 'http://{}'.format(new_cid)
-        consumer_cb2 = Consumer(
-            'Consumer CB2', 'consumer-cb2', sub_key=new_cid(), delivery_mode=PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id,
+        consumer_cb2 = Consumer(id2, name2, sub_key=sub_key2, delivery_mode=PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id,
             callback=callback_url2)
 
         consumer_pull = Consumer('Consumer pull', 'consumer-pull', sub_key=new_cid(), delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id)
+        consumer_inactive = Consumer(
+            'Consumer pull', 'consumer-pull', is_active=False, sub_key=new_cid(), delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id)
 
         ps.add_consumer(consumer_cb1, topic)
-        ps.add_consumer(consumer_pull, topic)
         ps.add_consumer(consumer_cb2, topic)
+        ps.add_consumer(consumer_pull, topic)     # This one should not be returned because it's a pull one
+        ps.add_consumer(consumer_inactive, topic) # This one should not be returned because it's inactive
 
-        self.fail()
+        consumers = list(ps.get_callback_consumers())
+
+        # Only 2 are returned, the rest won't make it
+        eq_(len(consumers), 2)
+
+        # Sort by each consumer's ID, i.e. in lexicographical order
+        consumers.sort(key=attrgetter('id'))
+
+        consumer1 = consumers[0]
+        eq_(consumer1.id, id1)
+        eq_(consumer1.name, name1)
+        eq_(consumer1.is_active, True)
+        eq_(consumer1.sub_key, sub_key1)
+        eq_(consumer1.callback, callback_url1)
+
+        consumer2 = consumers[1]
+        eq_(consumer2.id, id2)
+        eq_(consumer2.name, name2)
+        eq_(consumer2.is_active, True)
+        eq_(consumer2.sub_key, sub_key2)
+        eq_(consumer2.callback, callback_url2)
 
     # ############################################################################################################################
