@@ -291,6 +291,8 @@ class RequestHandler(object):
             channel_params = dict((key, value) for key, value in _qs.items())
             channel_params.update(path_params)
 
+        logger.debug('channel_params `%s`, path_params `%s`, _qs `%s`', channel_params, path_params, _qs)
+
         return channel_params
 
     def handle(self, cid, url_match, channel_item, wsgi_environ, raw_request,
