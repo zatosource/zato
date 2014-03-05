@@ -716,8 +716,8 @@ class RedisPubSub(PubSub):
                 if not consumer.is_active:
                     continue
 
-                #if consumer.delivery_mode == PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id:
-                yield consumer
+                if consumer.delivery_mode == PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id:
+                    yield consumer
 
 # ################################################################################################################################
 
