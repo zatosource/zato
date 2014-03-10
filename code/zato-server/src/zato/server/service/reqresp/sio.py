@@ -195,6 +195,16 @@ class Dict(ForceType):
 
 # ################################################################################################################################
 
+class Float(ForceType):
+    """ Gets transformed into a float object.
+    """
+    def from_json(self, value, *ignored):
+        return float(value)
+
+    from_xml = to_json = to_xml = from_json
+
+# ################################################################################################################################
+
 class Integer(ForceType):
     """ Gets transformed into an int object.
     """

@@ -482,6 +482,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                             'cron_definition':cron_definition})
                         self.singleton_server.scheduler.create_edit('create', job_data)
 
+        # Signal to ODB that we are done with deploying everything
+        self.odb.on_deployment_finished()
+
     def init_connectors(self):
         """ Starts all the connector subprocesses.
         """
