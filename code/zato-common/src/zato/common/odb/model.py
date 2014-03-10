@@ -510,11 +510,11 @@ class DeployedService(Base):
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False, primary_key=True)
     service = relationship(Service, backref=backref('deployment_data', order_by=deployment_time, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, deployment_time, details, server, service, source, source_path,
+    def __init__(self, deployment_time, details, server_id, service, source, source_path,
                  source_hash, source_hash_method):
         self.deployment_time = deployment_time
         self.details = details
-        self.server = server
+        self.server_id = server_id
         self.service = service
         self.source = source
         self.source_path = source_path
