@@ -133,6 +133,7 @@ class EnMasse(ManageCommand):
     """ Manages server objects en masse.
     """
     opts = [
+        {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},
         {'name':'--export-local', 'help':'Export local JSON definitions into one file (can be used with --export-odb)', 'action':'store_true'},
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
         {'name':'--import', 'help':'Import definitions from a local JSON (excludes --export-*)', 'action':'store_true'},
@@ -238,7 +239,8 @@ class EnMasse(ManageCommand):
         repo_dir = os.path.join(os.path.abspath(os.path.join(self.args.path)), 'config', 'repo')
         config = get_config(repo_dir, 'server.conf')
 
-        self.client = ZatoClient('http://{}'.format(config.main.gunicorn_bind),
+        server_url = self.args.server_url if self.args.server_url else config.main.gunicorn_bind
+        self.client = ZatoClient('http://{}'.format(server_url),
             '/zato/admin/invoke', self.get_server_client_auth(config, repo_dir), max_response_repr=15000)
 
         session = self.get_odb_session_from_server_config(
