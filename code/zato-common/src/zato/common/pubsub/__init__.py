@@ -716,8 +716,8 @@ class RedisPubSub(PubSub):
                 if not consumer.is_active:
                     continue
 
-                #if consumer.delivery_mode == PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id:
-                yield consumer
+                if consumer.delivery_mode == PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id:
+                    yield consumer
 
 # ################################################################################################################################
 
@@ -727,10 +727,11 @@ class PubSubAPI(object):
     def __init__(self, impl):
         self.impl = impl
 
-    def publish(self, client_id, payload, topic, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY,
-            expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, expire_at=None):
+    def publish(self, payload, topic, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY,
+            expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, expire_at=None, client_id=None):
         """ Publishes a message by a given to a given topic using a set of parameters provided.
         """
+        client_id = client_id or self.get_default_producer().id
         ctx = PubCtx()
         ctx.client_id = client_id
         ctx.topic = topic
@@ -831,9 +832,6 @@ class PubSubAPI(object):
         return self.impl.get_consumer_last_seen(client_id)
 
     # ############################################################################################################################
-
-    def get_default_consumer(self):
-        return self.impl.default_consumer
 
     def get_default_consumer(self):
         return self.impl.default_consumer
