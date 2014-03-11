@@ -444,7 +444,7 @@ class Response(object):
         return self._payload
 
     def _set_payload(self, value):
-        if isinstance(value, basestring):
+        if isinstance(value, (basestring, dict, list, tuple)):
             self._payload = value
         else:
             if not self.outgoing_declared:
