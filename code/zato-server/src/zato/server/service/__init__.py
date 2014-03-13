@@ -56,8 +56,8 @@ from zato.server.message import MessageFacade
 from zato.server.service.reqresp import Outgoing, Request, Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
-from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, ForceType, Integer, List, ListOfDicts, Nested, Unicode, \
-     UTC
+from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, Float, ForceType, Integer, List, ListOfDicts, Nested, \
+     Unicode, UTC
 
 logger = logging.getLogger(__name__)
 
@@ -138,6 +138,7 @@ class Service(object):
         self.logger = logging.getLogger(self.get_name())
         self.server = None
         self.broker_client = None
+        self.pubsub = None
         self.channel = None
         self.cid = None
         self.outgoing = None
@@ -203,6 +204,7 @@ class Service(object):
         self.odb = self.worker_store.server.odb
         self.kvdb = self.worker_store.kvdb
         self.time.kvdb = self.kvdb
+        self.pubsub = self.worker_store.pubsub
 
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
 

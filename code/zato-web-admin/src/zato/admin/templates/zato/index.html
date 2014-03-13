@@ -130,12 +130,20 @@
                         </li>
                     </ul>
                 </li>
+
                 <li><span class="like-a">Key/value DB &darr;</span>
                     <ul>
                         <li><a href="{% url kvdb-data-dict-dictionary %}?cluster={{ cluster_id|default:'' }}">Data dictionaries</a></li>
                         <li><a href="{% url kvdb-remote-command %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></li>
                     </ul>
                 </li>
+
+                <li><span class="like-a">Pub/sub &darr;</span>
+                    <ul>
+                        <li><a href="{% url pubsub-topics %}?cluster={{ cluster_id|default:'' }}">Topics</a></li>
+                    </ul>
+                </li>
+
                 <li><a href="{% url scheduler %}?cluster={{ cluster_id|default:'' }}">Scheduler</a></li>
                 <li><a href="#">Statistics &darr;</a>
                     <ul>

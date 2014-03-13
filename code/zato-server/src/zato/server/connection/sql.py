@@ -32,6 +32,7 @@ from springpython.context import DisposableObject
 # Zato
 from zato.common import Inactive, PASSWORD_SHADOW
 from zato.common.odb import engine_def, ping_queries
+from zato.common.util import get_component_name
 
 class SessionWrapper(object):
     """ Wraps an SQLAlchemy session.
@@ -78,6 +79,8 @@ class SQLConnectionPool(object):
         self.config_no_sensitive = config_no_sensitive 
         
         _extra = {}
+        _extra['connect_args'] = {'application_name': get_component_name()}
+
         extra = self.config.get('extra') # Will be None at times
         if extra:
             extra = ';'.join(extra.splitlines())

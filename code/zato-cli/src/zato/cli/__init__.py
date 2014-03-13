@@ -328,7 +328,10 @@ class ZatoCommand(object):
         engine_url = odb.engine_def.format(engine=args.odb_type, username=args.odb_user,
             password=args.odb_password, host=args.odb_host, port=args.odb_port,
             db_name=args.odb_db_name)
-        return sqlalchemy.create_engine(engine_url)
+
+        connect_args = {'application_name':util.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
+
+        return sqlalchemy.create_engine(engine_url, connect_args=connect_args)
 
     def _get_session(self, engine):
         Session = orm.sessionmaker() # noqa
