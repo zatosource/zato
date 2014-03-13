@@ -108,7 +108,7 @@ class ParallelServerTestCase(TestCase):
             eq_(msg.payload, expected_payload)
             eq_(msg.service, expected_service)
             ok_(msg.cid.startswith('K'))
-            self.assertEquals(len(msg.cid), 40)
+            self.assertEquals(len(msg.cid), 28)
             
     def test__set_tls_info(self):
 

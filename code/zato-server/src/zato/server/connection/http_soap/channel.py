@@ -224,7 +224,7 @@ class RequestDispatcher(object):
 
         # This is 404, no such URL path and SOAP action is known.
         else:
-            response = "[{}] Unknown URL:[{}] or SOAP action:[{}]".format(cid, path_info, soap_action)
+            response = b"[{}] Unknown URL:[{}] or SOAP action:[{}]".format(cid, path_info, soap_action)
             wsgi_environ['zato.http.response.status'] = _status_not_found
 
             logger.error(response)

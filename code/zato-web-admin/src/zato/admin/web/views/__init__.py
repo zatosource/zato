@@ -46,7 +46,7 @@ def get_definition_list(client, cluster, def_type):
     out = {}
     for item in client.invoke('zato.definition.{}.get-list'.format(def_type), {'cluster_id':cluster.id}):
         out[item.id] = item.name
-        
+
     return out
 
 def get_sample_dt(user_profile):
@@ -137,23 +137,23 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         return HttpResponseServerError(msg)
     else:
         return HttpResponse(dumps({'message':success_msg}))
-    
+
 class _BaseView(object):
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     service_name = None
     async_invoke = False
     form_prefix = ''
-    
+
     def on_before_append_item(self, item):
         return item
-    
+
     def on_after_set_input(self):
         pass
-        
+
     def clear_user_message(self):
         self.user_message = None
         self.user_message_class = 'failure'
-    
+
     class SimpleIO:
         input_required = []
         input_optional = []
@@ -165,21 +165,21 @@ class _BaseView(object):
         # Doesn't look overtly smart right now but more code will follow to sanction
         # the existence of this function
         cluster_id = self.req.zato.cluster_id
-        
+
         if cluster_id:
             self.cluster_id = cluster_id
-            
+
     def __init__(self):
         self.req = None
         self.cluster_id = None
-        
+
     def __call__(self, req, *args, **kwargs):
         self.req = req
         for k, v in kwargs.items():
             self.req.zato.args[k] = v
         self.cluster_id = None
         self.fetch_cluster_id()
-        
+
     def set_input(self, req=None):
         req = req or self.req
         self.input.update({'cluster_id':self.cluster_id})
@@ -188,7 +188,7 @@ class _BaseView(object):
                 value =  req.GET.get(self.form_prefix + name) or \
                     req.POST.get(self.form_prefix + name) or req.zato.args.get(self.form_prefix + name)
                 self.input[name] = value
-                
+
         self.on_after_set_input()
 
 class Index(_BaseView):
@@ -196,26 +196,26 @@ class Index(_BaseView):
     """
     url_name = 'url_name-must-be-defined-in-a-subclass'
     template = 'template-must-be-defined-in-a-subclass'
-    
+
     output_class = None
-    
+
     def __init__(self):
         super(Index, self).__init__()
         self.input = Bunch()
         self.items = []
         self.item = None
         self.clear_user_message()
-        
+
     def can_invoke_admin_service(self):
         """ Returns a boolean flag indicating that we know what service to invoke,
         what cluster on and all the required parameters were given in GET request.
         cluster_id doesn't have to be in GET, 'cluster' will suffice.
         """
         input_elems = self.req.GET.keys() + self.req.zato.args.keys()
-        
+
         if not(self.service_name and self.cluster_id):
             return False
-        
+
         for elem in self.SimpleIO.input_required:
             if elem == 'cluster_id':
                 continue
@@ -227,12 +227,12 @@ class Index(_BaseView):
                 if not value:
                     return False
         return True
-        
+
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
             return func(self.service_name, self.input)
-    
+
     def _handle_item_list(self, item_list):
         """ Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
@@ -250,19 +250,19 @@ class Index(_BaseView):
 
     def _handle_item(self, item):
         pass
-    
+
     def __call__(self, req, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
         self.clear_user_message()
-        
+
         try:
             super(Index, self).__call__(req, *args, **kwargs)
             del self.items[:]
             self.item = None
             self.set_input()
-    
+
             return_data = {'cluster_id':self.cluster_id}
             output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
             
@@ -277,27 +277,28 @@ class Index(_BaseView):
                     self.user_message = response.details
             else:
                 logger.info('can_invoke_admin_service returned False, not invoking an admin service:[%s]', self.service_name)
-    
+
             return_data['req'] = self.req
             return_data['items'] = self.items
             return_data['item'] = self.item
+            return_data['input'] = self.input
             return_data['user_message'] = self.user_message
             return_data['user_message_class'] = self.user_message_class
             return_data['zato_clusters'] = req.zato.clusters
             return_data['choose_cluster_form'] = req.zato.choose_cluster_form
-            
+
             view_specific = self.handle()
             if view_specific:
                 return_data.update(view_specific)
-                
+
             return TemplateResponse(req, self.template, return_data)
-        
+
         except Exception, e:
             return HttpResponseServerError(format_exc(e))
 
     def handle(self, req=None, *args, **kwargs):
         raise NotImplementedError('Must be overloaded by a subclass')
-    
+
 class CreateEdit(_BaseView):
     """ Subclasses of this class will handle the creation/updates of Zato objects.
     """
@@ -306,13 +307,13 @@ class CreateEdit(_BaseView):
         super(CreateEdit, self).__init__()
         self.input = Bunch()
         self.input_dict = {}
-    
+
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
         self.clear_user_message()
-        
+
         try:
             super(CreateEdit, self).__call__(req, *args, **kwargs)
             self.set_input()
@@ -323,11 +324,7 @@ class CreateEdit(_BaseView):
             if post_id:
                 input_dict['id'] = post_id
 
-            print(111, self.cluster_id, input_dict, initial_input_dict)
-
             input_dict.update(initial_input_dict)
-
-            print(111, self.cluster_id, input_dict)
 
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
                 if name not in input_dict:
@@ -341,7 +338,7 @@ class CreateEdit(_BaseView):
                     'message': self.success_message(response.data)
                     }
                 return_data.update(initial_return_data)
-                
+
                 for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):
                     if name not in initial_return_data:
                         value = getattr(response.data, name, None)
@@ -351,19 +348,24 @@ class CreateEdit(_BaseView):
                             else:
                                 value = str(value)
                         return_data[name] = value
-                        
+
+                self.post_process_return_data(return_data)
+
                 return HttpResponse(dumps(return_data), mimetype='application/javascript')
             else:
                 msg = 'response:[{}], details.response.details:[{}]'.format(response, response.details)
                 logger.error(msg)
                 raise ZatoException(msg=msg)
-            
+
         except Exception, e:
             return HttpResponseServerError(format_exc(e))
-    
+
     def success_message(self, item):
         raise NotImplementedError('Must be implemented by a subclass')
-        
+
+    def post_process_return_data(self, return_data):
+        return return_data
+
     @property
     def verb(self):
         if self.form_prefix:
@@ -375,7 +377,7 @@ class Delete(_BaseView):
     """
     method_allowed = 'POST'
     error_message = 'error_message-must-be-defined-in-a-subclass'
-    
+
     def __call__(self, req, initial_input_dict={}, *args, **kwargs):
         try:
             super(Delete, self).__call__(req, *args, **kwargs)
