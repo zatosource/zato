@@ -81,6 +81,10 @@ $.namespace('zato.outgoing.sql');
 $.namespace('zato.outgoing.zmq');
 $.namespace('zato.pattern.delivery');
 $.namespace('zato.pattern.delivery.in_doubt');
+$.namespace('zato.pubsub.consumers');
+$.namespace('zato.pubsub.message');
+$.namespace('zato.pubsub.producers');
+$.namespace('zato.pubsub.topics');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.basic_auth');
@@ -210,7 +214,7 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
                         if(_.include(skip_boolean, field_name)) {
                             form_elem.val(value);
                         }
-						else {
+                        else {
                             if($.fn.zato.to_bool(value)) {
                                 form_elem.attr('checked', 'checked');
                             }
@@ -348,7 +352,7 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
 }
 
 $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_pattern,
-                        append_cluster, confirm_challenge) {
+                        append_cluster, confirm_challenge, url_pattern, post_data) {
 
     var instance = $.fn.zato.data_table.data[id];
     var name = '';
@@ -381,11 +385,19 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 
     var callback = function(ok) {
         if(ok) {
-            var url = String.format('./delete/{0}/', id);
+            if(url_pattern) {
+                var url = String.format(url_pattern, id);
+            }
+            else {
+                var url = String.format('./delete/{0}/', id);
+            }
             if(append_cluster) {
                 url = url + String.format('cluster/{0}/', $('#cluster_id').val());
             }
-            $.fn.zato.post(url, _callback);
+            if(!post_data) {
+                post_data = {};
+            }
+            $.fn.zato.post(url, _callback, post_data);
             return false;
         }
     }
@@ -456,17 +468,17 @@ $.fn.zato.data_table.setup_change_password = function() {
         return false;
     });
 
-	if($.fn.zato.data_table.password_required) {
-		$('#id_password1').attr('data-bvalidator', 'required,equalto[id_password2]');
-		$('#id_password1').attr('data-bvalidator-msg', 'Both fields are required and need to be equal');
+    if($.fn.zato.data_table.password_required) {
+        $('#id_password1').attr('data-bvalidator', 'required,equalto[id_password2]');
+        $('#id_password1').attr('data-bvalidator-msg', 'Both fields are required and need to be equal');
 
         $('#id_password2').attr('data-bvalidator', 'required');
         $('#id_password2').attr('data-bvalidator-msg', 'This is a required field');
-	}
-	else {
-		$('#id_password1').attr('data-bvalidator', 'equalto[id_password2],valempty');
-		$('#id_password1').attr('data-bvalidator-msg', 'Fields need to be equal');
-	}
+    }
+    else {
+        $('#id_password1').attr('data-bvalidator', 'equalto[id_password2],valempty');
+        $('#id_password1').attr('data-bvalidator-msg', 'Fields need to be equal');
+    }
 
     change_password_form.bValidator();
 }
@@ -504,21 +516,21 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     var name = '';
     var id = '';
     var tag_name = '';
-	var html_elem;
+    var html_elem;
     var _columns = $.fn.zato.data_table.get_columns();
 
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');
-		html_elem = $('#id_' + prefix + name);
+        html_elem = $('#id_' + prefix + name);
         tag_name = html_elem.prop('tagName');
 
         if(tag_name && html_elem.prop('type') == 'checkbox') {
             item[name] = html_elem.is(':checked');
         }
 
-		else {
-			item[name] = elem.value;
-		}
+        else {
+            item[name] = elem.value;
+        }
 
         if(tag_name && tag_name.toLowerCase() == 'select') {
             item[name + '_select'] = $('#id_' + prefix + name + ' :selected').text();
@@ -700,17 +712,17 @@ $.fn.zato.startswith = function(s, prefix) {
 }
 
 $.fn.zato.toggle_visible_hidden = function(id, is_visible) {
-	var elem = $('#'+ id);
-	var remove_class = '';
-	var add_class = '';
+    var elem = $('#'+ id);
+    var remove_class = '';
+    var add_class = '';
 
     if(is_visible) {
-		remove_class = 'hidden';
-		add_class = 'visible';
+        remove_class = 'hidden';
+        add_class = 'visible';
     }
     else {
-		remove_class = 'visible';
-		add_class = 'hidden';
+        remove_class = 'visible';
+        add_class = 'hidden';
     }
-	$(elem).removeClass(remove_class).addClass(add_class);
+    $(elem).removeClass(remove_class).addClass(add_class);
 }
