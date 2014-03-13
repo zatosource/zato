@@ -454,7 +454,7 @@ def last_stats(req, service_id, cluster_id):
                 return_data[key] = value if value != ZATO_NONE else '0'
 
     except Exception, e:
-        msg = 'Caught an exception while invoking zato.service.get-last-stats, e:[{}]'.format(format_exc(e))
+        msg = 'Caught an exception while invoking zato.service.get-by-service, e:[{}]'.format(format_exc(e))
         logger.error(msg)
     
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
