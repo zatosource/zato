@@ -12,32 +12,26 @@ from cStringIO import StringIO
 from getpass import getpass, getuser
 from socket import gethostname
 
-# bzrlib
-from bzrlib.lazy_import import lazy_import
+# stdlib
+import argparse, glob, json, logging, os, subprocess, sys, tempfile, time
+from contextlib import closing
+from datetime import datetime
+
+# Bunch
+from bunch import Bunch
 
 # Importing
 from peak.util.imports import importString
 
-lazy_import(globals(), """
+# SQLAlchemy
+import sqlalchemy
+from sqlalchemy import orm # import sessionmaker
 
-    # stdlib
-    import argparse, glob, json, logging, os, subprocess, sys, tempfile, time
-    from contextlib import closing
-    from datetime import datetime
-
-    # Bunch
-    from bunch import Bunch
-
-    # SQLAlchemy
-    import sqlalchemy
-    from sqlalchemy import orm # import sessionmaker
-    
-    # Zato
-    from zato import common
-    from zato.common import odb #.odb import engine_def, version_raw
-    from zato.common import util #.util import fs_safe_now
-    from zato.common.crypto import CryptoManager
-""")
+# Zato
+from zato import common
+from zato.cli import util as cli_util
+from zato.common import odb, util
+from zato.common.crypto import CryptoManager
 
 ################################################################################
 
@@ -325,15 +319,10 @@ class ZatoCommand(object):
             file_name=os.path.abspath(file_name)))
 
     def _get_engine(self, args):
-        engine_url = odb.engine_def.format(engine=args.odb_type, username=args.odb_user,
-            password=args.odb_password, host=args.odb_host, port=args.odb_port,
-            db_name=args.odb_db_name)
-        return sqlalchemy.create_engine(engine_url)
+        return cli_util.get_engine(args)
 
     def _get_session(self, engine):
-        Session = orm.sessionmaker() # noqa
-        Session.configure(bind=engine)
-        return Session()
+        return cli_util.get_session(engine)
 
     def _check_passwords(self, args, check_password):
         """ Get the password from a user for each argument that needs a password.
@@ -411,52 +400,15 @@ class ZatoCommand(object):
             shutil.copyfile(os.path.abspath(getattr(args, attr)), file_name)
 
     def get_crypto_manager_from_server_config(self, config, repo_dir):
-
-        priv_key_location = os.path.abspath(os.path.join(repo_dir, config.crypto.priv_key_location))
-
-        cm = CryptoManager(priv_key_location=priv_key_location)
-        cm.load_keys()
-
-        return cm
+        return cli_util.get_crypto_manager_from_server_config(config, repo_dir)
 
     def get_odb_session_from_server_config(self, config, cm):
-
-        engine_args = Bunch()
-        engine_args.odb_type = config.odb.engine
-        engine_args.odb_user = config.odb.username
-        engine_args.odb_password = cm.decrypt(config.odb.password)
-        engine_args.odb_host = config.odb.host
-        engine_args.odb_port = config.odb.port
-        engine_args.odb_db_name = config.odb.db_name
-
-        engine = self._get_engine(engine_args)
-
-        return self._get_session(engine)
+        return cli_util.get_odb_session_from_server_config(config, cm)
 
     def get_server_client_auth(self, config, repo_dir):
         """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
         """
-        session = self.get_odb_session_from_server_config(config, self.get_crypto_manager_from_server_config(config, repo_dir))
-
-        auth = None
-        with closing(session) as session:
-            cluster = session.query(odb.model.Server).\
-                filter(odb.model.Server.token == config.main.token).\
-                one().cluster
-
-            channel = session.query(odb.model.HTTPSOAP).\
-                filter(odb.model.HTTPSOAP.cluster_id == cluster.id).\
-                filter(odb.model.HTTPSOAP.url_path == '/zato/admin/invoke').\
-                filter(odb.model.HTTPSOAP.connection== 'channel').\
-                one()
-
-            if channel.security_id:
-                security = session.query(odb.model.HTTPBasicAuth).\
-                    filter(odb.model.HTTPBasicAuth.id == channel.security_id).\
-                    first()
-
-                if security:
-                    return (security.username, security.password)
+        return cli_util.get_server_client_auth(config, repo_dir)
 
 class FromConfig(ZatoCommand):
     """ Executes commands from a command config file.

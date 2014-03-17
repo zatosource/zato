@@ -159,7 +159,7 @@ class CSV(ForceType):
     from_xml = from_json
 
     def to_json(self, value, *ignored):
-        return ','.join(value)
+        return ','.join(value) if isinstance(value, (list, tuple)) else value
 
     to_xml = to_json
 
@@ -295,7 +295,7 @@ class Unicode(ForceType):
     """ Gets transformed into a unicode object.
     """
     def from_json(self, value, *ignored):
-        return unicode(value)
+        return value if isinstance(value, unicode) else value.decode('utf-8')
 
     from_xml = to_json = to_xml = from_json
 
