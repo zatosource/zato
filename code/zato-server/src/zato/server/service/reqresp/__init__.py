@@ -131,6 +131,9 @@ class Request(SIOConverter):
                 self.payload = self.raw_request
 
             if required_list:
+                if not self.payload:
+                    raise ZatoException(cid, 'Input required yet not provided')
+
                 required_params = self.get_params(required_list, path_prefix, default_value, use_text)
             else:
                 required_params = {}
@@ -158,23 +161,19 @@ class Request(SIOConverter):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
         params = {}
-        if not isinstance(self.payload, basestring):
-            for param in request_params:
-                try:
-                    param_name, value = convert_param(self.cid, self.payload, param, self.data_format, is_required, default_value,
-                            path_prefix, use_text, self.channel_params, self.has_simple_io_config,
-                            self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes)
-                    params[param_name] = value
-    
-                except Exception, e:
-                    msg = 'Caught an exception, param:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
-                        param, self.has_simple_io_config, format_exc(e))
-                    self.logger.error(msg)
-                    raise Exception(msg)
-        else:
-            if self.logger.isEnabledFor(TRACE1):
-                msg = 'payload repr=[{}], type=[{}]'.format(repr(self.payload), type(self.payload))
-                self.logger.log(TRACE1, msg)
+
+        for param in request_params:
+            try:
+                param_name, value = convert_param(self.cid, self.payload, param, self.data_format, is_required, default_value,
+                        path_prefix, use_text, self.channel_params, self.has_simple_io_config,
+                        self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes)
+                params[param_name] = value
+
+            except Exception, e:
+                msg = 'Caught an exception, param:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
+                    param, self.has_simple_io_config, format_exc(e))
+                self.logger.error(msg)
+                raise Exception(msg)
 
         return params
 
@@ -353,7 +352,7 @@ class SimpleIOPayload(SIOConverter):
                         name = name.name
 
                     if isinstance(elem_value, basestring):
-                        elem_value = elem_value.decode('utf-8')
+                        elem_value = elem_value if isinstance(elem_value, unicode) else elem_value.decode('utf-8')
 
                     if self.zato_is_xml:
                         setattr(out_item, name, elem_value)
