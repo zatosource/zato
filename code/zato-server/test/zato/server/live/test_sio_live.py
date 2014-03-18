@@ -24,8 +24,10 @@ from nose.tools import eq_
 
 # Zato
 from zato.cli.util import Util
+from zato.client import JSONClient, SOAPClient, XMLClient
 from zato.common import ZatoException
 from zato.common.test import rand_bool, rand_string
+from zato.common.util import new_cid
 from zato.server.service import Bool, Dict, Nested
 from zato.server.service.reqresp.sio import ValidationException
 
@@ -34,6 +36,7 @@ from . import zato_test_live_sio
 
 DEV_CONFIG_FILE = os.path.expanduser(os.path.sep.join(['~', '.zato', 'dev.ini']))
 SERVER_CONFIG_FILE = os.path.sep.join(['config', 'repo', 'server.conf'])
+URL_PATH_PATTERN = '/zato/test-live/{}/{}'
 
 class SIOLiveTestCase(TestCase):
 
@@ -71,9 +74,38 @@ class SIOLiveTestCase(TestCase):
 
         self.util = None
 
-    def invoke(self, service, request=None):
+    def set_up_client_and_channel_json(self, service):
+        path = URL_PATH_PATTERN.format(service, new_cid())
+        self.util.client.invoke('zato.http-soap.create', {
+            'cluster_id': self.util.client.cluster_id,
+            'name': path,
+            'is_active': True,
+            'connection': 'channel',
+            'transport': 'plain_http',
+            'is_internal': True,
+            'url_path': path,
+            'service': service,
+            'security_id': None,
+            'data_format': 'json'
+        })
+        return JSONClient(self.util.client.address, path)
+
+    def invoke_asi(self, service, request=None):
+        """ Invokes a service using AnyServiceInvoker.
+        """
         request = request or {}
         response = self.util.client.invoke(service, request)
+
+        if response.ok:
+            return bunchify(response.data)
+        else:
+            raise Exception(response.details)
+
+    def invoke_json(self, client, request=None):
+        """ Invokes a service using JSONClient.
+        """
+        request = request or {}
+        response = client.invoke(request)
 
         if response.ok:
             return bunchify(response.data)
@@ -88,10 +120,14 @@ class SIOLiveTestCase(TestCase):
 
         # No input provided hence we expect a proper message on output
         try:
-            response = self.invoke(service)
+            response = self.invoke_asi(service)
         except Exception, e:
-            self.assertIn('Input required yet not provided', e.message)
+            self.assertIn('Missing input', e.message)
 
-        # JSON request/response
-        response = self.invoke(service, zato_test_live_sio.TestSimpleTypes.test_data)
+        # JSON request/response over AnyServiceInvoker
+        response = self.invoke_asi(service, zato_test_live_sio.TestSimpleTypes.test_data)
+        zato_test_live_sio.TestSimpleTypes.test_json(response.response, False)
+
+        # JSON request/response over JSONClient
+        response = self.invoke_json(self.set_up_client_and_channel_json(service), zato_test_live_sio.TestSimpleTypes.test_data)
         zato_test_live_sio.TestSimpleTypes.test_json(response.response, False)
