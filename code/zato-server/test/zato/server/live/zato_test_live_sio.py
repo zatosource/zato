@@ -81,4 +81,4 @@ class TestSimpleTypes(Service):
             setattr(self.response.payload, name, self.__class__.test_data[name])
 
         self.response.payload.csv2 = ['5', '6', '7', '8']
-        self.response.payload.csv3 = ['9', '10', '11', '12']
+        self.response.payload.csv3 = ('9', '10', '11', '12')
