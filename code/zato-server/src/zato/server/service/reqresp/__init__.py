@@ -132,7 +132,7 @@ class Request(SIOConverter):
 
             if required_list:
                 if not self.payload:
-                    raise ZatoException(cid, 'Input required yet not provided')
+                    raise ZatoException(cid, 'Missing input')
 
                 required_params = self.get_params(required_list, path_prefix, default_value, use_text)
             else:
