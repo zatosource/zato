@@ -236,7 +236,7 @@ class TestRequest(TestCase):
         data_format = uuid4().hex
         transport = uuid4().hex
         
-        io_default = {}
+        io_default = {'dummy':'dummy'}
         io_custom = Bunch({
             'request_elem': uuid4().hex,
             'input_required': ['a', 'b', 'c'],
@@ -260,6 +260,7 @@ class TestRequest(TestCase):
         
         request = Request(logger)
         request.payload = None
+        request.raw_request = io_default
         request.get_params = _get_params
         
         request.channel_params['a'] = 'channel_param_a'
