@@ -22,6 +22,9 @@ from configobj import ConfigObj
 # nose
 from nose.tools import eq_
 
+# Paste
+from paste.util.converters import asbool
+
 # Zato
 from zato.cli.util import Util
 from zato.client import JSONClient, SOAPClient, XMLClient
@@ -74,7 +77,7 @@ class SIOLiveTestCase(TestCase):
 
         self.util = None
 
-    def set_up_client_and_channel_json(self, service):
+    def set_up_client_and_channel(self, service, data_format):
         path = URL_PATH_PATTERN.format(service, new_cid())
         self.util.client.invoke('zato.http-soap.create', {
             'cluster_id': self.util.client.cluster_id,
@@ -86,31 +89,48 @@ class SIOLiveTestCase(TestCase):
             'url_path': path,
             'service': service,
             'security_id': None,
-            'data_format': 'json'
+            'data_format': data_format
         })
-        return JSONClient(self.util.client.address, path)
+
+        if data_format == 'json':
+            client_class = JSONClient
+        else:
+            client_class = XMLClient
+
+        return client_class(self.util.client.address, path)
+
+# ################################################################################################################################
+
+    def _invoke(self, client, unserialize_func, service=None, request=None):
+        """ Invokes a service using AnyServiceInvoker.
+        """
+        request = request or {}
+        if service:
+            response = client.invoke(service, request)
+        else:
+            response = client.invoke(request)
+
+        if response.ok:
+            return bunchify(response.data)
+        else:
+            raise Exception(response.details)
 
     def invoke_asi(self, service, request=None):
         """ Invokes a service using AnyServiceInvoker.
         """
-        request = request or {}
-        response = self.util.client.invoke(service, request)
-
-        if response.ok:
-            return bunchify(response.data)
-        else:
-            raise Exception(response.details)
+        return self._invoke(self.util.client, bunchify, service, request)
 
     def invoke_json(self, client, request=None):
         """ Invokes a service using JSONClient.
         """
-        request = request or {}
-        response = client.invoke(request)
+        return self._invoke(client, bunchify, request)
 
-        if response.ok:
-            return bunchify(response.data)
-        else:
-            raise Exception(response.details)
+    def invoke_xml(self, client, request=None):
+        """ Invokes a service using XMLClient.
+        """
+        return self._invoke(client, bunchify, request)
+
+# ################################################################################################################################
 
     def test_simple_types(self):
         if not self.should_run:
@@ -124,10 +144,102 @@ class SIOLiveTestCase(TestCase):
         except Exception, e:
             self.assertIn('Missing input', e.message)
 
+        test_data = zato_test_live_sio.TestSimpleTypes.test_data
+
         # JSON request/response over AnyServiceInvoker
-        response = self.invoke_asi(service, zato_test_live_sio.TestSimpleTypes.test_data)
-        zato_test_live_sio.TestSimpleTypes.test_json(response.response, False)
+        response = self.invoke_asi(service, test_data)
+        zato_test_live_sio.TestSimpleTypes.check_json(response.response, False)
 
         # JSON request/response over JSONClient
-        response = self.invoke_json(self.set_up_client_and_channel_json(service), zato_test_live_sio.TestSimpleTypes.test_data)
-        zato_test_live_sio.TestSimpleTypes.test_json(response.response, False)
+        response = self.invoke_json(
+            self.set_up_client_and_channel(service, 'json'), test_data)
+        zato_test_live_sio.TestSimpleTypes.check_json(response.response, False)
+
+        # XML request/response over XMLClient
+        client = self.set_up_client_and_channel(service, 'xml')
+
+        response = self.invoke_xml(client, """<request>
+            <should_as_is>True</should_as_is>
+            <is_boolean>True</is_boolean>
+            <should_boolean>False</should_boolean>
+            <csv1>1,2,3,4</csv1>
+            <dict>
+             <item><key>a</key><value>b</value></item>
+             <item><key>c</key><value>d</value></item>
+            </dict>
+            <float>2.3</float>
+            <integer>190</integer>
+            <integer2>0</integer2>
+            <list>
+             <item>1</item>
+             <item>2</item>
+             <item>3</item>
+            </list>
+
+            <list_of_dicts>
+
+             <item_dict>
+              <item>
+                <key>1</key>
+                <value>11</value>
+              </item>
+              <item>
+                <key>2</key>
+                <value>22</value>
+              </item>
+             </item_dict>
+
+             <item_dict>
+              <item>
+                <key>3</key>
+                <value>33</value>
+              </item>
+             </item_dict>
+
+             <item_dict>
+              <item>
+                <key>4</key>
+                <value>44</value>
+              </item>
+              <item>
+                <key>5</key>
+                <value>55</value>
+              </item>
+              <item>
+                <key>3</key>
+                <value>33</value>
+              </item>
+              <item>
+                <key>2</key>
+                <value>22</value>
+              </item>
+              <item>
+                <key>1</key>
+                <value>11</value>
+              </item>
+             </item_dict>
+
+            </list_of_dicts>
+
+            <unicode1>zzzä</unicode1>
+            <unicode2>zä</unicode2>
+            <utc>2012-01-12T03:12:19+00:00</utc>
+        </request>""".encode('utf-8'))
+
+        for name in('should_as_is', 'is_boolean', 'should_boolean', 'csv1', 'float', 'integer', 'integer2', 'unicode1', 'unicode2', 'utc'):
+            actual = response.xpath('//{}'.format(name))[0]
+            expected = test_data[name]
+
+            if name in ('is_boolean', 'should_boolean'):
+                expected = asbool(expected)
+
+            if name == 'float':
+                expected = float(expected)
+
+            if name in ('integer', 'integer2'):
+                expected = int(expected)
+
+            if name == 'utc':
+                expected = expected.replace('+00:00', '')
+
+            eq_(actual, expected, 'name:`{}` actual:`{}` expected:`{}`'.format(name, repr(actual), repr(expected)))

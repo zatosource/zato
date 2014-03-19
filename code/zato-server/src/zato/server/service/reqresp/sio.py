@@ -237,18 +237,25 @@ class List(ForceType):
 # ################################################################################################################################
 
 class ListOfDicts(ForceType):
-    """ Transformed into a list of dictionaries in JSON or a
-    list of
-     <dict>
-      <item>
-        <key>key1</key>
-        <value>value1</value>
-      </item>
-      <item>
-        <key>key2</key>
-        <value>value2</value>
-      </item>
-     <dict>
+    """ Transformed into a list of dictionaries in JSON or a list of
+     <my_list_of_dicts>
+      <item_dict>
+       <item>
+         <key>key1</key>
+         <value>value1</value>
+       </item>
+       <item>
+         <key>key2</key>
+         <value>value2</value>
+       </item>
+      </item_dict>
+      <item_dict>
+       <item>
+         <key>key3</key>
+         <value>value3</value>
+       </item>
+      </item_dict>
+     <my_list_of_dicts>
     elems in XML.
     """
     def from_json(self, value, *ignored):
@@ -259,9 +266,9 @@ class ListOfDicts(ForceType):
     def from_xml(self, value, *ignored):
         list_of_dicts = []
 
-        for xml_dict in value.iterchildren():
+        for item_dict in value.iterchildren('item_dict'):
             _dict = {}
-            for item in xml_dict.iterchildren():
+            for item in item_dict.iterchildren():
                 _dict[item.find('key').text] = item.find('value').text
             list_of_dicts.append(_dict)
 
@@ -329,7 +336,7 @@ def convert_sio(param, param_name, value, has_simple_io_config, is_xml, bool_par
         if any(param_name.startswith(prefix) for prefix in bool_parameter_prefixes) or isinstance(param, Boolean):
             value = asbool(value or None) # value can be an empty string and asbool chokes on that
 
-        if value and value is not None: # Can be a 0
+        if value is not None:
             if isinstance(param, ForceType):
                 value = param.convert(value, param_name, data_format, from_sio_to_external)
             else:
