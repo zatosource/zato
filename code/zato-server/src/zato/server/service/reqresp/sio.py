@@ -409,7 +409,8 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
             value = default_value
         else:
             if is_required and not channel_params.get(param_name):
-                msg = 'Required input element:[{}] not found, value:[{}]'.format(param, value)
+                msg = 'Required input element:`{}` not found, value:`{}`, data_format:`{}`, payload:`{}`'.format(
+                    param, value, data_format, payload)
                 raise ParsingException(cid, msg)
             else:
                 # Not required and not provided on input

@@ -444,12 +444,21 @@ class Response(object):
         return self._payload
 
     def _set_payload(self, value):
-        if isinstance(value, (basestring, dict, list, tuple)):
+        """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
+        the dicts are matched and transformed according to the SIO definition.
+        """
+        if isinstance(value, (basestring, list, tuple)):
             self._payload = value
         else:
-            if not self.outgoing_declared:
-                raise Exception("Can't set payload, there's no output_required nor output_optional declared")
-            self._payload.set_payload_attrs(value)
+            if isinstance(value, dict):
+                if not self.outgoing_declared:
+                    self._payload = value
+                else:
+                    self._payload.set_payload_attrs(value)
+            else:
+                if not self.outgoing_declared:
+                    raise Exception("Can't set payload, there's no output_required nor output_optional declared")
+                self._payload.set_payload_attrs(value)
 
     payload = property(_get_payload, _set_payload)
 
