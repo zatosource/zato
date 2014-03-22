@@ -230,7 +230,7 @@ class SOAPSIOClientTestCase(_Base):
             </soap:Envelope>""".format(sio_response).strip()
         
         client = self.get_client(FakeInnerResponse(headers, ok, text, status_code))
-        response = client.invoke(soap_action)
+        response = client.invoke(soap_action, '')
         
         eq_(response.ok, ok)
         eq_(response.inner.text, text)
@@ -295,7 +295,7 @@ NoResultFound: No row was found for one()
  </SOAP-ENV:Envelope>"""
         
         client = self.get_client(FakeInnerResponse(headers, ok, text, status_code))
-        response = client.invoke(soap_action)
+        response = client.invoke(soap_action, '')
         
         eq_(response.ok, ok)
         eq_(response.inner.text, text)
