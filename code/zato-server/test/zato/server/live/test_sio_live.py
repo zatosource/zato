@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import glob, os, shutil, time
 from json import dumps, loads
+from logging import getLogger
 from unittest import TestCase
 
 # Bunch
@@ -18,6 +19,9 @@ from bunch import Bunch, bunchify
 
 # configobj
 from configobj import ConfigObj
+
+# etree
+from lxml import etree
 
 # nose
 from nose.tools import eq_
@@ -36,6 +40,8 @@ from zato.server.service.reqresp.sio import ValidationException
 
 # Zato - test services
 from . import zato_test_live_sio 
+
+logger = getLogger(__name__)
 
 DEV_CONFIG_FILE = os.path.expanduser(os.path.sep.join(['~', '.zato', 'dev.ini']))
 SERVER_CONFIG_FILE = os.path.sep.join(['config', 'repo', 'server.conf'])
@@ -77,14 +83,14 @@ class SIOLiveTestCase(TestCase):
 
         self.util = None
 
-    def set_up_client_and_channel(self, service, data_format):
+    def set_up_client_and_channel(self, service, data_format, transport):
         path = URL_PATH_PATTERN.format(service, new_cid())
         self.util.client.invoke('zato.http-soap.create', {
             'cluster_id': self.util.client.cluster_id,
             'name': path,
             'is_active': True,
             'connection': 'channel',
-            'transport': 'plain_http',
+            'transport': transport,
             'is_internal': True,
             'url_path': path,
             'service': service,
@@ -146,100 +152,139 @@ class SIOLiveTestCase(TestCase):
 
         test_data = zato_test_live_sio.TestSimpleTypes.test_data
 
+        # ########################################################################################################################
+
         # JSON request/response over AnyServiceInvoker
         response = self.invoke_asi(service, test_data)
         zato_test_live_sio.TestSimpleTypes.check_json(response.response, False)
 
+        # ########################################################################################################################
+
         # JSON request/response over JSONClient
         response = self.invoke_json(
-            self.set_up_client_and_channel(service, 'json'), test_data)
+            self.set_up_client_and_channel(service, 'json', 'plain_http'), test_data)
         zato_test_live_sio.TestSimpleTypes.check_json(response.response, False)
 
-        # XML request/response over XMLClient
-        client = self.set_up_client_and_channel(service, 'xml')
+        # ########################################################################################################################
 
-        response = self.invoke_xml(client, """<request>
-            <should_as_is>True</should_as_is>
-            <is_boolean>True</is_boolean>
-            <should_boolean>False</should_boolean>
-            <csv1>1,2,3,4</csv1>
-            <dict>
-             <item><key>a</key><value>b</value></item>
-             <item><key>c</key><value>d</value></item>
-            </dict>
-            <float>2.3</float>
-            <integer>190</integer>
-            <integer2>0</integer2>
-            <list>
-             <item>1</item>
-             <item>2</item>
-             <item>3</item>
-            </list>
+        # Plain XML config
+        request_wrapper_plain_xml = '{}'
+        xpath_string_pattern_plain_xml = '//{}'
+        transport_plain_xml = 'plain_http'
 
-            <list_of_dicts>
+        # SOAP 1.1 config
+        request_wrapper_soap_11 = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+            <soap:Body>{}</soap:Body>
+            </soap:Envelope>
+        """
+        xpath_string_pattern_soap_11 = "//*[local-name()='{}']"
+        transport_soap_11 = 'soap'
 
-             <item_dict>
-              <item>
-                <key>1</key>
-                <value>11</value>
-              </item>
-              <item>
-                <key>2</key>
-                <value>22</value>
-              </item>
-             </item_dict>
+        config = [
+            [request_wrapper_plain_xml, xpath_string_pattern_plain_xml, transport_plain_xml],
+            [request_wrapper_soap_11, xpath_string_pattern_soap_11, transport_soap_11],
+        ]
 
-             <item_dict>
-              <item>
-                <key>3</key>
-                <value>33</value>
-              </item>
-             </item_dict>
+        request = """<request>
+                    <should_as_is>True</should_as_is>
+                    <is_boolean>True</is_boolean>
+                    <should_boolean>False</should_boolean>
+                    <csv1>1,2,3,4</csv1>
+                    <dict>
+                     <item><key>a</key><value>b</value></item>
+                     <item><key>c</key><value>d</value></item>
+                    </dict>
+                    <float>2.3</float>
+                    <integer>190</integer>
+                    <integer2>0</integer2>
+                    <list>
+                     <item>1</item>
+                     <item>2</item>
+                     <item>3</item>
+                    </list>
 
-             <item_dict>
-              <item>
-                <key>4</key>
-                <value>44</value>
-              </item>
-              <item>
-                <key>5</key>
-                <value>55</value>
-              </item>
-              <item>
-                <key>3</key>
-                <value>33</value>
-              </item>
-              <item>
-                <key>2</key>
-                <value>22</value>
-              </item>
-              <item>
-                <key>1</key>
-                <value>11</value>
-              </item>
-             </item_dict>
+                    <list_of_dicts>
 
-            </list_of_dicts>
+                     <item_dict>
+                      <item>
+                        <key>1</key>
+                        <value>11</value>
+                      </item>
+                      <item>
+                        <key>2</key>
+                        <value>22</value>
+                      </item>
+                     </item_dict>
 
-            <unicode1>zzzä</unicode1>
-            <unicode2>zä</unicode2>
-            <utc>2012-01-12T03:12:19+00:00</utc>
-        </request>""".encode('utf-8'))
+                     <item_dict>
+                      <item>
+                        <key>3</key>
+                        <value>33</value>
+                      </item>
+                     </item_dict>
 
-        for name in('should_as_is', 'is_boolean', 'should_boolean', 'csv1', 'float', 'integer', 'integer2', 'unicode1', 'unicode2', 'utc'):
-            actual = response.xpath('//{}'.format(name))[0]
-            expected = test_data[name]
+                     <item_dict>
+                      <item>
+                        <key>4</key>
+                        <value>44</value>
+                      </item>
+                      <item>
+                        <key>5</key>
+                        <value>55</value>
+                      </item>
+                      <item>
+                        <key>3</key>
+                        <value>33</value>
+                      </item>
+                      <item>
+                        <key>2</key>
+                        <value>22</value>
+                      </item>
+                      <item>
+                        <key>1</key>
+                        <value>11</value>
+                      </item>
+                     </item_dict>
 
-            if name in ('is_boolean', 'should_boolean'):
-                expected = asbool(expected)
+                    </list_of_dicts>
 
-            if name == 'float':
-                expected = float(expected)
+                    <unicode1>zzzä</unicode1>
+                    <unicode2>zä</unicode2>
+                    <utc>2012-01-12T03:12:19+00:00</utc>
+                </request>"""
 
-            if name in ('integer', 'integer2'):
-                expected = int(expected)
 
-            if name == 'utc':
-                expected = expected.replace('+00:00', '')
+        for request_wrapper, xpath_string_pattern, transport in config:
 
-            eq_(actual, expected, 'name:`{}` actual:`{}` expected:`{}`'.format(name, repr(actual), repr(expected)))
+            # XML request/response over XMLClient
+            client = self.set_up_client_and_channel(service, 'xml', transport)
+
+            response = self.invoke_xml(client, request_wrapper.format(request).encode('utf-8'))
+
+            for name in('should_as_is', 'is_boolean', 'should_boolean', 'csv1', 'float', 'integer', 'integer2',\
+                        'unicode1', 'unicode2', 'utc'):
+                expr = xpath_string_pattern.format(name)
+
+                actual = response.xpath(expr)
+                if not actual:
+                    raise Exception('Could not find {} in {}'.format(expr, etree.tostring(response, pretty_print=True)))
+                else:
+                    actual = actual[0]
+
+                expected = test_data[name]
+
+                if name in ('is_boolean', 'should_boolean'):
+                    expected = asbool(expected)
+
+                if name == 'float':
+                    expected = float(expected)
+
+                if name in ('integer', 'integer2'):
+                    expected = int(expected)
+
+                if name == 'utc':
+                    expected = expected.replace('+00:00', '')
+
+                eq_(actual, expected, 'name:`{}` actual:`{}` expected:`{}`'.format(name, repr(actual), repr(expected)))
+
+        # ########################################################################################################################
