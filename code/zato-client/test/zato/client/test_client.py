@@ -329,7 +329,7 @@ class AnyServiceInvokerTestCase(_Base):
         })
         
         client = self.get_client(FakeInnerResponse(headers, ok, text, status_code))
-        response = client.invoke(service_name)
+        response = client.invoke(service_name, '')
         
         eq_(response.ok, ok)
         eq_(response.inner.text, text)
