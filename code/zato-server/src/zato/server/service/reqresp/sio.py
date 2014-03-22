@@ -209,7 +209,7 @@ class Integer(ForceType):
     """ Gets transformed into an int object.
     """
     def from_json(self, value, *ignored):
-        return int(value)
+        return int(value) if value else None
 
     from_xml = to_json = to_xml = from_json
 
