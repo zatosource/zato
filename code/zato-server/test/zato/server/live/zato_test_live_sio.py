@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from logging import getLogger
+
 # Bunch
 from bunch import bunchify
 
@@ -16,6 +19,8 @@ from nose.tools import eq_
 
 # Zato
 from zato.server.service import AsIs, Boolean, CSV, Dict, Float, ForceType, Integer, List, ListOfDicts, Service, Unicode, UTC
+
+logger = getLogger(__name__)
 
 class TestSimpleTypes(Service):
 
@@ -67,6 +72,7 @@ class TestSimpleTypes(Service):
         # Note that in list_of_dicts all the keys will be automatically stringified, as required by JSON
 
         lod = data.list_of_dicts
+        #logger.warn('lod %r %r', lod, data)
         eq_(len(lod), 3)
         eq_(sorted(lod[0].items()), [('1', '11'), ('2', '22')])
         eq_(sorted(lod[1].items()), [('3', '33')])

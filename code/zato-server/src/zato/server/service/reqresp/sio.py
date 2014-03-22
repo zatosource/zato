@@ -187,7 +187,7 @@ class Dict(ForceType):
     def from_xml(self, value, *ignored):
         _dict = {}
         for item in value.iterchildren():
-            _dict[item.find('key').text] = item.find('value').text
+            _dict[item.key.text] = item.value.text
         return _dict
 
     def to_xml(self, value, param_name):
@@ -266,10 +266,10 @@ class ListOfDicts(ForceType):
     def from_xml(self, value, *ignored):
         list_of_dicts = []
 
-        for item_dict in value.iterchildren('item_dict'):
+        for item_dict in value.item_dict:
             _dict = {}
             for item in item_dict.iterchildren():
-                _dict[item.find('key').text] = item.find('value').text
+                _dict[item.key.text] = item.value.text
             list_of_dicts.append(_dict)
 
         return list_of_dicts
@@ -348,8 +348,8 @@ def convert_sio(param, param_name, value, has_simple_io_config, is_xml, bool_par
         return value
 
     except Exception, e:
-        msg = 'Conversion error, param:[{}], param_name:[{}], repr(value):[{}], e:[{}]'.format(
-            param, param_name, repr(value), format_exc(e))
+        msg = 'Conversion error, param:`{}`, param_name:`{}`, repr:`{}`, type:`{}`, e:`{}`'.format(
+            param, param_name, repr(value), type(value), format_exc(e))
         logger.error(msg)
 
         raise ZatoException(msg=msg)
