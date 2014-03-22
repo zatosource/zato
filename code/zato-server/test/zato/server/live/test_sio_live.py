@@ -117,6 +117,9 @@ class SIOLiveTestCase(TestCase):
             response = client.invoke(request)
 
         if response.ok:
+            if not response.data:
+                raise Exception('No response.data in {}'.format(response))
+
             return bunchify(response.data)
         else:
             raise Exception(response.details)
@@ -138,32 +141,28 @@ class SIOLiveTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_simple_types(self):
-        if not self.should_run:
-            return
-
-        service = 'zato-test-live-sio.test-simple-types'
+    def _run_tests_output_assigned_manually(self, service_name, service_class):
 
         # No input provided hence we expect a proper message on output
         try:
-            response = self.invoke_asi(service)
+            response = self.invoke_asi(service_name)
         except Exception, e:
             self.assertIn('Missing input', e.message)
 
-        test_data = zato_test_live_sio.TestSimpleTypes.test_data
+        test_data = service_class.test_data
 
         # ########################################################################################################################
 
         # JSON request/response over AnyServiceInvoker
-        response = self.invoke_asi(service, test_data)
-        zato_test_live_sio.TestSimpleTypes.check_json(response.response, False)
+        response = self.invoke_asi(service_name, test_data)
+        service_class.check_json(response.response, False)
 
         # ########################################################################################################################
 
         # JSON request/response over JSONClient
         response = self.invoke_json(
-            self.set_up_client_and_channel(service, 'json', 'plain_http'), test_data)
-        zato_test_live_sio.TestSimpleTypes.check_json(response.response, False)
+            self.set_up_client_and_channel(service_name, 'json', 'plain_http'), test_data)
+        service_class.check_json(response.response, False)
 
         # ########################################################################################################################
 
@@ -257,7 +256,7 @@ class SIOLiveTestCase(TestCase):
         for request_wrapper, xpath_string_pattern, transport in config:
 
             # XML request/response over XMLClient
-            client = self.set_up_client_and_channel(service, 'xml', transport)
+            client = self.set_up_client_and_channel(service_name, 'xml', transport)
 
             response = self.invoke_xml(client, request_wrapper.format(request).encode('utf-8'))
 
@@ -288,3 +287,17 @@ class SIOLiveTestCase(TestCase):
                 eq_(actual, expected, 'name:`{}` actual:`{}` expected:`{}`'.format(name, repr(actual), repr(expected)))
 
         # ########################################################################################################################
+
+    def test_channels_output_assigned_manually(self):
+        if not self.should_run:
+            return
+
+        service_data = (
+            ('zato-test-live-sio.roundtrip', zato_test_live_sio.Roundtrip),
+            ('zato-test-live-sio.from-dict', zato_test_live_sio.FromDict),
+            ('zato-test-live-sio.passthrough-to-roundtrip', zato_test_live_sio.PassthroughToRoundtrip),
+            ('zato-test-live-sio.passthrough-to-from-dict', zato_test_live_sio.PassthroughToFromDict),
+        )
+
+        for service_info in service_data:
+            self._run_tests_output_assigned_manually(*service_info)

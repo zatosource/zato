@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from copy import deepcopy
 from logging import getLogger
 
 # Bunch
@@ -22,7 +23,7 @@ from zato.server.service import AsIs, Boolean, CSV, Dict, Float, ForceType, Inte
 
 logger = getLogger(__name__)
 
-class TestSimpleTypes(Service):
+class _TestBase(Service):
 
     test_data = bunchify({
         'should_as_is': 'True',
@@ -72,7 +73,6 @@ class TestSimpleTypes(Service):
         # Note that in list_of_dicts all the keys will be automatically stringified, as required by JSON
 
         lod = data.list_of_dicts
-        #logger.warn('lod %r %r', lod, data)
         eq_(len(lod), 3)
         eq_(sorted(lod[0].items()), [('1', '11'), ('2', '22')])
         eq_(sorted(lod[1].items()), [('3', '33')])
@@ -82,15 +82,28 @@ class TestSimpleTypes(Service):
         eq_(data.unicode2, 'zä')
         eq_(data.utc, '2012-01-12T03:12:19')
 
+    def set_payload_csv(self):
+        self.response.payload.csv2 = ['5', '6', '7', '8']
+        self.response.payload.csv3 = ('9', '10', '11', '12')
+
+class Roundtrip(_TestBase):
+
     def handle(self):
-
         self.__class__.check_json(self.request.input, True)
-
         for name in self.SimpleIO.input_required:
             if isinstance(name, ForceType):
                 name = name.name
-
             setattr(self.response.payload, name, self.__class__.test_data[name])
+        self.set_payload_csv()
 
-        self.response.payload.csv2 = ['5', '6', '7', '8']
-        self.response.payload.csv3 = ('9', '10', '11', '12')
+class FromDict(_TestBase):
+    def handle(self):
+        self.__class__.check_json(self.request.input, True)
+        self.response.payload = deepcopy(self.test_data.toDict())
+        self.set_payload_csv()
+
+class PassthroughToRoundtrip(_TestBase):
+    passthrough_to = 'zato-test-live-sio.roundtrip'
+
+class PassthroughToFromDict(_TestBase):
+    passthrough_to = 'zato-test-live-sio.from-dict'
