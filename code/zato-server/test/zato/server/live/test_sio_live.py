@@ -107,6 +107,37 @@ class SIOLiveTestCase(TestCase):
 
 # ################################################################################################################################
 
+    def get_xml_soap_config(self):
+
+        # Plain XML config
+        request_wrapper_plain_xml = '{}'
+        xpath_string_pattern_plain_xml = '//{}'
+        transport_plain_xml = 'plain_http'
+
+        # SOAP 1.1 config
+        request_wrapper_soap_11 = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+            <soap:Body>{}</soap:Body>
+            </soap:Envelope>
+        """
+        xpath_string_pattern_soap_11 = "//*[local-name()='{}']"
+        transport_soap_11 = 'soap'
+
+        return [
+            [request_wrapper_plain_xml, xpath_string_pattern_plain_xml, transport_plain_xml],
+            [request_wrapper_soap_11, xpath_string_pattern_soap_11, transport_soap_11],
+        ]
+
+    def get_xml_value_from_response(self, xpath_string_pattern, response, name):
+        expr = xpath_string_pattern.format(name)
+        actual = response.xpath(expr)
+
+        if not actual:
+            raise Exception('Could not find {} in {}'.format(expr, etree.tostring(response, pretty_print=True)))
+        else:
+            return actual[0]
+
+# ################################################################################################################################
+
     def _invoke(self, client, unserialize_func, service=None, request=None):
         """ Invokes a service using AnyServiceInvoker.
         """
@@ -151,38 +182,21 @@ class SIOLiveTestCase(TestCase):
 
         test_data = service_class.test_data
 
-        # ########################################################################################################################
+# ################################################################################################################################
 
         # JSON request/response over AnyServiceInvoker
         response = self.invoke_asi(service_name, test_data)
         service_class.check_json(response.response, False)
 
-        # ########################################################################################################################
+# ################################################################################################################################
 
         # JSON request/response over JSONClient
         response = self.invoke_json(
             self.set_up_client_and_channel(service_name, 'json', 'plain_http'), test_data)
         service_class.check_json(response.response, False)
 
-        # ########################################################################################################################
+# ################################################################################################################################
 
-        # Plain XML config
-        request_wrapper_plain_xml = '{}'
-        xpath_string_pattern_plain_xml = '//{}'
-        transport_plain_xml = 'plain_http'
-
-        # SOAP 1.1 config
-        request_wrapper_soap_11 = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-            <soap:Body>{}</soap:Body>
-            </soap:Envelope>
-        """
-        xpath_string_pattern_soap_11 = "//*[local-name()='{}']"
-        transport_soap_11 = 'soap'
-
-        config = [
-            [request_wrapper_plain_xml, xpath_string_pattern_plain_xml, transport_plain_xml],
-            [request_wrapper_soap_11, xpath_string_pattern_soap_11, transport_soap_11],
-        ]
 
         request = """<request>
                     <should_as_is>True</should_as_is>
@@ -253,24 +267,17 @@ class SIOLiveTestCase(TestCase):
                 </request>"""
 
 
-        for request_wrapper, xpath_string_pattern, transport in config:
+        for request_wrapper, xpath_string_pattern, transport in self.get_xml_soap_config():
 
             # XML request/response over XMLClient
             client = self.set_up_client_and_channel(service_name, 'xml', transport)
-
             response = self.invoke_xml(client, request_wrapper.format(request).encode('utf-8'))
 
             for name in('should_as_is', 'is_boolean', 'should_boolean', 'csv1', 'float', 'integer', 'integer2',\
                         'unicode1', 'unicode2', 'utc'):
-                expr = xpath_string_pattern.format(name)
-
-                actual = response.xpath(expr)
-                if not actual:
-                    raise Exception('Could not find {} in {}'.format(expr, etree.tostring(response, pretty_print=True)))
-                else:
-                    actual = actual[0]
 
                 expected = test_data[name]
+                actual = self.get_xml_value_from_response(xpath_string_pattern, response, name)
 
                 if name in ('is_boolean', 'should_boolean'):
                     expected = asbool(expected)
@@ -286,7 +293,7 @@ class SIOLiveTestCase(TestCase):
 
                 eq_(actual, expected, 'name:`{}` actual:`{}` expected:`{}`'.format(name, repr(actual), repr(expected)))
 
-        # ########################################################################################################################
+# ################################################################################################################################
 
     def test_channels_output_assigned_manually(self):
         if not self.should_run:
@@ -301,3 +308,51 @@ class SIOLiveTestCase(TestCase):
 
         for service_info in service_data:
             self._run_tests_output_assigned_manually(*service_info)
+
+# ################################################################################################################################
+
+    def test_channels_output_from_sqlalchemy(self):
+        if not self.should_run:
+            return
+
+        service_name = 'zato-test-live-sio.from-sql-alchemy'
+
+        expected = [
+            ('impl_name', 'zato.server.service.internal.Ping'),
+            ('is_active', True),
+            ('is_internal', True),
+            ('name', 'zato.ping'),
+            ('slow_threshold', 99999)
+        ]
+
+# ################################################################################################################################
+
+        # JSON request/response over AnyServiceInvoker
+
+        response = self.invoke_asi(service_name, {})
+        eq_(sorted(response.response.items()), expected)
+
+# ################################################################################################################################
+
+        # JSON request/response over JSONClient
+        response = self.invoke_json(self.set_up_client_and_channel(service_name, 'json', 'plain_http'), {})
+        eq_(sorted(response.response.items()), expected)
+
+# ################################################################################################################################
+
+        for request_wrapper, xpath_string_pattern, transport in self.get_xml_soap_config():
+
+            # XML request/response over XMLClient
+            client = self.set_up_client_and_channel(service_name, 'xml', transport)
+            response = self.invoke_xml(client, request_wrapper.format('<dummy/>').encode('utf-8'))
+
+            actual_items = {}
+
+            for name in ('name', 'is_active', 'impl_name', 'is_internal', 'slow_threshold'):
+                actual_items[name] = self.get_xml_value_from_response(xpath_string_pattern, response, name)
+
+            eq_(sorted(actual_items.items()), expected)
+
+# ################################################################################################################################
+
+# ################################################################################################################################
