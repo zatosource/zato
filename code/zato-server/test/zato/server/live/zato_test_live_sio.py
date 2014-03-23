@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from contextlib import closing
 from copy import deepcopy
 from logging import getLogger
 
@@ -19,9 +20,12 @@ from bunch import bunchify
 from nose.tools import eq_
 
 # Zato
+from zato.common.odb.model import Cluster, Service as ServiceModel
 from zato.server.service import AsIs, Boolean, CSV, Dict, Float, ForceType, Integer, List, ListOfDicts, Service, Unicode, UTC
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
 
 class _TestBase(Service):
 
@@ -86,8 +90,11 @@ class _TestBase(Service):
         self.response.payload.csv2 = ['5', '6', '7', '8']
         self.response.payload.csv3 = ('9', '10', '11', '12')
 
-class Roundtrip(_TestBase):
+# ################################################################################################################################
 
+class Roundtrip(_TestBase):
+    """ Assigns to response all the data received on input.
+    """
     def handle(self):
         self.__class__.check_json(self.request.input, True)
         for name in self.SimpleIO.input_required:
@@ -96,14 +103,43 @@ class Roundtrip(_TestBase):
             setattr(self.response.payload, name, self.__class__.test_data[name])
         self.set_payload_csv()
 
+# ################################################################################################################################
+
 class FromDict(_TestBase):
+    """ Returns response based on a dictionary.
+    """
     def handle(self):
         self.__class__.check_json(self.request.input, True)
         self.response.payload = deepcopy(self.test_data.toDict())
         self.set_payload_csv()
 
+# ################################################################################################################################
+
 class PassthroughToRoundtrip(_TestBase):
+    """ Passes everything on to the next service.
+    """
     passthrough_to = 'zato-test-live-sio.roundtrip'
 
+# ################################################################################################################################
+
 class PassthroughToFromDict(_TestBase):
+    """ Passes everything on to the next service.
+    """
     passthrough_to = 'zato-test-live-sio.from-dict'
+
+# ################################################################################################################################
+
+class FromSQLAlchemy(Service):
+    """ Creates response from an SQLAlchemy model.
+    """
+    class SimpleIO:
+        output_required = ('name', 'is_active', 'impl_name', 'is_internal', Integer('slow_threshold'))
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload = session.query(ServiceModel.name, ServiceModel.is_active,
+                ServiceModel.impl_name, ServiceModel.is_internal, ServiceModel.slow_threshold).\
+                filter(Cluster.id==ServiceModel.cluster_id).\
+                filter(Cluster.id==self.server.cluster_id).\
+                filter(ServiceModel.name=='zato.ping').\
+                one()

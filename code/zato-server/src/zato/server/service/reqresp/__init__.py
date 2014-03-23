@@ -447,7 +447,7 @@ class Response(object):
         """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
         the dicts are matched and transformed according to the SIO definition.
         """
-        if isinstance(value, (basestring, list, tuple)):
+        if isinstance(value, (basestring, list, tuple)) and not isinstance(value, NamedTuple):
             self._payload = value
         else:
             if isinstance(value, dict):
