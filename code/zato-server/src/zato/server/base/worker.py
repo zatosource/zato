@@ -35,6 +35,7 @@ from paste.util.multidict import MultiDict
 # Zato
 from zato.common import CHANNEL, HTTP_SOAP_SERIALIZATION_TYPE, SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, STATS
+from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
@@ -78,6 +79,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.update_lock = RLock()
         self.kvdb = server.kvdb
         self.broker_client = None
+        self.pubsub = None
 
     def init(self):
 
@@ -106,11 +108,12 @@ class WorkerStore(BrokerMessageReceiver):
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
-        # Create all the expected connections
+        # Create all the expected connections and objects
         self.init_sql()
         self.init_ftp()
         self.init_http_soap()
         self.init_cloud()
+        self.init_pubsub()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
@@ -216,6 +219,34 @@ class WorkerStore(BrokerMessageReceiver):
             config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
             config.conn = SwiftWrapper(config)
             config.conn.build_queue()
+
+# ################################################################################################################################
+
+    def _topic_from_topic_data(self, data):
+        return Topic(data.name, data.is_active, True, data.max_depth)
+
+    def _add_pubsub_topic(self, data):
+        self.pubsub.add_topic(self._topic_from_topic_data(data))
+
+    def init_pubsub(self):
+        """ Initializes publish/subscribe mechanisms.
+        """
+        self.pubsub.set_default_consumer(self.worker_config.pubsub.default_consumer)
+        self.pubsub.set_default_producer(self.worker_config.pubsub.default_producer)
+
+        for topic_name, topic_data in self.worker_config.pubsub.topics.items():
+            self._add_pubsub_topic(topic_data.config)
+
+        for key, value in self.worker_config.pubsub.producers.items():
+            self.pubsub.add_producer(
+                Client(value.config.client_id, value.config.name, value.config.is_active), Topic(value.config.topic_name))
+    
+        for key, value in self.worker_config.pubsub.consumers.items():
+            config = value.config
+            self.pubsub.add_consumer(
+                Consumer(config.client_id, config.name, config.is_active, config.sub_key, config.max_backlog,
+                         config.delivery_mode, config.callback),
+                Topic(config.topic_name))
 
 # ################################################################################################################################
 
@@ -751,5 +782,40 @@ class WorkerStore(BrokerMessageReceiver):
         """ Closes and deletes an OpenStack Swift connection.
         """
         self._delete_config_close_wrapper(msg['name'], self.worker_config.cloud_openstack_swift, 'OpenStack Swift', logger.debug)
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUB_SUB_TOPIC_CREATE(self, msg):
+        self._add_pubsub_topic(msg)
+
+    def on_broker_msg_PUB_SUB_TOPIC_EDIT(self, msg):
+        self.pubsub.update_topic(Topic(msg.name, msg.is_active, True, msg.max_depth))
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUB_SUB_CONSUMER_CREATE(self, msg):
+        self.pubsub.add_consumer(
+            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog, msg.delivery_mode, msg.callback),
+            Topic(msg.topic_name))
+
+    def on_broker_msg_PUB_SUB_CONSUMER_EDIT(self, msg):
+        self.pubsub.update_consumer(
+            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog, msg.delivery_mode, msg.callback),
+            Topic(msg.topic_name))
+
+    def on_broker_msg_PUB_SUB_CONSUMER_DELETE(self, msg):
+        self.pubsub.delete_consumer(
+            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog), Topic(msg.topic_name))
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUB_SUB_PRODUCER_CREATE(self, msg):
+        self.pubsub.add_producer(Client(msg.client_id, msg.name, msg.is_active), Topic(msg.topic_name))
+
+    def on_broker_msg_PUB_SUB_PRODUCER_EDIT(self, msg):
+        self.pubsub.update_producer(Client(msg.client_id, msg.client_name, msg.is_active), Topic(msg.topic_name))
+
+    def on_broker_msg_PUB_SUB_PRODUCER_DELETE(self, msg):
+        self.pubsub.delete_producer(Client(msg.client_id, msg.client_name), Topic(msg.topic_name))
 
 # ################################################################################################################################

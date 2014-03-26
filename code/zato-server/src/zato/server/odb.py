@@ -605,3 +605,30 @@ class ODBManager(SessionWrapper):
             return query.cloud_openstack_swift_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
+    def get_pubsub_topic_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of pub/sub topics defined on a cluster.
+        """
+        return query.pubsub_topic_list(self._session, cluster_id, needs_columns)
+
+    def get_pubsub_default_client(self, cluster_id, name):
+        """ Returns an ID/name pair of a default internal consumer or producer, used for pub/sub.
+        """
+        result = query.pubsub_default_client(self._session, cluster_id, name)
+
+        if not result:
+            logger.warn('Could not find `%s` account', name)
+            return (None, 'Warn: Missing `%s` account'.format(name))
+        else:
+            return result.id, result.name
+
+    def get_pubsub_producer_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of pub/sub producers defined on a cluster.
+        """
+        return query.pubsub_producer_list(self._session, cluster_id, needs_columns)
+
+    def get_pubsub_consumer_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of pub/sub consumers defined on a cluster.
+        """
+        return query.pubsub_consumer_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################

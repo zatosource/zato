@@ -399,6 +399,44 @@ class HTTP_SOAP_SERIALIZATION_TYPE:
         def __iter__(self):
             return iter((self.STRING_VALUE, self.SUDS))
 
+class PUB_SUB:
+    PRIORITY_MIN = 1
+    PRIORITY_MAX = 9
+
+    DEFAULT_PRIORITY = 5
+    DEFAULT_MIME_TYPE = 'text/plain'
+    DEFAULT_EXPIRATION = 60.0 # In seconds
+    DEFAULT_GET_MAX_BATCH_SIZE = 100
+    DEFAULT_IS_FIFO = True
+    DEFAULT_MAX_DEPTH = 500
+    DEFAULT_MAX_BACKLOG = 1000
+
+    class DELIVERY_MODE:
+        PULL = NameId('Pull', 'pull')
+        CALLBACK_URL = NameId('Callback URL', 'callback-url')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.PULL, self.CALLBACK_URL))
+
+    class MESSAGE_SOURCE:
+        TOPIC = NameId('Topic', 'topic')
+        CONSUMER_QUEUE = NameId('Consumer queue', 'consumer-queue')
+    
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.TOPIC, self.CONSUMER_QUEUE))
+
+    class GET_FORMAT:
+        OBJECT = NameId('Object', 'object')
+        JSON = NameId('JSON', 'json')
+        XML = NameId('XML', 'xml')
+        DEFAULT = OBJECT
+    
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.OBJECT, self.JSON, self.XML))
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'

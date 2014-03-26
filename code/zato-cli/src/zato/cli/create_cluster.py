@@ -235,6 +235,7 @@ class Create(ZatoCommand):
         
         self.add_soap_services(session, cluster, admin_invoke_sec, pubapi_sec)
         self.add_ping_services(session, cluster)
+        self.add_default_pubsub_accounts(session, cluster)
         
         try:
             session.commit()
@@ -342,7 +343,7 @@ class Create(ZatoCommand):
             soap_action, soap_version = (zato_name, '1.1') if transport == 'soap' else ('', None)
             password = passwords[base_name]
             
-            sec = HTTPBasicAuth(None, zato_name, True, zato_name, 'Zato', password, cluster)
+            sec = HTTPBasicAuth(None, zato_name, True, zato_name, 'Zato ping', password, cluster)
             session.add(sec)
             
             channel = HTTPSOAP(
@@ -373,3 +374,12 @@ class Create(ZatoCommand):
             None, '/zato/admin/invoke', None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
             security=admin_invoke_sec)
         session.add(channel)
+
+    def add_default_pubsub_accounts(self, session, cluster):
+        """ Adds default accounts used by pub/sub internally.
+        """
+        for suffix in('consumer', 'producer'):
+            name = 'zato.pubsub.default-{}'.format(suffix)
+            item = HTTPBasicAuth(None, name, True, name, 'Zato pub/sub', uuid4().hex, cluster)
+            session.add(item)
+
