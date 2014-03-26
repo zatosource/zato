@@ -142,6 +142,7 @@ class ServiceTestCase(TestCase):
         worker_store = MagicMock()
         worker_store.worker_config = MagicMock
         worker_store.worker_config.outgoing_connections = MagicMock(return_value=(None, None, None))
+        worker_store.worker_config.cloud_openstack_swift = MagicMock(return_value=None)
         
         simple_io_config = {
             'int_parameters': SIMPLE_IO.INT_PARAMETERS.VALUES,

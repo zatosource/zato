@@ -53,7 +53,7 @@ from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.message import MessageFacade
-from zato.server.service.reqresp import Outgoing, Request, Response
+from zato.server.service.reqresp import Cloud, Outgoing, Request, Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, Float, ForceType, Integer, List, ListOfDicts, Nested, \
@@ -142,6 +142,7 @@ class Service(object):
         self.channel = None
         self.cid = None
         self.outgoing = None
+        self.cloud = None
         self.worker_store = None
         self.odb = None
         self.data_format = None
@@ -208,19 +209,23 @@ class Service(object):
 
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
 
+        # Queues
         out_amqp = PublisherFacade(self.broker_client, self.server.delivery_store)
         out_jms_wmq = WMQFacade(self.broker_client, self.server.delivery_store)
         out_zmq = ZMQFacade(self.broker_client, self.server.delivery_store)
+
+        # SQL
         out_sql = self.worker_store.sql_pool_store
 
+        # Regular outconns
         out_ftp, out_plain_http, out_soap = self.worker_store.worker_config.outgoing_connections()
         self.outgoing = Outgoing(out_ftp, out_amqp, out_zmq, out_jms_wmq, out_sql, out_plain_http, out_soap)
 
+        # Cloud
+        self.cloud = Cloud()
+        self.cloud.openstack.swift = self.worker_store.worker_config.cloud_openstack_swift
+
         is_sio = hasattr(self, 'SimpleIO')
-
-        if self.passthrough_request:
-            self.request = self.passthrough_request
-
         self.request.http.init(self.wsgi_environ)
 
         if is_sio:
@@ -252,6 +257,7 @@ class Service(object):
         wsgi_environ = kwargs.get('wsgi_environ', {})
         serialize = kwargs.get('serialize')
         as_bunch = kwargs.get('as_bunch')
+        channel_item = kwargs.get('channel_item')
 
         service.update(service, channel, server, broker_client,
             worker_store, cid, payload, raw_request, transport,
@@ -271,9 +277,9 @@ class Service(object):
 
         if service.passthrough_to:
             sio = getattr(service, 'SimpleIO', None)
-            return self.invoke(service.passthrough_to, raw_request, channel, data_format,
-                    transport, serialize, as_bunch, sio=sio, from_passthrough=True,
-                    passthrough_request=self.request, set_response_func=set_response_func)
+            return self.invoke(service.passthrough_to, payload, channel, data_format, transport, serialize, as_bunch,
+                sio=sio, from_passthrough=True, passthrough_request=self.request, set_response_func=set_response_func,
+                channel_item=channel_item)
         else:
             service.handle()
 

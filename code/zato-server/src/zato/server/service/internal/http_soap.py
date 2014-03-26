@@ -43,7 +43,7 @@ class _HTTPSOAPService(object):
         """ First checks whether the security type is correct for the given 
         connection type. If it is, returns a dictionary of security-related information.
         """
-        info = {'sec_name':None, 'sec_type':None}
+        info = {'security_name':None, 'sec_type':None}
         
         if security_id:
             

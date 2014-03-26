@@ -41,7 +41,13 @@ zato_services = {
     'zato.channel.zmq.delete':'zato.server.service.internal.channel.zmq.Delete',
     'zato.channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
     'zato.channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
-    
+
+    # Cloud - OpenStack - Swift
+    'zato.cloud.openstack.swift.create':'zato.server.service.internal.cloud.openstack.swift.Create',
+    'zato.cloud.openstack.swift.delete':'zato.server.service.internal.cloud.openstack.swift.Delete',
+    'zato.cloud.openstack.swift.edit':'zato.server.service.internal.cloud.openstack.swift.Edit',
+    'zato.cloud.openstack.swift.get-list':'zato.server.service.internal.cloud.openstack.swift.GetList',
+
     # Definitions - AMQP
     'zato.definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',
     'zato.definition.amqp.create':'zato.server.service.internal.definition.amqp.Create',

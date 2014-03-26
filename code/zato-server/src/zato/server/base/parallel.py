@@ -336,6 +336,19 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # the server's configuration from.
         self.config.repo_location = self.repo_location
 
+        # 
+        # Cloud - start
+        #
+
+        # OpenStack - Swift
+
+        query = self.odb.get_cloud_openstack_swift_list(server.cluster.id, True)
+        self.config.cloud_openstack_swift = ConfigDict.from_query('cloud_openstack_swift', query)
+
+        # 
+        # Cloud - end
+        #
+
         #
         # Outgoing connections - start
         #

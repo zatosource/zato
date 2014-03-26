@@ -19,12 +19,12 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, MSG_PATTERN_TYPE, SCHEDULER_JOB_TYPE
+from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, MSG_PATTERN_TYPE, SCHEDULER_JOB_TYPE
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
 
-################################################################################
+# ################################################################################################################################
 
 def to_json(model, return_as_dict=False):
     """ Returns a JSON representation of an SQLAlchemy-backed object.
@@ -152,7 +152,7 @@ class Server(Base):
         self.may_be_deleted = None # Not used by the database
         self.up_mod_date_user = None # Not used by the database
 
-################################################################################
+# ################################################################################################################################
 
 class SecurityBase(Base):
     """ A base class for all the security definitions.
@@ -290,7 +290,7 @@ class NTLM(SecurityBase):
     def to_json(self):
         return to_json(self)
 
-################################################################################
+# ################################################################################################################################
 
 class HTTPSOAP(Base):
     """ An incoming or outgoing HTTP/SOAP connection.
@@ -388,7 +388,7 @@ class HTTPSOAP(Base):
         self.security_id = security_id
         self.security_name = security_name
 
-################################################################################
+# ################################################################################################################################
 
 class SQLConnectionPool(Base):
     """ An SQL connection pool.
@@ -428,7 +428,7 @@ class SQLConnectionPool(Base):
         self.pool_size = pool_size
         self.cluster = cluster
 
-################################################################################
+# ################################################################################################################################
 
 class Service(Base):
     """ A set of basic informations about a service available in a given cluster.
@@ -521,7 +521,7 @@ class DeployedService(Base):
         self.source_hash = source_hash
         self.source_hash_method = source_hash_method
 
-################################################################################
+# ################################################################################################################################
 
 class Job(Base):
     """ A scheduler's job. Stores all the information needed to execute a job
@@ -612,7 +612,7 @@ class CronStyleJob(Base):
         self.job = job
         self.cron_definition = cron_definition
 
-################################################################################
+# ################################################################################################################################
 
 class ConnDefAMQP(Base):
     """ An AMQP connection definition.
@@ -699,7 +699,7 @@ class ConnDefWMQ(Base):
         self.max_chars_printed = max_chars_printed
         self.cluster_id = cluster_id
 
-################################################################################
+# ################################################################################################################################
 
 class OutgoingAMQP(Base):
     """ An outgoing AMQP connection.
@@ -832,7 +832,7 @@ class OutgoingZMQ(Base):
         self.address = address
         self.cluster_id = cluster_id
 
-################################################################################
+# ################################################################################################################################
 
 class ChannelAMQP(Base):
     """ An incoming AMQP connection.
@@ -974,7 +974,7 @@ class DeploymentStatus(Base):
         self.status = status
         self.status_change_time = status_change_time
 
-################################################################################
+# ################################################################################################################################
 
 class DeliveryDefinitionBase(Base):
     """ A guaranteed delivery's definition (base class).
@@ -1069,7 +1069,7 @@ class DeliveryHistory(Base):
     delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)
     delivery = relationship(Delivery, backref=backref('history_list', order_by=entry_time, cascade='all, delete, delete-orphan'))
 
-# ##############################################################################
+# ################################################################################################################################
 
 class MsgNamespace(Base):
     """ A message namespace, used in XPath, for instance.
@@ -1128,7 +1128,7 @@ class ElemPath(Base):
         self.value = value
         self.cluster_id = cluster_id
 
-# ##############################################################################
+# ################################################################################################################################
 
 class HTTSOAPAudit(Base):
     """ An audit log for HTTP/SOAP channels and outgoing connections.
@@ -1214,6 +1214,58 @@ class HTTSOAPAuditReplacePatternsXPath(Base):
         backref=backref('replace_patterns_xpath', order_by=id, cascade='all, delete, delete-orphan'))
 
     pattern = relationship(XPath)
+
+# ################################################################################################################################
+
+class OpenStackSwift(Base):
+    """ An outgoing connection to OpenStack's Swift.
+    """
+    __tablename__ = 'os_swift'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('os_swift_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    pool_size = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.POOL_SIZE)
+
+    auth_url = Column(String(200), nullable=False)
+    auth_version = Column(String(200), nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.AUTH_VERSION)
+    user = Column(String(200), nullable=True)
+    key = Column(String(200), nullable=True)
+    retries = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.RETRIES)
+    is_snet = Column(Boolean(), nullable=False)
+    starting_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_STARTING)
+    max_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_MAX)
+    tenant_name = Column(String(200), nullable=True)
+    should_validate_cert = Column(Boolean(), nullable=False)
+    cacert = Column(String(200), nullable=True)
+    should_retr_ratelimit = Column(Boolean(), nullable=False)
+    needs_tls_compr = Column(Boolean(), nullable=False)
+    custom_options = Column(String(2000), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('open_stack_swift_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, is_active=None, auth_url=None, auth_version=None, user=None, key=None, retries=None,
+            is_snet=None, starting_backoff=None, max_backoff=None, tenant_name=None, should_validate_cert=None,
+            cacert=None, should_retr_ratelimit=None, needs_tls_compr=None, custom_options=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.auth_url = auth_url
+        self.auth_version = auth_version
+        self.user = user
+        self.key = key
+        self.retries = retries
+        self.is_snet = is_snet
+        self.starting_backoff = starting_backoff
+        self.max_backoff = max_backoff
+        self.tenant_name = tenant_name
+        self.should_validate_cert = should_validate_cert
+        self.cacert = cacert
+        self.should_retr_ratelimit = should_retr_ratelimit
+        self.needs_tls_compr = needs_tls_compr
+        self.custom_options = custom_options
 
 # ##############################################################################
 
