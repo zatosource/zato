@@ -159,7 +159,7 @@ class CSV(ForceType):
     from_xml = from_json
 
     def to_json(self, value, *ignored):
-        return ','.join(value)
+        return ','.join(value) if isinstance(value, (list, tuple)) else value
 
     to_xml = to_json
 
@@ -187,7 +187,7 @@ class Dict(ForceType):
     def from_xml(self, value, *ignored):
         _dict = {}
         for item in value.iterchildren():
-            _dict[item.find('key').text] = item.find('value').text
+            _dict[item.key.text] = item.value.text
         return _dict
 
     def to_xml(self, value, param_name):
@@ -209,7 +209,7 @@ class Integer(ForceType):
     """ Gets transformed into an int object.
     """
     def from_json(self, value, *ignored):
-        return int(value)
+        return int(value) if value else 0
 
     from_xml = to_json = to_xml = from_json
 
@@ -237,18 +237,25 @@ class List(ForceType):
 # ################################################################################################################################
 
 class ListOfDicts(ForceType):
-    """ Transformed into a list of dictionaries in JSON or a
-    list of
-     <dict>
-      <item>
-        <key>key1</key>
-        <value>value1</value>
-      </item>
-      <item>
-        <key>key2</key>
-        <value>value2</value>
-      </item>
-     <dict>
+    """ Transformed into a list of dictionaries in JSON or a list of
+     <my_list_of_dicts>
+      <item_dict>
+       <item>
+         <key>key1</key>
+         <value>value1</value>
+       </item>
+       <item>
+         <key>key2</key>
+         <value>value2</value>
+       </item>
+      </item_dict>
+      <item_dict>
+       <item>
+         <key>key3</key>
+         <value>value3</value>
+       </item>
+      </item_dict>
+     <my_list_of_dicts>
     elems in XML.
     """
     def from_json(self, value, *ignored):
@@ -259,10 +266,10 @@ class ListOfDicts(ForceType):
     def from_xml(self, value, *ignored):
         list_of_dicts = []
 
-        for xml_dict in value.iterchildren():
+        for item_dict in value.item_dict:
             _dict = {}
-            for item in xml_dict.iterchildren():
-                _dict[item.find('key').text] = item.find('value').text
+            for item in item_dict.iterchildren():
+                _dict[item.key.text] = item.value.text
             list_of_dicts.append(_dict)
 
         return list_of_dicts
@@ -295,7 +302,7 @@ class Unicode(ForceType):
     """ Gets transformed into a unicode object.
     """
     def from_json(self, value, *ignored):
-        return unicode(value)
+        return value if isinstance(value, unicode) else value.decode('utf-8')
 
     from_xml = to_json = to_xml = from_json
 
@@ -329,7 +336,7 @@ def convert_sio(param, param_name, value, has_simple_io_config, is_xml, bool_par
         if any(param_name.startswith(prefix) for prefix in bool_parameter_prefixes) or isinstance(param, Boolean):
             value = asbool(value or None) # value can be an empty string and asbool chokes on that
 
-        if value and value is not None: # Can be a 0
+        if value is not None:
             if isinstance(param, ForceType):
                 value = param.convert(value, param_name, data_format, from_sio_to_external)
             else:
@@ -341,8 +348,8 @@ def convert_sio(param, param_name, value, has_simple_io_config, is_xml, bool_par
         return value
 
     except Exception, e:
-        msg = 'Conversion error, param:[{}], param_name:[{}], repr(value):[{}], e:[{}]'.format(
-            param, param_name, repr(value), format_exc(e))
+        msg = 'Conversion error, param:`{}`, param_name:`{}`, repr:`{}`, type:`{}`, e:`{}`'.format(
+            param, param_name, repr(value), type(value), format_exc(e))
         logger.error(msg)
 
         raise ZatoException(msg=msg)
@@ -402,7 +409,8 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
             value = default_value
         else:
             if is_required and not channel_params.get(param_name):
-                msg = 'Required input element:[{}] not found, value:[{}]'.format(param, value)
+                msg = 'Required input element:`{}` not found, value:`{}`, data_format:`{}`, payload:`{}`'.format(
+                    param, value, data_format, payload)
                 raise ParsingException(cid, msg)
             else:
                 # Not required and not provided on input

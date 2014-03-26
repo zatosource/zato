@@ -131,6 +131,10 @@ class Request(SIOConverter):
                 self.payload = self.raw_request
 
             if required_list:
+                # Needs to check for this exact default value to prevent a FutureWarning in 'if not self.payload'
+                if self.payload == '':
+                    raise ZatoException(cid, 'Missing input')
+
                 required_params = self.get_params(required_list, path_prefix, default_value, use_text)
             else:
                 required_params = {}
@@ -158,23 +162,19 @@ class Request(SIOConverter):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
         params = {}
-        if not isinstance(self.payload, basestring):
-            for param in request_params:
-                try:
-                    param_name, value = convert_param(self.cid, self.payload, param, self.data_format, is_required, default_value,
-                            path_prefix, use_text, self.channel_params, self.has_simple_io_config,
-                            self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes)
-                    params[param_name] = value
-    
-                except Exception, e:
-                    msg = 'Caught an exception, param:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
-                        param, self.has_simple_io_config, format_exc(e))
-                    self.logger.error(msg)
-                    raise Exception(msg)
-        else:
-            if self.logger.isEnabledFor(TRACE1):
-                msg = 'payload repr=[{}], type=[{}]'.format(repr(self.payload), type(self.payload))
-                self.logger.log(TRACE1, msg)
+
+        for param in request_params:
+            try:
+                param_name, value = convert_param(self.cid, self.payload, param, self.data_format, is_required, default_value,
+                        path_prefix, use_text, self.channel_params, self.has_simple_io_config,
+                        self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes)
+                params[param_name] = value
+
+            except Exception, e:
+                msg = 'Caught an exception, param:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
+                    param, self.has_simple_io_config, format_exc(e))
+                self.logger.error(msg)
+                raise Exception(msg)
 
         return params
 
@@ -353,7 +353,7 @@ class SimpleIOPayload(SIOConverter):
                         name = name.name
 
                     if isinstance(elem_value, basestring):
-                        elem_value = elem_value.decode('utf-8')
+                        elem_value = elem_value if isinstance(elem_value, unicode) else elem_value.decode('utf-8')
 
                     if self.zato_is_xml:
                         setattr(out_item, name, elem_value)
@@ -456,12 +456,21 @@ class Response(object):
         return self._payload
 
     def _set_payload(self, value):
-        if isinstance(value, (basestring, dict, list, tuple)):
+        """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
+        the dicts are matched and transformed according to the SIO definition.
+        """
+        if isinstance(value, (basestring, list, tuple)) and not isinstance(value, NamedTuple):
             self._payload = value
         else:
-            if not self.outgoing_declared:
-                raise Exception("Can't set payload, there's no output_required nor output_optional declared")
-            self._payload.set_payload_attrs(value)
+            if isinstance(value, dict):
+                if not self.outgoing_declared:
+                    self._payload = value
+                else:
+                    self._payload.set_payload_attrs(value)
+            else:
+                if not self.outgoing_declared:
+                    raise Exception("Can't set payload, there's no output_required nor output_optional declared")
+                self._payload.set_payload_attrs(value)
 
     payload = property(_get_payload, _set_payload)
 

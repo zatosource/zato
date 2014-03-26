@@ -286,6 +286,7 @@ class _Client(object):
     """
     def __init__(self, address, path, auth=None, session=None, to_bunch=False,
                  max_response_repr=DEFAULT_MAX_RESPONSE_REPR, max_cid_repr=DEFAULT_MAX_CID_REPR, logger=None):
+        self.address = address
         self.service_address = '{}{}'.format(address, path)
         self.session = session or requests.session()
         self.to_bunch = to_bunch
@@ -303,13 +304,11 @@ class _Client(object):
         response = response_class(
             raw_response, self.to_bunch, self.max_response_repr,
             self.max_cid_repr, self.logger, output_repeated)
-            
+
         if self.logger.isEnabledFor(logging.DEBUG):
-            msg = ('request:[{}]\nresponse_class:[{}]\nasync:[{}]\nheaders:[{}]\n' # noqa
-                  'text:[{}]\ndata:[{}]').format(
-                      request, response_class, async, headers, raw_response.text, response.data)
-            self.logger.debug(msg)
-            
+            msg = 'request:[%s]\nresponse_class:[%s]\nasync:[%s]\nheaders:[%s]\n text:[%s]\ndata:[%s]'
+            self.logger.debug(msg, request.decode('utf-8'), response_class, async, headers, raw_response.text, response.data)
+
         return response
     
     def invoke(self, request, response_class, async=False, headers=None, output_repeated=False):
