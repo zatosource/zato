@@ -645,10 +645,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             self.broker_client.invoke_async(msg)
 
     @staticmethod
-    def post_fork(arbiter, worker):
-        """ A Gunicorn hook which initializes the worker.
-        """
-        parallel_server = worker.app.zato_wsgi_app
+    def start_server(parallel_server, zato_deployment_key=None):
+
+        # Will be None if we are not running in background.
+        if not zato_deployment_key:
+            zato_deployment_key = uuid4().hex
 
         register_diag_handlers()
 
@@ -667,12 +668,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.name = server.name
         parallel_server.cluster_id = server.cluster_id
 
-        is_first = parallel_server._after_init_common(server, arbiter.zato_deployment_key)
+        is_first = parallel_server._after_init_common(server, zato_deployment_key)
 
         # For now, all the servers are always ACCEPTED but future versions
         # might introduce more join states
         if server.last_join_status in(SERVER_JOIN_STATUS.ACCEPTED):
-            parallel_server._after_init_accepted(server, arbiter.zato_deployment_key)
+            parallel_server._after_init_accepted(server, zato_deployment_key)
         else:
             msg = 'Server has not been accepted, last_join_status:[{0}]'
             logger.warn(msg.format(server.last_join_status))
@@ -689,6 +690,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         if is_first:
             parallel_server.invoke_startup_services()
+
+    @staticmethod
+    def post_fork(arbiter, worker):
+        """ A Gunicorn hook which initializes the worker.
+        """
+        ParallelServer.start_server(worker.app.zato_wsgi_app, arbiter.zato_deployment_key)
 
     @staticmethod
     def on_starting(arbiter):
@@ -716,7 +723,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.broker_client.publish(msg, msg_type=msg_type)
                 time.sleep(0.2)
 
+            # Broker client
             self.broker_client.close()
+
+            # Scheduler
+            self.singleton_server.scheduler.stop()
 
             # Pick-up processor
             self.singleton_server.pickup.stop()
@@ -738,6 +749,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
             self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()
+
+    # Convenience API
+    stop = destroy
 
 # ##############################################################################
 
