@@ -319,7 +319,6 @@ class ZatoCommand(object):
             file_name=os.path.abspath(file_name)))
 
     def _get_engine(self, args):
-
         engine_url = odb.engine_def.format(engine=args.odb_type, username=args.odb_user,
             password=args.odb_password, host=args.odb_host, port=args.odb_port,
             db_name=args.odb_db_name)
