@@ -264,7 +264,9 @@ class Invoke(AdminService):
             func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
             response = func(id_, payload, channel, data_format, transport, serialize=True)
 
-        self.response.payload.response = response.encode('base64') if response else ''
+        if isinstance(response, basestring):
+            if response:
+                self.response.payload.response = response.encode('base64') if response else ''
 
 class GetDeploymentInfoList(AdminService):
     """ Returns detailed information regarding the service's deployment status

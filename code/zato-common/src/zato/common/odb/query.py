@@ -21,8 +21,9 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_S
      URL_PARAMS_PRIORITY
 from zato.common.odb.model import ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
      DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NTLM, OAuth, OpenStackSwift, OutgoingAMQP, OutgoingFTP,\
-     OutgoingWMQ, OutgoingZMQ, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
+     HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NTLM, OAuth, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
+     OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Service, SQLConnectionPool, \
+     TechnicalAccount, XPath, WSSDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -714,5 +715,83 @@ def cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
     """ OpenStack Swift connections.
     """
     return _cloud_openstack_swift(session, cluster_id)
+
+# ################################################################################################################################
+
+def _pubsub_topic(session, cluster_id):
+    return session.query(PubSubTopic.id, PubSubTopic.name, PubSubTopic.is_active, PubSubTopic.max_depth).\
+        filter(Cluster.id==PubSubTopic.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(PubSubTopic.name)
+
+def pubsub_topic(session, cluster_id, id):
+    """ A pub/sub topic.
+    """
+    return _pubsub_topic(session, cluster_id).\
+        filter(PubSubTopic.id==id).\
+        one()
+
+@needs_columns
+def pubsub_topic_list(session, cluster_id, needs_columns=False):
+    """ All pub/sub topics.
+    """
+    return _pubsub_topic(session, cluster_id)
+
+def pubsub_default_client(session, cluster_id, name):
+    """ Returns a client ID of a given name used internally for pub/sub.
+    """
+    return session.query(HTTPBasicAuth.id, HTTPBasicAuth.name).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==HTTPBasicAuth.cluster_id).\
+        filter(HTTPBasicAuth.name==name).\
+        first()
+
+# ################################################################################################################################
+
+def _pubsub_producer(session, cluster_id, needs_columns=False):
+    return session.query(
+        PubSubProducer.id,
+        PubSubProducer.is_active,
+        SecurityBase.id.label('client_id'),
+        SecurityBase.name,
+        SecurityBase.sec_type,
+        PubSubTopic.name.label('topic_name')).\
+        filter(Cluster.id==cluster_id).\
+        filter(PubSubProducer.topic_id==PubSubTopic.id).\
+        filter(PubSubProducer.cluster_id==Cluster.id).\
+        filter(PubSubProducer.sec_def_id==SecurityBase.id).\
+        order_by(SecurityBase.sec_type, SecurityBase.name)
+
+@needs_columns
+def pubsub_producer_list(session, cluster_id, topic_name, needs_columns=False):
+    """ All pub/sub producers.
+    """
+    return _pubsub_producer(session, cluster_id, topic_name)
+
+# ################################################################################################################################
+
+def _pubsub_consumer(session, cluster_id, needs_columns=False):
+    return session.query(
+        PubSubConsumer.id,
+        PubSubConsumer.is_active,
+        PubSubConsumer.max_backlog,
+        PubSubConsumer.sub_key,
+        PubSubConsumer.delivery_mode,
+        PubSubConsumer.callback,
+        SecurityBase.id.label('client_id'),
+        SecurityBase.name,
+        SecurityBase.sec_type,
+        PubSubTopic.name.label('topic_name')).\
+        filter(Cluster.id==cluster_id).\
+        filter(PubSubConsumer.topic_id==PubSubTopic.id).\
+        filter(PubSubConsumer.cluster_id==Cluster.id).\
+        filter(PubSubConsumer.sec_def_id==SecurityBase.id).\
+        order_by(SecurityBase.sec_type, SecurityBase.name)
+
+@needs_columns
+def pubsub_consumer_list(session, cluster_id, topic_name, needs_columns=False):
+    """ All pub/sub consumers.
+    """
+    return _pubsub_consumer(session, cluster_id, topic_name)
 
 # ################################################################################################################################

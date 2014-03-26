@@ -55,6 +55,7 @@ from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, KVDB, MISC, SERVER_JOIN_S
      ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
      JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
+from zato.common.pubsub import PubSubAPI, RedisPubSub
 from zato.common.util import add_startup_jobs, make_psycopg_green, new_cid, register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
@@ -328,6 +329,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
     def _after_init_accepted(self, server, deployment_key):
 
+        # Pub/sub
+        self.pubsub = PubSubAPI(RedisPubSub(self.kvdb.conn))
+
         # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.
         self.config.repo_location = self.repo_location
@@ -437,8 +441,30 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.config.simple_io['int_parameter_suffixes'] = self.int_parameter_suffixes
         self.config.simple_io['bool_parameter_prefixes'] = self.bool_parameter_prefixes
 
+        # Pub/sub config
+        self.config.pubsub = Bunch()
+        self.config.pubsub.default_consumer = Bunch()
+        self.config.pubsub.default_producer = Bunch()
+
+        query = self.odb.get_pubsub_topic_list(server.cluster.id, True)
+        self.config.pubsub.topics = ConfigDict.from_query('pubsub_topics', query)
+
+        id, name = self.odb.get_pubsub_default_client(server.cluster.id, 'zato.pubsub.default-consumer')
+        self.config.pubsub.default_consumer.id, self.config.pubsub.default_consumer.name = id, name
+
+        id, name = self.odb.get_pubsub_default_client(server.cluster.id, 'zato.pubsub.default-producer')
+        self.config.pubsub.default_producer.id, self.config.pubsub.default_producer.name = id, name
+
+        query = self.odb.get_pubsub_producer_list(server.cluster.id, True)
+        self.config.pubsub.producers = ConfigDict.from_query('pubsub_producers', query)
+
+        query = self.odb.get_pubsub_consumer_list(server.cluster.id, True)
+        self.config.pubsub.consumers = ConfigDict.from_query('pubsub_consumers', query)
+
+        # Assign config to worker
         self.worker_store.worker_config = self.config
         self.worker_store.broker_client = self.broker_client
+        self.worker_store.pubsub = self.pubsub
         self.worker_store.init()
 
         if self.singleton_server:

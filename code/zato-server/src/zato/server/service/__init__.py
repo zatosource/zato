@@ -138,6 +138,7 @@ class Service(object):
         self.logger = logging.getLogger(self.get_name())
         self.server = None
         self.broker_client = None
+        self.pubsub = None
         self.channel = None
         self.cid = None
         self.outgoing = None
@@ -204,6 +205,7 @@ class Service(object):
         self.odb = self.worker_store.server.odb
         self.kvdb = self.worker_store.kvdb
         self.time.kvdb = self.kvdb
+        self.pubsub = self.worker_store.pubsub
 
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
 
