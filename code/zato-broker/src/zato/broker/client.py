@@ -121,8 +121,8 @@ def BrokerClient(kvdb, client_type, topic_callbacks):
             self.pub_client = _ClientThread(self.kvdb.copy(), 'pub', self.name)
             self.sub_client = _ClientThread(self.kvdb.copy(), 'sub', self.name, self.topic_callbacks, self.on_message)
             
-            start_new_thread(self.pub_client.run)
-            start_new_thread(self.sub_client.run)
+            start_new_thread(self.pub_client.run, ())
+            start_new_thread(self.sub_client.run, ())
             
             for client in(self.pub_client, self.sub_client):
                 while client.keep_running == ZATO_NONE:
@@ -197,6 +197,6 @@ def BrokerClient(kvdb, client_type, topic_callbacks):
 
 
     client = _BrokerClient(kvdb, client_type, topic_callbacks)
-    start_new_thread(client.run)
+    start_new_thread(client.run, ())
     
     return client

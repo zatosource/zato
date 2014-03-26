@@ -182,3 +182,6 @@ class Scheduler(object):
                 break
         else:
             logger.warn('Job [{0}] is not scheduled, could not execute it'.format(job_data.name))
+
+    def stop(self):
+        self._sched.shutdown()
