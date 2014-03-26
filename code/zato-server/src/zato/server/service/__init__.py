@@ -226,10 +226,6 @@ class Service(object):
         self.cloud.openstack.swift = self.worker_store.worker_config.cloud_openstack_swift
 
         is_sio = hasattr(self, 'SimpleIO')
-
-        if self.passthrough_request:
-            self.request = self.passthrough_request
-
         self.request.http.init(self.wsgi_environ)
 
         if is_sio:
@@ -261,6 +257,7 @@ class Service(object):
         wsgi_environ = kwargs.get('wsgi_environ', {})
         serialize = kwargs.get('serialize')
         as_bunch = kwargs.get('as_bunch')
+        channel_item = kwargs.get('channel_item')
 
         service.update(service, channel, server, broker_client,
             worker_store, cid, payload, raw_request, transport,
@@ -280,9 +277,9 @@ class Service(object):
 
         if service.passthrough_to:
             sio = getattr(service, 'SimpleIO', None)
-            return self.invoke(service.passthrough_to, raw_request, channel, data_format,
-                    transport, serialize, as_bunch, sio=sio, from_passthrough=True,
-                    passthrough_request=self.request, set_response_func=set_response_func)
+            return self.invoke(service.passthrough_to, payload, channel, data_format, transport, serialize, as_bunch,
+                sio=sio, from_passthrough=True, passthrough_request=self.request, set_response_func=set_response_func,
+                channel_item=channel_item)
         else:
             service.handle()
 
