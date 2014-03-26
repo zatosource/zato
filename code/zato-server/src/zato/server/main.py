@@ -87,7 +87,7 @@ class ZatoGunicornApplication(Application):
     def load(self):
         return self.zato_wsgi_app.on_wsgi_request
 
-def run(base_dir):
+def run(base_dir, start_gunicorn_app=True):
     register_diag_handlers()
 
     os.chdir(base_dir)
@@ -148,9 +148,18 @@ def run(base_dir):
             path = config.profiler.url_path,
             unwind = config.profiler.unwind)
 
-    # Run the app at last
-    zato_gunicorn_app.run()
- 
+    # Run the app at last we execute from command line
+    if start_gunicorn_app:
+        zato_gunicorn_app.run()
+    else:
+        return zato_gunicorn_app.zato_wsgi_app
+
+def run_in_foreground(base_dir):
+    server = run(base_dir, False)
+    server.start_server(server)
+
+    return server
+
 if __name__ == '__main__':
     base_dir = sys.argv[1]
     if not os.path.isabs(base_dir):
