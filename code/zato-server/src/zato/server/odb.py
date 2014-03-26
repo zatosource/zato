@@ -28,11 +28,7 @@ from zato.common import DEPLOYMENT_STATUS, MISC, MSG_PATTERN_TYPE, ZATO_NONE, ZA
 from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, HTTPSOAP, \
      HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, HTTSOAPAuditReplacePatternsXPath, OAuth, Server, Service, \
      TechnicalAccount, WSSDefinition
-from zato.common.odb.query import channel_amqp, channel_amqp_list, channel_jms_wmq, channel_jms_wmq_list, channel_zmq, \
-     channel_zmq_list, def_amqp, def_amqp_list, def_jms_wmq, def_jms_wmq_list, basic_auth_list, elem_path_list, http_soap_list, \
-     http_soap_security_list, internal_channel_list, job_list, namespace_list, ntlm_list, oauth_list, out_amqp, out_amqp_list, \
-     out_ftp, out_ftp_list, out_jms_wmq, out_jms_wmq_list, out_sql, out_sql_list, out_zmq, out_zmq_list, tech_acc_list, \
-     wss_list, xpath_list
+from zato.common.odb import query
 from zato.common.util import current_host, security_def_type, TRACE1
 from zato.server.connection.sql import SessionWrapper
 
@@ -124,14 +120,14 @@ class ODBManager(SessionWrapper):
 
             result = {}
 
-            query = http_soap_security_list(session, cluster_id, connection)
+            q = query.http_soap_security_list(session, cluster_id, connection)
             columns = Bunch()
 
             # So ConfigDict has its data in the format it expects
-            for c in query.statement.columns:
+            for c in q.statement.columns:
                 columns[c.name] = None
 
-            for item in query.all():
+            for item in q.all():
                 target = '{}{}{}'.format(item.soap_action, MISC.SEPARATOR, item.url_path)
 
                 result[target] = Bunch()
@@ -361,20 +357,20 @@ class ODBManager(SessionWrapper):
             session.add(dp)
             session.commit()
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_internal_channel_list(self, cluster_id, needs_columns=False):
         """ Returns the list of internal HTTP/SOAP channels, that is,
         channels pointing to internal services.
         """
         with closing(self.session()) as session:
-            return internal_channel_list(session, cluster_id, needs_columns)
+            return query.internal_channel_list(session, cluster_id, needs_columns)
 
     def get_http_soap_list(self, cluster_id, connection=None, transport=None, needs_columns=False):
         """ Returns the list of all HTTP/SOAP connections.
         """
         with closing(self.session()) as session:
-            item_list = http_soap_list(session, cluster_id, connection, transport, needs_columns)
+            item_list = query.http_soap_list(session, cluster_id, connection, transport, needs_columns)
 
             if connection == 'channel':
                 for item in item_list:
@@ -386,197 +382,197 @@ class ODBManager(SessionWrapper):
 
             return item_list
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_job_list(self, cluster_id, needs_columns=False):
         """ Returns a list of jobs defined on the given cluster.
         """
         with closing(self.session()) as session:
-            return job_list(session, cluster_id, needs_columns)
+            return query.job_list(session, cluster_id, needs_columns)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_basic_auth_list(self, cluster_id, needs_columns=False):
         """ Returns a list of HTTP Basic Auth definitions existing on the given cluster.
         """
         with closing(self.session()) as session:
-            return basic_auth_list(session, cluster_id, needs_columns)
+            return query.basic_auth_list(session, cluster_id, needs_columns)
 
     def get_ntlm_list(self, cluster_id, needs_columns=False):
         """ Returns a list of NTLM definitions existing on the given cluster.
         """
         with closing(self.session()) as session:
-            return ntlm_list(session, cluster_id, needs_columns)
+            return query.ntlm_list(session, cluster_id, needs_columns)
 
     def get_oauth_list(self, cluster_id, needs_columns=False):
         """ Returns a list of OAuth accounts existing on the given cluster.
         """
         with closing(self.session()) as session:
-            return oauth_list(session, cluster_id, needs_columns)
+            return query.oauth_list(session, cluster_id, needs_columns)
 
     def get_tech_acc_list(self, cluster_id, needs_columns=False):
         """ Returns a list of technical accounts existing on the given cluster.
         """
         with closing(self.session()) as session:
-            return tech_acc_list(session, cluster_id, needs_columns)
+            return query.tech_acc_list(session, cluster_id, needs_columns)
 
     def get_wss_list(self, cluster_id, needs_columns=False):
         """ Returns a list of WS-Security definitions on the given cluster.
         """
         with closing(self.session()) as session:
-            return wss_list(session, cluster_id, needs_columns)
+            return query.wss_list(session, cluster_id, needs_columns)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_def_amqp(self, cluster_id, def_id):
         """ Returns an AMQP definition's details.
         """
         with closing(self.session()) as session:
-            return def_amqp(session, cluster_id, def_id)
+            return query.def_amqp(session, cluster_id, def_id)
 
     def get_def_amqp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of AMQP definitions on the given cluster.
         """
         with closing(self.session()) as session:
-            return def_amqp_list(session, cluster_id, needs_columns)
+            return query.def_amqp_list(session, cluster_id, needs_columns)
 
     def get_out_amqp(self, cluster_id, out_id):
         """ Returns an outgoing AMQP connection's details.
         """
         with closing(self.session()) as session:
-            return out_amqp(session, cluster_id, out_id)
+            return query.out_amqp(session, cluster_id, out_id)
 
     def get_out_amqp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing AMQP connections.
         """
         with closing(self.session()) as session:
-            return out_amqp_list(session, cluster_id, needs_columns)
+            return query.out_amqp_list(session, cluster_id, needs_columns)
 
     def get_channel_amqp(self, cluster_id, channel_id):
         """ Returns a particular AMQP channel.
         """
         with closing(self.session()) as session:
-            return channel_amqp(session, cluster_id, channel_id)
+            return query.channel_amqp(session, cluster_id, channel_id)
 
     def get_channel_amqp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of AMQP channels.
         """
         with closing(self.session()) as session:
-            return channel_amqp_list(session, cluster_id, needs_columns)
+            return query.channel_amqp_list(session, cluster_id, needs_columns)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_def_jms_wmq(self, cluster_id, def_id):
         """ Returns an JMS WebSphere MQ definition's details.
         """
         with closing(self.session()) as session:
-            return def_jms_wmq(session, cluster_id, def_id)
+            return query.def_jms_wmq(session, cluster_id, def_id)
 
     def get_def_jms_wmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of JMS WebSphere MQ definitions on the given cluster.
         """
         with closing(self.session()) as session:
-            return def_jms_wmq_list(session, cluster_id, needs_columns)
+            return query.def_jms_wmq_list(session, cluster_id, needs_columns)
 
     def get_out_jms_wmq(self, cluster_id, out_id):
         """ Returns an outgoing JMS WebSphere MQ connection's details.
         """
         with closing(self.session()) as session:
-            return out_jms_wmq(session, cluster_id, out_id)
+            return query.out_jms_wmq(session, cluster_id, out_id)
 
     def get_out_jms_wmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing JMS WebSphere MQ connections.
         """
         with closing(self.session()) as session:
-            return out_jms_wmq_list(session, cluster_id, needs_columns)
+            return query.out_jms_wmq_list(session, cluster_id, needs_columns)
 
     def get_channel_jms_wmq(self, cluster_id, channel_id):
         """ Returns a particular JMS WebSphere MQ channel.
         """
         with closing(self.session()) as session:
-            return channel_jms_wmq(session, cluster_id, channel_id)
+            return query.channel_jms_wmq(session, cluster_id, channel_id)
 
     def get_channel_jms_wmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of JMS WebSphere MQ channels.
         """
         with closing(self.session()) as session:
-            return channel_jms_wmq_list(session, cluster_id, needs_columns)
+            return query.channel_jms_wmq_list(session, cluster_id, needs_columns)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_out_zmq(self, cluster_id, out_id):
         """ Returns an outgoing ZMQ connection's details.
         """
         with closing(self.session()) as session:
-            return out_zmq(session, cluster_id, out_id)
+            return query.out_zmq(session, cluster_id, out_id)
 
     def get_out_zmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing ZMQ connections.
         """
         with closing(self.session()) as session:
-            return out_zmq_list(session, cluster_id, needs_columns)
+            return query.out_zmq_list(session, cluster_id, needs_columns)
 
     def get_channel_zmq(self, cluster_id, channel_id):
         """ Returns a particular ZMQ channel.
         """
         with closing(self.session()) as session:
-            return channel_zmq(session, cluster_id, channel_id)
+            return query.channel_zmq(session, cluster_id, channel_id)
 
     def get_channel_zmq_list(self, cluster_id, needs_columns=False):
         """ Returns a list of ZMQ channels.
         """
         with closing(self.session()) as session:
-            return channel_zmq_list(session, cluster_id, needs_columns)
+            return query.channel_zmq_list(session, cluster_id, needs_columns)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_out_sql(self, cluster_id, out_id):
         """ Returns an outgoing SQL connection's details.
         """
         with closing(self.session()) as session:
-            return out_sql(session, cluster_id, out_id)
+            return query.out_sql(session, cluster_id, out_id)
 
     def get_out_sql_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing SQL connections.
         """
         with closing(self.session()) as session:
-            return out_sql_list(session, cluster_id, needs_columns)
+            return query.out_sql_list(session, cluster_id, needs_columns)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_out_ftp(self, cluster_id, out_id):
         """ Returns an outgoing FTP connection's details.
         """
         with closing(self.session()) as session:
-            return out_ftp(session, cluster_id, out_id)
+            return query.out_ftp(session, cluster_id, out_id)
 
     def get_out_ftp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of outgoing FTP connections.
         """
         with closing(self.session()) as session:
-            return out_ftp_list(session, cluster_id, needs_columns)
+            return query.out_ftp_list(session, cluster_id, needs_columns)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_namespace_list(self, cluster_id, needs_columns=False):
         """ Returns a list of XML namespaces.
         """
         with closing(self.session()) as session:
-            return namespace_list(session, cluster_id, needs_columns)
+            return query.namespace_list(session, cluster_id, needs_columns)
 
     def get_xpath_list(self, cluster_id, needs_columns=False):
         """ Returns a list of XPath expressions.
         """
         with closing(self.session()) as session:
-            return xpath_list(session, cluster_id, needs_columns)
+            return query.xpath_list(session, cluster_id, needs_columns)
 
     def get_elem_path_list(self, cluster_id, needs_columns=False):
         """ Returns a list of ElemPath expressions.
         """
         with closing(self.session()) as session:
-            return elem_path_list(session, cluster_id, needs_columns)
+            return query.elem_path_list(session, cluster_id, needs_columns)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def audit_set_request_http_soap(self, conn_id, name, cid, transport, 
             connection, req_time, user_token, remote_addr, req_headers,
@@ -600,4 +596,12 @@ class ODBManager(SessionWrapper):
             session.add(audit)
             session.commit()
 
-# ##############################################################################
+# ################################################################################################################################
+
+    def get_cloud_openstack_swift_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of OpenStack Swift connections.
+        """
+        with closing(self.session()) as session:
+            return query.cloud_openstack_swift_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################

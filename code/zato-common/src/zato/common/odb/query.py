@@ -21,8 +21,8 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_S
      URL_PARAMS_PRIORITY
 from zato.common.odb.model import ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
      DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NTLM, OAuth, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, \
-     OutgoingZMQ, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
+     HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NTLM, OAuth, OpenStackSwift, OutgoingAMQP, OutgoingFTP,\
+     OutgoingWMQ, OutgoingZMQ, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def needs_columns(func):
 
     return inner
 
-# ##############################################################################
+# ################################################################################################################################
 
 def internal_channel_list(session, cluster_id):
     """ All the HTTP/SOAP channels that point to internal services.
@@ -56,7 +56,7 @@ def internal_channel_list(session, cluster_id):
         filter(HTTPSOAP.cluster_id==Cluster.id).\
         filter(HTTPSOAP.service_id==Service.id).filter(Service.is_internal==True).filter(Cluster.id==cluster_id).filter(Cluster.id==HTTPSOAP.cluster_id) # noqa
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _job(session, cluster_id):
     return session.query(
@@ -88,7 +88,7 @@ def job_by_name(session, cluster_id, name):
         filter(Job.name==name).\
         one()
 
-# ##############################################################################
+# ################################################################################################################################
 
 @needs_columns
 def basic_auth_list(session, cluster_id, needs_columns=False):
@@ -165,7 +165,7 @@ def wss_list(session, cluster_id, needs_columns=False):
         filter(SecurityBase.id==WSSDefinition.id).\
         order_by('sec_base.name')
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _def_amqp(session, cluster_id):
     return session.query(
@@ -190,7 +190,7 @@ def def_amqp_list(session, cluster_id, needs_columns=False):
     """
     return _def_amqp(session, cluster_id)
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _def_jms_wmq(session, cluster_id):
     return session.query(
@@ -216,7 +216,7 @@ def def_jms_wmq_list(session, cluster_id, needs_columns=False):
     """
     return _def_jms_wmq(session, cluster_id)
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _out_amqp(session, cluster_id):
     return session.query(
@@ -243,7 +243,7 @@ def out_amqp_list(session, cluster_id, needs_columns=False):
     """
     return _out_amqp(session, cluster_id)
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _out_jms_wmq(session, cluster_id):
     return session.query(
@@ -276,7 +276,7 @@ def out_jms_wmq_list(session, cluster_id, needs_columns=False):
     """
     return _out_jms_wmq(session, cluster_id)
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _channel_amqp(session, cluster_id):
     return session.query(
@@ -305,7 +305,7 @@ def channel_amqp_list(session, cluster_id, needs_columns=False):
     """
     return _channel_amqp(session, cluster_id)
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _channel_jms_wmq(session, cluster_id):
     return session.query(
@@ -332,7 +332,7 @@ def channel_jms_wmq_list(session, cluster_id, needs_columns=False):
     """
     return _channel_jms_wmq(session, cluster_id)
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _out_zmq(session, cluster_id):
     return session.query(
@@ -355,7 +355,7 @@ def out_zmq_list(session, cluster_id, needs_columns=False):
     """
     return _out_zmq(session, cluster_id)
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _channel_zmq(session, cluster_id):
     return session.query(
@@ -380,7 +380,7 @@ def channel_zmq_list(session, cluster_id, needs_columns=False):
     """
     return _channel_zmq(session, cluster_id)
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _http_soap(session, cluster_id):
     return session.query(
@@ -446,7 +446,7 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, needs_c
 
     return q
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _out_sql(session, cluster_id):
     return session.query(SQLConnectionPool).\
@@ -467,7 +467,7 @@ def out_sql_list(session, cluster_id, needs_columns=False):
     """
     return _out_sql(session, cluster_id)
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _out_ftp(session, cluster_id):
     return session.query(
@@ -491,7 +491,7 @@ def out_ftp_list(session, cluster_id, needs_columns=False):
     """
     return _out_ftp(session, cluster_id)
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _service(session, cluster_id):
     return session.query(
@@ -514,7 +514,7 @@ def service_list(session, cluster_id, needs_columns=False):
     """
     return _service(session, cluster_id)
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _delivery_definition(session, cluster_id):
     return session.query(DeliveryDefinitionBase).\
@@ -533,7 +533,7 @@ def delivery_definition_list(session, cluster_id, target_type=None):
 
     return def_list
 
-# ##############################################################################
+# ################################################################################################################################
 
 def delivery_count_by_state(session, def_id):
     return session.query(Delivery.state, func.count(Delivery.state)).\
@@ -611,7 +611,7 @@ def delivery_history_list(session, task_id, needs_columns=True):
         filter(DeliveryHistory.task_id==task_id).\
         order_by(DeliveryHistory.entry_time.desc())
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _msg_list(class_, order_by, session, cluster_id, needs_columns=False):
     """ All the namespaces.
@@ -694,5 +694,25 @@ def http_soap_audit_item_list(session, cluster_id, conn_id, start, stop, query, 
 
 def http_soap_audit_item(session, cluster_id, id):
     return _http_soap_audit(session, cluster_id, id=id, needs_req_payload=True)
+
+# ################################################################################################################################
+
+def _cloud_openstack_swift(session, cluster_id):
+    return session.query(OpenStackSwift).\
+        filter(Cluster.id==cluster_id).\
+        order_by(OpenStackSwift.name)
+
+def cloud_openstack_swift(session, cluster_id, id):
+    """ An OpenStack Swift connection.
+    """
+    return _cloud_openstack_swift(session, cluster_id).\
+        filter(OpenStackSwift.id==id).\
+        one()
+
+@needs_columns
+def cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
+    """ OpenStack Swift connections.
+    """
+    return _cloud_openstack_swift(session, cluster_id)
 
 # ################################################################################################################################

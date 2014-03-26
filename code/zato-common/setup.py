@@ -36,7 +36,7 @@ setup(
           'lxml==3.0.1',
           'mock==1.0.1',
           'nose==1.3.0',
-          'pip==1.1',
+          'pip==1.5.2',
           'python-dateutil==2.1',
           'pytz==2012h',
           'pyzmq==2.2.0.1',

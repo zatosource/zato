@@ -53,6 +53,9 @@ $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.jms_wmq');
 $.namespace('zato.channel.zmq');
+$.namespace('zato.cloud');
+$.namespace('zato.cloud.openstack');
+$.namespace('zato.cloud.openstack.swift');
 $.namespace('zato.cluster');
 $.namespace('zato.cluster.servers');
 $.namespace('zato.data_table');
@@ -210,7 +213,7 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
                         if(_.include(skip_boolean, field_name)) {
                             form_elem.val(value);
                         }
-						else {
+                        else {
                             if($.fn.zato.to_bool(value)) {
                                 form_elem.attr('checked', 'checked');
                             }
@@ -456,17 +459,17 @@ $.fn.zato.data_table.setup_change_password = function() {
         return false;
     });
 
-	if($.fn.zato.data_table.password_required) {
-		$('#id_password1').attr('data-bvalidator', 'required,equalto[id_password2]');
-		$('#id_password1').attr('data-bvalidator-msg', 'Both fields are required and need to be equal');
+    if($.fn.zato.data_table.password_required) {
+        $('#id_password1').attr('data-bvalidator', 'required,equalto[id_password2]');
+        $('#id_password1').attr('data-bvalidator-msg', 'Both fields are required and need to be equal');
 
         $('#id_password2').attr('data-bvalidator', 'required');
         $('#id_password2').attr('data-bvalidator-msg', 'This is a required field');
-	}
-	else {
-		$('#id_password1').attr('data-bvalidator', 'equalto[id_password2],valempty');
-		$('#id_password1').attr('data-bvalidator-msg', 'Fields need to be equal');
-	}
+    }
+    else {
+        $('#id_password1').attr('data-bvalidator', 'equalto[id_password2],valempty');
+        $('#id_password1').attr('data-bvalidator-msg', 'Fields need to be equal');
+    }
 
     change_password_form.bValidator();
 }
@@ -504,21 +507,21 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     var name = '';
     var id = '';
     var tag_name = '';
-	var html_elem;
+    var html_elem;
     var _columns = $.fn.zato.data_table.get_columns();
 
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');
-		html_elem = $('#id_' + prefix + name);
+        html_elem = $('#id_' + prefix + name);
         tag_name = html_elem.prop('tagName');
 
         if(tag_name && html_elem.prop('type') == 'checkbox') {
             item[name] = html_elem.is(':checked');
         }
 
-		else {
-			item[name] = elem.value;
-		}
+        else {
+            item[name] = elem.value;
+        }
 
         if(tag_name && tag_name.toLowerCase() == 'select') {
             item[name + '_select'] = $('#id_' + prefix + name + ' :selected').text();
@@ -700,17 +703,17 @@ $.fn.zato.startswith = function(s, prefix) {
 }
 
 $.fn.zato.toggle_visible_hidden = function(id, is_visible) {
-	var elem = $('#'+ id);
-	var remove_class = '';
-	var add_class = '';
+    var elem = $('#'+ id);
+    var remove_class = '';
+    var add_class = '';
 
     if(is_visible) {
-		remove_class = 'hidden';
-		add_class = 'visible';
+        remove_class = 'hidden';
+        add_class = 'visible';
     }
     else {
-		remove_class = 'visible';
-		add_class = 'hidden';
+        remove_class = 'visible';
+        add_class = 'hidden';
     }
-	$(elem).removeClass(remove_class).addClass(add_class);
+    $(elem).removeClass(remove_class).addClass(add_class);
 }

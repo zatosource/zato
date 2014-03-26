@@ -323,11 +323,7 @@ class CreateEdit(_BaseView):
             if post_id:
                 input_dict['id'] = post_id
 
-            print(111, self.cluster_id, input_dict, initial_input_dict)
-
             input_dict.update(initial_input_dict)
-
-            print(111, self.cluster_id, input_dict)
 
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
                 if name not in input_dict:
