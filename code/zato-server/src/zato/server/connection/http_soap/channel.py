@@ -252,7 +252,7 @@ class RequestHandler(object):
         transport = kwargs.get('transport')
 
         self.set_payload(service.response, data_format, transport, service)
-        self.set_content_type(service.response, data_format, transport, kwargs.get('url_match'))
+        self.set_content_type(service.response, data_format, transport, kwargs.get('url_match'), kwargs.get('channel_item'))
 
         return service.response
 
@@ -370,7 +370,7 @@ class RequestHandler(object):
             if not isinstance(service_instance, AdminService):
                 response.payload = soap_doc.format(body=response.payload)
 
-    def set_content_type(self, response, data_format, transport, url_match):
+    def set_content_type(self, response, data_format, transport, url_match, channel_item):
         """ Sets a response's content type if one hasn't been supplied by the user.
         """
         # A user provided their own content type ..
@@ -380,7 +380,7 @@ class RequestHandler(object):
             # .. or they did not so let's find out if we're using SimpleIO ..
             if data_format == SIMPLE_IO.FORMAT.XML:
                 if transport == URL_TYPE.SOAP:
-                    if url_match.soap_version == '1.1':
+                    if channel_item.soap_version == '1.1':
                         content_type = self.server.soap11_content_type
                     else:
                         content_type = self.server.soap12_content_type

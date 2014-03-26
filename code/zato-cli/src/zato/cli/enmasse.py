@@ -45,6 +45,7 @@ from zato.server.service.internal import http_soap as http_soap_mod
 from zato.server.service.internal.channel import amqp as channel_amqp_mod
 from zato.server.service.internal.channel import jms_wmq as channel_jms_wmq_mod
 from zato.server.service.internal.channel import zmq as channel_zmq_mod
+from zato.server.service.internal.cloud.openstack import swift as cloud_openstack_swift
 from zato.server.service.internal.definition import amqp as definition_amqp_mod
 from zato.server.service.internal.definition import jms_wmq as definition_jms_wmq_mod
 from zato.server.service.internal.message import elem_path as elem_path_mod
@@ -88,7 +89,7 @@ ERROR_INVALID_SEC_DEF_TYPE = Code('E09', 'invalid sec def type')
 ERROR_INVALID_KEY = Code('E10', 'invalid key')
 ERROR_SERVICE_NAME_MISSING = Code('E11', 'service name missing')
 ERROR_SERVICE_MISSING = Code('E12', 'service missing')
-ERROR_COULD_IMPORT_OBJECT = Code('E13', 'could not import object')
+ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
 
 class _DummyLink(object):
     """ Pip requires URLs to have a .url attribute.
@@ -219,7 +220,7 @@ class EnMasse(ManageCommand):
             self.logger.error('At least one of --export-local, --export-odb or --import is required, stopping now')
             sys.exit(self.SYS_ERROR.NO_OPTIONS)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def save_json(self):
         now = datetime.now().isoformat() # Not in UTC, we want to use user's TZ
@@ -231,7 +232,7 @@ class EnMasse(ManageCommand):
 
         self.logger.info('Data exported to {}'.format(f.name))
 
-# ##############################################################################
+# ################################################################################################################################
 
     def set_client(self):
 
@@ -250,7 +251,7 @@ class EnMasse(ManageCommand):
 
         self.client.odb_session = session
 
-# ##############################################################################
+# ################################################################################################################################
 
     def ensure_input_exists(self):
         input_path = abspath(join(self.curdir, self.args.input))
@@ -262,7 +263,7 @@ class EnMasse(ManageCommand):
 
         return input_path
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_warnings_errors(self, items):
 
@@ -306,7 +307,7 @@ class EnMasse(ManageCommand):
             # A signal that we found no warnings nor errors
             return True
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_table(self, out):
 
@@ -327,7 +328,7 @@ class EnMasse(ManageCommand):
 
         return table
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_include_abspath(self, curdir, value):
         return abspath(join(curdir, value.replace('file://', '')))
@@ -442,7 +443,7 @@ class EnMasse(ManageCommand):
                 odb_key = json_key
 
             if odb_key not in merged:
-                sorted_merged = sorted(gggvvvvvcccc)
+                sorted_merged = sorted(merged)
                 raw = (json_key, odb_key, sorted_merged)
                 value = "JSON key '{}' not one of '{}'".format(odb_key, sorted_merged)
                 errors.append(Error(raw, value, ERROR_INVALID_KEY))
@@ -467,7 +468,7 @@ class EnMasse(ManageCommand):
 
         self.json = merged
 
-# ##############################################################################
+# ################################################################################################################################
 
     def get_odb_objects(self):
 
@@ -541,6 +542,7 @@ class EnMasse(ManageCommand):
             'zato.outgoing.sql.get-list':'outconn_sql',
             'zato.outgoing.zmq.get-list':'outconn_zmq',
             'zato.scheduler.job.get-list':'scheduler',
+            'zato.cloud.openstack.swift.get-list':'cloud_openstack_swift',
             }
 
         for value in service_key.values():
@@ -557,7 +559,7 @@ class EnMasse(ManageCommand):
             for item in items:
                 fix_up_odb_object(key, item)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def find_already_existing_odb_objects(self):
         warnings = []
@@ -592,7 +594,7 @@ class EnMasse(ManageCommand):
 
         return Results(warnings, errors)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def find_missing_defs(self):
         warnings = []
@@ -677,7 +679,7 @@ class EnMasse(ManageCommand):
         if warnings or errors:
             return Results(warnings, errors)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def validate_input(self):
         errors = []
@@ -703,6 +705,7 @@ class EnMasse(ManageCommand):
             'outconn_zmq':outgoing_zmq_mod.Create,
             'scheduler':scheduler_mod.Create,
             'xpath': xpath_mod.Create,
+            'cloud_openstack_swift': cloud_openstack_swift.Create,
         }
 
         def_sec_services = {
@@ -799,7 +802,7 @@ class EnMasse(ManageCommand):
         if errors:
             return Results([], errors)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def export(self):
 
@@ -838,7 +841,7 @@ class EnMasse(ManageCommand):
     def export_odb(self):
         return self.export_local_odb(False)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def validate_import_data(self):
         warnings = []
@@ -930,6 +933,7 @@ class EnMasse(ManageCommand):
             'outconn_zmq':ImportInfo(outgoing_zmq_mod),
             'scheduler':ImportInfo(scheduler_mod),
             'xpath':ImportInfo(xpath_mod),
+            'cloud_openstack_swift': ImportInfo(cloud_openstack_swift),
         }
 
         def_sec_info = {
@@ -1018,7 +1022,7 @@ class EnMasse(ManageCommand):
                 raw = (item_type, attrs_dict, error_response)
                 value = "Could not import '{}' with '{}', response was '{}'".format(
                     attrs.name, attrs_dict, error_response)
-                errors.append(Error(raw, value, ERROR_COULD_IMPORT_OBJECT))
+                errors.append(Error(raw, value, ERROR_COULD_NOT_IMPORT_OBJECT))
                 return Results(warnings, errors)
 
             # It's been just imported so we don't want to create in next steps
@@ -1090,4 +1094,4 @@ class EnMasse(ManageCommand):
 
         return []
 
-# ##############################################################################
+# ################################################################################################################################

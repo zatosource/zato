@@ -224,6 +224,11 @@ PUB_SUB_CONSUMER.CREATE = b'11650'
 PUB_SUB_CONSUMER.EDIT = b'11651'
 PUB_SUB_CONSUMER.DELETE = b'11652'
 
+# New in 1.2
+CLOUD_OPENSTACK_SWIFT = Bunch()
+CLOUD_OPENSTACK_SWIFT.CREATE_EDIT = b'11700'
+CLOUD_OPENSTACK_SWIFT.DELETE = b'11701'
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

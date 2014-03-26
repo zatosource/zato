@@ -350,6 +350,16 @@ class MISC:
     DEFAULT_AUDIT_BACK_LOG = 24 * 60 # 24 hours * 60 days ≅ 2 months
     DEFAULT_AUDIT_MAX_PAYLOAD = 0 # Using 0 means there's no limit
 
+class CLOUD:
+    class OPENSTACK:
+        class SWIFT:
+            class DEFAULTS:
+                POOL_SIZE = 5
+                RETRIES = 5
+                BACKOFF_STARTING = 1
+                BACKOFF_MAX = 64
+                AUTH_VERSION = '1'
+
 class URL_PARAMS_PRIORITY:
     PATH_OVER_QS = 'path-over-qs'
     QS_OVER_PATH = 'qs-over-path'

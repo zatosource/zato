@@ -38,6 +38,7 @@ from zato.common.broker_message import code_to_name, STATS
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
+from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
@@ -111,6 +112,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_sql()
         self.init_ftp()
         self.init_http_soap()
+        self.init_cloud()
         self.init_pubsub()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
@@ -162,14 +164,14 @@ class WorkerStore(BrokerMessageReceiver):
         wrapper_config.update(sec_config)
 
         if wrapper_config['serialization_type'] == HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id:
-            wrapper_config['queue_build_cap'] = float(self.server.fs_server_config.misc.suds_soap_queue_build_cap)
+            wrapper_config['queue_build_cap'] = float(self.server.fs_server_config.misc.queue_build_cap)
             wrapper = SudsSOAPWrapper(wrapper_config)
             wrapper.build_client_queue()
             return wrapper
 
         return HTTPSOAPWrapper(wrapper_config)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def init_sql(self):
         """ Initializes SQL connections, first to ODB and then any user-defined ones.
@@ -209,6 +211,17 @@ class WorkerStore(BrokerMessageReceiver):
                 # To make the API consistent with that of SQL connection pools
                 config_dict[name].ping = wrapper.ping
 
+    def init_cloud(self):
+        """ Initializes all the cloud connections.
+        """
+        for name in self.worker_config.cloud_openstack_swift:
+            config = self.worker_config.cloud_openstack_swift[name]['config']
+            config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
+            config.conn = SwiftWrapper(config)
+            config.conn.build_queue()
+
+# ################################################################################################################################
+
     def _topic_from_topic_data(self, data):
         return Topic(data.name, data.is_active, True, data.max_depth)
 
@@ -235,7 +248,7 @@ class WorkerStore(BrokerMessageReceiver):
                          config.delivery_mode, config.callback),
                 Topic(config.topic_name))
 
-# ##############################################################################
+# ################################################################################################################################
 
     def init_msg_ns_store(self):
         for k, v in self.worker_config.msg_ns.items():
@@ -249,7 +262,7 @@ class WorkerStore(BrokerMessageReceiver):
         for k, v in self.worker_config.elem_path.items():
             self.elem_path_store.create(k, v.config, {})
 
-# ##############################################################################
+# ################################################################################################################################
 
     def _update_auth(self, msg, action_name, sec_type, visit_wrapper, keys=None):
         """ A common method for updating auth-related configuration.
@@ -301,7 +314,7 @@ class WorkerStore(BrokerMessageReceiver):
             wrapper.config['password'] = msg['password']
             wrapper.set_auth()
 
-# ##############################################################################
+# ################################################################################################################################
 
     def ntlm_get(self, name):
         """ Returns the configuration of the NTLM security definition
@@ -332,7 +345,7 @@ class WorkerStore(BrokerMessageReceiver):
         self._update_auth(msg, code_to_name[msg.action], security_def_type.ntlm,
                 self._visit_wrapper_change_password)
 
-    # ##############################################################################
+    # ################################################################################################################################
 
     def basic_auth_get(self, name):
         """ Returns the configuration of the HTTP Basic Auth security definition
@@ -363,7 +376,7 @@ class WorkerStore(BrokerMessageReceiver):
         self._update_auth(msg, code_to_name[msg.action], security_def_type.basic_auth,
                 self._visit_wrapper_change_password)
 
-    # ##############################################################################
+    # ################################################################################################################################
 
     def oauth_get(self, name):
         """ Returns the configuration of the OAuth security definition
@@ -394,7 +407,7 @@ class WorkerStore(BrokerMessageReceiver):
         self._update_auth(msg, code_to_name[msg.action], security_def_type.oauth,
                 self._visit_wrapper_change_password)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def tech_acc_get(self, name):
         """ Returns the configuration of the technical account of the given name.
@@ -421,7 +434,7 @@ class WorkerStore(BrokerMessageReceiver):
         """
         self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(msg, *args)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def wss_get(self, name):
         """ Returns the configuration of the WSS definition of the given name.
@@ -453,7 +466,7 @@ class WorkerStore(BrokerMessageReceiver):
         self._update_auth(msg, code_to_name[msg.action], security_def_type.wss,
                 self._visit_wrapper_change_password)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def _set_service_response_data(self, service, **ignored):
         if not isinstance(service.response.payload, basestring):
@@ -472,7 +485,7 @@ class WorkerStore(BrokerMessageReceiver):
             self.broker_client, self, msg.cid, self.worker_config.simple_io,
             job_type=msg.get('job_type'), wsgi_environ=wsgi_environ)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
         return self._on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
@@ -486,7 +499,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg, args=None):
         return self._on_message_invoke_service(msg, CHANNEL.ZMQ, 'CHANNEL_ZMQ_MESSAGE_RECEIVED', args)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def on_broker_msg_OUTGOING_SQL_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an SQL connection, including changing its
@@ -509,7 +522,7 @@ class WorkerStore(BrokerMessageReceiver):
         """
         del self.sql_pool_store[msg['name']]
 
-# ##############################################################################
+# ################################################################################################################################
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
@@ -521,27 +534,34 @@ class WorkerStore(BrokerMessageReceiver):
         """
         self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_DELETE(msg, *args)
 
-# ##############################################################################
+# ################################################################################################################################
 
-    def _delete_outgoing_http_soap(self, name, transport, log_func):
-        """ Actually deletes an outgoing HTTP/SOAP connection.
+    def _delete_config_close_wrapper(self, name, config_dict, conn_type, log_func):
+        """ Deletes a wrapper-based connection's config and closes its underlying wrapper.
         """
-        # Are we dealing with plain HTTP or SOAP?
-        config_dict = getattr(self.worker_config, 'out_' + transport)
-
         # Delete the connection first, if it exists at all ..
         try:
             try:
                 wrapper = config_dict[name].conn
             except (KeyError, AttributeError), e:
-                log_func('Could not access a wrapper, e:[{}]'.format(format_exc(e)))
+                log_func('Could not access wrapper, e:[{}]'.format(format_exc(e)))
             else:
                 try:
                     wrapper.session.close()
                 finally:
                     del config_dict[name]
         except Exception, e:
-            log_func('Could not delete an outgoing HTTP/SOAP connection, e:[{}]'.format(format_exc(e)))
+            log_func('Could not delete `{}`, e:`{}`'.format(conn_type, format_exc(e)))
+
+# ################################################################################################################################
+
+    def _delete_config_close_wrapper_http_soap(self, name, transport, log_func):
+        """ Deletes/closes an HTTP/SOAP outconn.
+        """ 
+        # Are we dealing with plain HTTP or SOAP?
+        config_dict = getattr(self.worker_config, 'out_' + transport)
+
+        return self._delete_config_close_wrapper(name, config_dict, 'an outgoing HTTP/SOAP connection', log_func)
 
     def on_broker_msg_OUTGOING_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an outgoing HTTP/SOAP connection.
@@ -551,7 +571,7 @@ class WorkerStore(BrokerMessageReceiver):
         del_name = old_name if old_name else msg['name']
 
         # .. delete the connection if it exists ..
-        self._delete_outgoing_http_soap(del_name, msg['transport'], logger.debug)
+        self._delete_config_close_wrapper_http_soap(del_name, msg['transport'], logger.debug)
 
         # .. and create a new one
         wrapper = self._http_soap_wrapper_from_config(msg, False)
@@ -563,11 +583,11 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_OUTGOING_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an outgoing HTTP/SOAP connection (actually delegates the
-        task to self._delete_outgoing_http_soap.
+        task to self._delete_config_close_wrapper_http_soap.
         """
-        self._delete_outgoing_http_soap(msg['name'], msg['transport'], logger.error)
+        self._delete_config_close_wrapper_http_soap(msg['name'], msg['transport'], logger.error)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def on_broker_msg_SERVICE_DELETE(self, msg, *args):
         """ Deletes the service from the service store and removes it from the filesystem
@@ -604,7 +624,7 @@ class WorkerStore(BrokerMessageReceiver):
         for name in('is_active', 'slow_threshold'):
             self.server.service_store.services[msg.impl_name][name] = msg[name]
 
-# ##############################################################################
+# ################################################################################################################################
 
     def on_broker_msg_OUTGOING_FTP_CREATE_EDIT(self, msg, *args):
         self.worker_config.out_ftp.create_edit(msg, msg.get('old_name'))
@@ -615,7 +635,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_OUTGOING_FTP_CHANGE_PASSWORD(self, msg, *args):
         self.worker_config.out_ftp.change_password(msg.name, msg.password)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_CREATE(self, msg, *args):
         msg.cid = new_cid()
@@ -624,7 +644,7 @@ class WorkerStore(BrokerMessageReceiver):
         msg.data_format = SIMPLE_IO.FORMAT.JSON
         return self._on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def on_broker_msg_STATS_DELETE(self, msg, *args):
         start = parse(msg.start)
@@ -667,7 +687,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_STATS_DELETE_DAY(self, msg, *args):
         self.stats_maint.delete(parse(msg.start), parse(msg.stop), MINUTELY)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def on_broker_msg_SERVICE_PUBLISH(self, msg, args=None):
         return self._on_message_invoke_service(msg, CHANNEL.INVOKE_ASYNC, 'SERVICE_PUBLISH', args)
@@ -736,6 +756,32 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(self, msg, *args):
         return self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT(self, msg, *args):
+        """ Creates or updates an OpenStack Swift connection.
+        """
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+
+        # .. delete the connection if it exists ..
+        self._delete_config_close_wrapper(del_name, self.worker_config.cloud_openstack_swift, 'OpenStack Swift', logger.debug)
+
+        # .. and create a new one
+        msg['queue_build_cap'] = float(self.server.fs_server_config.misc.queue_build_cap)
+        wrapper = SwiftWrapper(msg)
+        wrapper.build_queue()
+
+        self.worker_config.cloud_openstack_swift[msg['name']] = Bunch()
+        self.worker_config.cloud_openstack_swift[msg['name']].config = msg
+        self.worker_config.cloud_openstack_swift[msg['name']].conn = wrapper
+
+    def on_broker_msg_CLOUD_OPENSTACK_SWIFT_DELETE(self, msg, *args):
+        """ Closes and deletes an OpenStack Swift connection.
+        """
+        self._delete_config_close_wrapper(msg['name'], self.worker_config.cloud_openstack_swift, 'OpenStack Swift', logger.debug)
 
 # ################################################################################################################################
 

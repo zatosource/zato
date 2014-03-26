@@ -131,6 +131,17 @@
                     </ul>
                 </li>
 
+                <li><span class="like-a">Cloud &darr;</span>
+                    <ul>
+                        <li>
+                            <span class="like-a">OpenStack &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url cloud-openstack-swift %}?cluster={{ cluster_id|default:'' }}">Swift</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
+
                 <li><span class="like-a">Key/value DB &darr;</span>
                     <ul>
                         <li><a href="{% url kvdb-data-dict-dictionary %}?cluster={{ cluster_id|default:'' }}">Data dictionaries</a></li>
