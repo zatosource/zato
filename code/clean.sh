@@ -14,6 +14,7 @@ rm -rf $CURDIR/downloads
 rm -rf $CURDIR/eggs
 rm -rf $CURDIR/include
 rm -rf $CURDIR/.installed.cfg
+rm -rf $CURDIR/.coverage
 rm -rf $CURDIR/lib
 rm -rf $CURDIR/local
 rm -rf $CURDIR/parts
