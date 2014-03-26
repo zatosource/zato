@@ -400,6 +400,18 @@ class Outgoing(object):
         self.plain_http = plain_http
         self.soap = soap
 
+class OpenStack(object):
+    def __init__(self, swift=None):
+        self.swift = swift
+
+class Cloud(object):
+    """ A container for cloud-related connections a service can establish.
+    """
+    __slots__ = ('openstack',)
+
+    def __init__(self, openstack=None):
+        self.openstack = openstack or OpenStack()
+
 # ################################################################################################################################
 
 class Response(object):

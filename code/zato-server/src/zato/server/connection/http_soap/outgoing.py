@@ -30,6 +30,7 @@ import requests
 # Zato
 from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SECURITY_TYPES, URL_TYPE, ZatoException
 from zato.common.util import get_component_name, new_cid, security_def_type
+from zato.server.connection.queue import ConnectionQueue
 
 logger = logging.getLogger(__name__)
 
@@ -311,35 +312,6 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
 # ################################################################################################################################
 
-class _SudsClient(object):
-    def __init__(self, client_queue, conn_name):
-        self.queue = client_queue
-        self.conn_name = conn_name
-        self.client = None
-
-    def __enter__(self):
-        try:
-            self.client = self.queue.get(block=False)
-        except Empty:
-            self.client = None
-            msg = 'No free connections to `{}`'.format(self.conn_name)
-            logger.error(msg)
-            raise Exception(msg)
-        else:
-            return self.client
-
-    def __exit__(self, type, value, traceback):
-        if self.client:
-            self.queue.put(self.client)
-
-class _SudsClientQueue(object):
-    def __init__(self, queue, conn_name):
-        self.queue = queue
-        self.conn_name = conn_name
-
-    def __call__(self):
-        return _SudsClient(self.queue, self.conn_name)
-
 class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
     """ A thin wrapper around the suds SOAP library
     """
@@ -349,65 +321,47 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
         self.config = config
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
-        self.client = _SudsClientQueue(Queue(self.config['pool_size']), self.config['name'])
+        self.address = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
+        self.conn_type = 'Suds SOAP'
+        self.client = ConnectionQueue(
+            self.config['pool_size'], self.config['queue_build_cap'], self.config['name'], self.conn_type, self.address,
+            self.add_client)
+
+    def add_client(self):
+
+        logger.info('About to add a client to `%s` (%s)', self.address, self.conn_type)
+
+        # Lazily-imported here to make sure gevent monkey patches everything well in advance
+        from suds.client import Client
+        from suds.transport.https import HttpAuthenticated
+        from suds.transport.https import WindowsHttpAuthenticated
+        from suds.wsse import Security, UsernameToken
+
+        sec_type = self.config['sec_type']
+
+        if sec_type == security_def_type.basic_auth:
+            transport = HttpAuthenticated(**self.suds_auth)
+
+        elif sec_type == security_def_type.ntlm:
+            transport = WindowsHttpAuthenticated(**self.suds_auth)
+
+        elif sec_type == security_def_type.wss:
+            security = Security()
+            token = UsernameToken(self.suds_auth['username'], self.suds_auth['password'])
+            security.tokens.append(token)
+
+            client = Client(self.address, autoblend=True, wsse=security)
+
+        if sec_type in(security_def_type.basic_auth, security_def_type.ntlm):
+            client = Client(self.address, autoblend=True, transport=transport)
+
+        # Still could be either none at all or WSS
+        if not sec_type:
+            client = Client(self.address, autoblend=True)
+
+        self.client.put_client(client)
 
     def build_client_queue(self):
 
         with self.update_lock:
-
-            # Lazily-imported here to make sure gevent monkey patches everything well in advance
-            from suds.client import Client
-            from suds.transport.https import HttpAuthenticated
-            from suds.transport.https import WindowsHttpAuthenticated
-            from suds.wsse import Security, UsernameToken
-
-            url = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
-
-            def add_client():
-
-                sec_type = self.config['sec_type']
-
-                if sec_type == security_def_type.basic_auth:
-                    transport = HttpAuthenticated(**self.suds_auth)
-
-                elif sec_type == security_def_type.ntlm:
-                    transport = WindowsHttpAuthenticated(**self.suds_auth)
-
-                elif sec_type == security_def_type.wss:
-                    security = Security()
-                    token = UsernameToken(self.suds_auth['username'], self.suds_auth['password'])
-                    security.tokens.append(token)
-
-                    client = Client(url, autoblend=True, wsse=security)
-
-                if sec_type in(security_def_type.basic_auth, security_def_type.ntlm):
-                    client = Client(url, autoblend=True, transport=transport)
-
-                # Still could be either none at all or WSS
-                if not sec_type:
-                    client = Client(url, autoblend=True)
-
-                self.client.queue.put(client)
-                logger.debug('Adding Suds SOAP client to [%s]', url)
-
-            for x in range(self.client.queue.maxsize):
-                gevent.spawn(add_client)
-
-            start = datetime.utcnow()
-            build_until = start + timedelta(seconds=self.config['queue_build_cap'])
-    
-            while not self.client.queue.full():
-                gevent.sleep(0.5)
-
-                now = datetime.utcnow()
-                if  now >= build_until:
-
-                    msg = 'Built {}/{} Suds SOAP clients to {} within {} seconds, giving up'.format(
-                        self.client.queue.qsize(), self.client.queue.maxsize, url, self.config['queue_build_cap'])
-                    logger.error(msg)
-                    return
-
-                logger.info('%d/%d Suds SOAP clients connected to `%s` after %s (cap: %ss)',
-                    self.client.queue.qsize(), self.client.queue.maxsize, url, now - start, self.config['queue_build_cap'])
-
-            logger.info('Obtained %d Suds SOAP clients to `%s` for `%s`', self.client.queue.maxsize, url, self.config['name'])
+            self.client.build_queue()

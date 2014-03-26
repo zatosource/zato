@@ -204,6 +204,11 @@ MSG_ELEM_PATH.CREATE = b'11500'
 MSG_ELEM_PATH.EDIT = b'11501'
 MSG_ELEM_PATH.DELETE = b'11502'
 
+# New in 1.2
+CLOUD_OPENSTACK_SWIFT = Bunch()
+CLOUD_OPENSTACK_SWIFT.CREATE_EDIT = b'11550'
+CLOUD_OPENSTACK_SWIFT.DELETE = b'11551'
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'
