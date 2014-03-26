@@ -22,7 +22,7 @@ sudo apt-get install git bzr gfortran haproxy  \
     libevent-dev libgfortran3 liblapack-dev liblapack3gf \
     libpq-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack5.4.0 \
     openssl python2.7-dev python-numpy python-pip \
-    python-scipy python-zdaemon swig uuid-dev uuid-runtime
+    python-scipy python-zdaemon swig uuid-dev uuid-runtime libffi-dev
 
 # On Debian and Ubuntu the binary goes to /usr/sbin/haproxy so we need to symlink it 
 # to a directory that can be easily found on PATH so that starting the load-balancer

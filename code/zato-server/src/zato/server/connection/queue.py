@@ -63,7 +63,7 @@ class ConnectionQueue(object):
 
     def put_client(self, client):
         self.queue.put(client)
-        self.logger.info('Added a `%s` client to %s (%s)', self.conn_name, self.address, self.conn_type)
+        self.logger.info('Added `%s` client to %s (%s)', self.conn_name, self.address, self.conn_type)
 
     def build_queue(self):
         """ Spawns greenlets to populate the queue and waits up to self.queue_build_cap seconds until the queue is full.
