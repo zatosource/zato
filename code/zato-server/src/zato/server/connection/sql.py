@@ -32,7 +32,7 @@ from springpython.context import DisposableObject
 # Zato
 from zato.common import Inactive, PASSWORD_SHADOW
 from zato.common.odb import engine_def, ping_queries
-from zato.common.util import get_component_name
+from zato.common.util import get_component_name, parse_extra_into_dict
 
 class SessionWrapper(object):
     """ Wraps an SQLAlchemy session.
@@ -81,33 +81,9 @@ class SQLConnectionPool(object):
         _extra = {}
         _extra['connect_args'] = {'application_name': get_component_name()}
 
-        extra = self.config.get('extra') # Will be None at times
-        if extra:
-            extra = ';'.join(extra.splitlines())
-            for line in extra.split(';'):
-                original_line = line
-                if line:
-                    line = line.split('=')
-                    if not len(line) == 2:
-                        raise ValueError('Each line must be a single key=value entry, not [{}]'.format(original_line))
-                    
-                    key, value = line
-                    value = value.strip()
-                    
-                    try:
-                        value = is_boolean(value)
-                    except VdtTypeError:
-                        # It's cool, not a boolean
-                        pass 
-                    
-                    try:
-                        value = is_integer(value)
-                    except VdtTypeError:
-                        # OK, not an integer
-                        pass 
-                    
-                    _extra[key.strip()] = value
-        
+        extra = self.config.get('extra') # Optional, hence .get
+        _extra.update(parse_extra_into_dict(extra))
+
         engine_url = engine_def.format(**config)
         self.engine = create_engine(engine_url, pool_size=int(config['pool_size']), **_extra)
         
