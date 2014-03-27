@@ -35,7 +35,7 @@ from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import producers as pubsub_producers
-from zato.admin.web.views.security import basic_auth, ntlm, oauth, tech_account, wss
+from zato.admin.web.views.security import aws, basic_auth, ntlm, oauth, tech_account, wss
 
 urlpatterns = patterns('',
 
@@ -218,6 +218,23 @@ urlpatterns = patterns('',
 # ################################################################################################################################
 
     # Security..
+
+# ################################################################################################################################
+
+    # .. NTLM
+
+    url(r'^zato/security/aws/$',
+        login_required(aws.Index()), name=aws.Index.url_name),
+    url(r'^zato/security/aws/$',
+        login_required(aws.Index()), name=aws.Index.url_name),
+    url(r'^zato/security/aws/create/$',
+        login_required(aws.Create()), name=aws.Create.url_name),
+    url(r'^zato/security/aws/edit/$',
+        login_required(aws.Edit()), name=aws.Edit.url_name),
+    url(r'^zato/security/aws/change-password/$',
+        login_required(aws.change_password), name='security-aws-change-password'),
+    url(r'^zato/security/aws/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(aws.Delete()), name=aws.Delete.url_name),
 
 # ################################################################################################################################
 
