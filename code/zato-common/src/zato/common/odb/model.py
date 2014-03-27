@@ -290,6 +290,24 @@ class NTLM(SecurityBase):
     def to_json(self):
         return to_json(self)
 
+class AWSSecurity(SecurityBase):
+    """ New in 1.2: Stores Amazon credentials.
+    """
+    __tablename__ = 'sec_aws'
+    __mapper_args__ = {'polymorphic_identity': 'amz'}
+
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.cluster = cluster
+
+    def to_json(self):
+        return to_json(self)
+
 # ################################################################################################################################
 
 class HTTPSOAP(Base):
@@ -1217,58 +1235,6 @@ class HTTSOAPAuditReplacePatternsXPath(Base):
 
 # ################################################################################################################################
 
-class OpenStackSwift(Base):
-    """ An outgoing connection to OpenStack's Swift.
-    """
-    __tablename__ = 'os_swift'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('os_swift_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    pool_size = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.POOL_SIZE)
-
-    auth_url = Column(String(200), nullable=False)
-    auth_version = Column(String(200), nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.AUTH_VERSION)
-    user = Column(String(200), nullable=True)
-    key = Column(String(200), nullable=True)
-    retries = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.RETRIES)
-    is_snet = Column(Boolean(), nullable=False)
-    starting_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_STARTING)
-    max_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_MAX)
-    tenant_name = Column(String(200), nullable=True)
-    should_validate_cert = Column(Boolean(), nullable=False)
-    cacert = Column(String(200), nullable=True)
-    should_retr_ratelimit = Column(Boolean(), nullable=False)
-    needs_tls_compr = Column(Boolean(), nullable=False)
-    custom_options = Column(String(2000), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('open_stack_swift_conns', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, auth_url=None, auth_version=None, user=None, key=None, retries=None,
-            is_snet=None, starting_backoff=None, max_backoff=None, tenant_name=None, should_validate_cert=None,
-            cacert=None, should_retr_ratelimit=None, needs_tls_compr=None, custom_options=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.auth_url = auth_url
-        self.auth_version = auth_version
-        self.user = user
-        self.key = key
-        self.retries = retries
-        self.is_snet = is_snet
-        self.starting_backoff = starting_backoff
-        self.max_backoff = max_backoff
-        self.tenant_name = tenant_name
-        self.should_validate_cert = should_validate_cert
-        self.cacert = cacert
-        self.should_retr_ratelimit = should_retr_ratelimit
-        self.needs_tls_compr = needs_tls_compr
-        self.custom_options = custom_options
-
-# ##############################################################################
-
 class PubSubTopic(Base):
     """ A definition of a topic in pub/sub.
     """
@@ -1358,5 +1324,72 @@ class PubSubProducer(Base):
         self.sec_def_id = sec_def_id
         self.cluster_id = cluster_id
         self.last_seen = None # Not used by the DB
+
+# ################################################################################################################################
+
+class OpenStackSwift(Base):
+    """ A connection to OpenStack's Swift.
+    """
+    __tablename__ = 'os_swift'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('os_swift_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    pool_size = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.POOL_SIZE)
+
+    auth_url = Column(String(200), nullable=False)
+    auth_version = Column(String(200), nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.AUTH_VERSION)
+    user = Column(String(200), nullable=True)
+    key = Column(String(200), nullable=True)
+    retries = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.RETRIES)
+    is_snet = Column(Boolean(), nullable=False)
+    starting_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_STARTING)
+    max_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_MAX)
+    tenant_name = Column(String(200), nullable=True)
+    should_validate_cert = Column(Boolean(), nullable=False)
+    cacert = Column(String(200), nullable=True)
+    should_retr_ratelimit = Column(Boolean(), nullable=False)
+    needs_tls_compr = Column(Boolean(), nullable=False)
+    custom_options = Column(String(2000), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('open_stack_swift_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, is_active=None, auth_url=None, auth_version=None, user=None, key=None, retries=None,
+            is_snet=None, starting_backoff=None, max_backoff=None, tenant_name=None, should_validate_cert=None,
+            cacert=None, should_retr_ratelimit=None, needs_tls_compr=None, custom_options=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.auth_url = auth_url
+        self.auth_version = auth_version
+        self.user = user
+        self.key = key
+        self.retries = retries
+        self.is_snet = is_snet
+        self.starting_backoff = starting_backoff
+        self.max_backoff = max_backoff
+        self.tenant_name = tenant_name
+        self.should_validate_cert = should_validate_cert
+        self.cacert = cacert
+        self.should_retr_ratelimit = should_retr_ratelimit
+        self.needs_tls_compr = needs_tls_compr
+        self.custom_options = custom_options
+
+# ################################################################################################################################
+
+'''
+class AmazonS3(Base):
+    """ An outgoing connection to OpenStack's Swift.
+    """
+    __tablename__ = 'amz_s3'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('amz_s3_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    pool_size = Column(Integer, nullable=False, default=CLOUD.AMAZON.S3.DEFAULTS.POOL_SIZE)
+'''
 
 # ################################################################################################################################

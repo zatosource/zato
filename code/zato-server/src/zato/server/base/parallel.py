@@ -385,6 +385,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # Outgoing connections - end
         #
 
+        # AWS
+        query = self.odb.get_aws_security_list(server.cluster.id, True)
+        self.config.aws = ConfigDict.from_query('aws', query)
+
         # HTTP Basic Auth
         query = self.odb.get_basic_auth_list(server.cluster.id, True)
         self.config.basic_auth = ConfigDict.from_query('basic_auth', query)

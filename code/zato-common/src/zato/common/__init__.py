@@ -360,6 +360,11 @@ class CLOUD:
                 BACKOFF_MAX = 64
                 AUTH_VERSION = '1'
 
+    class AMAZON:
+        class S3:
+            class DEFAULTS:
+                POOL_SIZE = 5
+
 class URL_PARAMS_PRIORITY:
     PATH_OVER_QS = 'path-over-qs'
     QS_OVER_PATH = 'qs-over-path'
