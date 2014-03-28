@@ -19,6 +19,7 @@ from zato.admin.web.views import account, cluster, http_soap, kvdb, load_balance
 from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import zmq as channel_zmq
+from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
 from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
@@ -523,6 +524,19 @@ urlpatterns = patterns('',
 # ################################################################################################################################
 
     # Cloud
+
+# ################################################################################################################################
+    
+    # .. OpenStack - S3
+
+    url(r'^zato/cloud/aws/s3/$',
+        login_required(cloud_aws_s3.Index()), name=cloud_aws_s3.Index.url_name),
+    url(r'^zato/cloud/aws/s3/create/$',
+        login_required(cloud_aws_s3.Create()), name=cloud_aws_s3.Create.url_name),
+    url(r'^zato/cloud/aws/s3/edit/$',
+        login_required(cloud_aws_s3.Edit()), name=cloud_aws_s3.Edit.url_name),
+    url(r'^zato/cloud/aws/s3/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_aws_s3.Delete()), name=cloud_aws_s3.Delete.url_name),
 
 # ################################################################################################################################
     

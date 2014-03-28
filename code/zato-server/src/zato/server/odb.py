@@ -610,6 +610,12 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.cloud_openstack_swift_list(session, cluster_id, needs_columns)
 
+    def get_cloud_aws_s3_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of AWS S3 connections.
+        """
+        with closing(self.session()) as session:
+            return query.cloud_aws_s3_list(session, cluster_id, needs_columns)
+
 # ################################################################################################################################
 
     def get_pubsub_topic_list(self, cluster_id, needs_columns=False):

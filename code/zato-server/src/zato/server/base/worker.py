@@ -38,6 +38,7 @@ from zato.common.broker_message import code_to_name, STATS
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
+from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
@@ -214,11 +215,18 @@ class WorkerStore(BrokerMessageReceiver):
     def init_cloud(self):
         """ Initializes all the cloud connections.
         """
-        for name in self.worker_config.cloud_openstack_swift:
-            config = self.worker_config.cloud_openstack_swift[name]['config']
-            config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
-            config.conn = SwiftWrapper(config)
-            config.conn.build_queue()
+        data = (
+            ('cloud_openstack_swift', SwiftWrapper),
+            ('cloud_aws_s3', S3Wrapper),
+        )
+
+        for config_key, wrapper in data:
+            config_attr = getattr(self.worker_config, config_key)
+            for name in config_attr:
+                config = config_attr[name]['config']
+                config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
+                config.conn = wrapper(config)
+                config.conn.build_queue()
 
 # ################################################################################################################################
 
