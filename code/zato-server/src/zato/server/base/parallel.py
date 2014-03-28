@@ -345,6 +345,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_cloud_openstack_swift_list(server.cluster.id, True)
         self.config.cloud_openstack_swift = ConfigDict.from_query('cloud_openstack_swift', query)
 
+        query = self.odb.get_cloud_aws_s3_list(server.cluster.id, True)
+        self.config.cloud_aws_s3 = ConfigDict.from_query('cloud_aws_s3', query)
+
         # 
         # Cloud - end
         #

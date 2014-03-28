@@ -16,12 +16,15 @@ from string import Template
 from sys import maxint
 from traceback import format_exc
 
-# lxml
-from lxml import etree
-from lxml.objectify import ObjectPath as _ObjectPath
+# boto
+from boto.s3.key import Key
 
 # Bunch
 from bunch import Bunch
+
+# lxml
+from lxml import etree
+from lxml.objectify import ObjectPath as _ObjectPath
 
 # The namespace for use in all Zato's own services.
 zato_namespace = 'https://zato.io/ns/20130518'
@@ -354,16 +357,20 @@ class CLOUD:
     class OPENSTACK:
         class SWIFT:
             class DEFAULTS:
-                POOL_SIZE = 5
-                RETRIES = 5
+                AUTH_VERSION = '1'
                 BACKOFF_STARTING = 1
                 BACKOFF_MAX = 64
-                AUTH_VERSION = '1'
+                POOL_SIZE = 5
+                RETRIES = 5
 
-    class AMAZON:
+    class AWS:
         class S3:
             class DEFAULTS:
+                ADDRESS = 'http://s3.amazonaws.com/'
+                CONTENT_TYPE = Key.DefaultContentType
+                DEBUG_LEVEL = 0
                 POOL_SIZE = 5
+                PROVIDER = 'aws'
 
 class URL_PARAMS_PRIORITY:
     PATH_OVER_QS = 'path-over-qs'

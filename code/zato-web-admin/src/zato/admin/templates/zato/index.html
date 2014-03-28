@@ -135,6 +135,12 @@
                 <li><span class="like-a">Cloud &darr;</span>
                     <ul>
                         <li>
+                            <span class="like-a">AWS &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url cloud-aws-s3 %}?cluster={{ cluster_id|default:'' }}">S3</a></li>
+                            </ul>
+                        </li>
+                        <li>
                             <span class="like-a">OpenStack &rarr;</span>
                             <ul>
                                 <li class='wide'><a href="{% url cloud-openstack-swift %}?cluster={{ cluster_id|default:'' }}">Swift</a></li>

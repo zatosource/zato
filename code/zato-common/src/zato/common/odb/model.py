@@ -1354,7 +1354,7 @@ class OpenStackSwift(Base):
     custom_options = Column(String(2000), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('open_stack_swift_conns', order_by=name, cascade='all, delete, delete-orphan'))
+    cluster = relationship(Cluster, backref=backref('openstack_swift_conns', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, auth_url=None, auth_version=None, user=None, key=None, retries=None,
             is_snet=None, starting_backoff=None, max_backoff=None, tenant_name=None, should_validate_cert=None,
@@ -1379,17 +1379,28 @@ class OpenStackSwift(Base):
 
 # ################################################################################################################################
 
-'''
-class AmazonS3(Base):
-    """ An outgoing connection to OpenStack's Swift.
+class AWSS3(Base):
+    """ An outgoing connection to AWS S3.
     """
-    __tablename__ = 'amz_s3'
+    __tablename__ = 'aws_s3'
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
 
-    id = Column(Integer, Sequence('amz_s3_seq'), primary_key=True)
+    id = Column(Integer, Sequence('aws_s3_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    pool_size = Column(Integer, nullable=False, default=CLOUD.AMAZON.S3.DEFAULTS.POOL_SIZE)
-'''
+    pool_size = Column(Integer, nullable=False, default=CLOUD.AWS.S3.DEFAULTS.POOL_SIZE)
+
+    address = Column(String(200), nullable=False, default=CLOUD.AWS.S3.DEFAULTS.ADDRESS)
+    debug_level = Column(Integer, nullable=False, default=CLOUD.AWS.S3.DEFAULTS.DEBUG_LEVEL)
+    suppr_cons_slashes = Column(Boolean(), nullable=False, default=True)
+
+    content_type = Column(String(200), nullable=False, default=CLOUD.AWS.S3.DEFAULTS.CONTENT_TYPE)
+    metadata_ = Column(String(2000), nullable=True) # Can't be 'metadata' because this is reserved to SQLAlchemy
+
+    sec_def_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    sec_def = relationship(SecurityBase, backref=backref('aws_s3_conns', order_by=is_active, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('aws_s3_conns', order_by=name, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################

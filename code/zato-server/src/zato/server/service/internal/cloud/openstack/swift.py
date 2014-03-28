@@ -13,7 +13,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common.broker_message import MESSAGE_TYPE, CLOUD_OPENSTACK_SWIFT
+from zato.common.broker_message import MESSAGE_TYPE, CLOUD
 from zato.common.odb.model import OpenStackSwift
 from zato.common.odb.query import cloud_openstack_swift_list
 from zato.server.service.internal import AdminService, AdminSIO
@@ -68,7 +68,7 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
 
-                input.action = CLOUD_OPENSTACK_SWIFT.CREATE_EDIT
+                input.action = CLOUD.OPENSTACK_SWIFT_CREATE_EDIT
                 self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
@@ -111,7 +111,7 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
 
-                input.action = CLOUD_OPENSTACK_SWIFT.CREATE_EDIT
+                input.action = CLOUD.OPENSTACK_SWIFT_CREATE_EDIT
                 input.old_name = old_name
                 self.broker_client.publish(input)
                 
@@ -143,7 +143,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
 
-                msg = {'action': CLOUD_OPENSTACK_SWIFT.DELETE, 'name': item.name, 'id':item.id}
+                msg = {'action': CLOUD.OPENSTACK_SWIFT_DELETE, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg)
                 
             except Exception, e:

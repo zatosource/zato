@@ -42,6 +42,12 @@ zato_services = {
     'zato.channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
     'zato.channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
 
+    # Cloud - AWS - S3
+    'zato.cloud.aws.s3.create':'zato.server.service.internal.cloud.aws.s3.Create',
+    'zato.cloud.aws.s3.delete':'zato.server.service.internal.cloud.aws.s3.Delete',
+    'zato.cloud.aws.s3.edit':'zato.server.service.internal.cloud.aws.s3.Edit',
+    'zato.cloud.aws.s3.get-list':'zato.server.service.internal.cloud.aws.s3.GetList',
+
     # Cloud - OpenStack - Swift
     'zato.cloud.openstack.swift.create':'zato.server.service.internal.cloud.openstack.swift.Create',
     'zato.cloud.openstack.swift.delete':'zato.server.service.internal.cloud.openstack.swift.Delete',
