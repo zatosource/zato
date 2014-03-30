@@ -19,11 +19,11 @@ from sqlalchemy.sql.expression import case
 # Zato
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
      URL_PARAMS_PRIORITY
-from zato.common.odb.model import ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
-     DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NTLM, OAuth, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
-     OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Service, SQLConnectionPool, \
-     TechnicalAccount, XPath, WSSDefinition
+from zato.common.odb.model import AWSS3, AWSSecurity, ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
+     CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, \
+     HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NTLM, OAuth, OpenStackSwift, OutgoingAMQP, \
+     OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Service, \
+     SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -164,6 +164,20 @@ def wss_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==WSSDefinition.cluster_id).\
         filter(SecurityBase.id==WSSDefinition.id).\
+        order_by('sec_base.name')
+
+@needs_columns
+def aws_security_list(session, cluster_id, needs_columns=False):
+    """ All the Amazon security definitions.
+    """
+    return session.query(
+        AWSSecurity.id, AWSSecurity.name,
+        AWSSecurity.is_active,
+        AWSSecurity.username,
+        AWSSecurity.password, AWSSecurity.sec_type).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==AWSSecurity.cluster_id).\
+        filter(SecurityBase.id==AWSSecurity.id).\
         order_by('sec_base.name')
 
 # ################################################################################################################################
@@ -715,6 +729,30 @@ def cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
     """ OpenStack Swift connections.
     """
     return _cloud_openstack_swift(session, cluster_id)
+
+# ################################################################################################################################
+
+def _cloud_aws_s3(session, cluster_id):
+    return session.query(
+        AWSS3.id, AWSS3.name, AWSS3.is_active, AWSS3.pool_size, AWSS3.address, AWSS3.debug_level, AWSS3.suppr_cons_slashes,
+        AWSS3.content_type, AWSS3.metadata_, AWSS3.security_id, AWSS3.bucket, AWSS3.encrypt_at_rest, AWSS3.storage_class,
+        SecurityBase.username, SecurityBase.password).\
+        filter(Cluster.id==cluster_id).\
+        filter(AWSS3.security_id==SecurityBase.id).\
+        order_by(AWSS3.name)
+
+def cloud_aws_s3(session, cluster_id, id):
+    """ An AWS S3 connection.
+    """
+    return _cloud_aws_s3(session, cluster_id).\
+        filter(AWSS3.id==id).\
+        one()
+
+@needs_columns
+def cloud_aws_s3_list(session, cluster_id, needs_columns=False):
+    """ AWS S3 connections.
+    """
+    return _cloud_aws_s3(session, cluster_id)
 
 # ################################################################################################################################
 

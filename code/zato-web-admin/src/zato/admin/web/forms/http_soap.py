@@ -12,8 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import ChooseClusterForm as _ChooseClusterForm
-from zato.admin.web.forms import DataFormatForm
+from zato.admin.web.forms import add_security_select, ChooseClusterForm as _ChooseClusterForm, DataFormatForm
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
      MSG_PATTERN_TYPE, PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
 
@@ -48,11 +47,11 @@ class CreateForm(DataFormatForm):
 
     def __init__(self, security_list=[], soap_versions=SOAP_VERSIONS, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        
+
         self.fields['url_params_pri'].choices = []
         for value, label in url_params_priority:
             self.fields['url_params_pri'].choices.append([value, label])
-            
+
         self.fields['params_pri'].choices = []
         for value, label in params_priority:
             self.fields['params_pri'].choices.append([value, label])
@@ -64,16 +63,11 @@ class CreateForm(DataFormatForm):
         self.fields['soap_version'].choices = []
         for name in sorted(soap_versions):
             self.fields['soap_version'].choices.append([name, name])
-            
-        self.fields['security'].choices = []
-        self.fields['security'].choices.append(['', '----------'])
-        self.fields['security'].choices.append([ZATO_NONE, 'No security'])
-        
-        for value, label in security_list:
-            self.fields['security'].choices.append([value, label])
-            
+
         self.fields['ping_method'].initial = DEFAULT_HTTP_PING_METHOD
         self.fields['pool_size'].initial = DEFAULT_HTTP_POOL_SIZE
+
+        add_security_select(self, security_list)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
@@ -87,16 +81,16 @@ class ReplacePatternsForm(forms.Form):
     audit_repl_patt_type = forms.ChoiceField(widget=forms.Select())
     pattern_list = forms.CharField(widget=forms.Textarea(attrs={'rows':13, 'cols':70}), required=False)
     audit_max_payload = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
-    
+
     def __init__(self, initial=None):
         super(ReplacePatternsForm, self).__init__(initial=initial)
-        
+
         self.fields['audit_repl_patt_type'].choices = []
         self.fields['audit_repl_patt_type'].choices.append(['', '----------'])
-        
+
         for item in MSG_PATTERN_TYPE:
             self.fields['audit_repl_patt_type'].choices.append([item.id, item.name])
-            
+
 class AuditLogEntryList(forms.Form):
     """ List of audit log entries for a given HTTP/SOAP object.
     """
