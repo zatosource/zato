@@ -15,6 +15,7 @@ from errno import ENOENT
 from threading import RLock
 from time import sleep
 from traceback import format_exc
+from urlparse import urlparse
 from uuid import uuid4
 
 # Bunch
@@ -36,8 +37,9 @@ from paste.util.multidict import MultiDict
 from zato.common import CHANNEL, HTTP_SOAP_SERIALIZATION_TYPE, SIMPLE_IO, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, STATS
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import new_cid, pairwise, security_def_type, TRACE1
+from zato.common.util import new_cid, pairwise, parse_extra_into_dict, security_def_type, TRACE1
 from zato.server.base import BrokerMessageReceiver
+from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
@@ -103,7 +105,7 @@ class WorkerStore(BrokerMessageReceiver):
             deepcopy(self.worker_config.http_soap),
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.ntlm, self.worker_config.oauth,
-            self.worker_config.tech_acc, self.worker_config.wss,
+            self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.aws,
             self.kvdb, self.broker_client, self.server.odb, self.elem_path_store, self.xpath_store)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
@@ -121,6 +123,18 @@ class WorkerStore(BrokerMessageReceiver):
     def filter(self, msg):
         # TODO: Fix it, worker doesn't need to accept all the messages
         return True
+
+    def _update_aws_config(self, msg):
+        """ Parses the address to AWS we store into discrete components S3Connection objects expect.
+        Also turns metadata string into a dictionary
+        """
+        url_info = urlparse(msg.address)
+
+        msg.is_secure = True if url_info.scheme == 'https' else False
+        msg.port = url_info.port if url_info.port else (443 if msg.is_secure else 80)
+        msg.host = url_info.netloc
+
+        msg.metadata = parse_extra_into_dict(msg.metadata_)
 
     def _http_soap_wrapper_from_config(self, config, has_sec_config=True):
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration
@@ -214,11 +228,19 @@ class WorkerStore(BrokerMessageReceiver):
     def init_cloud(self):
         """ Initializes all the cloud connections.
         """
-        for name in self.worker_config.cloud_openstack_swift:
-            config = self.worker_config.cloud_openstack_swift[name]['config']
-            config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
-            config.conn = SwiftWrapper(config)
-            config.conn.build_queue()
+        data = (
+            ('cloud_openstack_swift', SwiftWrapper),
+            ('cloud_aws_s3', S3Wrapper),
+        )
+
+        for config_key, wrapper in data:
+            config_attr = getattr(self.worker_config, config_key)
+            for name in config_attr:
+                config = config_attr[name]['config']
+                self._update_aws_config(config)
+                config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
+                config_attr[name].conn = wrapper(config)
+                config_attr[name].conn.build_queue()
 
 # ################################################################################################################################
 
@@ -313,6 +335,37 @@ class WorkerStore(BrokerMessageReceiver):
         if wrapper.config['security_name'] == msg['name']:
             wrapper.config['password'] = msg['password']
             wrapper.set_auth()
+
+# ################################################################################################################################
+
+    def aws_get(self, name):
+        """ Returns the configuration of the AWS security definition
+        of the given name.
+        """
+        self.request_dispatcher.url_data.aws_get(name)
+
+    def on_broker_msg_SECURITY_AWS_CREATE(self, msg, *args):
+        """ Creates a new AWS security definition
+        """
+        self.request_dispatcher.url_data.on_broker_msg_SECURITY_AWS_CREATE(msg, *args)
+
+    def on_broker_msg_SECURITY_AWS_EDIT(self, msg, *args):
+        """ Updates an existing AWS security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.aws,
+                self._visit_wrapper_edit, keys=('is_active', 'username', 'name'))
+
+    def on_broker_msg_SECURITY_AWS_DELETE(self, msg, *args):
+        """ Deletes an AWS security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.aws,
+                self._visit_wrapper_delete)
+
+    def on_broker_msg_SECURITY_AWS_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an AWS security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.aws,
+                self._visit_wrapper_change_password)
 
 # ################################################################################################################################
 
@@ -759,29 +812,52 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def on_broker_msg_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT(self, msg, *args):
-        """ Creates or updates an OpenStack Swift connection.
-        """
+    def _on_broker_msg_cloud_create_edit(self, msg, conn_type, config_dict, wrapper_class):
+
         # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
 
         # .. delete the connection if it exists ..
-        self._delete_config_close_wrapper(del_name, self.worker_config.cloud_openstack_swift, 'OpenStack Swift', logger.debug)
+        self._delete_config_close_wrapper(del_name, config_dict, conn_type, logger.debug)
 
         # .. and create a new one
         msg['queue_build_cap'] = float(self.server.fs_server_config.misc.queue_build_cap)
-        wrapper = SwiftWrapper(msg)
+        wrapper = wrapper_class(msg)
         wrapper.build_queue()
 
-        self.worker_config.cloud_openstack_swift[msg['name']] = Bunch()
-        self.worker_config.cloud_openstack_swift[msg['name']].config = msg
-        self.worker_config.cloud_openstack_swift[msg['name']].conn = wrapper
+        item = Bunch()
+
+        config_dict[msg['name']] = item
+        config_dict[msg['name']].config = msg
+        config_dict[msg['name']].conn = wrapper
+
+        return item
+
+# ################################################################################################################################
+
+    def on_broker_msg_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT(self, msg, *args):
+        """ Creates or updates an OpenStack Swift connection.
+        """
+        self._on_broker_msg_cloud_create_edit(msg, 'OpenStack Swift', self.worker_config.cloud_openstack_swift, SwiftWrapper)
 
     def on_broker_msg_CLOUD_OPENSTACK_SWIFT_DELETE(self, msg, *args):
         """ Closes and deletes an OpenStack Swift connection.
         """
         self._delete_config_close_wrapper(msg['name'], self.worker_config.cloud_openstack_swift, 'OpenStack Swift', logger.debug)
+
+# ################################################################################################################################
+
+    def on_broker_msg_CLOUD_AWS_S3_CREATE_EDIT(self, msg, *args):
+        """ Creates or updates an AWS S3 connection.
+        """
+        self._update_aws_config(msg)
+        self._on_broker_msg_cloud_create_edit(msg, 'AWS S3', self.worker_config.cloud_aws_s3, S3Wrapper)
+
+    def on_broker_msg_CLOUD_AWS_S3_DELETE(self, msg, *args):
+        """ Closes and deletes an AWS S3 connection.
+        """
+        self._delete_config_close_wrapper(msg['name'], self.worker_config.cloud_aws_s3, 'AWS S3', logger.debug)
 
 # ################################################################################################################################
 

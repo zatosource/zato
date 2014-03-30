@@ -42,6 +42,12 @@ zato_services = {
     'zato.channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
     'zato.channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
 
+    # Cloud - AWS - S3
+    'zato.cloud.aws.s3.create':'zato.server.service.internal.cloud.aws.s3.Create',
+    'zato.cloud.aws.s3.delete':'zato.server.service.internal.cloud.aws.s3.Delete',
+    'zato.cloud.aws.s3.edit':'zato.server.service.internal.cloud.aws.s3.Edit',
+    'zato.cloud.aws.s3.get-list':'zato.server.service.internal.cloud.aws.s3.GetList',
+
     # Cloud - OpenStack - Swift
     'zato.cloud.openstack.swift.create':'zato.server.service.internal.cloud.openstack.swift.Create',
     'zato.cloud.openstack.swift.delete':'zato.server.service.internal.cloud.openstack.swift.Delete',
@@ -140,12 +146,26 @@ zato_services = {
     # Security
     'zato.security.get-list':'zato.server.service.internal.security.GetList',
 
+    # Security - AWS
+    'zato.security.aws.change-password':'zato.server.service.internal.security.aws.ChangePassword',
+    'zato.security.aws.create':'zato.server.service.internal.security.aws.Create',
+    'zato.security.aws.delete':'zato.server.service.internal.security.aws.Delete',
+    'zato.security.aws.edit':'zato.server.service.internal.security.aws.Edit',
+    'zato.security.aws.get-list':'zato.server.service.internal.security.aws.GetList',
+
     # Security - HTTP Basic Auth
     'zato.security.basic-auth.change-password':'zato.server.service.internal.security.basic_auth.ChangePassword',
     'zato.security.basic-auth.create':'zato.server.service.internal.security.basic_auth.Create',
     'zato.security.basic-auth.delete':'zato.server.service.internal.security.basic_auth.Delete',
     'zato.security.basic-auth.edit':'zato.server.service.internal.security.basic_auth.Edit',
     'zato.security.basic-auth.get-list':'zato.server.service.internal.security.basic_auth.GetList',
+
+    # Security - NTLM
+    'zato.security.ntlm.change-password':'zato.server.service.internal.security.ntlm.ChangePassword',
+    'zato.security.ntlm.create':'zato.server.service.internal.security.ntlm.Create',
+    'zato.security.ntlm.delete':'zato.server.service.internal.security.ntlm.Delete',
+    'zato.security.ntlm.edit':'zato.server.service.internal.security.ntlm.Edit',
+    'zato.security.ntlm.get-list':'zato.server.service.internal.security.ntlm.GetList',
 
     # Security - Technical accounts
     'zato.security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',

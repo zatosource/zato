@@ -14,7 +14,7 @@ from bunch import Bunch
 # Zato
 from zato.common import zato_namespace
 from zato.common.test import rand_int, rand_string, rand_bool, ServiceTestCase
-from zato.server.service import Boolean, Integer
+from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal.security import GetList
 
 ##############################################################################
@@ -39,6 +39,7 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.response_elem, 'zato_security_get_list_response')
         self.assertEquals(self.sio.input_required, ('cluster_id',))
         self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'sec_type'))
+        self.assertEquals(self.sio.output_repeated, True)
         self.assertEquals(self.sio.output_optional,
             ('username', 'realm', 'password_type', self.wrap_force_type(Boolean('reject_empty_nonce_creat')),
             self.wrap_force_type(Boolean('reject_stale_tokens')),
@@ -48,8 +49,9 @@ class GetListTestCase(ServiceTestCase):
             self.wrap_force_type(Integer('max_nonce_log'))
             ))
         self.assertEquals(self.sio.namespace, zato_namespace)
-        self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
-        self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
+
+        self.assertEquals(len(self.sio.input_optional), 1)
+        self.assertEquals(self.sio.input_optional[0].name, 'sec_type')
 
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.security.get-list')
