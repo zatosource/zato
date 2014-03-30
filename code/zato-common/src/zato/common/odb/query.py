@@ -21,8 +21,8 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_S
      URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, AWSSecurity, ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
      CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, \
-     HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NTLM, OAuth, OpenStackSwift, OutgoingAMQP, \
-     OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Service, \
+     HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, \
+     OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Service, \
      SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
 
 logger = logging.getLogger(__name__)
@@ -92,6 +92,20 @@ def job_by_name(session, cluster_id, name):
 # ################################################################################################################################
 
 @needs_columns
+def aws_security_list(session, cluster_id, needs_columns=False):
+    """ All the Amazon security definitions.
+    """
+    return session.query(
+        AWSSecurity.id, AWSSecurity.name,
+        AWSSecurity.is_active,
+        AWSSecurity.username,
+        AWSSecurity.password, AWSSecurity.sec_type).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==AWSSecurity.cluster_id).\
+        filter(SecurityBase.id==AWSSecurity.id).\
+        order_by('sec_base.name')
+
+@needs_columns
 def basic_auth_list(session, cluster_id, needs_columns=False):
     """ All the HTTP Basic Auth definitions.
     """
@@ -122,21 +136,6 @@ def ntlm_list(session, cluster_id, needs_columns=False):
         order_by('sec_base.name')
 
 @needs_columns
-def tech_acc_list(session, cluster_id, needs_columns=False):
-    """ All the technical accounts.
-    """
-    return session.query(
-        TechnicalAccount.id, TechnicalAccount.name,
-        TechnicalAccount.is_active,
-        TechnicalAccount.password, TechnicalAccount.salt,
-        TechnicalAccount.sec_type, TechnicalAccount.password_type).\
-        order_by(TechnicalAccount.name).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==TechnicalAccount.cluster_id).\
-        filter(SecurityBase.id==TechnicalAccount.id).\
-        order_by('sec_base.name')
-
-@needs_columns
 def oauth_list(session, cluster_id, needs_columns=False):
     """ All the OAuth definitions.
     """
@@ -152,6 +151,33 @@ def oauth_list(session, cluster_id, needs_columns=False):
         order_by('sec_base.name')
 
 @needs_columns
+def openstack_security_list(session, cluster_id, needs_columns=False):
+    """ All the OpenStackSecurity definitions.
+    """
+    return session.query(
+        OpenStackSecurity.id, OpenStackSecurity.name, OpenStackSecurity.is_active,
+        OpenStackSecurity.username, OpenStackSecurity.sec_type).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==OpenStackSecurity.cluster_id).\
+        filter(SecurityBase.id==OpenStackSecurity.id).\
+        order_by('sec_base.name')
+
+@needs_columns
+def tech_acc_list(session, cluster_id, needs_columns=False):
+    """ All the technical accounts.
+    """
+    return session.query(
+        TechnicalAccount.id, TechnicalAccount.name,
+        TechnicalAccount.is_active,
+        TechnicalAccount.password, TechnicalAccount.salt,
+        TechnicalAccount.sec_type, TechnicalAccount.password_type).\
+        order_by(TechnicalAccount.name).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==TechnicalAccount.cluster_id).\
+        filter(SecurityBase.id==TechnicalAccount.id).\
+        order_by('sec_base.name')
+
+@needs_columns
 def wss_list(session, cluster_id, needs_columns=False):
     """ All the WS-Security definitions.
     """
@@ -164,20 +190,6 @@ def wss_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==WSSDefinition.cluster_id).\
         filter(SecurityBase.id==WSSDefinition.id).\
-        order_by('sec_base.name')
-
-@needs_columns
-def aws_security_list(session, cluster_id, needs_columns=False):
-    """ All the Amazon security definitions.
-    """
-    return session.query(
-        AWSSecurity.id, AWSSecurity.name,
-        AWSSecurity.is_active,
-        AWSSecurity.username,
-        AWSSecurity.password, AWSSecurity.sec_type).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==AWSSecurity.cluster_id).\
-        filter(SecurityBase.id==AWSSecurity.id).\
         order_by('sec_base.name')
 
 # ################################################################################################################################

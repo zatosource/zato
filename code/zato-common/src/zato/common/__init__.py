@@ -150,6 +150,7 @@ SECURITY_TYPES = {
     'basic_auth':'HTTP Basic Auth',
     'ntlm':'NTLM',
     'oauth': 'OAuth 1.0',
+    'openstack': 'OpenStack',
     'tech_acc':'Tech account',
     'wss':'WS-Security'
 }

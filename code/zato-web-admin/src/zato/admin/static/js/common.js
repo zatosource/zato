@@ -96,6 +96,7 @@ $.namespace('zato.security.aws');
 $.namespace('zato.security.basic_auth');
 $.namespace('zato.security.ntlm');
 $.namespace('zato.security.oauth');
+$.namespace('zato.security.openstack');
 $.namespace('zato.security.tech_account');
 $.namespace('zato.security.wss');
 $.namespace('zato.service');
