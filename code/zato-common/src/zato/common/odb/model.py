@@ -294,7 +294,7 @@ class AWSSecurity(SecurityBase):
     """ New in 1.2: Stores Amazon credentials.
     """
     __tablename__ = 'sec_aws'
-    __mapper_args__ = {'polymorphic_identity': 'amz'}
+    __mapper_args__ = {'polymorphic_identity': 'aws'}
 
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
 
@@ -303,6 +303,7 @@ class AWSSecurity(SecurityBase):
         self.name = name
         self.is_active = is_active
         self.username = username
+        self.password = password
         self.cluster = cluster
 
     def to_json(self):
@@ -1393,14 +1394,19 @@ class AWSS3(Base):
     address = Column(String(200), nullable=False, default=CLOUD.AWS.S3.DEFAULTS.ADDRESS)
     debug_level = Column(Integer, nullable=False, default=CLOUD.AWS.S3.DEFAULTS.DEBUG_LEVEL)
     suppr_cons_slashes = Column(Boolean(), nullable=False, default=True)
-
     content_type = Column(String(200), nullable=False, default=CLOUD.AWS.S3.DEFAULTS.CONTENT_TYPE)
     metadata_ = Column(String(2000), nullable=True) # Can't be 'metadata' because this is reserved to SQLAlchemy
+    bucket = Column(String(2000), nullable=True)
+    encrypt_at_rest = Column(Boolean(), nullable=False, default=False)
+    storage_class = Column(String(200), nullable=False, default=CLOUD.AWS.S3.STORAGE_CLASS.DEFAULT)
 
-    sec_def_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
-    sec_def = relationship(SecurityBase, backref=backref('aws_s3_conns', order_by=is_active, cascade='all, delete, delete-orphan'))
+    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    security = relationship(SecurityBase, backref=backref('aws_s3_conns', order_by=is_active, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('aws_s3_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def to_json(self):
+        return to_json(self)
 
 # ################################################################################################################################

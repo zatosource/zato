@@ -27,7 +27,7 @@ from paste.util.converters import asbool
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.http_soap import AuditLogEntryList, ChooseClusterForm, CreateForm, EditForm, ReplacePatternsForm
-from zato.admin.web.views import get_js_dt_format, method_allowed
+from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, method_allowed, SecurityList
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
      MSG_PATTERN_TYPE, PARAMS_PRIORITY, SECURITY_TYPES, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE
@@ -55,12 +55,8 @@ def _get_edit_create_message(params, prefix=''):
     """ A bunch of attributes that can be used by both 'edit' and 'create' actions
     for channels and outgoing connections.
     """
-    security = params[prefix + 'security']
-    if security != ZATO_NONE:
-        _, security_id = security.split('/')
-    else:
-        _, security_id = ZATO_NONE, ZATO_NONE
-    
+    security_id = get_security_id_from_select(params, prefix)
+
     return {
         'is_internal': False,
         'connection': params['connection'],
@@ -103,7 +99,7 @@ def index(req):
     connection = req.GET.get('connection')
     transport = req.GET.get('transport')
     items = []
-    _security = []
+    _security = SecurityList()
 
     if not all((connection, transport)):
         log_msg = "Redirecting to / because at least one of ('connection', 'transport') GET parameters was missing"
@@ -128,16 +124,14 @@ def index(req):
                 elif transport == URL_TYPE.SOAP and def_item.sec_type \
                      not in(_security_def_type.basic_auth, _security_def_type.ntlm, _security_def_type.wss):
                     continue
-            
-            value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
-            label = '{0}/{1}'.format(SECURITY_TYPES[def_item.sec_type], def_item.name)
-            _security.append((value, label))
+
+            _security.append(def_item)
 
         _soap_versions = SOAP_CHANNEL_VERSIONS if connection == 'channel' else SOAP_VERSIONS
-        
+
         create_form = CreateForm(_security, _soap_versions)
         edit_form = EditForm(_security, _soap_versions, prefix='edit')
-    
+
         input_dict = {
             'cluster_id': req.zato.cluster_id,
             'connection': connection,
@@ -150,13 +144,13 @@ def index(req):
                 security_name = '{0}<br/>{1}'.format(SECURITY_TYPES[item.sec_type], _security_name)
             else:
                 security_name = 'No security'
-            
+
             _security_id = item.security_id
             if _security_id:
                 security_id = '{0}/{1}'.format(item.sec_type, _security_id)
             else:
                 security_id = ZATO_NONE
-            
+
             item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection, 
                     transport, item.host, item.url_path, item.method, item.soap_action,
                     item.soap_version, item.data_format, item.ping_method, 
@@ -245,17 +239,17 @@ def reload_wsdl(req, id, cluster_id):
 @method_allowed('GET')
 def details(req, **kwargs):
     return_data = kwargs
-    
+
     audit_config = req.zato.client.invoke('zato.http-soap.get-audit-config', {'id': kwargs['id']})
     return_data.update(audit_config.data)
-    
+
     patterns_response = req.zato.client.invoke('zato.http-soap.get-audit-replace-patterns', {'id': kwargs['id']})
-    
+
     if audit_config.data.audit_repl_patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id:
         pattern_list = patterns_response.data.patterns_elem_path
     else:
         pattern_list = patterns_response.data.patterns_xpath
-    
+
     return_data['pattern_list'] = '\n'.join(pattern_list)
     return_data['replace_patterns_form'] = ReplacePatternsForm(initial=return_data)
     
@@ -265,11 +259,11 @@ def details(req, **kwargs):
 def audit_set_state(req, **kwargs):
     try:
         request = {'id':kwargs['id'], 'audit_enabled': not asbool(req.POST['audit_enabled'])}
-        
+
         response = req.zato.client.invoke('zato.http-soap.set-audit-state', request)
         if not response.ok:
             raise Exception(response.details)
-        
+
         return HttpResponse('OK')
     except Exception, e:
         msg = format_exc(e)
@@ -346,7 +340,7 @@ def audit_item(req, **kwargs):
         response = req.zato.client.invoke('zato.http-soap.get-audit-item', {'id':kwargs['id']})
         if response.ok:
             out.update(**response.data)
-            
+
             for name in('req', 'resp'):
                 headers = '{}_headers'.format(name)
                 if out.get(headers):

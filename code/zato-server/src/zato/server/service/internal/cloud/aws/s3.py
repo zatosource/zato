@@ -16,7 +16,7 @@ from traceback import format_exc
 from zato.common.broker_message import MESSAGE_TYPE, CLOUD
 from zato.common.odb.model import AWSS3
 from zato.common.odb.query import cloud_aws_s3_list
-from zato.server.service import Bool, Int
+from zato.server.service import Bool, ForceType, Int
 from zato.server.service.internal import AdminService, AdminSIO
 
 class GetList(AdminService):
@@ -27,8 +27,8 @@ class GetList(AdminService):
         response_elem = 'zato_cloud_aws_s3_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'pool_size', 'address', Int('debug_level'), Bool('suppr_cons_slashes'),
-            'content_type', 'sec_def_id')
-        output_optional = ('metadata_',)
+            'content_type', 'security_id', Bool('encrypt_at_rest'), 'storage_class')
+        output_optional = ('metadata_', 'bucket')
 
     def get_data(self, session):
         return cloud_aws_s3_list(session, self.request.input.cluster_id, False)
@@ -44,8 +44,8 @@ class Create(AdminService):
         request_elem = 'zato_cloud_aws_s3_create_request'
         response_elem = 'zato_cloud_aws_s3_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'pool_size', 'address', Int('debug_level'),
-Bool('suppr_cons_slashes'), 'content_type', 'sec_def_id')
-        input_optional = ('metadata_',)
+            Bool('suppr_cons_slashes'), 'content_type', 'security_id', Bool('encrypt_at_rest'), 'storage_class')
+        input_optional = ('metadata_', 'bucket')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -62,12 +62,17 @@ Bool('suppr_cons_slashes'), 'content_type', 'sec_def_id')
             try:
                 item = AWSS3()
                 for name in self.SimpleIO.input_required + self.SimpleIO.input_optional:
+                    if isinstance(name, ForceType):
+                        name = name.name
                     setattr(item, name, self.request.input.get(name))
 
                 session.add(item)
                 session.commit()
 
                 input.action = CLOUD.AWS_S3_CREATE_EDIT
+                input.username = item.security.username
+                input.password = item.security.password
+
                 self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
@@ -105,6 +110,8 @@ class Edit(AdminService):
                 old_name = item.name
 
                 for name in self.SimpleIO.input_required + self.SimpleIO.input_optional:
+                    if isinstance(name, ForceType):
+                        name = name.name
                     setattr(item, name, self.request.input.get(name))
 
                 session.add(item)
@@ -112,6 +119,9 @@ class Edit(AdminService):
 
                 input.action = CLOUD.AWS_S3_CREATE_EDIT
                 input.old_name = old_name
+                input.username = item.security.username
+                input.password = item.security.password
+
                 self.broker_client.publish(input)
                 
                 self.response.payload.id = item.id

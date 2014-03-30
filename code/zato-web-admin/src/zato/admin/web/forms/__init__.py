@@ -12,10 +12,24 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common import SIMPLE_IO
+from zato.common import SIMPLE_IO, ZATO_NONE
 
 INITIAL_CHOICES_DICT = {'': '----------'}
 INITIAL_CHOICES = INITIAL_CHOICES_DICT.items()[0]
+
+# ################################################################################################################################
+
+def add_security_select(form, security_list, needs_no_security=True, field_name='security'):
+    form.fields[field_name].choices = []
+    form.fields[field_name].choices.append(['', '----------'])
+
+    if needs_no_security:
+        form.fields[field_name].choices.append([ZATO_NONE, 'No security'])
+
+    for value, label in security_list:
+        form.fields[field_name].choices.append([value, label])
+
+# ################################################################################################################################
 
 class ChooseClusterForm(forms.Form):
 
@@ -30,9 +44,13 @@ class ChooseClusterForm(forms.Form):
             server_info = '{0} - http://{1}:{2}'.format(cluster.name, cluster.lb_host, cluster.lb_port)
             self.fields['cluster'].choices.append([cluster.id, server_info])
 
+# ################################################################################################################################
+
 class ChangePasswordForm(forms.Form):
     password1 = forms.CharField(widget=forms.PasswordInput(attrs={'class':'required'}))
     password2 = forms.CharField(widget=forms.PasswordInput(attrs={'class':'required validate-password-confirm'}))
+
+# ################################################################################################################################
 
 class DataFormatForm(forms.Form):
     data_format = forms.ChoiceField(widget=forms.Select())
@@ -44,6 +62,10 @@ class DataFormatForm(forms.Form):
         for name in sorted(dir(SIMPLE_IO.FORMAT)):
             if name.upper() == name:
                 self.fields['data_format'].choices.append([name.lower(), name])
-                
+
+# ################################################################################################################################
+
 class UploadForm(forms.Form):
     file = forms.FileField(widget=forms.FileInput(attrs={'size':'70'}))
+
+# ################################################################################################################################
