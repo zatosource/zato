@@ -167,6 +167,13 @@ zato_services = {
     'zato.security.ntlm.edit':'zato.server.service.internal.security.ntlm.Edit',
     'zato.security.ntlm.get-list':'zato.server.service.internal.security.ntlm.GetList',
 
+    # Security - OpenStack
+    'zato.security.openstack.change-password':'zato.server.service.internal.security.openstack.ChangePassword',
+    'zato.security.openstack.create':'zato.server.service.internal.security.openstack.Create',
+    'zato.security.openstack.delete':'zato.server.service.internal.security.openstack.Delete',
+    'zato.security.openstack.edit':'zato.server.service.internal.security.openstack.Edit',
+    'zato.security.openstack.get-list':'zato.server.service.internal.security.openstack.GetList',
+
     # Security - Technical accounts
     'zato.security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',
     'zato.security.tech-account.create':'zato.server.service.internal.security.tech_account.Create',

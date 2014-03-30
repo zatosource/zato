@@ -47,9 +47,9 @@ class OAuthStore(object):
 class URLData(OAuthDataStore):
     """ Performs URL matching and all the HTTP/SOAP-related security checks.
     """
-    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None,
-                 oauth_config=None, tech_acc_config=None, wss_config=None, aws_config=None, kvdb=None,
-                 broker_client=None, odb=None, elem_path_store=None, xpath_store=None):
+    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, oauth_config=None,
+                 tech_acc_config=None, wss_config=None, aws_config=None, openstack_config=None, kvdb=None, broker_client=None,
+                 odb=None, elem_path_store=None, xpath_store=None):
         self.channel_data = channel_data
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -58,6 +58,7 @@ class URLData(OAuthDataStore):
         self.tech_acc_config = tech_acc_config
         self.wss_config = wss_config
         self.aws_config = aws_config
+        self.openstack_config = openstack_config
         self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
@@ -313,6 +314,44 @@ class URLData(OAuthDataStore):
         """
         with self.url_sec_lock:
             self.aws_config[msg.name]['config']['password'] = msg.password
+
+# ################################################################################################################################
+
+    def _update_openstack(self, name, config):
+        self.openstack_config[name] = Bunch()
+        self.openstack_config[name].config = config
+
+    def openstack_get(self, name):
+        """ Returns the configuration of the OpenStack security definition of the given name.
+        """
+        with self.url_sec_lock:
+            return self.openstack_config.get(name)
+
+    def on_broker_msg_SECURITY_OPENSTACK_CREATE(self, msg, *args):
+        """ Creates a new OpenStack security definition
+        """
+        with self.url_sec_lock:
+            self._update_openstack(msg.name, msg)
+
+    def on_broker_msg_SECURITY_OPENSTACK_EDIT(self, msg, *args):
+        """ Updates an existing OpenStack security definition.
+        """
+        with self.url_sec_lock:
+            del self.openstack_config[msg.old_name]
+            self._update_openstack(msg.name, msg)
+
+    def on_broker_msg_SECURITY_OPENSTACK_DELETE(self, msg, *args):
+        """ Deletes an OpenStack security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('openstack', msg.name)
+            del self.openstack_config[msg.name]
+
+    def on_broker_msg_SECURITY_OPENSTACK_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an OpenStack security definition.
+        """
+        with self.url_sec_lock:
+            self.openstack_config[msg.name]['config']['password'] = msg.password
 
 # ################################################################################################################################
 

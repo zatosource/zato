@@ -111,6 +111,7 @@ security_def_type.aws = 'aws'
 security_def_type.basic_auth = 'basic_auth'
 security_def_type.ntlm = 'ntlm'
 security_def_type.oauth = 'oauth'
+security_def_type.openstack = 'openstack'
 security_def_type.tech_account = 'tech_acc'
 security_def_type.wss = 'wss'
 

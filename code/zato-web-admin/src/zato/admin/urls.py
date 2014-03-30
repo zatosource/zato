@@ -36,7 +36,7 @@ from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import producers as pubsub_producers
-from zato.admin.web.views.security import aws, basic_auth, ntlm, oauth, tech_account, wss
+from zato.admin.web.views.security import aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, wss
 
 urlpatterns = patterns('',
 
@@ -286,6 +286,24 @@ urlpatterns = patterns('',
         login_required(oauth.change_secret), name='security-oauth-change-secret'),
     url(r'^zato/security/oauth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(oauth.Delete()), name=oauth.Delete.url_name),
+
+# ################################################################################################################################
+
+    # .. OpenStack security
+
+    url(r'^zato/security/openstack_security/$',
+        login_required(openstack_security.Index()), name=openstack_security.Index.url_name),
+    url(r'^zato/security/openstack_security/$',
+        login_required(openstack_security.Index()), name=openstack_security.Index.url_name),
+    url(r'^zato/security/openstack_security/create/$',
+        login_required(openstack_security.Create()), name=openstack_security.Create.url_name),
+    url(r'^zato/security/openstack_security/edit/$',
+        login_required(openstack_security.Edit()), name=openstack_security.Edit.url_name),
+    url(r'^zato/security/openstack_security/change-password/$',
+        login_required(openstack_security.change_password), name='security-openstack-change-password'),
+    url(r'^zato/security/openstack_security/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(openstack_security.Delete()), name=openstack_security.Delete.url_name),
+
 
 # ################################################################################################################################
 

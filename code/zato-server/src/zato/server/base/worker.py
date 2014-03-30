@@ -105,7 +105,7 @@ class WorkerStore(BrokerMessageReceiver):
             deepcopy(self.worker_config.http_soap),
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.ntlm, self.worker_config.oauth,
-            self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.aws,
+            self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.aws, self.worker_config.openstack_security,
             self.kvdb, self.broker_client, self.server.odb, self.elem_path_store, self.xpath_store)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
@@ -365,6 +365,37 @@ class WorkerStore(BrokerMessageReceiver):
         """ Changes password of an AWS security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], security_def_type.aws,
+                self._visit_wrapper_change_password)
+
+# ################################################################################################################################
+
+    def openstack_get(self, name):
+        """ Returns the configuration of the OpenStack security definition
+        of the given name.
+        """
+        self.request_dispatcher.url_data.openstack_get(name)
+
+    def on_broker_msg_SECURITY_OPENSTACK_CREATE(self, msg, *args):
+        """ Creates a new OpenStack security definition
+        """
+        self.request_dispatcher.url_data.on_broker_msg_SECURITY_OPENSTACK_CREATE(msg, *args)
+
+    def on_broker_msg_SECURITY_OPENSTACK_EDIT(self, msg, *args):
+        """ Updates an existing OpenStack security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.openstack,
+                self._visit_wrapper_edit, keys=('is_active', 'username', 'name'))
+
+    def on_broker_msg_SECURITY_OPENSTACK_DELETE(self, msg, *args):
+        """ Deletes an OpenStack security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.openstack,
+                self._visit_wrapper_delete)
+
+    def on_broker_msg_SECURITY_OPENSTACK_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an OpenStack security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.openstack,
                 self._visit_wrapper_change_password)
 
 # ################################################################################################################################

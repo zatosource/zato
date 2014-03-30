@@ -404,6 +404,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_oauth_list(server.cluster.id, True)
         self.config.oauth = ConfigDict.from_query('oauth', query)
 
+        # OpenStack
+        query = self.odb.get_openstack_security_list(server.cluster.id, True)
+        self.config.openstack_security = ConfigDict.from_query('openstack_security', query)
+
         # Technical accounts
         query = self.odb.get_tech_acc_list(server.cluster.id, True)
         self.config.tech_acc = ConfigDict.from_query('tech_acc', query)
