@@ -733,8 +733,12 @@ def cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
 # ################################################################################################################################
 
 def _cloud_aws_s3(session, cluster_id):
-    return session.query(AWSS3).\
+    return session.query(
+        AWSS3.id, AWSS3.name, AWSS3.is_active, AWSS3.pool_size, AWSS3.address, AWSS3.debug_level, AWSS3.suppr_cons_slashes,
+        AWSS3.content_type, AWSS3.metadata_, AWSS3.security_id, AWSS3.bucket, AWSS3.encrypt_at_rest, AWSS3.storage_class,
+        SecurityBase.username, SecurityBase.password).\
         filter(Cluster.id==cluster_id).\
+        filter(AWSS3.security_id==SecurityBase.id).\
         order_by(AWSS3.name)
 
 def cloud_aws_s3(session, cluster_id, id):

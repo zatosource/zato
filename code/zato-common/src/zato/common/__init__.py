@@ -146,6 +146,7 @@ SOAP_VERSIONS = ('1.1', '1.2')
 SOAP_CHANNEL_VERSIONS = ('1.1',)
 
 SECURITY_TYPES = {
+    'aws':'AWS',
     'basic_auth':'HTTP Basic Auth',
     'ntlm':'NTLM',
     'oauth': 'OAuth 1.0',
@@ -365,8 +366,18 @@ class CLOUD:
 
     class AWS:
         class S3:
+            class STORAGE_CLASS:
+                STANDARD = 'STANDARD'
+                REDUCED_REDUNDANCY = 'REDUCED_REDUNDANCY'
+                GLACIER = 'GLACIER'
+                DEFAULT = STANDARD
+
+                class __metaclass__(type):
+                    def __iter__(self):
+                        return iter((self.STANDARD, self.REDUCED_REDUNDANCY, self.GLACIER))
+
             class DEFAULTS:
-                ADDRESS = 'http://s3.amazonaws.com/'
+                ADDRESS = 'https://s3.amazonaws.com/'
                 CONTENT_TYPE = Key.DefaultContentType
                 DEBUG_LEVEL = 0
                 POOL_SIZE = 5

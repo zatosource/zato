@@ -13,7 +13,7 @@ import logging
 
 # Zato
 from zato.admin.web.forms.cloud.aws.s3 import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.views import get_security_id_from_select, CreateEdit, Delete as _Delete, Index as _Index, SecurityList
 from zato.common.odb.model import AWSS3
 
 logger = logging.getLogger(__name__)
@@ -28,14 +28,19 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'pool_size', 'address', 'debug_level', 'suppr_cons_slashes',
-            'content_type', 'sec_def_id')
-        output_optional = ('metadata_',)
+            'content_type', 'security_id', 'encrypt_at_rest', 'storage_class')
+        output_optional = ('metadata_', 'bucket')
         output_repeated = True
 
     def handle(self):
+        if self.req.zato.cluster_id:
+            sec_list = SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, ['aws'])
+        else:
+            sec_list = []
+
         return {
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
+            'create_form': CreateForm(sec_list),
+            'edit_form': EditForm(sec_list, prefix='edit'),
         }
 
 class _CreateEdit(CreateEdit):
@@ -43,8 +48,12 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('cluster_id', 'name', 'is_active', 'pool_size', 'address', 'debug_level', 'suppr_cons_slashes',
-            'content_type', 'sec_def_id')
+            'content_type', 'security_id', 'encrypt_at_rest', 'storage_class')
+        input_optional = ('metadata_', 'bucket')
         output_required = ('id', 'name')
+
+    def on_after_set_input(self):
+        self.input_dict['security_id'] = get_security_id_from_select(self.input, '', 'security_id')
 
     def success_message(self, item):
         return 'Successfully {0} the AWS S3 connection [{1}]'.format(self.verb, item.name)
