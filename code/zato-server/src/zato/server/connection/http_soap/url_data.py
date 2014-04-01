@@ -94,12 +94,13 @@ class URLData(OAuthDataStore):
             if sec_config.config.username == oauth_consumer.key:
 
                 # The nonce was reused
-                if self.kvdb.has_oauth_nonce(oauth_consumer.key, nonce):
-                    return True
-
-                # No such nonce so we add it to the store
-                self.kvdb.add_oauth_nonce(
-                    oauth_consumer.key, nonce, sec_config.config.max_nonce_log)
+                existing_nonce = self.kvdb.has_oauth_nonce(oauth_consumer.key, nonce)
+                if existing_nonce:
+                    return nonce
+                else:
+                    # No such nonce so we add it to the store
+                    self.kvdb.add_oauth_nonce(
+                        oauth_consumer.key, nonce, sec_config.config.max_nonce_log)
 
     def fetch_request_token(self, oauth_consumer, oauth_callback):
         """-> OAuthToken."""
@@ -187,6 +188,9 @@ class URLData(OAuthDataStore):
             msg = 'Signature verification failed, wsgi_environ:[%r], e:[%s], e.message:[%s]'
             logger.error(msg, wsgi_environ, format_exc(e), e.message)
             raise Unauthorized(cid, 'Signature verification failed', 'OAuth')
+        else:
+            # Store for later use, custom channels may want to inspect it later on
+            wsgi_environ['zato.oauth.request'] = oauth_request
 
     def _handle_security_tech_acc(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
         """ Performs the authentication using technical accounts.
