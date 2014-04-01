@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from calendar import timegm
 from importlib import import_module
+from logging import getLogger
 from string import punctuation
 from time import gmtime
 
@@ -26,6 +27,8 @@ from redis.sentinel import Sentinel
 
 # Zato
 from zato.common import KVDB as _KVDB, NONCE_STORE
+
+logger = getLogger(__name__)
 
 # Redis PyParsing grammar
 
