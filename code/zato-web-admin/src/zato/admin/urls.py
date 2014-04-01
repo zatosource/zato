@@ -25,6 +25,7 @@ from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
 from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
 from zato.admin.web.views.message import elem_path, namespace, xpath
+from zato.admin.web.views.notif.cloud.openstack import swift as notif_cloud_openstack_swift
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
@@ -36,7 +37,7 @@ from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import producers as pubsub_producers
-from zato.admin.web.views.security import aws, basic_auth, ntlm, oauth, tech_account, wss
+from zato.admin.web.views.security import aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, wss
 
 urlpatterns = patterns('',
 
@@ -289,6 +290,24 @@ urlpatterns = patterns('',
 
 # ################################################################################################################################
 
+    # .. OpenStack security
+
+    url(r'^zato/security/openstack_security/$',
+        login_required(openstack_security.Index()), name=openstack_security.Index.url_name),
+    url(r'^zato/security/openstack_security/$',
+        login_required(openstack_security.Index()), name=openstack_security.Index.url_name),
+    url(r'^zato/security/openstack_security/create/$',
+        login_required(openstack_security.Create()), name=openstack_security.Create.url_name),
+    url(r'^zato/security/openstack_security/edit/$',
+        login_required(openstack_security.Edit()), name=openstack_security.Edit.url_name),
+    url(r'^zato/security/openstack_security/change-password/$',
+        login_required(openstack_security.change_password), name='security-openstack-change-password'),
+    url(r'^zato/security/openstack_security/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(openstack_security.Delete()), name=openstack_security.Delete.url_name),
+
+
+# ################################################################################################################################
+
     # .. Technical accounts
 
     url(r'^zato/security/tech-account/$',
@@ -520,6 +539,23 @@ urlpatterns = patterns('',
         login_required(channel_zmq.Edit()), name=channel_zmq.Edit.url_name),
     url(r'^zato/channel/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_zmq.Delete()), name=channel_zmq.Delete.url_name),
+
+# ################################################################################################################################
+
+    # Notifications
+
+# ################################################################################################################################
+
+    # .. OpenStack Swift
+
+    url(r'^zato/notif/cloud/openstack/swift/$',
+        login_required(notif_cloud_openstack_swift.Index()), name=notif_cloud_openstack_swift.Index.url_name),
+    url(r'^zato/notif/cloud/openstack/swift/create/$',
+        login_required(notif_cloud_openstack_swift.Create()), name=notif_cloud_openstack_swift.Create.url_name),
+    url(r'^zato/notif/cloud/openstack/swift/edit/$',
+        login_required(notif_cloud_openstack_swift.Edit()), name=notif_cloud_openstack_swift.Edit.url_name),
+    url(r'^zato/notif/cloud/openstack/swift/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(notif_cloud_openstack_swift.Delete()), name=notif_cloud_openstack_swift.Delete.url_name),
 
 # ################################################################################################################################
 

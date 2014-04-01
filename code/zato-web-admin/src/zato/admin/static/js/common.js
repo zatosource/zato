@@ -78,6 +78,10 @@ $.namespace('zato.message');
 $.namespace('zato.message.elem_path');
 $.namespace('zato.message.namespace');
 $.namespace('zato.message.xpath');
+$.namespace('zato.notif');
+$.namespace('zato.notif.cloud');
+$.namespace('zato.notif.cloud.openstack');
+$.namespace('zato.notif.cloud.openstack.swift');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.ftp');
@@ -96,6 +100,7 @@ $.namespace('zato.security.aws');
 $.namespace('zato.security.basic_auth');
 $.namespace('zato.security.ntlm');
 $.namespace('zato.security.oauth');
+$.namespace('zato.security.openstack');
 $.namespace('zato.security.tech_account');
 $.namespace('zato.security.wss');
 $.namespace('zato.service');
@@ -192,6 +197,8 @@ form with values read off the object. The 'name' and 'id' attributes of the
 form's fields may use custom prefixes that will be taken into account accordingly.
 */
 $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
+
+    console.log(instance);
 
     if(!name_prefix) {
         name_prefix = '';
