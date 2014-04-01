@@ -110,6 +110,7 @@ redis_sentinels_master=
 
 [startup_services]
 zato.helpers.input-logger=Sample payload for a startup service
+zato.notif.init-notifiers=
 zato.pattern.delivery.dispatch-auto-resubmit=
 zato.pubsub.move-to-target-queues=
 zato.pubsub.delete-expired=

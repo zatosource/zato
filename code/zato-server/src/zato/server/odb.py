@@ -651,3 +651,10 @@ class ODBManager(SessionWrapper):
         return query.pubsub_consumer_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
+
+    def get_notif_cloud_openstack_swift(self, cluster_id, needs_columns=False):
+        """ Returns a list of OpenStack Swift notification definitions.
+        """
+        return query.notif_cloud_openstack_swift_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################

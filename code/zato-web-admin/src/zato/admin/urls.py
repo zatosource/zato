@@ -25,6 +25,7 @@ from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
 from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
 from zato.admin.web.views.message import elem_path, namespace, xpath
+from zato.admin.web.views.notif.cloud.openstack import swift as notif_cloud_openstack_swift
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
@@ -538,6 +539,23 @@ urlpatterns = patterns('',
         login_required(channel_zmq.Edit()), name=channel_zmq.Edit.url_name),
     url(r'^zato/channel/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_zmq.Delete()), name=channel_zmq.Delete.url_name),
+
+# ################################################################################################################################
+
+    # Notifications
+
+# ################################################################################################################################
+
+    # .. OpenStack Swift
+
+    url(r'^zato/notif/cloud/openstack/swift/$',
+        login_required(notif_cloud_openstack_swift.Index()), name=notif_cloud_openstack_swift.Index.url_name),
+    url(r'^zato/notif/cloud/openstack/swift/create/$',
+        login_required(notif_cloud_openstack_swift.Create()), name=notif_cloud_openstack_swift.Create.url_name),
+    url(r'^zato/notif/cloud/openstack/swift/edit/$',
+        login_required(notif_cloud_openstack_swift.Edit()), name=notif_cloud_openstack_swift.Edit.url_name),
+    url(r'^zato/notif/cloud/openstack/swift/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(notif_cloud_openstack_swift.Delete()), name=notif_cloud_openstack_swift.Delete.url_name),
 
 # ################################################################################################################################
 

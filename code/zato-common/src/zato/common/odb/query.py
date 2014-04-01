@@ -21,9 +21,9 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_S
      URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, AWSSecurity, ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
      CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, \
-     HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, \
-     OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Service, \
-     SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
+     HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NotificationOpenStackSwift as NotifOSS, NTLM, \
+     OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, \
+     PubSubProducer, PubSubTopic, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -727,6 +727,7 @@ def http_soap_audit_item(session, cluster_id, id):
 def _cloud_openstack_swift(session, cluster_id):
     return session.query(OpenStackSwift).\
         filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==OpenStackSwift.cluster_id).\
         order_by(OpenStackSwift.name)
 
 def cloud_openstack_swift(session, cluster_id, id):
@@ -843,5 +844,31 @@ def pubsub_consumer_list(session, cluster_id, topic_name, needs_columns=False):
     """ All pub/sub consumers.
     """
     return _pubsub_consumer(session, cluster_id, topic_name)
+
+# ################################################################################################################################
+
+def _notif_cloud_openstack_swift(session, cluster_id):
+    return session.query(NotifOSS.id, NotifOSS.name, NotifOSS.is_active, NotifOSS.notif_type, NotifOSS.def_id,
+        NotifOSS.containers, NotifOSS.interval, NotifOSS.name_pattern, NotifOSS.name_pattern_neg,
+        NotifOSS.get_data, NotifOSS.get_data_patt, NotifOSS.get_data_patt_neg, OpenStackSwift.name.label('def_name'),
+        Service.name.label('service_name')).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==NotifOSS.cluster_id).\
+        filter(NotifOSS.def_id==OpenStackSwift.id).\
+        filter(NotifOSS.service_id==Service.id).\
+        order_by(NotifOSS.name)
+
+def notif_cloud_openstack_swift(session, cluster_id, id):
+    """ An OpenStack Swift notification definition.
+    """
+    return _notif_cloud_openstack_swift(session, cluster_id).\
+        filter(NotifOSS.id==id).\
+        one()
+
+@needs_columns
+def notif_cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
+    """ OpenStack Swift connection definitions.
+    """
+    return _notif_cloud_openstack_swift(session, cluster_id)
 
 # ################################################################################################################################

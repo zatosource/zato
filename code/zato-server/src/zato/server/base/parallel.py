@@ -352,6 +352,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # Cloud - end
         #
 
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
         #
         # Outgoing connections - start
         #
@@ -388,6 +390,26 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # Outgoing connections - end
         #
 
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        #
+        # Notifications - start
+        #
+
+        # OpenStack Swift
+        query = self.odb.get_notif_cloud_openstack_swift(server.cluster.id, True)
+        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift', query)
+
+        #
+        # Notifications - end
+        #
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        #
+        # Security - start
+        #
+
         # AWS
         query = self.odb.get_aws_security_list(server.cluster.id, True)
         self.config.aws = ConfigDict.from_query('aws', query)
@@ -415,6 +437,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # WS-Security
         query = self.odb.get_wss_list(server.cluster.id, True)
         self.config.wss = ConfigDict.from_query('wss', query)
+
+        #
+        # Security - end
+        #
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # All the HTTP/SOAP channels.
         http_soap = []
