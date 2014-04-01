@@ -129,6 +129,17 @@
                                 <li class='wide'><a href="{% url out-zmq %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>
+                        <li>
+                            <span class="like-a">Notifications &rarr;</span>
+                            <ul>
+                                <li>
+                                    <span class="like-a">Cloud &rarr;</span>
+                                    <ul>
+                                        <li class='wide'><a href="{% url notif-cloud-openstack-swift %}?cluster={{ cluster_id|default:'' }}">OpenStack Swift</a></li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
                     </ul>
                 </li>
 

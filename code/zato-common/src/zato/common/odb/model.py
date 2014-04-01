@@ -19,7 +19,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, MSG_PATTERN_TYPE, SCHEDULER_JOB_TYPE
+from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, MSG_PATTERN_TYPE, \
+     SCHEDULER_JOB_TYPE
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -174,7 +175,7 @@ class SecurityBase(Base):
     sec_type = Column(String(45), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('http_basic_auth_list', order_by=name, cascade='all, delete, delete-orphan'))
+    cluster = relationship(Cluster, backref=backref('security_list', order_by=name, cascade='all, delete, delete-orphan'))
 
 class HTTPBasicAuth(SecurityBase):
     """ An HTTP Basic Auth definition.
@@ -1423,6 +1424,56 @@ class AWSS3(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('aws_s3_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def to_json(self):
+        return to_json(self)
+
+# ################################################################################################################################
+
+class Notification(Base):
+    """ A base class for all notifications, be it cloud, FTP-based or others.
+    """
+    __tablename__ = 'notif'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+    __mapper_args__ = {'polymorphic_on': 'notif_type'}
+
+    id = Column(Integer, Sequence('sec_base_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False, default=True)
+    notif_type = Column(String(45), nullable=False)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    interval = Column(Integer, nullable=False, default=NOTIF.DEFAULT.CHECK_INTERVAL)
+    name_pattern = Column(String(2000), nullable=False, default=NOTIF.DEFAULT.NAME_PATTERN)
+    name_pattern_neg = Column(Boolean(), nullable=False, default=False)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    get_data = Column(Boolean(), nullable=False, default=False)
+    get_data_patt = Column(String(2000), nullable=True)
+    get_data_patt_neg = Column(Boolean(), nullable=False, default=False)
+
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
+    service = relationship(Service, backref=backref('notification_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('notification_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class NotificationOpenStackSwift(Notification):
+    """ New in 1.2: Stores OpenStack Swift notifications.
+    """
+    __tablename__ = 'notif_os_swift'
+    __mapper_args__ = {'polymorphic_identity': 'openstack_swift'}
+
+    id = Column(Integer, ForeignKey('notif.id'), primary_key=True)
+    
+    containers = Column(String(20000), nullable=False)
+
+    def_id = Column(Integer, ForeignKey('os_swift.id'), primary_key=True)
+    definition = relationship(OpenStackSwift, backref=backref('notif_oss_list', order_by=id, cascade='all, delete, delete-orphan'))
 
     def to_json(self):
         return to_json(self)
