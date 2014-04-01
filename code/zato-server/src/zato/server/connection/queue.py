@@ -20,6 +20,8 @@ from gevent.queue import Empty, Queue
 # A set of utilities for constructing greenlets-safe outgoing connection objects.
 # Used, for instance, in SOAP Suds and OpenStack Swift outconns.
 
+# ################################################################################################################################
+
 class _Connection(object):
     """ Meant to be used as a part of a 'with' block - returns a connection from its queue each time 'with' is entered
     assuming the queue isn't empty.
@@ -43,6 +45,8 @@ class _Connection(object):
     def __exit__(self, type, value, traceback):
         if self.client:
             self.queue.put(self.client)
+
+# ################################################################################################################################
 
 class ConnectionQueue(object):
     """ Holds connections to resources. Each time it's called a connection is fetched from its underlying queue
@@ -85,7 +89,28 @@ class ConnectionQueue(object):
                     self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.queue_build_cap)
                 return
 
-            self.logger.info('%d/%d %s clients connected to `%s` after %s (cap: %ss)',
-                self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, now - start, self.queue_build_cap)
+            self.logger.info('%d/%d %s clients connected to `%s` (%s) after %s (cap: %ss)',
+                self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.conn_name, now - start,
+                self.queue_build_cap)
 
         self.logger.info('Obtained %d %s clients to `%s` for `%s`', self.queue.maxsize, self.conn_type, self.address, self.conn_name)
+
+# ################################################################################################################################
+
+class Wrapper(object):
+    """ Base class for connections wrappers.
+    """
+    def __init__(self, config, conn_type):
+        self.conn_type = conn_type
+        self.config = config
+
+        self.client = ConnectionQueue(
+            self.config.pool_size, self.config.queue_build_cap, self.config.name, self.conn_type, self.config.auth_url,
+            self.add_client)
+
+        self.update_lock = RLock()
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    def build_queue(self):
+        with self.update_lock:
+            self.client.build_queue()

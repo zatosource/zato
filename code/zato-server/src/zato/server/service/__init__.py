@@ -224,6 +224,7 @@ class Service(object):
         # Cloud
         self.cloud = Cloud()
         self.cloud.openstack.swift = self.worker_store.worker_config.cloud_openstack_swift
+        self.cloud.aws.s3 = self.worker_store.worker_config.cloud_aws_s3
 
         is_sio = hasattr(self, 'SimpleIO')
         self.request.http.init(self.wsgi_environ)

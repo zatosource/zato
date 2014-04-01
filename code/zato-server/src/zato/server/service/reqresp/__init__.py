@@ -210,7 +210,8 @@ class SimpleIOPayload(SIOConverter):
     SimpleIO abstract data. All of the attributes are prefixed with zato_ so that
     they don't conflict with user-provided data.
     """
-    def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config, response_elem, namespace):
+    def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config, response_elem, namespace,
+            output_repeated):
         self.zato_cid = zato_cid
         self.zato_logger = logger
         self.zato_data_format = data_format
@@ -218,7 +219,7 @@ class SimpleIOPayload(SIOConverter):
         self.zato_output = []
         self.zato_required = [(True, name) for name in required_list]
         self.zato_optional = [(False, name) for name in optional_list]
-        self.zato_is_repeated = False
+        self.zato_output_repeated = output_repeated
         self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
         self.int_parameters = simple_io_config.get('int_parameters', [])
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
@@ -240,7 +241,13 @@ class SimpleIOPayload(SIOConverter):
         that the payload is actually a list of repeated elements.
         """
         self.zato_output[i:j] = seq
-        self.zato_is_repeated = True
+        self.zato_output_repeated = True
+
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def __getitem__(self, key):
+        return self.zato_output[key]
 
     def _is_sqlalchemy(self, item):
         return hasattr(item, '_sa_class_manager')
@@ -275,7 +282,7 @@ class SimpleIOPayload(SIOConverter):
 
     def append(self, item):
         self.zato_output.append(item)
-        self.zato_is_repeated = True
+        self.zato_output_repeated = True
 
     def _getvalue(self, name, item, is_sa_namedtuple, is_required, leave_as_is):
         """ Returns an element's value if any has been provided while taking
@@ -319,17 +326,17 @@ class SimpleIOPayload(SIOConverter):
         either XML or JSON.
         """
         if self.zato_is_xml:
-            if self.zato_is_repeated:
+            if self.zato_output_repeated:
                 value = Element('item_list')
             else:
                 value = Element('item')
         else:
-            if self.zato_is_repeated:
+            if self.zato_output_repeated:
                 value = []
             else:
                 value = {}
 
-        if self.zato_is_repeated:
+        if self.zato_output_repeated:
             output = self.zato_output
         else:
             output = set(dir(self)) & self.zato_all_attrs
@@ -360,7 +367,7 @@ class SimpleIOPayload(SIOConverter):
                     else:
                         out_item[name] = elem_value
 
-                if self.zato_is_repeated:
+                if self.zato_output_repeated:
                     value.append(out_item)
                 else:
                     value = out_item
@@ -400,6 +407,10 @@ class Outgoing(object):
         self.plain_http = plain_http
         self.soap = soap
 
+class AWS(object):
+    def __init__(self, s3=None):
+        self.s3 = s3
+
 class OpenStack(object):
     def __init__(self, swift=None):
         self.swift = swift
@@ -407,9 +418,10 @@ class OpenStack(object):
 class Cloud(object):
     """ A container for cloud-related connections a service can establish.
     """
-    __slots__ = ('openstack',)
+    __slots__ = ('aws', 'openstack')
 
-    def __init__(self, openstack=None):
+    def __init__(self, aws=None, openstack=None):
+        self.aws = aws or AWS()
         self.openstack = openstack or OpenStack()
 
 # ################################################################################################################################
@@ -480,8 +492,9 @@ class Response(object):
         optional_list = getattr(io, 'output_optional', [])
         response_elem = getattr(io, 'response_elem', 'response')
         namespace = getattr(io, 'namespace', '')
+        output_repeated = getattr(io, 'output_repeated', False)
         self.outgoing_declared = True if required_list or optional_list else False
 
         if required_list or optional_list:
-            self._payload = SimpleIOPayload(cid, self.logger, data_format,
-                required_list, optional_list, self.simple_io_config, response_elem, namespace)
+            self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, self.simple_io_config,
+                response_elem, namespace, output_repeated)

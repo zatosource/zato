@@ -345,9 +345,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_cloud_openstack_swift_list(server.cluster.id, True)
         self.config.cloud_openstack_swift = ConfigDict.from_query('cloud_openstack_swift', query)
 
+        query = self.odb.get_cloud_aws_s3_list(server.cluster.id, True)
+        self.config.cloud_aws_s3 = ConfigDict.from_query('cloud_aws_s3', query)
+
         # 
         # Cloud - end
         #
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         #
         # Outgoing connections - start
@@ -385,6 +390,30 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # Outgoing connections - end
         #
 
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        #
+        # Notifications - start
+        #
+
+        # OpenStack Swift
+        query = self.odb.get_notif_cloud_openstack_swift(server.cluster.id, True)
+        self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift', query)
+
+        #
+        # Notifications - end
+        #
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+        #
+        # Security - start
+        #
+
+        # AWS
+        query = self.odb.get_aws_security_list(server.cluster.id, True)
+        self.config.aws = ConfigDict.from_query('aws', query)
+
         # HTTP Basic Auth
         query = self.odb.get_basic_auth_list(server.cluster.id, True)
         self.config.basic_auth = ConfigDict.from_query('basic_auth', query)
@@ -397,6 +426,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_oauth_list(server.cluster.id, True)
         self.config.oauth = ConfigDict.from_query('oauth', query)
 
+        # OpenStack
+        query = self.odb.get_openstack_security_list(server.cluster.id, True)
+        self.config.openstack_security = ConfigDict.from_query('openstack_security', query)
+
         # Technical accounts
         query = self.odb.get_tech_acc_list(server.cluster.id, True)
         self.config.tech_acc = ConfigDict.from_query('tech_acc', query)
@@ -404,6 +437,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # WS-Security
         query = self.odb.get_wss_list(server.cluster.id, True)
         self.config.wss = ConfigDict.from_query('wss', query)
+
+        #
+        # Security - end
+        #
+
+        # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
         # All the HTTP/SOAP channels.
         http_soap = []
@@ -645,10 +684,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             self.broker_client.invoke_async(msg)
 
     @staticmethod
-    def post_fork(arbiter, worker):
-        """ A Gunicorn hook which initializes the worker.
-        """
-        parallel_server = worker.app.zato_wsgi_app
+    def start_server(parallel_server, zato_deployment_key=None):
+
+        # Will be None if we are not running in background.
+        if not zato_deployment_key:
+            zato_deployment_key = uuid4().hex
 
         register_diag_handlers()
 
@@ -667,12 +707,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.name = server.name
         parallel_server.cluster_id = server.cluster_id
 
-        is_first = parallel_server._after_init_common(server, arbiter.zato_deployment_key)
+        is_first = parallel_server._after_init_common(server, zato_deployment_key)
 
         # For now, all the servers are always ACCEPTED but future versions
         # might introduce more join states
         if server.last_join_status in(SERVER_JOIN_STATUS.ACCEPTED):
-            parallel_server._after_init_accepted(server, arbiter.zato_deployment_key)
+            parallel_server._after_init_accepted(server, zato_deployment_key)
         else:
             msg = 'Server has not been accepted, last_join_status:[{0}]'
             logger.warn(msg.format(server.last_join_status))
@@ -689,6 +729,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         if is_first:
             parallel_server.invoke_startup_services()
+
+    @staticmethod
+    def post_fork(arbiter, worker):
+        """ A Gunicorn hook which initializes the worker.
+        """
+        ParallelServer.start_server(worker.app.zato_wsgi_app, arbiter.zato_deployment_key)
 
     @staticmethod
     def on_starting(arbiter):
@@ -716,7 +762,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.broker_client.publish(msg, msg_type=msg_type)
                 time.sleep(0.2)
 
+            # Broker client
             self.broker_client.close()
+
+            # Scheduler
+            self.singleton_server.scheduler.stop()
 
             # Pick-up processor
             self.singleton_server.pickup.stop()
@@ -738,6 +788,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
             self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()
+
+    # Convenience API
+    stop = destroy
 
 # ##############################################################################
 

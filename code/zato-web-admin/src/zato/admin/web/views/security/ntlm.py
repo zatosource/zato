@@ -15,7 +15,7 @@ import logging
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.ntlm import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.odb.model import HTTPBasicAuth
+from zato.common.odb.model import NTLM
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class Index(_Index):
     url_name = 'security-ntlm'
     template = 'zato/security/ntlm.html'
     service_name = 'zato.security.ntlm.get-list'
-    output_class = HTTPBasicAuth
+    output_class = NTLM
     
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

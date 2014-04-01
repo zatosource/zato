@@ -47,9 +47,9 @@ class OAuthStore(object):
 class URLData(OAuthDataStore):
     """ Performs URL matching and all the HTTP/SOAP-related security checks.
     """
-    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None,
-                 oauth_config=None, tech_acc_config=None, wss_config=None, kvdb=None,
-                 broker_client=None, odb=None, elem_path_store=None, xpath_store=None):
+    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, oauth_config=None,
+                 tech_acc_config=None, wss_config=None, aws_config=None, openstack_config=None, kvdb=None, broker_client=None,
+                 odb=None, elem_path_store=None, xpath_store=None):
         self.channel_data = channel_data
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -57,6 +57,8 @@ class URLData(OAuthDataStore):
         self.oauth_config = oauth_config
         self.tech_acc_config = tech_acc_config
         self.wss_config = wss_config
+        self.aws_config = aws_config
+        self.openstack_config = openstack_config
         self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
@@ -72,7 +74,7 @@ class URLData(OAuthDataStore):
         self._oauth_server.add_signature_method(OAuthSignatureMethod_HMAC_SHA1())
         self._oauth_server.add_signature_method(OAuthSignatureMethod_PLAINTEXT())
 
-# ##############################################################################
+# ################################################################################################################################
 
     # OAuth data store API
 
@@ -93,12 +95,13 @@ class URLData(OAuthDataStore):
             if sec_config.config.username == oauth_consumer.key:
 
                 # The nonce was reused
-                if self.kvdb.has_oauth_nonce(oauth_consumer.key, nonce):
-                    return True
-
-                # No such nonce so we add it to the store
-                self.kvdb.add_oauth_nonce(
-                    oauth_consumer.key, nonce, sec_config.config.max_nonce_log)
+                existing_nonce = self.kvdb.has_oauth_nonce(oauth_consumer.key, nonce)
+                if existing_nonce:
+                    return nonce
+                else:
+                    # No such nonce so we add it to the store
+                    self.kvdb.add_oauth_nonce(
+                        oauth_consumer.key, nonce, sec_config.config.max_nonce_log)
 
     def fetch_request_token(self, oauth_consumer, oauth_callback):
         """-> OAuthToken."""
@@ -112,7 +115,7 @@ class URLData(OAuthDataStore):
         """-> OAuthToken."""
         raise NotImplementedError
 
-# ##############################################################################
+# ################################################################################################################################
 
     def _handle_security_basic_auth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
         """ Performs the authentication using HTTP Basic Auth.
@@ -186,6 +189,9 @@ class URLData(OAuthDataStore):
             msg = 'Signature verification failed, wsgi_environ:[%r], e:[%s], e.message:[%s]'
             logger.error(msg, wsgi_environ, format_exc(e), e.message)
             raise Unauthorized(cid, 'Signature verification failed', 'OAuth')
+        else:
+            # Store for later use, custom channels may want to inspect it later on
+            wsgi_environ['zato.oauth.request'] = oauth_request
 
     def _handle_security_tech_acc(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
         """ Performs the authentication using technical accounts.
@@ -219,7 +225,7 @@ class URLData(OAuthDataStore):
 
         return wsgi_environ['HTTP_X_ZATO_USER']
 
-# ##############################################################################
+# ################################################################################################################################
 
     def match(self, url_path, soap_action):
         """ Attemps to match the combination of SOAP Action and URL path against
@@ -263,7 +269,7 @@ class URLData(OAuthDataStore):
                             if key in sec_def:
                                 sec_def[key] = msg[key]
 
-# ##############################################################################
+# ################################################################################################################################
 
     def _delete_channel_data(self, sec_type, sec_name):
         match_idx = ZATO_NONE
@@ -275,7 +281,83 @@ class URLData(OAuthDataStore):
         if match_idx != ZATO_NONE:
             self.channel_data.pop(match_idx)
 
-# ##############################################################################
+# ################################################################################################################################
+
+    def _update_aws(self, name, config):
+        self.aws_config[name] = Bunch()
+        self.aws_config[name].config = config
+
+    def aws_get(self, name):
+        """ Returns the configuration of the AWS security definition of the given name.
+        """
+        with self.url_sec_lock:
+            return self.aws_config.get(name)
+
+    def on_broker_msg_SECURITY_AWS_CREATE(self, msg, *args):
+        """ Creates a new AWS security definition
+        """
+        with self.url_sec_lock:
+            self._update_aws(msg.name, msg)
+
+    def on_broker_msg_SECURITY_AWS_EDIT(self, msg, *args):
+        """ Updates an existing AWS security definition.
+        """
+        with self.url_sec_lock:
+            del self.aws_config[msg.old_name]
+            self._update_aws(msg.name, msg)
+
+    def on_broker_msg_SECURITY_AWS_DELETE(self, msg, *args):
+        """ Deletes an AWS security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('aws', msg.name)
+            del self.aws_config[msg.name]
+
+    def on_broker_msg_SECURITY_AWS_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an AWS security definition.
+        """
+        with self.url_sec_lock:
+            self.aws_config[msg.name]['config']['password'] = msg.password
+
+# ################################################################################################################################
+
+    def _update_openstack(self, name, config):
+        self.openstack_config[name] = Bunch()
+        self.openstack_config[name].config = config
+
+    def openstack_get(self, name):
+        """ Returns the configuration of the OpenStack security definition of the given name.
+        """
+        with self.url_sec_lock:
+            return self.openstack_config.get(name)
+
+    def on_broker_msg_SECURITY_OPENSTACK_CREATE(self, msg, *args):
+        """ Creates a new OpenStack security definition
+        """
+        with self.url_sec_lock:
+            self._update_openstack(msg.name, msg)
+
+    def on_broker_msg_SECURITY_OPENSTACK_EDIT(self, msg, *args):
+        """ Updates an existing OpenStack security definition.
+        """
+        with self.url_sec_lock:
+            del self.openstack_config[msg.old_name]
+            self._update_openstack(msg.name, msg)
+
+    def on_broker_msg_SECURITY_OPENSTACK_DELETE(self, msg, *args):
+        """ Deletes an OpenStack security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('openstack', msg.name)
+            del self.openstack_config[msg.name]
+
+    def on_broker_msg_SECURITY_OPENSTACK_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an OpenStack security definition.
+        """
+        with self.url_sec_lock:
+            self.openstack_config[msg.name]['config']['password'] = msg.password
+
+# ################################################################################################################################
 
     def _update_basic_auth(self, name, config):
         self.basic_auth_config[name] = Bunch()
@@ -317,7 +399,7 @@ class URLData(OAuthDataStore):
             self.basic_auth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.basic_auth)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def _update_ntlm(self, name, config):
         self.ntlm_config[name] = Bunch()
@@ -358,7 +440,7 @@ class URLData(OAuthDataStore):
             self.ntlm_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.ntlm)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def _update_oauth(self, name, config):
         self.oauth_config[name] = Bunch()
@@ -399,7 +481,7 @@ class URLData(OAuthDataStore):
             self.oauth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.oauth)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def _update_tech_acc(self, name, config):
         self.tech_acc_config[name] = Bunch()
@@ -442,7 +524,7 @@ class URLData(OAuthDataStore):
             self.tech_acc_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.tech_account)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def _update_wss(self, name, config):
         if name in self.wss_config:
@@ -488,7 +570,7 @@ class URLData(OAuthDataStore):
             self.wss_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, security_def_type.wss)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def _channel_item_from_msg(self, msg, match_target, old_data={}):
         """ Creates a channel info bunch out of an incoming CREATE_EDIT message.
@@ -589,7 +671,7 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             self._delete_channel(msg)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def replace_payload(self, payload, pattern, pattern_type):
         """ Replaces elements in a given payload using either ElemPath or XPath
@@ -685,4 +767,4 @@ class URLData(OAuthDataStore):
 
                 break
 
-# ##############################################################################
+# ################################################################################################################################
