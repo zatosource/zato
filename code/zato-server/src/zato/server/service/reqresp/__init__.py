@@ -243,6 +243,12 @@ class SimpleIOPayload(SIOConverter):
         self.zato_output[i:j] = seq
         self.zato_output_repeated = True
 
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
+    def __getitem__(self, key):
+        return self.zato_output[key]
+
     def _is_sqlalchemy(self, item):
         return hasattr(item, '_sa_class_manager')
 
