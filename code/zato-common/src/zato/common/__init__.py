@@ -16,12 +16,15 @@ from string import Template
 from sys import maxint
 from traceback import format_exc
 
-# lxml
-from lxml import etree
-from lxml.objectify import ObjectPath as _ObjectPath
+# boto
+from boto.s3.key import Key
 
 # Bunch
 from bunch import Bunch
+
+# lxml
+from lxml import etree
+from lxml.objectify import ObjectPath as _ObjectPath
 
 # The namespace for use in all Zato's own services.
 zato_namespace = 'https://zato.io/ns/20130518'
@@ -143,9 +146,11 @@ SOAP_VERSIONS = ('1.1', '1.2')
 SOAP_CHANNEL_VERSIONS = ('1.1',)
 
 SECURITY_TYPES = {
+    'aws':'AWS',
     'basic_auth':'HTTP Basic Auth',
     'ntlm':'NTLM',
     'oauth': 'OAuth 1.0',
+    'openstack': 'OpenStack',
     'tech_acc':'Tech account',
     'wss':'WS-Security'
 }
@@ -291,9 +296,11 @@ class CHANNEL(Attrs):
     INVOKE = 'invoke'
     INVOKE_ASYNC = 'invoke-async'
     JMS_WMQ = 'jms-wmq'
+    NOTIFIER_RUN = 'notifier-run' # New in 1.2
+    NOTIFIER_TARGET = 'notifier-target' # New in 1.2
     SCHEDULER = 'scheduler'
+    STARTUP_SERVICE = 'startup-service' # New in 1.2
     ZMQ = 'zmq'
-    STARTUP_SERVICE = 'startup-service'
 
 class INVOCATION_TARGET(Attrs):
     CHANNEL_AMQP = 'channel-amqp'
@@ -354,11 +361,30 @@ class CLOUD:
     class OPENSTACK:
         class SWIFT:
             class DEFAULTS:
-                POOL_SIZE = 5
-                RETRIES = 5
+                AUTH_VERSION = '1'
                 BACKOFF_STARTING = 1
                 BACKOFF_MAX = 64
-                AUTH_VERSION = '1'
+                POOL_SIZE = 5
+                RETRIES = 5
+
+    class AWS:
+        class S3:
+            class STORAGE_CLASS:
+                STANDARD = 'STANDARD'
+                REDUCED_REDUNDANCY = 'REDUCED_REDUNDANCY'
+                GLACIER = 'GLACIER'
+                DEFAULT = STANDARD
+
+                class __metaclass__(type):
+                    def __iter__(self):
+                        return iter((self.STANDARD, self.REDUCED_REDUNDANCY, self.GLACIER))
+
+            class DEFAULTS:
+                ADDRESS = 'https://s3.amazonaws.com/'
+                CONTENT_TYPE = Key.DefaultContentType
+                DEBUG_LEVEL = 0
+                POOL_SIZE = 5
+                PROVIDER = 'aws'
 
 class URL_PARAMS_PRIORITY:
     PATH_OVER_QS = 'path-over-qs'
@@ -436,6 +462,14 @@ class PUB_SUB:
         class __metaclass__(type):
             def __iter__(self):
                 return iter((self.OBJECT, self.JSON, self.XML))
+
+class NOTIF:
+    class DEFAULT:
+        CHECK_INTERVAL = 5 # In seconds
+        NAME_PATTERN = '*'
+
+    class TYPE:
+        OPENSTACK_SWIFT = 'openstack_swift'
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

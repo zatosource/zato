@@ -19,7 +19,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, MSG_PATTERN_TYPE, SCHEDULER_JOB_TYPE
+from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, MSG_PATTERN_TYPE, \
+     SCHEDULER_JOB_TYPE
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -174,7 +175,7 @@ class SecurityBase(Base):
     sec_type = Column(String(45), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('http_basic_auth_list', order_by=name, cascade='all, delete, delete-orphan'))
+    cluster = relationship(Cluster, backref=backref('security_list', order_by=name, cascade='all, delete, delete-orphan'))
 
 class HTTPBasicAuth(SecurityBase):
     """ An HTTP Basic Auth definition.
@@ -277,6 +278,43 @@ class NTLM(SecurityBase):
     """
     __tablename__ = 'sec_ntlm'
     __mapper_args__ = {'polymorphic_identity': 'ntlm'}
+
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.cluster = cluster
+
+    def to_json(self):
+        return to_json(self)
+
+class AWSSecurity(SecurityBase):
+    """ New in 1.2: Stores Amazon credentials.
+    """
+    __tablename__ = 'sec_aws'
+    __mapper_args__ = {'polymorphic_identity': 'aws'}
+
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.password = password
+        self.cluster = cluster
+
+    def to_json(self):
+        return to_json(self)
+
+class OpenStackSecurity(SecurityBase):
+    """ New in 1.2: Stores OpenStack credentials..
+    """
+    __tablename__ = 'sec_openstack'
+    __mapper_args__ = {'polymorphic_identity': 'openstack'}
 
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
 
@@ -1217,58 +1255,6 @@ class HTTSOAPAuditReplacePatternsXPath(Base):
 
 # ################################################################################################################################
 
-class OpenStackSwift(Base):
-    """ An outgoing connection to OpenStack's Swift.
-    """
-    __tablename__ = 'os_swift'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('os_swift_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    pool_size = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.POOL_SIZE)
-
-    auth_url = Column(String(200), nullable=False)
-    auth_version = Column(String(200), nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.AUTH_VERSION)
-    user = Column(String(200), nullable=True)
-    key = Column(String(200), nullable=True)
-    retries = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.RETRIES)
-    is_snet = Column(Boolean(), nullable=False)
-    starting_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_STARTING)
-    max_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_MAX)
-    tenant_name = Column(String(200), nullable=True)
-    should_validate_cert = Column(Boolean(), nullable=False)
-    cacert = Column(String(200), nullable=True)
-    should_retr_ratelimit = Column(Boolean(), nullable=False)
-    needs_tls_compr = Column(Boolean(), nullable=False)
-    custom_options = Column(String(2000), nullable=True)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('open_stack_swift_conns', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, auth_url=None, auth_version=None, user=None, key=None, retries=None,
-            is_snet=None, starting_backoff=None, max_backoff=None, tenant_name=None, should_validate_cert=None,
-            cacert=None, should_retr_ratelimit=None, needs_tls_compr=None, custom_options=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.auth_url = auth_url
-        self.auth_version = auth_version
-        self.user = user
-        self.key = key
-        self.retries = retries
-        self.is_snet = is_snet
-        self.starting_backoff = starting_backoff
-        self.max_backoff = max_backoff
-        self.tenant_name = tenant_name
-        self.should_validate_cert = should_validate_cert
-        self.cacert = cacert
-        self.should_retr_ratelimit = should_retr_ratelimit
-        self.needs_tls_compr = needs_tls_compr
-        self.custom_options = custom_options
-
-# ##############################################################################
-
 class PubSubTopic(Base):
     """ A definition of a topic in pub/sub.
     """
@@ -1358,5 +1344,138 @@ class PubSubProducer(Base):
         self.sec_def_id = sec_def_id
         self.cluster_id = cluster_id
         self.last_seen = None # Not used by the DB
+
+# ################################################################################################################################
+
+class OpenStackSwift(Base):
+    """ A connection to OpenStack's Swift.
+    """
+    __tablename__ = 'os_swift'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('os_swift_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    pool_size = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.POOL_SIZE)
+
+    auth_url = Column(String(200), nullable=False)
+    auth_version = Column(String(200), nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.AUTH_VERSION)
+    user = Column(String(200), nullable=True)
+    key = Column(String(200), nullable=True)
+    retries = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.RETRIES)
+    is_snet = Column(Boolean(), nullable=False)
+    starting_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_STARTING)
+    max_backoff = Column(Integer, nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.BACKOFF_MAX)
+    tenant_name = Column(String(200), nullable=True)
+    should_validate_cert = Column(Boolean(), nullable=False)
+    cacert = Column(String(200), nullable=True)
+    should_retr_ratelimit = Column(Boolean(), nullable=False)
+    needs_tls_compr = Column(Boolean(), nullable=False)
+    custom_options = Column(String(2000), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('openstack_swift_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, is_active=None, auth_url=None, auth_version=None, user=None, key=None, retries=None,
+            is_snet=None, starting_backoff=None, max_backoff=None, tenant_name=None, should_validate_cert=None,
+            cacert=None, should_retr_ratelimit=None, needs_tls_compr=None, custom_options=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.auth_url = auth_url
+        self.auth_version = auth_version
+        self.user = user
+        self.key = key
+        self.retries = retries
+        self.is_snet = is_snet
+        self.starting_backoff = starting_backoff
+        self.max_backoff = max_backoff
+        self.tenant_name = tenant_name
+        self.should_validate_cert = should_validate_cert
+        self.cacert = cacert
+        self.should_retr_ratelimit = should_retr_ratelimit
+        self.needs_tls_compr = needs_tls_compr
+        self.custom_options = custom_options
+
+# ################################################################################################################################
+
+class AWSS3(Base):
+    """ An outgoing connection to AWS S3.
+    """
+    __tablename__ = 'aws_s3'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('aws_s3_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    pool_size = Column(Integer, nullable=False, default=CLOUD.AWS.S3.DEFAULTS.POOL_SIZE)
+
+    address = Column(String(200), nullable=False, default=CLOUD.AWS.S3.DEFAULTS.ADDRESS)
+    debug_level = Column(Integer, nullable=False, default=CLOUD.AWS.S3.DEFAULTS.DEBUG_LEVEL)
+    suppr_cons_slashes = Column(Boolean(), nullable=False, default=True)
+    content_type = Column(String(200), nullable=False, default=CLOUD.AWS.S3.DEFAULTS.CONTENT_TYPE)
+    metadata_ = Column(String(2000), nullable=True) # Can't be 'metadata' because this is reserved to SQLAlchemy
+    bucket = Column(String(2000), nullable=True)
+    encrypt_at_rest = Column(Boolean(), nullable=False, default=False)
+    storage_class = Column(String(200), nullable=False, default=CLOUD.AWS.S3.STORAGE_CLASS.DEFAULT)
+
+    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
+    security = relationship(SecurityBase, backref=backref('aws_s3_conns', order_by=is_active, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('aws_s3_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def to_json(self):
+        return to_json(self)
+
+# ################################################################################################################################
+
+class Notification(Base):
+    """ A base class for all notifications, be it cloud, FTP-based or others.
+    """
+    __tablename__ = 'notif'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+    __mapper_args__ = {'polymorphic_on': 'notif_type'}
+
+    id = Column(Integer, Sequence('sec_base_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False, default=True)
+    notif_type = Column(String(45), nullable=False)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    interval = Column(Integer, nullable=False, default=NOTIF.DEFAULT.CHECK_INTERVAL)
+    name_pattern = Column(String(2000), nullable=False, default=NOTIF.DEFAULT.NAME_PATTERN)
+    name_pattern_neg = Column(Boolean(), nullable=False, default=False)
+
+    # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+    get_data = Column(Boolean(), nullable=False, default=False)
+    get_data_patt = Column(String(2000), nullable=True)
+    get_data_patt_neg = Column(Boolean(), nullable=False, default=False)
+
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
+    service = relationship(Service, backref=backref('notification_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('notification_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class NotificationOpenStackSwift(Notification):
+    """ New in 1.2: Stores OpenStack Swift notifications.
+    """
+    __tablename__ = 'notif_os_swift'
+    __mapper_args__ = {'polymorphic_identity': 'openstack_swift'}
+
+    id = Column(Integer, ForeignKey('notif.id'), primary_key=True)
+    
+    containers = Column(String(20000), nullable=False)
+
+    def_id = Column(Integer, ForeignKey('os_swift.id'), primary_key=True)
+    definition = relationship(OpenStackSwift, backref=backref('notif_oss_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+    def to_json(self):
+        return to_json(self)
 
 # ################################################################################################################################

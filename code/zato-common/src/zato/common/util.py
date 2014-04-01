@@ -80,6 +80,9 @@ from sqlalchemy.exc import IntegrityError
 # Texttable
 from texttable import Texttable
 
+# validate
+from validate import is_boolean, is_integer, VdtTypeError
+
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
 from zato.common import DATA_FORMAT, KVDB, NoDistributionFound, scheduler_date_time_format, \
@@ -104,9 +107,11 @@ random.seed()
 
 # TODO: Turn it into a class so it auto-completes and move to zato.common
 security_def_type = Bunch()
+security_def_type.aws = 'aws'
 security_def_type.basic_auth = 'basic_auth'
 security_def_type.ntlm = 'ntlm'
 security_def_type.oauth = 'oauth'
+security_def_type.openstack = 'openstack'
 security_def_type.tech_account = 'tech_acc'
 security_def_type.wss = 'wss'
 
@@ -835,3 +840,37 @@ def register_diag_handlers():
     signal.signal(signal.SIGURG, dump_stacks)
 
 # ################################################################################################################################
+
+def parse_extra_into_dict(lines):
+    """ Creates a dictionary out of key=value lines.
+    """
+    _extra = {}
+
+    if lines:
+        extra = ';'.join(lines.splitlines())
+
+        for line in extra.split(';'):
+            original_line = line
+            if line:
+                line = line.split('=')
+                if not len(line) == 2:
+                    raise ValueError('Each line must be a single key=value entry, not [{}]'.format(original_line))
+
+                key, value = line
+                value = value.strip()
+
+                try:
+                    value = is_boolean(value)
+                except VdtTypeError:
+                    # It's cool, not a boolean
+                    pass
+
+                try:
+                    value = is_integer(value)
+                except VdtTypeError:
+                    # OK, not an integer
+                    pass
+
+                _extra[key.strip()] = value
+
+    return _extra

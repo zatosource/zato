@@ -29,7 +29,7 @@ from pytz import UTC
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.common import ZatoException
+from zato.common import SECURITY_TYPES, ZatoException, ZATO_NONE
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,8 @@ from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, \
 from zato.common.util import get_lb_client as _get_lb_client
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
 
 def get_definition_list(client, cluster, def_type):
     """ Returns all definitions of a given type existing on a given cluster.
@@ -138,6 +140,17 @@ def change_password(req, service_name, field1='password1', field2='password2', s
     else:
         return HttpResponse(dumps({'message':success_msg}))
 
+def get_security_id_from_select(params, prefix, field_name='security'):
+    security = params[prefix + field_name]
+    if security != ZATO_NONE:
+        _, security_id = security.split('/')
+    else:
+        _, security_id = ZATO_NONE, ZATO_NONE
+
+    return security_id
+
+# ################################################################################################################################
+
 class _BaseView(object):
     method_allowed = 'method_allowed-must-be-defined-in-a-subclass'
     service_name = None
@@ -191,6 +204,8 @@ class _BaseView(object):
 
         self.on_after_set_input()
 
+# ################################################################################################################################
+
 class Index(_BaseView):
     """ A base class upon which other index views are based.
     """
@@ -227,6 +242,9 @@ class Index(_BaseView):
                 if not value:
                     return False
         return True
+
+    def before_invoke_admin_service(self):
+        pass
 
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
@@ -267,6 +285,7 @@ class Index(_BaseView):
             output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
             
             if self.can_invoke_admin_service():
+                self.before_invoke_admin_service()
                 response = self.invoke_admin_service()
                 if response.ok:
                     if output_repeated:
@@ -299,6 +318,8 @@ class Index(_BaseView):
     def handle(self, req=None, *args, **kwargs):
         raise NotImplementedError('Must be overloaded by a subclass')
 
+# ################################################################################################################################
+
 class CreateEdit(_BaseView):
     """ Subclasses of this class will handle the creation/updates of Zato objects.
     """
@@ -312,6 +333,7 @@ class CreateEdit(_BaseView):
         """ Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
+        self.input_dict.clear()
         self.clear_user_message()
 
         try:
@@ -327,12 +349,12 @@ class CreateEdit(_BaseView):
             input_dict.update(initial_input_dict)
 
             for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
-                if name not in input_dict:
+                if name not in input_dict and name not in self.input_dict:
                     input_dict[name] = self.input.get(name)
-                
+
             self.input_dict.update(input_dict)
 
-            response = self.req.zato.client.invoke(self.service_name, input_dict)
+            response = self.req.zato.client.invoke(self.service_name, self.input_dict)
             if response.ok:
                 return_data = {
                     'message': self.success_message(response.data)
@@ -372,6 +394,8 @@ class CreateEdit(_BaseView):
             return 'updated'
         return 'created'
 
+# ################################################################################################################################
+
 class Delete(_BaseView):
     """ Our subclasses will delete objects such as connections and others.
     """
@@ -392,3 +416,30 @@ class Delete(_BaseView):
             msg = '{}, e:[{}]'.format(self.error_message, format_exc(e))
             logger.error(msg)
             return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+
+class SecurityList(object):
+    def __init__(self):
+        self.def_items = []
+
+    def __iter__(self):
+        return iter(self.def_items)
+
+    def append(self, def_item):
+        value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
+        label = '{0}/{1}'.format(SECURITY_TYPES[def_item.sec_type], def_item.name)
+        self.def_items.append((value, label))
+
+    @staticmethod
+    def from_service(client, cluster_id, sec_type=None):
+        sec_list = SecurityList()
+
+        result = client.invoke('zato.security.get-list', {'cluster_id': cluster_id, 'sec_type':sec_type})
+
+        for def_item in result:
+            sec_list.append(def_item)
+
+        return sec_list
+
+# ################################################################################################################################

@@ -19,11 +19,13 @@ from zato.admin.web.views import account, cluster, http_soap, kvdb, load_balance
 from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import zmq as channel_zmq
+from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
 from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
 from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
 from zato.admin.web.views.message import elem_path, namespace, xpath
+from zato.admin.web.views.notif.cloud.openstack import swift as notif_cloud_openstack_swift
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
@@ -35,7 +37,7 @@ from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import producers as pubsub_producers
-from zato.admin.web.views.security import basic_auth, ntlm, oauth, tech_account, wss
+from zato.admin.web.views.security import aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, wss
 
 urlpatterns = patterns('',
 
@@ -221,6 +223,23 @@ urlpatterns = patterns('',
 
 # ################################################################################################################################
 
+    # .. NTLM
+
+    url(r'^zato/security/aws/$',
+        login_required(aws.Index()), name=aws.Index.url_name),
+    url(r'^zato/security/aws/$',
+        login_required(aws.Index()), name=aws.Index.url_name),
+    url(r'^zato/security/aws/create/$',
+        login_required(aws.Create()), name=aws.Create.url_name),
+    url(r'^zato/security/aws/edit/$',
+        login_required(aws.Edit()), name=aws.Edit.url_name),
+    url(r'^zato/security/aws/change-password/$',
+        login_required(aws.change_password), name='security-aws-change-password'),
+    url(r'^zato/security/aws/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(aws.Delete()), name=aws.Delete.url_name),
+
+# ################################################################################################################################
+
     # .. HTTP Basic Auth
     url(r'^zato/security/basic-auth/$',
         login_required(basic_auth.Index()), name=basic_auth.Index.url_name),
@@ -268,6 +287,24 @@ urlpatterns = patterns('',
         login_required(oauth.change_secret), name='security-oauth-change-secret'),
     url(r'^zato/security/oauth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(oauth.Delete()), name=oauth.Delete.url_name),
+
+# ################################################################################################################################
+
+    # .. OpenStack security
+
+    url(r'^zato/security/openstack_security/$',
+        login_required(openstack_security.Index()), name=openstack_security.Index.url_name),
+    url(r'^zato/security/openstack_security/$',
+        login_required(openstack_security.Index()), name=openstack_security.Index.url_name),
+    url(r'^zato/security/openstack_security/create/$',
+        login_required(openstack_security.Create()), name=openstack_security.Create.url_name),
+    url(r'^zato/security/openstack_security/edit/$',
+        login_required(openstack_security.Edit()), name=openstack_security.Edit.url_name),
+    url(r'^zato/security/openstack_security/change-password/$',
+        login_required(openstack_security.change_password), name='security-openstack-change-password'),
+    url(r'^zato/security/openstack_security/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(openstack_security.Delete()), name=openstack_security.Delete.url_name),
+
 
 # ################################################################################################################################
 
@@ -505,7 +542,37 @@ urlpatterns = patterns('',
 
 # ################################################################################################################################
 
+    # Notifications
+
+# ################################################################################################################################
+
+    # .. OpenStack Swift
+
+    url(r'^zato/notif/cloud/openstack/swift/$',
+        login_required(notif_cloud_openstack_swift.Index()), name=notif_cloud_openstack_swift.Index.url_name),
+    url(r'^zato/notif/cloud/openstack/swift/create/$',
+        login_required(notif_cloud_openstack_swift.Create()), name=notif_cloud_openstack_swift.Create.url_name),
+    url(r'^zato/notif/cloud/openstack/swift/edit/$',
+        login_required(notif_cloud_openstack_swift.Edit()), name=notif_cloud_openstack_swift.Edit.url_name),
+    url(r'^zato/notif/cloud/openstack/swift/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(notif_cloud_openstack_swift.Delete()), name=notif_cloud_openstack_swift.Delete.url_name),
+
+# ################################################################################################################################
+
     # Cloud
+
+# ################################################################################################################################
+    
+    # .. OpenStack - S3
+
+    url(r'^zato/cloud/aws/s3/$',
+        login_required(cloud_aws_s3.Index()), name=cloud_aws_s3.Index.url_name),
+    url(r'^zato/cloud/aws/s3/create/$',
+        login_required(cloud_aws_s3.Create()), name=cloud_aws_s3.Create.url_name),
+    url(r'^zato/cloud/aws/s3/edit/$',
+        login_required(cloud_aws_s3.Edit()), name=cloud_aws_s3.Edit.url_name),
+    url(r'^zato/cloud/aws/s3/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cloud_aws_s3.Delete()), name=cloud_aws_s3.Delete.url_name),
 
 # ################################################################################################################################
     
