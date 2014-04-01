@@ -56,6 +56,10 @@ class ConfigDict(object):
         with self.lock:
             del self._bunch[key]
 
+    def pop(self, key, default):
+        with self.lock:
+            return self._bunch.pop(key, default)
+
     def __iter__(self):
         with self.lock:
             return iter(self._bunch)

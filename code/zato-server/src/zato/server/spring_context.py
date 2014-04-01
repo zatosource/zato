@@ -20,7 +20,6 @@ from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
 from zato.server.connection.sql import PoolStore
 from zato.server.odb import ODBManager
-#from zato.server.pickup import Pickup, PickupEventProcessor
 from zato.server.scheduler import Scheduler
 from zato.server.service.store import ServiceStore
 
@@ -66,6 +65,8 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.message.namespace',
             'zato.server.service.internal.message.xpath',
             'zato.server.service.internal.message.elem_path',
+            'zato.server.service.internal.notif',
+            'zato.server.service.internal.notif.cloud.openstack.swift',
             'zato.server.service.internal.outgoing.amqp',
             'zato.server.service.internal.outgoing.ftp',
             'zato.server.service.internal.outgoing.jms_wmq',
@@ -84,6 +85,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.security.basic_auth',
             'zato.server.service.internal.security.ntlm',
             'zato.server.service.internal.security.oauth',
+            'zato.server.service.internal.security.openstack',
             'zato.server.service.internal.security.tech_account',
             'zato.server.service.internal.security.wss',
             'zato.server.service.internal.server',

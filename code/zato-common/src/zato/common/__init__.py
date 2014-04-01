@@ -150,6 +150,7 @@ SECURITY_TYPES = {
     'basic_auth':'HTTP Basic Auth',
     'ntlm':'NTLM',
     'oauth': 'OAuth 1.0',
+    'openstack': 'OpenStack',
     'tech_acc':'Tech account',
     'wss':'WS-Security'
 }
@@ -295,9 +296,11 @@ class CHANNEL(Attrs):
     INVOKE = 'invoke'
     INVOKE_ASYNC = 'invoke-async'
     JMS_WMQ = 'jms-wmq'
+    NOTIFIER_RUN = 'notifier-run' # New in 1.2
+    NOTIFIER_TARGET = 'notifier-target' # New in 1.2
     SCHEDULER = 'scheduler'
+    STARTUP_SERVICE = 'startup-service' # New in 1.2
     ZMQ = 'zmq'
-    STARTUP_SERVICE = 'startup-service'
 
 class INVOCATION_TARGET(Attrs):
     CHANNEL_AMQP = 'channel-amqp'
@@ -459,6 +462,14 @@ class PUB_SUB:
         class __metaclass__(type):
             def __iter__(self):
                 return iter((self.OBJECT, self.JSON, self.XML))
+
+class NOTIF:
+    class DEFAULT:
+        CHECK_INTERVAL = 5 # In seconds
+        NAME_PATTERN = '*'
+
+    class TYPE:
+        OPENSTACK_SWIFT = 'openstack_swift'
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

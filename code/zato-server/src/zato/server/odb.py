@@ -416,6 +416,12 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.oauth_list(session, cluster_id, needs_columns)
 
+    def get_openstack_security_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of OpenStack security accounts existing on the given cluster.
+        """
+        with closing(self.session()) as session:
+            return query.openstack_security_list(session, cluster_id, needs_columns)
+
     def get_tech_acc_list(self, cluster_id, needs_columns=False):
         """ Returns a list of technical accounts existing on the given cluster.
         """
@@ -643,5 +649,12 @@ class ODBManager(SessionWrapper):
         """ Returns a list of pub/sub consumers defined on a cluster.
         """
         return query.pubsub_consumer_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_notif_cloud_openstack_swift(self, cluster_id, needs_columns=False):
+        """ Returns a list of OpenStack Swift notification definitions.
+        """
+        return query.notif_cloud_openstack_swift_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################

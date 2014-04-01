@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging, inspect, os, socket, sys, traceback
 from copy import deepcopy
 from errno import ENOENT
+from json import dumps, loads
 from threading import RLock
 from time import sleep
 from traceback import format_exc
@@ -105,7 +106,7 @@ class WorkerStore(BrokerMessageReceiver):
             deepcopy(self.worker_config.http_soap),
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.ntlm, self.worker_config.oauth,
-            self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.aws,
+            self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.aws, self.worker_config.openstack_security,
             self.kvdb, self.broker_client, self.server.odb, self.elem_path_store, self.xpath_store)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
@@ -116,6 +117,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_http_soap()
         self.init_cloud()
         self.init_pubsub()
+        self.init_notifiers()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
@@ -141,8 +143,7 @@ class WorkerStore(BrokerMessageReceiver):
         dictionary.
         """
         security_name = config.get('security_name')
-        sec_config = {'security_name':security_name, 'sec_type':None, 'username':None,
-            'password':None, 'password_type':None}
+        sec_config = {'security_name':security_name, 'sec_type':None, 'username':None, 'password':None, 'password_type':None}
         _sec_config = None
 
         # This will be set to True only if the method's invoked on a server's starting up
@@ -237,10 +238,26 @@ class WorkerStore(BrokerMessageReceiver):
             config_attr = getattr(self.worker_config, config_key)
             for name in config_attr:
                 config = config_attr[name]['config']
-                self._update_aws_config(config)
+                if isinstance(wrapper, S3Wrapper):
+                    self._update_aws_config(config)
                 config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
                 config_attr[name].conn = wrapper(config)
                 config_attr[name].conn.build_queue()
+
+    def _update_cloud_openstack_swift_container(self, config_dict):
+        """ Makes sure OpenStack Swift containers always have a path to prefix queries with.
+        """
+        config_dict.containers = [elem.split(':') for elem in config_dict.containers.splitlines()]
+        for item in config_dict.containers:
+            # No path specified so we use an empty string to catch everything.
+            if len(item) == 1:
+                item.append('')
+
+            item.append('{}:{}'.format(item[0], item[1]))
+
+    def init_notifiers(self):
+        for config_dict in self.worker_config.notif_cloud_openstack_swift.values():
+            self._update_cloud_openstack_swift_container(config_dict.config)
 
 # ################################################################################################################################
 
@@ -365,6 +382,37 @@ class WorkerStore(BrokerMessageReceiver):
         """ Changes password of an AWS security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], security_def_type.aws,
+                self._visit_wrapper_change_password)
+
+# ################################################################################################################################
+
+    def openstack_get(self, name):
+        """ Returns the configuration of the OpenStack security definition
+        of the given name.
+        """
+        self.request_dispatcher.url_data.openstack_get(name)
+
+    def on_broker_msg_SECURITY_OPENSTACK_CREATE(self, msg, *args):
+        """ Creates a new OpenStack security definition
+        """
+        self.request_dispatcher.url_data.on_broker_msg_SECURITY_OPENSTACK_CREATE(msg, *args)
+
+    def on_broker_msg_SECURITY_OPENSTACK_EDIT(self, msg, *args):
+        """ Updates an existing OpenStack security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.openstack,
+                self._visit_wrapper_edit, keys=('is_active', 'username', 'name'))
+
+    def on_broker_msg_SECURITY_OPENSTACK_DELETE(self, msg, *args):
+        """ Deletes an OpenStack security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.openstack,
+                self._visit_wrapper_delete)
+
+    def on_broker_msg_SECURITY_OPENSTACK_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an OpenStack security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.openstack,
                 self._visit_wrapper_change_password)
 
 # ################################################################################################################################
@@ -532,10 +580,10 @@ class WorkerStore(BrokerMessageReceiver):
         # WSGI environment is the best place we have to store raw msg in
         wsgi_environ = {'zato.request_ctx.async_msg':msg}
 
-        service = self.server.service_store.new_instance_by_name(msg.service)
-        service.update_handle(self._set_service_response_data, service, msg.payload,
+        service = self.server.service_store.new_instance_by_name(msg['service'])
+        service.update_handle(self._set_service_response_data, service, msg['payload'],
             channel, msg.get('data_format'), msg.get('transport'), self.server,
-            self.broker_client, self, msg.cid, self.worker_config.simple_io,
+            self.broker_client, self, msg['cid'], self.worker_config.simple_io,
             job_type=msg.get('job_type'), wsgi_environ=wsgi_environ)
 
 # ################################################################################################################################
@@ -893,5 +941,34 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_PUB_SUB_PRODUCER_DELETE(self, msg):
         self.pubsub.delete_producer(Client(msg.client_id, msg.client_name), Topic(msg.topic_name))
+
+# ################################################################################################################################
+
+    def on_broker_msg_NOTIF_RUN_NOTIFIER(self, msg):
+        self._on_message_invoke_service(loads(msg.request), CHANNEL.NOTIFIER_RUN, 'NOTIF_RUN_NOTIFIER')
+
+    def on_broker_msg_NOTIF_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT(self, msg):
+
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg.name
+
+        config_dict = self.server.worker_store.worker_config.notif_cloud_openstack_swift
+        config_dict.pop(del_name, None) # Delete and ignore if it doesn't exit (it's CREATE then)
+        config_dict[msg.name] = msg
+
+        self._update_cloud_openstack_swift_container(msg)
+
+        # Start a new background notifier either if it's a create action or on rename.
+        if msg.source_service_type == 'create' or (old_name and old_name != msg.name):
+
+            self._on_message_invoke_service({
+                'service': 'zato.notif.invoke-run-notifier',
+                'payload': {'config': msg},
+                'cid': new_cid(),
+            }, CHANNEL.NOTIFIER_RUN, 'NOTIF_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT')
+
+    def on_broker_msg_NOTIF_CLOUD_OPENSTACK_SWIFT_DELETE(self, msg):
+        del self.server.worker_store.worker_config.notif_cloud_openstack_swift[msg.name]
 
 # ################################################################################################################################
