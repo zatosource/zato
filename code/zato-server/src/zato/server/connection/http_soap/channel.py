@@ -167,7 +167,10 @@ class RequestDispatcher(object):
                 if sec.sec_def != ZATO_NONE and sec.sec_def.sec_type == security_def_type.oauth:
                     post_data = QueryDict(payload, encoding='utf-8')
                 else:
-                    post_data = None
+                    post_data = {}
+
+                # This is handy if someone invoked URLData's OAuth API manually
+                wsgi_environ['zato.oauth.post_data'] = post_data
 
                 # Will raise an exception on any security violation
                 self.url_data.check_security(
