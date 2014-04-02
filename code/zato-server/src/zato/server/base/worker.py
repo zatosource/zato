@@ -955,7 +955,8 @@ class WorkerStore(BrokerMessageReceiver):
 
         config_dict = self.server.worker_store.worker_config.notif_cloud_openstack_swift
         config_dict.pop(del_name, None) # Delete and ignore if it doesn't exit (it's CREATE then)
-        config_dict[msg.name] = msg
+        config_dict[msg.name] = Bunch()
+        config_dict[msg.name].config = msg
 
         self._update_cloud_openstack_swift_container(msg)
 
