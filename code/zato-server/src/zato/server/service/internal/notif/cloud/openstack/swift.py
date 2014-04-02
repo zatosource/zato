@@ -181,45 +181,78 @@ class Delete(AdminService):
 class RunNotifier(AdminService):
     """ Runs a background gevent-based notifier of new data in OpenStack Swift containers.
     """
-    def _run_notifier(self, data):
+
+    def _get_data(self, client, config, container, name):
+        try:
+            return client.get_object(container, name)
+        except Exception, e:
+            self.logger.warn('Could not get `%s` from `%s`, e:`%s`', container, name, format_exc(e))
+            return None
+
+    def _prepare_service_request(self, ext_result, item, container, path, full_name):
+
+        req = Bunch(req_meta=Bunch(), item=Bunch(payload=None))
+        req.req_meta.container = container
+        req.req_meta.path = path
+        req.req_meta.full_name = full_name
+        req.result_meta = ext_result[0]
+        req.item_meta = bunchify(item)
+
+        return req
+
+    def _run_notifier(self, config):
         """ Invoked as a greenlet - fetches data from a container(s) and invokes the target service.
         """
         # It's possible our config has changed since the last time we run so we need to check the current one.
-        current_config = self.server.worker_store.worker_config.notif_cloud_openstack_swift.get(data.name)
+        current_config = self.server.worker_store.worker_config.notif_cloud_openstack_swift.get(config.name)
 
         # The notification definition has been deleted in between the invocations of ours so we need to stop now.
         if not current_config:
             self.keep_running = False
             return
 
-        # Ok, overwrite old config with current one.
-        data.update(current_config)
+        if not current_config.config['is_active']:
+            return
 
-        request = Bunch()
-        request.raw = {}
+        # Ok, overwrite old config with current one.
+        config.update(current_config.config)
 
         # Grab a distributed lock so we are sure it is only us who connect to pull newest data.
-        with self.lock(data.name):
-            conn = self.cloud.openstack.swift[data.def_name].conn
+        with self.lock(config.name):
+            conn = self.cloud.openstack.swift[config.def_name].conn
             with conn.client() as client:
-                for container_name, path, full_name in data.containers:
-                    result = client.get_container(container_name, path=path)
-                    raw = request.raw.setdefault(full_name, [])
-                    raw.append(result)
-                    
-                    for item in result:
-                        # Metadata will not contain this key
-                        if 'hash' in item:
-                            pass
+                for container, path, full_name in config.containers:
 
-        self.logger.warn(request)
+                    # Results of the call to an external resource - first element is result's metadata
+                    # and elements 1: are the actual data, if any.
+                    ext_result = client.get_container(container, path=path)
+
+                    # Iterate over elements skipping directories - we're interested only in files.
+                    for items in ext_result[1:]:
+                        for item in items:
+                            if item['content_type'] != 'application/directory':
+
+                                # Prepare a service request ..
+                                req = self._prepare_service_request(ext_result, item, container, path, full_name)
+
+                                # .. but don't necessarily pull data from the container.
+                                if config.get_data:
+                                    req.item.payload = self._get_data(client, config, container, req.item_meta.name)
+
+                                # Invoke the target service and see what next to do with its response
+                                srv_result = self.invoke(config.service_name, req)
+
+                                # Ok, we are to delete the just pulled document. Note that 'srv_result' can be either
+                                # an empty string or dict hence two conditions.
+                                if 'delete' in srv_result and srv_result.get('delete'):
+                                    client.delete_object(container, req.item_meta.name)
 
     def handle(self):
         self.keep_running = True
-        data = bunchify(self.request.payload)
+        config = bunchify(self.request.payload)
 
         while self.keep_running:
-            spawn(self._run_notifier, data)
-            sleep(data.interval)
+            spawn(self._run_notifier, config)
+            sleep(config.interval)
 
-        self.logger.info('Stopped OpenStack Swift notifier `%s`', data.name)
+        self.logger.info('Stopped OpenStack Swift notifier `%s`', config.name)
