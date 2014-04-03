@@ -1451,7 +1451,7 @@ class Notification(Base):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     get_data = Column(Boolean(), nullable=False, default=False)
-    get_data_patt = Column(String(2000), nullable=True)
+    get_data_patt = Column(String(2000), nullable=False, default=NOTIF.DEFAULT.GET_DATA_PATTERN)
     get_data_patt_neg = Column(Boolean(), nullable=False, default=False)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
