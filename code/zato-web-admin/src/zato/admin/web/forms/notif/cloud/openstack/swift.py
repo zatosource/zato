@@ -29,7 +29,7 @@ class CreateForm(forms.Form):
     name_pattern_neg = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     get_data = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    get_data_patt = forms.CharField(widget=forms.TextInput(attrs={'style':'width:70%'}))
+    get_data_patt = forms.CharField(initial=NOTIF.DEFAULT.GET_DATA_PATTERN, widget=forms.TextInput(attrs={'style':'width:70%'}))
     get_data_patt_neg = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     def_id = forms.ChoiceField(widget=forms.Select())
