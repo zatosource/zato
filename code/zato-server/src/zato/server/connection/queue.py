@@ -20,6 +20,8 @@ from gevent.queue import Empty, Queue
 # A set of utilities for constructing greenlets-safe outgoing connection objects.
 # Used, for instance, in SOAP Suds and OpenStack Swift outconns.
 
+logger = logging.getLogger(__name__)
+
 # ################################################################################################################################
 
 class _Connection(object):

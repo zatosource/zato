@@ -466,7 +466,8 @@ class PUB_SUB:
 class NOTIF:
     class DEFAULT:
         CHECK_INTERVAL = 5 # In seconds
-        NAME_PATTERN = '*'
+        NAME_PATTERN = '**'
+        GET_DATA_PATTERN = '**'
 
     class TYPE:
         OPENSTACK_SWIFT = 'openstack_swift'
