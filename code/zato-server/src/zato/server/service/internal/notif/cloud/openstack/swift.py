@@ -19,6 +19,9 @@ from bunch import Bunch, bunchify
 # gevent
 from gevent import sleep, spawn
 
+# globre
+from globre import match as globre_match
+
 # Zato
 from zato.common import NOTIF as COMMON_NOTIF, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, NOTIF
@@ -182,12 +185,18 @@ class RunNotifier(AdminService):
     """ Runs a background gevent-based notifier of new data in OpenStack Swift containers.
     """
 
+    def _name_matches(self, pattern, string, negate):
+        """ Matches a string against a pattern and returns True if it found it. 'negate' reverses the result,
+        only those not matching the pattern will yield True.
+        """
+        result = bool(globre_match(pattern, string))
+        return not result if negate else result
+
     def _get_data(self, client, config, container, name):
         try:
-            return client.get_object(container, name)
+            return client.get_object(container, name)[1]
         except Exception, e:
             self.logger.warn('Could not get `%s` from `%s`, e:`%s`', container, name, format_exc(e))
-            return None
 
     def _prepare_service_request(self, ext_result, item, container, path, full_name):
 
@@ -232,12 +241,18 @@ class RunNotifier(AdminService):
                         for item in items:
                             if item['content_type'] != 'application/directory':
 
+                                if not self._name_matches(config.name_pattern, item['name'], config.name_pattern_neg):
+                                    continue
+
                                 # Prepare a service request ..
                                 req = self._prepare_service_request(ext_result, item, container, path, full_name)
 
                                 # .. but don't necessarily pull data from the container.
-                                if config.get_data:
-                                    req.item.payload = self._get_data(client, config, container, req.item_meta.name)
+                                if config.get_data and self._name_matches(config.get_data_patt, item['name'], config.get_data_patt_neg):
+                                    req.item.payload = self._get_data(client, config, container, item['name'])
+
+                                self.logger.warn(item)
+                                self.logger.warn(config)
 
                                 # Invoke the target service and see what next to do with its response
                                 srv_result = self.invoke(config.service_name, req)
