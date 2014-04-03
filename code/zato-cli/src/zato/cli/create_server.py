@@ -253,7 +253,7 @@ class Create(ZatoCommand):
             server_conf.write(
                 server_conf_template.format(
                     port=port,
-                    gunicorn_workers=cpu_count(),
+                    gunicorn_workers=2,
                     odb_db_name=args.odb_db_name,
                     odb_engine=args.odb_type,
                     odb_host=args.odb_host,
