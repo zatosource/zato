@@ -1,4 +1,5 @@
 code/.coverage
+code/.idea/
 code/.installed.cfg
 code/bin/*
 code/build/*
