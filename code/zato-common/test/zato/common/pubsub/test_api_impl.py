@@ -139,10 +139,10 @@ class RedisPubSubAPITestCase(RedisPubSubCommonTestCase):
         self.assertEquals(len(msg_values), 1)
         self.assertEquals(payload, msg_values[ctx.msg.msg_id])
 
-    def test_publish_defaults(self):
+    def xtest_publish_defaults(self):
         self._check_publish()
 
-    def test_publish_custom_attrs(self):
+    def xtest_publish_custom_attrs(self):
         self._check_publish(**{
             'mime_type': rand_string(),
             'priority': rand_int(),
@@ -152,7 +152,7 @@ class RedisPubSubAPITestCase(RedisPubSubCommonTestCase):
 
 # ################################################################################################################################
 
-    def test_subscribe(self):
+    def xtest_subscribe(self):
         client_id, client_name = rand_int(), rand_string()
         client = Client(client_id, client_name)
         topics = rand_string(rand_int())
@@ -247,7 +247,7 @@ class RedisPubSubAPITestCase(RedisPubSubCommonTestCase):
         self.assertEquals(len(unack_counter), 1)
         self.assertEqual(unack_counter[ctx.msg.msg_id], '1') # One subscriber hence one undelivered message
 
-    def test_get_reject_acknowledge(self):
+    def xtest_get_reject_acknowledge(self):
         payload, topic, producer, ctx = self._publish_move(move=False)
         client_id, client_name = rand_int(), rand_string()
 
@@ -296,7 +296,18 @@ class RedisPubSubAPITestCase(RedisPubSubCommonTestCase):
 
 # ################################################################################################################################
 
-    def test_default_clients(self):
+    def test_validate_sub_key(self):
+        self.fail()
+
+    def test_publish_exceptions(self):
+        self.fail()
+
+    def test_ping(self):
+        self.fail()
+
+# ################################################################################################################################
+
+    def xtest_default_clients(self):
         # Initially, default clients are dummy ones.
         default_consumer = self.api.get_default_consumer()
         default_producer = self.api.get_default_producer()
@@ -336,7 +347,7 @@ class RedisPubSubAPITestCase(RedisPubSubCommonTestCase):
 
 # ################################################################################################################################
 
-    def test_topic_add(self):
+    def xtest_topic_add(self):
         name = rand_string()
         is_active = rand_bool()
         is_fifo = rand_bool()
@@ -359,7 +370,7 @@ class RedisPubSubAPITestCase(RedisPubSubCommonTestCase):
         self.api.add_topic(topic)
         self.assertEquals(len(self.api.impl.topics), 1)
 
-    def test_topic_update(self):
+    def xtest_topic_update(self):
         self.test_topic_add() # updating a topic works the same like creating it
 
 # ################################################################################################################################
@@ -371,7 +382,30 @@ class CtxObjectsTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_topic_defaults(self):
+    def test_add_producer(self):
+        self.fail()
+
+    def test_update_producer(self):
+        self.fail()
+
+    def test_delete_producer(self):
+        self.fail()
+
+    def test_add_consumer(self):
+        self.fail()
+
+    def test_update_consumer(self):
+        self.fail()
+
+    def test_delete_consumer(self):
+        self.fail()
+
+    def test_raising_not_implemented_error(self):
+        self.fail()
+
+# ################################################################################################################################
+
+    def xtest_topic_defaults(self):
         name = rand_string()
         topic = self._get_object(Topic, {'name': name})
         self.assertEquals(topic.name, name)
@@ -379,7 +413,7 @@ class CtxObjectsTestCase(TestCase):
         self.assertEquals(topic.is_fifo, PUB_SUB.DEFAULT_IS_FIFO)
         self.assertEquals(topic.max_depth, PUB_SUB.DEFAULT_MAX_DEPTH)
 
-    def test_topic_custom_attrs(self):
+    def xtest_topic_custom_attrs(self):
         name = rand_string()
         is_active = rand_bool()
         is_fifo = rand_bool()
@@ -396,13 +430,13 @@ class CtxObjectsTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_pub_ctx_defaults(self):
+    def xtest_pub_ctx_defaults(self):
         ctx = PubCtx()
         self.assertEquals(ctx.client_id, None)
         self.assertEquals(ctx.topic, None)
         self.assertEquals(ctx.msg, None)
 
-    def test_pub_ctx_custom_attrs(self):
+    def xtest_pub_ctx_custom_attrs(self):
         client_id, topic, msg = rand_string(3)
         ctx = PubCtx(client_id, topic, msg)
         self.assertEquals(ctx.client_id, client_id)
@@ -411,12 +445,12 @@ class CtxObjectsTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_sub_ctx_defaults(self):
+    def xtest_sub_ctx_defaults(self):
         ctx = SubCtx()
         self.assertEquals(ctx.client_id, None)
         self.assertEquals(ctx.topics, [])
 
-    def test_sub_ctx_custom_attrs(self):
+    def xtest_sub_ctx_custom_attrs(self):
         client_id, topics = rand_string(2)
         ctx = SubCtx(client_id, topics)
         self.assertEquals(ctx.client_id, client_id)
@@ -424,14 +458,14 @@ class CtxObjectsTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_get_ctx_defaults(self):
+    def xtest_get_ctx_defaults(self):
         ctx = GetCtx()
         self.assertEquals(ctx.sub_key, None)
         self.assertEquals(ctx.max_batch_size, PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE)
         self.assertEquals(ctx.is_fifo, PUB_SUB.DEFAULT_IS_FIFO)
         self.assertEquals(ctx.get_format, PUB_SUB.GET_FORMAT.OBJECT.id)
 
-    def test_get_ctx_custom_attrs(self):
+    def xtest_get_ctx_custom_attrs(self):
         sub_key = rand_string()
         max_batch_size = rand_int()
         is_fifo = rand_bool()
@@ -446,12 +480,12 @@ class CtxObjectsTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_ack_ctx_defaults(self):
+    def xtest_ack_ctx_defaults(self):
         ctx = AckCtx()
         self.assertEquals(ctx.sub_key, None)
         self.assertEquals(ctx.msg_ids, [])
 
-    def test_ack_ctx_custom_attrs(self):
+    def xtest_ack_ctx_custom_attrs(self):
         sub_key = rand_string()
         msg_ids = rand_string(2)
 
@@ -467,12 +501,12 @@ class CtxObjectsTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_reject_ctx_defaults(self):
+    def xtest_reject_ctx_defaults(self):
         ctx = RejectCtx()
         self.assertEquals(ctx.sub_key, None)
         self.assertEquals(ctx.msg_ids, [])
 
-    def test_reject_ctx_custom_attrs(self):
+    def xtest_reject_ctx_custom_attrs(self):
         sub_key = rand_string()
         msg_ids = rand_string(2)
 
@@ -488,7 +522,7 @@ class CtxObjectsTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_client_defaults(self):
+    def xtest_client_defaults(self):
         id, name = rand_int(), rand_string()
         client = Client(id, name)
 
@@ -496,7 +530,7 @@ class CtxObjectsTestCase(TestCase):
         self.assertEquals(client.name, name)
         self.assertEquals(client.is_active, True)
 
-    def test_client_custom_attrs(self):
+    def xtest_client_custom_attrs(self):
         id, name, is_active = rand_int(), rand_string(), rand_bool()
         client = Client(id, name, is_active)
 
@@ -506,7 +540,7 @@ class CtxObjectsTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_consumer_defaults(self):
+    def xtest_consumer_defaults(self):
         id, name = rand_int(), rand_string()
         consumer = Consumer(id, name)
 
@@ -518,7 +552,7 @@ class CtxObjectsTestCase(TestCase):
         self.assertEquals(consumer.delivery_mode, PUB_SUB.DELIVERY_MODE.PULL.id)
         self.assertEquals(consumer.callback, '')
 
-    def test_consumer_custom_attrs(self):
+    def xtest_consumer_custom_attrs(self):
         id = rand_int()
         name = rand_string()
         is_active = rand_bool()
@@ -538,7 +572,7 @@ class CtxObjectsTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_message_defaults(self):
+    def xtest_message_defaults(self):
         msg = self._get_object(Message)
         self.assertEquals(msg.payload, '')
         self.assertEquals(msg.topic, None)
@@ -559,7 +593,7 @@ class CtxObjectsTestCase(TestCase):
         self.assertEquals(msg.expire_at, None)
         self.assertEquals(msg.payload_html, None)
 
-    def test_message_serialization(self):
+    def xtest_message_serialization(self):
         msg_id = rand_string()
         creation_time_utc = rand_date_utc()
         expire_at_utc = rand_date_utc()
