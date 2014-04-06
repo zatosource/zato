@@ -19,7 +19,6 @@ from bunch import Bunch
 from zato.common.broker_message import PUB_SUB_TOPIC
 from zato.common.odb.model import Cluster, PubSubTopic
 from zato.common.odb.query import pubsub_topic_list
-from zato.common.pubsub import Message, PubCtx
 from zato.server.service import AsIs, Int, UTC
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -81,8 +80,8 @@ class Publish(AdminService):
     def handle(self):
         client_id = self.request.input.get('client_id') or self.pubsub.get_default_producer().id
 
-        self.response.payload.msg_id = self.pubsub.publish(client_id, self.request.input.payload, self.request.input.name,
-            self.request.input.mime_type, self.request.input.priority, self.request.input.expiration)
+        self.response.payload.msg_id = self.pubsub.publish(self.request.input.payload, self.request.input.name,
+           self.request.input.mime_type, self.request.input.priority, self.request.input.expiration, client_id=client_id)
 
 # ################################################################################################################################
 

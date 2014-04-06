@@ -17,10 +17,9 @@ from bunch import Bunch
 
 # Zato
 from zato.common.broker_message import PUB_SUB_PRODUCER, PUB_SUB_TOPIC
-from zato.common.odb.model import Cluster, PubSubProducer, PubSubTopic
+from zato.common.odb.model import PubSubProducer, PubSubTopic
 from zato.common.odb.query import pubsub_producer_list
-from zato.common.pubsub import Client
-from zato.server.service import AsIs, Int, UTC
+from zato.server.service import UTC
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################

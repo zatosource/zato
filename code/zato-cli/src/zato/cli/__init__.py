@@ -7,31 +7,25 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json, os, shutil
+import shutil
 from cStringIO import StringIO
 from getpass import getpass, getuser
 from socket import gethostname
 
 # stdlib
-import argparse, glob, json, logging, os, subprocess, sys, tempfile, time
-from contextlib import closing
+import glob, json, logging, os, subprocess, sys, tempfile, time
 from datetime import datetime
-
-# Bunch
-from bunch import Bunch
 
 # Importing
 from peak.util.imports import importString
 
 # SQLAlchemy
 import sqlalchemy
-from sqlalchemy import orm # import sessionmaker
 
 # Zato
 from zato import common
 from zato.cli import util as cli_util
 from zato.common import odb, util
-from zato.common.crypto import CryptoManager
 
 ################################################################################
 
@@ -92,13 +86,13 @@ def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
 
 common_logging_conf_contents = """
 [loggers]
-keys=root, zato, zato_access_log
+keys=root, zato, zato_access_log, zato_pubsub
 
 [handlers]
-keys=rotating_file_handler, rotating_file_handler_access_log, stdout_handler
+keys=rotating_file_handler, rotating_file_handler_access_log, stdout_handler, rotating_file_handler_pubsub
 
 [formatters]
-keys=default_formatter, default_formatter_access_log, colour_formatter
+keys=default_formatter, formatter_access_log, colour_formatter, formatter_pubsub
 
 [logger_root]
 level=INFO
@@ -127,7 +121,7 @@ format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lin
 format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
 class=zato.common.util.ColorFormatter
 
-# ################################################################################################################################
+# ######################################################################################################################
 
 [logger_zato_access_log]
 level=INFO
@@ -137,14 +131,30 @@ propagate=0
 
 [handler_rotating_file_handler_access_log]
 class=logging.handlers.RotatingFileHandler
-formatter=default_formatter_access_log
+formatter=formatter_access_log
 args=('./logs/http_access.log', 'a', 20000000, 10)
 
-[formatter_default_formatter_access_log]
+[formatter_formatter_access_log]
 format=%(remote_ip)s %(cid)s "%(channel_name)s" [%(req_timestamp)s] "%(method)s %(path)s %(http_version)s" %(status_code)s %(response_size)s "-" "%(user_agent)s"
+
+# ######################################################################################################################
+
+[logger_zato_pubsub]
+level=INFO
+handlers=rotating_file_handler_pubsub
+qualname=zato_pubsub
+propagate=0
+
+[handler_rotating_file_handler_pubsub]
+class=logging.handlers.RotatingFileHandler
+formatter=formatter_pubsub
+args=('./logs/pubsub.log', 'a', 20000000, 10)
+
+[formatter_formatter_pubsub]
+format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
 """
 
-################################################################################
+# ######################################################################################################################
 
 def run_command(args):
     command_class = {}

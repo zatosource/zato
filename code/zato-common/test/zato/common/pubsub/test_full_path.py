@@ -13,7 +13,6 @@ from json import loads
 from logging import getLogger
 from operator import attrgetter
 from time import sleep
-from unittest import TestCase
 
 # Arrow
 import arrow
@@ -21,29 +20,15 @@ import arrow
 # Nose
 from nose.tools import eq_
 
-# Redis
-from redis import ConnectionError, Redis
-
 # Zato
 from zato.common import PUB_SUB
 from zato.common.pubsub import AckCtx, Client, Consumer, GetCtx, Message, PubCtx, RedisPubSub, RejectCtx, SubCtx, Topic
 from zato.common.util import new_cid
+from .common import RedisPubSubCommonTestCase
 
 logger = getLogger(__name__)
 
-class RedisPubSubTestCase(TestCase):
-
-    def setUp(self):
-        self.key_prefix = 'zato:pubsub:{}:'.format(new_cid())
-        self.kvdb = Redis()
-
-        try:
-            self.kvdb.ping()
-        except ConnectionError:
-            self.has_redis = False
-        else:
-            self.has_redis = True
-
+class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
 
     def _check_unack_counter(self, ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id,
             msg_crm1_id_counter, msg_crm2_id_counter, msg_billing1_id_counter, msg_billing2_id_counter
@@ -66,7 +51,7 @@ class RedisPubSubTestCase(TestCase):
 
         eq_(sorted(unack_counter.items()), sorted(expected_counters.items()))
 
-    # ############################################################################################################################
+# ######################################################################################################################
 
     def _check_in_flight(self, ps, now, sub_key_crm, sub_key_billing, sub_key_erp, msg_crm1_id, msg_crm2_id,
             msg_billing1_id, msg_billing2_id, crm_needs_billing1_id, crm_needs_billing2_id,
@@ -126,7 +111,7 @@ class RedisPubSubTestCase(TestCase):
         else:
             self.assertNotIn(msg_billing2_id, in_flight_erp_data)
 
-    # ############################################################################################################################
+# ######################################################################################################################
 
     def _check_msg_values_metadata(self, ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id, before_last_acknowledge):
 
@@ -186,7 +171,7 @@ class RedisPubSubTestCase(TestCase):
         eq_(msg_billing2.mime_type, 'text/plain')
         eq_(msg_billing2.expiration, 3600)
 
-    # ############################################################################################################################
+# ######################################################################################################################
 
     def _assert_has_msg_metadata(self, msgs, msg_id, mime_type, priority, expiration):
         for msg in msgs:
@@ -198,12 +183,7 @@ class RedisPubSubTestCase(TestCase):
         else:
             raise Exception('Msg with msg_id `{}` not in `{}`'.format(msg_id, msgs))
 
-    # ############################################################################################################################
-
-
-    def tearDown(self):
-        for key in self.kvdb.keys('{}*'.format(self.key_prefix)):
-            self.kvdb.delete(key)
+# ######################################################################################################################
 
     def test_sub_key_generation(self):
         """ Checks whether a sub_key is generated if none is provided on input during subscribing.
@@ -512,7 +492,7 @@ class RedisPubSubTestCase(TestCase):
         # Messages should still be undelivered hence their unack counters are not touched at this point
         self._check_unack_counter(ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id, 1, 1, 2, 2)
 
-        # ########################################################################################################################
+# ######################################################################################################################
 
         # Messages are fetched, they can be confirmed or rejected now
 
@@ -605,7 +585,7 @@ class RedisPubSubTestCase(TestCase):
         eq_(len(msg_values), 4)
         eq_(sorted(loads(msg_values[msg_billing2_id]).items()), sorted(msg_billing2.to_dict().items()))
 
-    # ############################################################################################################################
+# ######################################################################################################################
 
     def test_delete_from_topic_no_subscribers(self):
         """ Tests deleting of messages from a topic without subscribers.
@@ -663,7 +643,7 @@ class RedisPubSubTestCase(TestCase):
         result = self.kvdb.hgetall(ps.MSG_EXPIRE_AT_KEY)
         eq_({}, result)
 
-    # ############################################################################################################################
+# ######################################################################################################################
 
     def test_delete_from_topic_has_subscribers(self):
         """ Tests deleting of messages from a topic which has subscribers.
@@ -727,7 +707,7 @@ class RedisPubSubTestCase(TestCase):
         eq_(len(result), 1)
         self.assertTrue(msg_id in result)
 
-    # ############################################################################################################################
+# ######################################################################################################################
 
     def test_ack_delete_from(self):
         """ Tests ack and delete on a consumer's queue.
@@ -766,7 +746,7 @@ class RedisPubSubTestCase(TestCase):
         result = self.kvdb.lrange(ps.CONSUMER_MSG_IDS_PREFIX.format(consumer.sub_key), 0, -1)
         eq_(result, [])
 
-    # ############################################################################################################################
+# ######################################################################################################################
 
     def test_get_callback_consumers(self):
         ps = RedisPubSub(self.kvdb, self.key_prefix)
@@ -826,4 +806,4 @@ class RedisPubSubTestCase(TestCase):
         eq_(consumer2.sub_key, sub_key2)
         eq_(consumer2.callback, callback_url2)
 
-    # ############################################################################################################################
+# ######################################################################################################################
