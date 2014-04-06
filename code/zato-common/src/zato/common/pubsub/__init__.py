@@ -388,7 +388,7 @@ class RedisPubSub(PubSub):
         """ Returns a client_id by its matching subscription key or raises ValueError if sub_key could not be found.
         Must be called with self.update_lock held.
         """
-        # Grab the client's ID, if it's a valid subscription key.
+        # Grab the client's ID if it's a valid subscription key.
         if not self.sub_to_cons.get(sub_key):
             msg = 'Invalid sub_key `{}`'.format(sub_key)
             self.logger.warn(msg)
@@ -403,13 +403,6 @@ class RedisPubSub(PubSub):
 
     def run_lua(self, name, keys=[], args=[]):
         return self.lua_programs[name](keys, args)
-
-    # ############################################################################################################################
-
-    def create(self, ctx):
-        """ Creates a new topic to publish messages to.
-        """
-        self.logger.info('Creating topic `%s`', ctx.topic)
 
     # ############################################################################################################################
 
