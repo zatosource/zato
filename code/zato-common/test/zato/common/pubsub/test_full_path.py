@@ -549,9 +549,6 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         # And again, rejections, as with reject_ctx_crm, don't change unack count
         self._check_unack_counter(ps, None, None, msg_billing1_id, msg_billing2_id, 1, 1, 1, 1)
 
-        # Values should be still there because no background job run to clean them up
-        self._check_msg_values_metadata(ps, msg_crm1_id, msg_crm2_id, msg_billing1_id, msg_billing2_id, False)
-
         # Sleep for a moment to make sure enough time passes for messages to expire
         sleep(0.4)
 
@@ -582,7 +579,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         eq_(crm_messages[0],msg_billing2_id)
 
         msg_values = self.kvdb.hgetall(ps.MSG_METADATA_KEY)
-        eq_(len(msg_values), 4)
+        eq_(len(msg_values), 2)
         eq_(sorted(loads(msg_values[msg_billing2_id]).items()), sorted(msg_billing2.to_dict().items()))
 
 # ######################################################################################################################

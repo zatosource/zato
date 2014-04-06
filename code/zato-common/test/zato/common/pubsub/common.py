@@ -32,4 +32,5 @@ class RedisPubSubCommonTestCase(TestCase):
 
     def tearDown(self):
         for key in self.kvdb.keys('{}*'.format(self.key_prefix)):
-            self.kvdb.delete(key)
+            #self.kvdb.delete(key)
+            pass

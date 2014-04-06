@@ -532,8 +532,9 @@ class RedisPubSub(PubSub):
 
         result = self.run_lua(
             self.LUA_ACK_DELETE,
-            keys=[cons_in_flight_ids, cons_in_flight_data, self.UNACK_COUNTER_KEY, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY,
-                  cons_queue],
+            keys=[
+                cons_in_flight_ids, cons_in_flight_data, self.UNACK_COUNTER_KEY, self.MSG_VALUES_KEY, 
+                self.MSG_EXPIRE_AT_KEY, self.MSG_METADATA_KEY, cons_queue],
             args=[int(is_delete)] + ctx.msg_ids) 
 
         self.logger.info(
