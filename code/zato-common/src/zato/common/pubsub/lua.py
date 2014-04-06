@@ -152,7 +152,8 @@ lua_ack_delete = """
     local unack_counter = KEYS[3]
     local msg_values = KEYS[4]
     local msg_expire_at = KEYS[5]
-    local cons_queue = KEYS[6]
+    local msg_metadata_key = KEYS[6]
+    local cons_queue = KEYS[7]
  
     local is_delete = ARGV[1]
     local ids = get_ids(ARGV)
@@ -169,12 +170,12 @@ lua_ack_delete = """
         redis.pcall('hdel', cons_in_flight_data, id)
         unack_id_count = redis.pcall('hincrby', unack_counter, id, -1)
 
-        -- It was the last confirmation we were waiting for so let's  add it to a list of IDs whose messages
-        -- can be safely deleted and delete the key from a hashmap of unack'ed IDs.
+        -- It was the last confirmation we were waiting for so let's delete all traces of the message.
 
         if unack_id_count == 0 then
-            redis.pcall('hdel', msg_values, id)
             redis.pcall('hdel', unack_counter, id)
+            redis.pcall('hdel', msg_values, id)
+            redis.pcall('hdel', msg_metadata_key, id)
             redis.pcall('hdel', msg_expire_at, id)
         end
 

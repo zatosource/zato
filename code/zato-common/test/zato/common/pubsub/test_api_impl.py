@@ -34,6 +34,21 @@ class RedisPubSubAPITestCase(RedisPubSubCommonTestCase):
 
 # ################################################################################################################################
 
+    def _publish_move(self, move=True, **kwargs):
+        payload = rand_string()
+
+        topic = Topic(rand_string())
+        self.api.add_topic(topic)
+
+        producer = Client(rand_int(), rand_string())
+        self.api.add_producer(producer, topic)
+
+        ctx = self.api.publish(payload, topic.name, client_id=producer.id, **kwargs)
+        if move:
+            self.api.impl.move_to_target_queues()
+
+        return payload, topic, producer, ctx
+
     def _check_publish(self, **kwargs):
 
         if kwargs:
@@ -47,16 +62,7 @@ class RedisPubSubAPITestCase(RedisPubSubCommonTestCase):
             expected_expiration = PUB_SUB.DEFAULT_EXPIRATION
             expected_msg_id = None
 
-        payload = rand_string()
-
-        topic = Topic(rand_string())
-        self.api.add_topic(topic)
-
-        producer = Client(rand_int(), rand_string())
-        self.api.add_producer(producer, topic)
-
-        ctx = self.api.publish(payload, topic.name, client_id=producer.id, **kwargs)
-        self.api.impl.move_to_target_queues()
+        payload, topic, producer, ctx = self._publish_move(**kwargs)
 
         now = datetime.utcnow()
 
@@ -133,27 +139,160 @@ class RedisPubSubAPITestCase(RedisPubSubCommonTestCase):
         self.assertEquals(len(msg_values), 1)
         self.assertEquals(payload, msg_values[ctx.msg.msg_id])
 
-        # ########################################################################################################################
-        #
-        # MSG_EXPIRE_AT_KEY
-        #
-        # ########################################################################################################################
-
-        msg_expire_at = self.kvdb.hgetall(self.api.impl.MSG_EXPIRE_AT_KEY)
-        self.assertEquals(len(msg_expire_at), 1)
-        msg_expire_at = parse(msg_expire_at[ctx.msg.msg_id])
-        self.assertTrue(msg_expire_at > now, 'last_seen_producer:`{}` is not greater than now:`{}`'.format(last_seen_producer, now))
-
     def test_publish_defaults(self):
         self._check_publish()
 
-    def xtest_publish_custom_attrs(self):
+    def test_publish_custom_attrs(self):
         self._check_publish(**{
             'mime_type': rand_string(),
             'priority': rand_int(),
             'expiration': rand_int(1000, 2000),
             'msg_id': rand_string(),
         })
+
+# ################################################################################################################################
+
+    def test_subscribe(self):
+        client_id, client_name = rand_int(), rand_string()
+        client = Client(client_id, client_name)
+        topics = rand_string(rand_int())
+
+        sub_key = self.api.subscribe(client.id, topics)
+
+        self.assertEquals(self.api.impl.sub_to_cons[sub_key], client_id)
+        self.assertEquals(self.api.impl.cons_to_sub[client_id], sub_key)
+        self.assertEquals(sorted(self.api.impl.cons_to_topic[client_id]), sorted(topics))
+
+        for topic in topics:
+            self.assertIn(client_id, self.api.impl.topic_to_cons[topic])
+
+# ################################################################################################################################
+
+    def _check_consumer_queue_before_get(self, ctx, sub_key):
+
+        # ########################################################################################################################
+        #
+        # UNACK_COUNTER_KEY
+        #
+        # ########################################################################################################################
+
+        unack_counter = self.kvdb.hgetall(self.api.impl.UNACK_COUNTER_KEY)
+        self.assertEquals(len(unack_counter), 1)
+        self.assertEqual(unack_counter[ctx.msg.msg_id], '1') # One subscriber hence one undelivered message
+
+        # ########################################################################################################################
+        #
+        # CONSUMER_MSG_IDS_PREFIX
+        #
+        # ########################################################################################################################
+
+        consumer_msg_ids = self.kvdb.lrange(self.api.impl.CONSUMER_MSG_IDS_PREFIX.format(sub_key), 0, -1)
+        self.assertEquals(consumer_msg_ids, [ctx.msg.msg_id])
+
+    def _check_get(self, ctx, sub_key, topic, producer, client):
+
+        msg = list(self.api.get(sub_key))[0].to_dict()
+        self.assertEquals(msg['topic'], topic.name)
+        self.assertEquals(msg['priority'], PUB_SUB.DEFAULT_PRIORITY)
+        self.assertEquals(msg['expiration'], PUB_SUB.DEFAULT_EXPIRATION)
+        self.assertEquals(msg['producer'], producer.name)
+        self.assertEquals(msg['msg_id'], ctx.msg.msg_id)
+        self.assertEquals(msg['mime_type'], PUB_SUB.DEFAULT_MIME_TYPE)
+
+        now = datetime.utcnow()
+
+        creation_time_utc = parse(msg['creation_time_utc'])
+        expire_at_utc = parse(msg['expire_at_utc'])
+
+        self.assertTrue(creation_time_utc < now, 'creation_time_utc:`{}` is not less than now:`{}`'.format(creation_time_utc, now))
+        self.assertTrue(expire_at_utc > now, 'creation_time_utc:`{}` is not greater than now:`{}`'.format(expire_at_utc, now))
+
+        # ########################################################################################################################
+        #
+        # LAST_SEEN_CONSUMER_KEY
+        #
+        # ########################################################################################################################
+
+        last_seen_consumer = self.kvdb.hgetall(self.api.impl.LAST_SEEN_CONSUMER_KEY)
+        self.assertEquals(len(last_seen_consumer), 1)
+        last_seen_consumer = parse(last_seen_consumer[str(client.id)])
+        self.assertTrue(last_seen_consumer < now, 'last_seen_consumer:`{}` is not less than now:`{}`'.format(last_seen_consumer, now))
+
+        # ########################################################################################################################
+        #
+        # CONSUMER_IN_FLIGHT_IDS_PREFIX
+        #
+        # ########################################################################################################################
+
+        consumer_id_flight_ids = self.kvdb.smembers(self.api.impl.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key))
+        self.assertEquals(len(consumer_id_flight_ids), 1)
+        self.assertEqual(list(consumer_id_flight_ids), [ctx.msg.msg_id])
+
+        # ########################################################################################################################
+        #
+        # CONSUMER_IN_FLIGHT_DATA_PREFIX
+        #
+        # ########################################################################################################################
+
+        consumer_in_flight_data = self.kvdb.hgetall(self.api.impl.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(sub_key))
+        self.assertEquals(len(consumer_in_flight_data), 1)
+        consumer_in_flight_data = parse(consumer_in_flight_data[ctx.msg.msg_id])
+        self.assertTrue(
+            consumer_in_flight_data < now, 'consumer_in_flight_data:`{}` is not less than now:`{}`'.format(
+                consumer_in_flight_data, now))
+
+        # There should still be one unacknowledged message.
+
+        unack_counter = self.kvdb.hgetall(self.api.impl.UNACK_COUNTER_KEY)
+        self.assertEquals(len(unack_counter), 1)
+        self.assertEqual(unack_counter[ctx.msg.msg_id], '1') # One subscriber hence one undelivered message
+
+    def test_get_reject_acknowledge(self):
+        payload, topic, producer, ctx = self._publish_move(move=False)
+        client_id, client_name = rand_int(), rand_string()
+
+        client = Client(client_id, client_name)
+        sub_key = self.api.subscribe(client.id, topic.name)
+
+        # Moves a message to the consumer's queue
+        self.api.impl.move_to_target_queues()
+        self._check_consumer_queue_before_get(ctx, sub_key)
+
+        # Consumer gets a message which puts it in the in-flight state.
+        self._check_get(ctx, sub_key, topic, producer, client)
+
+        # However, there should be nothing in the consumer's queue.
+        consumer_msg_ids = self.kvdb.lrange(self.api.impl.CONSUMER_MSG_IDS_PREFIX.format(sub_key), 0, -1)
+        self.assertEquals(consumer_msg_ids, [])
+
+        # Consumer rejects the message which puts it back on a queue.
+        self.api.reject(sub_key, ctx.msg.msg_id)
+
+        # After rejection it's as though the message has just been published.
+        self._check_consumer_queue_before_get(ctx, sub_key)
+
+        # Get after rejection works as before.
+        self._check_get(ctx, sub_key, topic, producer, client)
+
+        # Consumer acknowledges a message.
+        self.api.acknowledge(sub_key, ctx.msg.msg_id)
+
+        # This was the only one subscription so now that the message has been delivered
+        # there should be no trace of it in backend.
+        # The only keys left are LAST_PUB_TIME_KEY, LAST_SEEN_CONSUMER_KEY and LAST_SEEN_PRODUCER_KEY - nothing else.
+
+        keys = self.kvdb.keys('{}*'.format(self.key_prefix))
+        self.assertEquals(len(keys), 3)
+
+        now = datetime.utcnow()
+
+        last_pub_time = parse(self.kvdb.hgetall(self.api.impl.LAST_PUB_TIME_KEY)[topic.name])
+        last_seen_consumer = parse(self.kvdb.hgetall(self.api.impl.LAST_SEEN_CONSUMER_KEY)[str(client.id)])
+        last_seen_producer = parse(self.kvdb.hgetall(self.api.impl.LAST_SEEN_PRODUCER_KEY)[str(producer.id)])
+
+        self.assertTrue(last_pub_time < now, 'last_pub_time:`{}` is not less than now:`{}`'.format(last_pub_time, now))
+        self.assertTrue(last_seen_consumer < now, 'last_seen_consumer:`{}` is not less than now:`{}`'.format(last_seen_consumer, now))
+        self.assertTrue(last_seen_producer < now, 'last_seen_producer:`{}` is not less than now:`{}`'.format(last_seen_producer, now))
 
 # ################################################################################################################################
 
