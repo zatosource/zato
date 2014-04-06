@@ -138,13 +138,19 @@ class Service(object):
         self.logger = logging.getLogger(self.get_name())
         self.server = None
         self.broker_client = None
+
         self.pubsub = None
+        """:type: zato.common.pubsub.PubSubAPI"""
+
         self.channel = None
         self.cid = None
         self.outgoing = None
         self.cloud = None
         self.worker_store = None
+
         self.odb = None
+        """:type: zato.server.odb.ODBManager"""
+
         self.data_format = None
         self.transport = None
         self.wsgi_environ = None

@@ -817,7 +817,10 @@ def _pubsub_producer(session, cluster_id, needs_columns=False):
 def pubsub_producer_list(session, cluster_id, topic_name, needs_columns=False):
     """ All pub/sub producers.
     """
-    return _pubsub_producer(session, cluster_id, topic_name)
+    response = _pubsub_producer(session, cluster_id, needs_columns)
+    if topic_name:
+        response = response.filter(PubSubTopic.name==topic_name)
+    return response
 
 # ################################################################################################################################
 
@@ -843,7 +846,10 @@ def _pubsub_consumer(session, cluster_id, needs_columns=False):
 def pubsub_consumer_list(session, cluster_id, topic_name, needs_columns=False):
     """ All pub/sub consumers.
     """
-    return _pubsub_consumer(session, cluster_id, topic_name)
+    response = _pubsub_consumer(session, cluster_id, needs_columns)
+    if topic_name:
+        response = response.filter(PubSubTopic.name==topic_name)
+    return response
 
 # ################################################################################################################################
 

@@ -16,17 +16,13 @@ from json import dumps, loads
 from logging import getLogger
 from sys import maxint
 from traceback import format_exc
-from uuid import uuid4
 import logging
-
-# Bunch
-from bunch import Bunch
 
 # gevent
 from gevent.lock import RLock
 
 # Zato
-from zato.common import PUB_SUB, ZATO_NONE
+from zato.common import PUB_SUB
 from zato.common.pubsub import lua
      
 from zato.common.util import datetime_to_seconds, make_repr, new_cid
@@ -38,16 +34,16 @@ class Topic(object):
         self.name = name
         self.is_active = is_active
         self.is_fifo = is_fifo
-        self.max_depth = 500
+        self.max_depth = max_depth
 
 # ################################################################################################################################
 
 class Message(object):
     """ A published or received message.
     """
-    def __init__(self, payload='', topic=None, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY, \
-                     expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, producer=None, creation_time_utc=None,
-                     expire_at_utc=None, **kwargs):
+    def __init__(self, payload='', topic=None, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY,
+             expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, producer=None, creation_time_utc=None,
+             expire_at_utc=None):
         self.payload = payload
         self.topic = topic
         self.mime_type = mime_type
@@ -109,7 +105,7 @@ class SubCtx(object):
     """ Subscription context - what to subscribe to.
     """
     def __init__(self, client_id=None, topics=None):
-        self.client_id = None
+        self.client_id = client_id
         self.topics = topics or []
 
 # ################################################################################################################################
@@ -231,7 +227,7 @@ class PubSub(object):
         self.sub_to_cons[sub_key] = client_id
         self.cons_to_sub[client_id] = sub_key
 
-        # This consumers's topics
+        # This consumer's topics
         topics = self.cons_to_topic.setdefault(client_id, set())
         topics.add(topic)
 
@@ -569,7 +565,6 @@ class RedisPubSub(PubSub):
         """ Deletes expired messages. For each topic and its subscribers a Lua program is called to find expired
         messages and delete all traces of them.
         """
-
         for consumer in self.cons_to_topic:
             sub_key = self.cons_to_sub[consumer]
             consumer_msg_ids = self.CONSUMER_MSG_IDS_PREFIX.format(sub_key)
@@ -726,6 +721,7 @@ class PubSubAPI(object):
     """
     def __init__(self, impl):
         self.impl = impl
+        """:type: zato.common.pubsub.RedisPubSub"""
 
     def publish(self, payload, topic, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY,
             expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, expire_at=None, client_id=None):
@@ -785,6 +781,9 @@ class PubSubAPI(object):
     # Admin calls below
 
     def add_topic(self, topic):
+        """
+        :type topic: Topic
+        """
         return self.impl.add_topic(topic)
 
     def update_topic(self, topic):
