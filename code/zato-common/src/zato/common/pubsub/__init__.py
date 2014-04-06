@@ -30,7 +30,7 @@ from zato.common.util import datetime_to_seconds, make_repr, new_cid
 # ################################################################################################################################
 
 class Topic(object):
-    def __init__(self, name, is_active=True, is_fifo=True, max_depth=500):
+    def __init__(self, name, is_active=True, is_fifo=PUB_SUB.DEFAULT_IS_FIFO, max_depth=PUB_SUB.DEFAULT_MAX_DEPTH):
         self.name = name
         self.is_active = is_active
         self.is_fifo = is_fifo
@@ -458,6 +458,7 @@ class RedisPubSub(PubSub):
                       self.LAST_SEEN_PRODUCER_KEY],
                     [score, ctx.msg.msg_id, ctx.msg.expire_at_utc.isoformat(), ctx.msg.payload, ctx.msg.to_json(),
                        ctx.topic, datetime.utcnow().isoformat(), ctx.client_id])
+            return ctx
         except Exception, e:
             self.logger.error('Pub error `%s`', format_exc(e))
             raise
@@ -781,9 +782,6 @@ class PubSubAPI(object):
     # Admin calls below
 
     def add_topic(self, topic):
-        """
-        :type topic: Topic
-        """
         return self.impl.add_topic(topic)
 
     def update_topic(self, topic):

@@ -367,7 +367,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         pub_ctx_msg_crm1.topic = topic_cust_new.name
         pub_ctx_msg_crm1.msg = Message(msg_crm1_value, mime_type='text/xml', priority=1, expiration=0.1)
 
-        msg_crm1_id = ps.publish(pub_ctx_msg_crm1)
+        msg_crm1_id = ps.publish(pub_ctx_msg_crm1).msg.msg_id
 
         # CRM publishes Msg-CRM2 to /cust/new
         pub_ctx_msg_crm2 = PubCtx()
@@ -375,7 +375,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         pub_ctx_msg_crm2.topic = topic_cust_update.name
         pub_ctx_msg_crm2.msg = Message(msg_crm2_value,  mime_type='application/json', priority=2, expiration=0.2)
 
-        msg_crm2_id = ps.publish(pub_ctx_msg_crm2)
+        msg_crm2_id = ps.publish(pub_ctx_msg_crm2).msg.msg_id
 
         # Billing publishes Msg-Billing1 to /adsl/new
         pub_ctx_msg_billing1 = PubCtx()
@@ -383,7 +383,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         pub_ctx_msg_billing1.topic = topic_adsl_new.name
         pub_ctx_msg_billing1.msg = Message(msg_billing1_value,  mime_type='application/soap+xml', priority=3, expiration=0.3)
 
-        msg_billing1_id = ps.publish(pub_ctx_msg_billing1)
+        msg_billing1_id = ps.publish(pub_ctx_msg_billing1).msg.msg_id
 
         # Billing publishes Msg-Billing2 to /adsl/update
         pub_ctx_msg_billing2 = PubCtx()
@@ -394,7 +394,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         msg_billing2 = Message(msg_billing2_value, expiration=3600)
         pub_ctx_msg_billing2.msg = msg_billing2
 
-        msg_billing2_id = ps.publish(pub_ctx_msg_billing2)
+        msg_billing2_id = ps.publish(pub_ctx_msg_billing2).msg.msg_id
 
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
         eq_(len(keys), 9)
@@ -605,7 +605,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         pub_ctx.topic = topic.name
         pub_ctx.msg = Message(msg_value)
 
-        msg_id = ps.publish(pub_ctx)
+        msg_id = ps.publish(pub_ctx).msg.msg_id
 
         # We've got a msg_id now and we know this is a topic with no subsribers. In that case, deleting a messages should
         # also delete all the metadata related to it along with its payload.
@@ -666,7 +666,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         pub_ctx.topic = topic.name
         pub_ctx.msg = Message(msg_value)
 
-        msg_id = ps.publish(pub_ctx)
+        msg_id = ps.publish(pub_ctx).msg.msg_id
 
         # We've got a msg_id now and we know this is a topic which has a subscriber so deleting a message from the topic
         # should not delete it from any other place because the consumer may still hold onto it.
@@ -732,7 +732,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         pub_ctx.topic = topic.name
         pub_ctx.msg = Message(msg_value)
 
-        msg_id = ps.publish(pub_ctx)
+        msg_id = ps.publish(pub_ctx).msg.msg_id
         ps.move_to_target_queues()
 
         # A message has been published and move to a consumer's queue so let's confirm the fact first.
