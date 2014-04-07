@@ -240,11 +240,14 @@ class ServiceInvokeResponse(JSONSIOResponse):
                     # Not a JSON response
                     self.data = self.inner_service_response
                 else:
-                    data_keys = data.keys()
-                    if len(data_keys) == 1:
-                        data_key = data_keys[0]
-                        if isinstance(data_key, basestring) and data_key.startswith('zato'):
-                            self.data = data[data_key]
+                    if isinstance(data, dict):
+                        data_keys = data.keys()
+                        if len(data_keys) == 1:
+                            data_key = data_keys[0]
+                            if isinstance(data_key, basestring) and data_key.startswith('zato'):
+                                self.data = data[data_key]
+                            else:
+                                self.data = data
                         else:
                             self.data = data
                     else:
