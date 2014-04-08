@@ -29,6 +29,12 @@ from zato.common.util import datetime_to_seconds, make_repr, new_cid
 
 # ################################################################################################################################
 
+class PubSubException(Exception):
+    """ Raised when an attempt is made to make use of pub/sub from an invalid client.
+    """
+
+# ################################################################################################################################
+
 class Topic(object):
     def __init__(self, name, is_active=True, is_fifo=PUB_SUB.DEFAULT_IS_FIFO, max_depth=PUB_SUB.DEFAULT_MAX_DEPTH):
         self.name = name
@@ -385,14 +391,14 @@ class RedisPubSub(PubSub):
     # ############################################################################################################################
 
     def validate_sub_key(self, sub_key):
-        """ Returns a client_id by its matching subscription key or raises ValueError if sub_key could not be found.
+        """ Returns a client_id by its matching subscription key or raises PubSubException if sub_key could not be found.
         Must be called with self.update_lock held.
         """
         # Grab the client's ID if it's a valid subscription key.
         if not self.sub_to_cons.get(sub_key):
             msg = 'Invalid sub_key `{}`'.format(sub_key)
             self.logger.warn(msg)
-            raise ValueError(msg)
+            raise PubSubException(msg)
 
         return True
 
@@ -407,7 +413,7 @@ class RedisPubSub(PubSub):
     # ############################################################################################################################
 
     def _raise_cant_publish_error(self, ctx):
-        raise ValueError("Permision denied. Can't publish to `{}`".format(ctx.topic))
+        raise PubSubException("Permision denied. Can't publish to `{}`".format(ctx.topic))
 
     def publish(self, ctx):
         """ Publishes a message on a selected topic.
@@ -482,10 +488,8 @@ class RedisPubSub(PubSub):
         with self.in_flight_lock:
             with self.update_lock:
 
-                print(222222)
                 # Ignoring the result, we just check if this sub_key is valid
                 self.validate_sub_key(ctx.sub_key)
-                print(333333)
 
                 # Now that the client is known to be a valid one we can get all their messages
                 cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
@@ -753,7 +757,6 @@ class PubSubAPI(object):
             get_format=PUB_SUB.GET_FORMAT.DEFAULT.id):
         """ Gets one or more message, if any are available, for the given subscription key.
         """
-        print(9090)
         return self.impl.get(GetCtx(sub_key, max_batch_size, is_fifo, get_format))
 
     def acknowledge(self, sub_key, msg_ids):
