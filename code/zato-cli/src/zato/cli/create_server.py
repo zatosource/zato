@@ -135,6 +135,10 @@ flush_at_shutdown=True
 url_path=/zato-profiler
 unwind=False
 
+[custom_config]
+# All paths are either absolute or relative to the directory server.conf is in
+user=./user.conf
+
 """.encode('utf-8')
 
 service_sources_contents = """# Visit https://zato.io/docs for more information.
@@ -150,6 +154,12 @@ service_sources_contents = """# Visit https://zato.io/docs for more information.
 ./work/hot-deploy/current
 
 # Visit https://zato.io/docs for more information."""
+
+user_conf_contents = """[sample_section]
+string_key=sample_string
+list_key=sample,list
+
+"""
 
 default_odb_pool_size = 1
 
@@ -269,7 +279,12 @@ class Create(ZatoCommand):
                     initial_server_name=args.server_name,
                 ))
             server_conf.close()
-            
+
+            user_conf_loc = os.path.join(self.target_dir, 'config/repo/user.conf')
+            user_conf = open(user_conf_loc, 'w')
+            user_conf.write(user_conf_contents)
+            user_conf.close()
+
             if show_output:
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
             
