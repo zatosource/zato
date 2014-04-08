@@ -275,16 +275,17 @@ class WorkerStore(BrokerMessageReceiver):
         for topic_name, topic_data in self.worker_config.pubsub.topics.items():
             self._add_pubsub_topic(topic_data.config)
 
-        for key, value in self.worker_config.pubsub.producers.items():
-            self.pubsub.add_producer(
-                Client(value.config.client_id, value.config.name, value.config.is_active), Topic(value.config.topic_name))
-    
-        for key, value in self.worker_config.pubsub.consumers.items():
-            config = value.config
-            self.pubsub.add_consumer(
-                Consumer(config.client_id, config.name, config.is_active, config.sub_key, config.max_backlog,
-                         config.delivery_mode, config.callback),
-                Topic(config.topic_name))
+        for list_value in self.worker_config.pubsub.producers.values():
+            for config in list_value:
+                self.pubsub.add_producer(Client(config.client_id, config.name, config.is_active), Topic(config.topic_name))
+
+        for list_value in self.worker_config.pubsub.consumers.values():
+            for config in list_value:
+                self.pubsub.add_consumer(
+                    Consumer(
+                        config.client_id, config.name, config.is_active, config.sub_key, config.max_backlog,
+                        config.delivery_mode, config.callback),
+                    Topic(config.topic_name))
 
 # ######################################################################################################################
 

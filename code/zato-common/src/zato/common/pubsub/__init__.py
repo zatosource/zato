@@ -457,13 +457,12 @@ class RedisPubSub(PubSub):
                       self.LAST_SEEN_PRODUCER_KEY],
                     [score, ctx.msg.msg_id, ctx.msg.expire_at_utc.isoformat(), ctx.msg.payload, ctx.msg.to_json(),
                        ctx.topic, datetime.utcnow().isoformat(), ctx.client_id])
-            return ctx
         except Exception, e:
             self.logger.error('Pub error `%s`', format_exc(e))
             raise
         else:
             self.logger.info('Published: `%s` to `%s, exp:`%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
-            return ctx.msg.msg_id
+            return ctx
 
     # ############################################################################################################################
 
