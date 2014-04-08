@@ -80,8 +80,9 @@ class Publish(AdminService):
     def handle(self):
         client_id = self.request.input.get('client_id') or self.pubsub.get_default_producer().id
 
-        self.response.payload.msg_id = self.pubsub.publish(self.request.input.payload, self.request.input.name,
-           self.request.input.mime_type, self.request.input.priority, self.request.input.expiration, client_id=client_id)
+        self.response.payload.msg_id = self.pubsub.publish(
+            self.request.input.payload, self.request.input.name, self.request.input.mime_type, self.request.input.priority,
+            self.request.input.expiration, client_id=client_id).msg.msg_id
 
 # ################################################################################################################################
 
