@@ -125,7 +125,7 @@ def run(base_dir, start_gunicorn_app=True):
     parallel_server.repo_location = repo_location
     parallel_server.base_dir = base_dir
     parallel_server.fs_server_config = config
-    parallel_server.user_config.update(config.custom_config_items)
+    parallel_server.user_config.update(config.user_config_items)
     parallel_server.startup_jobs = app_context.get_object('startup_jobs')
     parallel_server.app_context = app_context
 

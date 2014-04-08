@@ -135,7 +135,7 @@ flush_at_shutdown=True
 url_path=/zato-profiler
 unwind=False
 
-[custom_config]
+[user_config]
 # All paths are either absolute or relative to the directory server.conf is in
 user=./user.conf
 
