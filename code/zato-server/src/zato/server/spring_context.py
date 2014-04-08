@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Bunch
+from bunch import Bunch
+
 # Spring Python
 from springpython.config import Object, PythonConfig
 
@@ -175,6 +178,7 @@ class ZatoContext(PythonConfig):
         server.internal_service_modules = self.internal_service_modules()
         server.service_modules = self.service_modules()
         server.kvdb = self.kvdb()
+        server.user_config = Bunch()
 
         return server
 
