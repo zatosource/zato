@@ -309,12 +309,12 @@ def get_config(repo_location, config_name, bunchified=True):
     """
     conf = ConfigObj(os.path.join(repo_location, config_name))
     conf = bunchify(conf) if bunchified else conf
-    conf.custom_config_items = {}
+    conf.user_config_items = {}
 
-    # custom_config is new in 1.2
-    custom_config = conf.get('custom_config')
-    if custom_config:
-        for name, path in custom_config.items():
+    # user_config is new in 1.2
+    user_config = conf.get('user_config')
+    if user_config:
+        for name, path in user_config.items():
             if not isabs(path):
                 path = os.path.expanduser(path)
             if not isabs(path):
@@ -322,9 +322,9 @@ def get_config(repo_location, config_name, bunchified=True):
             if not os.path.exists(path):
                 logger.warn('User config not found `%s`, name:`%s`', path, name)
             else:
-                custom_conf = ConfigObj(path)
-                custom_conf = bunchify(custom_conf) if bunchified else custom_conf
-                conf.custom_config_items[name] = custom_conf
+                user_conf = ConfigObj(path)
+                user_conf = bunchify(user_conf) if bunchified else user_conf
+                conf.user_config_items[name] = user_conf
 
     return conf
 
