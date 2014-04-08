@@ -304,10 +304,29 @@ def new_cid():
     return 'K{0:0>27}'.format(b32_crockford_encode(getrandbits(128)))
 
 def get_config(repo_location, config_name, bunchified=True):
-    """ Returns the configuration object.
+    """ Returns the configuration object. Will load additional user-defined config files,
+    if any are available at all.
     """
     conf = ConfigObj(os.path.join(repo_location, config_name))
-    return bunchify(conf) if bunchified else conf
+    conf = bunchify(conf) if bunchified else conf
+    conf.custom_config_items = {}
+
+    # custom_config is new in 1.2
+    custom_config = conf.get('custom_config')
+    if custom_config:
+        for name, path in custom_config.items():
+            if not isabs(path):
+                path = os.path.expanduser(path)
+            if not isabs(path):
+                path = os.path.normpath(os.path.join(repo_location, path))
+            if not os.path.exists(path):
+                logger.warn('User config not found `%s`, name:`%s`', path, name)
+            else:
+                custom_conf = ConfigObj(path)
+                custom_conf = bunchify(custom_conf) if bunchified else custom_conf
+                conf.custom_config_items[name] = custom_conf
+
+    return conf
 
 def _get_ioc_config(location, config_class):
     """ Instantiates an Inversion of Control container from the given location

@@ -170,6 +170,7 @@ class Service(object):
         self.time = TimeUtil(None)
         self.from_passthrough = False
         self.passthrough_request = None
+        self.user_config = None
 
     @classmethod
     def get_name(class_):
@@ -619,6 +620,7 @@ class Service(object):
         service.job_type = job_type
         service.translate = server.kvdb.translate
         service.delivery_store = server.delivery_store
+        service.user_config = server.user_config
 
         if channel_params:
             service.request.channel_params.update(channel_params)
