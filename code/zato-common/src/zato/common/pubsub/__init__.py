@@ -380,7 +380,7 @@ class RedisPubSub(PubSub):
     def ping(self):
         """ Pings the pub/sub backend.
         """
-        self.kvdb.ping()
+        return self.kvdb.ping()
 
     # ############################################################################################################################
 
@@ -482,8 +482,10 @@ class RedisPubSub(PubSub):
         with self.in_flight_lock:
             with self.update_lock:
 
+                print(222222)
                 # Ignoring the result, we just check if this sub_key is valid
                 self.validate_sub_key(ctx.sub_key)
+                print(333333)
 
                 # Now that the client is known to be a valid one we can get all their messages
                 cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
@@ -751,6 +753,7 @@ class PubSubAPI(object):
             get_format=PUB_SUB.GET_FORMAT.DEFAULT.id):
         """ Gets one or more message, if any are available, for the given subscription key.
         """
+        print(9090)
         return self.impl.get(GetCtx(sub_key, max_batch_size, is_fifo, get_format))
 
     def acknowledge(self, sub_key, msg_ids):
