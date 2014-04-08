@@ -127,6 +127,7 @@ class FakeServer(object):
         self.fs_server_config.misc.internal_services_may_be_deleted = False
         self.repo_location = rand_string()
         self.delivery_store = None
+        self.user_config = Bunch()
 
 class ForceTypeWrapper(object):
     """ Makes comparison between two ForceType elements use their names.
