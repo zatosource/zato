@@ -16,38 +16,47 @@ from json import dumps, loads
 from logging import getLogger
 from sys import maxint
 from traceback import format_exc
-from uuid import uuid4
 import logging
-
-# Bunch
-from bunch import Bunch
 
 # gevent
 from gevent.lock import RLock
 
 # Zato
-from zato.common import PUB_SUB, ZATO_NONE
+from zato.common import PUB_SUB
 from zato.common.pubsub import lua
+from zato.common.util import make_repr
      
 from zato.common.util import datetime_to_seconds, make_repr, new_cid
 
 # ################################################################################################################################
 
-class Topic(object):
-    def __init__(self, name, is_active=True, is_fifo=True, max_depth=500):
+class HasAutoRepr(object):
+    def __repr__(self):
+        return make_repr(self)
+
+# ################################################################################################################################
+
+class PubSubException(Exception):
+    """ Raised when an attempt is made to make use of pub/sub from an invalid client.
+    """
+
+# ################################################################################################################################
+
+class Topic(HasAutoRepr):
+    def __init__(self, name, is_active=True, is_fifo=PUB_SUB.DEFAULT_IS_FIFO, max_depth=PUB_SUB.DEFAULT_MAX_DEPTH):
         self.name = name
         self.is_active = is_active
         self.is_fifo = is_fifo
-        self.max_depth = 500
+        self.max_depth = max_depth
 
 # ################################################################################################################################
 
 class Message(object):
     """ A published or received message.
     """
-    def __init__(self, payload='', topic=None, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY, \
-                     expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, producer=None, creation_time_utc=None,
-                     expire_at_utc=None, **kwargs):
+    def __init__(self, payload='', topic=None, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY,
+             expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, producer=None, creation_time_utc=None,
+             expire_at_utc=None):
         self.payload = payload
         self.topic = topic
         self.mime_type = mime_type
@@ -95,7 +104,7 @@ class Message(object):
 
 # ################################################################################################################################
 
-class PubCtx(object):
+class PubCtx(HasAutoRepr):
     """ A set of data describing what to publish.
     """
     def __init__(self, client_id=None, topic=None, msg=None):
@@ -105,16 +114,16 @@ class PubCtx(object):
 
 # ################################################################################################################################
 
-class SubCtx(object):
+class SubCtx(HasAutoRepr):
     """ Subscription context - what to subscribe to.
     """
     def __init__(self, client_id=None, topics=None):
-        self.client_id = None
+        self.client_id = client_id
         self.topics = topics or []
 
 # ################################################################################################################################
 
-class GetCtx(object):
+class GetCtx(HasAutoRepr):
     """ A set of data describing where to fetch messages from.
     """
     def __init__(self, sub_key=None, max_batch_size=PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE, is_fifo=PUB_SUB.DEFAULT_IS_FIFO,
@@ -126,7 +135,7 @@ class GetCtx(object):
 
 # ################################################################################################################################
 
-class AckCtx(object):
+class AckCtx(HasAutoRepr):
     """ A set of data describing an acknowledge_delete of a message fetched.
     """
     def __init__(self, sub_key=None, msg_ids=None):
@@ -141,7 +150,7 @@ class AckCtx(object):
 
 # ################################################################################################################################
 
-class RejectCtx(object):
+class RejectCtx(HasAutoRepr):
     """ A set of data describing a rejection of one or more messages.
     """
     def __init__(self, sub_key=None, msg_ids=None):
@@ -153,7 +162,7 @@ class RejectCtx(object):
 
 # ################################################################################################################################
 
-class Client(object):
+class Client(HasAutoRepr):
     """ Either a subscriber or publisher.
     """
     def __init__(self, id, name, is_active=True):
@@ -171,9 +180,6 @@ class Consumer(Client):
         self.max_backlog = max_backlog
         self.delivery_mode = delivery_mode
         self.callback = callback
-
-    def __repr__(self):
-        return make_repr(self)
 
 # ################################################################################################################################
 
@@ -204,11 +210,11 @@ class PubSub(object):
 
         # Consumers and topics
         self.cons_to_topic = {} # String to set, key = client_id, value = topics it's subscribed to
-        self.topic_to_cons = {} # String to set, key = topic, value = clients subscribed to it
+        self.topic_to_cons = {} # String to set, key = topic, value = client_ids subscribed to it
 
         # Producers and topics
         self.prod_to_topic = {} # String to set, key = client_id, value = topics it can publish to
-        self.topic_to_prod = {} # String to set, key = topic, value = clients allowed to publish to it
+        self.topic_to_prod = {} # String to set, key = topic, value = client_ids allowed to publish to it
 
         # Used by internal services
         self.default_consumer = Client(None, None)
@@ -217,10 +223,32 @@ class PubSub(object):
     # ############################################################################################################################
 
     def add_topic(self, topic):
+        """ Adds a topic, with no clients attached.
+        """
         with self.update_lock:
             self.topics[topic.name] = topic
+            self.logger.info('Added topic `%s`', topic)
 
     update_topic = add_topic
+
+    # ############################################################################################################################
+
+    def delete_topic(self, topic):
+        """ Deletes a topic and any consumers or producers assigned to it.
+        """
+        with self.update_lock:
+            deleted = self.topics[topic.name]
+
+            consumers = self.topic_to_cons.get(topic.name, [])
+            producers = self.topic_to_prod.get(topic.name, [])
+
+            for consumer_id in list(consumers):
+                self.delete_consumer(self.consumers[consumer_id], topic)
+
+            for producer_id in list(producers):
+                self.delete_producer(self.producers[producer_id], topic)
+
+            self.logger.info('Deleted topic `%s`', deleted)
 
     # ############################################################################################################################
 
@@ -231,7 +259,7 @@ class PubSub(object):
         self.sub_to_cons[sub_key] = client_id
         self.cons_to_sub[client_id] = sub_key
 
-        # This consumers's topics
+        # This consumer's topics
         topics = self.cons_to_topic.setdefault(client_id, set())
         topics.add(topic)
 
@@ -247,13 +275,18 @@ class PubSub(object):
         """ Adds information that this client can publish to the topic. 
         """
         with self.update_lock:
+
+            # Topics for this producer
             topics = self.prod_to_topic.setdefault(client.id, set())
             topics.add(topic.name)
 
+            # Producers for this topic
             producers = self.topic_to_prod.setdefault(topic.name, set())
             producers.add(client.id)
 
             self.producers[client.id] = client
+
+            self.logger.info('Added producer `%s` for topic:`%s`', client, topic)
 
     def update_producer(self, client, topic):
         """ Updates a producer.
@@ -261,18 +294,24 @@ class PubSub(object):
         # Currently we can only switch is_active flag on/off
         with self.update_lock:
             self.producers[client.id].is_active = client.is_active
+            self.logger.info('Updated producer `%s` for topic:`%s`', client, topic)
 
     def delete_producer(self, client, topic):
         """ Deletes an association between a producer and a topic.
         """
         with self.update_lock:
+
+            # Topics for this producer
             topics = self.prod_to_topic.setdefault(client.id, set())
             topics.remove(topic.name)
 
+            # Producers for this topic
             producers = self.topic_to_prod.setdefault(topic.name, set())
             producers.remove(client.id)
 
             del self.producers[client.id]
+
+            self.logger.info('Deleted producer `%s` for topic:`%s`', client, topic)
 
     # ############################################################################################################################
 
@@ -291,6 +330,8 @@ class PubSub(object):
             self.sub_to_cons[client.sub_key] = client.id
             self.cons_to_sub[client.id] = client.sub_key
 
+            self.logger.info('Added consumer `%s` for topic:`%s`', client, topic)
+
     def update_consumer(self, client, topic):
         """ Updates a consumer.
         """
@@ -300,6 +341,8 @@ class PubSub(object):
             self.consumers[client.id].delivery_mode = client.delivery_mode
             self.consumers[client.id].callback = client.callback
 
+            self.logger.info('Updated consumer `%s` for topic:`%s`', client, topic)
+
     def delete_consumer(self, client, topic):
         """ Deletes an association between a consumer and a topic.
         """
@@ -307,18 +350,19 @@ class PubSub(object):
             topics = self.cons_to_topic.setdefault(client.id, set())
             topics.remove(topic.name)
 
-            consumers = self.topic_to_cons.setdefault(topic.name, set())
-            consumers.remove(client.id)
+            self.topic_to_cons[topic.name].remove(client.id)
 
             # That was the last consumer for this topic so let's delete the topic from this dict
             # so other parts of the code can assume that if a topic doesn't exist in it, it means there is no consumer
             # for the given topic name.
-            if not consumers:
+            if not self.topic_to_cons[topic.name]:
                 del self.topic_to_cons[topic.name]
 
             del self.consumers[client.id]
             del self.sub_to_cons[client.sub_key]
             del self.cons_to_sub[client.id]
+
+            self.logger.info('Deleted consumer `%s` for topic:`%s`', client, topic)
 
     # ############################################################################################################################
 
@@ -384,19 +428,19 @@ class RedisPubSub(PubSub):
     def ping(self):
         """ Pings the pub/sub backend.
         """
-        self.kvdb.ping()
+        return self.kvdb.ping()
 
     # ############################################################################################################################
 
     def validate_sub_key(self, sub_key):
-        """ Returns a client_id by its matching subscription key or raises ValueError if sub_key could not be found.
+        """ Returns a client_id by its matching subscription key or raises PubSubException if sub_key could not be found.
         Must be called with self.update_lock held.
         """
-        # Grab the client's ID, if it's a valid subscription key.
+        # Grab the client's ID if it's a valid subscription key.
         if not self.sub_to_cons.get(sub_key):
             msg = 'Invalid sub_key `{}`'.format(sub_key)
             self.logger.warn(msg)
-            raise ValueError(msg)
+            raise PubSubException(msg)
 
         return True
 
@@ -410,15 +454,8 @@ class RedisPubSub(PubSub):
 
     # ############################################################################################################################
 
-    def create(self, ctx):
-        """ Creates a new topic to publish messages to.
-        """
-        self.logger.info('Creating topic `%s`', ctx.topic)
-
-    # ############################################################################################################################
-
     def _raise_cant_publish_error(self, ctx):
-        raise ValueError("Permision denied. Can't publish to `{}`".format(ctx.topic))
+        raise PubSubException("Permision denied. Can't publish to `{}`".format(ctx.topic))
 
     def publish(self, ctx):
         """ Publishes a message on a selected topic.
@@ -467,7 +504,7 @@ class RedisPubSub(PubSub):
             raise
         else:
             self.logger.info('Published: `%s` to `%s, exp:`%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
-            return ctx.msg.msg_id
+            return ctx
 
     # ############################################################################################################################
 
@@ -535,8 +572,9 @@ class RedisPubSub(PubSub):
 
         result = self.run_lua(
             self.LUA_ACK_DELETE,
-            keys=[cons_in_flight_ids, cons_in_flight_data, self.UNACK_COUNTER_KEY, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY,
-                  cons_queue],
+            keys=[
+                cons_in_flight_ids, cons_in_flight_data, self.UNACK_COUNTER_KEY, self.MSG_VALUES_KEY, 
+                self.MSG_EXPIRE_AT_KEY, self.MSG_METADATA_KEY, cons_queue],
             args=[int(is_delete)] + ctx.msg_ids) 
 
         self.logger.info(
@@ -569,7 +607,6 @@ class RedisPubSub(PubSub):
         """ Deletes expired messages. For each topic and its subscribers a Lua program is called to find expired
         messages and delete all traces of them.
         """
-
         for consumer in self.cons_to_topic:
             sub_key = self.cons_to_sub[consumer]
             consumer_msg_ids = self.CONSUMER_MSG_IDS_PREFIX.format(sub_key)
@@ -610,16 +647,15 @@ class RedisPubSub(PubSub):
                 args.append(maxint)
 
                 consumers = self.topic_to_cons.get(topic, [])
-                if consumers:
-                    for consumer in consumers:
-                        sub_key = self.cons_to_sub[consumer]
-                        self.logger.debug('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
+                for consumer in consumers:
+                    sub_key = self.cons_to_sub[consumer]
+                    self.logger.debug('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
 
-                        keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
+                    keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
 
-                    move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
-                    if move_result:
-                        self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
+                move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
+                if move_result:
+                    self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
 
 # ################################################################################################################################
 
@@ -726,6 +762,7 @@ class PubSubAPI(object):
     """
     def __init__(self, impl):
         self.impl = impl
+        """:type: zato.common.pubsub.RedisPubSub"""
 
     def publish(self, payload, topic, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY,
             expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, expire_at=None, client_id=None):
@@ -789,6 +826,12 @@ class PubSubAPI(object):
 
     def update_topic(self, topic):
         return self.impl.update_topic(topic)
+
+    def delete_topic(self, topic):
+        return self.impl.delete_topic(topic)
+
+    def delete_consumer(self, consumer, topic):
+        return self.impl.delete_consumer(consumer, topic)
 
     def add_producer(self, producer, topic):
         return self.impl.add_producer(producer, topic)

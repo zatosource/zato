@@ -636,19 +636,19 @@ class ODBManager(SessionWrapper):
 
         if not result:
             logger.warn('Could not find `%s` account', name)
-            return (None, 'Warn: Missing `%s` account'.format(name))
+            return None, 'Warn: Missing `%s` account'.format(name)
         else:
             return result.id, result.name
 
     def get_pubsub_producer_list(self, cluster_id, needs_columns=False):
         """ Returns a list of pub/sub producers defined on a cluster.
         """
-        return query.pubsub_producer_list(self._session, cluster_id, needs_columns)
+        return query.pubsub_producer_list(self._session, cluster_id, None,needs_columns)
 
     def get_pubsub_consumer_list(self, cluster_id, needs_columns=False):
         """ Returns a list of pub/sub consumers defined on a cluster.
         """
-        return query.pubsub_consumer_list(self._session, cluster_id, needs_columns)
+        return query.pubsub_consumer_list(self._session, cluster_id, None, needs_columns)
 
 # ################################################################################################################################
 

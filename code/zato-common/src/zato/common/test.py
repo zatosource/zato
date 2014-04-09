@@ -47,11 +47,17 @@ def rand_int(start=1, stop=100):
 def rand_float(start=1.0, stop=100.0):
     return random((start, stop))
 
-def rand_string():
-    return 'a' + uuid4().hex
+def rand_string(count=1):
+    if count == 1:
+        return 'a' + uuid4().hex
+    else:
+        return ['a' + uuid4().hex for x in range(count)]
 
 def rand_object():
     return object()
+
+def rand_date_utc():
+    return datetime.utcnow() # Now is as random as any other date
 
 class Expected(object):
     """ A container for the data a test expects the service to return.
@@ -121,6 +127,7 @@ class FakeServer(object):
         self.fs_server_config.misc.internal_services_may_be_deleted = False
         self.repo_location = rand_string()
         self.delivery_store = None
+        self.user_config = Bunch()
 
 class ForceTypeWrapper(object):
     """ Makes comparison between two ForceType elements use their names.
