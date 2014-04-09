@@ -302,12 +302,20 @@ class PubSub(object):
         with self.update_lock:
 
             # Topics for this producer
-            topics = self.prod_to_topic.setdefault(client.id, set())
+            topics = self.prod_to_topic.pop(client.id, set())
             topics.remove(topic.name)
 
             # Producers for this topic
-            producers = self.topic_to_prod.setdefault(topic.name, set())
+            producers = self.topic_to_prod.get(topic.name, set())
             producers.remove(client.id)
+
+            # That was the last producer for this topic so let's delete the topic from this dict
+            # so other parts of the code can assume that if a topic doesn't exist in it, it means there is no producer
+            # for the given topic name.
+            if not self.topic_to_prod[topic.name]:
+                del self.topic_to_prod[topic.name]
+
+            self.logger.warn('44444 %r', self.topic_to_prod)
 
             del self.producers[client.id]
 
@@ -347,10 +355,11 @@ class PubSub(object):
         """ Deletes an association between a consumer and a topic.
         """
         with self.update_lock:
-            topics = self.cons_to_topic.setdefault(client.id, set())
+            topics = self.cons_to_topic.pop(client.id, set())
             topics.remove(topic.name)
 
-            self.topic_to_cons[topic.name].remove(client.id)
+            consumers = self.topic_to_cons.get(topic.name, set())
+            consumers.remove(client.id)
 
             # That was the last consumer for this topic so let's delete the topic from this dict
             # so other parts of the code can assume that if a topic doesn't exist in it, it means there is no consumer
@@ -436,13 +445,14 @@ class RedisPubSub(PubSub):
         """ Returns a client_id by its matching subscription key or raises PubSubException if sub_key could not be found.
         Must be called with self.update_lock held.
         """
-        # Grab the client's ID if it's a valid subscription key.
-        if not self.sub_to_cons.get(sub_key):
-            msg = 'Invalid sub_key `{}`'.format(sub_key)
-            self.logger.warn(msg)
-            raise PubSubException(msg)
+        with self.update_lock:
+            # Grab the client's ID if it's a valid subscription key.
+            if not self.sub_to_cons.get(sub_key):
+                msg = 'Invalid sub_key `{}`'.format(sub_key)
+                self.logger.warn(msg)
+                raise PubSubException(msg)
 
-        return True
+            return True
 
     # ############################################################################################################################
 
@@ -607,18 +617,19 @@ class RedisPubSub(PubSub):
         """ Deletes expired messages. For each topic and its subscribers a Lua program is called to find expired
         messages and delete all traces of them.
         """
-        for consumer in self.cons_to_topic:
-            sub_key = self.cons_to_sub[consumer]
-            consumer_msg_ids = self.CONSUMER_MSG_IDS_PREFIX.format(sub_key)
-            consumer_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key)
+        with self.update_lock:
+            for consumer in self.cons_to_topic:
+                sub_key = self.cons_to_sub[consumer]
+                consumer_msg_ids = self.CONSUMER_MSG_IDS_PREFIX.format(sub_key)
+                consumer_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key)
 
-            keys = [consumer_msg_ids, consumer_in_flight_ids, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY, 
-                    self.UNACK_COUNTER_KEY]
-            expired = self.run_lua(self.LUA_DELETE_EXPIRED, keys=keys, args=[datetime.utcnow().isoformat()]) 
+                keys = [consumer_msg_ids, consumer_in_flight_ids, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY, 
+                        self.UNACK_COUNTER_KEY]
+                expired = self.run_lua(self.LUA_DELETE_EXPIRED, keys=keys, args=[datetime.utcnow().isoformat()]) 
 
-            self.logger.info('Delete expired `%r` for keys `%s`', expired, keys)
+                self.logger.info('Delete expired `%r` for keys `%s`', expired, keys)
 
-            return expired
+                return expired
 
 # ############################################################################################################################
 
