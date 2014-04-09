@@ -35,65 +35,65 @@ class ConfigDict(object):
     """
     def __init__(self, name, _bunch=None):
         self.name = name
-        self._bunch = _bunch
+        self._impl = _bunch
         self.lock = RLock()
 
     def get(self, key, default=None):
         with self.lock:
-            return self._bunch.get(key, default)
+            return self._impl.get(key, default)
 
     def set(self, key, value):
         with self.lock:
-            self._bunch[key] = value
+            self._impl[key] = value
 
     __setitem__ = set
 
     def __getitem__(self, key):
         with self.lock:
-            return self._bunch.__getitem__(key)
+            return self._impl.__getitem__(key)
 
     def __delitem__(self, key):
         with self.lock:
-            del self._bunch[key]
+            del self._impl[key]
 
     def pop(self, key, default):
         with self.lock:
-            return self._bunch.pop(key, default)
+            return self._impl.pop(key, default)
 
     def __iter__(self):
         with self.lock:
-            return iter(self._bunch)
+            return iter(self._impl)
 
     def __repr__(self):
         with self.lock:
             return '<{} at {} keys:[{}]>'.format(self.__class__.__name__,
-                hex(id(self)), sorted(self._bunch.keys()))
+                hex(id(self)), sorted(self._impl.keys()))
 
     __str__ = __repr__
 
     def __nonzero__(self):
         with self.lock:
-            return bool(self._bunch)
+            return bool(self._impl)
 
     def keys(self):
         with self.lock:
-            return self._bunch.keys()
+            return self._impl.keys()
 
     def values(self):
         with self.lock:
-            return self._bunch.values()
+            return self._impl.values()
 
     def items(self):
         with self.lock:
-            return self._bunch.items()
+            return self._impl.items()
 
     def copy(self):
         """ Returns a new instance of ConfigDict with items copied over from self.
         """
         with self.lock:
             config_dict = ConfigDict(self.name)
-            config_dict._bunch = Bunch()
-            config_dict._bunch.update(deepcopy(self._bunch))
+            config_dict._impl = Bunch()
+            config_dict._impl.update(deepcopy(self._impl))
 
             return config_dict
 
@@ -102,7 +102,7 @@ class ConfigDict(object):
         """
         with self.lock:
             out = []
-            for value in self._bunch.values():
+            for value in self._impl.values():
                 config = value['config']
                 out.append(deepcopy(config))
 
@@ -112,24 +112,36 @@ class ConfigDict(object):
         """ Returns a deepcopy of the underlying Bunch's keys
         """
         with self.lock:
-            return deepcopy(self._bunch.keys())
+            return deepcopy(self._impl.keys())
 
     @staticmethod
-    def from_query(name, query_data, item_class=Bunch):
+    def from_query(name, query_data, impl_class=Bunch, item_class=Bunch, list_config=False):
         """ Return a new ConfigDict with items taken from an SQL query.
         """
         config_dict = ConfigDict(name)
-        config_dict._bunch = Bunch()
+        config_dict._impl = impl_class()
 
         if query_data:
             query, attrs = query_data
 
             for item in query:
-                config_dict._bunch[item.name] = Bunch()
-                config_dict._bunch[item.name].config = Bunch()
 
-                for attr_name in attrs.keys():
-                    config_dict._bunch[item.name]['config'][attr_name] = getattr(item, attr_name)
+                if list_config:
+                    list_dict = Bunch()
+                    if item.name not in config_dict._impl:
+                        config_dict._impl[item.name] = []
+                    config_dict._impl[item.name].append(list_dict)
+                else:
+                    config_dict._impl[item.name] = item_class()
+
+                if list_config:
+                    for attr_name in attrs.keys():
+                        list_dict[attr_name] = getattr(item, attr_name)
+
+                else:
+                    config_dict._impl[item.name].config = item_class()
+                    for attr_name in attrs.keys():
+                        config_dict._impl[item.name]['config'][attr_name] = getattr(item, attr_name)
 
         return config_dict
 

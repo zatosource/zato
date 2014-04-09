@@ -9,10 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, inspect, os, socket, sys, traceback
+import logging, inspect, os, sys
 from copy import deepcopy
 from errno import ENOENT
-from json import dumps, loads
+from json import loads
 from threading import RLock
 from time import sleep
 from traceback import format_exc
@@ -30,9 +30,6 @@ from dateutil.rrule import DAILY, MINUTELY, rrule
 # gunicorn
 from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
-
-# Paste
-from paste.util.multidict import MultiDict
 
 # Zato
 from zato.common import CHANNEL, HTTP_SOAP_SERIALIZATION_TYPE, SIMPLE_IO, ZATO_ODB_POOL_NAME
@@ -82,7 +79,9 @@ class WorkerStore(BrokerMessageReceiver):
         self.update_lock = RLock()
         self.kvdb = server.kvdb
         self.broker_client = None
+
         self.pubsub = None
+        """:type: zato.common.pubsub.PubSubAPI"""
 
     def init(self):
 
@@ -276,16 +275,17 @@ class WorkerStore(BrokerMessageReceiver):
         for topic_name, topic_data in self.worker_config.pubsub.topics.items():
             self._add_pubsub_topic(topic_data.config)
 
-        for key, value in self.worker_config.pubsub.producers.items():
-            self.pubsub.add_producer(
-                Client(value.config.client_id, value.config.name, value.config.is_active), Topic(value.config.topic_name))
-    
-        for key, value in self.worker_config.pubsub.consumers.items():
-            config = value.config
-            self.pubsub.add_consumer(
-                Consumer(config.client_id, config.name, config.is_active, config.sub_key, config.max_backlog,
-                         config.delivery_mode, config.callback),
-                Topic(config.topic_name))
+        for list_value in self.worker_config.pubsub.producers.values():
+            for config in list_value:
+                self.pubsub.add_producer(Client(config.client_id, config.name, config.is_active), Topic(config.topic_name))
+
+        for list_value in self.worker_config.pubsub.consumers.values():
+            for config in list_value:
+                self.pubsub.add_consumer(
+                    Consumer(
+                        config.client_id, config.name, config.is_active, config.sub_key, config.max_backlog,
+                        config.delivery_mode, config.callback),
+                    Topic(config.topic_name))
 
 # ################################################################################################################################
 
@@ -446,7 +446,7 @@ class WorkerStore(BrokerMessageReceiver):
         self._update_auth(msg, code_to_name[msg.action], security_def_type.ntlm,
                 self._visit_wrapper_change_password)
 
-    # ################################################################################################################################
+# ################################################################################################################################
 
     def basic_auth_get(self, name):
         """ Returns the configuration of the HTTP Basic Auth security definition
@@ -477,7 +477,7 @@ class WorkerStore(BrokerMessageReceiver):
         self._update_auth(msg, code_to_name[msg.action], security_def_type.basic_auth,
                 self._visit_wrapper_change_password)
 
-    # ################################################################################################################################
+# ################################################################################################################################
 
     def oauth_get(self, name):
         """ Returns the configuration of the OAuth security definition
@@ -914,6 +914,9 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_PUB_SUB_TOPIC_EDIT(self, msg):
         self.pubsub.update_topic(Topic(msg.name, msg.is_active, True, msg.max_depth))
+
+    def on_broker_msg_PUB_SUB_TOPIC_DELETE(self, msg):
+        self.pubsub.delete_topic(Topic(msg.name))
 
 # ################################################################################################################################
 

@@ -12,15 +12,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, uuid
 from copy import deepcopy
 from datetime import datetime
-from multiprocessing import cpu_count
 from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, \
-     kvdb_opts
+from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts
 from zato.common import SERVER_JOIN_STATUS
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
