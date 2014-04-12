@@ -69,7 +69,7 @@ def _get_edit_create_message(params, prefix=''):
         'url_path': params[prefix + 'url_path'],
         'method': params.get(prefix + 'method'),
         'soap_action': params.get(prefix + 'soap_action', ''),
-        'soap_version': params.get(prefix + 'soap_version', ''),
+        'soap_version': params.get(prefix + 'soap_version', None),
         'data_format': params.get(prefix + 'data_format', None),
         'service': params.get(prefix + 'service'),
         'security_id': security_id,
