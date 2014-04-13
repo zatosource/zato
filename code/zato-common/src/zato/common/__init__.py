@@ -437,6 +437,9 @@ class PUB_SUB:
     DEFAULT_MAX_DEPTH = 500
     DEFAULT_MAX_BACKLOG = 1000
 
+    class CALLBACK_TYPE:
+        HTTP_OUTCONN = 'http-outconn'
+
     class DELIVERY_MODE:
         PULL = NameId('Pull', 'pull')
         CALLBACK_URL = NameId('Callback URL', 'callback-url')

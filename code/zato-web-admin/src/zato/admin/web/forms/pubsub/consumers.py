@@ -22,7 +22,7 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     client_id = forms.ChoiceField(widget=forms.Select())
     delivery_mode = forms.ChoiceField(widget=forms.Select())
-    callback = forms.CharField(initial='', widget=forms.TextInput(attrs={'style':'width:90%'}))
+    http_soap_id = forms.ChoiceField(widget=forms.Select())
     max_backlog = forms.CharField(
         initial=PUB_SUB.DEFAULT_MAX_BACKLOG, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
 
@@ -34,12 +34,17 @@ class CreateForm(forms.Form):
         for item in PUB_SUB.DELIVERY_MODE:
             self.fields['delivery_mode'].choices.append([item.id, item.name])
 
-    def set_client_id(self, client_ids):
-        # Sort clients by their names.
-        client_ids = sorted(client_ids, key=attrgetter('name'))
+    def set_items(self, ids, field_name):
+        ids = sorted(ids, key=attrgetter('name'))
 
-        for item in client_ids:
-            self.fields['client_id'].choices.append([item.id, item.name])
+        for item in ids:
+            self.fields[field_name].choices.append([item.id, item.name])
+
+    def set_client_id(self, ids):
+        self.set_items(ids, 'client_id')
+
+    def set_http_soap_id(self, ids):
+        self.set_items(ids, 'http_soap_id')
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
