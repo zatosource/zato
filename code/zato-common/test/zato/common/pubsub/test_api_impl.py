@@ -153,6 +153,42 @@ class RedisPubSubTestCase(RedisPubSubCommonTestCase):
 
 # ################################################################################################################################
 
+    def test_delete_metadata(self):
+        payload, topic, producer, ctx = self._publish_move(move=False)
+        consumer = Consumer(rand_int(), rand_string())
+
+        self.api.add_consumer(consumer, topic)
+        sub_key = self.api.subscribe(consumer.id, topic.name)
+
+        self.api.impl.move_to_target_queues()
+
+        self._check_consumer_queue_before_get(ctx, sub_key)
+        self._check_get(ctx, sub_key, topic, producer, consumer)
+        self.api.acknowledge(sub_key, ctx.msg.msg_id)
+
+        # Ok, we should now have metadata for the consumer, producer and topic.
+        last_seen_consumer = self.api.impl.kvdb.hkeys(self.api.impl.LAST_SEEN_CONSUMER_KEY)
+        last_seen_producer = self.api.impl.kvdb.hkeys(self.api.impl.LAST_SEEN_PRODUCER_KEY)
+        last_pub_time = self.api.impl.kvdb.hkeys(self.api.impl.LAST_PUB_TIME_KEY)
+
+        self.assertIn(str(consumer.id), last_seen_consumer)
+        self.assertIn(str(producer.id), last_seen_producer)
+        self.assertIn(topic.name, last_pub_time)
+
+        self.api.impl.delete_producer(producer, topic)
+        last_seen_producer = self.api.impl.kvdb.hkeys(self.api.impl.LAST_SEEN_PRODUCER_KEY)
+        self.assertNotIn(str(producer.id), last_seen_producer)
+
+        self.api.impl.delete_consumer(consumer, topic)
+        last_seen_consumer = self.api.impl.kvdb.hkeys(self.api.impl.LAST_SEEN_CONSUMER_KEY)
+        self.assertNotIn(str(consumer.id), last_seen_consumer)
+
+        self.api.impl.delete_topic(topic)
+        last_pub_time = self.api.impl.kvdb.hkeys(self.api.impl.LAST_PUB_TIME_KEY)
+        self.assertNotIn(topic.name, last_pub_time)
+
+# ################################################################################################################################
+
     def test_subscribe(self):
         client_id, client_name = rand_int(), rand_string()
         client = Client(client_id, client_name)

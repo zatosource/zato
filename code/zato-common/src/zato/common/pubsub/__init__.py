@@ -186,7 +186,6 @@ class Consumer(Client):
 class PubSub(object):
     """ An entry point to the pub/sub mechanism. Must be partly subclassed by concrete implementation classes.
     """
-
     def __init__(self, *ignored_args, **ignored_kwargs):
         self.logger = getLogger('zato_pubsub')
 
@@ -248,7 +247,17 @@ class PubSub(object):
             for producer_id in list(producers):
                 self.delete_producer(self.producers[producer_id], topic)
 
+            # Implemented by subclasses
+            self.delete_topic_metadata(topic)
+
             self.logger.info('Deleted topic `%s`', deleted)
+
+    # ############################################################################################################################
+
+    def delete_topic_metadata(self, topic):
+        """ Deletes topic's metadata. Needs to be subclasses by concrete implementations.
+        """
+        raise NotImplementedError('Must be implemented by subclasses')
 
     # ############################################################################################################################
 
@@ -315,11 +324,15 @@ class PubSub(object):
             if not self.topic_to_prod[topic.name]:
                 del self.topic_to_prod[topic.name]
 
-            self.logger.warn('44444 %r', self.topic_to_prod)
-
             del self.producers[client.id]
+            self.delete_producer_metadata(client)
 
             self.logger.info('Deleted producer `%s` for topic:`%s`', client, topic)
+
+    def delete_producer_metadata(self, client):
+        """ Deletes producer's metadata. Needs to be subclasses by concrete implementations.
+        """
+        raise NotImplementedError('Must be implemented by subclasses')
 
     # ############################################################################################################################
 
@@ -371,7 +384,14 @@ class PubSub(object):
             del self.sub_to_cons[client.sub_key]
             del self.cons_to_sub[client.id]
 
+            self.delete_consumer_metadata(client)
+
             self.logger.info('Deleted consumer `%s` for topic:`%s`', client, topic)
+
+    def delete_consumer_metadata(self, client):
+        """ Deletes consumer's metadata. Needs to be subclasses by concrete implementations.
+        """
+        raise NotImplementedError('Must be implemented by subclasses')
 
     # ############################################################################################################################
 
@@ -461,6 +481,19 @@ class RedisPubSub(PubSub):
 
     def run_lua(self, name, keys=[], args=[]):
         return self.lua_programs[name](keys, args)
+
+    # ############################################################################################################################
+
+    # Overridden from the base class
+
+    def delete_topic_metadata(self, topic):
+        self.kvdb.hdel(self.LAST_PUB_TIME_KEY, topic.name)
+
+    def delete_consumer_metadata(self, client):
+        self.kvdb.hdel(self.LAST_SEEN_CONSUMER_KEY, client.id)
+
+    def delete_producer_metadata(self, client):
+        self.kvdb.hdel(self.LAST_SEEN_PRODUCER_KEY, client.id)
 
     # ############################################################################################################################
 
