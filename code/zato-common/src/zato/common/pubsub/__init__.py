@@ -546,7 +546,7 @@ class RedisPubSub(PubSub):
             self.logger.error('Pub error `%s`', format_exc(e))
             raise
         else:
-            self.logger.info('Published: `%s` to `%s, exp:`%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
+            self.logger.info('Published: `%s` to `%s`, exp:`%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
             return ctx
 
     # ############################################################################################################################
@@ -691,15 +691,18 @@ class RedisPubSub(PubSub):
                 args.append(maxint)
 
                 consumers = self.topic_to_cons.get(topic, [])
-                for consumer in consumers:
-                    sub_key = self.cons_to_sub[consumer]
-                    self.logger.debug('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
+                if consumers:
+                    for consumer in consumers:
+                        sub_key = self.cons_to_sub[consumer]
+                        self.logger.debug('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
 
-                    keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
+                        keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
 
-                move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
-                if move_result:
-                    self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
+                    move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
+                    if move_result:
+                        self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
+                else:
+                    self.logger.info('Move: no consumers for topic `%s`', topic)
 
 # ################################################################################################################################
 
