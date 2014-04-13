@@ -20,7 +20,7 @@ from sqlalchemy.orm import backref, relationship
 
 # Zato
 from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, MSG_PATTERN_TYPE, \
-     SCHEDULER_JOB_TYPE
+     PUB_SUB, SCHEDULER_JOB_TYPE
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -1293,7 +1293,10 @@ class PubSubConsumer(Base):
     sub_key = Column(String(200), nullable=False)
     max_backlog = Column(Integer, nullable=False)
     delivery_mode = Column(String(200), nullable=False)
-    callback = Column(String(4000), nullable=True)
+
+    # Our only callback type right now is an HTTP outconn but more will come with time.
+    http_soap_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)
+    callback_type = Column(String(20), nullable=True, default=PUB_SUB.CALLBACK_TYPE.HTTP_OUTCONN)
 
     topic_id = Column(Integer, ForeignKey('pub_sub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(PubSubTopic, backref=backref('consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
@@ -1303,6 +1306,8 @@ class PubSubConsumer(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pub_sub_consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
+
+    http_soap = relationship(SecurityBase, backref=backref('pubsub_consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, is_active=None, sub_key=None, max_backlog=None, delivery_mode=None, callback=None,
                 topic_id=None, sec_def_id=None, cluster_id=None):
