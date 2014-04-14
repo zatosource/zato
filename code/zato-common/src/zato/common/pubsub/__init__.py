@@ -174,12 +174,12 @@ class Consumer(Client):
     """ Pub/sub consumer.
     """
     def __init__(self, id, name, is_active=True, sub_key=None, max_backlog=PUB_SUB.DEFAULT_MAX_BACKLOG,
-            delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id, callback=''):
+            delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id, http_soap_id=''):
         super(Consumer, self).__init__(id, name, is_active)
         self.sub_key = sub_key
         self.max_backlog = max_backlog
         self.delivery_mode = delivery_mode
-        self.callback = callback
+        self.http_soap_id = http_soap_id
 
 # ################################################################################################################################
 
@@ -360,7 +360,7 @@ class PubSub(object):
             self.consumers[client.id].is_active = client.is_active
             self.consumers[client.id].max_backlog = client.max_backlog
             self.consumers[client.id].delivery_mode = client.delivery_mode
-            self.consumers[client.id].callback = client.callback
+            self.consumers[client.id].http_soap_id = client.http_soap_id
 
             self.logger.info('Updated consumer `%s` for topic:`%s`', client, topic)
 
