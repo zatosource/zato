@@ -638,7 +638,7 @@ class CtxObjectsTestCase(TestCase):
         self.assertEquals(consumer.sub_key, None)
         self.assertEquals(consumer.max_backlog, PUB_SUB.DEFAULT_MAX_BACKLOG)
         self.assertEquals(consumer.delivery_mode, PUB_SUB.DELIVERY_MODE.PULL.id)
-        self.assertEquals(consumer.callback, '')
+        self.assertEquals(consumer.http_soap_id, '')
 
     def test_consumer_custom_attrs(self):
         id = rand_int()
@@ -647,8 +647,8 @@ class CtxObjectsTestCase(TestCase):
         sub_key = rand_string()
         max_backlog = rand_int()
         delivery_mode = rand_string()
-        callback = rand_string()
-        consumer = Consumer(id, name, is_active, sub_key, max_backlog, delivery_mode, callback)
+        http_soap_id = rand_int()
+        consumer = Consumer(id, name, is_active, sub_key, max_backlog, delivery_mode, http_soap_id)
 
         self.assertEquals(consumer.id, id)
         self.assertEquals(consumer.name, name)
@@ -656,7 +656,7 @@ class CtxObjectsTestCase(TestCase):
         self.assertEquals(consumer.sub_key, sub_key)
         self.assertEquals(consumer.max_backlog, max_backlog)
         self.assertEquals(consumer.delivery_mode, delivery_mode)
-        self.assertEquals(consumer.callback, callback)
+        self.assertEquals(consumer.http_soap_id, http_soap_id)
 
 # ################################################################################################################################
 

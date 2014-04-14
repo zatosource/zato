@@ -26,25 +26,20 @@ class CreateForm(forms.Form):
     max_backlog = forms.CharField(
         initial=PUB_SUB.DEFAULT_MAX_BACKLOG, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
 
-    def __init__(self, prefix=None, post_data=None):
+    def __init__(self, prefix=None, post_data=None, client_ids=None, http_soap_ids=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        self.fields['client_id'].choices = []
-        self.fields['delivery_mode'].choices = []
+        for name in('client_id', 'delivery_mode', 'client_id', 'http_soap_id'):
+            self.fields[name].choices = []
 
-        for item in PUB_SUB.DELIVERY_MODE:
-            self.fields['delivery_mode'].choices.append([item.id, item.name])
+        self.set_items(PUB_SUB.DELIVERY_MODE, 'delivery_mode')
+        self.set_items(client_ids or [], 'client_id')
+        self.set_items(http_soap_ids or [], 'http_soap_id')
 
     def set_items(self, ids, field_name):
         ids = sorted(ids, key=attrgetter('name'))
 
         for item in ids:
             self.fields[field_name].choices.append([item.id, item.name])
-
-    def set_client_id(self, ids):
-        self.set_items(ids, 'client_id')
-
-    def set_http_soap_id(self, ids):
-        self.set_items(ids, 'http_soap_id')
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

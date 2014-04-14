@@ -117,7 +117,7 @@
                             <td>{{ create_form.client_id }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Active</td>
+                            <td style="vertical-align:middle;width:30%">Active</td>
                             <td>{{ create_form.is_active }}</td>
                         </tr>
                         <tr>
@@ -125,11 +125,11 @@
                             <td>{{ create_form.delivery_mode }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Callback URL
+                            <td style="vertical-align:middle">HTTP callback connection
                             <br/>
                             <span class="form_hint">(required if not Pull)</span>
                             </td>
-                            <td>{{ create_form.callback }}</td>
+                            <td>{{ create_form.http_soap_id }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Max backlog
@@ -164,11 +164,11 @@
                             <td>{{ edit_form.delivery_mode }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Callback URL
+                            <td style="vertical-align:middle">HTTP callback connection
                             <br/>
                             <span class="form_hint">(required if not Pull)</span>
                             </td>
-                            <td>{{ edit_form.callback }}</td>
+                            <td>{{ edit_form.http_soap_id }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Max backlog

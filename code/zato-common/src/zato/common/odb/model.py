@@ -1309,14 +1309,14 @@ class PubSubConsumer(Base):
 
     http_soap = relationship(SecurityBase, backref=backref('pubsub_consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, is_active=None, sub_key=None, max_backlog=None, delivery_mode=None, callback=None,
+    def __init__(self, id=None, is_active=None, sub_key=None, max_backlog=None, delivery_mode=None, http_soap_id=None,
                 topic_id=None, sec_def_id=None, cluster_id=None):
         self.id = id
         self.is_active = is_active
         self.sub_key = sub_key
         self.max_backlog = max_backlog
         self.delivery_mode = delivery_mode
-        self.callback = callback
+        self.http_soap_id = http_soap_id
         self.topic_id = topic_id
         self.sec_def_id = sec_def_id
         self.cluster_id = cluster_id
