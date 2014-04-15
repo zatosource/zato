@@ -760,18 +760,18 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         id1 = 'Consumer CB1'
         name1 = 'consumer-cb1'
         sub_key1 = new_cid()
-        http_soap_id1 = rand_int()
+        callback_id1 = rand_int()
 
         id2 = 'Consumer CB2'
         name2 = 'consumer-cb2'
         sub_key2 = new_cid()
-        http_soap_id2 = rand_int()
+        callback_id2 = rand_int()
 
         consumer_cb1 = Consumer(id1, name1, sub_key=sub_key1, delivery_mode=PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id,
-            http_soap_id=http_soap_id1)
+            callback_id=callback_id1)
 
         consumer_cb2 = Consumer(id2, name2, sub_key=sub_key2, delivery_mode=PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id,
-            http_soap_id=http_soap_id2)
+            callback_id=callback_id2)
 
         consumer_pull = Consumer('Consumer pull', 'consumer-pull', sub_key=new_cid(), delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id)
         consumer_inactive = Consumer(
@@ -795,13 +795,13 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         eq_(consumer1.name, name1)
         eq_(consumer1.is_active, True)
         eq_(consumer1.sub_key, sub_key1)
-        eq_(consumer1.http_soap_id, http_soap_id1)
+        eq_(consumer1.callback_id, callback_id1)
 
         consumer2 = consumers[1]
         eq_(consumer2.id, id2)
         eq_(consumer2.name, name2)
         eq_(consumer2.is_active, True)
         eq_(consumer2.sub_key, sub_key2)
-        eq_(consumer2.http_soap_id, http_soap_id2)
+        eq_(consumer2.callback_id, callback_id2)
 
 # ######################################################################################################################

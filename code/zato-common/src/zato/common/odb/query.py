@@ -831,7 +831,7 @@ def _pubsub_consumer(session, cluster_id, needs_columns=False):
         PubSubConsumer.max_backlog,
         PubSubConsumer.sub_key,
         PubSubConsumer.delivery_mode,
-        PubSubConsumer.http_soap_id,
+        PubSubConsumer.callback_id,
         PubSubConsumer.callback_type,
         SecurityBase.id.label('client_id'),
         SecurityBase.name,
