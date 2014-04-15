@@ -39,23 +39,23 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'topic_name')
         output_required = ('id', 'name', 'is_active', 'last_seen', 'max_backlog', 'current_depth', 'sub_key', 'delivery_mode')
-        output_optional = ('http_soap_id',)
+        output_optional = ('callback_id',)
         output_repeated = True
 
     def handle(self):
         if self.req.zato.cluster_id:
             client_ids = self.req.zato.client.invoke('zato.security.get-list', {'cluster_id': self.req.zato.cluster.id}).data
 
-            http_soap_ids = self.req.zato.client.invoke(
+            callback_ids = self.req.zato.client.invoke(
                 'zato.http-soap.get-list', {
                     'cluster_id': self.req.zato.cluster.id, 'connection':'outgoing', 'transport':'plain_http'
                 }).data
         else:
             client_ids = None
-            http_soap_ids = None
+            callback_ids = None
 
-        create_form = CreateForm(client_ids=client_ids, http_soap_ids=http_soap_ids)
-        edit_form = EditForm(prefix='edit', http_soap_ids=http_soap_ids)
+        create_form = CreateForm(client_ids=client_ids, callback_ids=callback_ids)
+        edit_form = EditForm(prefix='edit', callback_ids=callback_ids)
 
         return {
             'create_form': create_form,
@@ -66,7 +66,7 @@ class Index(_Index):
     def _handle_item_list(self, item_list):
         super(Index, self)._handle_item_list(item_list)
         for item in self.items:
-            item.http_soap_id = item.http_soap_id or ''
+            item.callback_id = item.callback_id or ''
             if item.last_seen:
                 item.last_seen = from_utc_to_user(item.last_seen + '+00:00', self.req.zato.user_profile)
 
@@ -77,7 +77,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('id', 'cluster_id', 'client_id', 'is_active', 'topic_name', 'max_backlog', 'delivery_mode')
-        input_optional = ('http_soap_id',)
+        input_optional = ('callback_id',)
         output_required = ('id', 'name', 'last_seen', 'current_depth', 'sub_key')
 
     def success_message(self, item):

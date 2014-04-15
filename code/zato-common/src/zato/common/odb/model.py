@@ -1295,7 +1295,7 @@ class PubSubConsumer(Base):
     delivery_mode = Column(String(200), nullable=False)
 
     # Our only callback type right now is an HTTP outconn but more will come with time.
-    http_soap_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)
+    callback_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)
     callback_type = Column(String(20), nullable=True, default=PUB_SUB.CALLBACK_TYPE.HTTP_OUTCONN)
 
     topic_id = Column(Integer, ForeignKey('pub_sub_topic.id', ondelete='CASCADE'), nullable=False)
@@ -1309,14 +1309,14 @@ class PubSubConsumer(Base):
 
     http_soap = relationship(SecurityBase, backref=backref('pubsub_consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, is_active=None, sub_key=None, max_backlog=None, delivery_mode=None, http_soap_id=None,
+    def __init__(self, id=None, is_active=None, sub_key=None, max_backlog=None, delivery_mode=None, callback_id=None,
                 topic_id=None, sec_def_id=None, cluster_id=None):
         self.id = id
         self.is_active = is_active
         self.sub_key = sub_key
         self.max_backlog = max_backlog
         self.delivery_mode = delivery_mode
-        self.http_soap_id = http_soap_id
+        self.callback_id = callback_id
         self.topic_id = topic_id
         self.sec_def_id = sec_def_id
         self.cluster_id = cluster_id

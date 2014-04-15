@@ -83,8 +83,8 @@ class _CreateEdit(AdminService):
             msg = 'Invalid delivery_mode `{}`, expected one of `{}`'.format(input.delivery_mode, PUB_SUB.DELIVERY_MODE)
             raise ValueError(msg)
 
-        if input.delivery_mode == PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id and not input.get('http_soap_id'):
-            msg = 'HTTP callback connection missing on input'
+        if input.delivery_mode == PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id and not input.get('callback_id'):
+            msg = 'Callback connection missing on input'
             raise ValueError(msg)
 
 # ################################################################################################################################
@@ -96,7 +96,7 @@ class Create(_CreateEdit):
         request_elem = 'zato_pubsub_consumers_create_request'
         response_elem = 'zato_pubsub_consumers_create_response'
         input_required = ('cluster_id', 'client_id', 'topic_name', 'is_active', 'max_backlog', 'delivery_mode')
-        input_optional = ('http_soap_id',)
+        input_optional = ('callback_id',)
         output_required = ('id', 'name', 'sub_key')
 
     def handle(self):
@@ -113,7 +113,7 @@ class Create(_CreateEdit):
 
                 sub_key = new_cid()
                 consumer = PubSubConsumer(
-                    None, input.is_active, sub_key, input.max_backlog, input.delivery_mode, input.get('http_soap_id'),
+                    None, input.is_active, sub_key, input.max_backlog, input.delivery_mode, input.get('callback_id'),
                     topic.id, input.client_id, input.cluster_id)
 
                 session.add(consumer)
@@ -144,7 +144,7 @@ class Edit(_CreateEdit):
         request_elem = 'zato_pubsub_consumers_edit_request'
         response_elem = 'zato_pubsub_consumers_edit_response'
         input_required = ('id', 'is_active', 'max_backlog', 'delivery_mode')
-        input_optional = ('http_soap_id',)
+        input_optional = ('callback_id',)
         output_required = ('id', 'name')
 
     def handle(self):
@@ -161,7 +161,7 @@ class Edit(_CreateEdit):
                 consumer.is_active = input.is_active
                 consumer.max_backlog = input.max_backlog
                 consumer.delivery_mode = input.delivery_mode
-                consumer.http_soap_id = input.get('http_soap_id')
+                consumer.callback_id = input.get('callback_id')
 
                 client_id = consumer.sec_def.id
                 client_name = consumer.sec_def.name
@@ -186,7 +186,7 @@ class Edit(_CreateEdit):
                 msg.max_backlog = consumer.max_backlog
                 msg.sub_key = consumer.sub_key
                 msg.delivery_mode = consumer.delivery_mode
-                msg.http_soap_id = consumer.http_soap_id
+                msg.callback_id = consumer.callback_id
 
                 msg.client_id = client_id
                 msg.client_name = client_name
