@@ -586,6 +586,8 @@ class RedisPubSub(PubSub):
                          self.MSG_METADATA_KEY, self.MSG_VALUES_KEY],
                     [ctx.max_batch_size, datetime.utcnow().isoformat(), self.sub_to_cons[ctx.sub_key]])
 
+                self.logger.debug('Get messages `%s`:`%r`', ctx.sub_key, messages)
+
                 for msg in messages:
 
                     if self.logger.isEnabledFor(logging.DEBUG):
