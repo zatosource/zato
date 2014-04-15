@@ -130,14 +130,14 @@ class Request(SIOConverter):
             else:
                 self.payload = self.raw_request
 
+            required_params = {}
             if required_list:
                 # Needs to check for this exact default value to prevent a FutureWarning in 'if not self.payload'
-                if self.payload == '':
+                if self.payload == '' and not self.channel_params:
                     raise ZatoException(cid, 'Missing input')
 
-                required_params = self.get_params(required_list, path_prefix, default_value, use_text)
-            else:
-                required_params = {}
+                if self.payload != '':
+                    required_params.update(self.get_params(required_list, path_prefix, default_value, use_text))
 
             if optional_list:
                 optional_params = self.get_params(optional_list, path_prefix, default_value, use_text, False)
