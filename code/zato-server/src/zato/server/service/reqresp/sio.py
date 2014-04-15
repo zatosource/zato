@@ -365,7 +365,7 @@ class SIOConverter(object):
 # ################################################################################################################################
 
 def convert_from_json(payload, param_name, cid, *ignored):
-    return payload.get(param_name, NOT_GIVEN)
+    return (payload or {}).get(param_name, NOT_GIVEN)
 
 convert_from_dict = convert_from_json
 
