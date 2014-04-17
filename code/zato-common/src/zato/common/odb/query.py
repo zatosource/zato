@@ -833,11 +833,14 @@ def _pubsub_consumer(session, cluster_id, needs_columns=False):
         PubSubConsumer.delivery_mode,
         PubSubConsumer.callback_id,
         PubSubConsumer.callback_type,
+        HTTPSOAP.name.label('callback_name'),
+        HTTPSOAP.soap_version,
         SecurityBase.id.label('client_id'),
         SecurityBase.name,
         SecurityBase.sec_type,
         PubSubTopic.name.label('topic_name')).\
         filter(Cluster.id==cluster_id).\
+        filter(PubSubConsumer.callback_id==HTTPSOAP.id).\
         filter(PubSubConsumer.topic_id==PubSubTopic.id).\
         filter(PubSubConsumer.cluster_id==Cluster.id).\
         filter(PubSubConsumer.sec_def_id==SecurityBase.id).\

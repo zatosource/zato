@@ -22,7 +22,7 @@ import logging
 from gevent.lock import RLock
 
 # Zato
-from zato.common import PUB_SUB
+from zato.common import PUB_SUB, ZATO_NOT_GIVEN
 from zato.common.pubsub import lua
 from zato.common.util import make_repr
      
@@ -174,12 +174,14 @@ class Consumer(Client):
     """ Pub/sub consumer.
     """
     def __init__(self, id, name, is_active=True, sub_key=None, max_backlog=PUB_SUB.DEFAULT_MAX_BACKLOG,
-            delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id, callback_id=''):
+            delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id, callback_id='', callback_name=None, callback_type=ZATO_NOT_GIVEN):
         super(Consumer, self).__init__(id, name, is_active)
         self.sub_key = sub_key
         self.max_backlog = max_backlog
         self.delivery_mode = delivery_mode
         self.callback_id = callback_id
+        self.callback_name = callback_name
+        self.callback_type = callback_type
 
 # ################################################################################################################################
 

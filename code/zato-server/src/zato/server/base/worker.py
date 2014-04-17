@@ -32,7 +32,7 @@ from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Zato
-from zato.common import CHANNEL, HTTP_SOAP_SERIALIZATION_TYPE, SIMPLE_IO, ZATO_ODB_POOL_NAME
+from zato.common import CHANNEL, HTTP_SOAP_SERIALIZATION_TYPE, SIMPLE_IO, PUB_SUB, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import code_to_name, STATS
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import new_cid, pairwise, parse_extra_into_dict, security_def_type, TRACE1
@@ -281,10 +281,14 @@ class WorkerStore(BrokerMessageReceiver):
 
         for list_value in self.worker_config.pubsub.consumers.values():
             for config in list_value:
+
+                callback_type = PUB_SUB.CALLBACK_TYPE.OUTCONN_SOAP if bool(config.soap_version) else \
+                    PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTP
+
                 self.pubsub.add_consumer(
                     Consumer(
                         config.client_id, config.name, config.is_active, config.sub_key, config.max_backlog,
-                        config.delivery_mode, config.callback_id),
+                        config.delivery_mode, config.callback_id, config.callback_name, callback_type),
                     Topic(config.topic_name))
 
 # ################################################################################################################################
@@ -920,15 +924,18 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def on_broker_msg_PUB_SUB_CONSUMER_CREATE(self, msg):
+    def _on_broker_msg_pub_sub_consumer_create_edit(self, msg):
         self.pubsub.add_consumer(
-            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog, msg.delivery_mode, msg.callback_id),
+            Consumer(
+                msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog,
+                msg.delivery_mode, msg.callback_id, msg.callback_name, msg.callback_type),
             Topic(msg.topic_name))
 
+    def _on_broker_msg_PUB_SUB_CONSUMER_CREATE(self, msg):
+        self._on_broker_msg_pub_sub_consumer_create_edit(msg)
+
     def on_broker_msg_PUB_SUB_CONSUMER_EDIT(self, msg):
-        self.pubsub.update_consumer(
-            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog, msg.delivery_mode, msg.callback_id),
-            Topic(msg.topic_name))
+        self._on_broker_msg_pub_sub_consumer_create_edit(msg)
 
     def on_broker_msg_PUB_SUB_CONSUMER_DELETE(self, msg):
         self.pubsub.delete_consumer(
