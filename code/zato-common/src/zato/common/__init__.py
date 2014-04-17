@@ -438,7 +438,8 @@ class PUB_SUB:
     DEFAULT_MAX_BACKLOG = 1000
 
     class CALLBACK_TYPE:
-        HTTP_OUTCONN = 'http-outconn'
+        OUTCONN_PLAIN_HTP = 'outconn-plain-http'
+        OUTCONN_SOAP = 'outconn-soap'
 
     class DELIVERY_MODE:
         PULL = NameId('Pull', 'pull')
