@@ -22,7 +22,7 @@ import logging
 from gevent.lock import RLock
 
 # Zato
-from zato.common import PUB_SUB
+from zato.common import PUB_SUB, ZATO_NOT_GIVEN
 from zato.common.pubsub import lua
 from zato.common.util import make_repr
      
@@ -174,12 +174,14 @@ class Consumer(Client):
     """ Pub/sub consumer.
     """
     def __init__(self, id, name, is_active=True, sub_key=None, max_backlog=PUB_SUB.DEFAULT_MAX_BACKLOG,
-            delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id, callback=''):
+            delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id, callback_id='', callback_name=None, callback_type=ZATO_NOT_GIVEN):
         super(Consumer, self).__init__(id, name, is_active)
         self.sub_key = sub_key
         self.max_backlog = max_backlog
         self.delivery_mode = delivery_mode
-        self.callback = callback
+        self.callback_id = callback_id
+        self.callback_name = callback_name
+        self.callback_type = callback_type
 
 # ################################################################################################################################
 
@@ -360,7 +362,7 @@ class PubSub(object):
             self.consumers[client.id].is_active = client.is_active
             self.consumers[client.id].max_backlog = client.max_backlog
             self.consumers[client.id].delivery_mode = client.delivery_mode
-            self.consumers[client.id].callback = client.callback
+            self.consumers[client.id].callback_id = client.callback_id
 
             self.logger.info('Updated consumer `%s` for topic:`%s`', client, topic)
 
@@ -546,7 +548,7 @@ class RedisPubSub(PubSub):
             self.logger.error('Pub error `%s`', format_exc(e))
             raise
         else:
-            self.logger.info('Published: `%s` to `%s, exp:`%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
+            self.logger.info('Published: `%s` to `%s`, exp:`%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
             return ctx
 
     # ############################################################################################################################
@@ -585,6 +587,8 @@ class RedisPubSub(PubSub):
                     [cons_queue, cons_in_flight_ids, cons_in_flight_data, self.LAST_SEEN_CONSUMER_KEY,
                          self.MSG_METADATA_KEY, self.MSG_VALUES_KEY],
                     [ctx.max_batch_size, datetime.utcnow().isoformat(), self.sub_to_cons[ctx.sub_key]])
+
+                self.logger.debug('Get messages `%s`:`%r`', ctx.sub_key, messages)
 
                 for msg in messages:
 
@@ -691,15 +695,18 @@ class RedisPubSub(PubSub):
                 args.append(maxint)
 
                 consumers = self.topic_to_cons.get(topic, [])
-                for consumer in consumers:
-                    sub_key = self.cons_to_sub[consumer]
-                    self.logger.debug('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
+                if consumers:
+                    for consumer in consumers:
+                        sub_key = self.cons_to_sub[consumer]
+                        self.logger.debug('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
 
-                    keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
+                        keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
 
-                move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
-                if move_result:
-                    self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
+                    move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
+                    if move_result:
+                        self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
+                else:
+                    self.logger.info('Move: no consumers for topic `%s`', topic)
 
 # ################################################################################################################################
 

@@ -22,24 +22,24 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     client_id = forms.ChoiceField(widget=forms.Select())
     delivery_mode = forms.ChoiceField(widget=forms.Select())
-    callback = forms.CharField(initial='', widget=forms.TextInput(attrs={'style':'width:90%'}))
+    callback_id = forms.ChoiceField(widget=forms.Select())
     max_backlog = forms.CharField(
         initial=PUB_SUB.DEFAULT_MAX_BACKLOG, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
 
-    def __init__(self, prefix=None, post_data=None):
+    def __init__(self, prefix=None, post_data=None, client_ids=None, callback_ids=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        self.fields['client_id'].choices = []
-        self.fields['delivery_mode'].choices = []
+        for name in('client_id', 'delivery_mode', 'client_id', 'callback_id'):
+            self.fields[name].choices = []
 
-        for item in PUB_SUB.DELIVERY_MODE:
-            self.fields['delivery_mode'].choices.append([item.id, item.name])
+        self.set_items(PUB_SUB.DELIVERY_MODE, 'delivery_mode')
+        self.set_items(client_ids or [], 'client_id')
+        self.set_items(callback_ids or [], 'callback_id')
 
-    def set_client_id(self, client_ids):
-        # Sort clients by their names.
-        client_ids = sorted(client_ids, key=attrgetter('name'))
+    def set_items(self, ids, field_name):
+        ids = sorted(ids, key=attrgetter('name'))
 
-        for item in client_ids:
-            self.fields['client_id'].choices.append([item.id, item.name])
+        for item in ids:
+            self.fields[field_name].choices.append([item.id, item.name])
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

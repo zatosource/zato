@@ -18,7 +18,7 @@ from bunch import Bunch
 # Zato
 from zato.common import PUB_SUB
 from zato.common.broker_message import PUB_SUB_CONSUMER, PUB_SUB_TOPIC
-from zato.common.odb.model import Cluster, PubSubConsumer, PubSubTopic
+from zato.common.odb.model import Cluster, HTTPSOAP, PubSubConsumer, PubSubTopic
 from zato.common.odb.query import pubsub_consumer_list
 from zato.common.pubsub import Client
 from zato.common.util import new_cid
@@ -83,11 +83,26 @@ class _CreateEdit(AdminService):
             msg = 'Invalid delivery_mode `{}`, expected one of `{}`'.format(input.delivery_mode, PUB_SUB.DELIVERY_MODE)
             raise ValueError(msg)
 
-        if input.delivery_mode == PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id and not input.get('callback'):
-            msg = 'Callback missing on input'
+        if input.delivery_mode == PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id and not input.get('callback_id'):
+            msg = 'Callback connection missing on input'
             raise ValueError(msg)
 
-# ################################################################################################################################
+    def _get_callback(self, session, input):
+
+        callback_id = input.get('callback_id')
+        if callback_id:
+            cb = session.query(HTTPSOAP.name, HTTPSOAP.soap_version).\
+                filter(HTTPSOAP.id==callback_id).\
+                one()
+            callback_name = cb.name
+            callback_type = PUB_SUB.CALLBACK_TYPE.OUTCONN_SOAP if bool(cb.soap_version) else \
+                PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTP
+        else:
+            callback_name, callback_type = None, None
+
+        return callback_id, callback_name, callback_type
+
+# ##############################################################################################################################
 
 class Create(_CreateEdit):
     """ Creates a new pub/sub consumer.
@@ -96,7 +111,7 @@ class Create(_CreateEdit):
         request_elem = 'zato_pubsub_consumers_create_request'
         response_elem = 'zato_pubsub_consumers_create_response'
         input_required = ('cluster_id', 'client_id', 'topic_name', 'is_active', 'max_backlog', 'delivery_mode')
-        input_optional = ('callback',)
+        input_optional = ('callback_id',)
         output_required = ('id', 'name', 'sub_key')
 
     def handle(self):
@@ -111,10 +126,12 @@ class Create(_CreateEdit):
                     filter(PubSubTopic.name==input.topic_name).\
                     one()
 
+                callback = self._get_callback(session, input)
+
                 sub_key = new_cid()
                 consumer = PubSubConsumer(
-                    None, input.is_active, sub_key, input.max_backlog, input.delivery_mode, input.get('callback'),
-                    topic.id, input.client_id, input.cluster_id)
+                    None, input.is_active, sub_key, input.max_backlog, input.delivery_mode, callback[0],
+                    callback[2], topic.id, input.client_id, input.cluster_id)
 
                 session.add(consumer)
                 session.commit()
@@ -129,6 +146,8 @@ class Create(_CreateEdit):
                 input.action = PUB_SUB_CONSUMER.CREATE
                 input.client_name = consumer.sec_def.name
                 input.sub_key = sub_key
+                input.callback_name = callback[1]
+                input.callback_type = callback[2]
                 self.broker_client.publish(input)
 
             self.response.payload.id = consumer.id
@@ -138,13 +157,13 @@ class Create(_CreateEdit):
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
-    """ Edits a new pub/sub consumer.
+    """ Edits a pub/sub consumer.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_consumers_edit_request'
         response_elem = 'zato_pubsub_consumers_edit_response'
         input_required = ('id', 'is_active', 'max_backlog', 'delivery_mode')
-        input_optional = ('callback',)
+        input_optional = ('callback_id',)
         output_required = ('id', 'name')
 
     def handle(self):
@@ -153,6 +172,9 @@ class Edit(_CreateEdit):
 
         with closing(self.odb.session()) as session:
             try:
+
+                callback = self._get_callback(session, input)
+
                 # Find a topic by its name so it can be paired with client_id later on
                 consumer = session.query(PubSubConsumer).\
                     filter(PubSubConsumer.id==input.id).\
@@ -161,7 +183,7 @@ class Edit(_CreateEdit):
                 consumer.is_active = input.is_active
                 consumer.max_backlog = input.max_backlog
                 consumer.delivery_mode = input.delivery_mode
-                consumer.callback = input.get('callback')
+                consumer.callback_id = callback[0]
 
                 client_id = consumer.sec_def.id
                 client_name = consumer.sec_def.name
@@ -186,13 +208,16 @@ class Edit(_CreateEdit):
                 msg.max_backlog = consumer.max_backlog
                 msg.sub_key = consumer.sub_key
                 msg.delivery_mode = consumer.delivery_mode
-                msg.callback = consumer.callback
+                msg.callback_id = consumer.callback_id
 
                 msg.client_id = client_id
                 msg.client_name = client_name
 
                 msg.topic_id = topic_id
                 msg.topic_name = topic_name
+
+                msg.callback_name = callback[1]
+                msg.callback_type = callback[2]
 
                 self.broker_client.publish(msg)
 
