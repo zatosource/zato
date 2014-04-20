@@ -153,11 +153,13 @@ class ODBManager(SessionWrapper):
 
                     if item.sec_type == security_def_type.tech_account:
                         result[target].sec_def.salt = sec_def.salt
-                    elif item.sec_type in(security_def_type.basic_auth, security_def_type.apikey):
+                    elif item.sec_type == security_def_type.basic_auth:
                         result[target].sec_def.username = sec_def.username
                         result[target].sec_def.password = sec_def.password
-                        if item.sec_type == security_def_type.basic_auth:
-                            result[target].sec_def.realm = sec_def.realm
+                        result[target].sec_def.realm = sec_def.realm
+                    elif item.sec_type == security_def_type.apikey:
+                        result[target].sec_def.username = 'HTTP_{}'.format(sec_def.username.upper())
+                        result[target].sec_def.password = sec_def.password
                     elif item.sec_type == security_def_type.wss:
                         result[target].sec_def.username = sec_def.username
                         result[target].sec_def.password = sec_def.password
