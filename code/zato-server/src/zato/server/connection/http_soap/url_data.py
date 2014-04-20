@@ -119,20 +119,15 @@ class URLData(OAuthDataStore):
 # ################################################################################################################################
 
     def _handle_security_apikey(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
-        """ Performs the authentication against an API key
+        """ Performs the authentication against an API key in a specified HTTP header.
         """
-        '''
-        env = {'HTTP_AUTHORIZATION':wsgi_environ.get('HTTP_AUTHORIZATION')}
-        url_config = {'basic-auth-username':sec_def.username, 'basic-auth-password':sec_def.password}
+        expected_key = sec_def['password']
+        actual_key = wsgi_environ.get(sec_def['username'])
 
-        result = on_basic_auth(env, url_config, False)
-
-        if not result:
-            msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
-                path_info, cid, result.code, result.description)
+        if not actual_key or (actual_key != expected_key):
+            msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
             logger.error(msg)
-            raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
-            '''
+            raise Unauthorized(cid, msg, 'zato-apikey')
 
     def _handle_security_basic_auth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
         """ Performs the authentication using HTTP Basic Auth.

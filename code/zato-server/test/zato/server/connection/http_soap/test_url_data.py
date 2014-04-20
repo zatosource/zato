@@ -25,7 +25,7 @@ from parse import compile as parse_compile, Parser, Result
 # Zato
 from zato.common import MISC, ZATO_NONE
 from zato.common.util import new_cid
-from zato.server.connection.http_soap import url_data
+from zato.server.connection.http_soap import Unauthorized, url_data
 
 # ################################################################################################################################
 
@@ -338,12 +338,35 @@ class URLDataTestCase(TestCase):
 # ################################################################################################################################
 
     def test_handle_security_apikey(self):
+        username, password = uuid4().hex, uuid4().hex
         ud = url_data.URLData()
         cid = new_cid()
-        sec_def = Bunch()
+        sec_def = Bunch(username=username, password=password)
         path_info = '/'
         body = ''
+
+        # No header at that point
         wsgi_environ = {}
+
+        try:
+            ud._handle_security_apikey(cid, sec_def, path_info, body, wsgi_environ)
+        except Unauthorized:
+            pass
+        else:
+            self.fail('No header sent, expected Unauthorized')
+
+        # Correct header name but invalid key
+        wsgi_environ[username] = uuid4().hex
+
+        try:
+            ud._handle_security_apikey(cid, sec_def, path_info, body, wsgi_environ)
+        except Unauthorized:
+            pass
+        else:
+            self.fail('Invalid key, expected Unauthorized')
+
+        # Both header and key are valid, not exception at this point
+        wsgi_environ[username] = password
 
         ud._handle_security_apikey(cid, sec_def, path_info, body, wsgi_environ)
 
