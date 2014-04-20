@@ -124,9 +124,14 @@ class URLData(OAuthDataStore):
         expected_key = sec_def['password']
         actual_key = wsgi_environ.get(sec_def['username'])
 
-        if not actual_key or (actual_key != expected_key):
+        if not actual_key:
             msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
-            logger.error(msg)
+            logger.error(msg + ' (No header)')
+            raise Unauthorized(cid, msg, 'zato-apikey')
+
+        if actual_key != expected_key:
+            msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
+            logger.error(msg + ' (Invalid key)')
             raise Unauthorized(cid, msg, 'zato-apikey')
 
     def _handle_security_basic_auth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
