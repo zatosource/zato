@@ -153,8 +153,6 @@ class URLDataTestCase(TestCase):
                 self.wsgi_environ = wsgi_environ
                 self.post_data = post_data
 
-# ################################################################################################################################
-
         dummy_basic_auth = DummyBasicAuth()
 
         expected_cid = uuid4().hex
@@ -189,8 +187,6 @@ class URLDataTestCase(TestCase):
         eq_(dummy_basic_auth.payload, expected_payload)
         eq_(dummy_basic_auth.wsgi_environ, expected_wsgi_environ)
         eq_(dummy_basic_auth.post_data, expected_post_data)
-
-# ################################################################################################################################
 
         dummy_basic_auth = DummyBasicAuth()
 
@@ -267,8 +263,6 @@ class URLDataTestCase(TestCase):
             self.assertNotIn('key2', ud_url_info2.sec_def)
             self.assertNotIn('key3', ud_url_info2.sec_def)
             self.assertNotIn('unexisting-key', ud_url_info2.sec_def)
-
-# ################################################################################################################################
 
             ud = url_data.URLData(url_sec=url_sec)
             ud._update_url_sec(msg, 'basic_auth', True)
