@@ -77,9 +77,10 @@ class SIOLiveTestCase(TestCase):
     def tearDown(self):
         """ Do away with all the test services and objects possibly created earlier.
         """
-        for item in self.util.client.invoke(
-                'zato.service.get-list', {'cluster_id': self.util.client.cluster_id, 'name_filter': 'zato-test-live'}):
-            self.util.client.invoke('zato.service.delete', {'id': item['id']})
+        if self.should_run:
+            for item in self.util.client.invoke(
+                    'zato.service.get-list', {'cluster_id': self.util.client.cluster_id, 'name_filter': 'zato-test-live'}):
+                self.util.client.invoke('zato.service.delete', {'id': item['id']})
 
         self.util = None
 
@@ -355,4 +356,3 @@ class SIOLiveTestCase(TestCase):
 
 # ################################################################################################################################
 
-# ################################################################################################################################
