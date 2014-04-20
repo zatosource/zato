@@ -119,7 +119,8 @@ def index(req):
             # Outgoing plain HTTP connections may use HTTP Basic Auth only,
             # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
             if connection == 'outgoing':
-                if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type != _security_def_type.basic_auth:
+                if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in(
+                    _security_def_type.basic_auth, _security_def_type.tech_account, _security_def_type.apikey):
                     continue
                 elif transport == URL_TYPE.SOAP and def_item.sec_type \
                      not in(_security_def_type.basic_auth, _security_def_type.ntlm, _security_def_type.wss):

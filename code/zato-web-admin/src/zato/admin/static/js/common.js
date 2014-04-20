@@ -96,6 +96,7 @@ $.namespace('zato.pubsub.producers');
 $.namespace('zato.pubsub.topics');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
+$.namespace('zato.security.apikey');
 $.namespace('zato.security.aws');
 $.namespace('zato.security.basic_auth');
 $.namespace('zato.security.ntlm');

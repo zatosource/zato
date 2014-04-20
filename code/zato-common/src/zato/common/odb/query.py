@@ -19,11 +19,12 @@ from sqlalchemy.sql.expression import case
 # Zato
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
      URL_PARAMS_PRIORITY
-from zato.common.odb.model import AWSS3, AWSSecurity, ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
-     CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, ElemPath, \
-     HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, NotificationOpenStackSwift as NotifOSS, NTLM, \
-     OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, \
-     PubSubProducer, PubSubTopic, SecurityBase, Service, SQLConnectionPool, TechnicalAccount, XPath, WSSDefinition
+from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, \
+     ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, \
+     ElemPath, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, \
+     NotificationOpenStackSwift as NotifOSS, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
+     OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Service, SQLConnectionPool, \
+     TechnicalAccount, XPath, WSSDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,20 @@ def job_by_name(session, cluster_id, name):
         one()
 
 # ################################################################################################################################
+
+@needs_columns
+def apikey_security_list(session, cluster_id, needs_columns=False):
+    """ All the API keys.
+    """
+    return session.query(
+        APIKeySecurity.id, APIKeySecurity.name,
+        APIKeySecurity.is_active,
+        APIKeySecurity.username,
+        APIKeySecurity.password, APIKeySecurity.sec_type).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==APIKeySecurity.cluster_id).\
+        filter(SecurityBase.id==APIKeySecurity.id).\
+        order_by('sec_base.name')
 
 @needs_columns
 def aws_security_list(session, cluster_id, needs_columns=False):

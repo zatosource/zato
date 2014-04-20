@@ -107,6 +107,7 @@ random.seed()
 
 # TODO: Turn it into a class so it auto-completes and move to zato.common
 security_def_type = Bunch()
+security_def_type.apikey = 'apikey'
 security_def_type.aws = 'aws'
 security_def_type.basic_auth = 'basic_auth'
 security_def_type.ntlm = 'ntlm'

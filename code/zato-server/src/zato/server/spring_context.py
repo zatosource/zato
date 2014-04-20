@@ -84,6 +84,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.pubsub.topics',
             'zato.server.service.internal.scheduler',
             'zato.server.service.internal.security',
+            'zato.server.service.internal.security.apikey',
             'zato.server.service.internal.security.aws',
             'zato.server.service.internal.security.basic_auth',
             'zato.server.service.internal.security.ntlm',
