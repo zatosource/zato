@@ -92,6 +92,7 @@ initial_cluster_name = {initial_cluster_name}
 initial_server_name = {initial_server_name}
 delivery_lock_timeout = 2
 queue_build_cap = 30 # All queue-based connections need to initialize in that many seconds
+http_proxy=
 
 [kvdb]
 host={kvdb_host}
