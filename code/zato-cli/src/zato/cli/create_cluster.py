@@ -146,6 +146,13 @@ zato_services = {
     # Security
     'zato.security.get-list':'zato.server.service.internal.security.GetList',
 
+    # Security - API keys
+    'zato.security.apikey.change-password':'zato.server.service.internal.security.apikey.ChangePassword',
+    'zato.security.apikey.create':'zato.server.service.internal.security.apikey.Create',
+    'zato.security.apikey.delete':'zato.server.service.internal.security.apikey.Delete',
+    'zato.security.apikey.edit':'zato.server.service.internal.security.apikey.Edit',
+    'zato.security.apikey.get-list':'zato.server.service.internal.security.apikey.GetList',
+
     # Security - AWS
     'zato.security.aws.change-password':'zato.server.service.internal.security.aws.ChangePassword',
     'zato.security.aws.create':'zato.server.service.internal.security.aws.Create',

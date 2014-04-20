@@ -90,6 +90,7 @@
 
                 <li><span class="like-a">Security &darr;</span>
                     <ul>
+                        <li><a href="{% url security-apikey %}?cluster={{ cluster_id|default:'' }}">API keys</a></li>
                         <li><a href="{% url security-aws %}?cluster={{ cluster_id|default:'' }}">AWS</a></li>
                         <li><a href="{% url security-basic-auth %}?cluster={{ cluster_id|default:'' }}">HTTP Basic Auth</a></li>
                         <li><a href="{% url security-ntlm %}?cluster={{ cluster_id|default:'' }}">NTLM</a></li>

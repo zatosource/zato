@@ -48,8 +48,8 @@ class URLData(OAuthDataStore):
     """ Performs URL matching and all the HTTP/SOAP-related security checks.
     """
     def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, oauth_config=None,
-                 tech_acc_config=None, wss_config=None, aws_config=None, openstack_config=None, kvdb=None, broker_client=None,
-                 odb=None, elem_path_store=None, xpath_store=None):
+                 tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, openstack_config=None, kvdb=None,
+                 broker_client=None, odb=None, elem_path_store=None, xpath_store=None):
         self.channel_data = channel_data
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -57,6 +57,7 @@ class URLData(OAuthDataStore):
         self.oauth_config = oauth_config
         self.tech_acc_config = tech_acc_config
         self.wss_config = wss_config
+        self.apikey_config = apikey_config
         self.aws_config = aws_config
         self.openstack_config = openstack_config
         self.kvdb = kvdb
@@ -116,6 +117,22 @@ class URLData(OAuthDataStore):
         raise NotImplementedError
 
 # ################################################################################################################################
+
+    def _handle_security_apikey(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
+        """ Performs the authentication against an API key
+        """
+        '''
+        env = {'HTTP_AUTHORIZATION':wsgi_environ.get('HTTP_AUTHORIZATION')}
+        url_config = {'basic-auth-username':sec_def.username, 'basic-auth-password':sec_def.password}
+
+        result = on_basic_auth(env, url_config, False)
+
+        if not result:
+            msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
+                path_info, cid, result.code, result.description)
+            logger.error(msg)
+            raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
+            '''
 
     def _handle_security_basic_auth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
         """ Performs the authentication using HTTP Basic Auth.
@@ -283,6 +300,47 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
+    def _update_apikey(self, name, config):
+        self.apikey_config[name] = Bunch()
+        self.apikey_config[name].config = config
+
+    def apikey_get(self, name):
+        """ Returns the configuration of the API key of the given name.
+        """
+        with self.url_sec_lock:
+            return self.apikey_config.get(name)
+
+    def on_broker_msg_SECURITY_APIKEY_CREATE(self, msg, *args):
+        """ Creates a new API key security definition.
+        """
+        with self.url_sec_lock:
+            self._update_apikey(msg.name, msg)
+
+    def on_broker_msg_SECURITY_APIKEY_EDIT(self, msg, *args):
+        """ Updates an existing API key security definition.
+        """
+        with self.url_sec_lock:
+            del self.apikey_config[msg.old_name]
+            self._update_apikey(msg.name, msg)
+            self._update_url_sec(msg, security_def_type.apikey)
+
+    def on_broker_msg_SECURITY_APIKEY_DELETE(self, msg, *args):
+        """ Deletes an API key security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('apikey', msg.name)
+            del self.apikey_config[msg.name]
+            self._update_url_sec(msg, security_def_type.apikey, True)
+
+    def on_broker_msg_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an API key security definition.
+        """
+        with self.url_sec_lock:
+            self.apikey_config[msg.name]['config']['password'] = msg.password
+            self._update_url_sec(msg, security_def_type.apikey)
+
+# ################################################################################################################################
+
     def _update_aws(self, name, config):
         self.aws_config[name] = Bunch()
         self.aws_config[name].config = config
@@ -294,7 +352,7 @@ class URLData(OAuthDataStore):
             return self.aws_config.get(name)
 
     def on_broker_msg_SECURITY_AWS_CREATE(self, msg, *args):
-        """ Creates a new AWS security definition
+        """ Creates a new AWS security definition.
         """
         with self.url_sec_lock:
             self._update_aws(msg.name, msg)
@@ -332,7 +390,7 @@ class URLData(OAuthDataStore):
             return self.openstack_config.get(name)
 
     def on_broker_msg_SECURITY_OPENSTACK_CREATE(self, msg, *args):
-        """ Creates a new OpenStack security definition
+        """ Creates a new OpenStack security definition.
         """
         with self.url_sec_lock:
             self._update_openstack(msg.name, msg)
@@ -371,7 +429,7 @@ class URLData(OAuthDataStore):
             return self.basic_auth_config.get(name)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
-        """ Creates a new HTTP Basic Auth security definition
+        """ Creates a new HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
             self._update_basic_auth(msg.name, msg)
@@ -412,7 +470,7 @@ class URLData(OAuthDataStore):
             return self.ntlm_config.get(name)
 
     def on_broker_msg_SECURITY_NTLM_CREATE(self, msg, *args):
-        """ Creates a new NTLM security definition
+        """ Creates a new NTLM security definition.
         """
         with self.url_sec_lock:
             self._update_ntlm(msg.name, msg)

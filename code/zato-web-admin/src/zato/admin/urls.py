@@ -37,7 +37,7 @@ from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import producers as pubsub_producers
-from zato.admin.web.views.security import aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, wss
+from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, wss
 
 urlpatterns = patterns('',
 
@@ -223,7 +223,24 @@ urlpatterns = patterns('',
 
 # ################################################################################################################################
 
-    # .. NTLM
+    # .. API keys
+
+    url(r'^zato/security/apikey/$',
+        login_required(apikey.Index()), name=apikey.Index.url_name),
+    url(r'^zato/security/apikey/$',
+        login_required(apikey.Index()), name=apikey.Index.url_name),
+    url(r'^zato/security/apikey/create/$',
+        login_required(apikey.Create()), name=apikey.Create.url_name),
+    url(r'^zato/security/apikey/edit/$',
+        login_required(apikey.Edit()), name=apikey.Edit.url_name),
+    url(r'^zato/security/apikey/change-password/$',
+        login_required(apikey.change_password), name='security-apikey-change-password'),
+    url(r'^zato/security/apikey/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(apikey.Delete()), name=apikey.Delete.url_name),    
+
+# ################################################################################################################################
+
+    # .. AWS
 
     url(r'^zato/security/aws/$',
         login_required(aws.Index()), name=aws.Index.url_name),
@@ -241,6 +258,7 @@ urlpatterns = patterns('',
 # ################################################################################################################################
 
     # .. HTTP Basic Auth
+
     url(r'^zato/security/basic-auth/$',
         login_required(basic_auth.Index()), name=basic_auth.Index.url_name),
     url(r'^zato/security/basic-auth/$',

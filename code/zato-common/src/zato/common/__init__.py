@@ -146,12 +146,13 @@ SOAP_VERSIONS = ('1.1', '1.2')
 SOAP_CHANNEL_VERSIONS = ('1.1',)
 
 SECURITY_TYPES = {
+    'apikey':'API key',
     'aws':'AWS',
     'basic_auth':'HTTP Basic Auth',
     'ntlm':'NTLM',
     'oauth': 'OAuth 1.0',
     'openstack': 'OpenStack',
-    'tech_acc':'Tech account',
+    'tech_account':'Tech account',
     'wss':'WS-Security'
 }
 

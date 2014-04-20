@@ -32,7 +32,8 @@ class GetList(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            pairs = (('aws', query.aws_security_list),
+            pairs = (('apikey', query.apikey_security_list),
+                     ('aws', query.aws_security_list),
                      ('basic_auth', query.basic_auth_list),
                      ('ntlm', query.ntlm_list),
                      ('oauth', query.oauth_list),

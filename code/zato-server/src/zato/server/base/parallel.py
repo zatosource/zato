@@ -410,6 +410,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # Security - start
         #
 
+        # API keys
+        query = self.odb.get_apikey_security_list(server.cluster.id, True)
+        self.config.apikey = ConfigDict.from_query('apikey', query)
+
         # AWS
         query = self.odb.get_aws_security_list(server.cluster.id, True)
         self.config.aws = ConfigDict.from_query('aws', query)

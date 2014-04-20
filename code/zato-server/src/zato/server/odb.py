@@ -25,8 +25,8 @@ from bunch import Bunch
 
 # Zato
 from zato.common import DEPLOYMENT_STATUS, MISC, MSG_PATTERN_TYPE, ZATO_NONE, ZATO_ODB_POOL_NAME
-from zato.common.odb.model import Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, HTTPSOAP, \
-     HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, HTTSOAPAuditReplacePatternsXPath, OAuth, Server, Service, \
+from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
+     HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, HTTSOAPAuditReplacePatternsXPath, OAuth, Server, Service, \
      TechnicalAccount, WSSDefinition
 from zato.common.odb import query
 from zato.common.util import current_host, security_def_type, TRACE1
@@ -112,6 +112,7 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             # What DB class to fetch depending on the string value of the security type.
             sec_type_db_class = {
+                'apikey': APIKeySecurity,
                 'basic_auth': HTTPBasicAuth,
                 'oauth': OAuth,
                 'tech_acc': TechnicalAccount,
@@ -391,6 +392,12 @@ class ODBManager(SessionWrapper):
             return query.job_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
+
+    def get_apikey_security_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of API keys existing on the given cluster.
+        """
+        with closing(self.session()) as session:
+            return query.apikey_security_list(session, cluster_id, needs_columns)
 
     def get_aws_security_list(self, cluster_id, needs_columns=False):
         """ Returns a list of AWS definitions existing on the given cluster.

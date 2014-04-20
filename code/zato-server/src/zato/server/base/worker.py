@@ -104,8 +104,8 @@ class WorkerStore(BrokerMessageReceiver):
         self.request_dispatcher.url_data = URLData(
             deepcopy(self.worker_config.http_soap),
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
-            self.worker_config.basic_auth, self.worker_config.ntlm, self.worker_config.oauth,
-            self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.aws, self.worker_config.openstack_security,
+            self.worker_config.basic_auth, self.worker_config.ntlm, self.worker_config.oauth, self.worker_config.tech_acc,
+            self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws, self.worker_config.openstack_security,
             self.kvdb, self.broker_client, self.server.odb, self.elem_path_store, self.xpath_store)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
@@ -356,6 +356,36 @@ class WorkerStore(BrokerMessageReceiver):
         if wrapper.config['security_name'] == msg['name']:
             wrapper.config['password'] = msg['password']
             wrapper.set_auth()
+
+# ################################################################################################################################
+
+    def apikey_get(self, name):
+        """ Returns the configuration of the API key of the given name.
+        """
+        self.request_dispatcher.url_data.apikey_get(name)
+
+    def on_broker_msg_SECURITY_APIKEY_CREATE(self, msg, *args):
+        """ Creates a new API key security definition.
+        """
+        self.request_dispatcher.url_data.on_broker_msg_SECURITY_APIKEY_CREATE(msg, *args)
+
+    def on_broker_msg_SECURITY_APIKEY_EDIT(self, msg, *args):
+        """ Updates an existing API key security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.apikey,
+                self._visit_wrapper_edit, keys=('is_active', 'username', 'name'))
+
+    def on_broker_msg_SECURITY_APIKEY_DELETE(self, msg, *args):
+        """ Deletes an API key security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.apikey,
+                self._visit_wrapper_delete)
+
+    def on_broker_msg_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an API key security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], security_def_type.apikey,
+                self._visit_wrapper_change_password)
 
 # ################################################################################################################################
 
