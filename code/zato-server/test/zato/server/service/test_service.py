@@ -41,7 +41,7 @@ from zato.server.service.reqresp import HTTPRequestData, Request
 logger = getLogger(__name__)
 faker = Faker()
 
-# ##############################################################################
+# ################################################################################################################################
 
 class HooksTestCase(ServiceTestCase):
     def test_hooks(self):
@@ -73,7 +73,7 @@ class HooksTestCase(ServiceTestCase):
         for name in('before_handle', 'before_job', 'before_one_time_job', 'after_handle', 'after_job', 'after_one_time_job'):
             eq_(instance.environ['{}_called'.format(name)], True)
 
-# ##############################################################################
+# ################################################################################################################################
 
 class TestLogInputOutput(ServiceTestCase):
     def test_log_input_output(self):
@@ -117,7 +117,7 @@ class TestLogInputOutput(ServiceTestCase):
                            'response.payload', 'slow_threshold', 'usage', 
                            'wsgi_environ', 'zato.http.response.headers'])
 
-# ##############################################################################
+# ################################################################################################################################
 
 class TestLock(ServiceTestCase):
     def test_lock_ok(self):
@@ -178,7 +178,7 @@ class TestLock(ServiceTestCase):
         else:
             self.fail('LockTimeout not raised')
             
-# ##############################################################################
+# ################################################################################################################################
 
 class TestHTTPRequestData(TestCase):
     def test_empty(self):
@@ -205,7 +205,7 @@ class TestHTTPRequestData(TestCase):
         self.assertEquals(sorted(data.GET.items()), [('get1', get1), ('get2', get2)])
         self.assertEquals(sorted(data.POST.items()), [('post1', post1), ('post2', post2)])
 
-# ##############################################################################
+# ################################################################################################################################
 
 class TestRequest(TestCase):
     def test_init_no_sio(self):
@@ -297,10 +297,10 @@ class TestRequest(TestCase):
                              'g': 'g-msg',
                              'h':'channel_param_h'}.items()))
                         
-# ##############################################################################
+# ################################################################################################################################
 
 class TestSIOListDataType(ServiceTestCase):
-    # https://github.com/zatosource/zato/issues/114    
+    # https://github.com/zatosource/zato/issues/114
     
     def test_sio_list_data_type_input_json(self):
         cid = rand_string()
@@ -403,3 +403,49 @@ class TestSIOListDataType(ServiceTestCase):
         eq_(data.first_name.text, expected_first_name)
         eq_(data.last_name.text, expected_last_name)
         eq_(data.emails.xpath('item'), expected_emails)
+
+# ################################################################################################################################
+
+class TestNav(TestCase):
+    # # https://github.com/zatosource/zato/issues/209
+
+    def test_dictnav(self):
+
+        key1, key2, key3 = 'a', 'b', 'c'
+        value = rand_string()
+
+        d = {
+            'flat': 123,
+            'nested':{
+                key1: {key2: {key3: value}}
+            }
+        }
+
+        class MyService(Service):
+            def handle(self):
+                dn = self.dictnav(self.request.input)
+                response = {
+                    'key1': sorted(dn.get(['nested', 'a']).items()),
+                    'value': dn.get(['nested', 'a', 'b', 'c']),
+                    'has_key_flat_true': dn.has_key('flat', False),
+                    'has_key_flat_false': dn.has_key(rand_string(), True),
+                    'has_key_nested_true': dn.has_key('b'),
+                    'has_key_nested_false': dn.has_key(rand_string()),
+                    'has_path': dn.has_path(['nested', 'a', 'b', 'c']),
+                }
+                self.response.payload = response
+
+        service = MyService()
+        service.request.input = d
+        service.handle()
+
+        eq_(service.response.payload['key1'], [('b', {'c': value})])
+        eq_(service.response.payload['value'], value)
+        eq_(service.response.payload['has_key_flat_true'], True)
+        eq_(service.response.payload['has_key_flat_false'], False)
+        eq_(service.response.payload['has_key_nested_true'], True)
+        eq_(service.response.payload['has_key_nested_false'], False)
+        eq_(service.response.payload['has_path'], True)
+
+    def test_listnav(self):
+        self.test_dictnav() # Right now dictnav and listnav do the same thing
