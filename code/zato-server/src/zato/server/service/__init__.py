@@ -47,6 +47,7 @@ from sqlalchemy.util import NamedTuple
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, \
      path, SIMPLE_IO, URL_TYPE, ZatoException, ZATO_NONE, ZATO_OK
 from zato.common.broker_message import SERVICE
+from zato.common.nav import DictNav, ListNav
 from zato.common.util import uncamelify, make_repr, new_cid, payload_from_request, service_name_from_impl, TRACE1
 from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
@@ -138,19 +139,13 @@ class Service(object):
         self.logger = logging.getLogger(self.get_name())
         self.server = None
         self.broker_client = None
-
         self.pubsub = None
-        """:type: zato.common.pubsub.PubSubAPI"""
-
         self.channel = None
         self.cid = None
         self.outgoing = None
         self.cloud = None
         self.worker_store = None
-
         self.odb = None
-        """:type: zato.server.odb.ODBManager"""
-
         self.data_format = None
         self.transport = None
         self.wsgi_environ = None
@@ -171,6 +166,8 @@ class Service(object):
         self.from_passthrough = False
         self.passthrough_request = None
         self.user_config = None
+        self.dictnav = DictNav
+        self.listnav = ListNav
 
     @classmethod
     def get_name(class_):
