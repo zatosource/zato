@@ -46,7 +46,7 @@ export ZATO_CLI_DONT_SHOW_OUTPUT=1
 {script_dir}
 ZATO_BIN={zato_bin}
 
-echo Starting the Zato quickstart environment
+echo Starting the Zato cluster {cluster_name}
 echo Running sanity checks
 
 $ZATO_BIN check-config $BASE_DIR/server1
@@ -75,7 +75,7 @@ $ZATO_BIN start .
 echo [6/6] Web admin started
 
 cd $BASE_DIR
-echo Zato quickstart environment started
+echo Zato cluster {cluster_name} started
 echo Visit https://zato.io/support for more information and support options
 exit 0
 """
@@ -87,7 +87,7 @@ export ZATO_CLI_DONT_SHOW_OUTPUT=1
 {script_dir}
 ZATO_BIN={zato_bin}
 
-echo Stopping the Zato quickstart environment
+echo Stopping the Zato cluster {cluster_name}
 
 # Start the load balancer first ..
 cd $BASE_DIR/load-balancer
@@ -108,7 +108,7 @@ $ZATO_BIN stop .
 echo [4/4] Web admin stopped
 
 cd $BASE_DIR
-echo Zato quickstart environment stopped
+echo Zato cluster {cluster_name} stopped
 """
 
 zato_qs_restart = """#!/bin/bash
@@ -328,9 +328,9 @@ class Create(ZatoCommand):
         zato_qs_stop_path = os.path.join(args_path, 'zato-qs-stop.sh')
         zato_qs_restart_path = os.path.join(args_path, 'zato-qs-restart.sh')
 
-        open(zato_qs_start_path, 'w').write(zato_qs_start_template.format(zato_bin=zato_bin, script_dir=script_dir))
-        open(zato_qs_stop_path, 'w').write(zato_qs_stop_template.format(zato_bin=zato_bin, script_dir=script_dir))
-        open(zato_qs_restart_path, 'w').write(zato_qs_restart.format(script_dir=script_dir))
+        open(zato_qs_start_path, 'w').write(zato_qs_start_template.format(zato_bin=zato_bin, script_dir=script_dir, cluster_name=cluster_name))
+        open(zato_qs_stop_path, 'w').write(zato_qs_stop_template.format(zato_bin=zato_bin, script_dir=script_dir, cluster_name=cluster_name))
+        open(zato_qs_restart_path, 'w').write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
 
         file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
         
