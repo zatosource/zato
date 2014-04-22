@@ -152,7 +152,8 @@ class Create(ZatoCommand):
     needs_empty_dir = True
     allow_empty_secrets = True
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
-    
+    opts.append({'name':'--cluster_name', 'help':"Name to be given to the new cluster"})
+
     def _bunch_from_args(self, args, cluster_name):
         bunch = Bunch()
         bunch.verbose = args.verbose
@@ -186,7 +187,7 @@ class Create(ZatoCommand):
         next_step = count(1)
         next_port = count(http_plain_server_port)
         total_steps = 8
-        cluster_name = 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)
+        cluster_name = getattr(args, 'cluster_name', 'quickstart-{}'.format(random.getrandbits(20)).zfill(7))
         server_names = {'1':'server1', '2':'server2'}
         admin_invoke_password = uuid4().hex
         broker_host = 'localhost'
