@@ -442,6 +442,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_wss_list(server.cluster.id, True)
         self.config.wss = ConfigDict.from_query('wss', query)
 
+        # XPath
+        query = self.odb.get_xpath_sec_list(server.cluster.id, True)
+        self.config.xpath_sec = ConfigDict.from_query('xpath_sec', query)
+
         #
         # Security - end
         #

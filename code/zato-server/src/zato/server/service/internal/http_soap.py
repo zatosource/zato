@@ -21,12 +21,11 @@ from webhelpers.paginate import Page
 
 # Zato
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MSG_PATTERN_TYPE, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
+     MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, ElemPath, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, \
      HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, to_json, XPath
 from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap_list
-from zato.common.util import security_def_type
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -54,10 +53,10 @@ class _HTTPSOAPService(object):
             # Outgoing plain HTTP connections may use HTTP Basic Auth only,
             # outgoing SOAP connections may use either WSS or HTTP Basic Auth.                
             if connection == 'outgoing':
-                if transport == URL_TYPE.PLAIN_HTTP and security.sec_type != security_def_type.basic_auth:
+                if transport == URL_TYPE.PLAIN_HTTP and security.sec_type != SEC_DEF_TYPE.BASIC_AUTH:
                     raise Exception('Only HTTP Basic Auth is supported, not [{}]'.format(security.sec_type))
                 elif transport == URL_TYPE.SOAP and security.sec_type \
-                     not in(security_def_type.basic_auth, security_def_type.ntlm, security_def_type.wss):
+                     not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.WSS):
                     raise Exception('Security type must be HTTP Basic Auth, NTLM or WS-Security, not [{}]'.format(
                         security.sec_type))
             

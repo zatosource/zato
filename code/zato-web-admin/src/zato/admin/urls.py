@@ -37,7 +37,8 @@ from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import producers as pubsub_producers
-from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, wss
+from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, \
+     wss, xpath as xpath_sec
 
 urlpatterns = patterns('',
 
@@ -236,7 +237,7 @@ urlpatterns = patterns('',
     url(r'^zato/security/apikey/change-password/$',
         login_required(apikey.change_password), name='security-apikey-change-password'),
     url(r'^zato/security/apikey/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(apikey.Delete()), name=apikey.Delete.url_name),    
+        login_required(apikey.Delete()), name=apikey.Delete.url_name),
 
 # ################################################################################################################################
 
@@ -355,6 +356,23 @@ urlpatterns = patterns('',
         login_required(wss.change_password), name='security-wss-change-password'),
     url(r'^zato/security/wss/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(wss.Delete()), name=wss.Delete.url_name),
+
+# ################################################################################################################################
+
+    # .. XPath
+
+    url(r'^zato/security/xpath/$',
+        login_required(xpath_sec.Index()), name=xpath_sec.Index.url_name),
+    url(r'^zato/security/xpath/$',
+        login_required(xpath_sec.Index()), name=xpath_sec.Index.url_name),
+    url(r'^zato/security/xpath/create/$',
+        login_required(xpath_sec.Create()), name=xpath_sec.Create.url_name),
+    url(r'^zato/security/xpath/edit/$',
+        login_required(xpath_sec.Edit()), name=xpath_sec.Edit.url_name),
+    url(r'^zato/security/xpath/change-password/$',
+        login_required(xpath_sec.change_password), name='security-xpath-change-password'),
+    url(r'^zato/security/xpath/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(xpath_sec.Delete()), name=xpath_sec.Delete.url_name),
 
 # ################################################################################################################################
 

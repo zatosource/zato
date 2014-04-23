@@ -33,9 +33,8 @@ from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import DATA_FORMAT, MISC, MSG_PATTERN_TYPE, URL_TYPE, ZATO_NONE
+from zato.common import DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL
-from zato.common.util import security_def_type, TRACE1
 from zato.server.connection.http_soap import Unauthorized
 
 logger = logging.getLogger(__name__)
@@ -48,8 +47,8 @@ class URLData(OAuthDataStore):
     """ Performs URL matching and all the HTTP/SOAP-related security checks.
     """
     def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, oauth_config=None,
-                 tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, openstack_config=None, kvdb=None,
-                 broker_client=None, odb=None, elem_path_store=None, xpath_store=None):
+                 tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, openstack_config=None,
+                 xpath_sec_config=None, kvdb=None, broker_client=None, odb=None, elem_path_store=None, xpath_store=None):
         self.channel_data = channel_data
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -60,6 +59,7 @@ class URLData(OAuthDataStore):
         self.apikey_config = apikey_config
         self.aws_config = aws_config
         self.openstack_config = openstack_config
+        self.xpath_sec_config = xpath_sec_config
         self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
@@ -242,6 +242,39 @@ class URLData(OAuthDataStore):
 
         return wsgi_environ['HTTP_X_ZATO_USER']
 
+    def _handle_security_xpath_sec(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
+
+        payload = wsgi_environ['zato.request.payload']
+        user_msg = 'Invalid username or password'
+
+        #logger.warn(payload)
+        #logger.warn(body)
+        #logger.warn(sorted(sec_def.items()))
+
+        username = payload.xpath(sec_def.username_expr)
+        if not username:
+            logger.error('%s `%s` expr:`%s`, value:`%r`', user_msg, '(no username)', sec_def.username_expr, username)
+            raise Unauthorized(cid, user_msg, 'zato-xpath')
+
+        username = username[0]
+
+        if username != sec_def.username:
+            logger.error('%s `%s` expr:`%s`, value:`%r`', user_msg, '(username)', sec_def.username_expr, username)
+            raise Unauthorized(cid, user_msg, 'zato-xpath')
+
+        if sec_def.get('password_expr'):
+
+            password = payload.xpath(sec_def.password_expr)
+            if not password:
+                logger.error('%s `%s` expr:`%s`', user_msg, '(no password)', sec_def.password_expr)
+                raise Unauthorized(cid, user_msg, 'zato-xpath')
+
+            password = password[0]
+
+            if password != sec_def.password:
+                logger.error('%s `%s` expr:`%s`', user_msg, '(password)', sec_def.password_expr)
+                raise Unauthorized(cid, user_msg, 'zato-xpath')
+
 # ################################################################################################################################
 
     def match(self, url_path, soap_action):
@@ -322,7 +355,7 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             del self.apikey_config[msg.old_name]
             self._update_apikey(msg.name, msg)
-            self._update_url_sec(msg, security_def_type.apikey)
+            self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY)
 
     def on_broker_msg_SECURITY_APIKEY_DELETE(self, msg, *args):
         """ Deletes an API key security definition.
@@ -330,14 +363,14 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             self._delete_channel_data('apikey', msg.name)
             del self.apikey_config[msg.name]
-            self._update_url_sec(msg, security_def_type.apikey, True)
+            self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY, True)
 
     def on_broker_msg_SECURITY_APIKEY_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an API key security definition.
         """
         with self.url_sec_lock:
             self.apikey_config[msg.name]['config']['password'] = msg.password
-            self._update_url_sec(msg, security_def_type.apikey)
+            self._update_url_sec(msg, SEC_DEF_TYPE.APIKEY)
 
 # ################################################################################################################################
 
@@ -440,7 +473,7 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             del self.basic_auth_config[msg.old_name]
             self._update_basic_auth(msg.name, msg)
-            self._update_url_sec(msg, security_def_type.basic_auth)
+            self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_DELETE(self, msg, *args):
         """ Deletes an HTTP Basic Auth security definition.
@@ -448,14 +481,14 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             self._delete_channel_data('basic_auth', msg.name)
             del self.basic_auth_config[msg.name]
-            self._update_url_sec(msg, security_def_type.basic_auth, True)
+            self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH, True)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an HTTP Basic Auth security definition.
         """
         with self.url_sec_lock:
             self.basic_auth_config[msg.name]['config']['password'] = msg.password
-            self._update_url_sec(msg, security_def_type.basic_auth)
+            self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
 
 # ################################################################################################################################
 
@@ -481,7 +514,7 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             del self.ntlm_config[msg.old_name]
             self._update_ntlm(msg.name, msg)
-            self._update_url_sec(msg, security_def_type.ntlm)
+            self._update_url_sec(msg, SEC_DEF_TYPE.NTLM)
 
     def on_broker_msg_SECURITY_NTLM_DELETE(self, msg, *args):
         """ Deletes an NTLM security definition.
@@ -489,14 +522,14 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             self._delete_channel_data('ntlm', msg.name)
             del self.ntlm_config[msg.name]
-            self._update_url_sec(msg, security_def_type.ntlm, True)
+            self._update_url_sec(msg, SEC_DEF_TYPE.NTLM, True)
 
     def on_broker_msg_SECURITY_NTLM_CHANGE_PASSWORD(self, msg, *args):
         """ Changes password of an NTLM security definition.
         """
         with self.url_sec_lock:
             self.ntlm_config[msg.name]['config']['password'] = msg.password
-            self._update_url_sec(msg, security_def_type.ntlm)
+            self._update_url_sec(msg, SEC_DEF_TYPE.NTLM)
 
 # ################################################################################################################################
 
@@ -522,7 +555,7 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             del self.oauth_config[msg.old_name]
             self._update_oauth(msg.name, msg)
-            self._update_url_sec(msg, security_def_type.oauth)
+            self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH)
 
     def on_broker_msg_SECURITY_OAUTH_DELETE(self, msg, *args):
         """ Deletes an OAuth account.
@@ -530,14 +563,14 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             self._delete_channel_data('oauth', msg.name)
             del self.oauth_config[msg.name]
-            self._update_url_sec(msg, security_def_type.oauth, True)
+            self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH, True)
 
     def on_broker_msg_SECURITY_OAUTH_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of an OAuth account.
         """
         with self.url_sec_lock:
             self.oauth_config[msg.name]['config']['password'] = msg.password
-            self._update_url_sec(msg, security_def_type.oauth)
+            self._update_url_sec(msg, SEC_DEF_TYPE.OAUTH)
 
 # ################################################################################################################################
 
@@ -563,7 +596,7 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             del self.tech_acc_config[msg.old_name]
             self._update_tech_acc(msg.name, msg)
-            self._update_url_sec(msg, security_def_type.tech_account)
+            self._update_url_sec(msg, SEC_DEF_TYPE.TECH_ACCOUNT)
 
     def on_broker_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
@@ -571,7 +604,7 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             self._delete_channel_data('tech_acc', msg.name)
             del self.tech_acc_config[msg.name]
-            self._update_url_sec(msg, security_def_type.tech_account, True)
+            self._update_url_sec(msg, SEC_DEF_TYPE.TECH_ACCOUNT, True)
 
     def on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
@@ -580,7 +613,7 @@ class URLData(OAuthDataStore):
             # The message's 'password' attribute already takes the salt
             # into account (pun intended ;-))
             self.tech_acc_config[msg.name]['config']['password'] = msg.password
-            self._update_url_sec(msg, security_def_type.tech_account)
+            self._update_url_sec(msg, SEC_DEF_TYPE.TECH_ACCOUNT)
 
 # ################################################################################################################################
 
@@ -609,7 +642,7 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             del self.wss_config[msg.old_name]
             self._update_wss(msg.name, msg)
-            self._update_url_sec(msg, security_def_type.wss)
+            self._update_url_sec(msg, SEC_DEF_TYPE.WSS)
 
     def on_broker_msg_SECURITY_WSS_DELETE(self, msg, *args):
         """ Deletes a WS-Security definition.
@@ -617,7 +650,7 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             self._delete_channel_data('wss', msg.name)
             del self.wss_config[msg.name]
-            self._update_url_sec(msg, security_def_type.wss, True)
+            self._update_url_sec(msg, SEC_DEF_TYPE.WSS, True)
 
     def on_broker_msg_SECURITY_WSS_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a WS-Security definition.
@@ -626,7 +659,49 @@ class URLData(OAuthDataStore):
             # The message's 'password' attribute already takes the salt
             # into account.
             self.wss_config[msg.name]['config']['password'] = msg.password
-            self._update_url_sec(msg, security_def_type.wss)
+            self._update_url_sec(msg, SEC_DEF_TYPE.WSS)
+
+# ################################################################################################################################
+
+    def _update_xpath_sec(self, name, config):
+        self.xpath_sec_config[name] = Bunch()
+        self.xpath_sec_config[name].config = config
+
+    def xpath_sec_get(self, name):
+        """ Returns the configuration of the XPath security definition
+        of the given name.
+        """
+        with self.url_sec_lock:
+            return self.xpath_sec_config.get(name)
+
+    def on_broker_msg_SECURITY_XPATH_SEC_CREATE(self, msg, *args):
+        """ Creates a new XPath security definition.
+        """
+        with self.url_sec_lock:
+            self._update_xpath_sec(msg.name, msg)
+
+    def on_broker_msg_SECURITY_XPATH_SEC_EDIT(self, msg, *args):
+        """ Updates an existing XPath security definition.
+        """
+        with self.url_sec_lock:
+            del self.xpath_sec_config[msg.old_name]
+            self._update_xpath_sec(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.XPATH_SEC)
+
+    def on_broker_msg_SECURITY_XPATH_SEC_DELETE(self, msg, *args):
+        """ Deletes an XPath security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('xpath_sec', msg.name)
+            del self.xpath_sec_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.XPATH_SEC, True)
+
+    def on_broker_msg_SECURITY_XPATH_SEC_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of an XPath security definition.
+        """
+        with self.url_sec_lock:
+            self.xpath_sec_config[msg.name]['config']['password'] = msg.password
+            self._update_url_sec(msg, SEC_DEF_TYPE.XPATH_SEC)
 
 # ################################################################################################################################
 

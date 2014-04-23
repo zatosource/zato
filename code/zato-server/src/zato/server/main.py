@@ -33,8 +33,9 @@ from repoze.profile import ProfileMiddleware
 
 # Zato
 from zato.common.repo import RepoManager
+from zato.common import TRACE1
 from zato.common.util import absolutize_path, clear_locks, get_app_context, get_config, get_crypto_manager, \
-     make_psycopg_green, register_diag_handlers, TRACE1
+     make_psycopg_green, register_diag_handlers
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):

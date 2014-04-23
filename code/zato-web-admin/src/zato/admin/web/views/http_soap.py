@@ -29,10 +29,10 @@ from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.http_soap import AuditLogEntryList, ChooseClusterForm, CreateForm, EditForm, ReplacePatternsForm
 from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, method_allowed, SecurityList
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MSG_PATTERN_TYPE, PARAMS_PRIORITY, SECURITY_TYPES, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, \
+     MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE
+from zato.common import SEC_DEF_TYPE
 from zato.common.odb.model import HTTPSOAP
-from zato.common.util import security_def_type as _security_def_type
 
 logger = logging.getLogger(__name__)
 
@@ -119,11 +119,11 @@ def index(req):
             # Outgoing plain HTTP connections may use HTTP Basic Auth only,
             # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
             if connection == 'outgoing':
-                if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in(
-                    _security_def_type.basic_auth, _security_def_type.tech_account, _security_def_type.apikey):
+                if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in (
+                    SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TECH_ACCOUNT, SEC_DEF_TYPE.APIKEY):
                     continue
-                elif transport == URL_TYPE.SOAP and def_item.sec_type \
-                     not in(_security_def_type.basic_auth, _security_def_type.ntlm, _security_def_type.wss):
+                elif transport == URL_TYPE.SOAP and def_item.sec_type not in (
+                    SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.WSS):
                     continue
 
             _security.append(def_item)
@@ -142,7 +142,7 @@ def index(req):
 
             _security_name = item.security_name
             if _security_name:
-                security_name = '{0}<br/>{1}'.format(SECURITY_TYPES[item.sec_type], _security_name)
+                security_name = '{0}<br/>{1}'.format(SEC_DEF_TYPE_NAME[item.sec_type], _security_name)
             else:
                 security_name = 'No security'
 

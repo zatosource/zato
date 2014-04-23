@@ -26,10 +26,9 @@ from springpython.remoting.xmlrpc import SSLServer
 # Zato
 from zato.agent.load_balancer.config import backend_template, config_from_string, string_from_config, zato_item_token
 from zato.agent.load_balancer.haproxy_stats import HAProxyStats
-from zato.common import ZATO_OK
+from zato.common import TRACE1, ZATO_OK
 from zato.common.haproxy import haproxy_stats
 from zato.common.repo import RepoManager
-from zato.common.util import TRACE1
 
 public_method_prefix = "_lb_agent_"
 config_file = "zato.config"

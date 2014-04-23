@@ -24,7 +24,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, ChannelAMQ
      ElemPath, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, \
      NotificationOpenStackSwift as NotifOSS, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
      OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Service, SQLConnectionPool, \
-     TechnicalAccount, XPath, WSSDefinition
+     TechnicalAccount, WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +205,18 @@ def wss_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==WSSDefinition.cluster_id).\
         filter(SecurityBase.id==WSSDefinition.id).\
+        order_by('sec_base.name')
+
+@needs_columns
+def xpath_sec_list(session, cluster_id, needs_columns=False):
+    """ All the XPath security definitions.
+    """
+    return session.query(
+        XPathSecurity.id, XPathSecurity.name, XPathSecurity.is_active, XPathSecurity.username, XPathSecurity.username_expr,
+        XPathSecurity.password_expr, XPathSecurity.password, XPathSecurity.sec_type).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==XPathSecurity.cluster_id).\
+        filter(SecurityBase.id==XPathSecurity.id).\
         order_by('sec_base.name')
 
 # ################################################################################################################################

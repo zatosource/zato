@@ -32,7 +32,7 @@ from django.http import QueryDict
 # lxml
 from lxml import etree
 from lxml.etree import _Element as EtreeElement
-from lxml.objectify import deannotate, Element, ElementMaker
+from lxml.objectify import deannotate, Element, ElementMaker, ObjectifiedElement
 
 # Paste
 from paste.util.converters import asbool
@@ -48,7 +48,7 @@ from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, NO_DEFAULT_VALUE, PA
      path, SIMPLE_IO, URL_TYPE, ZatoException, ZATO_NONE, ZATO_OK
 from zato.common.broker_message import SERVICE
 from zato.common.nav import DictNav, ListNav
-from zato.common.util import uncamelify, make_repr, new_cid, payload_from_request, service_name_from_impl, TRACE1
+from zato.common.util import uncamelify, make_repr, new_cid, payload_from_request, service_name_from_impl
 from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -168,6 +168,8 @@ class Service(object):
         self.user_config = None
         self.dictnav = DictNav
         self.listnav = ListNav
+        self.has_validate_input = False
+        self.has_validate_output = False
 
     @classmethod
     def get_name(class_):
@@ -253,13 +255,19 @@ class Service(object):
     def update_handle(self, set_response_func, service, raw_request, channel, data_format,
             transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
 
-        payload = payload_from_request(cid, raw_request, data_format, transport)
+        wsgi_environ = kwargs.get('wsgi_environ', {})
+        payload = wsgi_environ.get('zato.request.payload')
+
+        # Here's an edge case. If a SOAP request has a single child in Body and this child is an empty element
+        # (though possibly with attributes), checking for 'not payload' alone won't suffice - this evaluates
+        # to False so we'd be parsing the payload again superfluously.
+        if not isinstance(payload, ObjectifiedElement) and not payload:
+            payload = payload_from_request(cid, raw_request, data_format, transport)
 
         job_type = kwargs.get('job_type')
         channel_params = kwargs.get('channel_params', {})
         merge_channel_params = kwargs.get('merge_channel_params', True)
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
-        wsgi_environ = kwargs.get('wsgi_environ', {})
         serialize = kwargs.get('serialize')
         as_bunch = kwargs.get('as_bunch')
         channel_item = kwargs.get('channel_item')
@@ -286,7 +294,9 @@ class Service(object):
                 sio=sio, from_passthrough=True, passthrough_request=self.request, set_response_func=set_response_func,
                 channel_item=channel_item)
         else:
+            service.validate_input()
             service.handle()
+            service.validate_output()
 
         service.call_hooks('after')
         service.post_handle()
@@ -551,6 +561,14 @@ class Service(object):
     @staticmethod
     def after_add_to_store(logger):
         """ Invoked right after the class has been added to the service store.
+        """
+
+    def validate_input(self):
+        """ Invoked right before handle. Any exception raised means handle will not be called.
+        """
+
+    def validate_output(self):
+        """ Invoked right after handle. Any exception raised means further hooks will not be called.
         """
 
 # ##############################################################################

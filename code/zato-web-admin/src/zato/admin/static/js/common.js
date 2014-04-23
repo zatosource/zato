@@ -104,6 +104,7 @@ $.namespace('zato.security.oauth');
 $.namespace('zato.security.openstack');
 $.namespace('zato.security.tech_account');
 $.namespace('zato.security.wss');
+$.namespace('zato.security.xpath');
 $.namespace('zato.service');
 $.namespace('zato.stats');
 $.namespace('zato.stats.top_n');
