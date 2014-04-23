@@ -14,8 +14,8 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
 
 # Zato
+from zato.common import TRACE1
 from zato.common.odb import engine_def
-from zato.common.util import TRACE1
 from zato_settings import * # noqa
 
 if 'DEBUG' not in globals():

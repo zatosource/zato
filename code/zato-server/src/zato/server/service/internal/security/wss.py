@@ -14,6 +14,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
+from zato.common import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, WSSDefinition
 from zato.common.odb.query import wss_list
@@ -84,7 +85,7 @@ class Create(AdminService):
             else:
                 input.action = SECURITY.WSS_CREATE
                 input.password = password
-                input.sec_type = 'wss'
+                input.sec_type = SEC_DEF_TYPE.WSS
                 self.broker_client.publish(self.request.input)
             
             self.response.payload.id = wss.id
@@ -139,7 +140,7 @@ class Edit(AdminService):
             else:
                 input.action = SECURITY.WSS_EDIT
                 input.old_name = old_name
-                input.sec_type = 'wss'
+                input.sec_type = SEC_DEF_TYPE.WSS
                 self.broker_client.publish(self.request.input)
     
             self.response.payload.id = input.id

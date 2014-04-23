@@ -196,6 +196,13 @@ zato_services = {
     'zato.security.wss.edit':'zato.server.service.internal.security.wss.Edit',
     'zato.security.wss.get-list':'zato.server.service.internal.security.wss.GetList',
 
+    # Security - XPath
+    'zato.security.xpath.change-password':'zato.server.service.internal.security.xpath.ChangePassword',
+    'zato.security.xpath.create':'zato.server.service.internal.security.xpath.Create',
+    'zato.security.xpath.delete':'zato.server.service.internal.security.xpath.Delete',
+    'zato.security.xpath.edit':'zato.server.service.internal.security.xpath.Edit',
+    'zato.security.xpath.get-list':'zato.server.service.internal.security.xpath.GetList',
+
     # Servers
     'zato.server.delete':'zato.server.service.internal.server.Delete',
     'zato.server.edit':'zato.server.service.internal.server.Edit',

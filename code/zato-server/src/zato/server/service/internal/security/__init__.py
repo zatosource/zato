@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 
 # Zato
+from zato.common import SEC_DEF_TYPE
 from zato.common.odb import query
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO
@@ -32,14 +33,15 @@ class GetList(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            pairs = (('apikey', query.apikey_security_list),
-                     ('aws', query.aws_security_list),
-                     ('basic_auth', query.basic_auth_list),
-                     ('ntlm', query.ntlm_list),
-                     ('oauth', query.oauth_list),
-                     ('openstack', query.openstack_security_list),
-                     ('tech_acc', query.tech_acc_list),
-                     ('wss', query.wss_list))
+            pairs = ((SEC_DEF_TYPE.APIKEY, query.apikey_security_list),
+                     (SEC_DEF_TYPE.AWS, query.aws_security_list),
+                     (SEC_DEF_TYPE.BASIC_AUTH, query.basic_auth_list),
+                     (SEC_DEF_TYPE.NTLM, query.ntlm_list),
+                     (SEC_DEF_TYPE.OAUTH, query.oauth_list),
+                     (SEC_DEF_TYPE.OPENSTACK, query.openstack_security_list),
+                     (SEC_DEF_TYPE.TECH_ACCOUNT, query.tech_acc_list),
+                     (SEC_DEF_TYPE.WSS, query.wss_list),
+                     (SEC_DEF_TYPE.XPATH_SEC, query.xpath_sec_list))
 
             for def_type, func in pairs:
 

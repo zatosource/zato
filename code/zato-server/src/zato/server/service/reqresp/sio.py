@@ -42,9 +42,9 @@ from sqlalchemy.util import NamedTuple
 
 # Zato
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, \
-     path, SIMPLE_IO, URL_TYPE, ZatoException, ZATO_NONE, ZATO_OK
+     path, SIMPLE_IO, TRACE1, URL_TYPE, ZatoException, ZATO_NONE, ZATO_OK
 from zato.common.broker_message import SERVICE
-from zato.common.util import uncamelify, make_repr, new_cid, payload_from_request, service_name_from_impl, TRACE1
+from zato.common.util import uncamelify, make_repr, new_cid, service_name_from_impl
 from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade

@@ -30,7 +30,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common.broker_message import AMQP_CONNECTOR, DEFINITION
-from zato.common.util import TRACE1
+from zato.common import TRACE1
 from zato.server.connection import BaseConnection, BaseConnector
 
 logger = logging.getLogger(__name__)

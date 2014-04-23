@@ -14,6 +14,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
+from zato.common import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, OAuth
 from zato.common.odb.query import oauth_list
@@ -79,7 +80,7 @@ class Create(AdminService):
                 raise
             else:
                 input.action = SECURITY.OAUTH_CREATE
-                input.sec_type = 'oauth'
+                input.sec_type = SEC_DEF_TYPE.OAUTH
                 self.broker_client.publish(input)
 
             self.response.payload.id = auth.id
@@ -130,7 +131,7 @@ class Edit(AdminService):
             else:
                 input.action = SECURITY.OAUTH_EDIT
                 input.old_name = old_name
-                input.sec_type = 'oauth'
+                input.sec_type = SEC_DEF_TYPE.OAUTH
                 self.broker_client.publish(input)
 
                 self.response.payload.id = definition.id
