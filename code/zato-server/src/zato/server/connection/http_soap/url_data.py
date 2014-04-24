@@ -271,6 +271,8 @@ class URLData(OAuthDataStore):
                 logger.error('%s `%s` expr:`%s`', user_msg, '(password)', sec_def.password_expr)
                 raise Unauthorized(cid, user_msg, 'zato-xpath')
 
+        return True
+
 # ################################################################################################################################
 
     def match(self, url_path, soap_action):
