@@ -375,13 +375,19 @@ class URLDataTestCase(TestCase):
 
     def test_handle_security_xpath_sec(self):
 
-        username, password = rand_string(2)
+        is_valid1, username1, password1 = True, rand_string(), rand_string()
+        is_valid2, username2, password1 = False, rand_string(), rand_string()
+        is_valid3, username3, password3 = True, rand_string(), None
+        is_valid4, username4, password4 = False, rand_string(), None
+
         username_expr = "//*[local-name()='mydoc']/@user"
         password_expr = "//*[local-name()='mydoc']/@password"
 
         cid = rand_string()
         ud = url_data.URLData()
         sec_def = Bunch(username=username, password=password, username_expr=username_expr, password_expr=password_expr)
+
+        for is_valid, username, password in 
 
         doc = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:foo="http://foo.example.com">
             <soapenv:Header/>
