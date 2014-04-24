@@ -247,10 +247,6 @@ class URLData(OAuthDataStore):
         payload = wsgi_environ['zato.request.payload']
         user_msg = 'Invalid username or password'
 
-        #logger.warn(payload)
-        #logger.warn(body)
-        #logger.warn(sorted(sec_def.items()))
-
         username = payload.xpath(sec_def.username_expr)
         if not username:
             logger.error('%s `%s` expr:`%s`, value:`%r`', user_msg, '(no username)', sec_def.username_expr, username)
