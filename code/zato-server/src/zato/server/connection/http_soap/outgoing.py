@@ -28,8 +28,8 @@ from parse import PARSE_RE
 import requests
 
 # Zato
-from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SECURITY_TYPES, URL_TYPE, ZatoException
-from zato.common.util import get_component_name, new_cid, security_def_type
+from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, URL_TYPE, ZatoException
+from zato.common.util import get_component_name, new_cid
 from zato.server.connection.queue import ConnectionQueue
 
 logger = logging.getLogger(__name__)
@@ -107,8 +107,8 @@ class BaseHTTPSOAPWrapper(object):
 
         # Everything else
         else:
-            self.requests_auth = self.auth if self.config['sec_type'] == security_def_type.basic_auth else None
-            if self.config['sec_type'] == security_def_type.wss:
+            self.requests_auth = self.auth if self.config['sec_type'] == SEC_DEF_TYPE.BASIC_AUTH else None
+            if self.config['sec_type'] == SEC_DEF_TYPE.WSS:
                 self.soap[self.config['soap_version']]['header'] = \
                     self.soap[self.config['soap_version']]['header_template'].format(
                         Username=self.config['username'], Password=self.config['password'])
@@ -218,7 +218,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         """ Returns a username and password pair or None, if no security definition
         has been attached.
         """
-        if self.config['sec_type'] in(security_def_type.basic_auth, security_def_type.wss):
+        if self.config['sec_type'] in (SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.WSS):
             auth = (self.config['username'], self.config['password'])
         else:
             auth = None
@@ -242,7 +242,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if not headers.get('Content-Type'):
             headers['Content-Type'] = soap_config['content_type']
             
-        if self.config['sec_type'] == security_def_type.wss:
+        if self.config['sec_type'] == SEC_DEF_TYPE.WSS:
             soap_header = soap_config['header']
         else:
             soap_header = ''
@@ -339,20 +339,20 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
 
         sec_type = self.config['sec_type']
 
-        if sec_type == security_def_type.basic_auth:
+        if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
             transport = HttpAuthenticated(**self.suds_auth)
 
-        elif sec_type == security_def_type.ntlm:
+        elif sec_type == SEC_DEF_TYPE.NTLM:
             transport = WindowsHttpAuthenticated(**self.suds_auth)
 
-        elif sec_type == security_def_type.wss:
+        elif sec_type == SEC_DEF_TYPE.WSS:
             security = Security()
             token = UsernameToken(self.suds_auth['username'], self.suds_auth['password'])
             security.tokens.append(token)
 
             client = Client(self.address, autoblend=True, wsse=security)
 
-        if sec_type in(security_def_type.basic_auth, security_def_type.ntlm):
+        if sec_type in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM):
             client = Client(self.address, autoblend=True, transport=transport)
 
         # Still could be either none at all or WSS

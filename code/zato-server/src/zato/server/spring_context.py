@@ -92,6 +92,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.security.openstack',
             'zato.server.service.internal.security.tech_account',
             'zato.server.service.internal.security.wss',
+            'zato.server.service.internal.security.xpath',
             'zato.server.service.internal.server',
             'zato.server.service.internal.service',
             'zato.server.service.internal.stats',

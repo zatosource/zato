@@ -25,11 +25,10 @@ from bunch import Bunch
 from django.http import QueryDict
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO, URL_PARAMS_PRIORITY, \
-     URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
-from zato.common.util import security_def_type, TRACE1
-from zato.server.connection.http_soap import BadRequest, ClientHTTPError, \
-     NotFound, Unauthorized
+from zato.common import CHANNEL, DATA_FORMAT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, \
+     ZATO_ERROR, ZATO_NONE, ZATO_OK
+from zato.common.util import payload_from_request
+from zato.server.connection.http_soap import BadRequest, ClientHTTPError, NotFound, Unauthorized
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
@@ -149,9 +148,9 @@ class RequestDispatcher(object):
         if url_match:
 
             # This is a synchronous call so that whatever happens next we are always
-            # able to have at least initial audit log of requests.            
+            # able to have at least initial audit log of requests.
             if channel_item['audit_enabled']:
-                self.url_data.audit_set_request(cid, channel_item, payload, wsgi_environ)            
+                self.url_data.audit_set_request(cid, channel_item, payload, wsgi_environ)
 
             # Raise 404 if the channel is inactive
             if not channel_item['is_active']:
@@ -164,13 +163,19 @@ class RequestDispatcher(object):
                 # parsed. If so, we do it here and reuse it in other places
                 # so it doesn't have to be parsed two or more times.
                 sec = self.url_data.url_sec[channel_item['match_target']]
-                if sec.sec_def != ZATO_NONE and sec.sec_def.sec_type == security_def_type.oauth:
+                if sec.sec_def != ZATO_NONE and sec.sec_def.sec_type == SEC_DEF_TYPE.OAUTH:
                     post_data = QueryDict(payload, encoding='utf-8')
                 else:
                     post_data = {}
 
                 # This is handy if someone invoked URLData's OAuth API manually
                 wsgi_environ['zato.oauth.post_data'] = post_data
+
+                # Eagerly parse the request but only if we expect XPath-based credentials. The request will be re-used
+                # in later steps, it won't be parsed twice or more.
+                if sec.sec_def != ZATO_NONE and sec.sec_def.sec_type == SEC_DEF_TYPE.XPATH_SEC:
+                    wsgi_environ['zato.request.payload'] = payload_from_request(
+                        cid, payload, channel_item.data_format, channel_item.transport)
 
                 # Will raise an exception on any security violation
                 self.url_data.check_security(

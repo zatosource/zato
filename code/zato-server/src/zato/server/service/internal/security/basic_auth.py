@@ -14,6 +14,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
+from zato.common import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, HTTPBasicAuth
 from zato.common.odb.query import basic_auth_list
@@ -75,7 +76,7 @@ class Create(AdminService):
                 raise 
             else:
                 input.action = SECURITY.BASIC_AUTH_CREATE
-                input.sec_type = 'basic_auth'
+                input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
                 self.broker_client.publish(input)
             
             self.response.payload.id = auth.id
@@ -123,7 +124,7 @@ class Edit(AdminService):
             else:
                 input.action = SECURITY.BASIC_AUTH_EDIT
                 input.old_name = old_name
-                input.sec_type = 'basic_auth'
+                input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
                 self.broker_client.publish(input)
     
                 self.response.payload.id = definition.id

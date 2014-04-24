@@ -25,9 +25,9 @@ from bunch import Bunch
 import redis
 
 # Zato
-from zato.common import BROKER, ZATO_NONE
-from zato.common.util import new_cid, TRACE1
+from zato.common import BROKER, TRACE1, ZATO_NONE
 from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
+from zato.common.util import new_cid
 
 logger = logging.getLogger(__name__)
 

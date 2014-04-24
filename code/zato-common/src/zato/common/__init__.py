@@ -89,6 +89,9 @@ zato_details_xpath = etree.XPath(zato_details_path, namespaces=common_namespaces
 
 PASSWORD_SHADOW = '***'
 
+# TRACE1 logging level, even more details than DEBUG
+TRACE1 = 6
+
 SECONDS_IN_DAY = 86400 # 60 seconds * 60 minutes * 24 hours (and we ignore leap seconds)
 
 #iso8601_format = '%Y-%m-%dT%H:%M:%S.%fZ'
@@ -145,15 +148,27 @@ ZATO_ODB_POOL_NAME = 'ZATO_ODB'
 SOAP_VERSIONS = ('1.1', '1.2')
 SOAP_CHANNEL_VERSIONS = ('1.1',)
 
-SECURITY_TYPES = {
-    'apikey':'API key',
-    'aws':'AWS',
-    'basic_auth':'HTTP Basic Auth',
-    'ntlm':'NTLM',
-    'oauth': 'OAuth 1.0',
-    'openstack': 'OpenStack',
-    'tech_account':'Tech account',
-    'wss':'WS-Security'
+class SEC_DEF_TYPE:
+    APIKEY = 'apikey'
+    AWS = 'aws'
+    BASIC_AUTH = 'basic_auth'
+    NTLM = 'ntlm'
+    OAUTH = 'oauth'
+    OPENSTACK = 'openstack'
+    TECH_ACCOUNT = 'tech_acc'
+    WSS = 'wss'
+    XPATH_SEC = 'xpath_sec'
+
+SEC_DEF_TYPE_NAME = {
+    SEC_DEF_TYPE.APIKEY: 'API key',
+    SEC_DEF_TYPE.AWS: 'AWS',
+    SEC_DEF_TYPE.BASIC_AUTH: 'HTTP Basic Auth',
+    SEC_DEF_TYPE.NTLM: 'NTLM',
+    SEC_DEF_TYPE.OAUTH: 'OAuth 1.0',
+    SEC_DEF_TYPE.OPENSTACK: 'OpenStack',
+    SEC_DEF_TYPE.TECH_ACCOUNT: 'Tech account',
+    SEC_DEF_TYPE.WSS: 'WS-Security',
+    SEC_DEF_TYPE.XPATH_SEC: 'XPath',
 }
 
 # Name of the scheduler's job that will ensure a singleton server is always

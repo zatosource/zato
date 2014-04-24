@@ -57,3 +57,8 @@ class UtilsTestCase(TestCase):
         
         self.assertEquals(util.uncamelify(original), expected1)
         self.assertEquals(util.uncamelify(original, '_', unicode.upper), expected2)
+
+class XPathTestCase(TestCase):
+    def test_validate_xpath(self):
+        self.assertRaises(etree.XPathSyntaxError, util.validate_xpath, 'a b c')
+        self.assertTrue(util.validate_xpath('//node'))

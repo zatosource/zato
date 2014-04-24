@@ -23,8 +23,9 @@ from nose.tools import eq_
 from parse import compile as parse_compile, Parser, Result
 
 # Zato
-from zato.common import MISC, ZATO_NONE
-from zato.common.util import new_cid
+from zato.common import DATA_FORMAT, MISC, URL_TYPE, ZATO_NONE
+from zato.common.test import rand_string
+from zato.common.util import new_cid, payload_from_request
 from zato.server.connection.http_soap import Unauthorized, url_data
 
 # ################################################################################################################################
@@ -369,6 +370,48 @@ class URLDataTestCase(TestCase):
         wsgi_environ[username] = password
 
         ud._handle_security_apikey(cid, sec_def, path_info, body, wsgi_environ)
+
+# ################################################################################################################################
+
+    def test_handle_security_xpath_sec(self):
+
+        test_data = [
+            [True, rand_string(), rand_string()],
+            [False, rand_string(), rand_string()],
+            [True, rand_string(), None],
+            [False, rand_string(), None]
+        ]
+
+        username_expr = "//*[local-name()='mydoc']/@user"
+        for is_valid, valid_username, password in test_data:
+
+            password_expr = "//*[local-name()='mydoc']/@password" if password else None
+            xml_username = valid_username if is_valid else rand_string()
+
+            cid = rand_string()
+            ud = url_data.URLData()
+            sec_def = Bunch(username=valid_username, password=password, username_expr=username_expr, password_expr=password_expr)
+
+            xml = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:foo="http://foo.example.com">
+                <soapenv:Header/>
+                <soapenv:Body>
+                  <foo:mydoc user="{}" password="{}"/>
+                </soapenv:Body>
+                </soapenv:Envelope>""".format(xml_username, password)
+
+            payload = payload_from_request(cid, xml, DATA_FORMAT.XML, URL_TYPE.SOAP)
+
+            if is_valid:
+                result = ud._handle_security_xpath_sec(cid, sec_def, None, None, {'zato.request.payload':payload})
+                self.assertEqual(result, True)
+            else:
+                try:
+                    ud._handle_security_xpath_sec(cid, sec_def, None, None, {'zato.request.payload':payload})
+                except Unauthorized:
+                    pass
+                else:
+                    self.fail('Expected Unauthorized, `{}`, `{}`, `{}`, `{}`, `{}`'.format(
+                        is_valid, valid_username, xml_username, password, xml))
 
 # ################################################################################################################################
 

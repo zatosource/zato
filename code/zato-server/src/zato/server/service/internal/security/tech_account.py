@@ -14,6 +14,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
+from zato.common import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, TechnicalAccount
 from zato.common.odb.query import tech_acc_list
@@ -96,7 +97,7 @@ class Create(AdminService):
             else:
                 input.action = SECURITY.TECH_ACC_CREATE
                 input.password = input.password
-                input.sec_type = 'tech_acc'
+                input.sec_type = SEC_DEF_TYPE.TECH_ACCOUNT
                 self.broker_client.publish(input)
             
                 self.response.payload.id = tech_account.id
@@ -144,7 +145,7 @@ class Edit(AdminService):
             else:
                 input.action = SECURITY.TECH_ACC_EDIT
                 input.old_name = old_name
-                input.sec_type = 'tech_acc'
+                input.sec_type = SEC_DEF_TYPE.TECH_ACCOUNT
                 self.broker_client.publish(input)
             
                 self.response.payload.id = tech_account.id

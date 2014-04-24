@@ -27,10 +27,10 @@ from bunch import Bunch
 
 # Zato
 from zato.broker.thread_client import BrokerClient
-from zato.common import ZATO_ODB_POOL_NAME
+from zato.common import TRACE1, ZATO_ODB_POOL_NAME
 from zato.common.delivery import DeliveryStore
 from zato.common.kvdb import KVDB
-from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable, TRACE1
+from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable
 from zato.server.base import BrokerMessageReceiver
 
 class BaseConnection(object):

@@ -21,8 +21,9 @@ from kombu.pools import producers, reset as reset_pools
 from kombu.transport.pyamqp import Transport
 
 # Zato
+from zato.common import TRACE1
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
-from zato.common.util import get_component_name, TRACE1
+from zato.common.util import get_component_name
 from zato.server.connection.amqp import BaseAMQPConnector
 from zato.server.connection import setup_logging, start_connector as _start_connector
 
