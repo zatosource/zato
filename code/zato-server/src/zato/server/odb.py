@@ -24,12 +24,12 @@ from paste.util.multidict import MultiDict
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, MISC, MSG_PATTERN_TYPE, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common import DEPLOYMENT_STATUS, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, HTTSOAPAuditReplacePatternsXPath, OAuth, Server, Service, \
-     TechnicalAccount, WSSDefinition
+     TechnicalAccount, XPathSecurity, WSSDefinition
 from zato.common.odb import query
-from zato.common.util import current_host, security_def_type, TRACE1
+from zato.common.util import current_host
 from zato.server.connection.sql import SessionWrapper
 
 logger = logging.getLogger(__name__)
@@ -112,11 +112,12 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             # What DB class to fetch depending on the string value of the security type.
             sec_type_db_class = {
-                'apikey': APIKeySecurity,
-                'basic_auth': HTTPBasicAuth,
-                'oauth': OAuth,
-                'tech_acc': TechnicalAccount,
-                'wss': WSSDefinition
+                SEC_DEF_TYPE.APIKEY: APIKeySecurity,
+                SEC_DEF_TYPE.BASIC_AUTH: HTTPBasicAuth,
+                SEC_DEF_TYPE.OAUTH: OAuth,
+                SEC_DEF_TYPE.TECH_ACCOUNT: TechnicalAccount,
+                SEC_DEF_TYPE.WSS: WSSDefinition,
+                SEC_DEF_TYPE.XPATH_SEC: XPathSecurity,
                 }
 
             result = {}
@@ -151,16 +152,19 @@ class ODBManager(SessionWrapper):
                     result[target].sec_def.password = sec_def.password
                     result[target].sec_def.sec_type = item.sec_type
 
-                    if item.sec_type == security_def_type.tech_account:
+                    if item.sec_type == SEC_DEF_TYPE.TECH_ACCOUNT:
                         result[target].sec_def.salt = sec_def.salt
-                    elif item.sec_type == security_def_type.basic_auth:
+
+                    elif item.sec_type == SEC_DEF_TYPE.BASIC_AUTH:
                         result[target].sec_def.username = sec_def.username
                         result[target].sec_def.password = sec_def.password
                         result[target].sec_def.realm = sec_def.realm
-                    elif item.sec_type == security_def_type.apikey:
+
+                    elif item.sec_type == SEC_DEF_TYPE.APIKEY:
                         result[target].sec_def.username = 'HTTP_{}'.format(sec_def.username.upper())
                         result[target].sec_def.password = sec_def.password
-                    elif item.sec_type == security_def_type.wss:
+
+                    elif item.sec_type == SEC_DEF_TYPE.WSS:
                         result[target].sec_def.username = sec_def.username
                         result[target].sec_def.password = sec_def.password
                         result[target].sec_def.password_type = sec_def.password_type
@@ -168,6 +172,13 @@ class ODBManager(SessionWrapper):
                         result[target].sec_def.reject_stale_tokens = sec_def.reject_stale_tokens
                         result[target].sec_def.reject_expiry_limit = sec_def.reject_expiry_limit
                         result[target].sec_def.nonce_freshness_time = sec_def.nonce_freshness_time
+
+                    elif item.sec_type == SEC_DEF_TYPE.XPATH_SEC:
+                        result[target].sec_def.username = sec_def.username
+                        result[target].sec_def.password = sec_def.password
+                        result[target].sec_def.username_expr = sec_def.username_expr
+                        result[target].sec_def.password_expr = sec_def.password_expr
+
                 else:
                     result[target].sec_def = ZATO_NONE
 
@@ -443,6 +454,12 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.wss_list(session, cluster_id, needs_columns)
+
+    def get_xpath_sec_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of XPath-based security definitions on the given cluster.
+        """
+        with closing(self.session()) as session:
+            return query.xpath_sec_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 

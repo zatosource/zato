@@ -36,9 +36,9 @@ from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, \
      IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
-from zato.common import SCHEDULER_JOB_TYPE, ZatoException
+from zato.common import SCHEDULER_JOB_TYPE, TRACE1, ZatoException
 from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
-from zato.common.util import pprint, TRACE1
+from zato.common.util import pprint
 
 logger = logging.getLogger(__name__)
 

@@ -10,8 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import logging
 
 # Zato
-from zato.common import KVDB
-from zato.common.util import TRACE1 # TODO: TRACE1 should be moved over to zato.common
+from zato.common import KVDB, TRACE1
 
 logger = logging.getLogger(__name__)
 

@@ -18,8 +18,7 @@ from traceback import format_exc
 from fs.ftpfs import FTPFS, _GLOBAL_DEFAULT_TIMEOUT
 
 # Zato
-from zato.common import Inactive, PASSWORD_SHADOW
-from zato.common.util import TRACE1
+from zato.common import Inactive, PASSWORD_SHADOW, TRACE1
 
 logger = logging.getLogger(__name__)
 

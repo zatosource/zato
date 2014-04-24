@@ -347,6 +347,30 @@ class APIKeySecurity(SecurityBase):
     def to_json(self):
         return to_json(self)
 
+class XPathSecurity(SecurityBase):
+    """ New in 1.2: Stores XPath-based credentials.
+    """
+    __tablename__ = 'sec_xpath'
+    __mapper_args__ = {'polymorphic_identity':'xpath_sec'}
+
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+    username_expr = Column(String(200), nullable=False)
+    password_expr = Column(String(200), nullable=True)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, username_expr=None, password_expr=None,
+                 cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.password = password
+        self.username_expr = username_expr
+        self.password_expr = password_expr
+        self.cluster = cluster
+
+    def to_json(self):
+        return to_json(self)
+
 # ################################################################################################################################
 
 class HTTPSOAP(Base):

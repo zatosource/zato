@@ -57,7 +57,7 @@ from gevent.hub import Hub
 from gevent.socket import wait_read, wait_write
 
 # lxml
-from lxml import objectify
+from lxml import etree, objectify
 
 # pip
 from pip.download import is_archive_file, unpack_file_url
@@ -85,15 +85,14 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import DATA_FORMAT, KVDB, NoDistributionFound, scheduler_date_time_format, \
-     soap_body_path, soap_body_xpath, ZatoException
+from zato.common import DATA_FORMAT, KVDB, NoDistributionFound, scheduler_date_time_format, soap_body_path, soap_body_xpath, \
+     TRACE1, ZatoException
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import IntervalBasedJob, Job, Service
 from zato.common.odb.query import _service as _service
 
 logger = logging.getLogger(__name__)
 
-TRACE1 = 6
 logging.addLevelName(TRACE1, "TRACE1")
 
 _repr_template = Template('<$class_name at $mem_loc$attrs>')
@@ -102,19 +101,6 @@ _uncamelify_re = re.compile(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))')
 _epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
 
 random.seed()
-
-################################################################################
-
-# TODO: Turn it into a class so it auto-completes and move to zato.common
-security_def_type = Bunch()
-security_def_type.apikey = 'apikey'
-security_def_type.aws = 'aws'
-security_def_type.basic_auth = 'basic_auth'
-security_def_type.ntlm = 'ntlm'
-security_def_type.oauth = 'oauth'
-security_def_type.openstack = 'openstack'
-security_def_type.tech_account = 'tech_acc'
-security_def_type.wss = 'wss'
 
 ################################################################################
 
@@ -909,3 +895,9 @@ class LoggerWriter:
             self.logger.log(self.level, message)
 
 # ################################################################################################################################
+
+def validate_xpath(expr):
+    """ Evaluates an XPath expression thus confirming it is correct.
+    """
+    etree.XPath(expr)
+    return True

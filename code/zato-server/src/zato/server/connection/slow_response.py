@@ -13,8 +13,7 @@ import logging
 from anyjson import dumps
 
 # Zato
-from zato.common import KVDB
-from zato.common.util import TRACE1 # TODO: TRACE1 should be moved over to zato.common
+from zato.common import KVDB, TRACE1
 
 logger = logging.getLogger(__name__)
 

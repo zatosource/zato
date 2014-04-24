@@ -42,7 +42,7 @@ from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Delivery, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, \
      DeliveryHistory, DeliveryPayload
 from zato.common.odb.query import delivery, delivery_list
-from zato.common.util import datetime_to_seconds, new_cid, TRACE1
+from zato.common.util import datetime_to_seconds, new_cid
 from zato.redis_paginator import ZSetPaginator
 
 NULL_BASIC_DATA = {

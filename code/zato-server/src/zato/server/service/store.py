@@ -34,9 +34,9 @@ except ImportError:
 from springpython.context import InitializingObject
 
 # Zato
-from zato.common import DONT_DEPLOY_ATTR_NAME, NoDistributionFound, SourceInfo
-from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, \
-    TRACE1, visit_py_source, visit_py_source_from_distribution
+from zato.common import DONT_DEPLOY_ATTR_NAME, NoDistributionFound, SourceInfo, TRACE1
+from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, visit_py_source, \
+     visit_py_source_from_distribution
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
@@ -254,6 +254,7 @@ class ServiceStore(InitializingObject):
                         logger.debug('Imported service:[{}]'.format(name))
                         
                         item.after_add_to_store(logger)
+
                     else:
                         msg = 'Skipping [{}] from [{}], should_add:[{}] is not True'.format(
                             item, fs_location, should_add)

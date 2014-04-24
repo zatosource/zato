@@ -29,7 +29,7 @@ from pytz import UTC
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.common import SECURITY_TYPES, ZatoException, ZATO_NONE
+from zato.common import SEC_DEF_TYPE_NAME, ZatoException, ZATO_NONE
 
 logger = logging.getLogger(__name__)
 
@@ -354,6 +354,10 @@ class CreateEdit(_BaseView):
 
             self.input_dict.update(input_dict)
 
+            logger.debug(
+                'Request input dict `%r` out of `%r`, `%r`, `%r`, `%r`, `%r`', self.input_dict,
+                self.SimpleIO.input_required, self.SimpleIO.input_optional, self.input, self.req.GET, self.req.POST)
+
             response = self.req.zato.client.invoke(self.service_name, self.input_dict)
             if response.ok:
                 return_data = {
@@ -428,7 +432,7 @@ class SecurityList(object):
 
     def append(self, def_item):
         value = '{0}/{1}'.format(def_item.sec_type, def_item.id)
-        label = '{0}/{1}'.format(SECURITY_TYPES[def_item.sec_type], def_item.name)
+        label = '{0}/{1}'.format(SEC_DEF_TYPE_NAME[def_item.sec_type], def_item.name)
         self.def_items.append((value, label))
 
     @staticmethod

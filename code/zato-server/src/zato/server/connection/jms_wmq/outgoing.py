@@ -27,10 +27,10 @@ from retools.lock import Lock
 from springpython.jms.core import JmsTemplate, TextMessage
 
 # Zato
-from zato.common import INVOCATION_TARGET, KVDB
+from zato.common import INVOCATION_TARGET, KVDB, TRACE1
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
 from zato.common.model import DeliveryItem
-from zato.common.util import new_cid, TRACE1
+from zato.common.util import new_cid
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
 
