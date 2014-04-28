@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from glob import glob
+from json import loads
 from os.path import abspath, join
 
 # Bunch
@@ -23,10 +24,21 @@ from zato.cli import ManageCommand
 from zato.common.crypto import CryptoManager
 from zato.common.kvdb import KVDB
 from zato.common.odb import create_pool, ping_queries
+from zato.common.util import is_port_taken
 
 class CheckConfig(ManageCommand):
     """ Checks config of a Zato component (currently limited to servers only)
     """
+    def ensure_port_free(self, prefix, port, address):
+        if is_port_taken(port):
+            raise Exception('{} check failed. Address `{}` already taken.'.format(prefix, address))
+
+    def ensure_json_config_port_free(self, conf_name, prefix):
+        repo_dir = join(self.config_dir, 'repo')
+        conf = loads(open(join(repo_dir, conf_name)).read())
+        address = '{}:{}'.format(conf['host'], conf['port'])
+        self.ensure_port_free(prefix, conf['port'], address)
+
     def on_server_check_sql_odb(self, cm, server_conf, repo_dir):
 
         engine_params = dict(server_conf['odb'].items())
@@ -66,9 +78,12 @@ class CheckConfig(ManageCommand):
         if self.show_output:
             self.logger.info('No stale sockets found in {}, OK'.format(zdaemon_dir))
 
-    # TODO: Make it handle more components
-    def _on_server(self, args):
+    def on_server_check_port_available(self, server_conf):
+        address = server_conf['main']['gunicorn_bind']
+        _, port = address.split(':')
+        self.ensure_port_free('Server', int(port), address)
 
+    def _on_server(self, args):
         repo_dir = join(self.config_dir, 'repo')
         server_conf = ConfigObj(join(repo_dir, 'server.conf'))
 
@@ -77,6 +92,7 @@ class CheckConfig(ManageCommand):
 
         self.on_server_check_sql_odb(cm, server_conf, repo_dir)
         self.on_server_check_kvdb(cm, server_conf)
+        self.on_server_check_port_available(server_conf)
 
         # enmasse actually needs a sockets because it means a server is running
         # so we can't quit if one is available.
@@ -84,6 +100,25 @@ class CheckConfig(ManageCommand):
             self.on_server_check_stale_unix_socket()
 
     def _on_lb(self, *ignored_args, **ignored_kwargs):
-        self.logger.info('This command works with servers only')
+        repo_dir = join(self.config_dir, 'repo')
 
-    _on_web_admin = _on_lb
+        # Load-balancer's agent
+        self.ensure_json_config_port_free('lb-agent.conf', 'Load balancer agent')
+
+        # Load balancer itself
+        lb_address = None
+        marker = 'ZATO frontend front_http_plain:bind'
+        lb_conf = open(join(repo_dir, 'zato.config')).read().splitlines()
+        for line in lb_conf:
+            if marker in line:
+                lb_address = line.split(marker)[0].strip().split()[1]
+                break
+
+        if not lb_address:
+            raise Exception('Load balancer check failed. Marker line not found `{}`.'.format(marker))
+
+        _, port = lb_address.split(':')
+        self.ensure_port_free('Load balancer', int(port), lb_address)
+
+    def _on_web_admin(self, *ignored_args, **ignored_kwargs):
+        self.ensure_json_config_port_free('web-admin.conf', 'Web admin')
