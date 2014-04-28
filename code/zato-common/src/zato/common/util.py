@@ -62,6 +62,9 @@ from lxml import etree, objectify
 # pip
 from pip.download import is_archive_file, unpack_file_url
 
+# psutil
+import psutil
+
 # psycopg2
 import psycopg2
 from psycopg2 import extensions
@@ -901,3 +904,12 @@ def validate_xpath(expr):
     """
     etree.XPath(expr)
     return True
+
+# ################################################################################################################################
+
+# Taken from http://grodola.blogspot.com/2014/04/reimplementing-netstat-in-cpython.html
+def is_port_taken(port):
+    for conn in psutil.net_connections(kind='tcp'):
+        if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
+            return True
+    return False

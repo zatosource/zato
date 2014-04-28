@@ -65,22 +65,22 @@ class Info(ManageCommand):
             out['component_running'] = True
             master_proc_pid = int(master_proc_pid[0])
             master_proc = Process(master_proc_pid)
-            workers_pids = sorted(elem.pid for elem in master_proc.get_children())
+            workers_pids = sorted(elem.pid for elem in master_proc.children())
             
-            out['master_proc_connections'] = master_proc.get_connections()
+            out['master_proc_connections'] = master_proc.connections()
             out['master_proc_pid'] = master_proc.pid
-            out['master_proc_create_time'] = datetime.fromtimestamp(master_proc.create_time).isoformat()
-            out['master_proc_create_time_utc'] = datetime.fromtimestamp(master_proc.create_time, UTC).isoformat()
-            out['master_proc_username'] = master_proc.username
-            out['master_proc_name'] = master_proc.name
+            out['master_proc_create_time'] = datetime.fromtimestamp(master_proc.create_time()).isoformat()
+            out['master_proc_create_time_utc'] = datetime.fromtimestamp(master_proc.create_time(), UTC).isoformat()
+            out['master_proc_username'] = master_proc.username()
+            out['master_proc_name'] = master_proc.name()
             out['master_proc_workers_no'] = len(workers_pids)
             out['master_proc_workers_pids'] = workers_pids
             
             for pid in workers_pids:
                 worker = Process(pid)
-                out['worker_{}_create_time'.format(pid)] = datetime.fromtimestamp(worker.create_time).isoformat()
-                out['worker_{}_create_time_utc'.format(pid)] = datetime.fromtimestamp(worker.create_time, UTC).isoformat()
-                out['worker_{}_connections'.format(pid)] = worker.get_connections()
+                out['worker_{}_create_time'.format(pid)] = datetime.fromtimestamp(worker.create_time()).isoformat()
+                out['worker_{}_create_time_utc'.format(pid)] = datetime.fromtimestamp(worker.create_time(), UTC).isoformat()
+                out['worker_{}_connections'.format(pid)] = worker.connections()
             
         if getattr(args, 'json', False):
             out['component_details'] = loads(out['component_details'])
