@@ -242,7 +242,7 @@ class URLData(OAuthDataStore):
 
         return wsgi_environ['HTTP_X_ZATO_USER']
 
-    def _handle_security_xpath_sec(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
+    def _handle_security_xpath_sec(self, cid, sec_def, ignored_path_info, ignored_body, wsgi_environ, ignored_post_data=None):
 
         payload = wsgi_environ['zato.request.payload']
         user_msg = 'Invalid username or password'
