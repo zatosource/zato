@@ -92,12 +92,13 @@ class CheckConfig(ManageCommand):
 
         self.on_server_check_sql_odb(cm, server_conf, repo_dir)
         self.on_server_check_kvdb(cm, server_conf)
-        self.on_server_check_port_available(server_conf)
 
-        # enmasse actually needs a sockets because it means a server is running
-        # so we can't quit if one is available.
+        # enmasse actually needs a running server and it will set the flags below to False.
         if getattr(args, 'check_stale_server_sockets', True):
             self.on_server_check_stale_unix_socket()
+
+        if getattr(args, 'check_server_port_available', True):
+            self.on_server_check_port_available(server_conf)
 
     def _on_lb(self, *ignored_args, **ignored_kwargs):
         repo_dir = join(self.config_dir, 'repo')
