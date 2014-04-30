@@ -244,7 +244,7 @@ class Service(object):
 
     def set_response_data(self, service, **kwargs):
         response = service.response.payload
-        if not isinstance(response, (basestring, dict, list, tuple)):
+        if not isinstance(response, (basestring, dict, list, tuple, EtreeElement, ObjectifiedElement)):
             response = response.getvalue(serialize=kwargs['serialize'])
             if kwargs['as_bunch']:
                 response = bunchify(response)
