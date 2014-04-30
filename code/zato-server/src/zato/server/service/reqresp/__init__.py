@@ -29,7 +29,7 @@ from django.http import QueryDict
 # lxml
 from lxml import etree
 from lxml.etree import _Element as EtreeElement
-from lxml.objectify import deannotate, Element, ElementMaker
+from lxml.objectify import deannotate, Element, ElementMaker, ObjectifiedElement
 
 # Paste
 from paste.util.converters import asbool
@@ -471,7 +471,7 @@ class Response(object):
         """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
         the dicts are matched and transformed according to the SIO definition.
         """
-        if isinstance(value, (basestring, list, tuple)) and not isinstance(value, NamedTuple):
+        if isinstance(value, (basestring, list, tuple, EtreeElement, ObjectifiedElement)) and not isinstance(value, NamedTuple):
             self._payload = value
         else:
             if isinstance(value, dict):
