@@ -38,7 +38,7 @@ from zato.client import AnyServiceInvoker
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import ConnDefAMQP, ConnDefWMQ, HTTPBasicAuth, \
      HTTPSOAP, OAuth, SecurityBase, Server, Service, TechnicalAccount, \
-     to_json, WSSDefinition
+     to_json, WSSDefinition, XPathSecurity
 from zato.common.util import get_config
 from zato.server.service import ForceType
 from zato.server.service.internal import http_soap as http_soap_mod
@@ -61,6 +61,7 @@ from zato.server.service.internal.security import basic_auth as sec_basic_auth_m
 from zato.server.service.internal.security import oauth as sec_oauth_mod
 from zato.server.service.internal.security import tech_account as sec_tech_account_mod
 from zato.server.service.internal.security import wss as sec_wss_mod
+from zato.server.service.internal.security import xpath as sec_xpath_mod
 
 DEFAULT_COLS_WIDTH = '15,100'
 NO_SEC_DEF_NEEDED = 'zato-no-security'
@@ -514,7 +515,10 @@ class EnMasse(ManageCommand):
         wss = self.client.odb_session.query(WSSDefinition).\
             filter(WSSDefinition.cluster_id == self.client.cluster_id)
 
-        for query in(basic_auth, oauth, tech_acc, wss):
+        xpath_sec = self.client.odb_session.query(XPathSecurity).\
+            filter(XPathSecurity.cluster_id == self.client.cluster_id)
+
+        for query in(basic_auth, oauth, tech_acc, wss, xpath_sec):
             for item in query.all():
                 name = item.name.lower()
                 if not 'zato' in name and name not in('admin.invoke', 'pubapi'):
@@ -715,6 +719,7 @@ class EnMasse(ManageCommand):
             'oauth':sec_oauth_mod.Create,
             'tech_acc':sec_tech_account_mod.Create,
             'wss':sec_wss_mod.Create,
+            'xpath_sec':sec_xpath_mod.Create,
         }
 
         create_services_keys = sorted(create_services)
@@ -943,6 +948,7 @@ class EnMasse(ManageCommand):
             'oauth':ImportInfo(sec_oauth_mod, True),
             'tech_acc':ImportInfo(sec_tech_account_mod, True),
             'wss':ImportInfo(sec_wss_mod, True),
+            'xpath_sec':ImportInfo(sec_xpath_mod, True),
         }
 
         def get_odb_item(item_type, name):
