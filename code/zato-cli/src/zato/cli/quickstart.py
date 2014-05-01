@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os, random, stat
+from collections import OrderedDict
 from copy import deepcopy
 from itertools import count
 from uuid import uuid4
@@ -161,8 +162,8 @@ class Create(ZatoCommand):
     needs_empty_dir = True
     allow_empty_secrets = True
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
-    opts.append({'name':'--cluster_name', 'help':"Name to be given to the new cluster"})
-    opts.append({'name':'--servers', 'help':"Number of servers to be created"})
+    opts.append({'name':'--cluster_name', 'help':'Name to be given to the new cluster'})
+    opts.append({'name':'--servers', 'help':'Number of servers to be created'})
 
     def _bunch_from_args(self, args, cluster_name):
         bunch = Bunch()
@@ -197,7 +198,11 @@ class Create(ZatoCommand):
         next_port = count(http_plain_server_port)
         cluster_name = getattr(args, 'cluster_name', 'quickstart-{}'.format(random.getrandbits(20)).zfill(7))
         servers = int(getattr(args, 'servers', '2'))
-        server_names = {'{}'.format(i):'server{}'.format(i) for i in range(1,servers+1)}
+
+        server_names = OrderedDict()
+        for idx in range(1, servers+1):
+            server_names['{}'.format(idx)] = 'server{}'.format(idx)
+
         total_steps = 6 + servers
         admin_invoke_password = uuid4().hex
         broker_host = 'localhost'
@@ -228,11 +233,12 @@ class Create(ZatoCommand):
         ca_create_web_admin.Create(ca_args).execute(ca_args, False)
         
         server_crypto_loc = {}
-        for key in server_names:
+
+        for name in server_names:
             ca_args_server = deepcopy(ca_args)
-            ca_args_server.server_name = server_names[key]
+            ca_args_server.server_name = server_names[name]
             ca_create_server.Create(ca_args_server).execute(ca_args_server, False)
-            server_crypto_loc[key] = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server_names[key]))
+            server_crypto_loc[name] = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server_names[name]))
         
         lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
         web_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'web-admin')
@@ -264,21 +270,21 @@ class Create(ZatoCommand):
         #
         # 4) servers
         #
-        for key in server_names:
-            server_path = os.path.join(args_path, server_names[key])
+        for name in server_names:
+            server_path = os.path.join(args_path, server_names[name])
             os.mkdir(server_path)
             
             create_server_args = self._bunch_from_args(args, cluster_name)
-            create_server_args.server_name = server_names[key]
+            create_server_args.server_name = server_names[name]
             create_server_args.path = server_path
-            create_server_args.cert_path = server_crypto_loc[key].cert_path
-            create_server_args.pub_key_path = server_crypto_loc[key].pub_path
-            create_server_args.priv_key_path = server_crypto_loc[key].priv_path
-            create_server_args.ca_certs_path = server_crypto_loc[key].ca_certs_path
+            create_server_args.cert_path = server_crypto_loc[name].cert_path
+            create_server_args.pub_key_path = server_crypto_loc[name].pub_path
+            create_server_args.priv_key_path = server_crypto_loc[name].priv_path
+            create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path
             
             create_server.Create(create_server_args).execute(create_server_args, next_port.next(), False)
             
-            self.logger.info('[{}/{}] server{} created'.format(next_step.next(), total_steps, key))
+            self.logger.info('[{}/{}] server{} created'.format(next_step.next(), total_steps, name))
             
         #
         # 5) load-balancer
@@ -331,17 +337,18 @@ class Create(ZatoCommand):
         zato_qs_stop_path = os.path.join(args_path, 'zato-qs-stop.sh')
         zato_qs_restart_path = os.path.join(args_path, 'zato-qs-restart.sh')
 
-        sanity_checks_array = []
-        start_servers_array = []
-        stop_servers_array = []
-        for key in server_names:
-            sanity_checks_array.append(sanity_checks_template.format(server_name=server_names[key]))
-            start_servers_array.append(start_servers_template.format(server_name=server_names[key], step_number=int(key)+3))
-            stop_servers_array.append(stop_servers_template.format(server_name=server_names[key], step_number=int(key)+1))
+        sanity_checks = []
+        start_servers = []
+        stop_servers = []
 
-        sanity_checks = '\n'.join(sanity_checks_array)
-        start_servers = '\n'.join(start_servers_array)
-        stop_servers = '\n'.join(stop_servers_array)
+        for name in server_names:
+            sanity_checks.append(sanity_checks_template.format(server_name=server_names[name]))
+            start_servers.append(start_servers_template.format(server_name=server_names[name], step_number=int(name)+3))
+            stop_servers.append(stop_servers_template.format(server_name=server_names[name], step_number=int(name)+1))
+
+        sanity_checks = '\n'.join(sanity_checks)
+        start_servers = '\n'.join(start_servers)
+        stop_servers = '\n'.join(stop_servers)
         start_steps = 4 + servers
         stop_steps = 2 + servers
 
