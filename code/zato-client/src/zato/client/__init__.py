@@ -330,7 +330,7 @@ class _JSONClient(_Client):
     def invoke(self, payload='', headers=None, to_json=True):
         if to_json:
             payload = dumps(payload)
-        return super(_JSONClient, self).invoke(payload, self.response_class, headers)
+        return super(_JSONClient, self).invoke(payload, self.response_class, headers=headers)
 
 class JSONClient(_JSONClient):
     """ Client for services that accept JSON input.
@@ -393,7 +393,7 @@ class AnyServiceInvoker(_Client):
     
 class XMLClient(_Client):
     def invoke(self, payload='', headers=None):
-        return super(XMLClient, self).invoke(payload, XMLResponse, headers)
+        return super(XMLClient, self).invoke(payload, XMLResponse, headers=headers)
 
 class SOAPClient(_Client):
     def invoke(self, soap_action, payload='', headers=None):
@@ -408,6 +408,6 @@ class RawDataClient(_Client):
     Likewise, no parsing of response is performed.
     """
     def invoke(self, payload='', headers=None):
-        return super(RawDataClient, self).invoke(payload, RawDataResponse, headers)
+        return super(RawDataClient, self).invoke(payload, RawDataResponse, headers=headers)
 
 # ##############################################################################
