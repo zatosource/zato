@@ -308,7 +308,6 @@ class Service(object):
             transport=None, serialize=False, as_bunch=False, **kwargs):
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
-
         if self.impl_name == impl_name:
             msg = 'A service cannot invoke itself, name:[{}]'.format(self.name)
             self.logger.error(msg)
@@ -331,6 +330,11 @@ class Service(object):
     def invoke(self, name, *args, **kwargs):
         """ Invokes a service synchronously by its name.
         """
+        if kwargs.get('debug_invoke'):
+            self.logger.info('*' * 30)
+            for k, v in sorted(locals().items()):
+                self.logger.info('%r=%r', k, v)
+
         return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[name], *args, **kwargs)
 
     def invoke_by_id(self, service_id, *args, **kwargs):
