@@ -38,46 +38,59 @@ done
 BASE_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
 """
 
-zato_qs_start_template = """#!/bin/bash
+sanity_checks_template = """$ZATO_BIN check-config $BASE_DIR/{server_name}"""
+
+start_servers_template = """
+cd $BASE_DIR/{server_name}
+$ZATO_BIN start .
+echo [{step_number}/$STEPS] {server_name} started
+"""
+
+zato_qs_start_head_template = """#!/bin/bash
 
 set -e
 export ZATO_CLI_DONT_SHOW_OUTPUT=1
 
 {script_dir}
 ZATO_BIN={zato_bin}
+STEPS={start_steps}
+CLUSTER={cluster_name}
 
-echo Starting the Zato quickstart environment
+echo Starting the Zato cluster $CLUSTER
 echo Running sanity checks
+"""
 
-$ZATO_BIN check-config $BASE_DIR/server1
-$ZATO_BIN check-config $BASE_DIR/server2
+zato_qs_start_body_template = """
+{sanity_checks}
 
-echo [1/6] Redis connection OK
-echo [2/6] SQL ODB connection OK
+echo [1/$STEPS] Redis connection OK
+echo [2/$STEPS] SQL ODB connection OK
 
 # Start the load balancer first ..
 cd $BASE_DIR/load-balancer
 $ZATO_BIN start .
-echo [3/6] Load-balancer started
+echo [3/$STEPS] Load-balancer started
 
 # .. servers ..
-cd $BASE_DIR/server1
-$ZATO_BIN start .
-echo [4/6] server1 started
+{start_servers}
+"""
 
-cd $BASE_DIR/server2
-$ZATO_BIN start .
-echo [5/6] server2 started
-
+zato_qs_start_tail = """
 # .. web admin comes as the last one because it may ask Django-related questions.
 cd $BASE_DIR/web-admin
 $ZATO_BIN start .
-echo [6/6] Web admin started
+echo [$STEPS/$STEPS] Web admin started
 
 cd $BASE_DIR
-echo Zato quickstart environment started
+echo Zato cluster $CLUSTER started
 echo Visit https://zato.io/support for more information and support options
 exit 0
+"""
+
+stop_servers_template = """
+cd $BASE_DIR/{server_name}
+$ZATO_BIN stop .
+echo [{step_number}/$STEPS] {server_name} stopped
 """
 
 zato_qs_stop_template = """#!/bin/bash
@@ -86,29 +99,25 @@ export ZATO_CLI_DONT_SHOW_OUTPUT=1
 
 {script_dir}
 ZATO_BIN={zato_bin}
+STEPS={stop_steps}
+CLUSTER={cluster_name}
 
-echo Stopping the Zato quickstart environment
+echo Stopping the Zato cluster $CLUSTER
 
 # Start the load balancer first ..
 cd $BASE_DIR/load-balancer
 $ZATO_BIN stop .
-echo [1/4] Load-balancer stopped
+echo [1/$STEPS] Load-balancer stopped
 
 # .. servers ..
-cd $BASE_DIR/server1
-$ZATO_BIN stop .
-echo [2/4] server1 stopped
-
-cd $BASE_DIR/server2
-$ZATO_BIN stop .
-echo [3/4] server2 stopped
+{stop_servers}
 
 cd $BASE_DIR/web-admin
 $ZATO_BIN stop .
-echo [4/4] Web admin stopped
+echo [$STEPS/$STEPS] Web admin stopped
 
 cd $BASE_DIR
-echo Zato quickstart environment stopped
+echo Zato cluster $CLUSTER stopped
 """
 
 zato_qs_restart = """#!/bin/bash
@@ -152,7 +161,9 @@ class Create(ZatoCommand):
     needs_empty_dir = True
     allow_empty_secrets = True
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
-    
+    opts.append({'name':'--cluster_name', 'help':"Name to be given to the new cluster"})
+    opts.append({'name':'--servers', 'help':"Number of servers to be created"})
+
     def _bunch_from_args(self, args, cluster_name):
         bunch = Bunch()
         bunch.verbose = args.verbose
@@ -177,17 +188,17 @@ class Create(ZatoCommand):
         1) CA and crypto material
         2) ODB
         3) ODB initial data
-        4) server1
-        5) server2
-        6) load-balancer
-        7) Web admin
-        8) Scripts
+        4) servers
+        5) load-balancer
+        6) Web admin
+        7) Scripts
         """
         next_step = count(1)
         next_port = count(http_plain_server_port)
-        total_steps = 8
-        cluster_name = 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)
-        server_names = {'1':'server1', '2':'server2'}
+        cluster_name = getattr(args, 'cluster_name', 'quickstart-{}'.format(random.getrandbits(20)).zfill(7))
+        servers = int(getattr(args, 'servers', '2'))
+        server_names = {'{}'.format(i):'server{}'.format(i) for i in range(1,servers+1)}
+        total_steps = 6 + servers
         admin_invoke_password = uuid4().hex
         broker_host = 'localhost'
         broker_port = 6379
@@ -211,22 +222,16 @@ class Create(ZatoCommand):
         ca_args = self._bunch_from_args(args, cluster_name)
         ca_args.path = ca_path
         
-        ca_args_server1 = deepcopy(ca_args)
-        ca_args_server1.server_name = server_names['1']
-        
-        ca_args_server2 = deepcopy(ca_args)
-        ca_args_server2.server_name = server_names['2']
-        
         ca_create_ca.Create(ca_args).execute(ca_args, False)
         ca_create_lb_agent.Create(ca_args).execute(ca_args, False)
         
-        ca_create_server.Create(ca_args_server1).execute(ca_args_server1, False)
-        ca_create_server.Create(ca_args_server2).execute(ca_args_server2, False)
-        
         ca_create_web_admin.Create(ca_args).execute(ca_args, False)
-
+        
         server_crypto_loc = {}
         for key in server_names:
+            ca_args_server = deepcopy(ca_args)
+            ca_args_server.server_name = server_names[key]
+            ca_create_server.Create(ca_args_server).execute(ca_args_server, False)
             server_crypto_loc[key] = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server_names[key]))
         
         lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
@@ -257,8 +262,7 @@ class Create(ZatoCommand):
         self.logger.info('[{}/{}] ODB initial data created'.format(next_step.next(), total_steps))
         
         #
-        # 4) server1
-        # 5) server2
+        # 4) servers
         #
         for key in server_names:
             server_path = os.path.join(args_path, server_names[key])
@@ -277,7 +281,7 @@ class Create(ZatoCommand):
             self.logger.info('[{}/{}] server{} created'.format(next_step.next(), total_steps, key))
             
         #
-        # 6) load-balancer
+        # 5) load-balancer
         #
         lb_path = os.path.join(args_path, 'load-balancer')
         os.mkdir(lb_path)
@@ -291,13 +295,13 @@ class Create(ZatoCommand):
         
         # Need to substract 1 because we've already called .next() twice
         # when creating servers above.
-        server2_port = next_port.next() - 1
+        servers_port = next_port.next() - 1
         
-        create_lb.Create(create_lb_args).execute(create_lb_args, True, server2_port, False)
+        create_lb.Create(create_lb_args).execute(create_lb_args, True, servers_port, False)
         self.logger.info('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps))
         
         #
-        # 7) Web admin
+        # 6) Web admin
         #
         web_admin_path = os.path.join(args_path, 'web-admin')
         os.mkdir(web_admin_path)
@@ -320,16 +324,36 @@ class Create(ZatoCommand):
         self.logger.info('[{}/{}] Web admin created'.format(next_step.next(), total_steps))
         
         #
-        # 8) Scripts
+        # 7) Scripts
         #
         zato_bin = 'zato'
         zato_qs_start_path = os.path.join(args_path, 'zato-qs-start.sh')
         zato_qs_stop_path = os.path.join(args_path, 'zato-qs-stop.sh')
         zato_qs_restart_path = os.path.join(args_path, 'zato-qs-restart.sh')
 
-        open(zato_qs_start_path, 'w').write(zato_qs_start_template.format(zato_bin=zato_bin, script_dir=script_dir))
-        open(zato_qs_stop_path, 'w').write(zato_qs_stop_template.format(zato_bin=zato_bin, script_dir=script_dir))
-        open(zato_qs_restart_path, 'w').write(zato_qs_restart.format(script_dir=script_dir))
+        sanity_checks_array = []
+        start_servers_array = []
+        stop_servers_array = []
+        for key in server_names:
+            sanity_checks_array.append(sanity_checks_template.format(server_name=server_names[key]))
+            start_servers_array.append(start_servers_template.format(server_name=server_names[key], step_number=int(key)+3))
+            stop_servers_array.append(stop_servers_template.format(server_name=server_names[key], step_number=int(key)+1))
+
+        sanity_checks = '\n'.join(sanity_checks_array)
+        start_servers = '\n'.join(start_servers_array)
+        stop_servers = '\n'.join(stop_servers_array)
+        start_steps = 4 + servers
+        stop_steps = 2 + servers
+
+        zato_qs_start_head = zato_qs_start_head_template.format(zato_bin=zato_bin, script_dir=script_dir, cluster_name=cluster_name, start_steps=start_steps)
+        zato_qs_start_body = zato_qs_start_body_template.format(sanity_checks=sanity_checks, start_servers=start_servers)
+        zato_qs_start = zato_qs_start_head + zato_qs_start_body + zato_qs_start_tail
+
+        zato_qs_stop = zato_qs_stop_template.format(zato_bin=zato_bin, script_dir=script_dir, cluster_name=cluster_name, stop_steps=stop_steps, stop_servers=stop_servers)
+
+        open(zato_qs_start_path, 'w').write(zato_qs_start)
+        open(zato_qs_stop_path, 'w').write(zato_qs_stop)
+        open(zato_qs_restart_path, 'w').write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
 
         file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
         
