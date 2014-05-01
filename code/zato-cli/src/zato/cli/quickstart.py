@@ -27,6 +27,8 @@ from zato.common.util import make_repr
 
 random.seed()
 
+DEFAULT_NO_SERVERS=2
+
 # Taken from http://stackoverflow.com/a/246128
 script_dir = """SOURCE="${BASH_SOURCE[0]}"
 BASE_DIR="$( dirname "$SOURCE" )"
@@ -196,8 +198,8 @@ class Create(ZatoCommand):
         """
         next_step = count(1)
         next_port = count(http_plain_server_port)
-        cluster_name = getattr(args, 'cluster_name', 'quickstart-{}'.format(random.getrandbits(20)).zfill(7))
-        servers = int(getattr(args, 'servers', '2'))
+        cluster_name = getattr(args, 'cluster_name') or 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)
+        servers = int(getattr(args, 'servers') or DEFAULT_NO_SERVERS)
 
         server_names = OrderedDict()
         for idx in range(1, servers+1):
