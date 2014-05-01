@@ -18,13 +18,16 @@ from anyjson import dumps, loads
 # lxml
 from lxml import etree
 
+# mock
+from mock import patch
+
 # nose
 from nose.tools import eq_
 
 # Zato
 from zato.common import common_namespaces, ZATO_OK
 from zato.common.test import rand_bool, rand_int, rand_object, rand_string
-from zato.common.util import new_cid
+from zato.common.util import new_cid, make_repr
 from zato.client import AnyServiceInvoker, CID_NO_CLIP, _Client, JSONClient, JSONSIOClient, \
      RawDataClient, _Response, SOAPClient, SOAPSIOClient, _StructuredResponse, XMLClient
 
@@ -417,3 +420,32 @@ class TestSettingSessionAuth(TestCase):
         
         # The previous auth should still be there
         self.assertEqual(client.session.auth, auth1)
+
+class TestHeaders(TestCase):
+    """ GH #221 - Clients don't always properly pass headers on to super classes.
+    """
+    class InnerInvokeResponse(object):
+        def __init__(self, request, response_class, async, headers):
+            self.request = request
+            self.response_class = response_class
+            self.async = async
+            self.headers = headers
+
+        def __repr__(self):
+            return make_repr(self)
+
+    def get_inner_invoke(self):
+        return self.InnerInvokeResponse
+
+    def test_clients(self):
+        for class_ in AnyServiceInvoker, JSONClient, JSONSIOClient, XMLClient, RawDataClient, SOAPClient, SOAPSIOClient:
+            with patch('zato.client._Client.inner_invoke', self.get_inner_invoke()):
+
+                client = class_(*rand_string(2))
+
+                header1, value1 = rand_string(2)
+                header2, value2 = rand_string(2)
+                headers = {header1:value1, header2:value2}
+
+                response = client.invoke(rand_string(), headers=headers)
+                eq_(sorted(headers.items()), sorted(response.headers.items()))
