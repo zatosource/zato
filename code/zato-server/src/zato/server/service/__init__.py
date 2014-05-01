@@ -167,7 +167,7 @@ class Request(ValueConverter):
         path_prefix = getattr(io, 'request_elem', 'request')
         required_list = getattr(io, 'input_required', [])
         optional_list = getattr(io, 'input_optional', [])
-        default_value = getattr(io, 'default_value', None)
+        default_value = getattr(io, 'default_value', ZATO_NO_DEFAULT_VALUE)
         use_text = getattr(io, 'use_text', True)
         
         if self.simple_io_config:
@@ -192,7 +192,6 @@ class Request(ValueConverter):
         params = {}
         if not isinstance(self.payload, basestring):
             for param in request_params:
-                
                 if isinstance(param, ForceType):
                     param_name = param.name
                 else:
@@ -223,7 +222,10 @@ class Request(ValueConverter):
                 else:
                     if value is not None:
                         value = unicode(value)
-
+                    else:
+                        # Ok, we really don't have that value, raise an exception then.
+                        if is_required:
+                            raise ValueError('Required parameter [{}] missing - value is [{}]'.format(param_name, repr(value)))
                 try:
                     if not isinstance(param, AsIs):
                         params[param_name] = self.convert(param, param_name, value, self.has_simple_io_config)
