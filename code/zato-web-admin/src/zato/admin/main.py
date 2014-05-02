@@ -25,22 +25,23 @@ from django.core.management import call_command, execute_manager
 # Zato
 from zato.admin.zato_settings import update_globals
 from zato.common.repo import RepoManager
+from zato.common.util import store_pidfile
 
 def main():
-    
+    store_pidfile(os.path.abspath('.'))
     repo_dir = os.path.join('.', 'config', 'repo')
-    
+
     # Update Django settings
     config = json.loads(open(os.path.join(repo_dir, 'web-admin.conf')).read())
     config['config_dir'] = os.path.abspath('.')
     update_globals(config)
-    
+
     # Store the PID so that the server can be later stopped by its PID.
     open('./.web-admin.pid', 'w').write(str(os.getpid()))
-        
+
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
     call_command('loaddata', os.path.join(repo_dir, 'initial-data.json'))
-    
+
     RepoManager(repo_dir).ensure_repo_consistency()
 
     # Cannot be imported before update_globals does its job of updating settings' configuration

@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from glob import glob
 from json import loads
-from os.path import abspath, join
+from os.path import abspath, exists, join
 
 # Bunch
 from bunch import Bunch
@@ -29,21 +29,20 @@ from zato.common.util import is_port_taken
 class CheckConfig(ManageCommand):
     """ Checks config of a Zato component (currently limited to servers only)
     """
+    def get_json_conf(self, conf_name, repo_dir=None):
+        repo_dir = repo_dir or join(self.config_dir, 'repo')
+        return loads(open(join(repo_dir, conf_name)).read())
+
     def ensure_port_free(self, prefix, port, address):
         if is_port_taken(port):
             raise Exception('{} check failed. Address `{}` already taken.'.format(prefix, address))
 
     def ensure_json_config_port_free(self, conf_name, prefix):
-        repo_dir = join(self.config_dir, 'repo')
-        conf = loads(open(join(repo_dir, conf_name)).read())
+        conf = self.get_json_conf(conf_name)
         address = '{}:{}'.format(conf['host'], conf['port'])
         self.ensure_port_free(prefix, conf['port'], address)
 
-    def on_server_check_sql_odb(self, cm, server_conf, repo_dir):
-
-        engine_params = dict(server_conf['odb'].items())
-        engine_params['extra'] = {}
-        engine_params['pool_size'] = 1
+    def ping_sql(self, cm, engine_params):
         
         query = ping_queries[engine_params['engine']]
 
@@ -54,9 +53,30 @@ class CheckConfig(ManageCommand):
         if self.show_output:
             self.logger.info('SQL ODB connection OK')
 
-    def on_server_check_kvdb(self, cm, server_conf):
+    def check_sql_odb_server(self, cm, conf):
+        engine_params = dict(conf['odb'].items())
+        engine_params['extra'] = {}
+        engine_params['pool_size'] = 1
+        self.ping_sql(cm, engine_params)
 
-        kvdb_config = Bunch(dict(server_conf['kvdb'].items()))
+    def check_sql_odb_web_admin(self, cm, conf):
+        pairs = (
+            ('engine', 'db_type'),
+            ('username', 'DATABASE_USER'),
+            ('password', 'DATABASE_PASSWORD'),
+            ('host', 'DATABASE_HOST'),
+            ('port', 'DATABASE_PORT'),
+            ('db_name', 'DATABASE_NAME'),
+        )
+        engine_params = {'extra':{}, 'pool_size':1}
+        for sqlalch_name, django_name in pairs:
+            engine_params[sqlalch_name] = conf[django_name]
+
+        self.ping_sql(cm, engine_params)
+
+    def on_server_check_kvdb(self, cm, conf):
+
+        kvdb_config = Bunch(dict(conf['kvdb'].items()))
         kvdb = KVDB(None, kvdb_config, cm.decrypt)
         kvdb.init()
         
@@ -66,41 +86,47 @@ class CheckConfig(ManageCommand):
         if self.show_output:
             self.logger.info('Redis connection OK')
 
-    def on_server_check_stale_unix_socket(self):
-        zdaemon_dir = abspath(join(self.config_dir, 'zdaemon'))
-        results = glob(join(zdaemon_dir, '*.sock'))
-        if results:
-            len_results = len(results)
-            count, suffix = ('a', '') if len_results == 1 else (len_results, 's')
-            sockets = results[0] if len_results == 1 else ', '.join(results)
-            raise Exception('Found {} stale socket{} to manual deletion: {}'.format(count, suffix, sockets))
+    def ensure_no_pidfile(self):
+        pidfile = abspath(join(self.component_dir, 'pidfile'))
+        if exists(pidfile):
+            raise Exception('Cannot proceed, found pidfile `{}`'.format(pidfile))
 
         if self.show_output:
-            self.logger.info('No stale sockets found in {}, OK'.format(zdaemon_dir))
+            self.logger.info('No such pidfile `{}`, OK'.format(pidfile))
 
     def on_server_check_port_available(self, server_conf):
         address = server_conf['main']['gunicorn_bind']
         _, port = address.split(':')
         self.ensure_port_free('Server', int(port), address)
 
-    def _on_server(self, args):
-        repo_dir = join(self.config_dir, 'repo')
-        server_conf = ConfigObj(join(repo_dir, 'server.conf'))
+    def get_crypto_manager_conf(self, conf_file=None, priv_key_location=None, repo_dir=None):
+        repo_dir = repo_dir or join(self.config_dir, 'repo')
+        conf = None
 
-        cm = CryptoManager(priv_key_location=abspath(join(repo_dir, server_conf['crypto']['priv_key_location'])))
+        if not priv_key_location:
+            conf = ConfigObj(join(repo_dir, conf_file))
+            priv_key_location = priv_key_location or abspath(join(repo_dir, conf['crypto']['priv_key_location']))
+
+        cm = CryptoManager(priv_key_location=priv_key_location)
         cm.load_keys()
 
-        self.on_server_check_sql_odb(cm, server_conf, repo_dir)
-        self.on_server_check_kvdb(cm, server_conf)
+        return cm, conf
+
+    def _on_server(self, args):
+        cm, conf = self.get_crypto_manager_conf('server.conf')
+
+        self.check_sql_odb_server(cm, conf)
+        self.on_server_check_kvdb(cm, conf)
 
         # enmasse actually needs a running server and it will set the flags below to False.
-        if getattr(args, 'check_stale_server_sockets', True):
-            self.on_server_check_stale_unix_socket()
+        if getattr(args, 'ensure_no_pidfile', True):
+            self.ensure_no_pidfile()
 
         if getattr(args, 'check_server_port_available', True):
-            self.on_server_check_port_available(server_conf)
+            self.on_server_check_port_available(conf)
 
     def _on_lb(self, *ignored_args, **ignored_kwargs):
+        self.ensure_no_pidfile()
         repo_dir = join(self.config_dir, 'repo')
 
         # Load-balancer's agent
@@ -122,4 +148,11 @@ class CheckConfig(ManageCommand):
         self.ensure_port_free('Load balancer', int(port), lb_address)
 
     def _on_web_admin(self, *ignored_args, **ignored_kwargs):
+        repo_dir = join(self.component_dir, 'config', 'repo')
+
+        self.check_sql_odb_web_admin(
+            self.get_crypto_manager_conf(priv_key_location=join(repo_dir, 'web-admin-priv-key.pem'), repo_dir=repo_dir)[0],
+            self.get_json_conf('web-admin.conf', repo_dir))
+
+        self.ensure_no_pidfile()
         self.ensure_json_config_port_free('web-admin.conf', 'Web admin')
