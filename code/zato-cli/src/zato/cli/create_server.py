@@ -162,7 +162,7 @@ list_key=sample,list
 
 default_odb_pool_size = 1
 
-directories = ('config', 'config/repo', 'config/zdaemon', 'logs', 'pickup-dir', 'profiler', 'work',
+directories = ('config', 'config/repo', 'logs', 'pickup-dir', 'profiler', 'work',
                'work/hot-deploy', 'work/hot-deploy/current', 'work/hot-deploy/backup', 'work/hot-deploy/backup/last')
 files = {'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
          'config/repo/service-sources.txt':service_sources_contents}
