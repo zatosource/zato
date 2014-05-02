@@ -24,6 +24,7 @@ from texttable import Texttable
 
 # Zato
 from zato.cli import ManageCommand, ZATO_INFO_FILE
+from zato.common import MISC
 from zato.common.util import current_host
 
 DEFAULT_COLS_WIDTH = '30,90'
@@ -59,11 +60,15 @@ class Info(ManageCommand):
             'master_proc_workers_pids': None,
         }
 
-        master_proc_pid = self._zdaemon_command('status')
-        master_proc_pid = master_proc_pid.values()
-        if master_proc_pid and master_proc_pid[0]:
+        master_proc_pid = None
+        try:
+            master_proc_pid = int(open(os.path.join(abs_args_path, MISC.PIDFILE)).read())
+        except(IOError, ValueError):
+            # Ok, no such file or it's empty
+            pass
+
+        if master_proc_pid:
             out['component_running'] = True
-            master_proc_pid = int(master_proc_pid[0])
             master_proc = Process(master_proc_pid)
             workers_pids = sorted(elem.pid for elem in master_proc.children())
             

@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import gc, inspect, linecache, logging, os, random, re, signal, threading, traceback, sys
+import gc, inspect, json, linecache, logging, os, random, re, signal, threading, traceback, sys
 from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
@@ -88,8 +88,8 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import DATA_FORMAT, KVDB, NoDistributionFound, scheduler_date_time_format, soap_body_path, soap_body_xpath, \
-     TRACE1, ZatoException
+from zato.common import DATA_FORMAT, KVDB, MISC, NoDistributionFound, scheduler_date_time_format, soap_body_path, \
+     soap_body_xpath, TRACE1, ZatoException
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import IntervalBasedJob, Job, Service
 from zato.common.odb.query import _service as _service
@@ -913,3 +913,12 @@ def is_port_taken(port):
         if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
             return True
     return False
+
+# ################################################################################################################################
+
+def get_haproxy_pidfile(component_dir):
+    json_config = json.loads(open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf')).read())
+    return os.path.abspath(os.path.join(component_dir, json_config['pid_file']))
+
+def store_pidfile(component_dir):
+    open(os.path.join(component_dir, MISC.PIDFILE), 'w').write('{}'.format(os.getpid()))

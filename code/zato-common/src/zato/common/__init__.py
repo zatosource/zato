@@ -372,6 +372,7 @@ class MISC:
     OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
     DEFAULT_AUDIT_BACK_LOG = 24 * 60 # 24 hours * 60 days ≅ 2 months
     DEFAULT_AUDIT_MAX_PAYLOAD = 0 # Using 0 means there's no limit
+    PIDFILE = 'pidfile'
 
 class CLOUD:
     class OPENSTACK:

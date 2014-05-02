@@ -208,6 +208,7 @@ def get_parser():
     start = subs.add_parser('start', description=start_mod.Start.__doc__, parents=[base_parser], formatter_class=argparse.RawDescriptionHelpFormatter)
     start.add_argument('path', help='Path to the Zato component to be started')
     start.set_defaults(command='start')
+    add_opts(start, start_mod.Start.opts)
 
     #
     # stop

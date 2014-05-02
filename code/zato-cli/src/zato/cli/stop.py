@@ -13,51 +13,42 @@ import json, os, signal, sys
 
 # Zato
 from zato.cli import ManageCommand
+from zato.common.util import get_haproxy_pidfile
 
 class Stop(ManageCommand):
     """ Stops a Zato component
     """
-    def _try_stop(self, no_pid_template, stop_template, pre_stop_func=None):
-        ports_pids = self._zdaemon_command('status')
-        if not any(ports_pids.values()):
-            if self.show_output:
-                self.logger.warn(no_pid_template.format(self.component_dir))
-        else:
-            if pre_stop_func:
-                pre_stop_func()
-                
-            self._zdaemon_command('stop')
-            if self.show_output:
-                self.logger.info(stop_template.format(self.component_dir))
-    
-    def _signal(self, pid_file, component_name, signal_name, signal_code):
-        """ Sends a signal to a process known by its ID.
+    def signal(self, component_name, signal_name, signal_code, pidfile=None, component_dir=None):
+        """ Sends a signal to a process known by its pidfile.
         """
-        if not os.path.exists(pid_file):
-            self.logger.error('Did not find the expected file {}, quitting now'.format(pid_file))
+        component_dir = component_dir or self.component_dir
+        pidfile = pidfile or os.path.join(component_dir, 'pidfile')
+        if not os.path.exists(pidfile):
+            self.logger.error('No pidfile found in `%s`', pidfile)
             sys.exit(self.SYS_ERROR.FILE_MISSING)
 
-        pid = open(pid_file).read().strip()
+        pid = open(pidfile).read().strip()
         if not pid:
-            self.logger.error('Did not attempt to stop the {} because the file {} is empty'.format(component_name, pid_file))
+            self.logger.error('Empty pidfile `%s`, did not attempt to stop `%s`', pidfile, component_dir)
             sys.exit(self.SYS_ERROR.NO_PID_FOUND)
 
         pid = int(pid)
-        self.logger.debug('Will now send {} to pid {} (as found in the {} file)'.format(signal_name, pid, pid_file))
+        self.logger.debug('Will now send `%s` to pid `%s` (as found in `%s`)', signal_name, pid, pidfile)
 
         os.kill(pid, signal_code)
-        open(pid_file, 'w').truncate()
+        os.remove(pidfile)
+
+        self.logger.info('%s `%s` shutting down', component_name, component_dir)
 
     def _on_server(self, *ignored):
-        self._try_stop('No Zato server running in {}', 'Stopped Zato server in {}')
+        self.signal('Server', 'SIGTERM', signal.SIGTERM)
+
+    def stop_haproxy(self, component_dir):
+        self.signal('Load-balancer', 'SIGTERM', signal.SIGTERM, get_haproxy_pidfile(component_dir), component_dir)
 
     def _on_lb(self, *ignored):
-        def stop_haproxy():
-            json_config = json.loads(open(os.path.join(self.component_dir, 'config', 'repo', 'lb-agent.conf')).read())
-            pid_file = os.path.abspath(os.path.join(self.component_dir, json_config['pid_file']))
-            self._signal(pid_file, 'load-balancer', 'SIGUSR1', signal.SIGUSR1)
-            
-        self._try_stop('Zato load-balancer and agent in {} are not running', 'Stopped load-balancer and agent in {}', stop_haproxy)
+        self.stop_haproxy(self.component_dir)
+        self.signal('Load-balancer\'s agent', 'SIGTERM', signal.SIGTERM)
 
     def _on_web_admin(self, *ignored):
-        self._try_stop('No web admin running in {}', 'Stopped web admin in {}')
+        self.signal('Web admin', 'SIGTERM', signal.SIGTERM)
