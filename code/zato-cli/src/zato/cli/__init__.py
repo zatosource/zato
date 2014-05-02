@@ -582,66 +582,6 @@ class ManageCommand(ZatoCommand):
     
     _on_web_admin = _on_server = _on_lb
 
-    def _zdaemon_start(self, contents_template, zdaemon_conf_name,
-                       socket_prefix, logfile_path_prefix, program):
-
-        zdaemon_conf_name = os.path.join(self.config_dir, 'zdaemon', zdaemon_conf_name)
-
-        socket_name = socket_prefix + '.sock'
-        socket_name = os.path.join(self.config_dir, 'zdaemon', socket_name)
-
-        logfile_path = logfile_path_prefix + '.log'
-        logfile_path = os.path.join(self.component_dir, 'logs', logfile_path)
-
-        conf = contents_template.format(
-            program=program, socket_name=socket_name, logfile_path=logfile_path)
-
-        open(zdaemon_conf_name, 'w').write(conf)
-        self._execute_zdaemon_command(['zdaemon', '-C', zdaemon_conf_name, 'start'])
-
-    def _zdaemon_command(self, zdaemon_command, zdaemon_config_pattern=['config', 'zdaemon', 'zdaemon*.conf']):
-
-        conf_files = os.path.join(self.component_dir, *zdaemon_config_pattern)
-        conf_files = sorted(glob.iglob(conf_files)) # noqa
-
-        prefix = os.path.join(self.component_dir, 'config', 'zdaemon', 'zdaemon')
-        ports_pids = {}
-
-        for conf_file in conf_files:
-            port = conf_file.strip(prefix).strip('.').lstrip('0')
-            pid = self._execute_zdaemon_command(['zdaemon', '-C', conf_file, zdaemon_command])
-            ports_pids[port] = pid
-
-            if zdaemon_command == 'stop':
-                os.remove(conf_file)
-
-        return ports_pids
-
-    def _execute_zdaemon_command(self, command_list):
-        p = subprocess.Popen(command_list, stdout=subprocess.PIPE, stderr=subprocess.PIPE) # noqa
-        p.wait()
-
-        if p.returncode is None:
-            msg = 'Could not execute command_list {0} (p.returncode is None)'
-            msg = msg.format(str(command_list))
-            raise Exception(msg)
-
-        else:
-            if p.returncode != 0:
-                stdout, stderr = p.communicate()
-                msg = 'Failed to execute command_list {0}.'
-                msg += ' return code:[{1}], stdout:[{2}], stderr:[{3}]'
-                msg = msg.format(str(command_list), p.returncode, stdout, stderr)
-                raise Exception(msg)
-
-            stdout, stderr = p.communicate()
-            if stdout.startswith('program running'):
-                data = stdout
-                data = data.split(';')[1].strip()
-                pid = data.split('=')[1].strip()
-
-                return pid
-
     def execute(self, args):
 
         self.component_dir = os.path.abspath(args.path)

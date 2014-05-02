@@ -109,7 +109,6 @@ class Create(ZatoCommand):
 
     def execute(self, args, use_default_backend=False, server02_port=None, show_output=True):
         os.mkdir(os.path.join(self.target_dir, 'config')) # noqa
-        os.mkdir(os.path.join(self.target_dir, 'config', 'zdaemon')) # noqa
         os.mkdir(os.path.join(self.target_dir, 'logs')) # noqa
         
         repo_dir = os.path.join(self.target_dir, 'config', 'repo') # noqa

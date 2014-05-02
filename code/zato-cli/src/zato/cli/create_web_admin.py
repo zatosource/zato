@@ -98,7 +98,6 @@ class Create(ZatoCommand):
 
         os.mkdir(os.path.join(self.target_dir, 'logs'))
         os.mkdir(os.path.join(self.target_dir, 'config'))
-        os.mkdir(os.path.join(self.target_dir, 'config', 'zdaemon'))
         os.mkdir(repo_dir)
         
         user_name = 'admin'

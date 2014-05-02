@@ -35,7 +35,7 @@ from repoze.profile import ProfileMiddleware
 from zato.common.repo import RepoManager
 from zato.common import TRACE1
 from zato.common.util import absolutize_path, clear_locks, get_app_context, get_config, get_crypto_manager, \
-     make_psycopg_green, register_diag_handlers
+     make_psycopg_green, register_diag_handlers, store_pidfile
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
@@ -89,8 +89,9 @@ class ZatoGunicornApplication(Application):
         return self.zato_wsgi_app.on_wsgi_request
 
 def run(base_dir, start_gunicorn_app=True):
-    register_diag_handlers()
 
+    store_pidfile(base_dir)
+    register_diag_handlers()
     os.chdir(base_dir)
 
     # We're doing it here even if someone doesn't use PostgreSQL at all
