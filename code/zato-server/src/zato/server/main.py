@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Setting the custom logger must come first
-import logging
+import locale, logging
 from zato.server.log import ZatoLogger
 logging.setLoggerClass(ZatoLogger)
 
@@ -90,8 +90,13 @@ class ZatoGunicornApplication(Application):
 
 def run(base_dir, start_gunicorn_app=True):
 
+    # Store a pidfile before doing anything else
     store_pidfile(base_dir)
+
+    # For dumping stacktraces
     register_diag_handlers()
+
+    # Start initializing the server now
     os.chdir(base_dir)
 
     # We're doing it here even if someone doesn't use PostgreSQL at all
@@ -109,6 +114,16 @@ def run(base_dir, start_gunicorn_app=True):
     logger = logging.getLogger(__name__)
 
     config = get_config(repo_location, 'server.conf')
+
+    # New in 2.0 hence optional
+    user_locale = config.misc.get('locale', None)
+    if user_locale:
+        locale.setlocale(locale.LC_ALL, user_locale)
+        value = 12345
+        logger.info('Locale is `%s`, amount of %s -> `%s`', user_locale, value,
+                    locale.currency(value, grouping=True).decode('utf-8'))
+
+    # Spring Python
     app_context = get_app_context(config)
 
     # Makes queries against Postgres asynchronous
