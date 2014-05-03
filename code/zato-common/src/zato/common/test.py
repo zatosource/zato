@@ -36,7 +36,7 @@ def rand_int(start=1, stop=100):
     return randint(start, stop)
     
 def rand_float(start=1.0, stop=100.0):
-    return random((start, stop))
+    return float(rand_int(start, stop))
 
 def rand_string():
     return 'a' + uuid4().hex
