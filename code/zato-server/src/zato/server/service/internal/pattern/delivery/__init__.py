@@ -211,7 +211,7 @@ class GetHistoryList(AdminService):
 class GetDetails(AdminService):
     """ Returns details of a particular delivery definition that is in-doubt.
     """
-    class SimpleIO(object):
+    class SimpleIO(AdminSIO):
         request_elem = 'zato_pattern_delivery_in_doubt_get_list_request'
         response_elem = 'zato_pattern_delivery_in_doubt_get_list_response'
         input_required = (AsIs('task_id'),)
