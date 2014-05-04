@@ -13,6 +13,17 @@ function symlink_py {
 
 bash $CURDIR/clean.sh
 
+# Default libumfpack version on Debian 7 and Ubuntu 12.04
+LIBUMFPACK_VERSION=5.4.0
+
+# Ubuntu 14.04 needs a different one
+if command -v lsb_release > /dev/null; then
+    release=$(lsb_release -r | cut -f2)
+    if [[ "$release" == "14.04" ]]; then
+        LIBUMFPACK_VERSION=5.6.2
+    fi
+fi
+
 # Always run an update so there are no surprises later on when it actually
 # comes to fetching the packages from repositories.
 sudo apt-get update
@@ -20,7 +31,7 @@ sudo apt-get update
 sudo apt-get install git bzr gfortran haproxy  \
     libatlas-dev libatlas3gf-base libblas3gf \
     libevent-dev libgfortran3 liblapack-dev liblapack3gf \
-    libpq-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack5.4.0 \
+    libpq-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack$LIBUMFPACK_VERSION \
     openssl python2.7-dev python-numpy python-pip \
     python-scipy python-zdaemon swig uuid-dev uuid-runtime libffi-dev
 

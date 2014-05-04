@@ -38,12 +38,6 @@ if (($? == 0)) ; then IS_DARWIN=1 ; fi
 
 if [ $IS_DEB -eq 1 ]
 then
-    if command -v lsb_release > /dev/null; then
-        release=$(lsb_release -r | cut -f2)
-        if [[ "$release" == "14.04" ]]; then
-            sed -i 's/libumfpack5.4.0/libumfpack5.6.2/' $CURDIR/_install-deb.sh
-        fi
-    fi
   bash $CURDIR/_install-deb.sh
   RUN=1
 fi
