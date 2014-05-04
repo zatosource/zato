@@ -175,7 +175,7 @@ class EnMasse(ManageCommand):
             # Checks if connections to ODB/Redis are configured properly
             cc = CheckConfig(self.args)
             cc.show_output = False
-            cc.execute(Bunch(path='.', check_stale_server_sockets=False, check_server_port_available=False))
+            cc.execute(Bunch(path='.', ensure_no_pidfile=False, check_server_port_available=False))
 
             # Get back to the directory we started in so following commands start afresh as well
             os.chdir(self.curdir)
