@@ -82,7 +82,7 @@ class TimeUtil(object):
         """ Returns format stored under a key pointed to by 'format' or raises
         ValueError if the key is missing/has no value.
         """
-        key = 'zato:date-format:{}'.format(format[5:])
+        key = 'kvdb:date-format:{}'.format(format[5:])
         format = self.kvdb.conn.get(key)
         if not format:
             msg = 'Key [{}] does not exist'.format(key)
@@ -104,7 +104,7 @@ class TimeUtil(object):
         if tz != 'UTC':
             now = now.to(tz)
 
-        if format.startswith('zato:'):
+        if format.startswith('kvdb:'):
             format = self.get_format_from_kvdb(format)
 
         return now.format(format)
@@ -113,16 +113,19 @@ class TimeUtil(object):
         """ Reformats value from one datetime format to another, for instance
         from 23-03-2013 to 03/23/13 (MM-DD-YYYY to DD/MM/YY).
         """
-        if from_.startswith('zato:'):
+        if from_.startswith('kvdb:'):
             from_ = self.get_format_from_kvdb(from_)
 
-        if to.startswith('zato:'):
+        if to.startswith('kvdb:'):
             to = self.get_format_from_kvdb(to)
 
         try:
+            # Arrow compares to str, not basestring
+            value = str(value) if isinstance(value, unicode) else value
+            from_ = str(from_) if isinstance(from_, unicode) else from_
             return arrow.get(value, from_).format(to)
         except Exception, e:
-            logger.error('Could not reformat value:[%s] from_:[%s] to:[%s]',
+            logger.error('Could not reformat value:`%s` from:`%s` to:`%s`',
                 value, from_, to)
             raise
 
