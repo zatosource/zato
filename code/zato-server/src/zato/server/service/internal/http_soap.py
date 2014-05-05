@@ -80,7 +80,8 @@ class GetList(AdminService):
         
     def get_data(self, session):
         return http_soap_list(session, self.request.input.cluster_id,
-            self.request.input.connection, self.request.input.transport, False)
+            self.request.input.connection, self.request.input.transport,
+            asbool(self.server.fs_server_config.misc.return_internal_objects), False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

@@ -48,14 +48,19 @@ class GetList(AdminService):
         default_value = ''
         
     def get_data(self, session):
-        out = []
-        sl = service_list(session, self.request.input.cluster_id, False)
-        
+
+        return_internal = is_boolean(self.server.fs_server_config.misc.return_internal_objects)
         internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
-        name_filter = [elem.strip().lower() for elem in self.request.input.get('name_filter', '').strip().split()]
-        if not name_filter:
+
+        out = []
+        sl = service_list(session, self.request.input.cluster_id, return_internal, False)
+
+        name_filter = self.request.input.get('name_filter')
+        if name_filter:
+            name_filter = [elem.strip().lower() for elem in name_filter.strip().split() if elem]
+        else:
             name_filter = [_no_such_service_name] # So it matches nothing
-        
+
         for item in sl:
             if self.request.input.name_filter != '*':
                 skip_item = False
