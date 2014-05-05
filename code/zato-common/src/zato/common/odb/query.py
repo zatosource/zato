@@ -13,7 +13,7 @@ import logging
 from functools import wraps
 
 # SQLAlchemy
-from sqlalchemy import func
+from sqlalchemy import func, not_
 from sqlalchemy.sql.expression import case
 
 # Zato
@@ -487,7 +487,7 @@ def http_soap(session, cluster_id, id):
         one()
 
 @needs_columns
-def http_soap_list(session, cluster_id, connection=None, transport=None, needs_columns=False):
+def http_soap_list(session, cluster_id, connection=None, transport=None, return_internal=True, needs_columns=False):
     """ HTTP/SOAP connections, both channels and outgoing ones.
     """
     q = _http_soap(session, cluster_id)
@@ -497,6 +497,9 @@ def http_soap_list(session, cluster_id, connection=None, transport=None, needs_c
 
     if transport:
         q = q.filter(HTTPSOAP.transport==transport)
+
+    if not return_internal:
+        q = q.filter(not_(HTTPSOAP.name.startswith('zato')))
 
     return q
 
@@ -563,10 +566,13 @@ def service(session, cluster_id, id):
         one()
 
 @needs_columns
-def service_list(session, cluster_id, needs_columns=False):
+def service_list(session, cluster_id, return_internal=True, needs_columns=False):
     """ All services.
     """
-    return _service(session, cluster_id)
+    result = _service(session, cluster_id)
+    if not return_internal:
+        result = result.filter(not_(Service.name.startswith('zato')))
+    return result
 
 # ################################################################################################################################
 
