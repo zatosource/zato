@@ -116,6 +116,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", '');
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.data_format);
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.timeout);
 
     if(is_outgoing) {
         row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.ping_method);
