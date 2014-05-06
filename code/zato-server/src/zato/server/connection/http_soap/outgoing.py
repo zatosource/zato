@@ -41,6 +41,7 @@ class BaseHTTPSOAPWrapper(object):
     """
     def __init__(self, config, requests_module=None):
         self.config = config
+        self.config['timeout'] = float(self.config['timeout'])
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
         self.requests_module = requests_module or requests
@@ -319,6 +320,7 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
         super(SudsSOAPWrapper, self).__init__(config)
         self.update_lock = RLock()
         self.config = config
+        self.config['timeout'] = float(self.config['timeout'])
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
         self.address = '{}{}'.format(self.config['address_host'], self.config['address_url_path'])
@@ -357,7 +359,7 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
 
         # Still could be either none at all or WSS
         if not sec_type:
-            client = Client(self.address, autoblend=True)
+            client = Client(self.address, autoblend=True, timeout=self.config['timeout'])
 
         self.client.put_client(client)
 

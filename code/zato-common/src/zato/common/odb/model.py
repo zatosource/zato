@@ -378,7 +378,7 @@ class HTTPSOAP(Base):
     """
     __tablename__ = 'http_soap'
     __table_args__ = (UniqueConstraint('name', 'connection', 'transport', 'cluster_id'),
-                      UniqueConstraint('url_path', 'connection', 'soap_action', 'cluster_id'), {})
+                      UniqueConstraint('url_path', 'host', 'connection', 'soap_action', 'cluster_id'), {})
 
     id = Column(Integer, Sequence('http_soap_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -426,6 +426,9 @@ class HTTPSOAP(Base):
 
     # New in 1.2
     serialization_type = Column(String(), nullable=False, default=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id)
+
+    # New in 2.0
+    timeout = Column(Integer(), nullable=False, default=MISC.DEFAULT_HTTP_TIMEOUT)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
