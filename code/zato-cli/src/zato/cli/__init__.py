@@ -394,8 +394,16 @@ class ZatoCommand(object):
         
         if check_password:
             args = self._check_passwords(args, check_password)
-            
+
+        self.before_execute(args)
         sys.exit(self.execute(args)) # noqa
+
+    def before_execute(self, args):
+        """ A hooks that lets commands customize their input before they are actually executed.
+        """
+        # Update odb_type if it's MySQL so that users don't have to think about the particular client implementation.
+        if getattr(args, 'odb_type', None) == 'mysql':
+            args.odb_type = 'mysql+pymysql'
 
     def _copy_lb_server_crypto(self, repo_dir, args, middle_part):
         for name in('pub-key', 'priv-key', 'cert', 'ca-certs'):
