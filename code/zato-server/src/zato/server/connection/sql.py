@@ -85,7 +85,7 @@ class SQLConnectionPool(object):
         # Postgres-only
         if self.engine_name.startswith('mysql'):
             _extra['pool_recycle'] = 600
-        else:
+        elif self.engine_name.startswith('postgres'):
             _extra['connect_args'] = {'application_name': get_component_name()}
 
         extra = self.config.get('extra') # Optional, hence .get
