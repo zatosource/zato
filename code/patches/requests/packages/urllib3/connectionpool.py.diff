@@ -1,20 +1,24 @@
---- requests/packages/urllib3/connectionpool.py.orig	2013-07-07 20:21:06.803561777 +0200
-+++ requests/packages/urllib3/connectionpool.py	2013-07-07 20:21:38.943721143 +0200
-@@ -164,18 +164,18 @@
+--- requests/packages/urllib3connectionpool.py.orig	2014-05-06 18:47:11.346680199 +0200
++++ requests/packages/urllib3connectionpool.py	2014-05-06 18:47:38.246679116 +0200
+@@ -134,7 +134,7 @@
+     ConnectionCls = HTTPConnection
  
-     scheme = 'http'
+     def __init__(self, host, port=None, strict=False,
+-                 timeout=Timeout.DEFAULT_TIMEOUT, maxsize=1, block=False,
++                 timeout=Timeout.DEFAULT_TIMEOUT, maxsize=600, block=False,
+                  headers=None, _proxy=None, _proxy_headers=None):
+         ConnectionPool.__init__(self, host, port)
+         RequestMethods.__init__(self, headers)
+@@ -148,14 +148,14 @@
  
--    def __init__(self, host, port=None, strict=False, timeout=None, maxsize=1,
-+    def __init__(self, host, port=None, strict=False, timeout=None, maxsize=600,
-                  block=False, headers=None):
-         super(HTTPConnectionPool, self).__init__(host, port)
- 
-         self.strict = strict
          self.timeout = timeout
+ 
 -        self.pool = self.QueueCls(maxsize)
 +        self.pool = self.QueueCls(600)
          self.block = block
-         self.headers = headers or {}
+ 
+         self.proxy = _proxy
+         self.proxy_headers = _proxy_headers or {}
  
          # Fill the queue up so that doing get() on it will block properly
 -        for _ in xrange(maxsize):
@@ -22,3 +26,4 @@
              self.pool.put(None)
  
          # These are mostly for testing and debugging purposes.
+

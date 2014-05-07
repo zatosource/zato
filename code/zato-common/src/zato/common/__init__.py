@@ -115,19 +115,26 @@ ZATO_WARNING = 'ZATO_WARNING'
 ZATO_NONE = b'ZATO_NONE'
 
 # Default HTTP method outgoing connections use to ping resources
+# TODO: Move it to MISC
 DEFAULT_HTTP_PING_METHOD = 'HEAD'
 
 # Default size of an outgoing HTTP connection's pool (plain, SOAP, any).
 # This is a per-outconn setting
+# TODO: Move it to MISC
 DEFAULT_HTTP_POOL_SIZE = 20
 
 # Used when there's a need for encrypting/decrypting a well-known data.
+# TODO: Move it to MISC
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
 
 # All URL types Zato understands.
-class URL_TYPE:
+class URL_TYPE(object):
     SOAP = 'soap'
     PLAIN_HTTP = 'plain_http'
+
+    class __metaclass__(type):
+        def __iter__(self):
+            return iter((self.SOAP, self.PLAIN_HTTP))
 
 # Whether WS-Security passwords are transmitted in clear-text or not.
 ZATO_WSS_PASSWORD_CLEAR_TEXT = Bunch(name='clear_text', label='Clear text')
@@ -368,11 +375,12 @@ class BROKER:
     DEFAULT_EXPIRATION = 15 # In seconds
 
 class MISC:
-    SEPARATOR = ':::'
-    OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
+    DEFAULT_HTTP_TIMEOUT=10
     DEFAULT_AUDIT_BACK_LOG = 24 * 60 # 24 hours * 60 days ≅ 2 months
     DEFAULT_AUDIT_MAX_PAYLOAD = 0 # Using 0 means there's no limit
+    OAUTH_SIG_METHODS = ['HMAC-SHA1', 'PLAINTEXT']
     PIDFILE = 'pidfile'
+    SEPARATOR = ':::'
 
 class CLOUD:
     class OPENSTACK:

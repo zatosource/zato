@@ -1,7 +1,7 @@
---- requests/models.py.orig	2013-06-24 15:42:13.809937748 +0200
-+++ requests/models.py	2013-06-24 15:25:25.040935520 +0200
-@@ -140,6 +140,8 @@
-         """Properly register a hook."""
+--- requests/models.py.orig	2014-05-06 18:34:25.894711032 +0200
++++ requests/models.py	2014-05-06 18:34:46.126710217 +0200
+@@ -155,6 +155,8 @@
+             raise ValueError('Unsupported event specified, with event name "%s"' % (event))
  
          if isinstance(hook, collections.Callable):
 +            if event == 'zato_pre_request':
@@ -9,3 +9,4 @@
              self.hooks[event].append(hook)
          elif hasattr(hook, '__iter__'):
              self.hooks[event].extend(h for h in hook if isinstance(h, collections.Callable))
+
