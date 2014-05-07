@@ -96,8 +96,8 @@ class Create(AdminService, _HTTPSOAPService):
         response_elem = 'zato_http_soap_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
-            'host', 'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type',
-            'timeout')
+            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
+            'serialization_type', 'timeout')
         output_required = ('id', 'name')
     
     def handle(self):

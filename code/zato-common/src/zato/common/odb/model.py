@@ -422,10 +422,10 @@ class HTTPSOAP(Base):
     audit_max_payload = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_MAX_PAYLOAD)
     
     # New in 1.2
-    audit_repl_patt_type = Column(String(), nullable=False, default=MSG_PATTERN_TYPE.ELEM_PATH.id)
+    audit_repl_patt_type = Column(String(200), nullable=False, default=MSG_PATTERN_TYPE.ELEM_PATH.id)
 
     # New in 1.2
-    serialization_type = Column(String(), nullable=False, default=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id)
+    serialization_type = Column(String(200), nullable=False, default=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id)
 
     # New in 2.0
     timeout = Column(Integer(), nullable=False, default=MISC.DEFAULT_HTTP_TIMEOUT)
@@ -1220,24 +1220,24 @@ class HTTSOAPAudit(Base):
     __tablename__ = 'http_soap_audit'
 
     id = Column(Integer, Sequence('http_soap_audit_seq'), primary_key=True)
-    name = Column(String(), nullable=False, index=True)
-    cid = Column(String(), nullable=False, index=True)
+    name = Column(String(200), nullable=False, index=True)
+    cid = Column(String(200), nullable=False, index=True)
     
-    transport = Column(String(), nullable=False, index=True)
-    connection = Column(String(), nullable=False, index=True)
+    transport = Column(String(200), nullable=False, index=True)
+    connection = Column(String(200), nullable=False, index=True)
     
     req_time = Column(DateTime(), nullable=False)
     resp_time = Column(DateTime(), nullable=True)
     
-    user_token = Column(String(), nullable=True, index=True)
+    user_token = Column(String(200), nullable=True, index=True)
     invoke_ok = Column(Boolean(), nullable=True)
     auth_ok = Column(Boolean(), nullable=True)
-    remote_addr = Column(String(), nullable=False, index=True)
+    remote_addr = Column(String(200), nullable=False, index=True)
     
-    req_headers = Column(String(), nullable=True)
-    req_payload = Column(String(), nullable=True)
-    resp_headers = Column(String(), nullable=True)
-    resp_payload = Column(String(), nullable=True)
+    req_headers = Column(LargeBinary(), nullable=True)
+    req_payload = Column(LargeBinary(), nullable=True)
+    resp_headers = Column(LargeBinary(), nullable=True)
+    resp_payload = Column(LargeBinary(), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     conn_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)

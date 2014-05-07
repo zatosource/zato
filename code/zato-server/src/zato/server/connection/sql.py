@@ -71,15 +71,20 @@ class SQLConnectionPool(object):
     """ A pool of SQL connections wrapping an SQLAlchemy engine.
     """
     def __init__(self, name, config, config_no_sensitive):
+        self.logger = getLogger(self.__class__.__name__)
+
         self.name = name
         self.config = config
-        self.logger = getLogger(self.__class__.__name__)
-        
+        self.engine_name = config['engine'] # self.engine.name is 'mysql' while 'self.engine_name' is mysql+pymysql
+
         # Safe for printing out to logs, any sensitive data has been shadowed
         self.config_no_sensitive = config_no_sensitive 
         
         _extra = {}
-        _extra['connect_args'] = {'application_name': get_component_name()}
+
+        # Postgres-only
+        if not self.engine_name.startswith('mysql'):
+            _extra['connect_args'] = {'application_name': get_component_name()}
 
         extra = self.config.get('extra') # Optional, hence .get
         _extra.update(parse_extra_into_dict(extra))
@@ -121,7 +126,7 @@ class SQLConnectionPool(object):
     def ping(self):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
-        query = ping_queries[self.engine.name]
+        query = ping_queries[self.engine_name]
 
         self.logger.debug('About to ping the SQL connection pool:[{}], query:[{}]'.format(self.config_no_sensitive, query))
 

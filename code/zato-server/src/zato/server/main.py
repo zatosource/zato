@@ -99,6 +99,12 @@ def run(base_dir, start_gunicorn_app=True):
     # Start initializing the server now
     os.chdir(base_dir)
 
+    try:
+        import pymysql
+        pymysql.install_as_MySQLdb()
+    except ImportError:
+        pass
+
     # We're doing it here even if someone doesn't use PostgreSQL at all
     # so we're not suprised when someone suddenly starts using PG.
     # TODO: Make sure it's registered for each of the subprocess
