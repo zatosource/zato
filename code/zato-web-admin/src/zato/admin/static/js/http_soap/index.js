@@ -56,6 +56,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var merge_url_params_req_tr = '';
     var url_params_pri_tr = '';
     var params_pri_tr = '';
+    var serialization_type = item.serialization_type ? item.serialization_type : 'string';
 
     if(is_soap) {
         soap_action_tr += String.format('<td>{0}</td>', item.soap_action);
@@ -116,12 +117,12 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", '');
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.data_format);
-    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.timeout);
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", 333);
 
     if(is_outgoing) {
         row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.ping_method);
         row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.pool_size);
-        row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.serialization_type);
+        row += String.format("<td class='ignore item_id_{0}'>{0}</td>", serialization_type);
     }
 
     if(is_channel) {
@@ -145,6 +146,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     }
 
     return row;
+
 }
 
 $.fn.zato.http_soap.delete_ = function(id) {

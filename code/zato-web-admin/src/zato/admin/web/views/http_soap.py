@@ -157,7 +157,7 @@ def index(req):
                     transport, item.host, item.url_path, item.method, item.soap_action,
                     item.soap_version, item.data_format, item.ping_method, 
                     item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri, 
-                    item.serialization_type, service_id=item.service_id, service_name=item.service_name,
+                    item.serialization_type, item.timeout, service_id=item.service_id, service_name=item.service_name,
                     security_id=security_id, security_name=security_name)
             items.append(item)
 

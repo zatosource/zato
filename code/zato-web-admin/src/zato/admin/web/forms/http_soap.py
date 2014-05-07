@@ -14,7 +14,7 @@ from django import forms
 # Zato
 from zato.admin.web.forms import add_security_select, ChooseClusterForm as _ChooseClusterForm, DataFormatForm
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MSG_PATTERN_TYPE, PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
+     MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
 
 params_priority = (
     (PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG, 'URL over message'),
@@ -41,7 +41,7 @@ class CreateForm(DataFormatForm):
     service = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     ping_method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
-    timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
+    timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=MISC.DEFAULT_HTTP_TIMEOUT)
     security = forms.ChoiceField(widget=forms.Select())
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
