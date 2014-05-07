@@ -1,12 +1,17 @@
 --- requests/models.py.orig	2014-05-06 18:34:25.894711032 +0200
 +++ requests/models.py	2014-05-06 18:34:46.126710217 +0200
-@@ -155,6 +155,8 @@
+@@ -151,9 +151,12 @@
+     def register_hook(self, event, hook):
+         """Properly register a hook."""
+ 
+-        if event not in self.hooks:
++        if event not in self.hooks and event != 'zato_pre_request':
              raise ValueError('Unsupported event specified, with event name "%s"' % (event))
  
++        if event == 'zato_pre_request':
++            self.hooks[event] = []
++
          if isinstance(hook, collections.Callable):
-+            if event == 'zato_pre_request':
-+                self.hooks[event] = []
              self.hooks[event].append(hook)
          elif hasattr(hook, '__iter__'):
-             self.hooks[event].extend(h for h in hook if isinstance(h, collections.Callable))
 
