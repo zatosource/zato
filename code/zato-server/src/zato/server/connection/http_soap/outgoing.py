@@ -74,8 +74,8 @@ class BaseHTTPSOAPWrapper(object):
         # .. invoke the other end ..
         response = self.session.request(self.config['ping_method'], self.address, 
                 auth=self.requests_auth, headers=self._create_headers(cid, {}),
-                hooks={'zato_pre_request':zato_pre_request_hook})
-        
+                hooks={'zato_pre_request':zato_pre_request_hook}, timeout=self.config['timeout'])
+
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(response.status_code))
         verbose.write('\nResponse time: {}'.format(datetime.utcnow() - start))
@@ -174,14 +174,14 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         </s12:Header>
         """
 
-# ##############################################################################
+# ################################################################################################################################
         
     def __str__(self):
         return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
-    
+
     __repr__ = __str__
-    
-# ##############################################################################
+
+# ################################################################################################################################
 
     def format_address(self, cid, params):
         """ Formats a URL path to an external resource. Note that exception raised
@@ -192,20 +192,20 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if not params:
             logger.warn('CID:[%s] No parameters given for URL path:[%s]', cid, self.config['address_url_path'])
             raise ValueError('CID:[{}] No parameters given for URL path'.format(cid))
-        
+
         path_params = {}
         try:
             for name in self.path_params:
                 path_params[name] = params.pop(name)
-            
+
             return (self.address.format(**path_params), dict(params))
         except KeyError, e:
             logger.warn('CID:[%s] Could not build URL path:[%s] with params:[%s], e:[%s]', 
                 cid, self.config['address_url_path'], params, format_exc(e))
             
             raise ValueError('CID:[{}] Could not build URL path'.format(cid))
-            
-# ##############################################################################
+
+# ################################################################################################################################
 
     def _impl(self):
         """ Returns the self.session object through which access to HTTP/SOAP
@@ -214,7 +214,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         return self.session
 
     impl = property(fget=_impl, doc=_impl.__doc__)
-    
+
     def _get_auth(self):
         """ Returns a username and password pair or None, if no security definition
         has been attached.
@@ -223,9 +223,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             auth = (self.config['username'], self.config['password'])
         else:
             auth = None
-            
+
         return auth
-    
+
     auth = property(fget=_get_auth, doc=_get_auth)
 
     def _enforce_is_active(self):
@@ -236,21 +236,21 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         """ Wraps the data in a SOAP-specific messages and adds the headers required.
         """
         soap_config = self.soap[self.config['soap_version']]
-        
+
         # The idea here is that even though there usually won't be the Content-Type
         # header provided by the user, we shouldn't overwrite it if one has been
         # actually passed in.
         if not headers.get('Content-Type'):
             headers['Content-Type'] = soap_config['content_type']
-            
+
         if self.config['sec_type'] == SEC_DEF_TYPE.WSS:
             soap_header = soap_config['header']
         else:
             soap_header = ''
-            
+
         return soap_config['message'].format(header=soap_header, data=data), headers
-    
-# ##############################################################################
+
+# ################################################################################################################################
 
     def http_request(self, method, cid, data='', params=None, *args, **kwargs):
         self._enforce_is_active()
@@ -276,7 +276,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         logger.info('CID:[%s], address:[%s], qs_params:[%s], auth:[%s], kwargs:[%s]', cid, address, qs_params, self.requests_auth, kwargs) 
 
         response = self.session.request(method, address, data=data,
-            auth=self.requests_auth, params=qs_params, headers=headers, *args, **kwargs)
+            auth=self.requests_auth, params=qs_params, headers=headers, timeout=self.config['timeout'], *args, **kwargs)
 
         logger.debug('CID:[%s], response:[%s]', cid, response.text)
 
@@ -286,28 +286,27 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         return response
 
-# ##############################################################################
-    
+# ################################################################################################################################
+
     def get(self, cid, params=None, *args, **kwargs):
         return self.http_request('GET', cid, '', params, *args, **kwargs)
-    
+
     def delete(self, cid, params=None, *args, **kwargs):
         return self.http_request('DELETE', cid, '', params, *args, **kwargs)
-    
+
     def options(self, cid, params=None, *args, **kwargs):
         return self.http_request('OPTIONS', cid, '', params, *args, **kwargs)
-    
-# ##############################################################################
 
-    
+# ################################################################################################################################
+
     def post(self, cid, data='', params=None, *args, **kwargs):
         return self.http_request('POST', cid, data, params, *args, **kwargs)
-    
+
     send = post
-    
+
     def put(self, cid, data='', params=None, *args, **kwargs):
         return self.http_request('PUT', cid, data, params, *args, **kwargs)
-    
+
     def patch(self, cid, data='', params=None, *args, **kwargs):
         return self.http_request('PATCH', cid, data, params, *args, **kwargs)
 
@@ -367,3 +366,5 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
 
         with self.update_lock:
             self.client.build_queue()
+
+# ################################################################################################################################

@@ -128,9 +128,13 @@ DEFAULT_HTTP_POOL_SIZE = 20
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
 
 # All URL types Zato understands.
-class URL_TYPE:
+class URL_TYPE(object):
     SOAP = 'soap'
     PLAIN_HTTP = 'plain_http'
+
+    class __metaclass__(type):
+        def __iter__(self):
+            return iter((self.SOAP, self.PLAIN_HTTP))
 
 # Whether WS-Security passwords are transmitted in clear-text or not.
 ZATO_WSS_PASSWORD_CLEAR_TEXT = Bunch(name='clear_text', label='Clear text')

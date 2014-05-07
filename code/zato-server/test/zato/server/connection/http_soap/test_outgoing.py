@@ -18,7 +18,8 @@ from bunch import Bunch
 from nose.tools import eq_
 
 # Zato
-from zato.common.test import rand_int, rand_string
+from zato.common import URL_TYPE
+from zato.common.test import rand_float, rand_int, rand_string
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 
 class _FakeSession(object):
@@ -31,7 +32,7 @@ class _FakeSession(object):
         self.request_args = args
         self.request_kwargs = kwargs
         
-        return Bunch({'status_code':rand_string()})
+        return Bunch({'status_code':rand_string(), 'text':rand_string()})
         
 class _FakeRequestsModule(object):
     def __init__(self):
@@ -44,9 +45,9 @@ class _FakeRequestsModule(object):
 class HTTPSOAPWrapperTestCase(TestCase):
     
     def _get_config(self):
-        return {'sec_type':rand_string(), 'address_host':rand_string(), 
-            'address_url_path':rand_string(), 'ping_method':rand_string(), 
-            'pool_size':rand_int(), 'serialization_type':'string'}
+        return {'is_active':True, 'sec_type':rand_string(), 'address_host':rand_string(), 
+            'address_url_path':rand_string(), 'ping_method':rand_string(), 'soap_version':'1.1',
+            'pool_size':rand_int(), 'serialization_type':'string', 'timeout':rand_int()}
     
     def test_ping_method(self):
         """ https://github.com/zatosource/zato/issues/44 (outconn HTTP/SOAP ping method)
@@ -74,6 +75,24 @@ class HTTPSOAPWrapperTestCase(TestCase):
         wrapper.ping(rand_string())
         
         eq_(expected_pool_size, requests_module.session_obj.pool_size)
+
+    def test_timeout(self):
+        """ https://github.com/zatosource/zato/issues/112 (HTTP timeouts)
+        """
+        for name in 'ping', 'get', 'delete', 'options', 'post', 'send', 'put', 'patch':
+            for transport in URL_TYPE:
+                config = self._get_config()
+                config['transport'] = transport
+                expected_timeout = rand_float()
+                config['timeout'] = expected_timeout
+                requests_module = _FakeRequestsModule()
+
+                wrapper = HTTPSOAPWrapper(config, requests_module)
+                func = getattr(wrapper, name)
+                func(rand_string())
+
+                self.assertIn('timeout', requests_module.session_obj.request_kwargs)
+                eq_(expected_timeout, requests_module.session_obj.request_kwargs['timeout'])
 
     def test_set_address(self):
         address_host = rand_string()
