@@ -31,7 +31,7 @@ from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, 
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
      MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE
-from zato.common import SEC_DEF_TYPE
+from zato.common import MISC, SEC_DEF_TYPE
 from zato.common.odb.model import HTTPSOAP
 
 logger = logging.getLogger(__name__)
@@ -78,6 +78,7 @@ def _get_edit_create_message(params, prefix=''):
         'service': params.get(prefix + 'service'),
         'ping_method': params.get(prefix + 'ping_method'),
         'pool_size': params.get(prefix + 'pool_size'),
+        'timeout': params.get(prefix + 'timeout'),
         'security_id': security_id,
     }
 
@@ -174,6 +175,7 @@ def index(req):
         'colspan': colspan,
         'default_http_ping_method':DEFAULT_HTTP_PING_METHOD,
         'default_http_pool_size':DEFAULT_HTTP_POOL_SIZE,
+        'default_http_timeout':MISC.DEFAULT_HTTP_TIMEOUT,
         }
 
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)
