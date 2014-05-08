@@ -475,7 +475,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             for key in item.keys():
                 hs_item[key] = getattr(item, key)
 
-            hs_item.replace_patterns_elem_path = item.replace_patterns_elem_path
+            hs_item.replace_patterns_json_pointer = item.replace_patterns_json_pointer
             hs_item.replace_patterns_xpath = item.replace_patterns_xpath
 
             hs_item.match_target = '{}{}{}'.format(hs_item.soap_action, MISC.SEPARATOR, hs_item.url_path)
@@ -493,9 +493,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_xpath_list(server.cluster.id, True)
         self.config.xpath = ConfigDict.from_query('msg_xpath', query)
 
-        # ElemPath
-        query = self.odb.get_elem_path_list(server.cluster.id, True)
-        self.config.elem_path = ConfigDict.from_query('elem_path', query)
+        # JSON Pointer
+        query = self.odb.get_json_pointer_list(server.cluster.id, True)
+        self.config.json_pointer = ConfigDict.from_query('json_pointer', query)
 
         # SimpleIO
         self.config.simple_io = ConfigDict('simple_io', Bunch())

@@ -24,11 +24,11 @@ from lxml import etree
 from xmltodict import parse, unparse
 
 # Zato
-from zato.server.message import ElemPathStore, XPathStore
+from zato.server.message import JSONPointerStore, XPathStore
 
-class TestElemPathStore(TestCase):
+class TestJSONPointerStore(TestCase):
     def setUp(self):
-        self.eps = ElemPathStore()
+        self.eps = JSONPointerStore()
 
         self.cust_id = uuid4().hex
 

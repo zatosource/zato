@@ -44,7 +44,7 @@ from zato.server.connection.http_soap.channel import RequestDispatcher, RequestH
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.sql import PoolStore, SessionWrapper
-from zato.server.message import ElemPathStore, NamespaceStore, XPathStore
+from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.stats import MaintenanceTool
 
 logger = logging.getLogger(__name__)
@@ -89,13 +89,13 @@ class WorkerStore(BrokerMessageReceiver):
         self.stats_maint = MaintenanceTool(self.kvdb.conn)
 
         self.msg_ns_store = NamespaceStore()
-        self.elem_path_store = ElemPathStore()
+        self.json_pointer_store = JSONPointerStore()
         self.xpath_store = XPathStore()
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
         self.init_msg_ns_store()
-        self.init_elem_path_store()
+        self.init_json_pointer_store()
         self.init_xpath_store()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
@@ -106,7 +106,7 @@ class WorkerStore(BrokerMessageReceiver):
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.ntlm, self.worker_config.oauth, self.worker_config.tech_acc,
             self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws, self.worker_config.openstack_security,
-            self.worker_config.xpath_sec, self.kvdb, self.broker_client, self.server.odb, self.elem_path_store, self.xpath_store)
+            self.worker_config.xpath_sec, self.kvdb, self.broker_client, self.server.odb, self.json_pointer_store, self.xpath_store)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
@@ -302,9 +302,9 @@ class WorkerStore(BrokerMessageReceiver):
         for k, v in self.worker_config.xpath.items():
             self.xpath_store.create(k, v.config, self.msg_ns_store.ns_map)
 
-    def init_elem_path_store(self):
-        for k, v in self.worker_config.elem_path.items():
-            self.elem_path_store.create(k, v.config, {})
+    def init_json_pointer_store(self):
+        for k, v in self.worker_config.json_pointer.items():
+            self.json_pointer_store.create(k, v.config, {})
 
 # ################################################################################################################################
 
@@ -895,20 +895,20 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def on_broker_msg_MSG_ELEM_PATH_CREATE(self, msg, *args):
-        """ Creates a new XPath.
+    def on_broker_msg_MSG_JSON_POINTER_CREATE(self, msg, *args):
+        """ Creates a new JSON Pointer.
         """
-        self.elem_path_store.on_broker_msg_create(msg, self.msg_ns_store.ns_map)
+        self.json_pointer_store.on_broker_msg_create(msg, self.msg_ns_store.ns_map)
 
-    def on_broker_msg_MSG_ELEM_PATH_EDIT(self, msg, *args):
-        """ Updates an existing XPath.
+    def on_broker_msg_MSG_JSON_POINTER_EDIT(self, msg, *args):
+        """ Updates an existing JSON Pointer.
         """
-        self.elem_path_store.on_broker_msg_edit(msg, self.msg_ns_store.ns_map)
+        self.json_pointer_store.on_broker_msg_edit(msg, self.msg_ns_store.ns_map)
 
-    def on_broker_msg_MSG_ELEM_PATH_DELETE(self, msg, *args):
-        """ Deletes an XPath.
+    def on_broker_msg_MSG_JSON_POINTER_DELETE(self, msg, *args):
+        """ Deletes an JSON Pointer.
         """
-        self.elem_path_store.on_broker_msg_delete(msg, *args)
+        self.json_pointer_store.on_broker_msg_delete(msg, *args)
 
 # ################################################################################################################################
 
