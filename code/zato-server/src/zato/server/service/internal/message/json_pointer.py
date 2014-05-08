@@ -13,6 +13,10 @@ from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
 
+# jsonpointer 
+# Using 'as' below because Wing IDE confuses it with JSONPointer
+from jsonpointer import JsonPointer as _JsonPointer
+
 # Zato
 from zato.common.broker_message import MSG_JSON_POINTER
 from zato.common.odb.model import Cluster, JSONPointer
@@ -44,7 +48,8 @@ class _CreateEdit(AdminService):
         """ Check whether the expression can be evaluated at all,
         making sure all the namespaces needed, if any, are already defined.
         """
-        self.msg.json_pointer_store.compile(value, self.msg.ns.ns_map)
+        p = _JsonPointer(value)
+        p.resolve({}, None)
 
 class Create(_CreateEdit):
     """ Creates a new JSON Pointer.

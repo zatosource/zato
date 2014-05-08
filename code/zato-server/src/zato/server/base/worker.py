@@ -304,7 +304,8 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init_json_pointer_store(self):
         for k, v in self.worker_config.json_pointer.items():
-            self.json_pointer_store.create(k, v.config, {})
+            logger.warn('%r %r', k, v.config)
+            self.json_pointer_store.create(k, v.config.value)
 
 # ################################################################################################################################
 
