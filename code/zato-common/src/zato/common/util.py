@@ -285,7 +285,7 @@ def new_cid():
     """ Returns a new 128-bit correlation identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
-    Changed in 1.2: The number is now 28 characters long not 40, like in previous versions.
+    Changed in 2.0: The number is now 28 characters long not 40, like in previous versions.
     """
     # The number below (27) needs to be kept in sync with zato.common.log_message.CID_LENGTH.
     # There is nothing special in the 'K' prefix, it's just so that a CID always
@@ -301,7 +301,7 @@ def get_config(repo_location, config_name, bunchified=True):
     conf = bunchify(conf) if bunchified else conf
     conf.user_config_items = {}
 
-    # user_config is new in 1.2
+    # user_config is new in 2.0
     user_config = conf.get('user_config')
     if user_config:
         for name, path in user_config.items():

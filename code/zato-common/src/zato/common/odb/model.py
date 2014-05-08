@@ -247,7 +247,7 @@ class TechnicalAccount(SecurityBase):
         return to_json(self)
 
 class OAuth(SecurityBase):
-    """ New in 1.2: Stores OAuth credentials.
+    """ New in 2.0: Stores OAuth credentials.
     """
     __tablename__ = 'sec_oauth'
     __mapper_args__ = {'polymorphic_identity':'oauth'}
@@ -274,7 +274,7 @@ class OAuth(SecurityBase):
         return to_json(self)
 
 class NTLM(SecurityBase):
-    """ New in 1.2: Stores NTLM definitions.
+    """ New in 2.0: Stores NTLM definitions.
     """
     __tablename__ = 'sec_ntlm'
     __mapper_args__ = {'polymorphic_identity': 'ntlm'}
@@ -292,7 +292,7 @@ class NTLM(SecurityBase):
         return to_json(self)
 
 class AWSSecurity(SecurityBase):
-    """ New in 1.2: Stores Amazon credentials.
+    """ New in 2.0: Stores Amazon credentials.
     """
     __tablename__ = 'sec_aws'
     __mapper_args__ = {'polymorphic_identity': 'aws'}
@@ -311,7 +311,7 @@ class AWSSecurity(SecurityBase):
         return to_json(self)
 
 class OpenStackSecurity(SecurityBase):
-    """ New in 1.2: Stores OpenStack credentials..
+    """ New in 2.0: Stores OpenStack credentials..
     """
     __tablename__ = 'sec_openstack'
     __mapper_args__ = {'polymorphic_identity': 'openstack'}
@@ -329,7 +329,7 @@ class OpenStackSecurity(SecurityBase):
         return to_json(self)
 
 class APIKeySecurity(SecurityBase):
-    """ New in 1.2: Stores API keys.
+    """ New in 2.0: Stores API keys.
     """
     __tablename__ = 'sec_apikey'
     __mapper_args__ = {'polymorphic_identity': 'apikey'}
@@ -348,7 +348,7 @@ class APIKeySecurity(SecurityBase):
         return to_json(self)
 
 class XPathSecurity(SecurityBase):
-    """ New in 1.2: Stores XPath-based credentials.
+    """ New in 2.0: Stores XPath-based credentials.
     """
     __tablename__ = 'sec_xpath'
     __mapper_args__ = {'polymorphic_identity':'xpath_sec'}
@@ -397,34 +397,34 @@ class HTTPSOAP(Base):
 
     data_format = Column(String(20), nullable=True)
 
-    # New in 1.2
+    # New in 2.0
     ping_method = Column(String(60), nullable=True)
 
-    # New in 1.2
+    # New in 2.0
     pool_size = Column(Integer, nullable=True)
 
-    # New in 1.2
+    # New in 2.0
     merge_url_params_req = Column(Boolean, nullable=True, default=True)
 
-    # New in 1.2
+    # New in 2.0
     url_params_pri = Column(String(200), nullable=True, default='path-over-qs')
 
-    # New in 1.2
+    # New in 2.0
     params_pri = Column(String(200), nullable=True, default='channel-params-over-msg')
     
-    # New in 1.2
+    # New in 2.0
     audit_enabled = Column(Boolean, nullable=False, default=False)
     
-    # New in 1.2
+    # New in 2.0
     audit_back_log = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_BACK_LOG)
     
-    # New in 1.2
+    # New in 2.0
     audit_max_payload = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_MAX_PAYLOAD)
     
-    # New in 1.2
+    # New in 2.0
     audit_repl_patt_type = Column(String(200), nullable=False, default=MSG_PATTERN_TYPE.ELEM_PATH.id)
 
-    # New in 1.2
+    # New in 2.0
     serialization_type = Column(String(200), nullable=False, default=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id)
 
     # New in 2.0
@@ -1515,7 +1515,7 @@ class Notification(Base):
 # ################################################################################################################################
 
 class NotificationOpenStackSwift(Notification):
-    """ New in 1.2: Stores OpenStack Swift notifications.
+    """ New in 2.0: Stores OpenStack Swift notifications.
     """
     __tablename__ = 'notif_os_swift'
     __mapper_args__ = {'polymorphic_identity': 'openstack_swift'}
