@@ -45,6 +45,28 @@ command = oneOf((
 parameters = (OneOrMore(Word(alphanums + '-' + punctuation))).setResultsName('parameters')
 redis_grammar = command + Optional(White().suppress() + parameters)
 
+# ################################################################################################################################
+
+class LuaContainer(object):
+    """ A class which knows how to add and execute Lua scripts against Redis.
+    """
+    def __init__(self, kvdb=None, initial_programs=None):
+        self.kvdb = kvdb
+        self.lua_programs = {}
+        self.add_initial_lua_programs(initial_programs or {})
+
+    def add_initial_lua_programs(self, programs):
+        for name, program in programs:
+            self.add_lua_program(name, program)
+
+    def add_lua_program(self, name, program):
+        self.lua_programs[name] = self.kvdb.register_script(program)
+
+    def run_lua(self, name, keys=None, args=None):
+        return self.lua_programs[name](keys or [], args or [])
+
+# ################################################################################################################################
+
 class KVDB(object):
     """ A wrapper around the Zato's key-value database.
     """
@@ -53,6 +75,8 @@ class KVDB(object):
         self.config = config
         self.decrypt_func = decrypt_func
         self.conn_class = None # Introduced so it's easier to test the class
+        self.lua_container = LuaContainer()
+        self.run_lua = self.lua_container.run_lua # So it's more natural to use it
 
     def _get_connection_class(self, has_sentinel=False):
         """ Returns a concrete class to create Redis connections off basing on whether we use Redis sentinels or not.
@@ -128,6 +152,8 @@ class KVDB(object):
         else:
             self.conn = self.conn_class(**config)
 
+        self.lua_container.kvdb = self.conn
+
     def pubsub(self):
         return self.conn.pubsub()
 
@@ -156,7 +182,7 @@ class KVDB(object):
     def close(self):
         self.conn.connection_pool.disconnect()
 
-# ##############################################################################
+# ################################################################################################################################
 
     # OAuth
 
@@ -176,3 +202,5 @@ class KVDB(object):
         username stored in KVDB.
         """
         return self.conn.zscore(NONCE_STORE.KEY_PATTERN.format('oauth', username), nonce)
+
+# ################################################################################################################################
