@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from setuptools import setup, find_packages
 
-version = '1.2.1'
+version = '2.0'
 
 setup(
       name = 'zato-common',

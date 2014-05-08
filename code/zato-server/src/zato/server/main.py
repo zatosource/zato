@@ -72,7 +72,7 @@ class ZatoGunicornApplication(Application):
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
 
-        # TLS is new in 1.2 and we need to assume it's not enabled. In Zato 1.3
+        # TLS is new in 2.0 and we need to assume it's not enabled. In Zato 1.3
         # this will be changed to assume that we are always over TLS by default.
         if asbool(self.crypto_config.get('use_tls', False)):
             self.cfg.set('ssl_version', getattr(ssl, 'PROTOCOL_{}'.format(self.crypto_config.tls_protocol)))
@@ -136,7 +136,7 @@ def run(base_dir, start_gunicorn_app=True):
     if asbool(config.odb.use_async_driver) and config.odb.engine == 'postgresql':
         make_psycopg_green()
 
-    # New 1.2 - Put HTTP_PROXY in os.environ.
+    # New in 2.0 - Put HTTP_PROXY in os.environ.
     http_proxy = config.misc.get('http_proxy', False)
     if http_proxy:
         os.environ['http_proxy'] = http_proxy
@@ -163,7 +163,7 @@ def run(base_dir, start_gunicorn_app=True):
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
 
-    # This is new in 1.2 so is optional
+    # New in 2.0 so it's optional.
     profiler_enabled = config.get('profiler', {}).get('enabled', False)
 
     if asbool(profiler_enabled):

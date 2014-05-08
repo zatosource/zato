@@ -297,7 +297,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pick_up'):
 
-            # New in 1.2
+            # New in 2.0
             if name == 'delete_after_pick_up':
                 value = asbool(self.fs_server_config.hot_deploy.get(name, True))
                 self.hot_deploy_config[name] = value
