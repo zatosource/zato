@@ -13,7 +13,8 @@ from bunch import Bunch
 
 # Zato
 from zato.common import zato_namespace
-from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
+from zato.common.test import ForceTypeWrapper, rand_bool, rand_int, rand_string, ServiceTestCase
+from zato.server.service import Bool
 from zato.server.service.internal.http_soap import GetList, Create, Edit, Delete, Ping
 
 ################################################################################
@@ -73,7 +74,8 @@ class CreateTestCase(ServiceTestCase):
         self.assertEquals(self.sio.response_elem, 'zato_http_soap_create_response')
         self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path'))
         self.assertEquals(self.sio.input_optional, ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 'host', 
-            'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type', 'timeout'))
+            'ping_method', 'pool_size', ForceTypeWrapper(Bool('merge_url_params_req')), 'url_params_pri', 'params_pri',
+            'serialization_type', 'timeout'))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
