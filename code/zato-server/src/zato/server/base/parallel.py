@@ -252,6 +252,17 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
                 return True
 
+    def get_lua_programs(self):
+        for item in 'internal', 'user':
+            dir_name = os.path.join(self.repo_location, 'lua', item)
+            for file_name in os.listdir(dir_name):
+
+                lua_idx = file_name.find('.lua')
+                name = file_name[0:lua_idx] if lua_idx else file_name
+                program = open(os.path.join(dir_name, file_name)).read()
+
+                yield [name, program]
+
     def _after_init_common(self, server, deployment_key):
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
@@ -263,6 +274,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.kvdb.server = self
         self.kvdb.decrypt_func = self.crypto_manager.decrypt
         self.kvdb.init()
+
+        # Lua programs, both internal and user defined ones.
+        for name, program in self.get_lua_programs():
+            self.kvdb.lua_container.add_lua_program(name, program)
 
         # Service sources
         self.service_sources = []
@@ -292,6 +307,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         is_first = self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
 
+        # Broker callbacks
         broker_callbacks = {
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: self.worker_store.on_broker_msg,
@@ -300,7 +316,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         if is_first:
             broker_callbacks[TOPICS[MESSAGE_TYPE.TO_SINGLETON]] = self.on_broker_msg_singleton
 
-        self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks)
+        self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks, self.get_lua_programs())
 
         if is_first:
 
@@ -317,7 +333,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             self.singleton_server.pickup.pickup_event_processor.pickup_dir = pickup_dir
             self.singleton_server.pickup.pickup_event_processor.server = self.singleton_server
 
-            # TODO: Passing a broker client around isn't thread-safe
             kwargs = {'broker_client':self.broker_client}
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
 

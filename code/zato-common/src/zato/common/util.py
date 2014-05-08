@@ -922,3 +922,5 @@ def get_haproxy_pidfile(component_dir):
 
 def store_pidfile(component_dir):
     open(os.path.join(component_dir, MISC.PIDFILE), 'w').write('{}'.format(os.getpid()))
+
+# ################################################################################################################################
