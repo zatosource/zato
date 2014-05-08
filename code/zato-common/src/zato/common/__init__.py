@@ -312,17 +312,17 @@ class SCHEDULER_JOB_TYPE(Attrs):
 
 class CHANNEL(Attrs):
     AMQP = 'amqp'
-    AUDIT = 'audit' # New in 1.2
-    DELIVERY = 'delivery' # New in 1.2
+    AUDIT = 'audit' # New in 2.0
+    DELIVERY = 'delivery' # New in 2.0
     HTTP_SOAP = 'http-soap'
-    INTERNAL_CHECK = 'internal-check' # New in 1.2
+    INTERNAL_CHECK = 'internal-check' # New in 2.0
     INVOKE = 'invoke'
     INVOKE_ASYNC = 'invoke-async'
     JMS_WMQ = 'jms-wmq'
-    NOTIFIER_RUN = 'notifier-run' # New in 1.2
-    NOTIFIER_TARGET = 'notifier-target' # New in 1.2
+    NOTIFIER_RUN = 'notifier-run' # New in 2.0
+    NOTIFIER_TARGET = 'notifier-target' # New in 2.0
     SCHEDULER = 'scheduler'
-    STARTUP_SERVICE = 'startup-service' # New in 1.2
+    STARTUP_SERVICE = 'startup-service' # New in 2.0
     ZMQ = 'zmq'
 
 class INVOCATION_TARGET(Attrs):
