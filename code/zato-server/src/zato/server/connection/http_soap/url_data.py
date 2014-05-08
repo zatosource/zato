@@ -48,7 +48,7 @@ class URLData(OAuthDataStore):
     """
     def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, oauth_config=None,
                  tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, openstack_config=None,
-                 xpath_sec_config=None, kvdb=None, broker_client=None, odb=None, elem_path_store=None, xpath_store=None):
+                 xpath_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None):
         self.channel_data = channel_data
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -64,7 +64,7 @@ class URLData(OAuthDataStore):
         self.broker_client = broker_client
         self.odb = odb
 
-        self.elem_path_store = elem_path_store
+        self.json_pointer_store = json_pointer_store
         self.xpath_store = xpath_store
 
         self.url_sec_lock = RLock()
@@ -723,7 +723,7 @@ class URLData(OAuthDataStore):
         channel_item.audit_enabled = old_data.get('audit_enabled', False)
         channel_item.audit_max_payload = old_data.get('audit_max_payload', 0)
         channel_item.audit_repl_patt_type = old_data.get('audit_repl_patt_type', None)
-        channel_item.replace_patterns_elem_path = old_data.get('replace_patterns_elem_path', [])
+        channel_item.replace_patterns_json_pointer = old_data.get('replace_patterns_json_pointer', [])
         channel_item.replace_patterns_xpath = old_data.get('replace_patterns_xpath', [])
 
         channel_item.service_impl_name = msg.impl_name
@@ -805,9 +805,9 @@ class URLData(OAuthDataStore):
 # ################################################################################################################################
 
     def replace_payload(self, payload, pattern, pattern_type):
-        """ Replaces elements in a given payload using either ElemPath or XPath
+        """ Replaces elements in a given payload using either JSON Pointer or XPath
         """
-        store = self.elem_path_store if pattern_type == MSG_PATTERN_TYPE.ELEM_PATH.id else self.xpath_store
+        store = self.json_pointer_store if pattern_type == MSG_PATTERN_TYPE.JSON_POINTER.id else self.xpath_store
 
         logger.debug('Replacing [%r], pattern:[%r], store:[%r], pattern_type:[%r]', payload, pattern, store, pattern_type)
 
@@ -829,10 +829,10 @@ class URLData(OAuthDataStore):
     def audit_set_request(self, cid, channel_item, payload, wsgi_environ):
         """ Stores initial audit information, right after receiving a request.
         """
-        if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.ELEM_PATH.id:
+        if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.JSON_POINTER.id:
             payload = loads(payload) if payload else ''
             payload = {'root': payload}
-            pattern_list = channel_item['replace_patterns_elem_path']
+            pattern_list = channel_item['replace_patterns_json_pointer']
         else:
             pattern_list = channel_item['replace_patterns_xpath']
 
@@ -841,7 +841,7 @@ class URLData(OAuthDataStore):
             payload = self.replace_payload(payload, pattern, channel_item.audit_repl_patt_type)
             logger.debug('After:[%r]', payload)
 
-        if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.ELEM_PATH.id:
+        if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.JSON_POINTER.id:
             payload = dumps(payload['root'])
 
         if channel_item['audit_max_payload']:
@@ -891,8 +891,8 @@ class URLData(OAuthDataStore):
             if item.id == msg.id:
                 item.audit_repl_patt_type = msg.audit_repl_patt_type
 
-                if item.audit_repl_patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id:
-                    item.replace_patterns_elem_path = msg.pattern_list
+                if item.audit_repl_patt_type == MSG_PATTERN_TYPE.JSON_POINTER.id:
+                    item.replace_patterns_json_pointer = msg.pattern_list
                 else:
                     item.replace_patterns_xpath = msg.pattern_list
 

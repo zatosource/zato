@@ -434,12 +434,12 @@ class NONCE_STORE:
     DEFAULT_MAX_LOG = 25000
 
 class MSG_PATTERN_TYPE:
-    ELEM_PATH = NameId('ElemPath', 'elem-path')
+    JSON_POINTER = NameId('JSONPointer', 'json-pointer')
     XPATH = NameId('XPath', 'xpath')
     
     class __metaclass__(type):
         def __iter__(self):
-            return iter((self.ELEM_PATH, self.XPATH))
+            return iter((self.JSON_POINTER, self.XPATH))
 
 class HTTP_SOAP_SERIALIZATION_TYPE:
     STRING_VALUE = NameId('String', 'string')

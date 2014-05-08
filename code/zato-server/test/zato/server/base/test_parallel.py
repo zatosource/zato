@@ -157,7 +157,7 @@ class AuditTestCase(TestCase):
                     expected_payload = rand_string()
 
                     expected_audit_repl_patt_type = rand_string()
-                    expected_replace_patterns_elem_path = []
+                    expected_replace_patterns_json_pointer = []
                     expected_replace_patterns_xpath = []
                     expected_cluster_id = rand_int()
                     expected_id = rand_int()
@@ -184,7 +184,7 @@ class AuditTestCase(TestCase):
                         'audit_enabled': expected_audit_enabled,
                         expected_channel_item_key1:expected_channel_item_value1,
                         'audit_repl_patt_type': expected_audit_repl_patt_type,
-                        'replace_patterns_elem_path': expected_replace_patterns_elem_path,
+                        'replace_patterns_json_pointer': expected_replace_patterns_json_pointer,
                         'replace_patterns_xpath': expected_replace_patterns_xpath,
                         'audit_max_payload': expected_audit_max_payload,
                         'is_active': expected_is_active,
@@ -303,7 +303,7 @@ class AuditTestCase(TestCase):
                         self.assertEquals(channel_item['username'], expected_username)
                         self.assertEquals(channel_item[expected_channel_item_key1], expected_channel_item_value1)
                         self.assertEquals(channel_item['audit_repl_patt_type'], expected_audit_repl_patt_type)
-                        self.assertEquals(channel_item['replace_patterns_elem_path'], expected_replace_patterns_elem_path)
+                        self.assertEquals(channel_item['replace_patterns_json_pointer'], expected_replace_patterns_json_pointer)
                         self.assertEquals(channel_item['is_active'], expected_is_active)
                         self.assertEquals(channel_item['data_format'], expected_data_format)
                         self.assertEquals(channel_item['audit_enabled'], expected_audit_enabled)
@@ -344,7 +344,7 @@ class AuditTestCase(TestCase):
                         self.assertEquals(channel_item[expected_channel_item_key1], expected_channel_item_value1)
                         self.assertEquals(channel_item['audit_enabled'], expected_audit_enabled)
                         self.assertEquals(channel_item['audit_repl_patt_type'], expected_audit_repl_patt_type)
-                        self.assertEquals(channel_item['replace_patterns_elem_path'], expected_replace_patterns_elem_path)
+                        self.assertEquals(channel_item['replace_patterns_json_pointer'], expected_replace_patterns_json_pointer)
                         self.assertEquals(channel_item['replace_patterns_xpath'], expected_replace_patterns_xpath)
                         self.assertEquals(channel_item['name'], expected_name)
                         self.assertEquals(channel_item['id'], expected_id)

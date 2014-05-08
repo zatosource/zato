@@ -21,7 +21,7 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_S
      URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, \
      ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, \
-     ElemPath, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, \
+     JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, \
      NotificationOpenStackSwift as NotifOSS, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
      OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Service, SQLConnectionPool, \
      TechnicalAccount, WSSDefinition, XPath, XPathSecurity
@@ -697,10 +697,10 @@ def xpath_list(session, cluster_id, needs_columns=False):
     return _msg_list(XPath, 'msg_xpath.name', session, cluster_id, needs_columns)
 
 @needs_columns
-def elem_path_list(session, cluster_id, needs_columns=False):
-    """ All the ElemPaths.
+def json_pointer_list(session, cluster_id, needs_columns=False):
+    """ All the JSON Pointers.
     """
-    return _msg_list(ElemPath, 'msg_elem_path.name', session, cluster_id, needs_columns)
+    return _msg_list(JSONPointer, 'msg_json_pointer.name', session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 

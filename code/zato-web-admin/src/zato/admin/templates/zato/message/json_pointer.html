@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}ElemPath{% endblock %}
+{% block html_title %}JSON Pointer{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -13,7 +13,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/message/elem_path.js"></script>
+    <script type="text/javascript" src="/static/js/message/json_pointer.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -32,7 +32,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">ElemPath</h2>
+<h2 class="zato">JSON Pointer</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -46,7 +46,7 @@
     {% if cluster_id %}
 
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.message.elem_path.create()">Create a new ElemPath</a>
+            <a href="javascript:$.fn.zato.message.json_pointer.create()">Create a new JSON Pointer</a>
         </div>
 
         <div id="markup">
@@ -71,8 +71,8 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.value }}</td>
-                        <td><a href="javascript:$.fn.zato.message.elem_path.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.message.elem_path.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.message.json_pointer.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.message.json_pointer.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                     </tr>
                 {% endfor %}
@@ -88,7 +88,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url message-elem-path-create %}" method="post" id="create-form">
+                <form action="{% url message-json-pointer-create %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -113,7 +113,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url message-elem-path-edit %}" method="post" id="edit-form">
+                <form action="{% url message-json-pointer-edit %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
