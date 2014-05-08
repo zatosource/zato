@@ -162,12 +162,48 @@ list_key=sample,list
 
 """
 
+lua_zato_rename_if_exists = """
+-- Checks whether a from_key exists and if it does renames it to to_key.
+-- Returns an error code otherwise.
+
+-- Return codes:
+-- 10 = Ok, renamed from_key -> to_key
+-- 11 = No such from_key
+
+local from_key = KEYS[1]
+local to_key = KEYS[2]
+
+if redis.pcall('exists', from_key) == '1' then
+    redis.pcall('rename', from_key, to_key)
+    return 10
+else
+    return 11
+end
+"""
+
 default_odb_pool_size = 1
 
-directories = ('config', 'config/repo', 'logs', 'pickup-dir', 'profiler', 'work',
-               'work/hot-deploy', 'work/hot-deploy/current', 'work/hot-deploy/backup', 'work/hot-deploy/backup/last')
-files = {'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
-         'config/repo/service-sources.txt':service_sources_contents}
+directories = (
+    'config',
+    'config/repo',
+    'logs',
+    'pickup-dir',
+    'profiler',
+    'work',
+    'work/hot-deploy',
+    'work/hot-deploy/current',
+    'work/hot-deploy/backup',
+    'work/hot-deploy/backup/last',
+    'config/repo/lua',
+    'config/repo/lua/internal',
+    'config/repo/lua/user'
+)
+
+files = {
+    'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
+    'config/repo/service-sources.txt':service_sources_contents,
+    'config/repo/lua/internal/zato.rename_if_exists.lua':lua_zato_rename_if_exists
+}
 
 priv_key_location = './config/repo/config-priv.pem'
 priv_key_location = './config/repo/config-pub.pem'
