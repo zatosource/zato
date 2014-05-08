@@ -108,6 +108,11 @@ LOGIN_REDIRECT_URL = '/'
 # fetches values from the 'web-admin.conf' file.
 
 if 'DATABASES' in globals():
+
+    # So that Django doesn't complain about an unknown engine type
+    if db_type.startswith('mysql'):
+        db_type = 'mysql'
+
     db_data = DATABASES['default']
     db_data['ENGINE'] = 'django.db.backends.' + django_sqlalchemy_engine[db_type]
     
