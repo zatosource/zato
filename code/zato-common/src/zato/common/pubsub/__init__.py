@@ -23,9 +23,8 @@ from gevent.lock import RLock
 
 # Zato
 from zato.common import PUB_SUB, ZATO_NOT_GIVEN
+from zato.common.kvdb import LuaContainer
 from zato.common.pubsub import lua
-from zato.common.util import make_repr
-     
 from zato.common.util import datetime_to_seconds, make_repr, new_cid
 
 # ################################################################################################################################
@@ -404,7 +403,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-class RedisPubSub(PubSub):
+class RedisPubSub(PubSub, LuaContainer):
     """ Publish/subscribe based on Redis.
     """
     # Main public API
@@ -475,14 +474,6 @@ class RedisPubSub(PubSub):
                 raise PubSubException(msg)
 
             return True
-
-    # ############################################################################################################################
-
-    def add_lua_program(self, name, program):
-        self.lua_programs[name] = self.kvdb.register_script(program)
-
-    def run_lua(self, name, keys=[], args=[]):
-        return self.lua_programs[name](keys, args)
 
     # ############################################################################################################################
 
