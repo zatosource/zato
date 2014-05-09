@@ -382,6 +382,11 @@ class MISC:
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
 
+class INFO_FORMAT:
+    TEXT = 'text'
+    JSON = 'json'
+    YAML = 'yaml'
+
 class CLOUD:
     class OPENSTACK:
         class SWIFT:
