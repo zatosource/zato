@@ -23,7 +23,7 @@ from webhelpers.paginate import Page
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
      MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
-from zato.common.odb.model import Cluster, ElemPath, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, \
+from zato.common.odb.model import Cluster, JSONPointer, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsJSONPointer, \
      HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, to_json, XPath
 from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap_list
 from zato.server.service import Boolean, Integer, List
@@ -434,13 +434,13 @@ class SetAuditConfig(AdminService):
 # ################################################################################################################################
 
 class GetAuditReplacePatterns(AdminService):
-    """ Returns audit replace patterns for a given connection, both ElemPath and XPath.
+    """ Returns audit replace patterns for a given connection, both JSONPointer and XPath.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_http_soap_get_audit_replace_patterns_request'
         response_elem = 'zato_http_soap_get_audit_replace_patterns_response'
         input_required = ('id',)
-        output_required = (List('patterns_elem_path'), List('patterns_xpath'))
+        output_required = (List('patterns_json_pointer'), List('patterns_xpath'))
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -448,7 +448,7 @@ class GetAuditReplacePatterns(AdminService):
                 filter(HTTPSOAP.id==self.request.input.id).\
                 one()
 
-            self.response.payload.patterns_elem_path = [elem.pattern.name for elem in item.replace_patterns_elem_path]
+            self.response.payload.patterns_json_pointer = [elem.pattern.name for elem in item.replace_patterns_json_pointer]
             self.response.payload.patterns_xpath = [elem.pattern.name for elem in item.replace_patterns_xpath]
 
 class SetAuditReplacePatterns(AdminService):
@@ -461,7 +461,7 @@ class SetAuditReplacePatterns(AdminService):
         input_optional = (List('pattern_list'),)
 
     def _clear_patterns(self, conn):
-        conn.replace_patterns_elem_path[:] = []
+        conn.replace_patterns_json_pointer[:] = []
         conn.replace_patterns_xpath[:] = []
 
     def handle(self):
@@ -479,8 +479,8 @@ class SetAuditReplacePatterns(AdminService):
                 session.commit()
                 
             else:
-                pattern_class = ElemPath if patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id else XPath
-                conn_pattern_list_class = HTTSOAPAuditReplacePatternsElemPath if patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id else \
+                pattern_class = JSONPointer if patt_type == MSG_PATTERN_TYPE.JSON_POINTER.id else XPath
+                conn_pattern_list_class = HTTSOAPAuditReplacePatternsJSONPointer if patt_type == MSG_PATTERN_TYPE.JSON_POINTER.id else \
                     HTTSOAPAuditReplacePatternsXPath
                 
                 all_patterns = session.query(pattern_class).\

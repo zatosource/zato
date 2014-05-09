@@ -12,18 +12,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
-from zato.admin.web.forms.message.elem_path import CreateForm, EditForm
+from zato.admin.web.forms.message.json_pointer import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
-from zato.common.odb.model import ElemPath
+from zato.common.odb.model import JSONPointer
 
 logger = logging.getLogger(__name__)
 
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'message-elem-path'
-    template = 'zato/message/elem_path.html'
-    service_name = 'zato.message.elem-path.get-list'
-    output_class = ElemPath
+    url_name = 'message-json-pointer'
+    template = 'zato/message/json_pointer.html'
+    service_name = 'zato.message.json-pointer.get-list'
+    output_class = JSONPointer
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
@@ -44,18 +44,18 @@ class _CreateEdit(CreateEdit):
         output_required = ('id', 'name')
 
     def success_message(self, item):
-        return 'Successfully {0} the ElemPath [{1}]'.format(self.verb, item.name)
+        return 'Successfully {0} the JSON Pointer [{1}]'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
-    url_name = 'message-elem-path-create'
-    service_name = 'zato.message.elem-path.create'
+    url_name = 'message-json-pointer-create'
+    service_name = 'zato.message.json-pointer.create'
 
 class Edit(_CreateEdit):
-    url_name = 'message-elem-path-edit'
+    url_name = 'message-json-pointer-edit'
     form_prefix = 'edit-'
-    service_name = 'zato.message.elem-path.edit'
+    service_name = 'zato.message.json-pointer.edit'
 
 class Delete(_Delete):
-    url_name = 'message-elem-path-delete'
-    error_message = 'Could not delete the ElemPath'
-    service_name = 'zato.message.elem-path.delete'
+    url_name = 'message-json-pointer-delete'
+    error_message = 'Could not delete the JSON Pointer'
+    service_name = 'zato.message.json-pointer.delete'

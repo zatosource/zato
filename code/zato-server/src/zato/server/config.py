@@ -158,7 +158,7 @@ class ConfigStore(object):
             basic_auth=ZATO_NONE, wss=ZATO_NONE, tech_acc=ZATO_NONE,
             url_sec=ZATO_NONE, http_soap=ZATO_NONE, broker_config=ZATO_NONE,
             odb_data=ZATO_NONE, simple_io=ZATO_NONE, msg_ns=ZATO_NONE,
-            elem_path=ZATO_NONE, xpath=ZATO_NONE, pubsub_topics=ZATO_NONE):
+            json_pointer=ZATO_NONE, xpath=ZATO_NONE, pubsub_topics=ZATO_NONE):
 
         # Outgoing connections
         self.out_ftp = out_ftp
@@ -192,8 +192,8 @@ class ConfigStore(object):
         # Namespace
         self.msg_ns = msg_ns
 
-        # ElemPath
-        self.elem_path = elem_path
+        # JSON Pointer
+        self.json_pointer = json_pointer
 
         # XPath
         self.xpath = xpath

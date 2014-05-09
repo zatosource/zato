@@ -422,7 +422,7 @@ class HTTPSOAP(Base):
     audit_max_payload = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_MAX_PAYLOAD)
     
     # New in 2.0
-    audit_repl_patt_type = Column(String(200), nullable=False, default=MSG_PATTERN_TYPE.ELEM_PATH.id)
+    audit_repl_patt_type = Column(String(200), nullable=False, default=MSG_PATTERN_TYPE.JSON_POINTER.id)
 
     # New in 2.0
     serialization_type = Column(String(200), nullable=False, default=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id)
@@ -1193,18 +1193,18 @@ class XPath(Base):
         self.value = value
         self.cluster_id = cluster_id
 
-class ElemPath(Base):
+class JSONPointer(Base):
     """ An XPath-list expression to run against JSON messages.
     """
-    __tablename__ = 'msg_elem_path'
+    __tablename__ = 'msg_json_pointer'
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
 
-    id = Column(Integer, Sequence('msg_elem_path_seq'), primary_key=True)
+    id = Column(Integer, Sequence('msg_json_pointer_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     value = Column(String(1500), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('elem_paths', order_by=name, cascade='all, delete, delete-orphan'))
+    cluster = relationship(Cluster, backref=backref('json_pointers', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, value=None, cluster_id=None):
         self.id = id
@@ -1267,21 +1267,21 @@ class HTTSOAPAudit(Base):
         self.resp_headers = resp_headers
         self.resp_payload = resp_payload
 
-class HTTSOAPAuditReplacePatternsElemPath(Base):
-    """ ElemPath replace patterns for HTTP/SOAP connections.
+class HTTSOAPAuditReplacePatternsJSONPointer(Base):
+    """ JSONPointer replace patterns for HTTP/SOAP connections.
     """
-    __tablename__ = 'http_soap_au_rpl_p_ep'
+    __tablename__ = 'http_soap_au_rpl_p_jp'
     __table_args__ = (UniqueConstraint('conn_id', 'pattern_id'), {})
     
-    id = Column(Integer, Sequence('htp_sp_ad_rpl_p_ep_seq'), primary_key=True)
+    id = Column(Integer, Sequence('htp_sp_ad_rpl_p_jp_seq'), primary_key=True)
     conn_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
-    pattern_id = Column(Integer, ForeignKey('msg_elem_path.id', ondelete='CASCADE'), nullable=False)
+    pattern_id = Column(Integer, ForeignKey('msg_json_pointer.id', ondelete='CASCADE'), nullable=False)
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     
-    replace_patterns_elem_path = relationship(HTTPSOAP, 
-        backref=backref('replace_patterns_elem_path', order_by=id, cascade='all, delete, delete-orphan'))
+    replace_patterns_json_pointer = relationship(HTTPSOAP, 
+        backref=backref('replace_patterns_json_pointer', order_by=id, cascade='all, delete, delete-orphan'))
 
-    pattern = relationship(ElemPath)
+    pattern = relationship(JSONPointer)
     
 class HTTSOAPAuditReplacePatternsXPath(Base):
     """ XPath replace patterns for HTTP/SOAP connections.

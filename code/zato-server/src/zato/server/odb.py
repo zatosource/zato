@@ -26,7 +26,7 @@ from bunch import Bunch
 # Zato
 from zato.common import DEPLOYMENT_STATUS, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsElemPath, HTTSOAPAuditReplacePatternsXPath, OAuth, Server, Service, \
+     HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsJSONPointer, HTTSOAPAuditReplacePatternsXPath, OAuth, Server, Service, \
      TechnicalAccount, XPathSecurity, WSSDefinition
 from zato.common.odb import query
 from zato.common.util import current_host
@@ -389,8 +389,8 @@ class ODBManager(SessionWrapper):
 
             if connection == 'channel':
                 for item in item_list:
-                    item.replace_patterns_elem_path = [elem.pattern.name for elem in session.query(HTTPSOAP).\
-                        filter(HTTPSOAP.id == item.id).one().replace_patterns_elem_path]
+                    item.replace_patterns_json_pointer = [elem.pattern.name for elem in session.query(HTTPSOAP).\
+                        filter(HTTPSOAP.id == item.id).one().replace_patterns_json_pointer]
 
                     item.replace_patterns_xpath = [elem.pattern.name for elem in session.query(HTTPSOAP).\
                         filter(HTTPSOAP.id == item.id).one().replace_patterns_xpath]
@@ -605,11 +605,11 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.xpath_list(session, cluster_id, needs_columns)
 
-    def get_elem_path_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of ElemPath expressions.
+    def get_json_pointer_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of JSON Pointer expressions.
         """
         with closing(self.session()) as session:
-            return query.elem_path_list(session, cluster_id, needs_columns)
+            return query.json_pointer_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
