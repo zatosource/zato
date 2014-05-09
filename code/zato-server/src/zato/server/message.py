@@ -18,6 +18,9 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
+# jsonpointer
+from jsonpointer import JsonPointer
+
 # lxml
 from lxml import etree
 
@@ -26,24 +29,24 @@ from xmltodict import parse, unparse
 
 logger = logging.getLogger(__name__)
 
-# ##############################################################################
+# ################################################################################################################################
 
 class MessageFacade(object):
     """ An object through which services access all the message-related features,
-    such as namespaces, ElemPath or XPath.
+    such as namespaces, JSON Pointer or XPath.
     """
-    def __init__(self, msg_ns_store=None, elem_path_store=None, xpath_store=None):
+    def __init__(self, msg_ns_store=None, json_pointer_store=None, xpath_store=None):
         self.ns = msg_ns_store
-        self.elem_path_store = elem_path_store
+        self.json_pointer_store = json_pointer_store
         self.xpath_store = xpath_store
 
-    def elem_path(self, msg, name):
-        return self.elem_path_store.get(name).invoke(msg)
+    def json_pointer(self, msg, name):
+        return self.json_pointer_store.get(name).invoke(msg)
 
     def xpath(self, msg, name):
         return self.xpath_store.invoke(msg, name)
 
-# ##############################################################################
+# ################################################################################################################################
 
 class NamespaceStore(object):
     """ A store of all the namespaces used with XML processing.
@@ -82,12 +85,9 @@ class NamespaceStore(object):
             del self.data[msg.name]
             del self.ns_map[msg.name]
 
-# ##############################################################################
+# ################################################################################################################################
 
-class _BaseXPathStore(object):
-    """ Both XPath and ElemPath stores have common functionality that is kept
-    in this class.
-    """
+class BaseStore(object):
     def __init__(self, data={}):
         self.data = Bunch.fromDict(data)
         self.update_lock = RLock()
@@ -100,22 +100,7 @@ class _BaseXPathStore(object):
     def __getitem__(self, name):
         return self.data[name].config.value
 
-    def create(self, name, item, ns_map, is_xml=True):
-        with self.update_lock:
-
-            if is_xml:
-                compiled_elem = self.compile(item.value, ns_map)
-            else:
-                compiled_elem, compiled_text = self.compile(item.value, ns_map)
-
-            self.data[name] = Bunch()
-            self.data[name].config = item
-            self.data[name].compiled_elem = compiled_elem
-
-            if not is_xml:
-                self.data[name].compiled_text = compiled_text
-
-    def _compile(self, expr, ns_map={}):
+    def compile(self, expr, ns_map={}):
         """ Compiles an XPath expression using a namespace map provided, if any,
         and evaluates it against a dummy document to check that all the namespace
         prefixes are valid.
@@ -132,14 +117,14 @@ class _BaseXPathStore(object):
     def on_broker_msg_create(self, msg, ns_map):
         """ Creates a new XPath.
         """
-        self.create(msg.name, msg, ns_map)
+        self.add(msg.name, msg, ns_map)
 
     def on_broker_msg_edit(self, msg, ns_map):
         """ Updates an existing XPath.
         """
         with self.update_lock:
             del self.data[msg.old_name]
-        self.create(msg.name, msg, ns_map)
+            self.add(msg.name, msg, ns_map)
 
     def on_broker_msg_delete(self, msg, *args):
         """ Deletes an XPath.
@@ -157,13 +142,13 @@ class _BaseXPathStore(object):
         """ Invokes an expression of expr_name against the msg and returns
         results.
         """
-        logger.debug('ElemPath expr_name:[%s], msg:[%s], needs_text:[%s]', 
+        logger.debug('XPath expr_name:[%s], msg:[%s], needs_text:[%s]', 
             expr_name, msg, needs_text)
 
         if isinstance(msg, dict):
             msg = self.convert_dict_to_xml(msg)
 
-        logger.debug('ElemPath msg:[%s]', msg)
+        logger.debug('XPath msg:[%s]', msg)
 
         expr = self.data[expr_name]
 
@@ -172,7 +157,7 @@ class _BaseXPathStore(object):
         else:
             compile_func = expr.compiled_elem
 
-        logger.debug('ElemPath compile_func:[%s]', compile_func)
+        logger.debug('XPath compile_func:[%s]', compile_func)
 
         tree = etree.fromstring(msg)
         result = compile_func(tree)
@@ -208,36 +193,31 @@ class _BaseXPathStore(object):
 
         return etree.tostring(tree)
 
-# ##############################################################################
-
-class ElemPathStore(_BaseXPathStore):
-    def _elem_path_to_xpath(self, expr):
-        logger.debug('Original expr:[%s]', expr)
-
-        if expr[:2] == '*.':
-            expr = '//{}'.format(expr[2:])
-        else:
-            expr = '/{}'.format(expr)
-
-        if expr.endswith('.text'):
-            expr = expr[:-5]
-
-        expr = expr.replace('.*.', '//').replace('.', '/')
-
-        logger.debug('Reformatted expr:[%s]', expr)
-
-        return expr, '{}/text()'.format(expr)
-
-    def compile(self, expr, ns_map={}):
-        elem_path, text_path = self._elem_path_to_xpath(expr)
-        return self._compile(elem_path, ns_map), self._compile(text_path, ns_map)
-
-# ##############################################################################
-
-class XPathStore(_BaseXPathStore):
+class XPathStore(BaseStore):
     """ Keeps config of and evaluates XPath expressions.
     """
-    def compile(self, expr, ns_map={}):
-        return self._compile(expr, ns_map)
+    def add(self, name, item, ns_map):
+        with self.update_lock:
+            compiled_elem = self.compile(item.value, ns_map)
+            self.data[name] = Bunch()
+            self.data[name].config = item
+            self.data[name].compiled_elem = compiled_elem
 
-# ##############################################################################
+# ################################################################################################################################
+
+class JSONPointerStore(BaseStore):
+
+    def get(self, name, doc, default=None):
+        return self.data[name].get(doc, default)
+
+    def add(self, name, expr, *ignored_args, **ignored_kwargs):
+        """ Adds a new JSON Pointer expression to the store.
+        """
+        # Make sure it's valid, no exception in 'resolve' means the expression was valid.
+        pointer = JsonPointer(expr)
+        pointer.resolve({}, None)
+
+        with self.update_lock:
+            self.data[name] = pointer
+
+# ################################################################################################################################

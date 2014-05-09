@@ -24,7 +24,7 @@ from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
 from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
 from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
-from zato.admin.web.views.message import elem_path, namespace, xpath
+from zato.admin.web.views.message import json_pointer, namespace, xpath
 from zato.admin.web.views.notif.cloud.openstack import swift as notif_cloud_openstack_swift
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
@@ -208,15 +208,15 @@ urlpatterns = patterns('',
 
 # ################################################################################################################################
 
-    # .. ElemPath (JSON)
-    url(r'^zato/messages/elem_path/$',
-        login_required(elem_path.Index()), name=elem_path.Index.url_name),
-    url(r'^zato/messages/elem_path/create/$',
-        login_required(elem_path.Create()), name=elem_path.Create.url_name),
-    url(r'^zato/messages/elem_path/edit/$',
-        login_required(elem_path.Edit()), name=elem_path.Edit.url_name),
-    url(r'^zato/messages/elem_path/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(elem_path.Delete()), name=elem_path.Delete.url_name),
+    # .. JSON Pointer
+    url(r'^zato/messages/json-pointer/$',
+        login_required(json_pointer.Index()), name=json_pointer.Index.url_name),
+    url(r'^zato/messages/json-pointer/create/$',
+        login_required(json_pointer.Create()), name=json_pointer.Create.url_name),
+    url(r'^zato/messages/json-pointer/edit/$',
+        login_required(json_pointer.Edit()), name=json_pointer.Edit.url_name),
+    url(r'^zato/messages/json-pointer/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(json_pointer.Delete()), name=json_pointer.Delete.url_name),
 
 # ################################################################################################################################
 

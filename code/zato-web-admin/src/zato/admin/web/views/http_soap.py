@@ -248,8 +248,8 @@ def details(req, **kwargs):
 
     patterns_response = req.zato.client.invoke('zato.http-soap.get-audit-replace-patterns', {'id': kwargs['id']})
 
-    if audit_config.data.audit_repl_patt_type == MSG_PATTERN_TYPE.ELEM_PATH.id:
-        pattern_list = patterns_response.data.patterns_elem_path
+    if audit_config.data.audit_repl_patt_type == MSG_PATTERN_TYPE.JSON_POINTER.id:
+        pattern_list = patterns_response.data.patterns_json_pointer
     else:
         pattern_list = patterns_response.data.patterns_xpath
 

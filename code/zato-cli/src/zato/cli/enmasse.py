@@ -48,7 +48,7 @@ from zato.server.service.internal.channel import zmq as channel_zmq_mod
 from zato.server.service.internal.cloud.openstack import swift as cloud_openstack_swift
 from zato.server.service.internal.definition import amqp as definition_amqp_mod
 from zato.server.service.internal.definition import jms_wmq as definition_jms_wmq_mod
-from zato.server.service.internal.message import elem_path as elem_path_mod
+from zato.server.service.internal.message import json_pointer as json_pointer_mod
 from zato.server.service.internal.message import namespace as namespace_mod
 from zato.server.service.internal.message import xpath as xpath_mod
 from zato.server.service.internal.outgoing import amqp as outgoing_amqp_mod
@@ -542,7 +542,7 @@ class EnMasse(ManageCommand):
             'zato.channel.amqp.get-list':'channel_amqp',
             'zato.channel.jms-wmq.get-list':'channel_jms_wmq',
             'zato.channel.zmq.get-list':'channel_zmq',
-            'zato.message.elem-path.get-list':'elem_path',
+            'zato.message.json-pointer.get-list':'json_pointer',
             'zato.message.namespace.get-list':'def_namespace',
             'zato.message.xpath.get-list':'xpath',
             'zato.definition.jms-wmq.get-list':'def_jms_wmq',
@@ -703,7 +703,7 @@ class EnMasse(ManageCommand):
             'channel_zmq':channel_zmq_mod.Create,
             'def_amqp':definition_amqp_mod.Create,
             'def_jms_wmq':definition_jms_wmq_mod.Create,
-            'elem_path': elem_path_mod.Create,
+            'json_pointer': json_pointer_mod.Create,
             'http_soap':http_soap_mod.Create,
             'def_namespace': namespace_mod.Create,
             'outconn_amqp':outgoing_amqp_mod.Create,
@@ -935,7 +935,7 @@ class EnMasse(ManageCommand):
             'channel_zmq':ImportInfo(channel_zmq_mod),
             'def_amqp':ImportInfo(definition_amqp_mod, True),
             'def_jms_wmq':ImportInfo(definition_jms_wmq_mod),
-            'elem_path':ImportInfo(elem_path_mod),
+            'json_pointer':ImportInfo(json_pointer_mod),
             'http_soap':ImportInfo(http_soap_mod),
             'def_namespace':ImportInfo(namespace_mod),
             'outconn_amqp':ImportInfo(outgoing_amqp_mod),

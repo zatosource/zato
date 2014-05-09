@@ -75,7 +75,7 @@ $.namespace('zato.http_soap.audit');
 $.namespace('zato.http_soap.details');
 $.namespace('zato.load_balancer');
 $.namespace('zato.message');
-$.namespace('zato.message.elem_path');
+$.namespace('zato.message.json_pointer');
 $.namespace('zato.message.namespace');
 $.namespace('zato.message.xpath');
 $.namespace('zato.notif');
