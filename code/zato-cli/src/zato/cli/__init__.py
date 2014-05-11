@@ -25,11 +25,9 @@ import sqlalchemy
 # Zato
 from zato import common
 from zato.cli import util as cli_util
-from zato.common import odb, util
+from zato.common import odb, util, ZATO_INFO_FILE
 
 ################################################################################
-
-ZATO_INFO_FILE = b'.zato-info'
 
 _opts_odb_type = 'Operational database type, must be one of {}'.format(odb.SUPPORTED_DB_TYPES) # noqa
 _opts_odb_host = 'Operational database host'
