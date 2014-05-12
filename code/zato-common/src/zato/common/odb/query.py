@@ -23,7 +23,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, ChannelAMQ
      ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, Delivery, DeliveryHistory, DeliveryPayload, \
      JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, \
      NotificationOpenStackSwift as NotifOSS, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
-     OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Service, SQLConnectionPool, \
+     OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Server, Service, SQLConnectionPool, \
      TechnicalAccount, WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
@@ -914,5 +914,21 @@ def notif_cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
     """ OpenStack Swift connection definitions.
     """
     return _notif_cloud_openstack_swift(session, cluster_id)
+
+# ################################################################################################################################
+
+def _server(session, cluster_id):
+    return session.query(
+        Server.id, Server.name, Server.bind_host, Server.bind_port, Server.last_join_status, Server.last_join_mod_date,
+        Server.last_join_mod_by, Server.up_status, Server.up_mod_date, Cluster.name.label('cluster_name')).\
+        filter(Cluster.id==Server.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(Server.name)
+
+@needs_columns
+def server_list(session, cluster_id, needs_columns=False):
+    """ All the servers defined on a cluster.
+    """
+    return _server(session, cluster_id)
 
 # ################################################################################################################################

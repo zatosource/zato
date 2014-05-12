@@ -382,6 +382,12 @@ class MISC:
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
 
+class INFO_FORMAT:
+    DICT = 'dict'
+    TEXT = 'text'
+    JSON = 'json'
+    YAML = 'yaml'
+
 class CLOUD:
     class OPENSTACK:
         class SWIFT:
@@ -504,6 +510,8 @@ class NOTIF:
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
+
+ZATO_INFO_FILE = b'.zato-info'
 
 # ##############################################################################
 # Version

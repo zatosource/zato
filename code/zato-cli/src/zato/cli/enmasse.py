@@ -32,7 +32,7 @@ from pip import download
 from texttable import Texttable
 
 # Zato
-from zato.cli import ManageCommand, ZATO_INFO_FILE
+from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.client import AnyServiceInvoker
 from zato.common.crypto import CryptoManager
