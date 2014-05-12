@@ -49,7 +49,7 @@ class GetInfo(Service):
                     client = AnyServiceInvoker(
                         'http://{}:{}'.format(item.bind_host, item.bind_port),
                         channel.url_path, (sec_def.username, sec_def.password))
-                    response = client.invoke('dsuch.info2')
+                    response = client.invoke('zato.info.get-server-info')
                     if response.ok:
                         response = loads(response.inner.text)['zato_service_invoke_response']['response'].decode('base64')
                         response = loads(response)['response']
