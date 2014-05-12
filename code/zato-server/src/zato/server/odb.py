@@ -385,7 +385,7 @@ class ODBManager(SessionWrapper):
         """ Returns the list of all HTTP/SOAP connections.
         """
         with closing(self.session()) as session:
-            item_list = query.http_soap_list(session, cluster_id, connection, transport, needs_columns)
+            item_list = query.http_soap_list(session, cluster_id, connection, transport, True, needs_columns)
 
             if connection == 'channel':
                 for item in item_list:
