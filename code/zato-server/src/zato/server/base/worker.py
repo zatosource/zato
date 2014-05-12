@@ -364,7 +364,7 @@ class WorkerStore(BrokerMessageReceiver):
     def apikey_get(self, name):
         """ Returns the configuration of the API key of the given name.
         """
-        self.request_dispatcher.url_data.apikey_get(name)
+        return self.request_dispatcher.url_data.apikey_get(name)
 
     def on_broker_msg_SECURITY_APIKEY_CREATE(self, msg, *args):
         """ Creates a new API key security definition.
@@ -395,7 +395,7 @@ class WorkerStore(BrokerMessageReceiver):
         """ Returns the configuration of the AWS security definition
         of the given name.
         """
-        self.request_dispatcher.url_data.aws_get(name)
+        return self.request_dispatcher.url_data.aws_get(name)
 
     def on_broker_msg_SECURITY_AWS_CREATE(self, msg, *args):
         """ Creates a new AWS security definition
@@ -457,7 +457,7 @@ class WorkerStore(BrokerMessageReceiver):
         """ Returns the configuration of the NTLM security definition
         of the given name.
         """
-        self.request_dispatcher.url_data.ntlm_get(name)
+        return self.request_dispatcher.url_data.ntlm_get(name)
 
     def on_broker_msg_SECURITY_NTLM_CREATE(self, msg, *args):
         """ Creates a new NTLM security definition
@@ -488,7 +488,7 @@ class WorkerStore(BrokerMessageReceiver):
         """ Returns the configuration of the HTTP Basic Auth security definition
         of the given name.
         """
-        self.request_dispatcher.url_data.basic_auth_get(name)
+        return self.request_dispatcher.url_data.basic_auth_get(name)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
@@ -519,7 +519,7 @@ class WorkerStore(BrokerMessageReceiver):
         """ Returns the configuration of the OAuth security definition
         of the given name.
         """
-        self.request_dispatcher.url_data.oauth_get(name)
+        return self.request_dispatcher.url_data.oauth_get(name)
 
     def on_broker_msg_SECURITY_OAUTH_CREATE(self, msg, *args):
         """ Creates a new OAuth security definition
@@ -691,6 +691,12 @@ class WorkerStore(BrokerMessageReceiver):
         del self.sql_pool_store[msg['name']]
 
 # ################################################################################################################################
+
+    def get_channel_plain_http(self, name):
+        with self.update_lock:
+            for item in self.request_dispatcher.url_data.channel_data:
+                if item.connection == 'channel' and item.name == name:
+                    return item
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_CREATE_EDIT(self, msg, *args):
         """ Creates or updates an HTTP/SOAP channel.
