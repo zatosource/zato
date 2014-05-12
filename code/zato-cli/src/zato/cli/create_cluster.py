@@ -24,6 +24,10 @@ from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Service, WSS
 
 zato_services = {
 
+    # Clusters - Connections map
+    'zato.info.get-info':'zato.server.service.internal.info.GetInfo',
+    'zato.info.get-server-info':'zato.server.service.internal.info.GetServerInfo',
+
     # Channels - AMQP
     'zato.channel.amqp.create':'zato.server.service.internal.channel.amqp.Create',
     'zato.channel.amqp.delete':'zato.server.service.internal.channel.amqp.Delete',
