@@ -45,14 +45,25 @@ def format_connections(conns, format):
         items = list(items)
         items.sort(key=attrgetter('raddr'))
         out_items = out.setdefault(status, [])
+
         for item in items:
+
             laddr_str = ':'.join(str(elem) for elem in item.laddr).ljust(21).decode('utf-8')
             raddr_str = ':'.join(str(elem) for elem in item.raddr).rjust(21).decode('utf-8')
+
+            out_item = {
+                'from': '{}:{}'.format(*item.laddr),
+                'to': None,
+                'formatted': None,
+            }
+
             if item.raddr:
-                out_item = '{} -> {}'.format(laddr_str, raddr_str)
-                out_items.append(out_item)
+                out_item['to'] = '{}:{}'.format(*item.raddr)
+                out_item['formatted'] = '{} -> {}'.format(laddr_str, raddr_str)
             else:
-                out_items.append('{}:{}'.format(*item.laddr))
+                out_item['formatted'] = '{}:{}'.format(*item.laddr)
+
+            out_items.append(out_item)
 
     return out
 
@@ -105,7 +116,7 @@ def get_info(component_path, format):
 
     return out
 
-def format_info(value, format, cols_width, dumper):
+def format_info(value, format, cols_width=None, dumper=None):
     if format in(INFO_FORMAT.DICT, INFO_FORMAT.JSON, INFO_FORMAT.YAML):
         value['component_details'] = json_loads(value['component_details'])
 
