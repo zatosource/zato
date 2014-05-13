@@ -173,8 +173,8 @@ lua_zato_rename_if_exists = """
 local from_key = KEYS[1]
 local to_key = KEYS[2]
 
-if redis.pcall('exists', from_key) == '1' then
-    redis.pcall('rename', from_key, to_key)
+if redis.call('exists', from_key) == 1 then
+    redis.call('rename', from_key, to_key)
     return 10
 else
     return 11
