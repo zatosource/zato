@@ -33,7 +33,7 @@ from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, URL_TYPE, ZATO_NONE
+from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import CHANNEL
 from zato.server.connection.http_soap import Unauthorized
 
@@ -804,14 +804,14 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
-    def replace_payload(self, payload, pattern, pattern_type):
+    def replace_payload(self, pattern_name, payload, pattern_type):
         """ Replaces elements in a given payload using either JSON Pointer or XPath
         """
         store = self.json_pointer_store if pattern_type == MSG_PATTERN_TYPE.JSON_POINTER.id else self.xpath_store
 
-        logger.debug('Replacing [%r], pattern:[%r], store:[%r], pattern_type:[%r]', payload, pattern, store, pattern_type)
+        logger.debug('Replacing pattern:`%r` in`%r` , store:`%r`', pattern_name, payload, store)
 
-        return store.replace(payload, pattern, '******')
+        return store.set(pattern_name, payload, AUDIT_LOG.REPLACE_WITH, True)
 
 # ################################################################################################################################
 
@@ -822,7 +822,7 @@ class URLData(OAuthDataStore):
         env = wsgi_environ.items()
         for elem in env:
             if elem[0] == 'zato.http.channel_item':
-                elem[1]['password'] = '******'
+                elem[1]['password'] = AUDIT_LOG.REPLACE_WITH
 
         return dumps({key: repr(value) for key, value in env})
 
@@ -831,18 +831,17 @@ class URLData(OAuthDataStore):
         """
         if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.JSON_POINTER.id:
             payload = loads(payload) if payload else ''
-            payload = {'root': payload}
             pattern_list = channel_item['replace_patterns_json_pointer']
         else:
             pattern_list = channel_item['replace_patterns_xpath']
 
-        for pattern in pattern_list:
-            logger.debug('Before:[%r]', payload)
-            payload = self.replace_payload(payload, pattern, channel_item.audit_repl_patt_type)
-            logger.debug('After:[%r]', payload)
+        for name in pattern_list:
+            logger.debug('Before `%r`:`%r`', name, payload)
+            payload = self.replace_payload(name, payload, channel_item.audit_repl_patt_type)
+            logger.debug('After `%r`:`%r`', name, payload)
 
         if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.JSON_POINTER.id:
-            payload = dumps(payload['root'])
+            payload = dumps(payload)
 
         if channel_item['audit_max_payload']:
             payload = payload[:channel_item['audit_max_payload']]
@@ -897,5 +896,21 @@ class URLData(OAuthDataStore):
                     item.replace_patterns_xpath = msg.pattern_list
 
                 break
+
+    def on_broker_msg_MSG_JSON_POINTER_DELETE(self, msg):
+        for item in self.channel_data:
+            if msg.msg_pattern_type == MSG_PATTERN_TYPE.JSON_POINTER.id:
+                pattern_list = item.replace_patterns_json_pointer 
+            else:
+                pattern_list = item.replace_patterns_xpath 
+
+            try:
+                pattern_list.remove(msg.name)
+            except ValueError:
+                # It's OK, this item wasn't using that particular JSON Pointer
+                pass
+
+            if pattern_list:
+                yield item.id, pattern_list
 
 # ################################################################################################################################

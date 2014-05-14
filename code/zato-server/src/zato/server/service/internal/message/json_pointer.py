@@ -18,6 +18,7 @@ from uuid import uuid4
 from jsonpointer import JsonPointer as _JsonPointer
 
 # Zato
+from zato.common import MSG_PATTERN_TYPE
 from zato.common.broker_message import MSG_JSON_POINTER
 from zato.common.odb.model import Cluster, JSONPointer
 from zato.common.odb.query import json_pointer_list
@@ -172,4 +173,5 @@ class Delete(AdminService):
             else:
                 self.request.input.action = MSG_JSON_POINTER.DELETE
                 self.request.input.name = auth.name
+                self.request.input.msg_pattern_type = MSG_PATTERN_TYPE.JSON_POINTER.id
                 self.broker_client.publish(self.request.input)
