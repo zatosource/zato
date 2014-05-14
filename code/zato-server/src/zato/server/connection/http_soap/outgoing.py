@@ -190,7 +190,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         """
 
         if not params:
-            logger.warn('CID:[%s] No parameters given for URL path:[%s]', cid, self.config['address_url_path'])
+            logger.warn('CID:[%s] No parameters given for URL path:`%r`', cid, self.config['address_url_path'])
             raise ValueError('CID:[{}] No parameters given for URL path'.format(cid))
 
         path_params = {}
@@ -198,10 +198,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             for name in self.path_params:
                 path_params[name] = params.pop(name)
 
+            logger.warn('%r %r %r', self.address, path_params, params)
             return (self.address.format(**path_params), dict(params))
-        except KeyError, e:
-            logger.warn('CID:[%s] Could not build URL path:[%s] with params:[%s], e:[%s]', 
-                cid, self.config['address_url_path'], params, format_exc(e))
+        except(KeyError, ValueError), e:
+            logger.warn('CID:[%s] Could not build URL address `%r` path:`%r` with params:`%r`, e:`%s`', 
+                cid, self.address, self.config['address_url_path'], params, format_exc(e))
             
             raise ValueError('CID:[{}] Could not build URL path'.format(cid))
 
