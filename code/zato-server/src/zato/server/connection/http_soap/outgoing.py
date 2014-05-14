@@ -198,7 +198,6 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             for name in self.path_params:
                 path_params[name] = params.pop(name)
 
-            logger.warn('%r %r %r', self.address, path_params, params)
             return (self.address.format(**path_params), dict(params))
         except(KeyError, ValueError), e:
             logger.warn('CID:[%s] Could not build URL address `%r` path:`%r` with params:`%r`, e:`%s`', 
