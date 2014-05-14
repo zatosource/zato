@@ -107,25 +107,54 @@ class TestJSONPointerStore(TestCase):
 
         jps.add(name5, expr5)
         value = jps.get(name5, doc)
-        self.assertEqual(value, c_value)
+        self.assertEquals(value, c_value)
 
         default1 = rand_string()
         default2 = rand_string()
 
         jps.add(name6, expr6)
         value = jps.get(name6, doc, default1)
-        self.assertEqual(value, default1)
+        self.assertEquals(value, default1)
 
         jps.add(name7, expr7)
         value = jps.get(name7, doc, default2)
-        self.assertEqual(value, default2)
+        self.assertEquals(value, default2)
 
         jps.add(name8, expr8)
         value = jps.get(name8, doc)
-        self.assertEqual(value, 0)
+        self.assertEquals(value, 0)
 
     def test_set(self):
-        pass
+        jps = JSONPointerStore()
+
+        value1 = {'b':{}}
+        value2 = {'c':{}}
+        value_random = rand_string()
+
+        doc = {}
+
+        name1, expr1 = '1', '/a'
+        name2, expr2 = '2', '/a/b'
+
+        jps.add(name1, expr1)
+        jps.add(name2, expr2)
+
+        jps.set(name1, doc, value1)
+        value = jps.get(name1, doc)
+        self.assertDictEqual(value, value1)
+
+        jps.set(name2, doc, value2)
+        value = jps.get(name2, doc)
+        self.assertDictEqual(value, value2)
+
+        # in_place is False so a new doc is created and the previous one should be retained
+        new_doc = jps.set(name2, doc, value_random, False)
+
+        value = jps.get(name2, new_doc)
+        self.assertEquals(value, value_random)
+
+        value = jps.get(name2, doc)
+        self.assertDictEqual(value, value2)
 
 '''
     def setUp(self):
