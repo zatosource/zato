@@ -156,105 +156,8 @@ class TestJSONPointerStore(TestCase):
         value = jps.get(name2, doc)
         self.assertDictEqual(value, value2)
 
-'''
-    def setUp(self):
-        self.jps = JSONPointerStore()
-
-        self.cust_id = uuid4().hex
-
-        self.street_name1 = 'street-1-{}'.format(uuid4().hex)
-        self.street_name2 = 'street-2-{}'.format(uuid4().hex)
-
-        self.street_elems1_1 = 'street-1_1-{}'.format(uuid4().hex)
-        self.street_elems1_2 = 'street-1_2-{}'.format(uuid4().hex)
-
-        self.street_elems2_1 = 'street-2_1-{}'.format(uuid4().hex)
-        self.street_elems2_2 = 'street-2_2-{}'.format(uuid4().hex)
-
-        self.msg = Bunch()
-        self.msg.request = Bunch()
-        self.msg.request.customer = Bunch()
-        self.msg.request.customer.id = self.cust_id
-        self.msg.request.customer.address = []
-
-        self.msg.request.customer.address.append(
-            {'street_name': self.street_name1,
-             'elems': [self.street_elems1_1, self.street_elems1_2],
-            }
-        )
-
-        self.msg.request.customer.address.append(
-            {'street_name': self.street_name2,
-             'elems': [self.street_elems2_1, self.street_elems2_2],
-            }
-        )
-
-        self.expr1 = '/request.customer.id'
-        self.expr2 = '/id'
-        self.expr3 = '/request.customer.id'
-        self.expr4 = 'request.customer.address.street_name'
-        self.expr5 = '/address.street_name'
-        self.expr6 = '/request.customer'
-        self.expr7 = '/request.customer.address.street_name/0'
-        self.expr8 = '/request.customer.address.street_name'
-        self.expr9 = '/request.customer.address.elems'
-
-        self.expressions = [self.expr1, self.expr2, self.expr3, self.expr4,
-            self.expr5, self.expr6, self.expr7, self.expr8, self.expr9]
-
-        for idx, expr in enumerate(self.expressions, 1):
-
-            config = Bunch()
-            config.name = str(idx)
-            config.value = expr
-
-            self.jps.create(config.name, config, {}, False)
-
-    def test_invoke(self):
-        expected = {
-            '1': self.cust_id,
-            '2': [self.cust_id],
-            '3': [self.cust_id],
-            '4': [self.street_name1, self.street_name2],
-            '5': [self.street_name1, self.street_name2],
-            '6': [self.street_name1, self.street_name2],
-            '7': [self.street_name1, self.street_name2],
-            '8': [self.street_name1, self.street_name2],
-            '9': [self.street_elems1_1, self.street_elems1_2,
-                  self.street_elems2_1, self.street_elems2_2],
-        }
-
-        for idx, expr in enumerate(self.expressions, 1):
-            name = str(idx)
-            result = self.jps.invoke(self.msg, name)
-            self.assertEquals(expected[name], result)
-
-    def xtest_conversion_roundtrip(self):
-        xml = self.jps.convert_dict_to_xml(self.msg)
-        msg = self.jps.convert_xml_to_dict(xml)
-
-        self.assertEquals(msg, self.msg)
-
-    def xtest_replace(self):
-
-        for idx, expr in enumerate(self.expressions, 1):
-
-            msg = deepcopy(self.msg)
-            new_value = uuid4().hex
-            name = str(idx)
-
-            replaced = self.jps.replace(msg, name, new_value)
-            result = self.jps.invoke(replaced, name)
-
-            if isinstance(result, basestring):
-                self.assertEquals(result, new_value)
-            else:
-                for item in result:
-                    self.assertEquals(item, new_value)
-'''
-
 class TestXPathStore(TestCase):
-    def xtest_replace(self):
+    def test_replace(self):
         msg = """
             <root>
               <elem1>elem1</elem1>
@@ -283,7 +186,7 @@ class TestXPathStore(TestCase):
             config.value = expr
 
             xps = XPathStore()
-            xps.create(config.name, config, ns_map={'jt':'just-testing'})
+            xps.add(config.name, config, ns_map={'jt':'just-testing'})
 
             replaced = xps.replace(msg, config.name, new_value)
             result = xps.invoke(replaced, config.name, False)
