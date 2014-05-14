@@ -124,12 +124,11 @@ class TestJSONPointerStore(TestCase):
         value = jps.get(name8, doc)
         self.assertEquals(value, 0)
 
-    def test_set(self):
+    def test_set_defaults(self):
         jps = JSONPointerStore()
 
         value1 = {'b':{}}
         value2 = {'c':{}}
-        value_random = rand_string()
 
         doc = {}
 
@@ -141,20 +140,54 @@ class TestJSONPointerStore(TestCase):
 
         jps.set(name1, doc, value1)
         value = jps.get(name1, doc)
-        self.assertDictEqual(value, value1)
+        self.assertEquals(value, value1)
 
         jps.set(name2, doc, value2)
         value = jps.get(name2, doc)
         self.assertDictEqual(value, value2)
 
-        # in_place is False so a new doc is created and the previous one should be retained
-        new_doc = jps.set(name2, doc, value_random, False)
+    def test_set_in_place(self):
+        jps = JSONPointerStore()
 
-        value = jps.get(name2, new_doc)
+        doc = {'a':'b'}
+        value_random = rand_string()
+
+        name1, expr1 = '1', '/a'
+
+        jps.add(name1, expr1)
+
+        # in_place is False so a new doc is created and the previous one should be retained
+        new_doc = jps.set(name1, doc, value_random, True, in_place=False)
+
+        value = jps.get(name1, new_doc)
         self.assertEquals(value, value_random)
 
-        value = jps.get(name2, doc)
-        self.assertDictEqual(value, value2)
+        value = jps.get(name1, doc)
+        self.assertEquals(value, 'b')
+
+    def test_set_skip_missing(self):
+        jps = JSONPointerStore()
+        doc = {}
+
+        name1, expr1 = '1', '/a'
+        name2, expr2 = '2', '/b'
+
+        value1, value2 = rand_string(2)
+        default1, default2 = rand_string(2)
+
+        jps.add(name1, expr1)
+        jps.add(name2, expr2)
+
+        # value is equal to default1 because it is never set by jps.set
+        jps.set(name1, doc, value1, True)
+        value = jps.get(name1, doc, default1)
+        self.assertEquals(value, default1)
+        self.assertDictEqual(doc, {})
+
+        jps.set(name2, doc, value2)
+        value = jps.get(name2, doc, default2)
+        self.assertEquals(value, value2)
+        self.assertDictEqual(doc, {'b':value2})
 
 class TestXPathStore(TestCase):
     def test_replace(self):
@@ -188,7 +221,7 @@ class TestXPathStore(TestCase):
             xps = XPathStore()
             xps.add(config.name, config, ns_map={'jt':'just-testing'})
 
-            replaced = xps.replace(msg, config.name, new_value)
+            replaced = xps.set(msg, config.name, new_value)
             result = xps.invoke(replaced, config.name, False)
 
             self.assertTrue(len(result) > 0)

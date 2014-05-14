@@ -19,7 +19,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # jsonpointer
-from jsonpointer import JsonPointer
+from jsonpointer import JsonPointer, JsonPointerException
 
 # lxml
 from lxml import etree
@@ -36,15 +36,15 @@ class MessageFacade(object):
     such as namespaces, JSON Pointer or XPath.
     """
     def __init__(self, msg_ns_store=None, json_pointer_store=None, xpath_store=None):
-        self.ns = msg_ns_store
-        self.json_pointer_store = json_pointer_store
-        self.xpath_store = xpath_store
+        self._ns = msg_ns_store
+        self._json_pointer_store = json_pointer_store
+        self._xpath_store = xpath_store
 
-    def json_pointer(self, msg, name):
-        return self.json_pointer_store.get(name).invoke(msg)
+    def json_pointer(self):
+        return self._json_pointer_store
 
-    def xpath(self, msg, name):
-        return self.xpath_store.invoke(msg, name)
+    def xpath(self, msg):
+        return self._xpath_store
 
 # ################################################################################################################################
 
@@ -142,11 +142,8 @@ class BaseStore(object):
         """ Invokes an expression of expr_name against the msg and returns
         results.
         """
-        logger.debug('XPath expr_name:[%s], msg:[%s], needs_text:[%s]', 
+        logger.debug('expr_name:[%s], msg:[%s], needs_text:[%s]', 
             expr_name, msg, needs_text)
-
-        if isinstance(msg, dict):
-            msg = self.convert_dict_to_xml(msg)
 
         logger.debug('XPath msg:[%s]', msg)
 
@@ -170,29 +167,6 @@ class BaseStore(object):
         else:
             return result
 
-    def replace(self, msg, expr_name, new_value):
-        """ Evaluates expr_name against a msg which can be either a dictionary
-        or an XML string. Text value of all  the elements returned is replaced
-        with new_value.
-        """
-        orig_msg = msg
-
-        if isinstance(msg, dict):
-            msg = self.convert_dict_to_xml(msg)
-
-        result, tree = self.invoke(msg, expr_name, False, True)
-
-        if isinstance(result, list):
-            for elem in result:
-                elem.text = new_value
-        else:
-            result.text = new_value
-
-        if isinstance(orig_msg, dict):
-            return self.convert_xml_to_dict(etree.tostring(tree))
-
-        return etree.tostring(tree)
-
 class XPathStore(BaseStore):
     """ Keeps config of and evaluates XPath expressions.
     """
@@ -202,6 +176,23 @@ class XPathStore(BaseStore):
             self.data[name] = Bunch()
             self.data[name].config = item
             self.data[name].compiled_elem = compiled_elem
+
+    def set(self, msg, expr_name, new_value):
+        """ Evaluates expr_name against a msg which can be either a dictionary
+        or an XML string. Text value of all  the elements returned is replaced
+        with new_value.
+        """
+        orig_msg = msg
+
+        result, tree = self.invoke(msg, expr_name, False, True)
+
+        if isinstance(result, list):
+            for elem in result:
+                elem.text = new_value
+        else:
+            result.text = new_value
+
+        return etree.tostring(tree)
 
 # ################################################################################################################################
 
@@ -214,7 +205,11 @@ class JSONPointerStore(BaseStore):
         else:
             return default
 
-    def set(self, name, doc, value, in_place=True):
+    def set(self, name, doc, value, return_on_missing=False, in_place=True):
+        if return_on_missing:
+            if not self.get(name, doc):
+                return doc
+
         return self.data[name].set(doc, value, in_place)
 
     def add(self, name, expr, *ignored_args, **ignored_kwargs):

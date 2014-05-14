@@ -323,6 +323,7 @@ class CHANNEL(Attrs):
     NOTIFIER_TARGET = 'notifier-target' # New in 2.0
     SCHEDULER = 'scheduler'
     STARTUP_SERVICE = 'startup-service' # New in 2.0
+    WORKER = 'worker' # New in 2.0
     ZMQ = 'zmq'
 
 class INVOCATION_TARGET(Attrs):
@@ -385,6 +386,9 @@ class MISC:
 class ADAPTER_PARAMS:
     APPLY_BEFORE_REQUST = 'apply-before-request'
     APPLY_AFTER_REQUEST = 'apply-after-request'
+
+class AUDIT_LOG:
+    REPLACE_WITH = '******'
 
 class INFO_FORMAT:
     DICT = 'dict'
