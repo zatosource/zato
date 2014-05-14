@@ -60,7 +60,7 @@ class TestJSONPointerStore(TestCase):
     def test_get(self):
         jps = JSONPointerStore()
 
-        c_value, d_value = 'ccc', 'ddd'
+        c_value, d_value = rand_string(2)
 
         doc = {
             'a': {
@@ -68,7 +68,9 @@ class TestJSONPointerStore(TestCase):
                     {'c': c_value},
                     {'d': d_value},
                 ]
-            }
+            },
+            'e': None,
+            'f': 0
         }
 
         name1, expr1 = '1', '/a'
@@ -76,6 +78,15 @@ class TestJSONPointerStore(TestCase):
         name3, expr3 = '3', '/a/b/0'
         name4, expr4 = '4', '/a/b/1'
         name5, expr5 = '5', '/a/b/0/c'
+
+        # This will return default because the path points to None
+        name6, expr6 = '6', '/e'
+
+        # This will return default because there is no such path
+        name7, expr7 = '7', '/e/e2/e3'
+
+        # This will not return None because 0 is not None even though it's False in boolean sense
+        name8, expr8 = '8', '/f'
 
         jps.add(name1, expr1)
         value = jps.get(name1, doc)
@@ -86,7 +97,32 @@ class TestJSONPointerStore(TestCase):
         self.assertDictEqual(value[0], {'c':c_value})
         self.assertDictEqual(value[1], {'d':d_value})
 
-        # TODO - remember about testing get with default
+        jps.add(name3, expr3)
+        value = jps.get(name3, doc)
+        self.assertDictEqual(value, {'c':c_value})
+
+        jps.add(name4, expr4)
+        value = jps.get(name4, doc)
+        self.assertDictEqual(value, {'d':d_value})
+
+        jps.add(name5, expr5)
+        value = jps.get(name5, doc)
+        self.assertEqual(value, c_value)
+
+        default1 = rand_string()
+        default2 = rand_string()
+
+        jps.add(name6, expr6)
+        value = jps.get(name6, doc, default1)
+        self.assertEqual(value, default1)
+
+        jps.add(name7, expr7)
+        value = jps.get(name7, doc, default2)
+        self.assertEqual(value, default2)
+
+        jps.add(name8, expr8)
+        value = jps.get(name8, doc)
+        self.assertEqual(value, 0)
 
     def test_set(self):
         pass

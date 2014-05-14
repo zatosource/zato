@@ -208,7 +208,11 @@ class XPathStore(BaseStore):
 class JSONPointerStore(BaseStore):
 
     def get(self, name, doc, default=None):
-        return self.data[name].get(doc, default)
+        value = self.data[name].get(doc, default)
+        if value is not None:
+            return value
+        else:
+            return default
 
     def add(self, name, expr, *ignored_args, **ignored_kwargs):
         """ Adds a new JSON Pointer expression to the store.
