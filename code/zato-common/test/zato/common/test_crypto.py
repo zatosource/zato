@@ -74,7 +74,7 @@ secret = 'T8irIao63mrrSIItl1JDgs8K+9zIXi3OTXYzEHtSpzB9m52Q34LYeeiyYJTvEq8nWb3Lpu
 
 class CryptoTestCase(TestCase):
     
-    def xtest_decrypt_priv_key_in_file(self):
+    def test_decrypt_priv_key_in_file(self):
         """ Decrypt a message using a private key from file.
         """
         with NamedTemporaryFile(prefix='zato-test-') as tf:
@@ -87,7 +87,7 @@ class CryptoTestCase(TestCase):
             
             eq_(plain_text, cm.decrypt(secret))
 
-    def xtest_decrypt_priv_key_in_string(self):
+    def test_decrypt_priv_key_in_string(self):
         """ Decrypt a message using a private key from string.
         """
         cm = CryptoManager()
@@ -123,7 +123,7 @@ class CryptoTestCase(TestCase):
                 
                 eq_(_plain_text, decrypted)
         
-    def xtest_reset(self):
+    def test_reset(self):
         """ Resets all keys to None.
         """
         cm = CryptoManager()
