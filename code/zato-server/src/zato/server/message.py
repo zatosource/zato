@@ -214,6 +214,9 @@ class JSONPointerStore(BaseStore):
         else:
             return default
 
+    def set(self, name, doc, value, in_place=True):
+        return self.data[name].set(doc, value, in_place)
+
     def add(self, name, expr, *ignored_args, **ignored_kwargs):
         """ Adds a new JSON Pointer expression to the store.
         """
