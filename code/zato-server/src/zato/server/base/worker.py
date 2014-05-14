@@ -296,16 +296,15 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init_msg_ns_store(self):
         for k, v in self.worker_config.msg_ns.items():
-            self.msg_ns_store.create(k, v.config)
+            self.msg_ns_store.add(k, v.config)
 
     def init_xpath_store(self):
         for k, v in self.worker_config.xpath.items():
-            self.xpath_store.create(k, v.config, self.msg_ns_store.ns_map)
+            self.xpath_store.add(k, v.config, self.msg_ns_store.ns_map)
 
     def init_json_pointer_store(self):
         for k, v in self.worker_config.json_pointer.items():
-            logger.warn('%r %r', k, v.config)
-            self.json_pointer_store.create(k, v.config.value)
+            self.json_pointer_store.add(k, v.config.value)
 
 # ################################################################################################################################
 
