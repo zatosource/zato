@@ -117,14 +117,14 @@ class BaseStore(object):
     def on_broker_msg_create(self, msg, ns_map):
         """ Creates a new XPath.
         """
-        self.add(msg.name, msg, ns_map)
+        self.add(msg.name, msg.value, ns_map)
 
     def on_broker_msg_edit(self, msg, ns_map):
         """ Updates an existing XPath.
         """
         with self.update_lock:
             del self.data[msg.old_name]
-            self.add(msg.name, msg, ns_map)
+            self.add(msg.name, msg.value, ns_map)
 
     def on_broker_msg_delete(self, msg, *args):
         """ Deletes an XPath.
