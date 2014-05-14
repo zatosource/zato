@@ -382,6 +382,10 @@ class MISC:
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
 
+class ADAPTER_PARAMS:
+    APPLY_BEFORE_REQUST = 'apply-before-request'
+    APPLY_AFTER_REQUEST = 'apply-after-request'
+
 class INFO_FORMAT:
     DICT = 'dict'
     TEXT = 'text'
