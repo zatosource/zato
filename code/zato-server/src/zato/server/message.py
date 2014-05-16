@@ -31,17 +31,31 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+class JSONPointerAPI(object):
+    """ User-visible API to a store of JSON Pointers.
+    """
+    def __init__(self, doc, store):
+        self._doc = doc
+        self._store = store
+
+    def get(self, name, default=None):
+        return self._store.get(name, self._doc, default)
+
+    def set(self, name, value, return_on_missing=False, in_place=True):
+        return self._store.set(name, self._doc, value, return_on_missing, in_place)
+
 class MessageFacade(object):
     """ An object through which services access all the message-related features,
     such as namespaces, JSON Pointer or XPath.
     """
-    def __init__(self, msg_ns_store=None, json_pointer_store=None, xpath_store=None):
+    def __init__(self, msg_ns_store=None, json_pointer_store=None, xpath_store=None, payload=None):
         self._ns = msg_ns_store
         self._json_pointer_store = json_pointer_store
         self._xpath_store = xpath_store
+        self._payload = payload
 
-    def json_pointer(self):
-        return self._json_pointer_store
+    def json_pointer(self, doc=None):
+        return JSONPointerAPI(doc or self._payload, self._json_pointer_store)
 
     def xpath(self, msg):
         return self._xpath_store
