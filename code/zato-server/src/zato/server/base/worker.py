@@ -32,8 +32,9 @@ from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Zato
-from zato.common import CHANNEL, HTTP_SOAP_SERIALIZATION_TYPE, PUB_SUB, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import code_to_name, STATS
+from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, PUB_SUB, SEC_DEF_TYPE, SIMPLE_IO, \
+     TRACE1, ZATO_ODB_POOL_NAME
+from zato.common.broker_message import code_to_name, SERVICE, STATS
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import new_cid, pairwise, parse_extra_into_dict
 from zato.server.base import BrokerMessageReceiver
@@ -296,16 +297,15 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init_msg_ns_store(self):
         for k, v in self.worker_config.msg_ns.items():
-            self.msg_ns_store.create(k, v.config)
+            self.msg_ns_store.add(k, v.config)
 
     def init_xpath_store(self):
         for k, v in self.worker_config.xpath.items():
-            self.xpath_store.create(k, v.config, self.msg_ns_store.ns_map)
+            self.xpath_store.add(k, v.config, self.msg_ns_store.ns_map)
 
     def init_json_pointer_store(self):
         for k, v in self.worker_config.json_pointer.items():
-            logger.warn('%r %r', k, v.config)
-            self.json_pointer_store.create(k, v.config.value)
+            self.json_pointer_store.add(k, v.config.value)
 
 # ################################################################################################################################
 
@@ -915,7 +915,25 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_MSG_JSON_POINTER_DELETE(self, msg, *args):
         """ Deletes an JSON Pointer.
         """
+        # Delete the pattern from its store
         self.json_pointer_store.on_broker_msg_delete(msg, *args)
+
+        # Delete the pattern from url_data's cache and let know servers that it should be deleted from the ODB as well
+        for item_id, pattern_list in self.request_dispatcher.url_data.on_broker_msg_MSG_JSON_POINTER_DELETE(msg):
+            logger.warn('333 %r %r', item_id, pattern_list)
+
+            # This is a bit inefficient, if harmless, because each worker in a cluster will publish it
+            # so the list of patterns will be updates that many times.
+
+            msg = {}
+            msg['action'] = SERVICE.PUBLISH
+            msg['service'] = 'zato.http-soap.set-audit-replace-patterns'
+            msg['payload'] = {'id':item_id, 'audit_repl_patt_type':MSG_PATTERN_TYPE.JSON_POINTER.id, 'pattern_list':pattern_list}
+            msg['cid'] = new_cid()
+            msg['channel'] = CHANNEL.WORKER
+            msg['data_format'] = DATA_FORMAT.JSON
+
+            self.broker_client.invoke_async(msg)
 
 # ################################################################################################################################
 

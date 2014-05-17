@@ -166,6 +166,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         headers = ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items())
         start_response(wsgi_environ['zato.http.response.status'], headers)
 
+        if isinstance(payload, unicode):
+            payload = payload.encode('utf-8')
+
         if self.access_logger.isEnabledFor(INFO):
 
             channel_item = wsgi_environ.get('zato.http.channel_item')
