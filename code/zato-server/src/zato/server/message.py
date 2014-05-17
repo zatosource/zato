@@ -18,6 +18,9 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
+# dpath
+from dpath import util as dpath_util
+
 # jsonpointer
 from jsonpointer import JsonPointer, JsonPointerException
 
@@ -25,7 +28,11 @@ from jsonpointer import JsonPointer, JsonPointerException
 from lxml import etree
 
 # xmldict
-from xmltodict import parse, unparse
+from xmltodict import parse as xml_parse
+
+# Zato
+from zato.common import MSG_MAPPER
+from zato.common.nav import DictNav
 
 logger = logging.getLogger(__name__)
 
@@ -146,12 +153,6 @@ class BaseStore(object):
         with self.update_lock:
             del self.data[msg.name]
 
-    def convert_dict_to_xml(self, d):
-        return unparse(d).encode('utf-8')
-
-    def convert_xml_to_dict(self, xml):
-        return parse(xml)
-
     def invoke(self, msg, expr_name, needs_text=True, needs_tree=False):
         """ Invokes an expression of expr_name against the msg and returns
         results.
@@ -180,6 +181,8 @@ class BaseStore(object):
             return result, tree
         else:
             return result
+
+# ################################################################################################################################
 
 class XPathStore(BaseStore):
     """ Keeps config of and evaluates XPath expressions.
@@ -237,3 +240,54 @@ class JSONPointerStore(BaseStore):
             self.data[name] = pointer
 
 # ################################################################################################################################
+
+class Mapper(object):
+    def __init__(self, source, target=None, *args, **kwargs):
+        self.target = target or {}
+        self.map_type = kwargs.get('msg_type', MSG_MAPPER.DICT_TO_DICT)
+        self.skip_ns = kwargs.get('skip_ns', True)
+        self.subs = {}
+        self.funcs = {'int':int}
+        self.func_keys = self.funcs.keys()
+        self.cache = {}
+
+        if self.map_type.startswith('dict-to-'):
+            self.source = DictNav(source)
+
+    def set_substitution(self, name, value):
+        self.subs[name] = value
+
+    def set_func(self, name, func):
+        self.funcs[name] = func
+        self.func_keys = self.funcs.keys()
+
+    def map(self, from_, to, separator='/'):
+        """ Maps 'from_' into 'to', splitting from using the 'separator' and applying
+        transformation functions along the way.
+        """
+        orig_from = from_
+        force_func = None
+        force_func_name = None
+
+        for key in self.func_keys:
+            if from_.startswith(key):
+                from_ = from_.replace('{}:'.format(key), '', 1)
+                force_func = self.funcs[key]
+                force_func_name = key
+                break
+
+        value = self.source.get(from_.split(separator)[1:])
+
+        try:
+            value = force_func(value) if force_func else value
+        except Exception, e:
+            logger.warn('Error in force_func:`%s` `%s` over `%s` in `%s` -> `%s`',
+                force_func_name, force_func, value, orig_from, to)
+            raise
+
+        dpath_util.new(self.target, to, value)
+
+    def set(self, value, to):
+        """ Sets 'to' to a static 'value'.
+        """
+        dpath_util.new(self.target, to, value)
