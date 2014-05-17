@@ -396,6 +396,12 @@ class INFO_FORMAT:
     JSON = 'json'
     YAML = 'yaml'
 
+class MSG_MAPPER:
+    DICT_TO_DICT = 'dict-to-dict'
+    DICT_TO_XML = 'dict-to-xml'
+    XML_TO_DICT = 'xml-to-dict'
+    XML_TO_XML = 'xml-to-xml'
+
 class CLOUD:
     class OPENSTACK:
         class SWIFT:
