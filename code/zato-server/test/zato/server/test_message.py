@@ -31,7 +31,7 @@ from zato.server.message import JSONPointerStore, Mapper, XPathStore
 
 class TestJSONPointerStore(TestCase):
 
-    def xtest_add(self):
+    def test_add(self):
         jps = JSONPointerStore()
 
         name1, expr1 = '1', '/{}/{}'.format(*rand_string(2))
@@ -59,7 +59,7 @@ class TestJSONPointerStore(TestCase):
         self.assertEquals(expr4, jps.data[name2].path)
         self.assertEquals(expr4, jps.data[name4].path)
 
-    def xtest_get(self):
+    def test_get(self):
         jps = JSONPointerStore()
 
         c_value, d_value = rand_string(2)
@@ -126,7 +126,7 @@ class TestJSONPointerStore(TestCase):
         value = jps.get(name8, doc)
         self.assertEquals(value, 0)
 
-    def xtest_set_defaults(self):
+    def test_set_defaults(self):
         jps = JSONPointerStore()
 
         value1 = {'b':{}}
@@ -148,7 +148,7 @@ class TestJSONPointerStore(TestCase):
         value = jps.get(name2, doc)
         self.assertDictEqual(value, value2)
 
-    def xtest_set_in_place(self):
+    def test_set_in_place(self):
         jps = JSONPointerStore()
 
         doc = {'a':'b'}
@@ -167,7 +167,7 @@ class TestJSONPointerStore(TestCase):
         value = jps.get(name1, doc)
         self.assertEquals(value, 'b')
 
-    def xtest_set_skip_missing(self):
+    def test_set_skip_missing(self):
         jps = JSONPointerStore()
         doc = {}
 
@@ -194,7 +194,7 @@ class TestJSONPointerStore(TestCase):
 # ################################################################################################################################
 
 class TestXPathStore(TestCase):
-    def xtest_replace(self):
+    def test_replace(self):
         msg = """
             <root>
               <elem1>elem1</elem1>
