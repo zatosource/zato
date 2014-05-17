@@ -557,8 +557,8 @@ class SetAuditResponseData(AdminService):
             item.invoke_ok = asbool(payload_req['invoke_ok'])
             item.auth_ok = asbool(payload_req['auth_ok'])
             item.resp_time = payload_req['resp_time']
-            item.resp_headers = payload_req['resp_headers']
-            item.resp_payload = payload_req['resp_payload']
+            item.resp_headers = payload_req['resp_headers'].encode('utf-8')
+            item.resp_payload = payload_req['resp_payload'].encode('utf-8')
             
             session.add(item)
             session.commit()

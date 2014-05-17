@@ -60,7 +60,7 @@ class TestJSONPointerStore(TestCase):
     def test_get(self):
         jps = JSONPointerStore()
 
-        c_value, d_value = 'ccc', 'ddd'
+        c_value, d_value = rand_string(2)
 
         doc = {
             'a': {
@@ -68,7 +68,9 @@ class TestJSONPointerStore(TestCase):
                     {'c': c_value},
                     {'d': d_value},
                 ]
-            }
+            },
+            'e': None,
+            'f': 0
         }
 
         name1, expr1 = '1', '/a'
@@ -76,6 +78,15 @@ class TestJSONPointerStore(TestCase):
         name3, expr3 = '3', '/a/b/0'
         name4, expr4 = '4', '/a/b/1'
         name5, expr5 = '5', '/a/b/0/c'
+
+        # This will return default because the path points to None
+        name6, expr6 = '6', '/e'
+
+        # This will return default because there is no such path
+        name7, expr7 = '7', '/e/e2/e3'
+
+        # This will not return None because 0 is not None even though it's False in boolean sense
+        name8, expr8 = '8', '/f'
 
         jps.add(name1, expr1)
         value = jps.get(name1, doc)
@@ -86,110 +97,100 @@ class TestJSONPointerStore(TestCase):
         self.assertDictEqual(value[0], {'c':c_value})
         self.assertDictEqual(value[1], {'d':d_value})
 
-        # TODO - remember about testing get with default
+        jps.add(name3, expr3)
+        value = jps.get(name3, doc)
+        self.assertDictEqual(value, {'c':c_value})
 
-    def test_set(self):
-        pass
+        jps.add(name4, expr4)
+        value = jps.get(name4, doc)
+        self.assertDictEqual(value, {'d':d_value})
 
-'''
-    def setUp(self):
-        self.jps = JSONPointerStore()
+        jps.add(name5, expr5)
+        value = jps.get(name5, doc)
+        self.assertEquals(value, c_value)
 
-        self.cust_id = uuid4().hex
+        default1 = rand_string()
+        default2 = rand_string()
 
-        self.street_name1 = 'street-1-{}'.format(uuid4().hex)
-        self.street_name2 = 'street-2-{}'.format(uuid4().hex)
+        jps.add(name6, expr6)
+        value = jps.get(name6, doc, default1)
+        self.assertEquals(value, default1)
 
-        self.street_elems1_1 = 'street-1_1-{}'.format(uuid4().hex)
-        self.street_elems1_2 = 'street-1_2-{}'.format(uuid4().hex)
+        jps.add(name7, expr7)
+        value = jps.get(name7, doc, default2)
+        self.assertEquals(value, default2)
 
-        self.street_elems2_1 = 'street-2_1-{}'.format(uuid4().hex)
-        self.street_elems2_2 = 'street-2_2-{}'.format(uuid4().hex)
+        jps.add(name8, expr8)
+        value = jps.get(name8, doc)
+        self.assertEquals(value, 0)
 
-        self.msg = Bunch()
-        self.msg.request = Bunch()
-        self.msg.request.customer = Bunch()
-        self.msg.request.customer.id = self.cust_id
-        self.msg.request.customer.address = []
+    def test_set_defaults(self):
+        jps = JSONPointerStore()
 
-        self.msg.request.customer.address.append(
-            {'street_name': self.street_name1,
-             'elems': [self.street_elems1_1, self.street_elems1_2],
-            }
-        )
+        value1 = {'b':{}}
+        value2 = {'c':{}}
 
-        self.msg.request.customer.address.append(
-            {'street_name': self.street_name2,
-             'elems': [self.street_elems2_1, self.street_elems2_2],
-            }
-        )
+        doc = {}
 
-        self.expr1 = '/request.customer.id'
-        self.expr2 = '/id'
-        self.expr3 = '/request.customer.id'
-        self.expr4 = 'request.customer.address.street_name'
-        self.expr5 = '/address.street_name'
-        self.expr6 = '/request.customer'
-        self.expr7 = '/request.customer.address.street_name/0'
-        self.expr8 = '/request.customer.address.street_name'
-        self.expr9 = '/request.customer.address.elems'
+        name1, expr1 = '1', '/a'
+        name2, expr2 = '2', '/a/b'
 
-        self.expressions = [self.expr1, self.expr2, self.expr3, self.expr4,
-            self.expr5, self.expr6, self.expr7, self.expr8, self.expr9]
+        jps.add(name1, expr1)
+        jps.add(name2, expr2)
 
-        for idx, expr in enumerate(self.expressions, 1):
+        jps.set(name1, doc, value1)
+        value = jps.get(name1, doc)
+        self.assertEquals(value, value1)
 
-            config = Bunch()
-            config.name = str(idx)
-            config.value = expr
+        jps.set(name2, doc, value2)
+        value = jps.get(name2, doc)
+        self.assertDictEqual(value, value2)
 
-            self.jps.create(config.name, config, {}, False)
+    def test_set_in_place(self):
+        jps = JSONPointerStore()
 
-    def test_invoke(self):
-        expected = {
-            '1': self.cust_id,
-            '2': [self.cust_id],
-            '3': [self.cust_id],
-            '4': [self.street_name1, self.street_name2],
-            '5': [self.street_name1, self.street_name2],
-            '6': [self.street_name1, self.street_name2],
-            '7': [self.street_name1, self.street_name2],
-            '8': [self.street_name1, self.street_name2],
-            '9': [self.street_elems1_1, self.street_elems1_2,
-                  self.street_elems2_1, self.street_elems2_2],
-        }
+        doc = {'a':'b'}
+        value_random = rand_string()
 
-        for idx, expr in enumerate(self.expressions, 1):
-            name = str(idx)
-            result = self.jps.invoke(self.msg, name)
-            self.assertEquals(expected[name], result)
+        name1, expr1 = '1', '/a'
 
-    def xtest_conversion_roundtrip(self):
-        xml = self.jps.convert_dict_to_xml(self.msg)
-        msg = self.jps.convert_xml_to_dict(xml)
+        jps.add(name1, expr1)
 
-        self.assertEquals(msg, self.msg)
+        # in_place is False so a new doc is created and the previous one should be retained
+        new_doc = jps.set(name1, doc, value_random, True, in_place=False)
 
-    def xtest_replace(self):
+        value = jps.get(name1, new_doc)
+        self.assertEquals(value, value_random)
 
-        for idx, expr in enumerate(self.expressions, 1):
+        value = jps.get(name1, doc)
+        self.assertEquals(value, 'b')
 
-            msg = deepcopy(self.msg)
-            new_value = uuid4().hex
-            name = str(idx)
+    def test_set_skip_missing(self):
+        jps = JSONPointerStore()
+        doc = {}
 
-            replaced = self.jps.replace(msg, name, new_value)
-            result = self.jps.invoke(replaced, name)
+        name1, expr1 = '1', '/a'
+        name2, expr2 = '2', '/b'
 
-            if isinstance(result, basestring):
-                self.assertEquals(result, new_value)
-            else:
-                for item in result:
-                    self.assertEquals(item, new_value)
-'''
+        value1, value2 = rand_string(2)
+        default1, default2 = rand_string(2)
+
+        jps.add(name1, expr1)
+        jps.add(name2, expr2)
+
+        # value is equal to default1 because it is never set by jps.set
+        jps.set(name1, doc, value1, True)
+        value = jps.get(name1, doc, default1)
+        self.assertEquals(value, default1)
+        self.assertDictEqual(doc, {})
+
+        jps.set(name2, doc, value2)
+        value = jps.get(name2, doc, default2)
+        self.assertEquals(value, value2)
+        self.assertDictEqual(doc, {'b':value2})
 
 class TestXPathStore(TestCase):
-    def xtest_replace(self):
+    def test_replace(self):
         msg = """
             <root>
               <elem1>elem1</elem1>
@@ -218,9 +219,9 @@ class TestXPathStore(TestCase):
             config.value = expr
 
             xps = XPathStore()
-            xps.create(config.name, config, ns_map={'jt':'just-testing'})
+            xps.add(config.name, config, ns_map={'jt':'just-testing'})
 
-            replaced = xps.replace(msg, config.name, new_value)
+            replaced = xps.set(msg, config.name, new_value)
             result = xps.invoke(replaced, config.name, False)
 
             self.assertTrue(len(result) > 0)
