@@ -246,15 +246,15 @@ class TestMapper(TestCase):
         m = Mapper(source)
 
         # 1:1 mappings
-        m.map('/a/b', '/aa')
-        m.map('/a/c/d', '/bb')
+        m.map('/aa', '/a/b')
+        m.map('/bb', '/a/c/d')
 
         # Force conversion to int
-        m.map('int:/a/c/d', '/cc/dd')
+        m.map('/cc/dd', 'int:/a/c/d')
 
         # Manually signal /cc/ee/ff should be a list here ..
-        m.set([], '/cc/ee/ff')
-        m.map('int:/a/c/d', '/cc/ee/ff/19')
+        m.set('/cc/ee/ff', [])
+        m.map('/cc/ee/ff/19', 'int:/a/c/d')
 
         target = bunchify(m.target)
 
