@@ -835,10 +835,11 @@ class URLData(OAuthDataStore):
         else:
             pattern_list = channel_item['replace_patterns_xpath']
 
-        for name in pattern_list:
-            logger.debug('Before `%r`:`%r`', name, payload)
-            payload = self.replace_payload(name, payload, channel_item.audit_repl_patt_type)
-            logger.debug('After `%r`:`%r`', name, payload)
+        if payload:
+            for name in pattern_list:
+                logger.debug('Before `%r`:`%r`', name, payload)
+                payload = self.replace_payload(name, payload, channel_item.audit_repl_patt_type)
+                logger.debug('After `%r`:`%r`', name, payload)
 
         if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.JSON_POINTER.id:
             payload = dumps(payload)
