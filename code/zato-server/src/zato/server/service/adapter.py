@@ -27,47 +27,61 @@ class JSONAdapter(Service):
     params_to_qs = False
     load_response = True
     params = {}
+    force_in_qs = []
     apply_params = ADAPTER_PARAMS.APPLY_AFTER_REQUEST
+
+    def get_call_params(self):
+        call_params = {'params':{}}
+        dyn_params = {}
+
+        for name in self.force_in_qs:
+            call_params['params'][name] = self.request.payload.pop(name, '')
+
+        if self.apply_params == ADAPTER_PARAMS.APPLY_AFTER_REQUEST:
+            dyn_params.update(self.request.payload)
+            dyn_params.update(self.params)
+        else:
+            dyn_params.update(self.params)
+            dyn_params.update(self.request.payload)
+
+        if self.params_to_qs:
+            call_params['params'].update(dyn_params)
+        else:
+            call_params['data'] = dyn_params
+
+        return call_params
 
     def handle(self):
         self.logger.debug(
             '`%s` invoked with `%r` and `%r`, `%r`, `%r`, `%r`, `%r`, `%r`', self.name, self.request.payload,
             self.outconn, self.method, self.params_to_qs, self.load_response, self.params, self.apply_params)
 
+        # Only return what was received
         if self.request.payload.pop('echo', False):
             self.response.payload = self.request.payload
+            return
 
-        elif self.request.payload.pop('dry-run', False):
-            self.response.payload = self.request.payload
+        # Parameters to invoke the remote resource with
+        call_params = self.get_call_params()
 
+        # Build a request but don't actually call it
+        if call_params.pop('dry-run', False):
+            self.response.payload = call_params
+            return
+
+        conn = self.outgoing.plain_http[self.outconn].conn
+        func = getattr(conn, self.method.lower())
+
+        response = func(self.cid, **call_params)
+
+        if self.load_response:
+            try:
+                self.response.payload = loads(response.text)
+            except ValueError, e:
+                self.logger.error('Cannot load JSON response `%s` for request `%s` to `%s`', 
+                    response.text, call_params, self.outconn)
+                raise
         else:
-            conn = self.outgoing.plain_http[self.outconn].conn
-            func = getattr(conn, self.method.lower())
-
-            params = {}
-
-            if self.apply_params == ADAPTER_PARAMS.APPLY_AFTER_REQUEST:
-                params.update(self.request.payload)
-                params.update(self.params)
-            else:
-                params.update(self.params)
-                params.update(self.request.payload)
-
-            if self.params_to_qs:
-                func_params = {'params': params}
-            else:
-                func_params = {'data': params}
-
-            response = func(self.cid, **func_params)
-
-            if self.load_response:
-                try:
-                    self.response.payload = loads(response.text)
-                except ValueError, e:
-                    self.logger.error('Cannot load JSON response `%s` for request `%s` to `%s`', 
-                        response.text, func_params, self.outconn)
-                    raise
-            else:
-                self.response.payload = response.text
+            self.response.payload = response.text
 
 # ################################################################################################################################
