@@ -905,12 +905,13 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_MSG_JSON_POINTER_CREATE(self, msg, *args):
         """ Creates a new JSON Pointer.
         """
-        self.json_pointer_store.on_broker_msg_create(msg, self.msg_ns_store.ns_map)
+        self.json_pointer_store.on_broker_msg_create(msg)
 
     def on_broker_msg_MSG_JSON_POINTER_EDIT(self, msg, *args):
         """ Updates an existing JSON Pointer.
         """
-        self.json_pointer_store.on_broker_msg_edit(msg, self.msg_ns_store.ns_map)
+        self.request_dispatcher.url_data.on_broker_msg_MSG_JSON_POINTER_EDIT(msg)
+        self.json_pointer_store.on_broker_msg_edit(msg)
 
     def on_broker_msg_MSG_JSON_POINTER_DELETE(self, msg, *args):
         """ Deletes an JSON Pointer.
@@ -920,10 +921,9 @@ class WorkerStore(BrokerMessageReceiver):
 
         # Delete the pattern from url_data's cache and let know servers that it should be deleted from the ODB as well
         for item_id, pattern_list in self.request_dispatcher.url_data.on_broker_msg_MSG_JSON_POINTER_DELETE(msg):
-            logger.warn('333 %r %r', item_id, pattern_list)
 
             # This is a bit inefficient, if harmless, because each worker in a cluster will publish it
-            # so the list of patterns will be updates that many times.
+            # so the list of patterns will be updated that many times.
 
             msg = {}
             msg['action'] = SERVICE.PUBLISH

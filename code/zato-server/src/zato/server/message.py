@@ -142,12 +142,12 @@ class BaseStore(object):
         else:
             return compiled
 
-    def on_broker_msg_create(self, msg, ns_map):
+    def on_broker_msg_create(self, msg, ns_map=None):
         """ Creates a new XPath.
         """
         self.add(msg.name, msg.value, ns_map)
 
-    def on_broker_msg_edit(self, msg, ns_map):
+    def on_broker_msg_edit(self, msg, ns_map=None):
         """ Updates an existing XPath.
         """
         with self.update_lock:
