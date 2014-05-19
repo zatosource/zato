@@ -117,9 +117,10 @@ class Error(_Incorrect):
     pass
 
 class Results(object):
-    def __init__(self, warnings, errors):
+    def __init__(self, warnings, errors, service=None):
         self.warnings = warnings
         self.errors = errors
+        self.service_name = service.get_name() if service else None
 
     def _get_ok(self):
         return not(self.warnings or self.errors)
@@ -972,6 +973,7 @@ class EnMasse(ManageCommand):
             info_dict, info_key = (def_sec_info, attrs.type) if 'sec' in def_type else (service_info, def_type)
             import_info = info_dict[info_key]
             service_class = getattr(import_info.mod, 'Edit' if is_edit else 'Create')
+            service_name = service_class.get_name()
 
             # Fetch an item from a cache of ODB object and assign its ID
             # to attrs so that the Edit service knows what to update.
@@ -990,20 +992,22 @@ class EnMasse(ManageCommand):
                 odb_item = get_odb_item(def_type_name, attrs.get('def'))
                 attrs.def_id = odb_item.id
 
-            response = self.client.invoke(service_class.get_name(), attrs)
+            response = self.client.invoke(service_name, attrs)
             if not response.ok:
-                return response.details
+                return service_name, response.details
             else:
                 verb = 'Updated' if is_edit else 'Created'
-                self.logger.info("{} object '{}' ({})".format(verb, attrs.name, item_type))
+                self.logger.info("{} object '{}' ({} {})".format(verb, attrs.name, item_type, service_name))
                 if import_info.needs_password:
 
                     password = attrs.get('password')
                     if not password:
                         if import_info.needs_password == MAYBE_NEEDS_PASSWORD:
-                            self.logger.info("Password missing but not required '{}' ({})".format(attrs.name, item_type))
+                            self.logger.info("Password missing but not required '{}' ({} {})".format(
+                                attrs.name, item_type, service_name))
                         else:
-                            return "Password missing but is required '{}' ({}) attrs '{}'".format(attrs.name, item_type, attrs_dict)
+                            return service_name, "Password missing but is required '{}' ({} {}) attrs '{}'".format(
+                                attrs.name, item_type, service_name, attrs_dict)
                     else:
                         if not is_edit:
                             attrs.id = response.data['id']
@@ -1012,9 +1016,12 @@ class EnMasse(ManageCommand):
                         request = {'id':attrs.id, 'password1':attrs.password, 'password2':attrs.password}
                         response = self.client.invoke(service_class.get_name(), request)
                         if not response.ok:
-                            return response.details
+                            return service_name, response.details
                         else:
-                            self.logger.info("Updated password '{}' ({})".format(attrs.name, item_type))
+                            self.logger.info("Updated password '{}' ({} {})".format(
+                                attrs.name, item_type, service_name))
+
+            return None, None
 
         def remove_from_import_list(item_type, name):
             for json_item_type, items in self.json_to_import.items():
@@ -1029,13 +1036,13 @@ class EnMasse(ManageCommand):
         def _import(item_type, attrs, is_edit):
             attrs_dict = attrs.toDict()
             attrs.cluster_id = self.client.cluster_id
-            error_response = import_object(item_type, attrs, is_edit)
+            service_name, error_response = import_object(item_type, attrs, is_edit)
 
             # We quit on first error encountered
             if error_response:
                 raw = (item_type, attrs_dict, error_response)
-                value = "Could not import '{}' with '{}', response was '{}'".format(
-                    attrs.name, attrs_dict, error_response)
+                value = "Could not import '{}' with '{}', response from '{}' was '{}'".format(
+                    attrs.name, attrs_dict, service_name, error_response)
                 errors.append(Error(raw, value, ERROR_COULD_NOT_IMPORT_OBJECT))
                 return Results(warnings, errors)
 
