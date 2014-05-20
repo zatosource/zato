@@ -68,6 +68,7 @@ class URLData(OAuthDataStore):
         self.xpath_store = xpath_store
 
         self.url_sec_lock = RLock()
+        self.update_lock = RLock()
         self._wss = WSSE()
         self._target_separator = MISC.SEPARATOR
 
@@ -835,10 +836,11 @@ class URLData(OAuthDataStore):
         else:
             pattern_list = channel_item['replace_patterns_xpath']
 
-        for name in pattern_list:
-            logger.debug('Before `%r`:`%r`', name, payload)
-            payload = self.replace_payload(name, payload, channel_item.audit_repl_patt_type)
-            logger.debug('After `%r`:`%r`', name, payload)
+        if payload:
+            for name in pattern_list:
+                logger.debug('Before `%r`:`%r`', name, payload)
+                payload = self.replace_payload(name, payload, channel_item.audit_repl_patt_type)
+                logger.debug('After `%r`:`%r`', name, payload)
 
         if channel_item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.JSON_POINTER.id:
             payload = dumps(payload)
@@ -897,20 +899,33 @@ class URLData(OAuthDataStore):
 
                 break
 
-    def on_broker_msg_MSG_JSON_POINTER_DELETE(self, msg):
+    def _yield_pattern_list(self, msg):
         for item in self.channel_data:
             if msg.msg_pattern_type == MSG_PATTERN_TYPE.JSON_POINTER.id:
                 pattern_list = item.replace_patterns_json_pointer 
             else:
                 pattern_list = item.replace_patterns_xpath 
 
-            try:
-                pattern_list.remove(msg.name)
-            except ValueError:
-                # It's OK, this item wasn't using that particular JSON Pointer
-                pass
-
             if pattern_list:
+                yield pattern_list
+
+    def on_broker_msg_MSG_JSON_POINTER_EDIT(self, msg):
+        with self.update_lock:
+            for pattern_list in self._yield_pattern_list(msg):
+                if msg.old_name in pattern_list:
+                    pattern_list.remove(msg.old_name)
+                    pattern_list.append(msg.name)
+
+    def on_broker_msg_MSG_JSON_POINTER_DELETE(self, msg):
+        with self.update_lock:
+            for pattern_list in self._yield_pattern_list(msg):
+
+                try:
+                    pattern_list.remove(msg.name)
+                except ValueError:
+                    # It's OK, this item wasn't using that particular JSON Pointer
+                    pass
+
                 yield item.id, pattern_list
 
 # ################################################################################################################################

@@ -46,8 +46,7 @@ class GetList(AdminService):
 
 class _CreateEdit(AdminService):
     def check_json_pointer(self, value):
-        """ Check whether the expression can be evaluated at all,
-        making sure all the namespaces needed, if any, are already defined.
+        """ Check whether the expression can be evaluated at all.
         """
         p = _JsonPointer(value)
         p.resolve({}, None)
@@ -142,6 +141,7 @@ class Edit(_CreateEdit):
             else:
                 input.action = MSG_JSON_POINTER.EDIT
                 input.old_name = old_name
+                self.request.input.msg_pattern_type = MSG_PATTERN_TYPE.JSON_POINTER.id
                 self.broker_client.publish(input)
 
                 self.response.payload.id = definition.id

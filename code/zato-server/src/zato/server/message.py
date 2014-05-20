@@ -22,7 +22,7 @@ from bunch import Bunch
 from dpath import util as dpath_util
 
 # jsonpointer
-from jsonpointer import JsonPointer, JsonPointerException
+from jsonpointer import JsonPointer, JsonPointerException, PathNotFoundException
 
 # lxml
 from lxml import etree
@@ -66,7 +66,7 @@ class MessageFacade(object):
         self._time_util = time_util
 
     def json_pointer(self, doc=None):
-        return JSONPointerAPI(doc or self._payload, self._json_pointer_store)
+        return JSONPointerAPI(doc if doc is not None else self._payload, self._json_pointer_store)
 
     def xpath(self, msg):
         return self._xpath_store
@@ -142,12 +142,12 @@ class BaseStore(object):
         else:
             return compiled
 
-    def on_broker_msg_create(self, msg, ns_map):
+    def on_broker_msg_create(self, msg, ns_map=None):
         """ Creates a new XPath.
         """
         self.add(msg.name, msg.value, ns_map)
 
-    def on_broker_msg_edit(self, msg, ns_map):
+    def on_broker_msg_edit(self, msg, ns_map=None):
         """ Updates an existing XPath.
         """
         with self.update_lock:
@@ -234,7 +234,13 @@ class JSONPointerStore(BaseStore):
             if not self.get(name, doc):
                 return doc
 
-        return self.data[name].set(doc, value, in_place)
+        pointer = self.data[name]
+
+        try:
+            return pointer.set(doc, value, in_place)
+        except PathNotFoundException:
+            dpath_util.new(doc, '/' + '/'.join(pointer.parts), value)
+            return doc
 
     def add(self, name, expr, *ignored_args, **ignored_kwargs):
         """ Adds a new JSON Pointer expression to the store.
