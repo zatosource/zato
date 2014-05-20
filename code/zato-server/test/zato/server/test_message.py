@@ -191,6 +191,29 @@ class TestJSONPointerStore(TestCase):
         self.assertEquals(value, value2)
         self.assertDictEqual(doc, {'b':value2})
 
+    def test_set_create_missing(self):
+        jps = JSONPointerStore()
+        doc = {}
+
+        name1, expr1, value1 = '1', '/a/b/c/d', rand_string()
+        name2, expr2, value2 = '2', '/a/b/c/dd', rand_string()
+        name3, expr3, value3 = '3', '/a/b/cc/d', rand_string()
+
+        jps.add(name1, expr1)
+        jps.add(name2, expr2)
+        jps.add(name3, expr3)
+
+        # Creates all the missing path parts in the empty document
+        jps.set(name1, doc, value1)
+        jps.set(name2, doc, value2)
+        jps.set(name3, doc, value3)
+
+        doc = bunchify(doc)
+
+        self.assertEquals(doc.a.b.c.d, value1)
+        self.assertEquals(doc.a.b.c.dd, value2)
+        self.assertEquals(doc.a.b.cc.d, value3)
+
 # ################################################################################################################################
 
 class TestXPathStore(TestCase):
