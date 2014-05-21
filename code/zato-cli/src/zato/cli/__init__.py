@@ -103,7 +103,7 @@ qualname=zato
 propagate=0
 
 [handler_rotating_file_handler]
-class=logging.handlers.RotatingFileHandler
+class=handlers.ConcurrentRotatingFileHandler
 formatter=default_formatter
 args=('{log_path}', 'a', 20000000, 10)
 
@@ -128,7 +128,7 @@ qualname=zato_access_log
 propagate=0
 
 [handler_rotating_file_handler_access_log]
-class=logging.handlers.RotatingFileHandler
+class=handlers.ConcurrentRotatingFileHandler
 formatter=formatter_access_log
 args=('./logs/http_access.log', 'a', 20000000, 10)
 
@@ -144,7 +144,7 @@ qualname=zato_pubsub
 propagate=0
 
 [handler_rotating_file_handler_pubsub]
-class=logging.handlers.RotatingFileHandler
+class=handlers.ConcurrentRotatingFileHandler
 formatter=formatter_pubsub
 args=('./logs/pubsub.log', 'a', 20000000, 10)
 
@@ -160,7 +160,7 @@ qualname=zato_kvdb
 propagate=0
 
 [handler_rotating_file_handler_kvdb]
-class=logging.handlers.RotatingFileHandler
+class=handlers.ConcurrentRotatingFileHandler
 formatter=formatter_kvdb
 args=('./logs/kvdb.log', 'a', 20000000, 10)
 
@@ -176,7 +176,7 @@ qualname=apscheduler.scheduler
 propagate=0
 
 [handler_rotating_file_handler_scheduler]
-class=logging.handlers.RotatingFileHandler
+class=handlers.ConcurrentRotatingFileHandler
 formatter=formatter_scheduler
 args=('./logs/scheduler.log', 'a', 20000000, 10)
 
