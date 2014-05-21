@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import gc, inspect, json, linecache, logging, os, random, re, signal, threading, traceback, sys
+import copy, gc, inspect, json, linecache, logging, os, random, re, signal, threading, traceback, sys
 from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
@@ -59,6 +59,9 @@ from gevent.socket import wait_read, wait_write
 # lxml
 from lxml import etree, objectify
 
+# Paste
+from paste.util.converters import asbool
+
 # pip
 from pip.download import is_archive_file, unpack_file_url
 
@@ -88,8 +91,8 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import DATA_FORMAT, KVDB, MISC, NoDistributionFound, scheduler_date_time_format, soap_body_path, \
-     soap_body_xpath, TRACE1, ZatoException
+from zato.common import DATA_FORMAT, KVDB, MISC, NoDistributionFound, PASSWORD_SHADOW, scheduler_date_time_format, \
+     soap_body_path, soap_body_xpath, TRACE1, ZatoException
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import IntervalBasedJob, Job, Service
 from zato.common.odb.query import _service as _service
@@ -924,3 +927,12 @@ def store_pidfile(component_dir):
     open(os.path.join(component_dir, MISC.PIDFILE), 'w').write('{}'.format(os.getpid()))
 
 # ################################################################################################################################
+
+def get_kvdb_config_for_log(config):
+    config = copy.deepcopy(config)
+    if config.shadow_password_in_logs:
+        config.password = PASSWORD_SHADOW
+    return config
+
+def has_redis_sentinels(config):
+    return asbool(config.get('use_redis_sentinels', False))

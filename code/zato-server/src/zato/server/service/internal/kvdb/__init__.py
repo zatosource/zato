@@ -9,12 +9,22 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from logging import DEBUG, getLogger
 from traceback import format_exc
+
+# gevent
+from gevent import sleep
+
+# Redis
+from redis.sentinel import MasterNotFoundError
 
 # Zato
 from zato.common import ZatoException
 from zato.common.kvdb import redis_grammar
+from zato.common.util import has_redis_sentinels
 from zato.server.service.internal import AdminService, AdminSIO
+
+kvdb_logger = getLogger('zato_kvdb')
 
 class ExecuteCommand(AdminService):
     """ Executes a command against the key/value DB.
@@ -76,6 +86,28 @@ class ExecuteCommand(AdminService):
             self.logger.error(msg)
             raise ZatoException(self.cid, msg)
 
+class LogConnectionInfo(AdminService):
+    """ Writes outs to logs information regarding current connections to KVDB.
+    """
+    def handle(self):
+        config = self.server.fs_server_config.kvdb
+        sleep_time = float(config.log_connection_info_sleep_time)
+        has_sentinels = has_redis_sentinels(config)
+
+        if kvdb_logger.isEnabledFor(DEBUG):
+            while True:
+                if has_sentinels:
+                    try:
+                        master_address = self.kvdb.conn.connection_pool.connection_kwargs['connection_pool'].get_master_address()
+                        kvdb_logger.debug(
+                            'Uses sentinels: `%s %r`, master: `%r`', has_sentinels, config.redis_sentinels, master_address)
+                    except MasterNotFoundError, e:
+                        self.logger.warn(format_exc(e))
+                        kvdb_logger.warn(format_exc(e))
+                else:
+                    kvdb_logger.debug(
+                        'Uses sentinels: `%s`, conn:`%r`', has_sentinels, self.kvdb.conn)
+                sleep(sleep_time)
 
 # The data browser will most likely be implemented in a future version
 '''
