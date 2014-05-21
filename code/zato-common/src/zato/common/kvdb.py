@@ -15,9 +15,6 @@ from logging import getLogger
 from string import punctuation
 from time import gmtime
 
-# Paste
-from paste.util.converters import asbool
-
 # PyParsing
 from pyparsing import alphanums, oneOf, OneOrMore, Optional, White, Word
 
@@ -27,6 +24,7 @@ from redis.sentinel import Sentinel
 
 # Zato
 from zato.common import KVDB as _KVDB, NONCE_STORE
+from zato.common.util import has_redis_sentinels
 
 logger = getLogger(__name__)
 
@@ -77,12 +75,13 @@ class KVDB(object):
         self.conn_class = None # Introduced so it's easier to test the class
         self.lua_container = LuaContainer()
         self.run_lua = self.lua_container.run_lua # So it's more natural to use it
+        self.has_sentinel = False
 
-    def _get_connection_class(self, has_sentinel=False):
+    def _get_connection_class(self):
         """ Returns a concrete class to create Redis connections off basing on whether we use Redis sentinels or not.
         Abstracted out to a separate method so it's easier to test the whole class in separation.
         """
-        return Sentinel if has_sentinel else StrictRedis 
+        return Sentinel if self.has_sentinel else StrictRedis
 
     def _parse_sentinels(self, item):
         if item:
@@ -97,9 +96,9 @@ class KVDB(object):
     def init(self):
         config = {}
 
-        has_sentinel = asbool(self.config.get('use_redis_sentinels', False))
+        self.has_sentinel = has_redis_sentinels(self.config)
 
-        if has_sentinel:
+        if self.has_sentinel:
             sentinels = self._parse_sentinels(self.config.get('redis_sentinels'))
 
             if not sentinels:
@@ -144,9 +143,9 @@ class KVDB(object):
         if self.config.get('errors'):
             config['errors'] = self.config.errors
 
-        self.conn_class = self._get_connection_class(has_sentinel)
+        self.conn_class = self._get_connection_class()
 
-        if has_sentinel:
+        if self.has_sentinel:
             instance = self.conn_class(config['sentinels'], config.get('password'), config.get('socket_timeout'))
             self.conn = instance.master_for(config['sentinel_master'])
         else:

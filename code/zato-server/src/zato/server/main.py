@@ -16,7 +16,7 @@ logging.setLoggerClass(ZatoLogger)
 logging.captureWarnings(True)
 
 # stdlib
-import os, ssl, sys
+import copy, os, ssl, sys
 import logging.config
 
 # gunicorn
@@ -35,7 +35,7 @@ from repoze.profile import ProfileMiddleware
 from zato.common.repo import RepoManager
 from zato.common import TRACE1
 from zato.common.util import absolutize_path, clear_locks, get_app_context, get_config, get_crypto_manager, \
-     make_psycopg_green, register_diag_handlers, store_pidfile
+     get_kvdb_config_for_log, make_psycopg_green, register_diag_handlers, store_pidfile
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
@@ -118,8 +118,13 @@ def run(base_dir, start_gunicorn_app=True):
     logging.config.fileConfig(os.path.join(repo_location, 'logging.conf'))
 
     logger = logging.getLogger(__name__)
+    kvdb_logger = logging.getLogger('zato_kvdb')
 
     config = get_config(repo_location, 'server.conf')
+
+    # Store KVDB config in logs, possibly replacing its password if told to
+    kvdb_config = get_kvdb_config_for_log(config.kvdb)
+    kvdb_logger.info('Master process config `%s`', kvdb_config)
 
     # New in 2.0 hence optional
     user_locale = config.misc.get('locale', None)
@@ -158,7 +163,9 @@ def run(base_dir, start_gunicorn_app=True):
     parallel_server.app_context = app_context
 
     # Remove all locks possibly left over by previous server instances
-    clear_locks(app_context.get_object('kvdb'), config.main.token, config.kvdb, crypto_manager.decrypt)
+    kvdb = app_context.get_object('kvdb')
+    kvdb.component = 'master-proc'
+    clear_locks(kvdb, config.main.token, config.kvdb, crypto_manager.decrypt)
 
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()

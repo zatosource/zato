@@ -84,13 +84,13 @@ def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
 
 common_logging_conf_contents = """
 [loggers]
-keys=root, zato, zato_access_log, zato_pubsub
+keys=root, zato, zato_access_log, zato_pubsub, zato_kvdb
 
 [handlers]
-keys=rotating_file_handler, rotating_file_handler_access_log, stdout_handler, rotating_file_handler_pubsub
+keys=rotating_file_handler, rotating_file_handler_access_log, stdout_handler, rotating_file_handler_pubsub, rotating_file_handler_kvdb
 
 [formatters]
-keys=default_formatter, formatter_access_log, colour_formatter, formatter_pubsub
+keys=default_formatter, formatter_access_log, colour_formatter, formatter_pubsub, formatter_kvdb
 
 [logger_root]
 level=INFO
@@ -150,6 +150,23 @@ args=('./logs/pubsub.log', 'a', 20000000, 10)
 
 [formatter_formatter_pubsub]
 format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
+
+# ######################################################################################################################
+
+[logger_zato_kvdb]
+level=INFO
+handlers=rotating_file_handler_kvdb
+qualname=zato_kvdb
+propagate=0
+
+[handler_rotating_file_handler_kvdb]
+class=logging.handlers.RotatingFileHandler
+formatter=formatter_pubsub
+args=('./logs/kvdb.log', 'a', 20000000, 10)
+
+[formatter_formatter_kvdb]
+format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
+
 """
 
 # ######################################################################################################################
