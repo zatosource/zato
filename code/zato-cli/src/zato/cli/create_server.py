@@ -108,6 +108,8 @@ errors=
 use_redis_sentinels=False
 redis_sentinels=
 redis_sentinels_master=
+shadow_password_in_logs=True
+log_connection_info_sleep_time=5 # In seconds
 
 [startup_services]
 zato.helpers.input-logger=Sample payload for a startup service
@@ -116,6 +118,7 @@ zato.pattern.delivery.dispatch-auto-resubmit=
 zato.pubsub.move-to-target-queues=
 zato.pubsub.delete-expired=
 zato.pubsub.invoke-callbacks=
+zato.kvdb.log-connection-info=
 
 [pubsub]
 move_to_target_queues_interval=3 # In seconds

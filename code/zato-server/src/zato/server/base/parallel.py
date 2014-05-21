@@ -56,7 +56,7 @@ from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, KVDB, MISC, SERVER_JOIN_S
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
      JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
 from zato.common.pubsub import PubSubAPI, RedisPubSub
-from zato.common.util import add_startup_jobs, make_psycopg_green, new_cid, register_diag_handlers
+from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, make_psycopg_green, new_cid, register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore
@@ -69,6 +69,7 @@ from zato.server.connection.zmq_.outgoing import start_connector as zmq_outgoing
 from zato.server.pickup import get_pickup
 
 logger = logging.getLogger(__name__)
+kvdb_logger = logging.getLogger('zato_kvdb')
 
 class ParallelServer(DisposableObject, BrokerMessageReceiver):
     def __init__(self):
@@ -273,10 +274,15 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.worker_store = WorkerStore(self.config, self)
 
         # Key-value DB
+        kvdb_config = get_kvdb_config_for_log(self.fs_server_config.kvdb)
+        kvdb_logger.info('Worker config `%s`', kvdb_config)
+
         self.kvdb.config = self.fs_server_config.kvdb
         self.kvdb.server = self
         self.kvdb.decrypt_func = self.crypto_manager.decrypt
         self.kvdb.init()
+
+        kvdb_logger.info('Worker config `%s`', kvdb_config)
 
         # Lua programs, both internal and user defined ones.
         for name, program in self.get_lua_programs():
