@@ -36,9 +36,13 @@ class ZatoClient(AnyServiceInvoker):
 # ################################################################################################################################
 
 def get_engine(args):
-    engine_url = odb.engine_def.format(engine=args.odb_type, username=args.odb_user,
-        password=args.odb_password, host=args.odb_host, port=args.odb_port,
-        db_name=args.odb_db_name)
+    if hasattr(args, 'sqlite_path'):
+        engine_url = odb.engine_def_sqlite.format(engine=args.odb_type, path=args.sqlite_path)
+    else:
+        engine_url = odb.engine_def.format(engine=args.odb_type, username=args.odb_user,
+            password=args.odb_password, host=args.odb_host, port=args.odb_port,
+            db_name=args.odb_db_name)
+
     return sqlalchemy.create_engine(engine_url)
 
 def get_session(engine):

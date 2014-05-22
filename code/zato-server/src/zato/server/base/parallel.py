@@ -650,15 +650,18 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         """
         odb_data = Bunch()
         odb_data.db_name = parallel_server.odb_data['db_name']
-        odb_data.engine = parallel_server.odb_data['engine']
         odb_data.extra = parallel_server.odb_data['extra']
-        odb_data.host = parallel_server.odb_data['host']
-        odb_data.port = parallel_server.odb_data['port']
-        odb_data.password = parallel_server.crypto_manager.decrypt(parallel_server.odb_data['password'])
-        odb_data.pool_size = parallel_server.odb_data['pool_size']
-        odb_data.username = parallel_server.odb_data['username']
+        odb_data.engine = parallel_server.odb_data['engine']
         odb_data.token = parallel_server.fs_server_config.main.token
         odb_data.is_odb = True
+
+        if odb_data.engine != 'sqlite':
+            odb_data.password = parallel_server.crypto_manager.decrypt(parallel_server.odb_data['password'])
+            odb_data.host = parallel_server.odb_data['host']
+            odb_data.port = parallel_server.odb_data['port']
+            odb_data.engine = parallel_server.odb_data['engine']
+            odb_data.pool_size = parallel_server.odb_data['pool_size']
+            odb_data.username = parallel_server.odb_data['username']
 
         # Note that we don't read is_active off of anywhere - ODB always must
         # be active and it's not a regular connection pool anyway.
