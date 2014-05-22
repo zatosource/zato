@@ -603,6 +603,10 @@ class HTTPException(ZatoException):
         self.status = status
         self.reason = responses[status]
 
+    def __repr__(self):
+        return '<{} at {} cid:`{}`, status:`{}`, msg:`{}`>'.format(
+            self.__class__.__name__, hex(id(self)), self.cid, self.status, self.msg)
+
 class ParsingException(ZatoException):
     """ Raised when the error is to do with parsing of documents, such as an input
     XML document.
