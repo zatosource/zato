@@ -13,7 +13,7 @@ from json import loads
 from uuid import uuid4
 
 # Zato
-from zato.common import ADAPTER_PARAMS
+from zato.common import ADAPTER_PARAMS, HTTPException
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -29,6 +29,7 @@ class JSONAdapter(Service):
     params = {}
     force_in_qs = []
     apply_params = ADAPTER_PARAMS.APPLY_AFTER_REQUEST
+    raise_error_on = ['4', '5'] # Any HTTP code starting with these prefixes will mean an exception
 
     def get_call_params(self):
         call_params = {'params':{}}
@@ -73,6 +74,10 @@ class JSONAdapter(Service):
         func = getattr(conn, self.method.lower())
 
         response = func(self.cid, **call_params)
+
+        for item in self.raise_error_on:
+            if str(response.status_code).startswith(item):
+                raise HTTPException(self.cid, response.text, response.status_code)
 
         if self.load_response:
             try:
