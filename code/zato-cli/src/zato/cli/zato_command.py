@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import argparse
 
+# ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
+import cloghandler
+
 # Zato
 from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
      ca_create_server as ca_create_server_mod, ca_create_web_admin as ca_create_web_admin_mod, \
