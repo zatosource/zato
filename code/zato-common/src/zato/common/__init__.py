@@ -30,6 +30,10 @@ from lxml.objectify import ObjectPath as _ObjectPath
 zato_namespace = 'https://zato.io/ns/20130518'
 zato_ns_map = {None: zato_namespace}
 
+# SQL ODB
+engine_def = '{engine}://{username}:{password}@{host}:{port}/{db_name}'
+engine_def_sqlite = 'sqlite:///{sqlite_path}'
+
 # Convenience access functions and constants.
 
 soapenv_namespace = 'http://schemas.xmlsoap.org/soap/envelope/'
