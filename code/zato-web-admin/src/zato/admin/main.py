@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
+import cloghandler
+
 try:
     import pymysql
     pymysql.install_as_MySQLdb()
