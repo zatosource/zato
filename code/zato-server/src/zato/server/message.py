@@ -54,22 +54,37 @@ class JSONPointerAPI(object):
     def set(self, name, value, return_on_missing=False, in_place=True):
         return self._store.set(name, self._doc, value, return_on_missing, in_place)
 
+class XPathAPI(object):
+    """ User-visible API to a store of XPath expressions.
+    """
+    def __init__(self, doc, store, ns_store):
+        self._doc = doc
+        self._store = store
+        self._ns_store = ns_store
+
+    def get(self, name, default=None):
+        return self._store.get(name, self._doc, default)
+
+    def set(self, name, value):
+        return self._store.set(name, self._doc, value)
+
 class MessageFacade(object):
     """ An object through which services access all the message-related features,
     such as namespaces, JSON Pointer or XPath.
     """
-    def __init__(self, msg_ns_store=None, json_pointer_store=None, xpath_store=None, payload=None, time_util=None):
+    def __init__(self, msg_ns_store=None, json_pointer_store=None, xpath_store=None, ns_store=None, payload=None, time_util=None):
         self._ns = msg_ns_store
         self._json_pointer_store = json_pointer_store
         self._xpath_store = xpath_store
+        self._ns_store = ns_store
         self._payload = payload
         self._time_util = time_util
 
     def json_pointer(self, doc=None):
         return JSONPointerAPI(doc if doc is not None else self._payload, self._json_pointer_store)
 
-    def xpath(self, msg):
-        return self._xpath_store
+    def xpath(self, msg=None):
+        return XPathAPI(msg if msg is not None else self._payload, self._xpath_store, self._ns_store)
 
     def mapper(self, source, target=None, *args, **kwargs):
         return Mapper(source, target, time_util=self._time_util, *args, **kwargs)
@@ -145,14 +160,14 @@ class BaseStore(object):
     def on_broker_msg_create(self, msg, ns_map=None):
         """ Creates a new XPath.
         """
-        self.add(msg.name, msg.value, ns_map)
+        self.add(msg.name, msg, ns_map)
 
     def on_broker_msg_edit(self, msg, ns_map=None):
         """ Updates an existing XPath.
         """
         with self.update_lock:
             del self.data[msg.old_name]
-            self.add(msg.name, msg.value, ns_map)
+            self.add(msg.name, msg, ns_map)
 
     def on_broker_msg_delete(self, msg, *args):
         """ Deletes an XPath.
@@ -194,11 +209,11 @@ class BaseStore(object):
 class XPathStore(BaseStore):
     """ Keeps config of and evaluates XPath expressions.
     """
-    def add(self, name, item, ns_map):
+    def add(self, name, config, ns_map):
         with self.update_lock:
-            compiled_elem = self.compile(item.value, ns_map)
+            compiled_elem = self.compile(config.value, ns_map)
             self.data[name] = Bunch()
-            self.data[name].config = item
+            self.data[name].config = config
             self.data[name].compiled_elem = compiled_elem
 
     def set(self, msg, expr_name, new_value):
@@ -242,11 +257,11 @@ class JSONPointerStore(BaseStore):
             dpath_util.new(doc, '/' + '/'.join(pointer.parts), value)
             return doc
 
-    def add(self, name, expr, *ignored_args, **ignored_kwargs):
+    def add(self, name, config, *ignored_args, **ignored_kwargs):
         """ Adds a new JSON Pointer expression to the store.
         """
         # Make sure it's valid, no exception in 'resolve' means the expression was valid.
-        pointer = JsonPointer(expr)
+        pointer = JsonPointer(config.value)
         pointer.resolve({}, None)
 
         with self.update_lock:
