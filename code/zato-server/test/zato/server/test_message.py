@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from copy import deepcopy
 from json import dumps
+from logging import getLogger
 from unittest import TestCase
 from uuid import uuid4
 
@@ -26,6 +27,8 @@ from xmltodict import parse, unparse
 # Zato
 from zato.common.test import rand_string
 from zato.server.message import JSONPointerStore, Mapper, XPathStore
+
+logger = getLogger(__name__)
 
 def config_value(value):
     return Bunch({'value':value})
@@ -220,27 +223,31 @@ class TestJSONPointerStore(TestCase):
 # ################################################################################################################################
 
 class TestXPathStore(TestCase):
-    def test_replace(self):
-        msg = """
-            <root>
-              <elem1>elem1</elem1>
-              <elem2 xmlns="just-testing">elem2</elem2>
-              <list1>
-                  <item1>item</item1>
-                  <item1>item</item1>
-                  <item2>
-                      <key>key</key>
-                  </item2>
-              </list1>
-            </root>
-        """.encode('utf-8')
+    def test_store_replace(self):
 
         expr1 = '/root/elem1'
         expr2 = '//jt:elem2'
         expr3 = '//list1/item1'
         expr4 = '//item2/key'
 
+        ns_map={'jt':'just-testing'}
+
         for idx, expr in enumerate([expr1, expr2, expr3, expr4]):
+            msg = """
+                <root>
+                  <elem1>elem1</elem1>
+                  <elem2 xmlns="just-testing">elem2</elem2>
+                  <list1>
+                      <item1>item-a</item1>
+                      <item1>item-b</item1>
+                      <item2>
+                          <key>key</key>
+                      </item2>
+                  </list1>
+                </root>
+            """.encode('utf-8')
+
+            doc = etree.fromstring(msg)
 
             new_value = uuid4().hex
 
@@ -249,15 +256,80 @@ class TestXPathStore(TestCase):
             config.value = expr
 
             xps = XPathStore()
-            xps.add(config.name, config, ns_map={'jt':'just-testing'})
+            xps.add(config.name, config, ns_map=ns_map)
 
-            replaced = xps.set(msg, config.name, new_value)
-            result = xps.invoke(replaced, config.name, False)
+            replaced = xps.set(config.name, doc, new_value, ns_map)
+            result = xps.get(config.name, doc)
 
             self.assertTrue(len(result) > 0)
 
-            for item in result:
-                self.assertEquals(item.text, new_value)
+            if isinstance(result, list):
+                for item in result:
+                    logger.warn('%r %r %r %r %s', idx, expr, item, result, etree.tostring(doc, pretty_print=1))
+                    self.assertEquals(item, new_value)
+            else:
+                self.assertEquals(result, new_value)
+
+    def test_get(self):
+        msg = """
+            <root>
+                <a>123</a>
+                <b>456</b>
+            </root>
+        """.encode('utf-8')
+
+        config1 = Bunch()
+        config1.name = '1'
+        config1.value = '//a'
+
+        config2 = Bunch()
+        config2.name = '2'
+        config2.value = '//zzz'
+        default = rand_string()
+
+        xps = XPathStore()
+        xps.add(config1.name, config1)
+        xps.add(config2.name, config2)
+
+        doc = etree.fromstring(msg)
+
+        value = xps.get('1', doc)
+        self.assertEquals(value, '123')
+
+        value = xps.get('2', doc, default)
+        self.assertEquals(value, default)
+
+    def test_set(self):
+        msg = """
+            <root>
+                <a>123</a>
+                <b>456</b>
+            </root>
+        """.encode('utf-8')
+
+        config1 = Bunch()
+        config1.name = '1'
+        config1.value = '//a'
+        new_value = rand_string()
+
+        config2 = Bunch()
+        config2.name = '2'
+        config2.value = '/zzz'
+        default = rand_string()
+
+        xps = XPathStore()
+        xps.add(config1.name, config1)
+        xps.add(config2.name, config2)
+
+        doc = etree.fromstring(msg)
+
+        xps.set('1', doc, new_value)
+        value = xps.get('1', doc)
+        self.assertEquals(value, new_value)
+
+        xps.set('2', doc, new_value)
+        value = xps.get('2', doc)
+        self.assertEquals(value, None)
 
 # ################################################################################################################################
 
