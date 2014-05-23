@@ -27,6 +27,9 @@ from xmltodict import parse, unparse
 from zato.common.test import rand_string
 from zato.server.message import JSONPointerStore, Mapper, XPathStore
 
+def config_value(value):
+    return Bunch({'value':value})
+
 # ################################################################################################################################
 
 class TestJSONPointerStore(TestCase):
@@ -34,30 +37,30 @@ class TestJSONPointerStore(TestCase):
     def test_add(self):
         jps = JSONPointerStore()
 
-        name1, expr1 = '1', '/{}/{}'.format(*rand_string(2))
-        name2, expr2 = '2', '/aaa/{}/{}'.format(*rand_string(2))
-        name3, expr3 = '3', '/aaa/{}/{}'.format(*rand_string(2))
-        name4, expr4 = '2', '/aaa/{}/{}'.format(*rand_string(2))
+        name1, expr1 = '1', config_value('/{}/{}'.format(*rand_string(2)))
+        name2, expr2 = '2', config_value('/aaa/{}/{}'.format(*rand_string(2)))
+        name3, expr3 = '3', config_value('/aaa/{}/{}'.format(*rand_string(2)))
+        name4, expr4 = '2', config_value('/aaa/{}/{}'.format(*rand_string(2)))
 
         jps.add(name1, expr1)
         self.assertIn(name1, jps.data)
-        self.assertEquals(expr1, jps.data[name1].path)
+        self.assertEquals(expr1.value, jps.data[name1].path)
 
         jps.add(name2, expr2)
         self.assertIn(name2, jps.data)
-        self.assertEquals(expr2, jps.data[name2].path)
+        self.assertEquals(expr2.value, jps.data[name2].path)
 
         jps.add(name3, expr3)
         self.assertIn(name3, jps.data)
-        self.assertEquals(expr3, jps.data[name3].path)
+        self.assertEquals(expr3.value, jps.data[name3].path)
 
         # name4's value is '2' so it overrides 2
 
         jps.add(name4, expr4)
         self.assertIn(name4, jps.data)
 
-        self.assertEquals(expr4, jps.data[name2].path)
-        self.assertEquals(expr4, jps.data[name4].path)
+        self.assertEquals(expr4.value, jps.data[name2].path)
+        self.assertEquals(expr4.value, jps.data[name4].path)
 
     def test_get(self):
         jps = JSONPointerStore()
@@ -75,20 +78,20 @@ class TestJSONPointerStore(TestCase):
             'f': 0
         }
 
-        name1, expr1 = '1', '/a'
-        name2, expr2 = '2', '/a/b'
-        name3, expr3 = '3', '/a/b/0'
-        name4, expr4 = '4', '/a/b/1'
-        name5, expr5 = '5', '/a/b/0/c'
+        name1, expr1 = '1', config_value('/a')
+        name2, expr2 = '2', config_value('/a/b')
+        name3, expr3 = '3', config_value('/a/b/0')
+        name4, expr4 = '4', config_value('/a/b/1')
+        name5, expr5 = '5', config_value('/a/b/0/c')
 
         # This will return default because the path points to None
-        name6, expr6 = '6', '/e'
+        name6, expr6 = '6', config_value('/e')
 
         # This will return default because there is no such path
-        name7, expr7 = '7', '/e/e2/e3'
+        name7, expr7 = '7', config_value('/e/e2/e3')
 
         # This will not return None because 0 is not None even though it's False in boolean sense
-        name8, expr8 = '8', '/f'
+        name8, expr8 = '8', config_value('/f')
 
         jps.add(name1, expr1)
         value = jps.get(name1, doc)
@@ -134,8 +137,8 @@ class TestJSONPointerStore(TestCase):
 
         doc = {}
 
-        name1, expr1 = '1', '/a'
-        name2, expr2 = '2', '/a/b'
+        name1, expr1 = '1', config_value('/a')
+        name2, expr2 = '2', config_value('/a/b')
 
         jps.add(name1, expr1)
         jps.add(name2, expr2)
@@ -154,7 +157,7 @@ class TestJSONPointerStore(TestCase):
         doc = {'a':'b'}
         value_random = rand_string()
 
-        name1, expr1 = '1', '/a'
+        name1, expr1 = '1', config_value('/a')
 
         jps.add(name1, expr1)
 
@@ -171,8 +174,8 @@ class TestJSONPointerStore(TestCase):
         jps = JSONPointerStore()
         doc = {}
 
-        name1, expr1 = '1', '/a'
-        name2, expr2 = '2', '/b'
+        name1, expr1 = '1', config_value('/a')
+        name2, expr2 = '2', config_value('/b')
 
         value1, value2 = rand_string(2)
         default1, default2 = rand_string(2)
@@ -195,9 +198,9 @@ class TestJSONPointerStore(TestCase):
         jps = JSONPointerStore()
         doc = {}
 
-        name1, expr1, value1 = '1', '/a/b/c/d', rand_string()
-        name2, expr2, value2 = '2', '/a/b/c/dd', rand_string()
-        name3, expr3, value3 = '3', '/a/b/cc/d', rand_string()
+        name1, expr1, value1 = '1', config_value('/a/b/c/d'), rand_string()
+        name2, expr2, value2 = '2', config_value('/a/b/c/dd'), rand_string()
+        name3, expr3, value3 = '3', config_value('/a/b/cc/d'), rand_string()
 
         jps.add(name1, expr1)
         jps.add(name2, expr2)
