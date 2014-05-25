@@ -14,8 +14,8 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
 
 # Zato
-from zato.common import TRACE1
-from zato.common.odb import engine_def
+from zato.common import engine_def, engine_def_sqlite, TRACE1
+from zato.common.odb.util import get_engine_url
 from zato_settings import * # noqa
 
 if 'DEBUG' not in globals():
@@ -119,6 +119,8 @@ if 'DATABASES' in globals():
     for name in('ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT'):
         globals()['DATABASE_{}'.format(name)] = DATABASES['default'][name]
 
+    db_data['db_type'] = db_type
+
     # Crypto
     ssl_key_file = os.path.abspath(os.path.join(config_dir, SSL_KEY_FILE))
     ssl_cert_file = os.path.abspath(os.path.join(config_dir, SSL_CERT_FILE))
@@ -126,9 +128,7 @@ if 'DATABASES' in globals():
     
     # SQLAlchemy setup
     SASession = scoped_session(sessionmaker())
-    engine = create_engine(engine_def.format(engine=db_type, username=db_data['USER'],
-        password=db_data['PASSWORD'], host=db_data['HOST'], port=db_data['PORT'],
-        db_name=db_data['NAME']))
+    engine = create_engine(get_engine_url(db_data))
     SASession.configure(bind=engine)
     
     TEMPLATE_DEBUG = True

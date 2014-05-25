@@ -23,6 +23,7 @@ from sqlalchemy import orm
 from zato.client import AnyServiceInvoker
 from zato.common import odb
 from zato.common.crypto import CryptoManager
+from zato.common.odb.util import get_engine_url
 from zato.common.util import get_config
 
 # ################################################################################################################################
@@ -36,10 +37,7 @@ class ZatoClient(AnyServiceInvoker):
 # ################################################################################################################################
 
 def get_engine(args):
-    engine_url = odb.engine_def.format(engine=args.odb_type, username=args.odb_user,
-        password=args.odb_password, host=args.odb_host, port=args.odb_port,
-        db_name=args.odb_db_name)
-    return sqlalchemy.create_engine(engine_url)
+    return sqlalchemy.create_engine(get_engine_url(args))
 
 def get_session(engine):
     session = orm.sessionmaker() # noqa
