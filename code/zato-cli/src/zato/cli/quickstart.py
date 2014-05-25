@@ -169,6 +169,7 @@ class Create(ZatoCommand):
 
     def _bunch_from_args(self, args, cluster_name):
         bunch = Bunch()
+        bunch.path = args.path
         bunch.verbose = args.verbose
         bunch.store_log = args.store_log
         bunch.store_config = args.store_config
@@ -179,11 +180,12 @@ class Create(ZatoCommand):
         bunch.odb_db_name = args.odb_db_name
         bunch.kvdb_host = args.kvdb_host
         bunch.kvdb_port = args.kvdb_port
+        bunch.sqlite_path = getattr(args, 'sqlite_path', None)
         bunch.postgresql_schema = getattr(args, 'postgresql_schema', None)
         bunch.odb_password = args.odb_password
         bunch.kvdb_password = args.kvdb_password
         bunch.cluster_name = cluster_name
-        
+
         return bunch
     
     def execute(self, args):
@@ -196,6 +198,10 @@ class Create(ZatoCommand):
         6) Web admin
         7) Scripts
         """
+
+        if args.odb_type == 'sqlite':
+            args.sqlite_path = os.path.join(args.path, 'zato.db')
+
         next_step = count(1)
         next_port = count(http_plain_server_port)
         cluster_name = getattr(args, 'cluster_name') or 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)

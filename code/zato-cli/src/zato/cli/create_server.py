@@ -249,7 +249,7 @@ class Create(ZatoCommand):
         
         engine = self._get_engine(args)
         session = self._get_session(engine)
-        
+
         cluster = session.query(Cluster).\
             filter(Cluster.name == args.cluster_name).\
             first()
@@ -304,13 +304,13 @@ class Create(ZatoCommand):
                 server_conf_template.format(
                     port=port,
                     gunicorn_workers=2,
-                    odb_db_name=args.odb_db_name,
+                    odb_db_name=args.odb_db_name or args.sqlite_path,
                     odb_engine=args.odb_type,
-                    odb_host=args.odb_host,
-                    odb_port=args.odb_port,
-                    odb_password=encrypt(args.odb_password, priv_key), 
+                    odb_host=args.odb_host or '',
+                    odb_port=args.odb_port or '',
+                    odb_password=encrypt(args.odb_password, priv_key) if args.odb_password else '',  
                     odb_pool_size=default_odb_pool_size, 
-                    odb_user=args.odb_user, 
+                    odb_user=args.odb_user or '', 
                     token=self.token, 
                     kvdb_host=args.kvdb_host,
                     kvdb_port=args.kvdb_port,

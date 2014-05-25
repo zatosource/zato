@@ -91,8 +91,8 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import DATA_FORMAT, KVDB, MISC, NoDistributionFound, PASSWORD_SHADOW, scheduler_date_time_format, \
-     soap_body_path, soap_body_xpath, TRACE1, ZatoException
+from zato.common import DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, NoDistributionFound, PASSWORD_SHADOW, \
+     scheduler_date_time_format, soap_body_path, soap_body_xpath, TRACE1, ZatoException
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import IntervalBasedJob, Job, Service
 from zato.common.odb.query import _service as _service
@@ -653,7 +653,7 @@ def add_startup_jobs(cluster_id, odb, stats_jobs):
             try:
                 service_id = get_service_by_name(session, cluster_id, item['service'])[0]
 
-                now = datetime.utcnow().strftime(scheduler_date_time_format)
+                now = datetime.utcnow()#.strftime(scheduler_date_time_format)
                 job = Job(None, item['name'], True, 'interval_based', now, item.get('extra', '').encode('utf-8'),
                           cluster_id=cluster_id, service_id=service_id)
 
@@ -936,3 +936,5 @@ def get_kvdb_config_for_log(config):
 
 def has_redis_sentinels(config):
     return asbool(config.get('use_redis_sentinels', False))
+
+# ################################################################################################################################

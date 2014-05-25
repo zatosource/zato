@@ -235,8 +235,8 @@ class ServiceStore(InitializingObject):
                         should_add = item.before_add_to_store(logger)
                         if should_add:
 
-                            timestamp = datetime.utcnow().isoformat()
-                            depl_info = deployment_info('service-store', item, timestamp, fs_location)
+                            timestamp = datetime.utcnow()#.isoformat()
+                            depl_info = deployment_info('service-store', item, timestamp.isoformat(), fs_location)
                             name = item.get_name()
                             impl_name = item.get_impl_name()
 

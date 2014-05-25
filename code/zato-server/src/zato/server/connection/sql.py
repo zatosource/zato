@@ -30,8 +30,9 @@ from validate import is_boolean, is_integer, VdtTypeError
 from springpython.context import DisposableObject
 
 # Zato
-from zato.common import Inactive, PASSWORD_SHADOW
-from zato.common.odb import engine_def, ping_queries
+from zato.common import engine_def, Inactive, PASSWORD_SHADOW
+from zato.common.odb import ping_queries
+from zato.common.odb.util import get_engine_url
 from zato.common.util import get_component_name, parse_extra_into_dict
 
 class SessionWrapper(object):
@@ -91,8 +92,12 @@ class SQLConnectionPool(object):
         extra = self.config.get('extra') # Optional, hence .get
         _extra.update(parse_extra_into_dict(extra))
 
-        engine_url = engine_def.format(**config)
-        self.engine = create_engine(engine_url, pool_size=int(config['pool_size']), **_extra)
+        # SQLite has no pools
+        if self.engine_name != 'sqlite':
+            _extra['pool_size'] = int(config.get('pool_size', 1))
+
+        engine_url = get_engine_url(config)
+        self.engine = create_engine(engine_url, **_extra)
         
         event.listen(self.engine, 'checkin', self.on_checkin)
         event.listen(self.engine, 'checkout', self.on_checkout)
