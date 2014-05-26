@@ -25,7 +25,7 @@ django_sa_mappings = {
 }
 
 cli_sa_mappings = {
-    'odb_db_name': 'db_db_name',
+    'odb_db_name': 'db_name',
     'odb_host': 'host',
     'odb_port': 'port',
     'odb_user': 'username',
@@ -36,6 +36,7 @@ cli_sa_mappings = {
 def get_engine_url(args):
     attrs = {}
     is_sqlite = False
+    is_django = 'NAME' in args
     has_get = getattr(args, 'get', False)
 
     odb_type = getattr(args, 'odb_type', None)
@@ -48,25 +49,14 @@ def get_engine_url(args):
              'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name', 'odb_type', 'ENGINE', 'NAME', 'HOST', 'USER',
              'PASSWORD', 'PORT')
 
-    # Args as attributes
-    if is_sqlite:
-        for name in names:
+    for name in names:
+        if has_get:
+            attrs[name] = args.get(name, '')
+        else:
             attrs[name] = getattr(args, name, '')
 
-    # Args as keys
-    else:
-        if attrs.get('NAME'):
-            for name in names:
-                attrs[name] = getattr(args, name, '')
-        else:
-            for name in names:
-                if has_get:
-                    attrs[name] = args.get(name, '')
-                else:
-                    attrs[name] = getattr(args, name, '')
-
     # Re-map Django params into SQLAlchemy params
-    if attrs.get('NAME'):
+    if is_django:
         for name in django_sa_mappings:
             value = attrs.get(name, ZATO_NOT_GIVEN)
             if value != ZATO_NOT_GIVEN:
@@ -83,8 +73,13 @@ def get_engine_url(args):
 
     # Re-map server ODB params into SQLAlchemy params
     if attrs['engine'] == 'sqlite':
-        attrs['sqlite_path'] = attrs.get('db_name')
+        db_name = attrs.get('db_name')
+        sqlite_path = attrs.get('sqlite_path')
 
-    engine_url = (engine_def_sqlite if is_sqlite else engine_def).format(**attrs)
+        if db_name:
+            attrs['sqlite_path'] = db_name
 
-    return engine_url
+        if sqlite_path:
+            attrs['db_name'] = sqlite_path
+
+    return (engine_def_sqlite if is_sqlite else engine_def).format(**attrs)
