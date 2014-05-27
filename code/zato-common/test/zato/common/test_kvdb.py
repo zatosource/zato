@@ -43,8 +43,8 @@ class KVDBTestCase(TestCase):
                 self.config = config
 
         class FakeKVDB(KVDB):
-            def _get_connection_class(self, has_sentinel):
-                return FakeSentinel if has_sentinel else FakeStrictRedis 
+            def _get_connection_class(self):
+                return FakeSentinel if self.has_sentinel else FakeStrictRedis
 
         def decrypt_func(password):
             return password

@@ -45,7 +45,7 @@ class _CreateEdit(AdminService):
         """ Check whether the expression can be evaluated at all,
         making sure all the namespaces needed, if any, are already defined.
         """
-        self.msg.xpath_store.compile(value, self.msg.ns.ns_map)
+        self.msg._xpath_store.compile(value, self.msg._ns_store.ns_map)
 
 class Create(_CreateEdit):
     """ Creates a new XPath.
