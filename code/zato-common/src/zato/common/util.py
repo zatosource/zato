@@ -653,7 +653,8 @@ def add_startup_jobs(cluster_id, odb, stats_jobs):
             try:
                 service_id = get_service_by_name(session, cluster_id, item['service'])[0]
 
-                now = datetime.utcnow()#.strftime(scheduler_date_time_format)
+                now = datetime.utcnow()
+
                 job = Job(None, item['name'], True, 'interval_based', now, item.get('extra', '').encode('utf-8'),
                           cluster_id=cluster_id, service_id=service_id)
 
