@@ -16,6 +16,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
+# Zato
+from zato.common.odb.util import get_engine_url
+
 logger = logging.getLogger(__name__)
 
 AMQP_DEFAULT_PRIORITY = 5
@@ -24,9 +27,7 @@ WMQ_DEFAULT_PRIORITY = 5
 # ODB version
 VERSION = 1
 
-SUPPORTED_DB_TYPES = (b'oracle', b'postgresql', b'mysql')
-
-engine_def = '{engine}://{username}:{password}@{host}:{port}/{db_name}'
+SUPPORTED_DB_TYPES = (b'oracle', b'postgresql', b'mysql', b'sqlite')
 
 # Queries to use in pinging the databases.
 ping_queries = {
@@ -38,14 +39,16 @@ ping_queries = {
     'mysql+pymysql': 'SELECT 1+1',
     'oracle': 'SELECT 1 FROM dual',
     'postgresql': 'SELECT 1',
+    'sqlite': 'SELECT 1',
 }
 
 def create_pool(crypto_manager, engine_params):
     engine_params = copy.deepcopy(engine_params)
-    engine_params['password'] = str(crypto_manager.decrypt(engine_params['password']))
-    engine_url = engine_def.format(**engine_params)
+    if engine_params['engine'] != 'sqlite':
+        engine_params['password'] = str(crypto_manager.decrypt(engine_params['password']))
+        engine_params['extra']['pool_size'] = engine_params.pop('pool_size')
 
-    engine = create_engine(engine_url, pool_size=engine_params['pool_size'], **engine_params['extra'])
+    engine = create_engine(get_engine_url(engine_params), **engine_params['extra'])
     engine.execute(ping_queries[engine_params['engine']])
 
     Session = sessionmaker()

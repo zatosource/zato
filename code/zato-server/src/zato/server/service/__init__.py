@@ -243,7 +243,8 @@ class Service(object):
             self.response.init(self.cid, self.SimpleIO, self.data_format)
 
         self.msg = MessageFacade(self.worker_store.msg_ns_store,
-            self.worker_store.json_pointer_store, self.worker_store.xpath_store, self.request.payload, self.time)
+            self.worker_store.json_pointer_store, self.worker_store.xpath_store, self.worker_store.msg_ns_store,
+            self.request.payload, self.time)
 
     def set_response_data(self, service, **kwargs):
         response = service.response.payload

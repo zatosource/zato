@@ -26,6 +26,7 @@ import sqlalchemy
 from zato import common
 from zato.cli import util as cli_util
 from zato.common import odb, util, ZATO_INFO_FILE
+from zato.common.odb import util as odb_util
 
 ################################################################################
 
@@ -54,10 +55,10 @@ default_common_name = 'localhost'
 
 common_odb_opts = [
     {'name':'odb_type', 'help':_opts_odb_type, 'choices':odb.SUPPORTED_DB_TYPES}, # noqa
-    {'name':'odb_host', 'help':_opts_odb_host},
-    {'name':'odb_port', 'help':_opts_odb_port},
-    {'name':'odb_user', 'help':_opts_odb_user},
-    {'name':'odb_db_name', 'help':_opts_odb_db_name},
+    {'name':'--odb_host', 'help':_opts_odb_host},
+    {'name':'--odb_port', 'help':_opts_odb_port},
+    {'name':'--odb_user', 'help':_opts_odb_user},
+    {'name':'--odb_db_name', 'help':_opts_odb_db_name},
     {'name':'--postgresql_schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
     {'name':'--odb_password', 'help':'ODB database password'},
 ]
@@ -359,12 +360,8 @@ class ZatoCommand(object):
             file_name=os.path.abspath(file_name)))
 
     def _get_engine(self, args):
-        engine_url = odb.engine_def.format(engine=args.odb_type, username=args.odb_user,
-            password=args.odb_password, host=args.odb_host, port=args.odb_port,
-            db_name=args.odb_db_name)
-
         connect_args = {'application_name':util.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
-        return sqlalchemy.create_engine(engine_url, connect_args=connect_args)
+        return sqlalchemy.create_engine(odb_util.get_engine_url(args), connect_args=connect_args)
 
     def _get_session(self, engine):
         return cli_util.get_session(engine)
@@ -420,6 +417,11 @@ class ZatoCommand(object):
         for opt_dict in self.opts:
             name = opt_dict['name']
             if 'password' in name or 'secret' in name:
+
+                # Don't required password on SQLite
+                if 'odb' in name and args.odb_type == 'sqlite':
+                    continue
+
                 check_password.append((name, opt_dict['help']))
         
         if check_password:
