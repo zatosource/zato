@@ -77,9 +77,9 @@
                 <td class='numbering'>&nbsp;</td>
                 <td class="impexp"><input type="checkbox" /></td>
                 <td><a href="{% url http-soap-audit-item connection transport conn_id conn_name cluster_id item.id %}">{{ item.cid }}</a></td>
-                <td>{{ item.invoke_ok|default:'(None)' }}</td>
-                <td>{{ item.auth_ok|default:'(None)' }}</td>
-                <td>{{ item.user_token }}</td>
+                <td>{{ item.invoke_ok|default:'False' }}</td>
+                <td>{{ item.auth_ok|default:'False' }}</td>
+                <td>{{ item.user_token|default:'<span class="form_hint">(None)</span>' }}</td>
                 <td>{{ item.remote_addr }}</td>
                 <td>{{ item.req_time }}</td>
                 <td>{{ item.resp_time }}</td>
