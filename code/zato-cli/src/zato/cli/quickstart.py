@@ -260,7 +260,7 @@ class Create(ZatoCommand):
             self.logger.info('[{}/{}] ODB schema already exists'.format(next_step.next(), total_steps))
         else:
             self.logger.info('[{}/{}] ODB schema created'.format(next_step.next(), total_steps))
-            
+
         #
         # 3) ODB initial data
         #

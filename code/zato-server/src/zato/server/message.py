@@ -111,7 +111,7 @@ class NamespaceStore(object):
     def on_broker_msg_MSG_NS_CREATE(self, msg, *args):
         """ Creates a new namespace.
         """
-        self.create(msg.name, msg)
+        self.add(msg.name, msg)
 
     def on_broker_msg_MSG_NS_EDIT(self, msg, *args):
         """ Updates an existing namespace.
@@ -119,7 +119,7 @@ class NamespaceStore(object):
         with self.update_lock:
             del self.data[msg.old_name]
             del self.ns_map[msg.old_name]
-        self.create(msg.name, msg)
+        self.add(msg.name, msg)
 
     def on_broker_msg_MSG_NS_DELETE(self, msg, *args):
         """ Deletes a namespace.

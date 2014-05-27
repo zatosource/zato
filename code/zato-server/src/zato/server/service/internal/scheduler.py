@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
+# dateutil
+from dateutil.parser import parse
+
 # Zato
 from zato.common import scheduler_date_time_format, SCHEDULER_JOB_TYPE, ZatoException, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
@@ -79,7 +82,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     
     extra = input.extra.encode('utf-8')
     is_active = input.is_active
-    start_date = input.start_date
+    start_date = parse(input.start_date)
     
     if action == 'create':
         job = Job(None, name, is_active, job_type, start_date, extra, cluster_id=cluster_id, service=service)
@@ -153,7 +156,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         if is_active:
             msg_action = SCHEDULER.CREATE if action == 'create' else SCHEDULER.EDIT
             msg = {'action': msg_action, 'job_type': job_type,
-                   'is_active':is_active, 'start_date':start_date,
+                   'is_active':is_active, 'start_date':start_date.isoformat(),
                    'extra':extra, 'service': service.name,
                    'name': name
                    }
