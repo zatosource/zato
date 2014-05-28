@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import loads
+from json import dumps, loads
 from uuid import uuid4
 
 # Zato
@@ -48,7 +48,7 @@ class JSONAdapter(Service):
         if self.params_to_qs:
             call_params['params'].update(dyn_params)
         else:
-            call_params['data'] = dyn_params
+            call_params['data'] = dumps(dyn_params)
 
         return call_params
 
