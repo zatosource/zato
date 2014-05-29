@@ -164,7 +164,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             self.worker_store.request_dispatcher.url_data.audit_set_response(
                 cid, payload, wsgi_environ)
 
-        headers = ((k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items())
+        headers = [(k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items()]
         start_response(wsgi_environ['zato.http.response.status'], headers)
 
         if isinstance(payload, unicode):
