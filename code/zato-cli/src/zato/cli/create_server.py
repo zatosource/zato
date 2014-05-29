@@ -143,6 +143,12 @@ unwind=False
 # All paths are either absolute or relative to the directory server.conf is in
 user=./user.conf
 
+[newrelic]
+config=
+environment=
+ignore_errors=
+log_file=
+log_level=
 """.encode('utf-8')
 
 service_sources_contents = """# Visit https://zato.io/docs for more information.
