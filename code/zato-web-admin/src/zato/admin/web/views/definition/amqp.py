@@ -43,7 +43,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat', 'cluster_id')
+        input_required = ('name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
         output_required = ('id',)
         
     def success_message(self, item):
