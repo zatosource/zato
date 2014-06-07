@@ -1,6 +1,6 @@
---- requests/sessions.py.orig	2014-05-06 18:35:36.978708169 +0200
-+++ requests/sessions.py	2014-05-06 18:37:01.818704751 +0200
-@@ -192,7 +192,7 @@
+--- requests/sessions.py.orig	2014-06-07 22:20:58.793057763 +0200
++++ requests/sessions.py	2014-06-07 22:22:51.041053241 +0200
+@@ -265,7 +265,7 @@
          'params', 'verify', 'cert', 'prefetch', 'adapters', 'stream',
          'trust_env', 'max_redirects']
  
@@ -9,7 +9,7 @@
  
          #: A case-insensitive dictionary of headers to be sent on each
          #: :class:`Request <Request>` sent from this
-@@ -240,8 +240,8 @@
+@@ -313,8 +313,8 @@
  
          # Default connection adapters.
          self.adapters = OrderedDict()
@@ -20,7 +20,7 @@
  
      def __enter__(self):
          return self
-@@ -480,6 +480,9 @@
+@@ -552,6 +552,9 @@
          # Get the appropriate adapter to use
          adapter = self.get_adapter(url=request.url)
  
@@ -29,8 +29,8 @@
 +
          # Start time (approximately) of the request
          start = datetime.utcnow()
-         # Send the request
-@@ -547,7 +550,7 @@
+ 
+@@ -631,7 +634,7 @@
              setattr(self, attr, value)
  
  
@@ -39,4 +39,3 @@
      """Returns a :class:`Session` for context-management."""
  
      return Session()
-
