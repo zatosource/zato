@@ -1,14 +1,14 @@
 """gh110 Msg paths
 
-Revision ID: 45c5b38b620e
-Revises: 4eb66feec2a6
+Revision ID: 0009_45c5b38b620e
+Revises: 0008_4eb66feec2a6
 Create Date: 2013-11-24 17:05:50.526032
 
 """
 
 # revision identifiers, used by Alembic.
-revision = '45c5b38b620e'
-down_revision = '4eb66feec2a6'
+revision = '0009_45c5b38b620e'
+down_revision = '0008_4eb66feec2a6'
 
 from alembic import op
 import sqlalchemy as sa

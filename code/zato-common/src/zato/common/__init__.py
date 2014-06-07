@@ -487,7 +487,7 @@ class PUB_SUB:
     DEFAULT_MAX_BACKLOG = 1000
 
     class CALLBACK_TYPE:
-        OUTCONN_PLAIN_HTP = 'outconn-plain-http'
+        OUTCONN_PLAIN_HTTP = 'outconn-plain-http'
         OUTCONN_SOAP = 'outconn-soap'
 
     class DELIVERY_MODE:

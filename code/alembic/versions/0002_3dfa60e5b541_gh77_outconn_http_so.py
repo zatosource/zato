@@ -1,14 +1,14 @@
 """gh77: Outconn HTTP/SOAP pool size
 
-Revision ID: 3dfa60e5b541
-Revises: 419059182a1d
+Revision ID: 0002_3dfa60e5b541
+Revises: 0001_419059182a1d
 Create Date: 2013-10-29 21:14:14.310464
 
 """
 
 # revision identifiers, used by Alembic.
-revision = '3dfa60e5b541'
-down_revision = '419059182a1d'
+revision = '0002_3dfa60e5b541'
+down_revision = '0001_419059182a1d'
 
 from alembic import op
 import sqlalchemy as sa

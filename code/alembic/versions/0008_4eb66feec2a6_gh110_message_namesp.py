@@ -1,14 +1,14 @@
 """gh110 Message namespaces
 
-Revision ID: 4eb66feec2a6
-Revises: c16781527a4
+Revision ID: 0008_4eb66feec2a6
+Revises: 0007_c16781527a4
 Create Date: 2013-11-22 13:34:36.678790
 
 """
 
 # revision identifiers, used by Alembic.
-revision = '4eb66feec2a6'
-down_revision = 'c16781527a4'
+revision = '0008_4eb66feec2a6'
+down_revision = '0007_c16781527a4'
 
 from alembic import op
 import sqlalchemy as sa

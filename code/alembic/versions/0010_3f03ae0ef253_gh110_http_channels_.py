@@ -1,14 +1,14 @@
 """gh110 HTTP channels audit
 
-Revision ID: 3f03ae0ef253
-Revises: 45c5b38b620e
+Revision ID: 0010_3f03ae0ef253
+Revises: 0009_45c5b38b620e
 Create Date: 2013-11-27 20:54:35.653604
 
 """
 
 # revision identifiers, used by Alembic.
-revision = '3f03ae0ef253'
-down_revision = '45c5b38b620e'
+revision = '0010_3f03ae0ef253'
+down_revision = '0009_45c5b38b620e'
 
 from alembic import op
 import sqlalchemy as sa
