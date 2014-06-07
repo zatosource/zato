@@ -16,7 +16,9 @@ from socket import gethostname
 # Zato
 from zato.cli import ZatoCommand, common_odb_opts
 from zato.common.odb import VERSION
-from zato.common.odb.model import Base, ZatoInstallState
+from zato.common.odb.model import AlembicRevision, Base, ZatoInstallState
+
+LATEST_ALEMBIC_REVISION = '0011_1500abb1cf3'
 
 class Create(ZatoCommand):
     """ Creates a new Zato ODB (Operational Database)
@@ -40,9 +42,13 @@ class Create(ZatoCommand):
 
         else:
             Base.metadata.create_all(engine)
+
             state = ZatoInstallState(None, VERSION, datetime.now(), gethostname(), getuser())
+            alembic_rev = AlembicRevision(LATEST_ALEMBIC_REVISION)
 
             session.add(state)
+            session.add(alembic_rev)
+
             session.commit()
 
             if show_output:

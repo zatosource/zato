@@ -42,6 +42,21 @@ def to_json(model, return_as_dict=False):
     else:
         return dumps([json])
 
+# ################################################################################################################################
+
+class AlembicRevision(Base):
+    """ A table for Alembic to store its revision IDs for SQL migrations.
+    Note that Alembic as of version 0.6.0 which is the latest one right now (Sun, Jun 8 2014)
+    doesn't declare 'version_num' to be a primary key but we need to because SQLAlchemy always needs one.
+    """
+    __tablename__ = 'alembic_version'
+    version_num = Column(String(32), primary_key=True)
+
+    def __init__(self, version_num=None):
+        self.version_num = version_num
+
+# ################################################################################################################################
+
 class ZatoInstallState(Base):
     """ Contains a row for each Zato installation belonging to that particular
     ODB. For instance, installing Zato 1.0 will add a new row, installing 1.1
