@@ -285,7 +285,7 @@ class WorkerStore(BrokerMessageReceiver):
             for config in list_value:
 
                 callback_type = PUB_SUB.CALLBACK_TYPE.OUTCONN_SOAP if bool(config.soap_version) else \
-                    PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTP
+                    PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTTP
 
                 self.pubsub.add_consumer(
                     Consumer(

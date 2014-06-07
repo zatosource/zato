@@ -1342,7 +1342,7 @@ class PubSubConsumer(Base):
 
     # Our only callback type right now is an HTTP outconn but more will come with time.
     callback_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)
-    callback_type = Column(String(20), nullable=True, default=PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTP)
+    callback_type = Column(String(20), nullable=True, default=PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTTP)
 
     topic_id = Column(Integer, ForeignKey('pub_sub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(PubSubTopic, backref=backref('consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
