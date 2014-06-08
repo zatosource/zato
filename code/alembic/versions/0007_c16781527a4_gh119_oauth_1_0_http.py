@@ -1,14 +1,14 @@
 """gh119: OAuth 1.0 HTTP channels
 
-Revision ID: c16781527a4
-Revises: 2538d53b16c8
+Revision ID: 0007_c16781527a4
+Revises: 0006_2538d53b16c8
 Create Date: 2013-11-13 14:57:36.541735
 
 """
 
 # revision identifiers, used by Alembic.
-revision = 'c16781527a4'
-down_revision = '2538d53b16c8'
+revision = '0007_c16781527a4'
+down_revision = '0006_2538d53b16c8'
 
 from alembic import op
 import sqlalchemy as sa

@@ -125,6 +125,13 @@ def run(base_dir, start_gunicorn_app=True):
 
     config = get_config(repo_location, 'server.conf')
 
+    # New in 2.0 - Start monitoring as soon as possible
+    if config.get('newrelic', {}).get('config'):
+        import newrelic.agent
+        newrelic.agent.initialize(
+            config.newrelic.config, config.newrelic.environment or None, config.newrelic.ignore_errors or None,
+            config.newrelic.log_file or None, config.newrelic.log_level or None)
+
     # Store KVDB config in logs, possibly replacing its password if told to
     kvdb_config = get_kvdb_config_for_log(config.kvdb)
     kvdb_logger.info('Master process config `%s`', kvdb_config)

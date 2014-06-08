@@ -96,7 +96,7 @@ class _CreateEdit(AdminService):
                 one()
             callback_name = cb.name
             callback_type = PUB_SUB.CALLBACK_TYPE.OUTCONN_SOAP if bool(cb.soap_version) else \
-                PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTP
+                PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTTP
         else:
             callback_name, callback_type = None, None
 

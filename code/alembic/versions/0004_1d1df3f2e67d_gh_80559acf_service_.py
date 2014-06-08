@@ -1,14 +1,14 @@
 """gh 80559acf Service.name (300)
 
-Revision ID: 1d1df3f2e67d
-Revises: 54c7cc2d0416
+Revision ID: 0004_1d1df3f2e67d
+Revises: 0003_54c7cc2d0416
 Create Date: 2013-10-29 22:18:59.663205
 
 """
 
 # revision identifiers, used by Alembic.
-revision = '1d1df3f2e67d'
-down_revision = '54c7cc2d0416'
+revision = '0004_1d1df3f2e67d'
+down_revision = '0003_54c7cc2d0416'
 
 from alembic import op
 import sqlalchemy as sa
