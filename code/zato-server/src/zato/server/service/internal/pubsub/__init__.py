@@ -65,7 +65,7 @@ class InvokeCallbacks(AdminService):
 
                 # messages is a generator so we still don't know if we had anything.
                 if msg_ids:
-                    conn = (self.outgoing.plain_http if consumer.callback_type == PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTP else \
+                    conn = (self.outgoing.plain_http if consumer.callback_type == PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTTP else \
                         self.outgoing.soap)[consumer.callback_name].conn
                     try:
                         response = conn.post(self.cid, data=dumps(request), headers={'content-type': 'application/json'})

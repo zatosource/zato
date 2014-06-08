@@ -1,13 +1,13 @@
 """gh44: Pinging Plain HTTP outgoing connection
 
-Revision ID: 419059182a1d
+Revision ID: 0001_419059182a1d
 Revises: None
 Create Date: 2013-10-29 20:27:14.040498
 
 """
 
 # revision identifiers, used by Alembic.
-revision = '419059182a1d'
+revision = '0001_419059182a1d'
 down_revision = None
 
 from alembic import op

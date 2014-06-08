@@ -1,14 +1,14 @@
 """gh43: Empty passwords in sec definitions
 
-Revision ID: 54c7cc2d0416
-Revises: 3dfa60e5b541
+Revision ID: 0003_54c7cc2d0416
+Revises: 0002_3dfa60e5b541
 Create Date: 2013-10-29 21:28:49.103205
 
 """
 
 # revision identifiers, used by Alembic.
-revision = '54c7cc2d0416'
-down_revision = '3dfa60e5b541'
+revision = '0003_54c7cc2d0416'
+down_revision = '0002_3dfa60e5b541'
 
 from alembic import op
 

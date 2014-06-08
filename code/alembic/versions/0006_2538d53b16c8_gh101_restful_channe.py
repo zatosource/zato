@@ -1,14 +1,14 @@
 """gh101 RESTful channels (URL params + priority)
 
-Revision ID: 2538d53b16c8
-Revises: 15a75c65a3a1
+Revision ID: 0006_2538d53b16c8
+Revises: 0005_15a75c65a3a1
 Create Date: 2013-10-29 23:37:49.556055
 
 """
 
 # revision identifiers, used by Alembic.
-revision = '2538d53b16c8'
-down_revision = '15a75c65a3a1'
+revision = '0006_2538d53b16c8'
+down_revision = '0005_15a75c65a3a1'
 
 from alembic import op
 import sqlalchemy as sa

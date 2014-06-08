@@ -1,14 +1,14 @@
 """Guaranteed delivery
 
-Revision ID: 15a75c65a3a1
-Revises: 1d1df3f2e67d
+Revision ID: 0005_15a75c65a3a1
+Revises: 0004_1d1df3f2e67d
 Create Date: 2013-10-29 22:26:17.288183
 
 """
 
 # revision identifiers, used by Alembic.
-revision = '15a75c65a3a1'
-down_revision = '1d1df3f2e67d'
+revision = '0005_15a75c65a3a1'
+down_revision = '0004_1d1df3f2e67d'
 
 from alembic import op
 import sqlalchemy as sa
