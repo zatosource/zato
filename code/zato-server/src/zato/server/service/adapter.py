@@ -58,7 +58,7 @@ class JSONAdapter(Service):
             self.outconn, self.method, self.params_to_qs, self.load_response, self.params, self.apply_params)
 
         # Only return what was received
-        if self.request.payload.pop('echo', False):
+        if(self.request.payload or {}).pop('echo', False):
             self.response.payload = self.request.payload
             return
 
