@@ -30,6 +30,9 @@ from bunch import Bunch
 # faulthandler
 import faulthandler
 
+# gevent
+import gevent
+
 # parse
 from parse import compile as parse_compile
 
@@ -113,6 +116,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         # The main config store
         self.config = ConfigStore()
+
+        gevent.signal(signal.SIGINT, self.destroy)
 
     def set_tls_info(self, wsgi_environ):
         wsgi_environ['zato.tls.client_cert.dict'] = wsgi_environ['gunicorn.socket'].getpeercert()
