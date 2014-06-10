@@ -620,7 +620,7 @@ class EnMasse(ManageCommand):
             errors.append(Error(raw, value, ERROR_DEF_KEY_NOT_DEFINED))
 
         defs_keys = {
-                'def': ('jms-wmq', 'amqp'),
+                'def_name': ('jms-wmq', 'amqp'),
                 'sec_def': ('plain-http', 'soap'),
             }
 
@@ -660,7 +660,12 @@ class EnMasse(ManageCommand):
 
             if not def_key:
                 raw = (info_dict, items_defs)
-                value = "Could not find a def key in {} for item_key '{}'".format(items_defs, item_key)
+
+                items_defs_pretty = []
+                for k, v in sorted(items_defs.items()):
+                    items_defs_pretty.append('`{} = {}`'.format(k, v))
+
+                value = "Could not find a def key in \n{}\nfor item_key '{}'".format('\n'.join(items_defs_pretty), item_key)
                 errors.append(Error(raw, value, ERROR_NO_DEF_KEY_IN_LOOKUP_TABLE))
 
             else:
@@ -732,7 +737,7 @@ class EnMasse(ManageCommand):
         def_sec_services_keys = sorted(def_sec_services)
 
         replace_names = {
-            'def_id': 'def',
+            'def_id': 'def_name',
         }
 
         skip_names = ('cluster_id',)
@@ -989,7 +994,7 @@ class EnMasse(ManageCommand):
 
             if def_type in('channel_amqp', 'channel_jms_wmq', 'outconn_amqp', 'outconn_jms_wmq'):
                 def_type_name = def_type.replace('channel', 'def').replace('outconn', 'def')
-                odb_item = get_odb_item(def_type_name, attrs.get('def'))
+                odb_item = get_odb_item(def_type_name, attrs.get('def_name'))
                 attrs.def_id = odb_item.id
 
             response = self.client.invoke(service_name, attrs)
