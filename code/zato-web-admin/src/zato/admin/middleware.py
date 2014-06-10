@@ -106,3 +106,10 @@ class ZatoMiddleware(object):
         resp.render()
         
         return resp
+
+    def process_response(self, req, resp):
+        try:
+            req.zato.odb.close()
+        except AttributeError:
+            pass
+        return resp

@@ -88,7 +88,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url message-xpath-create %}" method="post" id="create-form">
+                <form action="{% url 'message-xpath-create' %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -113,7 +113,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url message-xpath-edit %}" method="post" id="edit-form">
+                <form action="{% url 'message-xpath-edit' %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>

@@ -15,7 +15,7 @@ from inspect import getargspec
 from traceback import format_exc
 
 # anyjson
-from anyjson import dumps as anyjson_dumps, loads
+from json import dumps as anyjson_dumps, loads
 
 # Bunch
 from bunch import bunchify

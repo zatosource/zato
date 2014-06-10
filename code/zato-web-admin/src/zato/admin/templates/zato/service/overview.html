@@ -19,15 +19,15 @@
 
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-<h2 class="zato">Services : <a href="{% url service %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Overview</h2>
+<h2 class="zato">Services : <a href="{% url 'service' %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Overview</h2>
 
 <div class='page_prompt'>
-    <a href="{% url service-overview service.name %}?cluster={{ cluster_id }}" class="common current">Overview</a>
-    <a href="{% url service-invoker service.name %}?cluster={{ cluster_id }}" class="common">Invoker</a>
-    <a href="{% url service-source-info service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
-    <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
-    <a href="{% url service-request-response service.name %}?cluster={{ cluster_id }}" class="common">Sample request/response</a>
-    <a href="{% url service-slow-response service.name %}?cluster={{ cluster_id }}" class="common">Slow responses</a>
+    <a href="{% url 'service-overview' service.name %}?cluster={{ cluster_id }}" class="common current">Overview</a>
+    <a href="{% url 'service-invoker' service.name %}?cluster={{ cluster_id }}" class="common">Invoker</a>
+    <a href="{% url 'service-source-info' service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
+    <a href="{% url 'service-wsdl' service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
+    <a href="{% url 'service-request-response' service.name %}?cluster={{ cluster_id }}" class="common">Sample request/response</a>
+    <a href="{% url 'service-slow-response' service.name %}?cluster={{ cluster_id }}" class="common">Slow responses</a>
 </div>
 
 <div id="markup">

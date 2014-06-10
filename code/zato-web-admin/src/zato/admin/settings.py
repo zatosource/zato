@@ -57,19 +57,19 @@ ADMIN_MEDIA_PREFIX = '/media/'
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.load_template_source',
-    'django.template.loaders.app_directories.load_template_source',
+    'django.template.loaders.filesystem.Loader',
+    'django.template.loaders.app_directories.Loader'
 )
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.middleware.csrf.CsrfResponseMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'zato.admin.middleware.ZatoMiddleware',
 )
+
+STATIC_URL='admin/static/'
 
 ROOT_URLCONF = 'zato.admin.urls'
 
@@ -84,8 +84,8 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.humanize',
+    'django.contrib.staticfiles',
     'django_openid_auth',
-    'debug_toolbar',
     'django_settings',
     'zato.admin.web',
 )

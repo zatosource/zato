@@ -192,7 +192,7 @@
                             {% endcomment %}
 
                             {% ifequal connection 'channel' %}
-                                <a href="{% url http-soap-details connection transport item.id item.name cluster_id %}">{{ item.name }}</a>
+                                <a href="{% url 'http-soap-details' connection transport item.id item.name cluster_id %}">{{ item.name }}</a>
                             {% else %}
                                 {{ item.name }}
                             {% endifequal %}
@@ -203,7 +203,7 @@
                         {% endifequal %}
                         <td>{{ item.url_path }}</td>
                         {% ifequal connection 'channel' %}
-                            <td><a href="{% url service-overview item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                            <td><a href="{% url 'service-overview' item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         {% endifequal %}
                         <td>{{ item.security_name|safe }}</td>
                         {% ifequal transport 'soap' %}
@@ -257,7 +257,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url http-soap-create %}?connection={{ connection }}&amp;transport={{ transport }}" method="post" id="create-form">
+                <form action="{% url 'http-soap-create' %}?connection={{ connection }}&amp;transport={{ transport }}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
@@ -386,7 +386,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url http-soap-edit %}?connection={{ connection }}&amp;transport={{ transport }}" method="post" id="edit-form">
+                <form action="{% url 'http-soap-edit' %}?connection={{ connection }}&amp;transport={{ transport }}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
