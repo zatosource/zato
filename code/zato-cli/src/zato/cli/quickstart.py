@@ -204,8 +204,8 @@ class Create(ZatoCommand):
 
         next_step = count(1)
         next_port = count(http_plain_server_port)
-        cluster_name = getattr(args, 'cluster_name') or 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)
-        servers = int(getattr(args, 'servers') or DEFAULT_NO_SERVERS)
+        cluster_name = getattr(args, 'cluster_name', None) or 'quickstart-{}'.format(random.getrandbits(20)).zfill(7)
+        servers = int(getattr(args, 'servers', 0) or DEFAULT_NO_SERVERS)
 
         server_names = OrderedDict()
         for idx in range(1, servers+1):
