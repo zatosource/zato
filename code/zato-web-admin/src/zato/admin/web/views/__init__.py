@@ -261,7 +261,7 @@ class CreateEdit(_BaseView):
             }
             post_id = self.req.POST.get('id')
             if post_id:
-                input_dict = {'id': post_id}
+                input_dict['id'] = post_id
 
             input_dict.update(initial_input_dict)
     
