@@ -20,7 +20,7 @@ from bunch import Bunch
 from dpath import util as dpath_util
 
 # jsonpointer
-from jsonpointer import JsonPointer, PathNotFoundException
+from jsonpointer import JsonPointer, JsonPointerException
 
 # lxml
 from lxml import etree
@@ -264,11 +264,7 @@ class JSONPointerStore(BaseStore):
 
         pointer = self.data[name]
 
-        try:
-            return pointer.set(doc, value, in_place)
-        except PathNotFoundException:
-            dpath_util.new(doc, '/' + '/'.join(pointer.parts), value)
-            return doc
+        return pointer.set(doc, value, in_place)
 
     def add(self, name, config, *ignored_args, **ignored_kwargs):
         """ Adds a new JSON Pointer expression to the store.
