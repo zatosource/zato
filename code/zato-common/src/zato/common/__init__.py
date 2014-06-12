@@ -309,10 +309,16 @@ class KVDB(Attrs):
     DELIVERY_PREFIX = 'zato:delivery:'
     DELIVERY_BY_TARGET_PREFIX = '{}by-target:'.format(DELIVERY_PREFIX)
 
+# TODO: Turn it into SCHEDULER.JOB_TYPE rather than keeping it in SCHEDULER_JOB_TYPE
 class SCHEDULER_JOB_TYPE(Attrs):
     ONE_TIME = 'one_time'
     INTERVAL_BASED = 'interval_based'
     CRON_STYLE = 'cron_style'
+
+class SCHEDULER:
+    class ON_MAX_RUNS_REACHED:
+        DELETE = 'delete'
+        INACTIVATE = 'inactivate'
 
 class CHANNEL(Attrs):
     AMQP = 'amqp'

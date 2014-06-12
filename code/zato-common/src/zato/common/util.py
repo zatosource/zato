@@ -294,7 +294,7 @@ def new_cid():
     # There is nothing special in the 'K' prefix, it's just so that a CID always
     # begins with a letter and 'K' seems like something
     # that can't be taken for some other ASCII letter (e.g. is it Z or 2 etc.)
-    return 'K{0:0>27}'.format(b32_crockford_encode(getrandbits(128)))
+    return 'K{0:0>27}'.format(b32_crockford_encode(getrandbits(127) + (1 << 127)))
 
 def get_config(repo_location, config_name, bunchified=True):
     """ Returns the configuration object. Will load additional user-defined config files,
