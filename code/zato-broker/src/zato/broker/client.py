@@ -33,6 +33,11 @@ from zato.common.util import new_cid
 logger = logging.getLogger(__name__)
 
 REMOTE_END_CLOSED_SOCKET = 'Socket closed on remote end'
+FILE_DESCR_CLOSED_IN_ANOTHER_GREENLET = "Error while reading from socket: (9, 'File descriptor was closed in another greenlet')"
+
+# We use textual messages because some error may have codes whereas different won't.
+EXPECTED_CONNECTION_ERRORS = [REMOTE_END_CLOSED_SOCKET, FILE_DESCR_CLOSED_IN_ANOTHER_GREENLET]
+
 NEEDS_TMP_KEY = [v for k,v in TOPICS.items() if k in(
     MESSAGE_TYPE.TO_PARALLEL_ANY,
 )]
@@ -70,7 +75,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                             for msg in self.client.listen():
                                 self.on_message(Bunch(msg))
                     except redis.ConnectionError, e:
-                        if e.message != REMOTE_END_CLOSED_SOCKET:  # Hm, there's no error code, only the message
+                        if e.message not in EXPECTED_CONNECTION_ERRORS:  # Hm, there's no error code, only the message
                             logger.info('Caught `%s`, will quit now', e.message)
                             raise
                 except KeyboardInterrupt:

@@ -28,7 +28,7 @@ fi
 # comes to fetching the packages from repositories.
 sudo apt-get update
 
-sudo apt-get install git bzr gfortran haproxy  \
+sudo apt-get install -y git bzr gfortran haproxy  \
     libatlas-dev libatlas3gf-base libblas3gf \
     libevent-dev libgfortran3 liblapack-dev liblapack3gf \
     libpq-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack$LIBUMFPACK_VERSION \
