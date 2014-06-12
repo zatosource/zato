@@ -364,6 +364,8 @@ class ODBManager(SessionWrapper):
             session.add(cluster)
             session.commit()
 
+            self.logger.info('({}) Cleared cluster-wide singleton server flag'.format(self.server.name))
+
     def add_delivery(self, deployment_time, details, service, source_info):
         """ Adds information about the server's deployed service into the ODB.
         """
