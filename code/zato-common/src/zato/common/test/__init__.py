@@ -41,9 +41,12 @@ def rand_bool():
 def rand_datetime():
     return datetime.utcnow().isoformat() # Random in the sense of not repeating
 
-def rand_int(start=1, stop=100):
-    return randint(start, stop)
-    
+def rand_int(start=1, stop=100, count=1):
+    if count == 1:
+        return randint(start, stop)
+    else:
+        return [randint(start, stop) for x in range(count)]
+
 def rand_float(start=1.0, stop=100.0):
     return float(rand_int(start, stop))
 
