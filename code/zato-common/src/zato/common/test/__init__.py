@@ -17,6 +17,9 @@ from uuid import uuid4
 # anyjson
 from anyjson import loads
 
+# base32_crockford
+from base32_crockford import decode
+
 # Bunch
 from bunch import Bunch
 
@@ -26,12 +29,16 @@ from mock import MagicMock, Mock
 # nose
 from nose.tools import eq_
 
+# six
+from six import string_types
+
 # SQLAlchemy
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
 from zato.common.util import new_cid
 
@@ -61,6 +68,26 @@ def rand_object():
 
 def rand_date_utc():
     return datetime.utcnow() # Now is as random as any other date
+
+def is_like_cid(cid):
+    """ Raises ValueError if the cid given on input does not look like a genuine CID
+    produced by zato.common.util.new_cid
+    """
+    if not isinstance(cid, string_types):
+        raise ValueError('CID `{}` should be string like instead of `{}`'.format(cid, type(cid)))
+
+    len_given = len(cid)
+    if len_given != CID_LENGTH:
+        raise ValueError('CID `{}` should have length `{}` instead of `{}`'.format(cid, CID_LENGTH, len_given))
+
+    if not cid.startswith('K'):
+        raise ValueError('CID `{}` should start with `K`'.format(cid))
+
+    value = decode(cid[1:])
+    if(value >> 128) != 0:
+        raise ValueError('There aren\'t 128 bits in CID `{}`'.format(value))
+
+    return True
 
 class Expected(object):
     """ A container for the data a test expects the service to return.
