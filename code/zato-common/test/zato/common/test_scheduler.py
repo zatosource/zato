@@ -13,11 +13,17 @@ from datetime import datetime
 from random import choice, seed
 from unittest import TestCase
 
+# calllib
+from calllib import apply
+
 # dateutil
 from dateutil.parser import parse
 
 # gevent
 from gevent import sleep, spawn
+
+# mock
+from mock import patch
 
 # paodate
 from paodate import Delta
@@ -28,12 +34,16 @@ from zato.common.test import is_like_cid, rand_bool, rand_date_utc, rand_int, ra
 
 seed()
 
-def get_job(name=None, start_time=None, interval_in_seconds=None, max_runs=None):
+def dummy_callback(*args, **kwargs):
+    pass
+
+def get_job(name=None, start_time=None, interval_in_seconds=None, max_runs=None, callback=None):
     name = name or rand_string()
     start_time = start_time or rand_date_utc()
     interval_in_seconds = interval_in_seconds or rand_int()
+    callback = callback or dummy_callback
     
-    return Job(name, start_time, max_runs=max_runs, interval=Interval(in_seconds=interval_in_seconds))
+    return Job(name, start_time, Interval(in_seconds=interval_in_seconds), callback, max_runs=max_runs)
 
 class IntervalTestCase(TestCase):
 
@@ -57,6 +67,26 @@ class IntervalTestCase(TestCase):
             self.assertEquals(interval.in_seconds, expected)
 
 class JobTestCase(TestCase):
+
+    def check_ctx(self, ctx, job, interval_in_seconds, max_runs, idx, cb_kwargs, len_runs_ctx):
+        self.assertEquals(ctx['name'], job.name)
+        self.assertEquals(ctx['interval_in_seconds'], job.interval.in_seconds)
+        self.assertEquals(ctx['max_runs'], job.max_runs)
+        self.assertDictEqual(ctx['cb_kwargs'], job.cb_kwargs)
+
+        self.assertEquals(ctx['interval_in_seconds'], interval_in_seconds)
+        self.assertEquals(ctx['max_runs'], max_runs)
+        self.assertEquals(ctx['current_run'], idx)
+        self.assertDictEqual(ctx['cb_kwargs'], cb_kwargs)
+
+        func = self.assertFalse if idx < len_runs_ctx else self.assertTrue
+        func(ctx['max_runs_reached'])
+
+        # Don't check an exact time. Simply parse it out and confirm it's in the past.
+        start_time = parse(ctx['start_time'])
+        self.assertTrue(start_time < datetime.utcnow())
+
+        self.assertTrue(is_like_cid(ctx['cid']))
 
     def test_get_context(self):
         name = rand_string()
@@ -116,28 +146,55 @@ class JobTestCase(TestCase):
         job.callback = callback
         job.cb_kwargs = cb_kwargs
 
-        job.main_loop()
+        self.assertTrue(job.main_loop())
         sleep(0.2)
 
         len_runs_ctx = len(runs_ctx)
         self.assertEquals(len_runs_ctx, max_runs)
 
+        self.assertFalse(job.keep_running)
+        self.assertIs(job.callback, callback)
+
         for idx, ctx in enumerate(runs_ctx, 1):
-            self.assertEquals(ctx['name'], job.name)
-            self.assertEquals(ctx['interval_in_seconds'], job.interval.in_seconds)
-            self.assertEquals(ctx['max_runs'], job.max_runs)
-            self.assertDictEqual(ctx['cb_kwargs'], job.cb_kwargs)
+            self.check_ctx(ctx, job, interval_in_seconds, max_runs, idx, cb_kwargs, len_runs_ctx)
 
-            self.assertEquals(ctx['interval_in_seconds'], interval_in_seconds)
-            self.assertEquals(ctx['max_runs'], max_runs)
-            self.assertEquals(ctx['current_run'], idx)
-            self.assertDictEqual(ctx['cb_kwargs'], cb_kwargs)
+    def test_main_loop_sleep_spawn_called(self):
 
-            func = self.assertFalse if idx < len_runs_ctx else self.assertTrue
-            func(ctx['max_runs_reached'])
+        wait_time = 0.2
 
-            # Don't check an exact time. Simply parse it out and confirm it's in the past.
-            start_time = parse(ctx['start_time'])
-            self.assertTrue(start_time < datetime.utcnow())
+        sleep_history = []
+        spawn_history = []
 
-            self.assertTrue(is_like_cid(ctx['cid']))
+        def sleep(value):
+            if value != wait_time:
+                sleep_history.append(value)
+
+        def spawn(*args):
+            spawn_history.append(args)
+
+        with patch('gevent.sleep', sleep):
+            with patch('gevent.spawn', spawn):
+                interval_in_seconds = 0.01
+                max_runs = choice(range(2, 5))
+
+                cb_kwargs = {
+                    rand_string():rand_string(),
+                    rand_string():rand_string()
+                }
+
+                job = get_job(interval_in_seconds=interval_in_seconds, max_runs=max_runs)
+                job.cb_kwargs = cb_kwargs
+
+                self.assertTrue(job.main_loop())
+                sleep(0.2)
+
+                self.assertEquals(max_runs, len(sleep_history))
+                self.assertEquals(max_runs, len(spawn_history))
+
+                for item in sleep_history:
+                    self.assertEquals(interval_in_seconds, item)
+
+                for idx, (apply_func, callback, ctx_dict) in enumerate(spawn_history, 1):
+                    self.check_ctx(ctx_dict['ctx'], job, interval_in_seconds, max_runs, idx, cb_kwargs, len(spawn_history))
+                    self.assertIs(apply_func, apply)
+                    self.assertIs(callback, dummy_callback)

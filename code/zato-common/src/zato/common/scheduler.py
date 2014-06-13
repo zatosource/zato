@@ -17,7 +17,7 @@ from traceback import format_exc
 from calllib import apply
 
 # gevent
-from gevent import sleep, spawn
+import gevent # Imported directly so it can be mocked out in tests
 from gevent.lock import RLock
 
 # paodate
@@ -83,21 +83,26 @@ class Job(object):
         return ctx
 
     def main_loop(self):
+
+        _sleep = gevent.sleep
+        _spawn = gevent.spawn
+
         while self.keep_running:
-            self.current_run += 1
-
-            # Perhaps we've already been run enough times
-            if self.max_runs and self.current_run == self.max_runs:
-                self.keep_running = False
-                self.max_runs_reached = True
-
-            # Pause the greenlet for however long is needed
-            sleep(self.interval.in_seconds)
-
             try:
+                self.current_run += 1
+
+                # Perhaps we've already been executed enough times
+                if self.max_runs and self.current_run == self.max_runs:
+                    self.keep_running = False
+                    self.max_runs_reached = True
+
+                # Pause the greenlet for however long is needed
+                _sleep(self.interval.in_seconds)
+
                 # Invoke callback in a new greenlet so it doesn't block the current one.
-                spawn(apply, self.callback, {'ctx':self.get_context()})
+                _spawn(apply, self.callback, {'ctx':self.get_context()})
             except Exception, e:
+                print(format_exc(e))
                 self.logger.warn(format_exc(e))
 
         return True
@@ -105,10 +110,12 @@ class Job(object):
     def run(self):
         self.logger.info('Init job `%s`', self)
 
+        _sleep = gevent.sleep
+
         # If the job has a start time in the future, sleep until it's ready to go.
         if self.start_time:
             while self.start_time >= datetime.utcnow():
-                sleep(1)
+                _sleep(1)
 
         # OK, we're ready
         self.main_loop()
@@ -133,15 +140,17 @@ class Scheduler(object):
 
     def spawn_job(self, job):
         job.callback = self.on_job_executed
-        spawn(job.run)
+        gevent.spawn(job.run)
 
     def run(self):
+        _sleep = gevent.sleep
+
         with self.lock:
             for job in self.jobs:
                 self.spawn_job(job)
 
         while self.keep_running:
-            sleep(0.1)
+            _sleep(0.1)
 
 # ################################################################################################################################
 
