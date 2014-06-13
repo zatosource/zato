@@ -13,6 +13,9 @@ from datetime import datetime
 from logging import basicConfig, getLogger, INFO
 from traceback import format_exc
 
+# calllib
+from calllib import apply
+
 # gevent
 from gevent import sleep, spawn
 from gevent.lock import RLock
@@ -47,20 +50,17 @@ class Interval(object):
 # ################################################################################################################################
 
 class Job(object):
-    def __init__(self, name, start_time, interval, callback=None, cb_args=None, cb_kwargs=None, max_runs=None,
+    def __init__(self, name, start_time, interval, callback=None, cb_kwargs=None, max_runs=None,
                  on_max_runs_reached=SCHEDULER.ON_MAX_RUNS_REACHED.INACTIVATE):
         self.logger = getLogger(self.__class__.__name__)
         self.name = name
         self.start_time = start_time
         self.interval = interval
         self.callback = callback
-        self.cb_args = cb_args or ()
         self.cb_kwargs = cb_kwargs or {}
         self.max_runs = max_runs
         self.on_max_runs_reached = on_max_runs_reached
-        self.current_runs = 0 # Starts over each time scheduler is started
-        self.success_runs = 0
-        self.failure_runs = 0
+        self.current_run = 0 # Starts over each time scheduler is started
         self.max_runs_reached = False
         self.keep_running = True
 
@@ -73,18 +73,21 @@ class Job(object):
         ctx = {
             'cid':new_cid(),
             'interval_in_seconds': self.interval.in_seconds,
-            'start_time': self.start_time.isoformat()
+            'start_time': self.start_time.isoformat(),
+            'cb_kwargs': self.cb_kwargs
         }
-        for name in 'name', 'current_runs', 'success_runs', 'failure_runs', 'max_runs_reached':
+
+        for name in 'name', 'current_run', 'max_runs_reached', 'max_runs':
             ctx[name] = getattr(self, name)
 
         return ctx
 
     def main_loop(self):
         while self.keep_running:
+            self.current_run += 1
 
             # Perhaps we've already been run enough times
-            if self.max_runs and self.current_runs == self.max_runs:
+            if self.max_runs and self.current_run == self.max_runs:
                 self.keep_running = False
                 self.max_runs_reached = True
 
@@ -93,13 +96,11 @@ class Job(object):
 
             try:
                 # Invoke callback in a new greenlet so it doesn't block the current one.
-                spawn(self.callback, ctx=self.get_context(), *self.cb_args, **self.cb_kwargs)
-                self.success_runs += 1
+                spawn(apply, self.callback, {'ctx':self.get_context()})
             except Exception, e:
-                self.failure_runs += 1
                 self.logger.warn(format_exc(e))
-            finally:
-                self.current_runs += 1
+
+        return True
 
     def run(self):
         self.logger.info('Init job `%s`', self)
