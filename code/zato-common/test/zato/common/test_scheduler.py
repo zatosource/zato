@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from random import choice, seed
 from unittest import TestCase
 
@@ -198,3 +198,33 @@ class JobTestCase(TestCase):
                     self.check_ctx(ctx_dict['ctx'], job, interval_in_seconds, max_runs, idx, cb_kwargs, len(spawn_history))
                     self.assertIs(apply_func, apply)
                     self.assertIs(callback, dummy_callback)
+
+    def test_run(self):
+
+        data = {'main_loop_called':False, 'sleep': False}
+
+        def main_loop():
+            data['main_loop_called'] = True
+
+        def sleep(value):
+            data['sleep'] = value # Should not be executed if start_time is None
+
+        start_time1 = None
+        start_time2 = datetime.utcnow() + timedelta(seconds=1.2)
+
+        with patch('gevent.sleep', sleep):
+            for start_time in start_time1, start_time2:
+
+                job = get_job()
+                job.main_loop = main_loop
+                job.start_time = start_time
+        
+                job.run()
+        
+                self.assertTrue(data['main_loop_called'])
+
+                if start_time:
+                    self.assertEquals(data['sleep'], 1)
+
+                else:
+                    self.assertFalse(data['sleep'])

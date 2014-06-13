@@ -77,8 +77,10 @@ def is_like_cid(cid):
         raise ValueError('CID `{}` should be string like instead of `{}`'.format(cid, type(cid)))
 
     len_given = len(cid)
-    if len_given != CID_LENGTH:
-        raise ValueError('CID `{}` should have length `{}` instead of `{}`'.format(cid, CID_LENGTH, len_given))
+    len_expected = CID_LENGTH + 1 # CID_LENGTH doesn't count 'K' in
+
+    if len_given != len_expected:
+        raise ValueError('CID `{}` should have length `{}` instead of `{}`'.format(cid, len_expected, len_given))
 
     if not cid.startswith('K'):
         raise ValueError('CID `{}` should start with `K`'.format(cid))
