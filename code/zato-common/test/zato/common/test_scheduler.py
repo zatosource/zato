@@ -239,6 +239,19 @@ class JobTestCase(TestCase):
                 else:
                     self.assertFalse(data['sleep'])
 
+    def test_hash_eq(self):
+        job1 = get_job(name='a')
+        job2 = get_job(name='a')
+        job3 = get_job(name='b')
+
+        self.assertEquals(job1, job2)
+        self.assertNotEquals(job1, job3)
+        self.assertNotEquals(job2, job3)
+
+        self.assertEquals(hash(job1), hash('a'))
+        self.assertEquals(hash(job2), hash('a'))
+        self.assertEquals(hash(job3), hash('b'))
+
 class SchedulerTestCase(TestCase):
     def test_create(self):
 
