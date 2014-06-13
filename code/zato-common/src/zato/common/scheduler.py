@@ -18,7 +18,7 @@ from calllib import apply
 
 # gevent
 import gevent # Imported directly so it can be mocked out in tests
-from gevent.lock import RLock
+from gevent import lock
 
 # paodate
 from paodate import Delta
@@ -68,6 +68,12 @@ class Job(object):
 
     def __str__(self):
         return make_repr(self)
+
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        return self.name == other.name
 
     def get_context(self):
         ctx = {
@@ -125,14 +131,14 @@ class Job(object):
 class Scheduler(object):
     def __init__(self):
         self.logger = getLogger(self.__class__.__name__)
-        self.jobs = []
+        self.jobs = set()
         self.keep_running = True
-        self.lock = RLock()
+        self.lock = lock.RLock()
 
     def create(self, job):
         with self.lock:
             self.logger.info('Creating job `%s`', job)
-            self.jobs.append(job)
+            self.jobs.add(job)
             self.spawn_job(job)
 
     def on_job_executed(self, *args, **kwargs):

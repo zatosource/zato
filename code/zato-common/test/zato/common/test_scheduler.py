@@ -29,10 +29,20 @@ from mock import patch
 from paodate import Delta
 
 # Zato
-from zato.common.scheduler import Interval, Job
+from zato.common.scheduler import Interval, Job, Scheduler
 from zato.common.test import is_like_cid, rand_bool, rand_date_utc, rand_int, rand_string
 
 seed()
+
+class RLock(object):
+    def __init__(self):
+        self.called = 0
+
+    def __enter__(self):
+        self.called += 1
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return True
 
 def dummy_callback(*args, **kwargs):
     pass
@@ -228,3 +238,47 @@ class JobTestCase(TestCase):
 
                 else:
                     self.assertFalse(data['sleep'])
+
+class SchedulerTestCase(TestCase):
+    def test_create(self):
+
+        def on_job_executed(*ignored):
+            pass
+
+        def job_run(*ignored):
+            pass
+
+        def spawn(func):
+            self.assertIs(func, job_run)
+
+        lock = RLock()
+
+        scheduler = Scheduler()
+        scheduler.on_job_executed = on_job_executed
+        scheduler.lock = lock
+
+        job1 = get_job()
+        job1.run = job_run
+
+        job2 = get_job()
+        job2.run = job_run
+
+        job3 = get_job(name=job2.name)
+        job3.run = job_run
+
+        with patch('gevent.spawn', spawn):
+            scheduler.create(job1)
+            scheduler.create(job2)
+
+            # These two won't be added because scheduler.jobs is a set hashed by a job's name.
+            scheduler.create(job2)
+            scheduler.create(job3)
+
+            self.assertEquals(lock.called, 4)
+            self.assertEquals(len(scheduler.jobs), 2)
+
+            self.assertIn(job1, scheduler.jobs)
+            self.assertIn(job2, scheduler.jobs)
+
+            self.assertIs(job1.callback, scheduler.on_job_executed)
+            self.assertIs(job2.callback, scheduler.on_job_executed)
