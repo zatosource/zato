@@ -134,12 +134,20 @@ class Scheduler(object):
         self.jobs = set()
         self.keep_running = True
         self.lock = lock.RLock()
+        self.sleep_time = 0.1
+        self.iter_cb = None
+        self.iter_cb_args = ()
 
     def create(self, job):
         with self.lock:
             self.logger.info('Creating job `%s`', job)
             self.jobs.add(job)
             self.spawn_job(job)
+
+    def sleep(self, value):
+        """ A method introduced so the class is easier to mock out in tests.
+        """
+        gevent.sleep(value)
 
     def on_job_executed(self, *args, **kwargs):
         self.logger.warn('%s %s %s', 1, args, kwargs)
@@ -149,14 +157,18 @@ class Scheduler(object):
         gevent.spawn(job.run)
 
     def run(self):
-        _sleep = gevent.sleep
+        _sleep = self.sleep
+        _sleep_time = self.sleep_time
 
         with self.lock:
             for job in self.jobs:
                 self.spawn_job(job)
 
         while self.keep_running:
-            _sleep(0.1)
+            _sleep(_sleep_time)
+    
+            if self.iter_cb:
+                self.iter_cb(*self.iter_cb_args)
 
 # ################################################################################################################################
 

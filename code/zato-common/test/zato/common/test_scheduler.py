@@ -58,11 +58,13 @@ def get_job(name=None, start_time=None, interval_in_seconds=None, max_runs=None,
 class IntervalTestCase(TestCase):
 
     def test_interval_has_in_seconds(self):
+
         in_seconds = rand_int()
         interval = Interval(in_seconds=in_seconds)
         self.assertEquals(interval.in_seconds, in_seconds)
 
     def test_interval_compute_in_seconds(self):
+
         for days, hours, minutes, seconds, expected in (
             (55, 83, 69, 75, 5055015.0),
             (31, 2, 6, 23, 2685983.0),
@@ -79,6 +81,7 @@ class IntervalTestCase(TestCase):
 class JobTestCase(TestCase):
 
     def check_ctx(self, ctx, job, interval_in_seconds, max_runs, idx, cb_kwargs, len_runs_ctx):
+
         self.assertEquals(ctx['name'], job.name)
         self.assertEquals(ctx['interval_in_seconds'], job.interval.in_seconds)
         self.assertEquals(ctx['max_runs'], job.max_runs)
@@ -99,6 +102,7 @@ class JobTestCase(TestCase):
         self.assertTrue(is_like_cid(ctx['cid']))
 
     def test_get_context(self):
+
         name = rand_string()
         start_time = rand_date_utc()
         interval_in_seconds = rand_int()
@@ -253,6 +257,7 @@ class JobTestCase(TestCase):
         self.assertEquals(hash(job3), hash('b'))
 
 class SchedulerTestCase(TestCase):
+
     def test_create(self):
 
         def on_job_executed(*ignored):
@@ -264,11 +269,9 @@ class SchedulerTestCase(TestCase):
         def spawn(func):
             self.assertIs(func, job_run)
 
-        lock = RLock()
-
         scheduler = Scheduler()
         scheduler.on_job_executed = on_job_executed
-        scheduler.lock = lock
+        scheduler.lock = RLock()
 
         job1 = get_job()
         job1.run = job_run
@@ -287,7 +290,7 @@ class SchedulerTestCase(TestCase):
             scheduler.create(job2)
             scheduler.create(job3)
 
-            self.assertEquals(lock.called, 4)
+            self.assertEquals(scheduler.lock.called, 4)
             self.assertEquals(len(scheduler.jobs), 2)
 
             self.assertIn(job1, scheduler.jobs)
@@ -295,3 +298,55 @@ class SchedulerTestCase(TestCase):
 
             self.assertIs(job1.callback, scheduler.on_job_executed)
             self.assertIs(job2.callback, scheduler.on_job_executed)
+
+    def test_run(self):
+
+        test_wait_time = 0.3
+        sched_sleep_time = 0.1
+
+        data = {'sleep': [], 'jobs':set()}
+
+        def _sleep(value):
+            data['sleep'].append(value)
+
+        def spawn_job(job):
+            data['jobs'].add(job)
+
+        def job_run(self):
+            pass
+
+        def iter_cb(scheduler, stop_time):
+            """ Stop the scheduler after stop_time is reached (test_wait_time seconds from test's start time) -
+            which should plenty enough for all the jobs to be spawned and the iteration loop to 
+            """
+            if datetime.utcnow() >= stop_time:
+                scheduler.keep_running = False
+
+        job1, job2, job3 = [get_job() for x in range(3)]
+
+        job1.run = job_run
+        job2.run = job_run
+        job3.run = job_run
+
+        scheduler = Scheduler()
+        scheduler.spawn_job = spawn_job
+        scheduler.lock = RLock()
+        scheduler.sleep = _sleep
+        scheduler.sleep_time = sched_sleep_time
+        scheduler.iter_cb = iter_cb
+        scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
+
+        scheduler.create(job1)
+        scheduler.create(job2)
+        scheduler.create(job3)
+
+        scheduler.run()
+
+        self.assertEquals(3, len(data['jobs']))
+        self.assertTrue(scheduler.lock.called)
+
+        for item in data['sleep']:
+            self.assertEquals(sched_sleep_time, item)
+
+        for job in job1, job2, job3:
+            self.assertIn(job, data['jobs'])
