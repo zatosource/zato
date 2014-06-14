@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from pprint import pprint
 from traceback import format_exc
 
 # Bunch
@@ -24,7 +23,7 @@ from globre import match as globre_match
 
 # Zato
 from zato.common import NOTIF as COMMON_NOTIF, ZATO_NONE
-from zato.common.broker_message import MESSAGE_TYPE, NOTIF
+from zato.common.broker_message import NOTIF
 from zato.common.odb.model import NotificationOpenStackSwift, Service
 from zato.common.odb.query import notif_cloud_openstack_swift_list
 from zato.server.service import Bool, ForceType, Int

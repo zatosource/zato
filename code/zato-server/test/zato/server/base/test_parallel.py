@@ -9,13 +9,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import httplib, os
+import httplib
 from ast import literal_eval
 from cStringIO import StringIO
 from datetime import datetime
 from hashlib import sha1
 from json import loads
-from pprint import pprint
 from unittest import TestCase
 
 # Bunch
@@ -28,7 +27,7 @@ from mock import patch
 from nose.tools import eq_, ok_
 
 # pytz
-from pytz import timezone, UTC
+from pytz import UTC
 
 # tzlocal
 from tzlocal import get_localzone
@@ -37,7 +36,7 @@ from tzlocal import get_localzone
 from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, DATA_FORMAT, ZATO_NONE
 from zato.common.broker_message import CHANNEL as CHANNEL_BROKER_MESSAGE, SERVICE
 from zato.common.test import rand_int, rand_string
-from zato.common.util import make_repr, new_cid, utcnow
+from zato.common.util import new_cid, utcnow
 from zato.server.connection.http_soap.channel import RequestDispatcher
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.base.parallel import ParallelServer
@@ -423,9 +422,6 @@ class HTTPAccessLogTestCase(TestCase):
                 def __init__(self):
                     self.msg = None
                     self.cluster = Bunch(id=cluster_id)
-
-                def session(self):
-                    return fake_session
 
             class FakeURLData(URLData):
                 def __init__(self):

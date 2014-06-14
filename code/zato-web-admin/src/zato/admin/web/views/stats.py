@@ -579,7 +579,7 @@ def settings(req):
             if not name.startswith('scheduler'):
                 _settings[name] = Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name])
     else:
-        form, defaults, _settings = None, None, {}
+        defaults, _settings = None, {}
 
     return_data = {
         'zato_clusters': req.zato.clusters,

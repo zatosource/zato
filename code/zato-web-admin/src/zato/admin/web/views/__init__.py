@@ -146,6 +146,7 @@ def get_security_id_from_select(params, prefix, field_name='security'):
         _, security_id = security.split('/')
     else:
         _, security_id = ZATO_NONE, ZATO_NONE
+        _ = _ # So pyflakes doesn't complain
 
     return security_id
 

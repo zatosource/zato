@@ -14,7 +14,7 @@ from django import forms
 # Zato
 from zato.admin.web.forms import add_security_select, ChooseClusterForm as _ChooseClusterForm, DataFormatForm
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
+     MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY
 
 params_priority = (
     (PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG, 'URL over message'),

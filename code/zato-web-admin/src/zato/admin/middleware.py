@@ -9,13 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Django
-from django.conf import settings
-from django.contrib.auth.views import login
 from django.core.urlresolvers import resolve
-from django.http import HttpResponseRedirect
-
-# Django-OpenID
-from django_openid_auth.views import login_complete
 
 # Bunch
 from bunch import Bunch

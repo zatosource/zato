@@ -14,7 +14,7 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
 
 # Zato
-from zato.common import engine_def, engine_def_sqlite, TRACE1
+from zato.common import TRACE1
 from zato.common.odb.util import get_engine_url
 from zato_settings import * # noqa
 
