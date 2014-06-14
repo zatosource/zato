@@ -12,11 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # regardless if they're backed by an SQL database or not.
 
 # stdlib
-from json import loads
 from logging import getLogger
-
-# memory_profiler
-from memory_profiler import profile
 
 # Zato
 from zato.common.util import make_repr

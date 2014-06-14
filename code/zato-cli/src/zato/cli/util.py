@@ -76,7 +76,6 @@ def get_server_client_auth(config, repo_dir):
     """
     session = get_odb_session_from_server_config(config, get_crypto_manager_from_server_config(config, repo_dir))
 
-    auth = None
     with closing(session) as session:
         cluster = session.query(odb.model.Server).\
             filter(odb.model.Server.token == config.main.token).\
