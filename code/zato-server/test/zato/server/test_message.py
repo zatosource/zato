@@ -9,20 +9,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from copy import deepcopy
-from json import dumps
 from logging import getLogger
 from unittest import TestCase
 from uuid import uuid4
 
 # Bunch
-from bunch import Bunch, bunchify, unbunchify
+from bunch import Bunch, bunchify
 
 # lxml
 from lxml import etree
-
-# xmldict
-from xmltodict import parse, unparse
 
 # Zato
 from zato.common.test import rand_string
@@ -258,7 +253,7 @@ class TestXPathStore(TestCase):
             xps = XPathStore()
             xps.add(config.name, config, ns_map=ns_map)
 
-            replaced = xps.set(config.name, doc, new_value, ns_map)
+            xps.set(config.name, doc, new_value, ns_map)
             result = xps.get(config.name, doc)
 
             self.assertTrue(len(result) > 0)
@@ -315,7 +310,6 @@ class TestXPathStore(TestCase):
         config2 = Bunch()
         config2.name = '2'
         config2.value = '/zzz'
-        default = rand_string()
 
         xps = XPathStore()
         xps.add(config1.name, config1)

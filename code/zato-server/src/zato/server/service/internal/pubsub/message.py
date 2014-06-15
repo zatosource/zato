@@ -8,13 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from contextlib import closing
-from traceback import format_exc
-
 # Zato
 from zato.common import PUB_SUB
-from zato.common.pubsub import Message
 from zato.server.service import AsIs, Int, UTC
 from zato.server.service.internal import AdminService, AdminSIO
 

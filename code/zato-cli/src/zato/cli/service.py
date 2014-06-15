@@ -10,17 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
-from contextlib import closing
-
-# Bunch
-from bunch import Bunch
 
 # Zato
 from zato.cli import ZatoCommand
 from zato.client import AnyServiceInvoker, CID_NO_CLIP, DEFAULT_MAX_CID_REPR, DEFAULT_MAX_RESPONSE_REPR
 from zato.common import BROKER, DATA_FORMAT, ZATO_INFO_FILE
-from zato.common.crypto import CryptoManager
-from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, Server
 from zato.common.util import get_config
 
 class Invoke(ZatoCommand):

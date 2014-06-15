@@ -14,9 +14,6 @@ from operator import attrgetter
 # Django
 from django import forms
 
-# Zato
-from zato.common import PUB_SUB
-
 class CreateForm(forms.Form):
     cluster_id = forms.CharField(widget=forms.HiddenInput())
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
