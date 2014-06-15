@@ -25,9 +25,6 @@ from gevent import sleep, spawn
 # mock
 from mock import patch
 
-# paodate
-from paodate import Delta
-
 # Zato
 from zato.common.scheduler import Interval, Job, Scheduler
 from zato.common.test import is_like_cid, rand_bool, rand_date_utc, rand_int, rand_string
@@ -47,13 +44,13 @@ class RLock(object):
 def dummy_callback(*args, **kwargs):
     pass
 
-def get_job(name=None, start_time=None, interval_in_seconds=None, max_runs=None, callback=None):
+def get_job(name=None, interval_in_seconds=None, start_time=None, max_runs=None, callback=None):
     name = name or rand_string()
-    start_time = start_time or rand_date_utc()
     interval_in_seconds = interval_in_seconds or rand_int()
+    start_time = start_time or rand_date_utc()
     callback = callback or dummy_callback
     
-    return Job(name, start_time, Interval(in_seconds=interval_in_seconds), callback, max_runs=max_runs)
+    return Job(name, Interval(in_seconds=interval_in_seconds), start_time, callback, max_runs=max_runs)
 
 class IntervalTestCase(TestCase):
 
@@ -97,7 +94,8 @@ class JobTestCase(TestCase):
 
         # Don't check an exact time. Simply parse it out and confirm it's in the past.
         start_time = parse(ctx['start_time'])
-        self.assertTrue(start_time < datetime.utcnow())
+        now = datetime.utcnow()
+        self.assertTrue(start_time < now, 'start_time:`{}` is not less than now:`{}`'.format(start_time, now))
 
         self.assertTrue(is_like_cid(ctx['cid']))
 
@@ -110,7 +108,8 @@ class JobTestCase(TestCase):
         current_run, max_runs = rand_int(count=2)
         cb_kwargs = {rand_string():rand_string()}
 
-        job = Job(name, start_time, cb_kwargs=cb_kwargs, interval=Interval(in_seconds=interval_in_seconds))
+        job = Job(name, cb_kwargs=cb_kwargs, interval=Interval(in_seconds=interval_in_seconds))
+        job.start_time = start_time
         job.current_run = current_run
         job.max_runs = max_runs
         job.max_runs_reached = max_runs_reached
@@ -198,6 +197,7 @@ class JobTestCase(TestCase):
 
                 job = get_job(interval_in_seconds=interval_in_seconds, max_runs=max_runs)
                 job.cb_kwargs = cb_kwargs
+                job.start_time = datetime.utcnow()
 
                 self.assertTrue(job.main_loop())
                 sleep(0.2)
@@ -223,25 +223,18 @@ class JobTestCase(TestCase):
         def sleep(value):
             data['sleep'] = value # Should not be executed if start_time is None
 
-        start_time1 = None
-        start_time2 = datetime.utcnow() + timedelta(seconds=1.2)
+        start_time = datetime.utcnow() + timedelta(seconds=1.2)
 
         with patch('gevent.sleep', sleep):
-            for start_time in start_time1, start_time2:
 
-                job = get_job()
-                job.main_loop = main_loop
-                job.start_time = start_time
-        
-                job.run()
-        
-                self.assertTrue(data['main_loop_called'])
-
-                if start_time:
-                    self.assertEquals(data['sleep'], 1)
-
-                else:
-                    self.assertFalse(data['sleep'])
+            job = get_job()
+            job.main_loop = main_loop
+            job.start_time = start_time
+    
+            job.run()
+    
+            self.assertTrue(data['main_loop_called'])
+            self.assertEquals(data['sleep'], 1)
 
     def test_hash_eq(self):
         job1 = get_job(name='a')
@@ -255,6 +248,58 @@ class JobTestCase(TestCase):
         self.assertEquals(hash(job1), hash('a'))
         self.assertEquals(hash(job2), hash('a'))
         self.assertEquals(hash(job3), hash('b'))
+
+class JobStartTimeTestCase(TestCase):
+    def setUp(self):
+
+        class _datetime(datetime):
+        
+            class datetime:
+                @staticmethod
+                def utcnow():
+                    return self.now
+        
+            @staticmethod
+            def timedelta(*args, **kwargs):
+                return timedelta(*args, **kwargs)
+
+        self._datetime = _datetime
+
+    def test_get_start_time_result_in_future(self):
+
+        start_time = parse('2017-03-20 19:11:37')
+        self.now = parse('2017-03-21 15:11:37')
+        expected = parse('2017-03-21 19:11:37')
+        interval = 1 # Days
+        data = {'start_time':[], 'now':[]}
+
+        def wait_iter_cb(start_time, now, *ignored):
+            data['start_time'].append(start_time)
+            data['now'].append(now)
+
+        with patch('zato.common.scheduler.datetime', self._datetime):
+
+            interval = Interval(days=interval)
+            job = Job(rand_string(), start_time=start_time, interval=interval)
+            job.wait_iter_cb = wait_iter_cb
+            job.wait_sleep_time = 0.1
+    
+            self.assertEquals(job.start_time, expected)
+
+            spawn(job.run)
+            sleep(0.2)
+
+            len_start_time = len(data['start_time'])
+            len_now = len(data['now'])
+
+            self.assertNotEquals(len_start_time, 0)
+            self.assertNotEquals(len_now, 0)
+
+            for item in data['start_time']:
+                self.assertEquals(expected, item)
+
+            for item in data['now']:
+                self.assertEquals(self.now, item)
 
 class SchedulerTestCase(TestCase):
 

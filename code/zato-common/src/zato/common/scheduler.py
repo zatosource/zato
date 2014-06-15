@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from datetime import datetime
+import datetime
 from logging import basicConfig, getLogger, INFO
 from traceback import format_exc
 
@@ -39,23 +39,23 @@ class Interval(object):
         self.hours = hours
         self.minutes = minutes
         self.seconds = seconds
-        self.in_seconds = in_seconds or self.compute_in_seconds()
+        self.in_seconds = in_seconds or self.get_in_seconds()
 
     def __str__(self):
         return make_repr(self)
 
-    def compute_in_seconds(self):
+    def get_in_seconds(self):
         return Delta(days=self.days, hours=self.hours, minutes=self.minutes, seconds=self.seconds).total_seconds
 
 # ################################################################################################################################
 
 class Job(object):
-    def __init__(self, name, start_time, interval, callback=None, cb_kwargs=None, max_runs=None,
+    def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, max_runs=None,
                  on_max_runs_reached=SCHEDULER.ON_MAX_RUNS_REACHED.INACTIVATE):
         self.logger = getLogger(self.__class__.__name__)
         self.name = name
-        self.start_time = start_time
         self.interval = interval
+        self.start_time = self.get_start_time(start_time) if start_time else None
         self.callback = callback
         self.cb_kwargs = cb_kwargs or {}
         self.max_runs = max_runs
@@ -63,6 +63,10 @@ class Job(object):
         self.current_run = 0 # Starts over each time scheduler is started
         self.max_runs_reached = False
         self.keep_running = True
+
+        self.wait_sleep_time = 1
+        self.wait_iter_cb = None
+        self.wait_iter_cb_args = ()
 
         # TODO: Add skip_days, skip_hours and skip_dates
 
@@ -74,6 +78,47 @@ class Job(object):
 
     def __eq__(self, other):
         return self.name == other.name
+
+    def get_start_time(self, start_time):
+        """ Converts initial start time to the time the job should be invoked next.
+
+        For instance, assume the scheduler has just been started. Given this job config ..
+
+        - start_time: 2019-11-23 13:15:17
+        - interval: 90 seconds
+        - now: 2019-11-23 17:32:44
+
+        .. a basic approach is to add 90 seconds to now and schedule the job. This would even
+        work for jobs that have very short intervals when no one usually cares that much if a job
+        is 15 seconds off or not.
+
+        However, consider this series of events ..
+
+        - start_time: 2019-11-23 13:00:00
+        - interval: 86400 seconds (1 day)
+        - the job is started
+        - at 2019-11-23 21:15:00 the scheduler is stopped and started again
+
+        .. now we don't want for the scheduler to start the job at 21:15:00 with an interval of one day,
+        the job should rather wait till the next day so that the computed start_time should in fact be 2019-11-24 13:00:00.
+        """
+
+        # We have a couple of scenarios to handle
+        #
+        # 1) start_time + interval > now
+        # 2) start_time + interval <= now
+        #
+        # Scenario 1) is quick - start_time simply becomes start_time + interval
+        #
+        # Scenario 2) means we dub last_run_time the last occurrence of the job before now.
+        # The new start_time is now last_run_time + interval and will be either now or in the future.
+
+        first_run_time = start_time + datetime.timedelta(seconds=self.interval.in_seconds)
+
+        if first_run_time > datetime.datetime.utcnow():
+            return first_run_time
+        else:
+            raise NotImplementedError()
 
     def get_context(self):
         ctx = {
@@ -116,12 +161,19 @@ class Job(object):
     def run(self):
         self.logger.info('Init job `%s`', self)
 
+        _utcnow = datetime.datetime.utcnow
         _sleep = gevent.sleep
 
         # If the job has a start time in the future, sleep until it's ready to go.
-        if self.start_time:
-            while self.start_time >= datetime.utcnow():
-                _sleep(1)
+        now = _utcnow()
+
+        while self.start_time > now:
+            _sleep(self.wait_sleep_time)
+
+            if self.wait_iter_cb:
+                self.wait_iter_cb(self.start_time, now, *self.wait_iter_cb_args)
+
+            now = _utcnow()
 
         # OK, we're ready
         self.main_loop()
@@ -180,4 +232,4 @@ if __name__ == '__main__':
     sched.run()
 
     while True:
-        sleep(1)
+        gevent.sleep(1)
