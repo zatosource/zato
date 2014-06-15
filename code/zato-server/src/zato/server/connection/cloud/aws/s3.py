@@ -10,22 +10,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import getLogger
-from traceback import format_exc
 
 # Boto
 from boto.s3.bucket import Bucket
 from boto.s3.connection import S3Connection
 from boto.s3.key import Key
 
-# gevent
-from gevent.lock import RLock
-
-# python-swiftclient
-from swiftclient.client import Connection
-
 # Zato
 from zato.common import ZATO_NONE
-from zato.common.util import parse_extra_into_dict
 from zato.server.connection.queue import Wrapper
 
 logger = getLogger(__name__)

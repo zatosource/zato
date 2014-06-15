@@ -14,15 +14,12 @@ from contextlib import closing
 # anyjson
 from traceback import format_exc
 
-# datetutil
-from dateutil.parser import parse
-
 # Zato
-from zato.common import BATCH_DEFAULTS, DELIVERY_STATE, INVOCATION_TARGET, KVDB, ZatoException
-from zato.common.odb.model import DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, OutgoingWMQ, to_json
+from zato.common import BATCH_DEFAULTS, INVOCATION_TARGET
+from zato.common.odb.model import DeliveryDefinitionBase
 from zato.common.odb.query import delivery_definition_list, out_jms_wmq, out_jms_wmq_by_name
-from zato.common.util import datetime_to_seconds, validate_input_dict
-from zato.server.service import AsIs, Boolean, CSV, Integer, UTC
+from zato.common.util import validate_input_dict
+from zato.server.service import UTC
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.pattern.delivery import target_def_class
 

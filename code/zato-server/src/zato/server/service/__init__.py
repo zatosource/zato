@@ -10,45 +10,31 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from copy import deepcopy
 from datetime import datetime
-from httplib import OK
-from itertools import chain
 from sys import maxint
 from traceback import format_exc
 
 # anyjson
-from anyjson import dumps, loads
+from anyjson import dumps
 
 # Arrow
 import arrow
 
 # Bunch
-from bunch import Bunch, bunchify
-
-# Django
-from django.http import QueryDict
+from bunch import bunchify
 
 # lxml
-from lxml import etree
 from lxml.etree import _Element as EtreeElement
-from lxml.objectify import deannotate, Element, ElementMaker, ObjectifiedElement
-
-# Paste
-from paste.util.converters import asbool
+from lxml.objectify import ObjectifiedElement
 
 # retools
-from retools.lock import Lock, LockTimeout as RetoolsLockTimeout
-
-# SQLAlchemy
-from sqlalchemy.util import NamedTuple
+from retools.lock import Lock
 
 # Zato
-from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, \
-     path, SIMPLE_IO, URL_TYPE, ZatoException, ZATO_NONE, ZATO_OK
+from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.nav import DictNav, ListNav
-from zato.common.util import uncamelify, make_repr, new_cid, payload_from_request, service_name_from_impl
+from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl
 from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -59,6 +45,20 @@ from zato.server.service.reqresp import Cloud, Outgoing, Request, Response
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, Float, ForceType, Integer, List, ListOfDicts, Nested, \
      Unicode, UTC
+
+# So pyflakes doesn't complain about names being imported but not used
+AsIs
+CSV
+Boolean
+Dict
+Float
+ForceType
+Integer
+List
+ListOfDicts
+Nested
+Unicode
+UTC
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +124,7 @@ class TimeUtil(object):
             value = str(value) if isinstance(value, unicode) else value
             from_ = str(from_) if isinstance(from_, unicode) else from_
             return arrow.get(value, from_).format(to)
-        except Exception, e:
+        except Exception:
             logger.error('Could not reformat value:`%s` from:`%s` to:`%s`',
                 value, from_, to)
             raise

@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_security_select
 from zato.common import NOTIF
 
 class CreateForm(forms.Form):

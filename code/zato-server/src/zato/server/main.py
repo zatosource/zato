@@ -16,7 +16,7 @@ logging.setLoggerClass(ZatoLogger)
 logging.captureWarnings(True)
 
 # stdlib
-import copy, os, ssl, sys
+import os, ssl, sys
 import logging.config
 
 # gunicorn

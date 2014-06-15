@@ -23,14 +23,11 @@ from time import time
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, scoped_session
 
-# validate
-from validate import is_boolean, is_integer, VdtTypeError
-
 # Spring Python
 from springpython.context import DisposableObject
 
 # Zato
-from zato.common import engine_def, Inactive, PASSWORD_SHADOW
+from zato.common import Inactive, PASSWORD_SHADOW
 from zato.common.odb import ping_queries
 from zato.common.odb.util import get_engine_url
 from zato.common.util import get_component_name, parse_extra_into_dict

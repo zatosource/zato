@@ -9,11 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import csv
 from contextlib import closing
 from datetime import datetime, timedelta
-from json import dumps, loads
-from logging import getLogger, DEBUG
+from json import dumps
+from logging import getLogger
 from sys import maxint
 from traceback import format_exc
 
@@ -22,9 +21,6 @@ from bunch import Bunch
 
 # gevent
 from gevent import sleep, spawn_later
-
-# Paste
-from paste.util.converters import asbool
 
 # retools
 from retools.lock import Lock
@@ -42,8 +38,7 @@ from zato.common.broker_message import SERVICE
 from zato.common.odb.model import Delivery, DeliveryDefinitionBase, DeliveryDefinitionOutconnWMQ, \
      DeliveryHistory, DeliveryPayload
 from zato.common.odb.query import delivery, delivery_list
-from zato.common.util import datetime_to_seconds, new_cid
-from zato.redis_paginator import ZSetPaginator
+from zato.common.util import new_cid
 
 NULL_BASIC_DATA = {
     'last_updated_utc':None,
@@ -349,7 +344,7 @@ class DeliveryStore(object):
             try:
                 delivery = session.merge(self.get_delivery(item.task_id))
                 payload = delivery.payload.payload
-            except orm_exc.NoResultFound, e:
+            except orm_exc.NoResultFound:
                 # Apparently the delivery was deleted since the last time we were scheduled to run
                 self.logger.info('Stopping [%s] (NoResultFound->True)', item.log_name)
                 return

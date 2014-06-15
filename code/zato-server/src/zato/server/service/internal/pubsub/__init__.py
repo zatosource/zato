@@ -16,9 +16,6 @@ from traceback import format_exc
 # gevent
 from gevent import sleep, spawn
 
-# requests
-import requests
-
 # Zato
 from zato.common import PUB_SUB
 from zato.server.service.internal import AdminService

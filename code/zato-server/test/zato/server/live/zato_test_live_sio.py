@@ -21,7 +21,7 @@ from nose.tools import eq_
 
 # Zato
 from zato.common.odb.model import Cluster, Service as ServiceModel
-from zato.server.service import AsIs, Boolean, CSV, Dict, Float, ForceType, Integer, List, ListOfDicts, Service, Unicode, UTC
+from zato.server.service import AsIs, CSV, Dict, Float, ForceType, Integer, List, ListOfDicts, Service, Unicode, UTC
 
 logger = getLogger(__name__)
 

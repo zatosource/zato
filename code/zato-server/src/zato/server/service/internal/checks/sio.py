@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from nose.tools import eq_
 
 # Zato
-from zato.common import DATA_FORMAT
 from zato.server.service import AsIs, CSV, Bool, Boolean, Dict, Int, Integer, List, ListOfDicts, Nested, Service, Unicode, UTC
 from zato.server.service.internal.checks import CheckService
 
