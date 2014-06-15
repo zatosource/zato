@@ -53,19 +53,21 @@ class Interval(object):
 # ################################################################################################################################
 
 class Job(object):
-    def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, max_runs=None,
-                 on_max_runs_reached=SCHEDULER.ON_MAX_RUNS_REACHED.INACTIVATE):
+    def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, repeats=None,
+                 on_repeats_reached=SCHEDULER.ON_MAX_RUNS_REACHED.INACTIVATE):
         self.logger = getLogger(self.__class__.__name__)
         self.name = name
         self.interval = interval
-        self.start_time = self.get_start_time(start_time) if start_time else None
         self.callback = callback
         self.cb_kwargs = cb_kwargs or {}
-        self.max_runs = max_runs
-        self.on_max_runs_reached = on_max_runs_reached
+        self.repeats = repeats
+        self.on_repeats_reached = on_repeats_reached
         self.current_run = 0 # Starts over each time scheduler is started
-        self.max_runs_reached = False
+        self.repeats_reached = False
+        self.repeats_reached_at = None
         self.keep_running = True
+
+        self.start_time = self.get_start_time(start_time) if start_time else None
 
         self.wait_sleep_time = 1
         self.wait_iter_cb = None
@@ -106,15 +108,15 @@ class Job(object):
         the job should rather wait till the next day so that the computed start_time should in fact be 2019-11-24 13:00:00.
         """
 
-        # We have a couple of scenarios to handle
+        # We have several scenarios to handle assuming that first_run_time = start_time + interval
         #
-        # 1) start_time + interval > now
-        # 2) start_time + interval <= now
+        # 1)  first_run_time > now
+        # 2a) first_run_time <= now and first_run_time + interval_in_seconds > now
+        # 2b) first_run_time <= now and first_run_time + interval_in_seconds <= now
         #
-        # Scenario 1) is quick - start_time simply becomes start_time + interval
-        #
-        # Scenario 2) means we dub last_run_time the last occurrence of the job before now.
-        # The new start_time is now last_run_time + interval and will be either now or in the future.
+        # 1) is quick - start_time simply becomes first_run_time
+        # 2a) means we already seen some executions of this job and there's still at least one in the future
+        # 2b) means we already seen some executions of this job and it won't be run in the future anymore
 
         now = datetime.datetime.utcnow()
         interval = datetime.timedelta(seconds=self.interval.in_seconds)
@@ -124,9 +126,17 @@ class Job(object):
         if first_run_time > now:
             return first_run_time
         else:
-            runs = rrule(SECONDLY, interval=int(self.interval.in_seconds), dtstart=start_time)
+            runs = rrule(SECONDLY, interval=int(self.interval.in_seconds), dtstart=start_time, count=self.repeats)
             last_run_time = runs.before(now)
-            return last_run_time + interval
+            next_run_time = last_run_time + interval
+
+            if next_run_time > now:
+                return next_run_time
+            else:
+                # We must have already run out of iterations
+                self.repeats_reached = True
+                self.repeats_reached_at = next_run_time
+                self.keep_running = False
 
     def get_context(self):
         ctx = {
@@ -136,7 +146,7 @@ class Job(object):
             'cb_kwargs': self.cb_kwargs
         }
 
-        for name in 'name', 'current_run', 'max_runs_reached', 'max_runs':
+        for name in 'name', 'current_run', 'repeats_reached', 'repeats':
             ctx[name] = getattr(self, name)
 
         return ctx
@@ -151,9 +161,9 @@ class Job(object):
                 self.current_run += 1
 
                 # Perhaps we've already been executed enough times
-                if self.max_runs and self.current_run == self.max_runs:
+                if self.repeats and self.current_run == self.repeats:
                     self.keep_running = False
-                    self.max_runs_reached = True
+                    self.repeats_reached = True
 
                 # Pause the greenlet for however long is needed
                 _sleep(self.interval.in_seconds)
@@ -198,11 +208,13 @@ class Scheduler(object):
         self.iter_cb = None
         self.iter_cb_args = ()
 
-    def create(self, job):
+    def create(self, job, spawn=True):
         with self.lock:
             self.logger.info('Creating job `%s`', job)
             self.jobs.add(job)
-            self.spawn_job(job)
+
+            if spawn:
+                self.spawn_job(job)
 
     def sleep(self, value):
         """ A method introduced so the class is easier to mock out in tests.
@@ -222,10 +234,19 @@ class Scheduler(object):
 
         with self.lock:
             for job in self.jobs:
-                self.spawn_job(job)
+                if job.repeats_reached:
+                    self.logger.info('Job `%s` already reached max runs count (%s UTC)', job.name, job.repeats_reached_at)
+                else:
+                    self.spawn_job(job)
 
         while self.keep_running:
             _sleep(_sleep_time)
     
             if self.iter_cb:
                 self.iter_cb(*self.iter_cb_args)
+
+if __name__ == '__main__':
+    job = Job('a', start_time=datetime.datetime.utcnow(), interval=Interval(seconds=1), repeats=2)
+    scheduler = Scheduler()
+    scheduler.create(job, False)
+    scheduler.run()
