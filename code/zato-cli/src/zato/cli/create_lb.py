@@ -5,20 +5,15 @@ Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
+
 from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+import os, uuid
 
 # Zato
 from zato.cli import common_logging_conf_contents, ZatoCommand
 from zato.common.defaults import http_plain_server_port
-
-# bzrlib
-from bzrlib.lazy_import import lazy_import
-
-lazy_import(globals(), """
-    # quicli
-    import os, uuid
-    
-""")
 
 config_template = """{
   "haproxy_command": "haproxy",

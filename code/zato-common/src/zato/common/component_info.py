@@ -13,14 +13,11 @@ import os
 from anyjson import dumps as json_dumps, loads as json_loads
 from cStringIO import StringIO
 from datetime import datetime
-from itertools import chain, groupby
-from operator import attrgetter, itemgetter
-
-# pyaml
-import pyaml
+from itertools import groupby
+from operator import attrgetter
 
 # psutil
-from psutil import CONN_LISTEN, Process
+from psutil import Process
 
 # PyYAML
 import yaml

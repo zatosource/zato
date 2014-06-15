@@ -56,12 +56,10 @@ class RedisPubSubTestCase(RedisPubSubCommonTestCase):
             expected_mime_type = kwargs['mime_type']
             expected_priority = kwargs['priority']
             expected_expiration = kwargs['expiration']
-            expected_msg_id = kwargs['msg_id']
         else:
             expected_mime_type = PUB_SUB.DEFAULT_MIME_TYPE
             expected_priority = PUB_SUB.DEFAULT_PRIORITY
             expected_expiration = PUB_SUB.DEFAULT_EXPIRATION
-            expected_msg_id = None
 
         payload, topic, producer, ctx = self._publish_move(**kwargs)
 

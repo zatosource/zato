@@ -162,7 +162,7 @@ class JSONSIOResponse(_Response):
     def init(self):
         try:
             json = loads(self.inner.text)
-        except ValueError, e:
+        except ValueError:
             msg = 'inner.status_code `{}`, JSON parsing error `{}`'.format(self.inner.status_code, self.inner.text)
             self.logger.error(msg)
             raise ValueError(msg)

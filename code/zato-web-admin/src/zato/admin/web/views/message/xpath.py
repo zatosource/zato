@@ -13,7 +13,7 @@ import logging
 
 # Zato
 from zato.admin.web.forms.message.xpath import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.odb.model import XPath
 
 logger = logging.getLogger(__name__)

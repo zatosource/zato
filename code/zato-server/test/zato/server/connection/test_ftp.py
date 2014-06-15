@@ -18,7 +18,7 @@ from bunch import Bunch
 from mock import patch
 
 # Zato
-from zato.common.test import rand_float, rand_string
+from zato.common.test import rand_string
 from zato.server.connection.ftp import FTPStore
 
 class TestFTP(TestCase):

@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from cStringIO import StringIO
 from unittest import TestCase
 from uuid import uuid4
 
@@ -320,7 +319,6 @@ class URLDataTestCase(TestCase):
         ud.basic_auth_config = {}
 
         name1 = uuid4().hex
-        name2 = uuid4().hex
 
         value1 = uuid4().hex
         value2 = uuid4().hex
@@ -744,7 +742,6 @@ class URLDataTestCase(TestCase):
         ud.ntlm_config = {}
 
         name1 = uuid4().hex
-        name2 = uuid4().hex
 
         value1 = uuid4().hex
         value2 = uuid4().hex
@@ -929,7 +926,6 @@ class URLDataTestCase(TestCase):
         ud.tech_acc_config = {}
 
         name1 = uuid4().hex
-        name2 = uuid4().hex
 
         value1 = uuid4().hex
         value2 = uuid4().hex
@@ -1114,7 +1110,6 @@ class URLDataTestCase(TestCase):
         ud.wss_config = {}
 
         name1 = uuid4().hex
-        name2 = uuid4().hex
 
         value1 = uuid4().hex
         value2 = uuid4().hex

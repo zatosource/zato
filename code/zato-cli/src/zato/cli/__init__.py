@@ -7,13 +7,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import shutil
+import json, shutil
 from cStringIO import StringIO
 from getpass import getpass, getuser
 from socket import gethostname
 
 # stdlib
-import glob, json, logging, os, subprocess, sys, tempfile, time
+import logging, os, sys, tempfile, time
 from datetime import datetime
 
 # Importing

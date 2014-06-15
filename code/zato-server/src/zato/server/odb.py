@@ -17,17 +17,14 @@ from traceback import format_exc
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
-# Paste
-from paste.util.multidict import MultiDict
 
 # Bunch
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common import DEPLOYMENT_STATUS, MISC, SEC_DEF_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsJSONPointer, HTTSOAPAuditReplacePatternsXPath, OAuth, Server, Service, \
-     TechnicalAccount, XPathSecurity, WSSDefinition
+     HTTPSOAP, HTTSOAPAudit, OAuth, Server, Service, TechnicalAccount, XPathSecurity, WSSDefinition
 from zato.common.odb import query
 from zato.common.util import current_host
 from zato.server.connection.sql import SessionWrapper
@@ -364,13 +361,16 @@ class ODBManager(SessionWrapper):
             session.add(cluster)
             session.commit()
 
+            self.logger.info('({}) Cleared cluster-wide singleton server flag'.format(self.server.name))
+
     def add_delivery(self, deployment_time, details, service, source_info):
         """ Adds information about the server's deployed service into the ODB.
         """
-        with closing(self.session()) as session:
-            dp = DeliveryPayload
-            session.add(dp)
-            session.commit()
+        raise NotImplementedError()
+        #with closing(self.session()) as session:
+        #    dp = DeliveryPayload
+        #    session.add(dp)
+        #    session.commit()
 
 # ################################################################################################################################
 
