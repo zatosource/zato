@@ -44,13 +44,13 @@ class RLock(object):
 def dummy_callback(*args, **kwargs):
     pass
 
-def get_job(name=None, interval_in_seconds=None, start_time=None, max_runs=None, callback=None):
+def get_job(name=None, interval_in_seconds=None, start_time=None, repeats=None, callback=None):
     name = name or rand_string()
     interval_in_seconds = interval_in_seconds or rand_int()
     start_time = start_time or rand_date_utc()
     callback = callback or dummy_callback
     
-    return Job(name, Interval(in_seconds=interval_in_seconds), start_time, callback, max_runs=max_runs)
+    return Job(name, Interval(in_seconds=interval_in_seconds), start_time, callback, repeats=repeats)
 
 class IntervalTestCase(TestCase):
 
@@ -77,20 +77,20 @@ class IntervalTestCase(TestCase):
 
 class JobTestCase(TestCase):
 
-    def check_ctx(self, ctx, job, interval_in_seconds, max_runs, idx, cb_kwargs, len_runs_ctx):
+    def check_ctx(self, ctx, job, interval_in_seconds, repeats, idx, cb_kwargs, len_runs_ctx):
 
         self.assertEquals(ctx['name'], job.name)
         self.assertEquals(ctx['interval_in_seconds'], job.interval.in_seconds)
-        self.assertEquals(ctx['max_runs'], job.max_runs)
+        self.assertEquals(ctx['repeats'], job.repeats)
         self.assertDictEqual(ctx['cb_kwargs'], job.cb_kwargs)
 
         self.assertEquals(ctx['interval_in_seconds'], interval_in_seconds)
-        self.assertEquals(ctx['max_runs'], max_runs)
+        self.assertEquals(ctx['repeats'], repeats)
         self.assertEquals(ctx['current_run'], idx)
         self.assertDictEqual(ctx['cb_kwargs'], cb_kwargs)
 
         func = self.assertFalse if idx < len_runs_ctx else self.assertTrue
-        func(ctx['max_runs_reached'])
+        func(ctx['repeats_reached'])
 
         # Don't check an exact time. Simply parse it out and confirm it's in the past.
         start_time = parse(ctx['start_time'])
@@ -104,15 +104,15 @@ class JobTestCase(TestCase):
         name = rand_string()
         start_time = rand_date_utc()
         interval_in_seconds = rand_int()
-        max_runs_reached = rand_bool()
-        current_run, max_runs = rand_int(count=2)
+        repeats_reached = rand_bool()
+        current_run, repeats = rand_int(count=2)
         cb_kwargs = {rand_string():rand_string()}
 
         job = Job(name, cb_kwargs=cb_kwargs, interval=Interval(in_seconds=interval_in_seconds))
         job.start_time = start_time
         job.current_run = current_run
-        job.max_runs = max_runs
-        job.max_runs_reached = max_runs_reached
+        job.repeats = repeats
+        job.repeats_reached = repeats_reached
 
         ctx = job.get_context()
         cid = ctx.pop('cid')
@@ -124,8 +124,8 @@ class JobTestCase(TestCase):
             'interval_in_seconds': interval_in_seconds,
             'name': name,
             'start_time': start_time.isoformat(),
-            'max_runs': max_runs,
-            'max_runs_reached': max_runs_reached,
+            'repeats': repeats,
+            'repeats_reached': repeats_reached,
             'cb_kwargs': cb_kwargs
         })
 
@@ -136,11 +136,11 @@ class JobTestCase(TestCase):
 
         self.assertTrue(job.main_loop())
         self.assertFalse(job.keep_running)
-        self.assertFalse(job.max_runs_reached)
+        self.assertFalse(job.repeats_reached)
 
         self.assertEquals(job.current_run, 0)
 
-    def test_main_loop_max_runs_reached(self):
+    def test_main_loop_repeats_reached(self):
 
         runs_ctx = []
 
@@ -153,9 +153,9 @@ class JobTestCase(TestCase):
         }
 
         interval_in_seconds = 0.01
-        max_runs = choice(range(2, 5))
+        repeats = choice(range(2, 5))
 
-        job = get_job(interval_in_seconds=interval_in_seconds, max_runs=max_runs)
+        job = get_job(interval_in_seconds=interval_in_seconds, repeats=repeats)
         job.callback = callback
         job.cb_kwargs = cb_kwargs
 
@@ -163,13 +163,13 @@ class JobTestCase(TestCase):
         sleep(0.2)
 
         len_runs_ctx = len(runs_ctx)
-        self.assertEquals(len_runs_ctx, max_runs)
+        self.assertEquals(len_runs_ctx, repeats)
 
         self.assertFalse(job.keep_running)
         self.assertIs(job.callback, callback)
 
         for idx, ctx in enumerate(runs_ctx, 1):
-            self.check_ctx(ctx, job, interval_in_seconds, max_runs, idx, cb_kwargs, len_runs_ctx)
+            self.check_ctx(ctx, job, interval_in_seconds, repeats, idx, cb_kwargs, len_runs_ctx)
 
     def test_main_loop_sleep_spawn_called(self):
 
@@ -188,28 +188,28 @@ class JobTestCase(TestCase):
         with patch('gevent.sleep', sleep):
             with patch('gevent.spawn', spawn):
                 interval_in_seconds = 0.01
-                max_runs = choice(range(2, 5))
+                repeats = choice(range(2, 5))
 
                 cb_kwargs = {
                     rand_string():rand_string(),
                     rand_string():rand_string()
                 }
 
-                job = get_job(interval_in_seconds=interval_in_seconds, max_runs=max_runs)
+                job = get_job(interval_in_seconds=interval_in_seconds, repeats=repeats)
                 job.cb_kwargs = cb_kwargs
                 job.start_time = datetime.utcnow()
 
                 self.assertTrue(job.main_loop())
                 sleep(0.2)
 
-                self.assertEquals(max_runs, len(sleep_history))
-                self.assertEquals(max_runs, len(spawn_history))
+                self.assertEquals(repeats, len(sleep_history))
+                self.assertEquals(repeats, len(spawn_history))
 
                 for item in sleep_history:
                     self.assertEquals(interval_in_seconds, item)
 
                 for idx, (apply_func, callback, ctx_dict) in enumerate(spawn_history, 1):
-                    self.check_ctx(ctx_dict['ctx'], job, interval_in_seconds, max_runs, idx, cb_kwargs, len(spawn_history))
+                    self.check_ctx(ctx_dict['ctx'], job, interval_in_seconds, repeats, idx, cb_kwargs, len(spawn_history))
                     self.assertIs(apply_func, apply)
                     self.assertIs(callback, dummy_callback)
 
@@ -286,6 +286,9 @@ class JobStartTimeTestCase(TestCase):
             job.wait_sleep_time = 0.1
     
             self.assertEquals(job.start_time, expected)
+            self.assertTrue(job.keep_running)
+            self.assertFalse(job.repeats_reached)
+            self.assertIs(job.repeats_reached_at, None)
 
             spawn(job.run)
             sleep(0.2)
@@ -308,9 +311,26 @@ class JobStartTimeTestCase(TestCase):
     def test_get_start_time_last_run_in_past_next_run_in_future(self):
         self.check_get_start_time('2017-03-20 19:11:37', '2017-03-21 21:11:37', '2017-03-22 19:11:37')
 
+    def test_get_start_time_last_run_in_past_next_run_in_past(self):
+        start_time = parse('2017-03-20 19:11:23')
+        self.now = parse('2019-05-13 05:19:37')
+        expected = parse('2017-04-04 19:11:23')
+
+        with patch('zato.common.scheduler.datetime', self._datetime):
+
+            interval = Interval(days=3)
+            job = Job(rand_string(), start_time=start_time, interval=interval, repeats=5)
+
+            self.assertFalse(job.keep_running)
+            self.assertTrue(job.repeats_reached)
+            self.assertEquals(job.repeats_reached_at, expected)
+            self.assertFalse(job.start_time)
+
 class SchedulerTestCase(TestCase):
 
     def test_create(self):
+
+        data = {'spawned_jobs': 0}
 
         def on_job_executed(*ignored):
             pass
@@ -320,6 +340,7 @@ class SchedulerTestCase(TestCase):
 
         def spawn(func):
             self.assertIs(func, job_run)
+            data['spawned_jobs'] += 1
 
         scheduler = Scheduler()
         scheduler.on_job_executed = on_job_executed
@@ -334,6 +355,9 @@ class SchedulerTestCase(TestCase):
         job3 = get_job(name=job2.name)
         job3.run = job_run
 
+        job4 = get_job()
+        job5 = get_job()
+
         with patch('gevent.spawn', spawn):
             scheduler.create(job1)
             scheduler.create(job2)
@@ -342,14 +366,20 @@ class SchedulerTestCase(TestCase):
             scheduler.create(job2)
             scheduler.create(job3)
 
-            self.assertEquals(scheduler.lock.called, 4)
-            self.assertEquals(len(scheduler.jobs), 2)
+            # The first one won't be spawned but the second one will.
+            scheduler.create(job4, spawn=False)
+            scheduler.create(job5, spawn=True)
+
+            self.assertEquals(scheduler.lock.called, 6)
+            self.assertEquals(len(scheduler.jobs), 4)
 
             self.assertIn(job1, scheduler.jobs)
             self.assertIn(job2, scheduler.jobs)
 
             self.assertIs(job1.callback, scheduler.on_job_executed)
             self.assertIs(job2.callback, scheduler.on_job_executed)
+
+            self.assertEquals(data['spawned_jobs'], 4)
 
     def test_run(self):
 
@@ -374,11 +404,15 @@ class SchedulerTestCase(TestCase):
             if datetime.utcnow() >= stop_time:
                 scheduler.keep_running = False
 
-        job1, job2, job3 = [get_job() for x in range(3)]
+        job1, job2, job3 = [get_job(str(x)) for x in range(3)]
+
+        # Already run out of repeats and should not be started
+        job4 = Job(rand_string(), start_time=parse('1997-12-23 21:24:27'), interval=Interval(seconds=5), repeats=3)
 
         job1.run = job_run
         job2.run = job_run
         job3.run = job_run
+        job4.run = job_run
 
         scheduler = Scheduler()
         scheduler.spawn_job = spawn_job
@@ -388,9 +422,10 @@ class SchedulerTestCase(TestCase):
         scheduler.iter_cb = iter_cb
         scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
 
-        scheduler.create(job1)
-        scheduler.create(job2)
-        scheduler.create(job3)
+        scheduler.create(job1, spawn=False)
+        scheduler.create(job2, spawn=False)
+        scheduler.create(job3, spawn=False)
+        scheduler.create(job4, spawn=False)
 
         scheduler.run()
 
@@ -402,3 +437,5 @@ class SchedulerTestCase(TestCase):
 
         for job in job1, job2, job3:
             self.assertIn(job, data['jobs'])
+
+        self.assertNotIn(job4, data['jobs'])
