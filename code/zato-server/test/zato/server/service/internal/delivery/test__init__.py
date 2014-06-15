@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from unittest import TestCase
 
 # Zato
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminSIO
 from zato.server.service.internal.pattern.delivery import GetDetails
 
 # ################################################################################################################################

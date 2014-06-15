@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import copy, gc, inspect, json, linecache, logging, os, random, re, signal, threading, traceback, sys
+import copy, gc, inspect, json, linecache, logging, os, random, re, signal, threading, sys
 from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
@@ -43,7 +43,7 @@ from anyjson import dumps, loads
 from base32_crockford import encode as b32_crockford_encode
 
 # Bunch
-from bunch import Bunch, bunchify
+from bunch import bunchify
 
 # ConfigObj
 from configobj import ConfigObj
@@ -91,8 +91,8 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, NoDistributionFound, PASSWORD_SHADOW, \
-     scheduler_date_time_format, soap_body_path, soap_body_xpath, TRACE1, ZatoException
+from zato.common import DATA_FORMAT, KVDB, MISC, NoDistributionFound, PASSWORD_SHADOW, soap_body_path, soap_body_xpath, \
+     TRACE1, ZatoException
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import IntervalBasedJob, Job, Service
 from zato.common.odb.query import _service as _service

@@ -9,16 +9,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import json, os, sys
+import os, sys
 
 # Bunch
 from bunch import Bunch
 
-# ConfigObj
-from configobj import ConfigObj
-
 # Sarge
-from sarge import capture_both, capture_stderr, run
+from sarge import run
 
 # Zato
 from zato.cli import ManageCommand

@@ -10,16 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from cStringIO import StringIO
 from httplib import INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNAUTHORIZED
-from pprint import pprint
 from traceback import format_exc
 
 # anyjson
 from anyjson import dumps
-
-# Bunch
-from bunch import Bunch
 
 # Django
 from django.http import QueryDict
@@ -28,7 +23,7 @@ from django.http import QueryDict
 from zato.common import CHANNEL, DATA_FORMAT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, \
      ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.util import payload_from_request
-from zato.server.connection.http_soap import BadRequest, ClientHTTPError, NotFound, Unauthorized
+from zato.server.connection.http_soap import ClientHTTPError, NotFound, Unauthorized
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)

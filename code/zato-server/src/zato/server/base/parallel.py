@@ -27,9 +27,6 @@ from arrow import utcnow
 # Bunch
 from bunch import Bunch
 
-# faulthandler
-import faulthandler
-
 # gevent
 import gevent
 
@@ -38,7 +35,6 @@ from parse import compile as parse_compile
 
 # Paste
 from paste.util.converters import asbool
-from paste.util.multidict import MultiDict
 
 # pytz
 from pytz import UTC
@@ -59,7 +55,7 @@ from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, KVDB, MISC, SERVER_JOIN_S
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
      JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
 from zato.common.pubsub import PubSubAPI, RedisPubSub
-from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, make_psycopg_green, new_cid, register_diag_handlers
+from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, new_cid, register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore

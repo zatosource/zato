@@ -82,7 +82,7 @@ class JSONAdapter(Service):
         if self.load_response:
             try:
                 self.response.payload = loads(response.text)
-            except ValueError, e:
+            except ValueError:
                 self.logger.error('Cannot load JSON response `%s` for request `%s` to `%s`', 
                     response.text, call_params, self.outconn)
                 raise

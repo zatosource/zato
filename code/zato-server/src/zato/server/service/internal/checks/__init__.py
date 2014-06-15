@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from json import dumps, loads
 
 # Bunch
-from bunch import Bunch, bunchify
+from bunch import bunchify
 
 # lxml
 from lxml import objectify

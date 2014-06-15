@@ -10,12 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import glob, os, shutil, time
-from json import dumps, loads
 from logging import getLogger
 from unittest import TestCase
 
 # Bunch
-from bunch import Bunch, bunchify
+from bunch import bunchify
 
 # configobj
 from configobj import ConfigObj
@@ -31,12 +30,8 @@ from paste.util.converters import asbool
 
 # Zato
 from zato.cli.util import Util
-from zato.client import JSONClient, SOAPClient, XMLClient
-from zato.common import ZatoException
-from zato.common.test import rand_bool, rand_string
+from zato.client import JSONClient, XMLClient
 from zato.common.util import new_cid
-from zato.server.service import Bool, Dict, Nested
-from zato.server.service.reqresp.sio import ValidationException
 
 # Zato - test services
 from . import zato_test_live_sio 

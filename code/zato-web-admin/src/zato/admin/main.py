@@ -16,8 +16,6 @@ except ImportError:
 
 # stdlib
 import json, os
-from logging import getLogger
-from wsgiref.simple_server import make_server
 
 # Django
 from django.core.management import call_command, execute_manager

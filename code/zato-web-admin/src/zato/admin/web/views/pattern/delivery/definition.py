@@ -10,18 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from traceback import format_exc
-
-# anyjson
-from anyjson import dumps
-
-# Django
-from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
-from zato.admin.web import from_utc_to_user, from_user_to_utc, TARGET_TYPE_HUMAN
-from zato.admin.web.forms.pattern.delivery.definition import CreateForm, DeliveryTargetForm, EditForm, InstanceListForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, get_js_dt_format, method_allowed
+from zato.admin.web import from_utc_to_user, TARGET_TYPE_HUMAN
+from zato.admin.web.forms.pattern.delivery.definition import CreateForm, DeliveryTargetForm, EditForm
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.model import DeliveryItem
 
 logger = logging.getLogger(__name__)

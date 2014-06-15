@@ -749,8 +749,6 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
     def test_get_callback_consumers(self):
         ps = RedisPubSub(self.kvdb, self.key_prefix)
 
-        msg_value = '"msg_value"'
-
         topic = Topic('/test/delete')
         ps.add_topic(topic)
 
