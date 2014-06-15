@@ -265,11 +265,12 @@ class JobStartTimeTestCase(TestCase):
 
         self._datetime = _datetime
 
-    def test_get_start_time_result_in_future(self):
+    def check_get_start_time(self, start_time, now, expected):
 
-        start_time = parse('2017-03-20 19:11:37')
-        self.now = parse('2017-03-21 15:11:37')
-        expected = parse('2017-03-21 19:11:37')
+        start_time = parse(start_time)
+        self.now = parse(now)
+        expected = parse(expected)
+
         interval = 1 # Days
         data = {'start_time':[], 'now':[]}
 
@@ -300,6 +301,12 @@ class JobStartTimeTestCase(TestCase):
 
             for item in data['now']:
                 self.assertEquals(self.now, item)
+
+    def test_get_start_time_result_in_future(self):
+        self.check_get_start_time('2017-03-20 19:11:37', '2017-03-21 15:11:37', '2017-03-21 19:11:37')
+
+    def test_get_start_time_last_run_in_past_next_run_in_future(self):
+        self.check_get_start_time('2017-03-20 19:11:37', '2017-03-21 21:11:37', '2017-03-22 19:11:37')
 
 class SchedulerTestCase(TestCase):
 

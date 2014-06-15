@@ -16,6 +16,9 @@ from traceback import format_exc
 # calllib
 from calllib import apply
 
+# datetime
+from dateutil.rrule import rrule, SECONDLY
+
 # gevent
 import gevent # Imported directly so it can be mocked out in tests
 from gevent import lock
@@ -113,12 +116,17 @@ class Job(object):
         # Scenario 2) means we dub last_run_time the last occurrence of the job before now.
         # The new start_time is now last_run_time + interval and will be either now or in the future.
 
-        first_run_time = start_time + datetime.timedelta(seconds=self.interval.in_seconds)
+        now = datetime.datetime.utcnow()
+        interval = datetime.timedelta(seconds=self.interval.in_seconds)
 
-        if first_run_time > datetime.datetime.utcnow():
+        first_run_time = start_time + interval
+
+        if first_run_time > now:
             return first_run_time
         else:
-            raise NotImplementedError()
+            runs = rrule(SECONDLY, interval=int(self.interval.in_seconds), dtstart=start_time)
+            last_run_time = runs.before(now)
+            return last_run_time + interval
 
     def get_context(self):
         ctx = {
