@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from base64 import b64decode, b64encode
-from hashlib import sha256
 
 # PyCrypto
 from Crypto.PublicKey import RSA as pycrypto_rsa

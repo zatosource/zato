@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from json import dumps, loads
+from json import dumps
 from traceback import format_exc
 
 # Paste

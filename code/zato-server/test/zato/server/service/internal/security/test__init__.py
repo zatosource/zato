@@ -14,7 +14,7 @@ from bunch import Bunch
 # Zato
 from zato.common import zato_namespace
 from zato.common.test import rand_int, rand_string, rand_bool, ServiceTestCase
-from zato.server.service import Boolean, Integer, List
+from zato.server.service import Boolean, Integer
 from zato.server.service.internal.security import GetList
 
 ##############################################################################

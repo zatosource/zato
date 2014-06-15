@@ -890,9 +890,6 @@ class PubSubAPI(object):
     def update_consumer(self, consumer, topic):
         return self.impl.update_consumer(consumer, topic)
 
-    def delete_consumer(self, consumer, topic):
-        return self.impl.delete_consumer(consumer, topic)
-
     # ############################################################################################################################
 
     def get_topic_depth(self, topic):

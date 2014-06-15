@@ -12,14 +12,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from copy import deepcopy
 from cStringIO import StringIO
-from datetime import datetime, timedelta
+from datetime import datetime
 from json import dumps, loads
 from traceback import format_exc
 
 # gevent
-import gevent
 from gevent.lock import RLock
-from gevent.queue import Empty, Queue
 
 # parse
 from parse import PARSE_RE
@@ -28,8 +26,8 @@ from parse import PARSE_RE
 import requests
 
 # Zato
-from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, URL_TYPE, ZatoException
-from zato.common.util import get_component_name, new_cid
+from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, URL_TYPE
+from zato.common.util import get_component_name
 from zato.server.connection.queue import ConnectionQueue
 
 logger = logging.getLogger(__name__)

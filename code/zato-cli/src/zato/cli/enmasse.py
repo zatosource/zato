@@ -9,15 +9,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import argparse, logging, os, sys
-from contextlib import closing
+import logging, os, sys
 from copy import deepcopy
 from datetime import datetime
 from itertools import chain
 from json import dumps
 from os.path import abspath, exists, join
 from traceback import format_exc
-from uuid import uuid4
 
 # anyjson
 from anyjson import loads
@@ -35,7 +33,6 @@ from texttable import Texttable
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.client import AnyServiceInvoker
-from zato.common.crypto import CryptoManager
 from zato.common.odb.model import ConnDefAMQP, ConnDefWMQ, HTTPBasicAuth, \
      HTTPSOAP, NTLM, OAuth, SecurityBase, Server, Service, TechnicalAccount, \
      to_json, WSSDefinition, XPathSecurity
@@ -92,6 +89,7 @@ ERROR_INVALID_KEY = Code('E10', 'invalid key')
 ERROR_SERVICE_NAME_MISSING = Code('E11', 'service name missing')
 ERROR_SERVICE_MISSING = Code('E12', 'service missing')
 ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
+ERROR_TYPE_MISSING = Code('E04', 'type missing')
 
 class _DummyLink(object):
     """ Pip requires URLs to have a .url attribute.
@@ -503,6 +501,7 @@ class EnMasse(ManageCommand):
 
         self.odb_objects.def_sec = []
         self.odb_objects.def_amqp = []
+        self.odb_objects.def_jms_wmq = []
         self.odb_objects.http_soap = []
 
         basic_auth = self.client.odb_session.query(HTTPBasicAuth).\
@@ -532,6 +531,10 @@ class EnMasse(ManageCommand):
         for item in self.client.odb_session.query(ConnDefAMQP).\
             filter(ConnDefAMQP.cluster_id == self.client.cluster_id).all():
             self.odb_objects.def_amqp.append(get_fields(item))
+
+        for item in self.client.odb_session.query(ConnDefWMQ).\
+            filter(ConnDefWMQ.cluster_id == self.client.cluster_id).all():
+            self.odb_objects.def_jms_wmq.append(get_fields(item))
 
         for item in self.client.odb_session.query(HTTPSOAP).\
             filter(HTTPSOAP.cluster_id == self.client.cluster_id).\
@@ -610,9 +613,7 @@ class EnMasse(ManageCommand):
     def find_missing_defs(self):
         warnings = []
         errors = []
-        missing_def_keys = set()
         missing_def_names = {}
-        json_keys = tuple(sorted((self.json)))
 
         def _add_error(item,  key_name, def_, json_key):
             raw = (item, def_)
@@ -647,7 +648,6 @@ class EnMasse(ManageCommand):
                             for json_item in json_items:
                                 if 'def' in json_key:
                                     continue
-                                needed_def = json_item.get(def_key)
                                 def_ = json_item.get(def_name)
                                 if not def_:
                                     _add_error(json_item, def_name, def_, json_key)
@@ -759,7 +759,6 @@ class EnMasse(ManageCommand):
             name = item.get('name')
             item_dict = item.toDict()
             missing = None
-            required_lookup_key = None
 
             if not name:
                 raw = (key, item_dict)

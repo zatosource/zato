@@ -16,7 +16,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # Zato
-from zato.common.broker_message import PUB_SUB_PRODUCER, PUB_SUB_TOPIC
+from zato.common.broker_message import PUB_SUB_PRODUCER
 from zato.common.odb.model import PubSubProducer, PubSubTopic
 from zato.common.odb.query import pubsub_producer_list
 from zato.server.service import UTC

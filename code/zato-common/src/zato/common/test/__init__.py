@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime
-from random import choice, randint, random
+from random import choice, randint
 from unittest import TestCase
 from uuid import uuid4
 
@@ -34,7 +34,6 @@ from six import string_types
 
 # SQLAlchemy
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
@@ -284,8 +283,6 @@ class ODBTestCase(TestCase):
 
     def setUp(self):
         self.engine = create_engine('sqlite:///:memory:')
-        Session = sessionmaker(bind=self.engine)
-        session = Session()
         model.Base.metadata.create_all(self.engine)
         
     def tearDown(self):

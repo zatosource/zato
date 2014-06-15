@@ -11,45 +11,20 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from copy import deepcopy
-from datetime import datetime
-from httplib import OK
-from itertools import chain
-from sys import maxint
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps, loads
-
 # Bunch
-from bunch import Bunch, bunchify
-
-# Django
-from django.http import QueryDict
+from bunch import Bunch
 
 # lxml
 from lxml import etree
-from lxml.etree import _Element as EtreeElement
-from lxml.objectify import deannotate, Element, ElementMaker
+from lxml.objectify import Element
 
 # Paste
 from paste.util.converters import asbool
 
-# retools
-from retools.lock import Lock, LockTimeout as RetoolsLockTimeout
-
-# SQLAlchemy
-from sqlalchemy.util import NamedTuple
-
 # Zato
-from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, \
-     path, SIMPLE_IO, TRACE1, URL_TYPE, ZatoException, ZATO_NONE, ZATO_OK
-from zato.common.broker_message import SERVICE
-from zato.common.util import uncamelify, make_repr, new_cid, service_name_from_impl
-from zato.server.connection import request_response, slow_response
-from zato.server.connection.amqp.outgoing import PublisherFacade
-from zato.server.connection.jms_wmq.outgoing import WMQFacade
-from zato.server.connection.zmq_.outgoing import ZMQFacade
-from zato.server.message import MessageFacade
+from zato.common import DATA_FORMAT, NO_DEFAULT_VALUE, ParsingException, path, ZatoException, ZATO_NONE
 
 logger = logging.getLogger(__name__)
 

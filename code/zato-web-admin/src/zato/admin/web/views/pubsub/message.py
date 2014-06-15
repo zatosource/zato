@@ -23,13 +23,11 @@ from lxml import etree
 from paste.util.converters import asbool
 
 # Pygments
-from pygments import highlight
 from pygments.lexers.web import JSONLexer
-from pygments.lexers import MakoXmlLexer, PythonLexer
-from pygments.formatters import HtmlFormatter
+from pygments.lexers import MakoXmlLexer
 
 # Zato
-from zato.admin.web import from_utc_to_user, last_hour_start_stop
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.views import method_allowed
 from zato.common import PUB_SUB
 from zato.common.pubsub import Message
