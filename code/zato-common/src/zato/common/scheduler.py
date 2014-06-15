@@ -221,15 +221,3 @@ class Scheduler(object):
     
             if self.iter_cb:
                 self.iter_cb(*self.iter_cb_args)
-
-# ################################################################################################################################
-
-if __name__ == '__main__':
-    sched = Scheduler()
-    interval = Interval(minutes=0, seconds=1)
-    job = Job('test', None, interval, max_runs=5)
-    sched.create(job)
-    sched.run()
-
-    while True:
-        gevent.sleep(1)
