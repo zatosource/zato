@@ -16,7 +16,7 @@ logging.setLoggerClass(ZatoLogger)
 logging.captureWarnings(True)
 
 # stdlib
-import copy, os, ssl, sys
+import os, ssl, sys
 import logging.config
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay

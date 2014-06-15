@@ -10,15 +10,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from contextlib import closing
-from datetime import datetime
 
 # dateutil
 from dateutil.rrule import MINUTELY, rrule
 
 # Zato
-from zato.common import KVDB, scheduler_date_time_format
-from zato.common.odb.model import Job, IntervalBasedJob, Service
+from zato.common import KVDB
 
 logger = logging.getLogger(__name__)
                 

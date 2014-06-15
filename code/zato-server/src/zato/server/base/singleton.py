@@ -114,16 +114,20 @@ class SingletonServer(BrokerMessageReceiver):
         return False
 
     def on_broker_msg_SCHEDULER_CREATE(self, msg, *ignored_args):
-        self.scheduler.create_edit('create', msg)
+        if self.is_cluster_wide:
+            self.scheduler.create_edit('create', msg)
 
     def on_broker_msg_SCHEDULER_EDIT(self, msg, *ignored_args):
-        self.scheduler.create_edit('edit', msg)
+        if self.is_cluster_wide:
+            self.scheduler.create_edit('edit', msg)
 
     def on_broker_msg_SCHEDULER_DELETE(self, msg, *ignored_args):
-        self.scheduler.delete(msg)
+        if self.is_cluster_wide:
+            self.scheduler.delete(msg)
 
     def on_broker_msg_SCHEDULER_EXECUTE(self, msg, *ignored_args):
-        self.scheduler.execute(msg)
+        if self.is_cluster_wide:
+            self.scheduler.execute(msg)
 
     def on_broker_msg_SINGLETON_CLOSE(self, msg, *ignored_args):
         self.broker_client.close()

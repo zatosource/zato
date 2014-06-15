@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from copy import deepcopy
 from datetime import datetime
 from hashlib import sha256
 from json import dumps, loads
@@ -21,9 +20,8 @@ from traceback import format_exc
 from bunch import Bunch
 
 # oauth
-from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, \
-     OAuthServer, OAuthSignatureMethod_HMAC_SHA1, OAuthSignatureMethod_PLAINTEXT, \
-     OAuthToken
+from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
+     OAuthSignatureMethod_PLAINTEXT, OAuthToken
 
 # parse
 from parse import compile as parse_compile
@@ -33,7 +31,7 @@ from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
 # Zato
-from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, URL_TYPE, ZATO_NONE
+from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, ZATO_NONE
 from zato.common.broker_message import CHANNEL
 from zato.server.connection.http_soap import Unauthorized
 
@@ -907,18 +905,18 @@ class URLData(OAuthDataStore):
                 pattern_list = item.replace_patterns_xpath 
 
             if pattern_list:
-                yield pattern_list
+                yield item, pattern_list
 
     def on_broker_msg_MSG_JSON_POINTER_EDIT(self, msg):
         with self.update_lock:
-            for pattern_list in self._yield_pattern_list(msg):
+            for _, pattern_list in self._yield_pattern_list(msg):
                 if msg.old_name in pattern_list:
                     pattern_list.remove(msg.old_name)
                     pattern_list.append(msg.name)
 
     def on_broker_msg_MSG_JSON_POINTER_DELETE(self, msg):
         with self.update_lock:
-            for pattern_list in self._yield_pattern_list(msg):
+            for item, pattern_list in self._yield_pattern_list(msg):
 
                 try:
                     pattern_list.remove(msg.name)

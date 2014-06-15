@@ -15,7 +15,6 @@ from json import dumps, loads
 # Zato
 from zato.client import AnyServiceInvoker
 from zato.common import INFO_FORMAT, SERVER_JOIN_STATUS, SERVER_UP_STATUS
-from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.odb.query import server_list
 from zato.common.component_info import format_info, get_info
 from zato.server.service import Service
