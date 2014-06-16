@@ -219,14 +219,14 @@ class Scheduler(object):
 
     def create(self, job, spawn=True):
         with self.lock:
-            if job.is_active:
                 self.logger.info('Creating job `%s`', job)
                 self.jobs.add(job)
 
-                if spawn:
-                    self.spawn_job(job)
-            else:
-                self.logger.warn('Skipping inactive job `%s`', job)
+                if job.is_active:
+                    if spawn:
+                        self.spawn_job(job)
+                else:
+                    self.logger.warn('Skipping inactive job `%s`', job)
 
     def sleep(self, value):
         """ A method introduced so the class is easier to mock out in tests.

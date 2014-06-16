@@ -384,7 +384,7 @@ class SchedulerTestCase(TestCase):
             scheduler.create(job6)
 
             self.assertEquals(scheduler.lock.called, 7)
-            self.assertEquals(len(scheduler.jobs), 4)
+            self.assertEquals(len(scheduler.jobs), 5)
 
             self.assertIn(job1, scheduler.jobs)
             self.assertIn(job2, scheduler.jobs)
