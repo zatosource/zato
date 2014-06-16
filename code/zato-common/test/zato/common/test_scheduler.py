@@ -365,6 +365,9 @@ class SchedulerTestCase(TestCase):
         job4 = get_job()
         job5 = get_job()
 
+        job6 = get_job()
+        job6.is_active = False
+
         with patch('gevent.spawn', spawn):
             scheduler.create(job1)
             scheduler.create(job2)
@@ -377,7 +380,10 @@ class SchedulerTestCase(TestCase):
             scheduler.create(job4, spawn=False)
             scheduler.create(job5, spawn=True)
 
-            self.assertEquals(scheduler.lock.called, 6)
+            # Won't be added anywhere nor spawned because it's inactive.
+            scheduler.create(job6)
+
+            self.assertEquals(scheduler.lock.called, 7)
             self.assertEquals(len(scheduler.jobs), 4)
 
             self.assertIn(job1, scheduler.jobs)
@@ -442,20 +448,26 @@ class SchedulerTestCase(TestCase):
 
     def test_on_repeats_reached(self):
 
-        test_wait_time = 0.2
-        sched_sleep_time = job_sleep_time = 0.02
+        test_wait_time = 0.5
+        job_sleep_time = 0.02
         job_repeats = 3
 
         data = {'job':None, 'called':0}
 
-        def on_repeats_reached(job):
-            data['job'] = job
-            data['called'] += 1
-
         job = Job('a', Interval(seconds=0.1), repeats=job_repeats)
         job.wait_sleep_time = job_sleep_time
 
+        # Just to make sure it's inactive by default.
+        self.assertTrue(job.is_active)
+
         scheduler = Scheduler()
+        data['old_on_repeats_reached'] = scheduler.on_repeats_reached
+
+        def on_repeats_reached(job):
+            data['job'] = job
+            data['called'] += 1
+            data['old_on_repeats_reached'](job)
+
         scheduler.on_repeats_reached = on_repeats_reached
         scheduler.iter_cb = iter_cb
         scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
@@ -472,3 +484,6 @@ class SchedulerTestCase(TestCase):
         self.assertFalse(job.keep_running)
         self.assertTrue(job.repeats_reached_at < now)
         self.assertTrue(job.repeats_reached_at >= now + timedelta(seconds=-test_wait_time))
+
+        # Having run out of repeats it should not be active now.
+        self.assertFalse(job.is_active)
