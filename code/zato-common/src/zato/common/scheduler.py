@@ -27,7 +27,6 @@ from gevent import lock
 from paodate import Delta
 
 # Zato
-from zato.common import SCHEDULER
 from zato.common.util import make_repr, new_cid
 
 logger = getLogger(__name__)
@@ -53,7 +52,8 @@ class Interval(object):
 # ################################################################################################################################
 
 class Job(object):
-    def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, repeats=None, on_repeats_reached_cb=None):
+    def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, repeats=None, on_repeats_reached_cb=None,
+            is_active=True):
         self.logger = getLogger(self.__class__.__name__)
         self.name = name
         self.interval = interval
@@ -61,6 +61,8 @@ class Job(object):
         self.cb_kwargs = cb_kwargs or {}
         self.repeats = repeats
         self.on_repeats_reached_cb = on_repeats_reached_cb
+        self.is_active = is_active
+
         self.current_run = 0 # Starts over each time scheduler is started
         self.repeats_reached = False
         self.repeats_reached_at = None
@@ -212,15 +214,19 @@ class Scheduler(object):
         self.iter_cb_args = ()
 
     def on_repeats_reached(self, job):
-        raise NotImplementedError()
+        with self.lock:
+            job.is_active = False
 
     def create(self, job, spawn=True):
         with self.lock:
-            self.logger.info('Creating job `%s`', job)
-            self.jobs.add(job)
+            if job.is_active:
+                self.logger.info('Creating job `%s`', job)
+                self.jobs.add(job)
 
-            if spawn:
-                self.spawn_job(job)
+                if spawn:
+                    self.spawn_job(job)
+            else:
+                self.logger.warn('Skipping inactive job `%s`', job)
 
     def sleep(self, value):
         """ A method introduced so the class is easier to mock out in tests.
@@ -248,7 +254,7 @@ class Scheduler(object):
 
         while self.keep_running:
             _sleep(_sleep_time)
-    
+
             if self.iter_cb:
                 self.iter_cb(*self.iter_cb_args)
 
