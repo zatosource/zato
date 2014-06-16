@@ -207,6 +207,7 @@ class Scheduler(object):
     def __init__(self):
         self.logger = getLogger(self.__class__.__name__)
         self.jobs = set()
+        self.job_greenlets = {}
         self.keep_running = True
         self.lock = lock.RLock()
         self.sleep_time = 0.1
@@ -233,6 +234,8 @@ class Scheduler(object):
         """
         job.keep_running = False
         self.jobs.remove(job)
+        self.job_greenlets[job.name].kill(timeout=2.0)
+        del self.job_greenlets[job.name]
 
     def delete(self, job):
         """ Public API for job deletion.
@@ -249,9 +252,11 @@ class Scheduler(object):
         self.logger.warn('%s %s %s', 1, args, kwargs)
 
     def spawn_job(self, job):
+        """ Spawns a job's greenlet. Must be called with self.lock held.
+        """
         job.callback = self.on_job_executed
         job.on_repeats_reached_cb = self.on_repeats_reached
-        gevent.spawn(job.run)
+        self.job_greenlets[job.name] = gevent.spawn(job.run)
 
     def run(self):
         _sleep = self.sleep
