@@ -228,6 +228,18 @@ class Scheduler(object):
                 else:
                     self.logger.warn('Skipping inactive job `%s`', job)
 
+    def _delete(self, job):
+        """ Actually deletes a job. Must be called with self.lock held.
+        """
+        job.keep_running = False
+        self.jobs.remove(job)
+
+    def delete(self, job):
+        """ Public API for job deletion.
+        """
+        with self.lock:
+            return self._delete(job)
+
     def sleep(self, value):
         """ A method introduced so the class is easier to mock out in tests.
         """
