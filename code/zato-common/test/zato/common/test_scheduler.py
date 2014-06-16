@@ -52,6 +52,13 @@ def get_job(name=None, interval_in_seconds=None, start_time=None, repeats=None, 
     
     return Job(name, Interval(in_seconds=interval_in_seconds), start_time, callback, repeats=repeats)
 
+def iter_cb(scheduler, stop_time):
+    """ Stop the scheduler after stop_time is reached (test_wait_time seconds from test's start time) -
+    which should plenty enough for all the jobs to be spawned and the iteration loop to 
+    """
+    if datetime.utcnow() >= stop_time:
+        scheduler.keep_running = False
+
 class IntervalTestCase(TestCase):
 
     def test_interval_has_in_seconds(self):
@@ -397,13 +404,6 @@ class SchedulerTestCase(TestCase):
         def job_run(self):
             pass
 
-        def iter_cb(scheduler, stop_time):
-            """ Stop the scheduler after stop_time is reached (test_wait_time seconds from test's start time) -
-            which should plenty enough for all the jobs to be spawned and the iteration loop to 
-            """
-            if datetime.utcnow() >= stop_time:
-                scheduler.keep_running = False
-
         job1, job2, job3 = [get_job(str(x)) for x in range(3)]
 
         # Already run out of repeats and should not be started
@@ -439,3 +439,36 @@ class SchedulerTestCase(TestCase):
             self.assertIn(job, data['jobs'])
 
         self.assertNotIn(job4, data['jobs'])
+
+    def test_on_repeats_reached(self):
+
+        test_wait_time = 0.2
+        sched_sleep_time = job_sleep_time = 0.02
+        job_repeats = 3
+
+        data = {'job':None, 'called':0}
+
+        def on_repeats_reached(job):
+            data['job'] = job
+            data['called'] += 1
+
+        job = Job('a', Interval(seconds=0.1), repeats=job_repeats)
+        job.wait_sleep_time = job_sleep_time
+
+        scheduler = Scheduler()
+        scheduler.on_repeats_reached = on_repeats_reached
+        scheduler.iter_cb = iter_cb
+        scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
+
+        scheduler.create(job)
+        scheduler.run()
+
+        now = datetime.utcnow()
+
+        # Now the job should have reached the repeats limit within the now - test_wait_time period.
+        self.assertIs(job, data['job'])
+        self.assertEquals(1, data['called'])
+        self.assertTrue(job.repeats_reached)
+        self.assertFalse(job.keep_running)
+        self.assertTrue(job.repeats_reached_at < now)
+        self.assertTrue(job.repeats_reached_at >= now + timedelta(seconds=-test_wait_time))

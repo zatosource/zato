@@ -53,21 +53,20 @@ class Interval(object):
 # ################################################################################################################################
 
 class Job(object):
-    def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, repeats=None,
-                 on_repeats_reached=SCHEDULER.ON_MAX_RUNS_REACHED.INACTIVATE):
+    def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, repeats=None, on_repeats_reached_cb=None):
         self.logger = getLogger(self.__class__.__name__)
         self.name = name
         self.interval = interval
         self.callback = callback
         self.cb_kwargs = cb_kwargs or {}
         self.repeats = repeats
-        self.on_repeats_reached = on_repeats_reached
+        self.on_repeats_reached_cb = on_repeats_reached_cb
         self.current_run = 0 # Starts over each time scheduler is started
         self.repeats_reached = False
         self.repeats_reached_at = None
         self.keep_running = True
 
-        self.start_time = self.get_start_time(start_time) if start_time else None
+        self.start_time = self.get_start_time(start_time) if start_time else datetime.datetime.utcnow()
 
         self.wait_sleep_time = 1
         self.wait_iter_cb = None
@@ -164,6 +163,10 @@ class Job(object):
                 if self.repeats and self.current_run == self.repeats:
                     self.keep_running = False
                     self.repeats_reached = True
+                    self.repeats_reached_at = datetime.datetime.utcnow()
+
+                    if self.on_repeats_reached_cb:
+                        self.on_repeats_reached_cb(self)
 
                 # Pause the greenlet for however long is needed
                 _sleep(self.interval.in_seconds)
@@ -208,6 +211,9 @@ class Scheduler(object):
         self.iter_cb = None
         self.iter_cb_args = ()
 
+    def on_repeats_reached(self, job):
+        raise NotImplementedError()
+
     def create(self, job, spawn=True):
         with self.lock:
             self.logger.info('Creating job `%s`', job)
@@ -226,6 +232,7 @@ class Scheduler(object):
 
     def spawn_job(self, job):
         job.callback = self.on_job_executed
+        job.on_repeats_reached_cb = self.on_repeats_reached
         gevent.spawn(job.run)
 
     def run(self):
