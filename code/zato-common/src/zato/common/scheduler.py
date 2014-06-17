@@ -65,7 +65,7 @@ class Job(object):
         self.max_repeats_reached_at = None
         self.keep_running = True
 
-        self.start_time = self.get_start_time(start_time) if start_time else datetime.datetime.utcnow()
+        self.start_time = self.get_start_time(start_time if start_time else datetime.datetime.utcnow())
 
         self.wait_sleep_time = 1
         self.wait_iter_cb = None
@@ -81,6 +81,10 @@ class Job(object):
 
     def __eq__(self, other):
         return self.name == other.name
+
+    def clone(self):
+        return Job(self.name, self.interval, self.start_time, self.callback, self.cb_kwargs, self.max_repeats,
+            self.on_max_repeats_reached_cb, self.is_active)
 
     def get_start_time(self, start_time):
         """ Converts initial start time to the time the job should be invoked next.
@@ -123,20 +127,22 @@ class Job(object):
 
         if first_run_time > now:
             return first_run_time
+
         else:
             runs = rrule(SECONDLY, interval=int(self.interval.in_seconds), dtstart=start_time, count=self.max_repeats)
             last_run_time = runs.before(now)
             next_run_time = last_run_time + interval
 
-            if next_run_time > now:
+            if next_run_time >= now:
                 return next_run_time
+
             else:
                 # We must have already run out of iterations
                 self.max_repeats_reached = True
                 self.max_repeats_reached_at = next_run_time
                 self.keep_running = False
 
-                self.logger.info('Job (%s) max repeats reached at `%s`', self.name, self.max_repeats_reached_at)
+                self.logger.warn('Job (%s) max repeats reached at `%s`', self.name, self.max_repeats_reached_at)
 
     def get_context(self):
         ctx = {
@@ -152,6 +158,9 @@ class Job(object):
         return ctx
 
     def main_loop(self):
+
+        if self.logger.isEnabledFor(DEBUG):
+            self.logger.debug('Job entering main loop `%s`', self)
 
         _sleep = gevent.sleep
         _spawn = gevent.spawn
@@ -177,6 +186,9 @@ class Job(object):
             except Exception, e:
                 print(format_exc(e))
                 self.logger.warn(format_exc(e))
+
+        if self.logger.isEnabledFor(DEBUG):
+            self.logger.debug('Job leaving main loop `%s` after %d iterations', self, self.current_run)
 
         return True
 
@@ -247,7 +259,7 @@ class Scheduler(object):
         """
         with self.lock:
             self.delete(job)
-            self.create(job)
+            self.create(job.clone(), True)
 
     def _delete(self, job):
         """ Actually deletes a job. Must be called with self.lock held.
@@ -283,9 +295,9 @@ class Scheduler(object):
         """ Stops all jobs and the scheduler itself.
         """
         with self.lock:
-            job_names = sorted(job.name for job in self.jobs)
-            for name in job_names:
-                self._delete_stop(Job(name, None), 'stopped')
+            jobs = sorted(job for job in self.jobs)
+            for job in jobs:
+                self._delete_stop(job.clone(), 'stopped')
 
     def sleep(self, value):
         """ A method introduced so the class is easier to mock out in tests.
@@ -320,7 +332,6 @@ class Scheduler(object):
 
         while self.keep_running:
             _sleep(_sleep_time)
-            self.logger.warn(1)
 
             if self.iter_cb:
                 self.iter_cb(*self.iter_cb_args)
