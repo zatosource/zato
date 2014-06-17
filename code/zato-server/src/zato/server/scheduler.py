@@ -50,9 +50,13 @@ class Scheduler(object):
 
         spawn(self.sched.run)
 
+# ################################################################################################################################
+
     def _parse_cron(self, def_):
         minute, hour, day_of_month, month, day_of_week = [elem.strip() for elem in def_.split()]
         return minute, hour, day_of_month, month, day_of_week
+
+# ################################################################################################################################
 
     def on_job_executed(self, ctx):
         """ Invoked by the underlying scheduler when a job is executed. Sends
@@ -82,6 +86,8 @@ class Scheduler(object):
                 name, service, extra)
             logger.debug(msg)
 
+# ################################################################################################################################
+
     def create_edit(self, action, job_data, broker_msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY):
         """ Invokes a handler appropriate for the given action and job_data.job_type.
         """
@@ -102,7 +108,10 @@ class Scheduler(object):
             msg = 'Caught exception [{0}]'.format(format_exc(e))
             logger.error(msg)
 
-    def create_job(self, name, start_date, job_type, service, max_repeats=1, days=0, hours=0, minutes=0, seconds=0, extra=None):
+# ################################################################################################################################
+
+    def create_edit_job(self, name, start_date, job_type, service, is_create=True, max_repeats=1, days=0, hours=0, minutes=0,
+            seconds=0, extra=None):
         """ A base method for scheduling of jobs.
         """
         cb_kwargs = {
@@ -114,14 +123,25 @@ class Scheduler(object):
         interval = Interval(days=days, hours=hours, minutes=minutes, seconds=seconds)
         job = Job(name, interval, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
 
-        self.sched.create(job)
+        func = self.sched.create if is_create else self.sched.edit
+        func(job)
+
+# ################################################################################################################################
 
     def create_one_time(self, job_data, broker_msg_type):
         """ Schedules the execution of a one-time job.
         """
-        self.create_job(job_data.name, _start_date(job_data), SCHEDULER_JOB_TYPE.ONE_TIME, job_data.service)
+        self.create_edit_job(job_data.name, _start_date(job_data), SCHEDULER_JOB_TYPE.ONE_TIME, job_data.service)
 
-    def create_interval_based(self, job_data, broker_msg_type):
+    def edit_one_time(self, job_data, broker_msg_type):
+        """ First deletes a one-time job and then schedules its execution. 
+        The operations aren't parts of an atomic transaction.
+        """
+        self.create_one_time(job_data, broker_msg_type)
+
+# ################################################################################################################################
+
+    def create_edit_interval_based(self, job_data, broker_msg_type, is_create=True):
         """ Schedules the execution of an interval-based job.
         """
         start_date = _start_date(job_data)
@@ -132,8 +152,21 @@ class Scheduler(object):
         seconds = job_data.seconds if job_data.get('seconds') else 0
         max_repeats = job_data.repeats if job_data.get('repeats') else None
 
-        self.create_job(job_data.name, start_date, SCHEDULER_JOB_TYPE.INTERVAL_BASED, job_data.service,
-            max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra, )
+        self.create_edit_job(job_data.name, start_date, SCHEDULER_JOB_TYPE.INTERVAL_BASED, job_data.service,
+            is_create, max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra, )
+
+    def create_interval_based(self, job_data, broker_msg_type):
+        """ Schedules the execution of an interval-based job.
+        """
+        self.create_edit_interval_based(job_data, broker_msg_type)
+
+    def edit_interval_based(self, job_data, broker_msg_type):
+        """ First deletes an interval-based job and then schedules its execution. 
+        The operations aren't parts of an atomic transaction.
+        """
+        self.create_edit_interval_based(job_data, broker_msg_type, False)
+
+# ################################################################################################################################
 
     def create_cron_style(self, job_data, broker_msg_type):
         """ Schedules the execution of a one-time job.
@@ -148,6 +181,14 @@ class Scheduler(object):
 
         logger.info('Cron-style job [{0}] scheduled'.format(job_data.name))
 
+    def edit_cron_style(self, job_data, broker_msg_type):
+        """ First deletes a cron-style job and then schedules its execution. 
+        The operations aren't parts of an atomic transaction.
+        """
+        self.create_cron_style(job_data, broker_msg_type)
+
+# ################################################################################################################################
+
     def delete(self, job_data):
         """ Deletes the job or warns if it hasn't been scheduled.
         """
@@ -156,23 +197,7 @@ class Scheduler(object):
         _name = job_data.old_name if job_data.get('old_name') else job_data.name
         self.sched.delete(Job(_name, None))
 
-    def edit_one_time(self, job_data, broker_msg_type):
-        """ First deletes a one-time job and then schedules its execution. 
-        The operations aren't parts of an atomic transaction.
-        """
-        self.create_one_time(job_data, broker_msg_type)
-
-    def edit_interval_based(self, job_data, broker_msg_type):
-        """ First deletes an interval-based job and then schedules its execution. 
-        The operations aren't parts of an atomic transaction.
-        """
-        self.create_interval_based(job_data, broker_msg_type)
-
-    def edit_cron_style(self, job_data, broker_msg_type):
-        """ First deletes a cron-style job and then schedules its execution. 
-        The operations aren't parts of an atomic transaction.
-        """
-        self.create_cron_style(job_data, broker_msg_type)
+# ################################################################################################################################
 
     def execute(self, job_data):
         for job in self.sched.get_jobs():
@@ -183,5 +208,9 @@ class Scheduler(object):
         else:
             logger.warn('Job [{0}] is not scheduled, could not execute it'.format(job_data.name))
 
+# ################################################################################################################################
+
     def stop(self):
         self.sched.stop()
+
+# ################################################################################################################################
