@@ -13,9 +13,6 @@ import datetime
 from logging import basicConfig, getLogger, INFO
 from traceback import format_exc
 
-# calllib
-from calllib import apply
-
 # datetime
 from dateutil.rrule import rrule, SECONDLY
 
@@ -174,7 +171,7 @@ class Job(object):
                 _sleep(self.interval.in_seconds)
 
                 # Invoke callback in a new greenlet so it doesn't block the current one.
-                _spawn(apply, self.callback, {'ctx':self.get_context()})
+                _spawn(self.callback, **{'ctx':self.get_context()})
             except Exception, e:
                 print(format_exc(e))
                 self.logger.warn(format_exc(e))
@@ -261,8 +258,8 @@ class Scheduler(object):
         """
         gevent.sleep(value)
 
-    def on_job_executed(self, *args, **kwargs):
-        self.logger.warn('%s %s %s', 1, args, kwargs)
+    def on_job_executed(self, ctx):
+        self.logger.warn('%s %s', 1, ctx)
 
     def spawn_job(self, job):
         """ Spawns a job's greenlet. Must be called with self.lock held.
@@ -289,7 +286,7 @@ class Scheduler(object):
                 self.iter_cb(*self.iter_cb_args)
 
 if __name__ == '__main__':
-    job = Job('a', start_time=datetime.datetime.utcnow(), interval=Interval(seconds=1), repeats=2)
+    job = Job('a', start_time=datetime.datetime.utcnow(), interval=Interval(seconds=1), repeats=20)
     scheduler = Scheduler()
     scheduler.create(job, False)
     scheduler.run()

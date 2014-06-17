@@ -13,9 +13,6 @@ from datetime import datetime, timedelta
 from random import choice, seed
 from unittest import TestCase
 
-# calllib
-from calllib import apply
-
 # dateutil
 from dateutil.parser import parse
 
@@ -189,8 +186,8 @@ class JobTestCase(TestCase):
             if value != wait_time:
                 sleep_history.append(value)
 
-        def spawn(*args):
-            spawn_history.append(args)
+        def spawn(*args, **kwargs):
+            spawn_history.append([args, kwargs])
 
         with patch('gevent.sleep', sleep):
             with patch('gevent.spawn', spawn):
@@ -215,9 +212,10 @@ class JobTestCase(TestCase):
                 for item in sleep_history:
                     self.assertEquals(interval_in_seconds, item)
 
-                for idx, (apply_func, callback, ctx_dict) in enumerate(spawn_history, 1):
+                for idx, (callback, ctx_dict) in enumerate(spawn_history, 1):
+                    self.assertEquals(1, len(callback))
+                    callback = callback[0]
                     self.check_ctx(ctx_dict['ctx'], job, interval_in_seconds, repeats, idx, cb_kwargs, len(spawn_history))
-                    self.assertIs(apply_func, apply)
                     self.assertIs(callback, dummy_callback)
 
     def test_run(self):
