@@ -201,8 +201,9 @@ class Job(object):
 # ################################################################################################################################
 
 class Scheduler(object):
-    def __init__(self):
+    def __init__(self, on_job_executed_cb=None):
         self.logger = getLogger(self.__class__.__name__)
+        self.on_job_executed_cb = on_job_executed_cb
         self.jobs = set()
         self.job_greenlets = {}
         self.keep_running = True
@@ -259,7 +260,9 @@ class Scheduler(object):
         gevent.sleep(value)
 
     def on_job_executed(self, ctx):
-        self.logger.warn('%s %s', 1, ctx)
+        self.logger.debug('Executing `%s`', ctx)
+        self.on_job_executed_cb(ctx)
+        self.logger.info('Executed `%s`', ctx)
 
     def spawn_job(self, job):
         """ Spawns a job's greenlet. Must be called with self.lock held.

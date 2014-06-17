@@ -347,7 +347,7 @@ class SchedulerTestCase(TestCase):
             self.assertIs(func, job_run)
             data['spawned_jobs'] += 1
 
-        scheduler = Scheduler()
+        scheduler = Scheduler(dummy_callback)
         scheduler.on_job_executed = on_job_executed
         scheduler.lock = RLock()
 
@@ -418,7 +418,7 @@ class SchedulerTestCase(TestCase):
         job3.run = job_run
         job4.run = job_run
 
-        scheduler = Scheduler()
+        scheduler = Scheduler(dummy_callback)
         scheduler.spawn_job = spawn_job
         scheduler.lock = RLock()
         scheduler.sleep = _sleep
@@ -458,7 +458,7 @@ class SchedulerTestCase(TestCase):
         # Just to make sure it's inactive by default.
         self.assertTrue(job.is_active)
 
-        scheduler = Scheduler()
+        scheduler = Scheduler(dummy_callback)
         data['old_on_repeats_reached'] = scheduler.on_repeats_reached
 
         def on_repeats_reached(job):
@@ -497,7 +497,7 @@ class SchedulerTestCase(TestCase):
         job2 = Job('b', Interval(seconds=0.1), repeats=job_repeats)
         job2.wait_sleep_time = job_sleep_time
 
-        scheduler = Scheduler()
+        scheduler = Scheduler(dummy_callback)
         scheduler.lock = RLock()
         scheduler.iter_cb = iter_cb
         scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
@@ -547,7 +547,7 @@ class SchedulerTestCase(TestCase):
             job2 = Job('b', Interval(seconds=0.1), repeats=job_repeats)
             job2.wait_sleep_time = job_sleep_time
 
-            scheduler = Scheduler()
+            scheduler = Scheduler(dummy_callback)
             scheduler.lock = RLock()
             scheduler.iter_cb = iter_cb
             scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
@@ -598,7 +598,7 @@ class SchedulerTestCase(TestCase):
         job2 = Job('a', Interval(seconds=0.13), repeats=job_repeats2)
         job2.wait_sleep_time = job_sleep_time
 
-        scheduler = Scheduler()
+        scheduler = Scheduler(dummy_callback)
         scheduler.lock = RLock()
         scheduler.iter_cb = iter_cb
         scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
@@ -616,3 +616,37 @@ class SchedulerTestCase(TestCase):
 
         # .. so now job2 is the now removed job1.
         check(scheduler, job2)
+
+    def test_on_job_executed_cb(self):
+
+        data = {'runs':[], 'ctx':[]}
+
+        def get_context():
+            ctx = rand_string()
+            data['ctx'].append(ctx)
+            return ctx
+
+        def on_job_executed_cb(ctx):
+            data['runs'].append(ctx)
+
+        test_wait_time = 0.5
+        job_sleep_time = 0.1
+        job_repeats = 10
+
+        job = Job('a', Interval(seconds=0.1), repeats=job_repeats)
+        job.wait_sleep_time = job_sleep_time
+        job.get_context = get_context
+
+        scheduler = Scheduler(dummy_callback)
+        scheduler.lock = RLock()
+        scheduler.iter_cb = iter_cb
+        scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
+        scheduler.on_job_executed_cb = on_job_executed_cb
+
+        scheduler.create(job, spawn=False)
+        scheduler.run()
+
+        self.assertEquals(len(data['runs']), len(data['ctx']))
+
+        for idx, item in enumerate(data['runs']):
+            self.assertEquals(data['ctx'][idx], item)
