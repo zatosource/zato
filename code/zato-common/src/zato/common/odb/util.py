@@ -33,6 +33,25 @@ cli_sa_mappings = {
     'odb_type': 'engine',
 }
 
+default_sa_mappings = {
+    'odb_db_name': 'zato',
+    'odb_host': '127.0.0.1',
+    'odp_port': '5432',
+    'odb_user': 'zato',
+    'odb_type': 'postgresql',
+}
+
+
+def loaddefaults(key):
+    '''
+        Loads the default values for arguments to zato
+        such as db_port, db_host etc
+    '''
+    if key in default_sa_mappings:
+        return default_sa_mappings[key]
+    return None
+
+
 def get_engine_url(args):
     attrs = {}
     is_sqlite = False
@@ -54,6 +73,9 @@ def get_engine_url(args):
             attrs[name] = args.get(name, '')
         else:
             attrs[name] = getattr(args, name, '')
+
+        if not attrs[name]:
+            attrs[name] = loaddefaults(name)
 
     # Re-map Django params into SQLAlchemy params
     if is_django:

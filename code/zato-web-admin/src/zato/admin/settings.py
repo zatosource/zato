@@ -80,13 +80,12 @@ TEMPLATE_DIRS = (
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
+    'django.contrib.humanize',
+    'django.contrib.messages',
     'django.contrib.sessions',
     'django.contrib.sites',
-    'django.contrib.messages',
-    'django.contrib.humanize',
     'django.contrib.staticfiles',
     'django_openid_auth',
-    'django_settings',
     'zato.admin.web',
 )
 
