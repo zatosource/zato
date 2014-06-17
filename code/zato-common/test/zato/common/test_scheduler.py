@@ -577,3 +577,44 @@ class SchedulerTestCase(TestCase):
             self.assertIs(g.run.im_func, job1.run.im_func) # That's how we know it was job1 deleted not job2
             self.assertIs(args, ())
             self.assertDictEqual(kwargs, {'timeout':2.0})
+
+    def test_edit(self):
+
+        def check(scheduler, job):
+            self.assertIn(job.name, scheduler.job_greenlets)
+            self.assertIn(job, scheduler.jobs)
+
+            self.assertEquals(1, len(scheduler.job_greenlets))
+            self.assertEquals(1, len(scheduler.jobs))
+
+            self.assertIs(job, list(scheduler.jobs)[0])
+            self.assertIs(job.run.im_func, scheduler.job_greenlets.values()[0]._run.im_func)
+
+        test_wait_time = 0.5
+        job_sleep_time = 10
+        job_repeats1, job_repeats2 = 20, 30
+
+        job1 = Job('a', Interval(seconds=0.12), repeats=job_repeats1)
+        job1.wait_sleep_time = job_sleep_time
+
+        job2 = Job('a', Interval(seconds=0.13), repeats=job_repeats2)
+        job2.wait_sleep_time = job_sleep_time
+
+        scheduler = Scheduler()
+        scheduler.lock = RLock()
+        scheduler.iter_cb = iter_cb
+        scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
+
+        scheduler.run()
+        scheduler.create(job1)
+
+        sleep(test_wait_time / 2.0)
+
+        # We have only job1 at this point
+        check(scheduler, job1)
+
+        # Removes job1 along the way ..
+        scheduler.edit(job2)
+
+        # .. so now job2 is the now removed job1.
+        check(scheduler, job2)
