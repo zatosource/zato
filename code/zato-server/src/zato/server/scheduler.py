@@ -76,7 +76,7 @@ class Scheduler(object):
             self.singleton.broker_client.publish(msg)
         else:
             self.singleton.broker_client.invoke_async(msg)
-        
+
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Sent a job execution request, name [{0}], service [{1}], extra [{2}]'.format(
                 name, service, extra)
@@ -87,21 +87,21 @@ class Scheduler(object):
         """
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug(job_data)
-            
+
         if not job_data.is_active:
             msg = 'Job [{0}] is not active, not scheduling it'.format(job_data.name)
             logger.info(msg)
             return
-        
+
         handler = '{0}_{1}'.format(action, job_data.job_type)
         handler = getattr(self, handler)
-        
+
         try:
             handler(job_data, broker_msg_type)
         except Exception, e:
             msg = 'Caught exception [{0}]'.format(format_exc(e))
             logger.error(msg)
-        
+
     def create_one_time(self, job_data, broker_msg_type):
         """ Schedules the execution of a one-time job.
         """
@@ -109,9 +109,9 @@ class Scheduler(object):
         self.sched.add_date_job(self._on_job_execution, start_date, 
             [job_data.name, job_data.service, job_data.extra, broker_msg_type,
                SCHEDULER_JOB_TYPE.ONE_TIME], name=job_data.name)
-        
+
         logger.info('One-time job [{0}] scheduled'.format(job_data.name))
-        
+
     def create_interval_based(self, job_data, broker_msg_type):
         """ Schedules the execution of an interval-based job.
         """
@@ -130,11 +130,11 @@ class Scheduler(object):
         }
 
         interval = Interval(days=days+weeks*7, hours=hours, minutes=minutes, seconds=1)
-        job = Job(job_data.name + '-'+ str(x), interval, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
+        job = Job(job_data.name, interval, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
 
         self.sched.create(job)
         logger.info('Interval-based job [{0}] scheduled'.format(job_data.name))
-        
+
     def create_cron_style(self, job_data, broker_msg_type):
         """ Schedules the execution of a one-time job.
         """
@@ -145,7 +145,7 @@ class Scheduler(object):
             minute=minute, second=None, start_date=start_date, 
             args=[job_data.name, job_data.service, job_data.extra, broker_msg_type,
                     SCHEDULER_JOB_TYPE.CRON_STYLE], name=job_data.name)
-        
+
         logger.info('Cron-style job [{0}] scheduled'.format(job_data.name))
 
     def delete(self, job_data):
@@ -161,28 +161,28 @@ class Scheduler(object):
                 break
         else:
             logger.warn('Job [{0}] was not scheduled, could not unschedule it'.format(_name))
-            
+
     def edit_one_time(self, job_data, broker_msg_type):
         """ First deletes a one-time job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
         self.delete(job_data)
         self.create_one_time(job_data, broker_msg_type)
-        
+
     def edit_interval_based(self, job_data, broker_msg_type):
         """ First deletes an interval-based job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
         self.delete(job_data)
         self.create_interval_based(job_data, broker_msg_type)
-        
+
     def edit_cron_style(self, job_data, broker_msg_type):
         """ First deletes a cron-style job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
         self.delete(job_data)
         self.create_cron_style(job_data, broker_msg_type)
-            
+
     def execute(self, job_data):
         for job in self.sched.get_jobs():
             if job.name == job_data.name:
