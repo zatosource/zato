@@ -218,16 +218,29 @@ class Scheduler(object):
         with self.lock:
             job.is_active = False
 
-    def create(self, job, spawn=True):
-        with self.lock:
-                self.logger.info('Creating job `%s`', job)
-                self.jobs.add(job)
+    def _create(self, job, spawn=True):
+        """ Actually creates a job. Must be called with self.lock held.
+        """
+        self.logger.info('Creating job `%s`', job)
+        self.jobs.add(job)
 
-                if job.is_active:
-                    if spawn:
-                        self.spawn_job(job)
-                else:
-                    self.logger.warn('Skipping inactive job `%s`', job)
+        if job.is_active:
+            if spawn:
+                self.spawn_job(job)
+        else:
+            self.logger.warn('Skipping inactive job `%s`', job)
+
+    def create(self, *args, **kwargs):
+        with self.lock:
+            self._create(*args, **kwargs)
+
+    def edit(self, job):
+        """ Edits a job - this means an already existing job is deleted and created again,
+        i.e. it's not an in-place update.
+        """
+        with self.lock:
+            self.delete(job)
+            self.create(job)
 
     def _delete(self, job):
         """ Actually deletes a job. Must be called with self.lock held.
