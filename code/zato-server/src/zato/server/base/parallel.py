@@ -347,7 +347,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             Thread(target=self.singleton_server.run, kwargs=kwargs).start()
 
             # Let the scheduler fully initialize
-            self.singleton_server.scheduler.wait_for_init()
             self.singleton_server.server_id = server.id
 
         return is_first

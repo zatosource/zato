@@ -49,20 +49,20 @@ class Interval(object):
 # ################################################################################################################################
 
 class Job(object):
-    def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, repeats=None, on_repeats_reached_cb=None,
+    def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None, on_max_repeats_reached_cb=None,
             is_active=True):
         self.logger = getLogger(self.__class__.__name__)
         self.name = name
         self.interval = interval
         self.callback = callback
         self.cb_kwargs = cb_kwargs or {}
-        self.repeats = repeats
-        self.on_repeats_reached_cb = on_repeats_reached_cb
+        self.max_repeats = max_repeats
+        self.on_max_repeats_reached_cb = on_max_repeats_reached_cb
         self.is_active = is_active
 
         self.current_run = 0 # Starts over each time scheduler is started
-        self.repeats_reached = False
-        self.repeats_reached_at = None
+        self.max_repeats_reached = False
+        self.max_repeats_reached_at = None
         self.keep_running = True
 
         self.start_time = self.get_start_time(start_time) if start_time else datetime.datetime.utcnow()
@@ -124,7 +124,7 @@ class Job(object):
         if first_run_time > now:
             return first_run_time
         else:
-            runs = rrule(SECONDLY, interval=int(self.interval.in_seconds), dtstart=start_time, count=self.repeats)
+            runs = rrule(SECONDLY, interval=int(self.interval.in_seconds), dtstart=start_time, count=self.max_repeats)
             last_run_time = runs.before(now)
             next_run_time = last_run_time + interval
 
@@ -132,8 +132,8 @@ class Job(object):
                 return next_run_time
             else:
                 # We must have already run out of iterations
-                self.repeats_reached = True
-                self.repeats_reached_at = next_run_time
+                self.max_repeats_reached = True
+                self.max_repeats_reached_at = next_run_time
                 self.keep_running = False
 
     def get_context(self):
@@ -144,7 +144,7 @@ class Job(object):
             'cb_kwargs': self.cb_kwargs
         }
 
-        for name in 'name', 'current_run', 'repeats_reached', 'repeats':
+        for name in 'name', 'current_run', 'max_repeats_reached', 'max_repeats':
             ctx[name] = getattr(self, name)
 
         return ctx
@@ -159,13 +159,13 @@ class Job(object):
                 self.current_run += 1
 
                 # Perhaps we've already been executed enough times
-                if self.repeats and self.current_run == self.repeats:
+                if self.max_repeats and self.current_run == self.max_repeats:
                     self.keep_running = False
-                    self.repeats_reached = True
-                    self.repeats_reached_at = datetime.datetime.utcnow()
+                    self.max_repeats_reached = True
+                    self.max_repeats_reached_at = datetime.datetime.utcnow()
 
-                    if self.on_repeats_reached_cb:
-                        self.on_repeats_reached_cb(self)
+                    if self.on_max_repeats_reached_cb:
+                        self.on_max_repeats_reached_cb(self)
 
                 # Pause the greenlet for however long is needed
                 _sleep(self.interval.in_seconds)
@@ -211,8 +211,9 @@ class Scheduler(object):
         self.sleep_time = 0.1
         self.iter_cb = None
         self.iter_cb_args = ()
+        self.ready = False
 
-    def on_repeats_reached(self, job):
+    def on_max_repeats_reached(self, job):
         with self.lock:
             job.is_active = False
 
@@ -268,7 +269,7 @@ class Scheduler(object):
         """ Spawns a job's greenlet. Must be called with self.lock held.
         """
         job.callback = self.on_job_executed
-        job.on_repeats_reached_cb = self.on_repeats_reached
+        job.on_max_repeats_reached_cb = self.on_max_repeats_reached
         self.job_greenlets[job.name] = gevent.spawn(job.run)
 
     def run(self):
@@ -277,19 +278,23 @@ class Scheduler(object):
 
         with self.lock:
             for job in self.jobs:
-                if job.repeats_reached:
-                    self.logger.info('Job `%s` already reached max runs count (%s UTC)', job.name, job.repeats_reached_at)
+                if job.max_repeats_reached:
+                    self.logger.info('Job `%s` already reached max runs count (%s UTC)', job.name, job.max_repeats_reached_at)
                 else:
                     self.spawn_job(job)
 
+        # Ok, we're good now.
+        self.ready = True
+
         while self.keep_running:
             _sleep(_sleep_time)
+            self.logger.warn(1)
 
             if self.iter_cb:
                 self.iter_cb(*self.iter_cb_args)
 
 if __name__ == '__main__':
-    job = Job('a', start_time=datetime.datetime.utcnow(), interval=Interval(seconds=1), repeats=20)
+    job = Job('a', start_time=datetime.datetime.utcnow(), interval=Interval(seconds=1), max_repeats=20)
     scheduler = Scheduler()
     scheduler.create(job, False)
     scheduler.run()

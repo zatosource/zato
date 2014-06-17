@@ -12,15 +12,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging, time
 from traceback import format_exc
 
-# APScheduler
-from apscheduler.scheduler import Scheduler as APScheduler
-
 # dateutil
 from dateutil.parser import parse
+
+# gevent
+from gevent import sleep, spawn
 
 # Zato 
 from zato.common import ENSURE_SINGLETON_JOB, SCHEDULER_JOB_TYPE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
+from zato.common.scheduler import Interval, Job, Scheduler as _Scheduler
 from zato.common.util import new_cid
 
 logger = logging.getLogger(__name__)
@@ -37,34 +38,38 @@ class Scheduler(object):
     def __init__(self, singleton=None, init=False):
         self.singleton = singleton
         self.broker_token = None
-        self.zmq_context = None
         self.client_push_broker_pull = None
-        
+        self.sched = _Scheduler(self.on_job_executed)
+
         if init:
-            self._init()
-            
-    def _init(self):
-        self._sched = APScheduler()
-        self._sched.start()
-        
-    def wait_for_init(self):
-        """ Sleeps till the background APScheduler's thread is up and running.
-        """
-        self._init()
-        while not self._sched.running:
-            time.sleep(0.01)
-        
+            self.init()
+
+    def init(self):
+        while not self.sched.ready:
+            sleep(0.1)
+
+        spawn(self.sched.run)
+
     def _parse_cron(self, def_):
         minute, hour, day_of_month, month, day_of_week = [elem.strip() for elem in def_.split()]
         return minute, hour, day_of_month, month, day_of_week
         
-    def _on_job_execution(self, name, service, extra, broker_msg_type, job_type):
-        """ Invoked by the underlying APScheduler when a job is executed. Sends
+    #def on_job_executed(self, name, service, extra, broker_msg_type, job_type):
+    def on_job_executed(self, ctx):
+        """ Invoked by the underlying scheduler when a job is executed. Sends
         the actual execution request to the broker so it can be picked up by
         one of the parallel server's broker clients.
         """
-        msg = {'action': SCHEDULER.JOB_EXECUTED, 'name':name, 'service': service, 
-                   'payload':extra, 'cid':new_cid(), 'job_type': job_type}
+        name = ctx['name']
+
+        msg = {
+            'action': SCHEDULER.JOB_EXECUTED,
+            'name':name,
+            'service': ctx['cb_kwargs']['service'], 
+            'payload':ctx['cb_kwargs']['extra'],
+            'cid':ctx['cid'],
+            'job_type': ctx['cb_kwargs']['job_type']
+        }
 
         # Special case an internal job that needs to be delivered to all parallel
         # servers.
@@ -102,7 +107,7 @@ class Scheduler(object):
         """ Schedules the execution of a one-time job.
         """
         start_date = _start_date(job_data)
-        self._sched.add_date_job(self._on_job_execution, start_date, 
+        self.sched.add_date_job(self._on_job_execution, start_date, 
             [job_data.name, job_data.service, job_data.extra, broker_msg_type,
                SCHEDULER_JOB_TYPE.ONE_TIME], name=job_data.name)
         
@@ -117,12 +122,25 @@ class Scheduler(object):
         hours = job_data.hours if job_data.get('hours') else 0
         minutes = job_data.minutes if job_data.get('minutes') else 0
         seconds = job_data.seconds if job_data.get('seconds') else 0
-        max_runs = job_data.repeats if job_data.get('repeats') else None
-        
-        self._sched.add_interval_job(self._on_job_execution, 
-            weeks, days, hours, minutes, seconds, start_date, 
-            [job_data.name, job_data.service, job_data.extra, broker_msg_type,
-               SCHEDULER_JOB_TYPE.INTERVAL_BASED], name=job_data.name, max_runs=max_runs)
+        max_repeats = job_data.repeats if job_data.get('repeats') else None
+
+        cb_kwargs = {
+            'job_type': SCHEDULER_JOB_TYPE.INTERVAL_BASED,
+            'service': job_data.service,
+            'extra': job_data.extra,
+        }
+
+        for x in range(10):
+            sleep(1)
+            interval = Interval(days=days+weeks*7, hours=hours, minutes=minutes, seconds=1)
+            job = Job(job_data.name + '-'+ str(x), interval, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
+
+            self.sched.create(job)
+
+        #self.sched.add_interval_job(self._on_job_execution, 
+        #    weeks, days, hours, minutes, seconds, start_date, 
+        #    [job_data.name, job_data.service, job_data.extra, broker_msg_type,
+        #       SCHEDULER_JOB_TYPE.INTERVAL_BASED], name=job_data.name, max_runs=max_runs)
         
         logger.info('Interval-based job [{0}] scheduled'.format(job_data.name))
         
@@ -131,7 +149,7 @@ class Scheduler(object):
         """
         start_date = _start_date(job_data)
         minute, hour, day_of_month, month, day_of_week = self._parse_cron(job_data.cron_definition)
-        self._sched.add_cron_job(self._on_job_execution, 
+        self.sched.add_cron_job(self._on_job_execution, 
             year=None, month=month, day=day_of_month, hour=hour,
             minute=minute, second=None, start_date=start_date, 
             args=[job_data.name, job_data.service, job_data.extra, broker_msg_type,
@@ -145,9 +163,9 @@ class Scheduler(object):
         # If there's an old_name then we're performing an edit, 
         # otherwise we're using the current name.
         _name = job_data.old_name if job_data.get('old_name') else job_data.name
-        for job in self._sched.get_jobs():
+        for job in self.sched.get_jobs():
             if job.name == _name:
-                self._sched.unschedule_job(job)
+                self.sched.unschedule_job(job)
                 logger.info('Job [{0}] unscheduled'.format(_name))
                 break
         else:
@@ -175,7 +193,7 @@ class Scheduler(object):
         self.create_cron_style(job_data, broker_msg_type)
             
     def execute(self, job_data):
-        for job in self._sched.get_jobs():
+        for job in self.sched.get_jobs():
             if job.name == job_data.name:
                 self._on_job_execution(*job.args)
                 logger.info('Job [{0}] executed'.format(job_data.name))
@@ -184,4 +202,4 @@ class Scheduler(object):
             logger.warn('Job [{0}] is not scheduled, could not execute it'.format(job_data.name))
 
     def stop(self):
-        self._sched.shutdown()
+        self.sched.shutdown()

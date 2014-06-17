@@ -41,13 +41,13 @@ class RLock(object):
 def dummy_callback(*args, **kwargs):
     pass
 
-def get_job(name=None, interval_in_seconds=None, start_time=None, repeats=None, callback=None):
+def get_job(name=None, interval_in_seconds=None, start_time=None, max_repeats=None, callback=None):
     name = name or rand_string()
     interval_in_seconds = interval_in_seconds or rand_int()
     start_time = start_time or rand_date_utc()
     callback = callback or dummy_callback
     
-    return Job(name, Interval(in_seconds=interval_in_seconds), start_time, callback, repeats=repeats)
+    return Job(name, Interval(in_seconds=interval_in_seconds), start_time, callback, max_repeats=max_repeats)
 
 def iter_cb(scheduler, stop_time):
     """ Stop the scheduler after stop_time is reached (test_wait_time seconds from test's start time) -
@@ -81,20 +81,20 @@ class IntervalTestCase(TestCase):
 
 class JobTestCase(TestCase):
 
-    def check_ctx(self, ctx, job, interval_in_seconds, repeats, idx, cb_kwargs, len_runs_ctx):
+    def check_ctx(self, ctx, job, interval_in_seconds, max_repeats, idx, cb_kwargs, len_runs_ctx):
 
         self.assertEquals(ctx['name'], job.name)
         self.assertEquals(ctx['interval_in_seconds'], job.interval.in_seconds)
-        self.assertEquals(ctx['repeats'], job.repeats)
+        self.assertEquals(ctx['max_repeats'], job.max_repeats)
         self.assertDictEqual(ctx['cb_kwargs'], job.cb_kwargs)
 
         self.assertEquals(ctx['interval_in_seconds'], interval_in_seconds)
-        self.assertEquals(ctx['repeats'], repeats)
+        self.assertEquals(ctx['max_repeats'], max_repeats)
         self.assertEquals(ctx['current_run'], idx)
         self.assertDictEqual(ctx['cb_kwargs'], cb_kwargs)
 
         func = self.assertFalse if idx < len_runs_ctx else self.assertTrue
-        func(ctx['repeats_reached'])
+        func(ctx['max_repeats_reached'])
 
         # Don't check an exact time. Simply parse it out and confirm it's in the past.
         start_time = parse(ctx['start_time'])
@@ -108,15 +108,15 @@ class JobTestCase(TestCase):
         name = rand_string()
         start_time = rand_date_utc()
         interval_in_seconds = rand_int()
-        repeats_reached = rand_bool()
-        current_run, repeats = rand_int(count=2)
+        max_repeats_reached = rand_bool()
+        current_run, max_repeats = rand_int(count=2)
         cb_kwargs = {rand_string():rand_string()}
 
         job = Job(name, cb_kwargs=cb_kwargs, interval=Interval(in_seconds=interval_in_seconds))
         job.start_time = start_time
         job.current_run = current_run
-        job.repeats = repeats
-        job.repeats_reached = repeats_reached
+        job.max_repeats = max_repeats
+        job.max_repeats_reached = max_repeats_reached
 
         ctx = job.get_context()
         cid = ctx.pop('cid')
@@ -128,8 +128,8 @@ class JobTestCase(TestCase):
             'interval_in_seconds': interval_in_seconds,
             'name': name,
             'start_time': start_time.isoformat(),
-            'repeats': repeats,
-            'repeats_reached': repeats_reached,
+            'max_repeats': max_repeats,
+            'max_repeats_reached': max_repeats_reached,
             'cb_kwargs': cb_kwargs
         })
 
@@ -140,11 +140,11 @@ class JobTestCase(TestCase):
 
         self.assertTrue(job.main_loop())
         self.assertFalse(job.keep_running)
-        self.assertFalse(job.repeats_reached)
+        self.assertFalse(job.max_repeats_reached)
 
         self.assertEquals(job.current_run, 0)
 
-    def test_main_loop_repeats_reached(self):
+    def test_main_loop_max_repeats_reached(self):
 
         runs_ctx = []
 
@@ -157,9 +157,9 @@ class JobTestCase(TestCase):
         }
 
         interval_in_seconds = 0.01
-        repeats = choice(range(2, 5))
+        max_repeats = choice(range(2, 5))
 
-        job = get_job(interval_in_seconds=interval_in_seconds, repeats=repeats)
+        job = get_job(interval_in_seconds=interval_in_seconds, max_repeats=max_repeats)
         job.callback = callback
         job.cb_kwargs = cb_kwargs
 
@@ -167,13 +167,13 @@ class JobTestCase(TestCase):
         sleep(0.2)
 
         len_runs_ctx = len(runs_ctx)
-        self.assertEquals(len_runs_ctx, repeats)
+        self.assertEquals(len_runs_ctx, max_repeats)
 
         self.assertFalse(job.keep_running)
         self.assertIs(job.callback, callback)
 
         for idx, ctx in enumerate(runs_ctx, 1):
-            self.check_ctx(ctx, job, interval_in_seconds, repeats, idx, cb_kwargs, len_runs_ctx)
+            self.check_ctx(ctx, job, interval_in_seconds, max_repeats, idx, cb_kwargs, len_runs_ctx)
 
     def test_main_loop_sleep_spawn_called(self):
 
@@ -192,22 +192,22 @@ class JobTestCase(TestCase):
         with patch('gevent.sleep', sleep):
             with patch('gevent.spawn', spawn):
                 interval_in_seconds = 0.01
-                repeats = choice(range(2, 5))
+                max_repeats = choice(range(2, 5))
 
                 cb_kwargs = {
                     rand_string():rand_string(),
                     rand_string():rand_string()
                 }
 
-                job = get_job(interval_in_seconds=interval_in_seconds, repeats=repeats)
+                job = get_job(interval_in_seconds=interval_in_seconds, max_repeats=max_repeats)
                 job.cb_kwargs = cb_kwargs
                 job.start_time = datetime.utcnow()
 
                 self.assertTrue(job.main_loop())
                 sleep(0.2)
 
-                self.assertEquals(repeats, len(sleep_history))
-                self.assertEquals(repeats, len(spawn_history))
+                self.assertEquals(max_repeats, len(sleep_history))
+                self.assertEquals(max_repeats, len(spawn_history))
 
                 for item in sleep_history:
                     self.assertEquals(interval_in_seconds, item)
@@ -215,7 +215,7 @@ class JobTestCase(TestCase):
                 for idx, (callback, ctx_dict) in enumerate(spawn_history, 1):
                     self.assertEquals(1, len(callback))
                     callback = callback[0]
-                    self.check_ctx(ctx_dict['ctx'], job, interval_in_seconds, repeats, idx, cb_kwargs, len(spawn_history))
+                    self.check_ctx(ctx_dict['ctx'], job, interval_in_seconds, max_repeats, idx, cb_kwargs, len(spawn_history))
                     self.assertIs(callback, dummy_callback)
 
     def test_run(self):
@@ -292,8 +292,8 @@ class JobStartTimeTestCase(TestCase):
     
             self.assertEquals(job.start_time, expected)
             self.assertTrue(job.keep_running)
-            self.assertFalse(job.repeats_reached)
-            self.assertIs(job.repeats_reached_at, None)
+            self.assertFalse(job.max_repeats_reached)
+            self.assertIs(job.max_repeats_reached_at, None)
 
             spawn(job.run)
             sleep(0.2)
@@ -324,11 +324,11 @@ class JobStartTimeTestCase(TestCase):
         with patch('zato.common.scheduler.datetime', self._datetime):
 
             interval = Interval(days=3)
-            job = Job(rand_string(), start_time=start_time, interval=interval, repeats=5)
+            job = Job(rand_string(), start_time=start_time, interval=interval, max_repeats=5)
 
             self.assertFalse(job.keep_running)
-            self.assertTrue(job.repeats_reached)
-            self.assertEquals(job.repeats_reached_at, expected)
+            self.assertTrue(job.max_repeats_reached)
+            self.assertEquals(job.max_repeats_reached_at, expected)
             self.assertFalse(job.start_time)
 
 class SchedulerTestCase(TestCase):
@@ -410,8 +410,8 @@ class SchedulerTestCase(TestCase):
 
         job1, job2, job3 = [get_job(str(x)) for x in range(3)]
 
-        # Already run out of repeats and should not be started
-        job4 = Job(rand_string(), start_time=parse('1997-12-23 21:24:27'), interval=Interval(seconds=5), repeats=3)
+        # Already run out of max_repeats and should not be started
+        job4 = Job(rand_string(), start_time=parse('1997-12-23 21:24:27'), interval=Interval(seconds=5), max_repeats=3)
 
         job1.run = job_run
         job2.run = job_run
@@ -444,29 +444,29 @@ class SchedulerTestCase(TestCase):
 
         self.assertNotIn(job4, data['jobs'])
 
-    def test_on_repeats_reached(self):
+    def test_on_max_repeats_reached(self):
 
         test_wait_time = 0.5
         job_sleep_time = 0.02
-        job_repeats = 3
+        job_max_repeats = 3
 
         data = {'job':None, 'called':0}
 
-        job = Job('a', Interval(seconds=0.1), repeats=job_repeats)
+        job = Job('a', Interval(seconds=0.1), max_repeats=job_max_repeats)
         job.wait_sleep_time = job_sleep_time
 
         # Just to make sure it's inactive by default.
         self.assertTrue(job.is_active)
 
         scheduler = Scheduler(dummy_callback)
-        data['old_on_repeats_reached'] = scheduler.on_repeats_reached
+        data['old_on_max_repeats_reached'] = scheduler.on_max_repeats_reached
 
-        def on_repeats_reached(job):
+        def on_max_repeats_reached(job):
             data['job'] = job
             data['called'] += 1
-            data['old_on_repeats_reached'](job)
+            data['old_on_max_repeats_reached'](job)
 
-        scheduler.on_repeats_reached = on_repeats_reached
+        scheduler.on_max_repeats_reached = on_max_repeats_reached
         scheduler.iter_cb = iter_cb
         scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
 
@@ -475,26 +475,26 @@ class SchedulerTestCase(TestCase):
 
         now = datetime.utcnow()
 
-        # Now the job should have reached the repeats limit within the now - test_wait_time period.
+        # Now the job should have reached the max_repeats limit within the now - test_wait_time period.
         self.assertIs(job, data['job'])
         self.assertEquals(1, data['called'])
-        self.assertTrue(job.repeats_reached)
+        self.assertTrue(job.max_repeats_reached)
         self.assertFalse(job.keep_running)
-        self.assertTrue(job.repeats_reached_at < now)
-        self.assertTrue(job.repeats_reached_at >= now + timedelta(seconds=-test_wait_time))
+        self.assertTrue(job.max_repeats_reached_at < now)
+        self.assertTrue(job.max_repeats_reached_at >= now + timedelta(seconds=-test_wait_time))
 
-        # Having run out of repeats it should not be active now.
+        # Having run out of max_repeats it should not be active now.
         self.assertFalse(job.is_active)
 
     def test_delete(self):
         test_wait_time = 0.5
         job_sleep_time = 10
-        job_repeats = 30
+        job_max_repeats = 30
 
-        job1 = Job('a', Interval(seconds=0.1), repeats=job_repeats)
+        job1 = Job('a', Interval(seconds=0.1), max_repeats=job_max_repeats)
         job1.wait_sleep_time = job_sleep_time
 
-        job2 = Job('b', Interval(seconds=0.1), repeats=job_repeats)
+        job2 = Job('b', Interval(seconds=0.1), max_repeats=job_max_repeats)
         job2.wait_sleep_time = job_sleep_time
 
         scheduler = Scheduler(dummy_callback)
@@ -515,7 +515,7 @@ class SchedulerTestCase(TestCase):
         # run - 1
         # create - 2
         # delete - 1
-        # on_repeats_reached - 0 (because of how long it takes to run job_repeats with test_wait_time)
+        # on_max_repeats_reached - 0 (because of how long it takes to run job_max_repeats with test_wait_time)
         # 1+2+1 = 4
         self.assertEquals(scheduler.lock.called, 4)
 
@@ -539,12 +539,12 @@ class SchedulerTestCase(TestCase):
 
             test_wait_time = 0.5
             job_sleep_time = 10
-            job_repeats = 30
+            job_max_repeats = 30
 
-            job1 = Job('a', Interval(seconds=0.1), repeats=job_repeats)
+            job1 = Job('a', Interval(seconds=0.1), max_repeats=job_max_repeats)
             job1.wait_sleep_time = job_sleep_time
 
-            job2 = Job('b', Interval(seconds=0.1), repeats=job_repeats)
+            job2 = Job('b', Interval(seconds=0.1), max_repeats=job_max_repeats)
             job2.wait_sleep_time = job_sleep_time
 
             scheduler = Scheduler(dummy_callback)
@@ -590,12 +590,12 @@ class SchedulerTestCase(TestCase):
 
         test_wait_time = 0.5
         job_sleep_time = 10
-        job_repeats1, job_repeats2 = 20, 30
+        job_max_repeats1, job_max_repeats2 = 20, 30
 
-        job1 = Job('a', Interval(seconds=0.12), repeats=job_repeats1)
+        job1 = Job('a', Interval(seconds=0.12), max_repeats=job_max_repeats1)
         job1.wait_sleep_time = job_sleep_time
 
-        job2 = Job('a', Interval(seconds=0.13), repeats=job_repeats2)
+        job2 = Job('a', Interval(seconds=0.13), max_repeats=job_max_repeats2)
         job2.wait_sleep_time = job_sleep_time
 
         scheduler = Scheduler(dummy_callback)
@@ -631,9 +631,9 @@ class SchedulerTestCase(TestCase):
 
         test_wait_time = 0.5
         job_sleep_time = 0.1
-        job_repeats = 10
+        job_max_repeats = 10
 
-        job = Job('a', Interval(seconds=0.1), repeats=job_repeats)
+        job = Job('a', Interval(seconds=0.1), max_repeats=job_max_repeats)
         job.wait_sleep_time = job_sleep_time
         job.get_context = get_context
 
