@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import datetime
-from logging import basicConfig, getLogger, INFO
+from logging import basicConfig, getLogger, DEBUG, INFO
 from traceback import format_exc
 
 # datetime
@@ -28,8 +28,6 @@ from zato.common.util import make_repr, new_cid
 
 logger = getLogger(__name__)
 
-basicConfig(level=INFO)
-
 # ################################################################################################################################
 
 class Interval(object):
@@ -42,6 +40,8 @@ class Interval(object):
 
     def __str__(self):
         return make_repr(self)
+
+    __repr__ = __str__
 
     def get_in_seconds(self):
         return Delta(days=self.days, hours=self.hours, minutes=self.minutes, seconds=self.seconds).total_seconds
@@ -136,6 +136,8 @@ class Job(object):
                 self.max_repeats_reached_at = next_run_time
                 self.keep_running = False
 
+                self.logger.info('Job (%s) max repeats reached at `%s`', self.name, self.max_repeats_reached_at)
+
     def get_context(self):
         ctx = {
             'cid':new_cid(),
@@ -179,7 +181,8 @@ class Job(object):
         return True
 
     def run(self):
-        self.logger.info('Init job `%s`', self)
+        if self.logger.isEnabledFor(DEBUG):
+            self.logger.debug('Job starting `%s`', self)
 
         _utcnow = datetime.datetime.utcnow
         _sleep = gevent.sleep
@@ -220,12 +223,17 @@ class Scheduler(object):
     def _create(self, job, spawn=True):
         """ Actually creates a job. Must be called with self.lock held.
         """
-        self.logger.info('Creating job `%s`', job)
         self.jobs.add(job)
 
         if job.is_active:
             if spawn:
                 self.spawn_job(job)
+
+                if self.logger.isEnabledFor(DEBUG):
+                    self.logger.debug('Job scheduled `%s`', job)
+                else:
+                    self.logger.info('Job scheduled `%s`', job.name)
+
         else:
             self.logger.warn('Skipping inactive job `%s`', job)
 
@@ -249,11 +257,35 @@ class Scheduler(object):
         self.job_greenlets[job.name].kill(timeout=2.0)
         del self.job_greenlets[job.name]
 
+    def _delete_stop(self, job, message):
+        """ API for job deletion and stopping. Must be called with a self.lock held.
+        """
+        self._delete(job)
+
+        if self.logger.isEnabledFor(DEBUG):
+            self.logger.debug('Job %s `%s`', message, job)
+        else:
+            self.logger.info('Job %s `%s`', message, job.name)
+
     def delete(self, job):
-        """ Public API for job deletion.
+        """ Deletes a job.
         """
         with self.lock:
-            return self._delete(job)
+            self._delete_stop(job, 'deleted')
+
+    def stop_job(self, job):
+        """ Stops a job by deleting it.
+        """
+        with self.lock:
+            self._delete_stop(job, 'stopped')
+
+    def stop(self):
+        """ Stops all jobs and the scheduler itself.
+        """
+        with self.lock:
+            job_names = sorted(job.name for job in self.jobs)
+            for name in job_names:
+                self._delete_stop(Job(name, None), 'stopped')
 
     def sleep(self, value):
         """ A method introduced so the class is easier to mock out in tests.
@@ -263,7 +295,7 @@ class Scheduler(object):
     def on_job_executed(self, ctx):
         self.logger.debug('Executing `%s`', ctx)
         self.on_job_executed_cb(ctx)
-        self.logger.info('Executed `%s`', ctx)
+        self.logger.info('Job executed `%s`', ctx)
 
     def spawn_job(self, job):
         """ Spawns a job's greenlet. Must be called with self.lock held.
@@ -277,7 +309,7 @@ class Scheduler(object):
         _sleep_time = self.sleep_time
 
         with self.lock:
-            for job in self.jobs:
+            for job in sorted(self.jobs):
                 if job.max_repeats_reached:
                     self.logger.info('Job `%s` already reached max runs count (%s UTC)', job.name, job.max_repeats_reached_at)
                 else:
@@ -294,6 +326,7 @@ class Scheduler(object):
                 self.iter_cb(*self.iter_cb_args)
 
 if __name__ == '__main__':
+    basicConfig(level=INFO)
     job = Job('a', start_time=datetime.datetime.utcnow(), interval=Interval(seconds=1), max_repeats=20)
     scheduler = Scheduler()
     scheduler.create(job, False)
