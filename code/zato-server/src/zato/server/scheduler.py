@@ -127,21 +127,26 @@ class Scheduler(object):
 
 # ################################################################################################################################
 
+    def create_edit_one_time(self, job_data, broker_msg_type, is_create=True):
+        """ Re-/schedules the execution of a one-time job.
+        """
+        self.create_edit_job(job_data.name, _start_date(job_data), SCHEDULER_JOB_TYPE.ONE_TIME, job_data.service, is_create)
+
     def create_one_time(self, job_data, broker_msg_type):
         """ Schedules the execution of a one-time job.
         """
-        self.create_edit_job(job_data.name, _start_date(job_data), SCHEDULER_JOB_TYPE.ONE_TIME, job_data.service)
+        self.create_edit_one_time(job_data, broker_msg_type)
 
     def edit_one_time(self, job_data, broker_msg_type):
         """ First deletes a one-time job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
-        self.create_one_time(job_data, broker_msg_type)
+        self.create_edit_one_time(job_data, broker_msg_type, False)
 
 # ################################################################################################################################
 
     def create_edit_interval_based(self, job_data, broker_msg_type, is_create=True):
-        """ Schedules the execution of an interval-based job.
+        """ Re-/schedules the execution of an interval-based job.
         """
         start_date = _start_date(job_data)
         weeks = job_data.weeks if job_data.get('weeks') else 0
@@ -189,12 +194,9 @@ class Scheduler(object):
 # ################################################################################################################################
 
     def delete(self, job_data):
-        """ Deletes the job or warns if it hasn't been scheduled.
+        """ Deletes the job from the scheduler.
         """
-        # If there's an old_name then we're performing an edit, 
-        # otherwise we're using the current name.
-        _name = job_data.old_name if job_data.get('old_name') else job_data.name
-        self.sched.delete(Job(_name, None))
+        self.sched.delete_by_name(job_data.old_name if job_data.get('old_name') else job_data.name)
 
 # ################################################################################################################################
 
