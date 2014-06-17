@@ -285,6 +285,21 @@ class Scheduler(object):
         with self.lock:
             self._delete_stop(job, 'deleted')
 
+    def delete_by_name(self, name):
+        """ Deletes a job by its name.
+        """
+        _job = None
+
+        with self.lock:
+            for job in self.jobs:
+                if job.name == name:
+                    _job = job
+                    break
+
+        # We can't do it with self.lock because deleting changes the set = RuntimeError
+        if _job:
+            self.delete(job)
+
     def stop_job(self, job):
         """ Stops a job by deleting it.
         """
