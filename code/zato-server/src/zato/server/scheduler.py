@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, time
+import logging
 from traceback import format_exc
 
 # dateutil
@@ -22,7 +22,6 @@ from gevent import sleep, spawn
 from zato.common import ENSURE_SINGLETON_JOB, SCHEDULER_JOB_TYPE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.scheduler import Interval, Job, Scheduler as _Scheduler
-from zato.common.util import new_cid
 
 logger = logging.getLogger(__name__)
 
@@ -82,8 +81,8 @@ class Scheduler(object):
             self.singleton.broker_client.invoke_async(msg)
 
         if logger.isEnabledFor(logging.DEBUG):
-            msg = 'Sent a job execution request, name [{0}], service [{1}], extra [{2}]'.format(
-                name, service, extra)
+            msg = 'Sent a job execution request, name [{}], service [{}], extra [{}]'.format(
+                name, ctx['cb_kwargs']['service'], ctx['cb_kwargs']['extra'])
             logger.debug(msg)
 
 # ################################################################################################################################
