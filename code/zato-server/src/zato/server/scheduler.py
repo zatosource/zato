@@ -102,15 +102,24 @@ class Scheduler(object):
             msg = 'Caught exception [{0}]'.format(format_exc(e))
             logger.error(msg)
 
+    def create_job(self, name, start_date, job_type, service, max_repeats=1, days=0, hours=0, minutes=0, seconds=0, extra=None):
+        """ A base method for scheduling of jobs.
+        """
+        cb_kwargs = {
+            'service': service,
+            'extra': extra,
+            'job_type': job_type,
+        }
+
+        interval = Interval(days=days, hours=hours, minutes=minutes, seconds=seconds)
+        job = Job(name, interval, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
+
+        self.sched.create(job)
+
     def create_one_time(self, job_data, broker_msg_type):
         """ Schedules the execution of a one-time job.
         """
-        start_date = _start_date(job_data)
-        self.sched.add_date_job(self._on_job_execution, start_date, 
-            [job_data.name, job_data.service, job_data.extra, broker_msg_type,
-               SCHEDULER_JOB_TYPE.ONE_TIME], name=job_data.name)
-
-        logger.info('One-time job [{0}] scheduled'.format(job_data.name))
+        self.create_job(job_data.name, _start_date(job_data), SCHEDULER_JOB_TYPE.ONE_TIME, job_data.service)
 
     def create_interval_based(self, job_data, broker_msg_type):
         """ Schedules the execution of an interval-based job.
@@ -123,17 +132,8 @@ class Scheduler(object):
         seconds = job_data.seconds if job_data.get('seconds') else 0
         max_repeats = job_data.repeats if job_data.get('repeats') else None
 
-        cb_kwargs = {
-            'job_type': SCHEDULER_JOB_TYPE.INTERVAL_BASED,
-            'service': job_data.service,
-            'extra': job_data.extra,
-        }
-
-        interval = Interval(days=days+weeks*7, hours=hours, minutes=minutes, seconds=1)
-        job = Job(job_data.name, interval, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
-
-        self.sched.create(job)
-        logger.info('Interval-based job [{0}] scheduled'.format(job_data.name))
+        self.create_job(job_data.name, start_date, SCHEDULER_JOB_TYPE.INTERVAL_BASED, job_data.service,
+            max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra, )
 
     def create_cron_style(self, job_data, broker_msg_type):
         """ Schedules the execution of a one-time job.
@@ -154,33 +154,24 @@ class Scheduler(object):
         # If there's an old_name then we're performing an edit, 
         # otherwise we're using the current name.
         _name = job_data.old_name if job_data.get('old_name') else job_data.name
-        for job in self.sched.get_jobs():
-            if job.name == _name:
-                self.sched.unschedule_job(job)
-                logger.info('Job [{0}] unscheduled'.format(_name))
-                break
-        else:
-            logger.warn('Job [{0}] was not scheduled, could not unschedule it'.format(_name))
+        self.sched.delete(Job(_name, None))
 
     def edit_one_time(self, job_data, broker_msg_type):
         """ First deletes a one-time job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
-        self.delete(job_data)
         self.create_one_time(job_data, broker_msg_type)
 
     def edit_interval_based(self, job_data, broker_msg_type):
         """ First deletes an interval-based job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
-        self.delete(job_data)
         self.create_interval_based(job_data, broker_msg_type)
 
     def edit_cron_style(self, job_data, broker_msg_type):
         """ First deletes a cron-style job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
-        self.delete(job_data)
         self.create_cron_style(job_data, broker_msg_type)
 
     def execute(self, job_data):
@@ -193,4 +184,4 @@ class Scheduler(object):
             logger.warn('Job [{0}] is not scheduled, could not execute it'.format(job_data.name))
 
     def stop(self):
-        self.sched.shutdown()
+        self.sched.stop()
