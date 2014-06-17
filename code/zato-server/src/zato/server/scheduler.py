@@ -53,8 +53,7 @@ class Scheduler(object):
     def _parse_cron(self, def_):
         minute, hour, day_of_month, month, day_of_week = [elem.strip() for elem in def_.split()]
         return minute, hour, day_of_month, month, day_of_week
-        
-    #def on_job_executed(self, name, service, extra, broker_msg_type, job_type):
+
     def on_job_executed(self, ctx):
         """ Invoked by the underlying scheduler when a job is executed. Sends
         the actual execution request to the broker so it can be picked up by
@@ -130,18 +129,10 @@ class Scheduler(object):
             'extra': job_data.extra,
         }
 
-        for x in range(10):
-            sleep(1)
-            interval = Interval(days=days+weeks*7, hours=hours, minutes=minutes, seconds=1)
-            job = Job(job_data.name + '-'+ str(x), interval, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
+        interval = Interval(days=days+weeks*7, hours=hours, minutes=minutes, seconds=1)
+        job = Job(job_data.name + '-'+ str(x), interval, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
 
-            self.sched.create(job)
-
-        #self.sched.add_interval_job(self._on_job_execution, 
-        #    weeks, days, hours, minutes, seconds, start_date, 
-        #    [job_data.name, job_data.service, job_data.extra, broker_msg_type,
-        #       SCHEDULER_JOB_TYPE.INTERVAL_BASED], name=job_data.name, max_runs=max_runs)
-        
+        self.sched.create(job)
         logger.info('Interval-based job [{0}] scheduled'.format(job_data.name))
         
     def create_cron_style(self, job_data, broker_msg_type):
