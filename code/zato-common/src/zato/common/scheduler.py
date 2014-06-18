@@ -49,8 +49,8 @@ class Interval(object):
 # ################################################################################################################################
 
 class Job(object):
-    def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None, on_max_repeats_reached_cb=None,
-            is_active=True):
+    def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None,
+            on_max_repeats_reached_cb=None, is_active=True):
         self.name = name
         self.interval = interval
         self.callback = callback

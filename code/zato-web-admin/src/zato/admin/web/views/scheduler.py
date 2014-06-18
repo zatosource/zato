@@ -36,7 +36,7 @@ from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed
 from zato.admin.settings import job_type_friendly_names
 from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, \
      IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
-from zato.common import SCHEDULER_JOB_TYPE, TRACE1, ZatoException
+from zato.common import SCHEDULER, TRACE1, ZatoException
 from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
 from zato.common.util import pprint
 
@@ -143,7 +143,7 @@ def _get_create_edit_one_time_message(user_profile, cluster, params, form_prefix
     actions. Used when creating one_time jobs.
     """
     input_dict = _get_create_edit_message(user_profile, cluster, params, form_prefix)
-    input_dict['job_type'] = SCHEDULER_JOB_TYPE.ONE_TIME
+    input_dict['job_type'] = SCHEDULER.JOB_TYPE.ONE_TIME
 
     return input_dict
 
@@ -152,7 +152,7 @@ def _get_create_edit_interval_based_message(user_profile, cluster, params, form_
     actions. Used when creating interval_based jobs.
     """
     input_dict =_get_create_edit_message(user_profile, cluster, params, form_prefix)
-    input_dict['job_type'] = SCHEDULER_JOB_TYPE.INTERVAL_BASED
+    input_dict['job_type'] = SCHEDULER.JOB_TYPE.INTERVAL_BASED
     input_dict['weeks'] = params.get(form_prefix + 'weeks', '')
     input_dict['days'] = params.get(form_prefix + 'days', '')
     input_dict['hours'] = params.get(form_prefix + 'hours', '')
@@ -167,7 +167,7 @@ def _get_create_edit_cron_style_message(user_profile, cluster, params, form_pref
     actions. Used when creating cron_style jobs.
     """
     input_dict =_get_create_edit_message(user_profile, cluster, params, form_prefix)
-    input_dict['job_type'] = SCHEDULER_JOB_TYPE.CRON_STYLE
+    input_dict['job_type'] = SCHEDULER.JOB_TYPE.CRON_STYLE
     input_dict['cron_definition'] = params[form_prefix + 'cron_definition']
 
     return input_dict
@@ -299,10 +299,10 @@ def index(req):
                               extra, service_name=service_name, 
                               job_type_friendly=job_type_friendly)
                     
-                    if job_type == SCHEDULER_JOB_TYPE.ONE_TIME:
+                    if job_type == SCHEDULER.JOB_TYPE.ONE_TIME:
                         definition_text=_one_time_job_def(req.zato.user_profile, start_date)
                         
-                    elif job_type == SCHEDULER_JOB_TYPE.INTERVAL_BASED:
+                    elif job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
                         definition_text = _interval_based_job_def(req.zato.user_profile,
                             _get_start_date(job_elem.start_date),
                             job_elem.repeats, job_elem.weeks, job_elem.days,
@@ -319,7 +319,7 @@ def index(req):
                                             seconds, repeats)
                         job.interval_based = ib_job
                         
-                    elif job_type == SCHEDULER_JOB_TYPE.CRON_STYLE:
+                    elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
                         cron_definition = job_elem.cron_definition or ''
                         definition_text=_cron_style_job_def(req.zato.user_profile, start_date, cron_definition)
                         

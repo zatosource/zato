@@ -16,8 +16,8 @@ from traceback import format_exc
 from dateutil.parser import parse
 
 # Zato
-from zato.common import scheduler_date_time_format, SCHEDULER_JOB_TYPE, ZatoException, ZATO_NONE
-from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
+from zato.common import scheduler_date_time_format, SCHEDULER, ZatoException, ZATO_NONE
+from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
 from zato.common.odb.query import job_by_name, job_list
@@ -46,8 +46,8 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     name = input.name
     service_name = input.service
     
-    if job_type not in(SCHEDULER_JOB_TYPE.ONE_TIME, SCHEDULER_JOB_TYPE.INTERVAL_BASED, 
-                           SCHEDULER_JOB_TYPE.CRON_STYLE):
+    if job_type not in(SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED, 
+                           SCHEDULER.JOB_TYPE.CRON_STYLE):
         msg = 'Unrecognized job type [{0}]'.format(job_type)
         logger.error(msg)
         raise ZatoException(cid, msg)
@@ -99,7 +99,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         # Add but don't commit yet.
         session.add(job)
 
-        if job_type == SCHEDULER_JOB_TYPE.INTERVAL_BASED:
+        if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
             ib_params = ('weeks', 'days', 'hours', 'minutes', 'seconds')
             if not any(input[key] for key in ib_params):
                 msg = "At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given"
@@ -118,7 +118,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             
             session.add(ib_job)
             
-        elif job_type == SCHEDULER_JOB_TYPE.CRON_STYLE:
+        elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
             cron_definition = input.cron_definition.strip()
             
             if cron_definition.startswith('@'):
@@ -154,7 +154,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         
         # Now send it to the broker, but only if the job is active.
         if is_active:
-            msg_action = SCHEDULER.CREATE if action == 'create' else SCHEDULER.EDIT
+            msg_action = SCHEDULER_MSG.CREATE if action == 'create' else SCHEDULER_MSG.EDIT
             msg = {'action': msg_action, 'job_type': job_type,
                    'is_active':is_active, 'start_date':start_date.isoformat(),
                    'extra':extra, 'service': service.name,
@@ -163,14 +163,14 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             if action == 'edit':
                 msg['old_name'] = old_name
 
-            if job_type == SCHEDULER_JOB_TYPE.INTERVAL_BASED:
+            if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
                 for param in ib_params:
                     value = input[param]
                     msg[param] = int(value) if value else 0
-            elif job_type == SCHEDULER_JOB_TYPE.CRON_STYLE:
+            elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
                 msg['cron_definition'] = cron_definition
         else:
-            msg = {'action': SCHEDULER.DELETE, 'name': name}
+            msg = {'action': SCHEDULER_MSG.DELETE, 'name': name}
             
         broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
             
@@ -183,7 +183,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         response.payload.id = job.id
         response.payload.name = input.name
             
-        if job_type == SCHEDULER_JOB_TYPE.CRON_STYLE:
+        if job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
             # Needs to be returned because we might've been performing
             # a substitution like changing '@hourly' into '0 * * * *'.
             response.payload.cron_definition = cs_job.cron_definition
@@ -288,7 +288,7 @@ class Delete(AdminService):
                 session.delete(job)
                 session.commit()
 
-                msg = {'action': SCHEDULER.DELETE, 'name': job.name}
+                msg = {'action': SCHEDULER_MSG.DELETE, 'name': job.name}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
                 
             except Exception, e:
@@ -315,7 +315,7 @@ class Execute(AdminService):
                     filter(Job.id==self.request.input.id).\
                     one()
                 
-                msg = {'action': SCHEDULER.EXECUTE, 'name': job.name}
+                msg = {'action': SCHEDULER_MSG.EXECUTE, 'name': job.name}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
                 
             except Exception, e:
