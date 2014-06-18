@@ -86,6 +86,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.staticfiles',
     'django_openid_auth',
+    'django_settings',
     'zato.admin.web',
 )
 

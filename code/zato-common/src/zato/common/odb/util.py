@@ -36,7 +36,7 @@ cli_sa_mappings = {
 default_sa_mappings = {
     'odb_db_name': 'zato',
     'odb_host': '127.0.0.1',
-    'odp_port': '5432',
+    'odb_port': '5432',
     'odb_user': 'zato',
     'odb_type': 'postgresql',
 }
@@ -92,6 +92,9 @@ def get_engine_url(args):
             value = attrs.get(name, ZATO_NOT_GIVEN)
             if value != ZATO_NOT_GIVEN:
                 attrs[cli_sa_mappings[name]] = value
+    elif attrs['engine'] == 'postgresql':
+        if not attrs['port']:
+            attrs['port'] = loaddefaults('odb_port')
 
     # Re-map server ODB params into SQLAlchemy params
     if attrs['engine'] == 'sqlite':
