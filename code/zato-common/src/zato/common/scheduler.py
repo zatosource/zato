@@ -185,14 +185,15 @@ class Job(object):
                     if self.on_max_repeats_reached_cb:
                         self.on_max_repeats_reached_cb(self)
 
-                # Pause the greenlet for however long is needed
-                _sleep(self.interval.in_seconds)
-
                 # Invoke callback in a new greenlet so it doesn't block the current one.
                 _spawn(self.callback, **{'ctx':self.get_context()})
+
             except Exception, e:
-                print(format_exc(e))
                 logger.warn(format_exc(e))
+
+            finally:
+                # Pause the greenlet for however long is needed
+                _sleep(self.interval.in_seconds)
 
         if logger.isEnabledFor(DEBUG):
             logger.debug('Job leaving main loop `%s` after %d iterations', self, self.current_run)
