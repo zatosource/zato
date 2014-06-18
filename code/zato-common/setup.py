@@ -25,6 +25,7 @@ setup(
 
       package_dir = {'':'src'},
       packages = find_packages('src'),
+      scripts = ['bin/zato-py'],
       namespace_packages = ['zato'],
       
       install_requires=[

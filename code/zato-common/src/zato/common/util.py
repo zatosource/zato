@@ -160,7 +160,7 @@ def get_executable():
     """ Returns the wrapper buildout uses for executing Zato commands. This has
     all the dependencies added to PYTHONPATH.
     """
-    return os.path.join(os.path.dirname(sys.executable), 'py')
+    return os.path.join(os.path.dirname(sys.executable), 'zato-py')
 
 def get_zato_command():
     """ Returns the full path to the 'zato' command' in a buildout environment.
