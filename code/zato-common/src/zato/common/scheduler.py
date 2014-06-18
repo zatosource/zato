@@ -24,6 +24,7 @@ from gevent import lock
 from paodate import Delta
 
 # Zato
+from zato.common import SCHEDULER
 from zato.common.util import make_repr, new_cid
 
 logger = getLogger('zato_scheduler')
@@ -136,6 +137,12 @@ class Job(object):
             if next_run_time >= now:
                 return next_run_time
 
+            # The assumption here is that all one-time jobs are always active at the instant we evaluate them here.
+            elif next_run_time < now and self.type == SCHEDULER.JOB_TYPE.ONE_TIME and self.is_active:
+
+                # The delay is 100% arbitrary
+                return now + datetime.timedelta(seconds=10)
+
             else:
                 # We must have already run out of iterations
                 self.max_repeats_reached = True
@@ -243,7 +250,7 @@ class Scheduler(object):
                 if logger.isEnabledFor(DEBUG):
                     logger.debug('Job scheduled `%s`', job)
                 else:
-                    logger.info('Job scheduled `%s`', job.name)
+                    logger.info('Job scheduled `%s` (%s, start: %s UTC)', job.name, job.type, job.start_time)
 
         else:
             logger.warn('Skipping inactive job `%s`', job)
@@ -253,38 +260,48 @@ class Scheduler(object):
             self._create(*args, **kwargs)
 
     def edit(self, job):
-        """ Edits a job - this means an already existing job is deleted and created again,
+        """ Edits a job - this means an already existing job is unscheduled and created again,
         i.e. it's not an in-place update.
         """
         with self.lock:
-            self.delete(job)
+            self.unschedule(job)
             self.create(job.clone(), True)
 
-    def _delete(self, job):
-        """ Actually deletes a job. Must be called with self.lock held.
+    def _unschedule(self, job):
+        """ Actually unschedules a job. Must be called with self.lock held.
         """
+        found = False
         job.keep_running = False
-        self.jobs.remove(job)
-        self.job_greenlets[job.name].kill(timeout=2.0)
-        del self.job_greenlets[job.name]
 
-    def _delete_stop(self, job, message):
+        if job in self.jobs:
+            self.jobs.remove(job)
+            found = True
+
+        if job.name in self.job_greenlets:
+            self.job_greenlets[job.name].kill(timeout=2.0)
+            del self.job_greenlets[job.name]
+            found = True
+
+        return found
+
+    def _unschedule_stop(self, job, message):
         """ API for job deletion and stopping. Must be called with a self.lock held.
         """
-        self._delete(job)
-
-        if logger.isEnabledFor(DEBUG):
-            logger.debug('Job %s `%s`', message, job)
+        if self._unschedule(job):
+            if logger.isEnabledFor(DEBUG):
+                logger.debug('Job %s `%s`', message, job)
+            else:
+                logger.info('Job %s `%s` (%s)', message, job.name, job.type)
         else:
-            logger.info('Job %s `%s`', message, job.name)
+            logger.debug('Job not found `%s`', job)
 
-    def delete(self, job):
+    def unschedule(self, job):
         """ Deletes a job.
         """
         with self.lock:
-            self._delete_stop(job, 'deleted')
+            self._unschedule_stop(job, 'unscheduled')
 
-    def delete_by_name(self, name):
+    def unschedule_by_name(self, name):
         """ Deletes a job by its name.
         """
         _job = None
@@ -297,13 +314,13 @@ class Scheduler(object):
 
         # We can't do it with self.lock because deleting changes the set = RuntimeError
         if _job:
-            self.delete(job)
+            self.unschedule(job)
 
     def stop_job(self, job):
         """ Stops a job by deleting it.
         """
         with self.lock:
-            self._delete_stop(job, 'stopped')
+            self._unschedule_stop(job, 'stopped')
 
     def stop(self):
         """ Stops all jobs and the scheduler itself.
@@ -311,7 +328,7 @@ class Scheduler(object):
         with self.lock:
             jobs = sorted(job for job in self.jobs)
             for job in jobs:
-                self._delete_stop(job.clone(), 'stopped')
+                self._unschedule_stop(job.clone(), 'stopped')
 
     def sleep(self, value):
         """ A method introduced so the class is easier to mock out in tests.
@@ -319,9 +336,12 @@ class Scheduler(object):
         gevent.sleep(value)
 
     def on_job_executed(self, ctx):
-        logger.debug('Executing `%s`', ctx)
+        logger.debug('Executing `%s`, `%s`', ctx['name'], ctx)
         self.on_job_executed_cb(ctx)
-        logger.info('Job executed `%s`', ctx)
+        logger.info('Job executed `%s`, `%s`', ctx['name'], ctx)
+
+        if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME:
+            self.unschedule_by_name(ctx['name'])
 
     def spawn_job(self, job):
         """ Spawns a job's greenlet. Must be called with self.lock held.
@@ -352,7 +372,7 @@ class Scheduler(object):
 
 if __name__ == '__main__':
     basicConfig(level=INFO)
-    job = Job('a', start_time=datetime.datetime.utcnow(), interval=Interval(seconds=1), max_repeats=20)
+    job = Job('a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_time=datetime.datetime.utcnow(), interval=Interval(seconds=1), max_repeats=20)
     scheduler = Scheduler()
     scheduler.create(job, False)
     scheduler.run()
