@@ -70,7 +70,7 @@ class Scheduler(object):
             'service': ctx['cb_kwargs']['service'], 
             'payload':ctx['cb_kwargs']['extra'],
             'cid':ctx['cid'],
-            'job_type': ctx['cb_kwargs']['job_type']
+            'job_type': ctx['type']
         }
 
         # Special case an internal job that needs to be delivered to all parallel
@@ -109,18 +109,17 @@ class Scheduler(object):
 
 # ################################################################################################################################
 
-    def create_edit_job(self, name, start_date, job_type, service, is_create=True, max_repeats=1, days=0, hours=0, minutes=0,
+    def create_edit_job(self, name, start_time, job_type, service, is_create=True, max_repeats=1, days=0, hours=0, minutes=0,
             seconds=0, extra=None):
         """ A base method for scheduling of jobs.
         """
         cb_kwargs = {
             'service': service,
             'extra': extra,
-            'job_type': job_type,
         }
 
         interval = Interval(days=days, hours=hours, minutes=minutes, seconds=seconds)
-        job = Job(name, interval, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
+        job = Job(name, job_type, interval, start_time, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
 
         func = self.sched.create if is_create else self.sched.edit
         func(job)
@@ -138,7 +137,7 @@ class Scheduler(object):
         self.create_edit_one_time(job_data, broker_msg_type)
 
     def edit_one_time(self, job_data, broker_msg_type):
-        """ First deletes a one-time job and then schedules its execution. 
+        """ First unschedules a one-time job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
         self.create_edit_one_time(job_data, broker_msg_type, False)
@@ -165,7 +164,7 @@ class Scheduler(object):
         self.create_edit_interval_based(job_data, broker_msg_type)
 
     def edit_interval_based(self, job_data, broker_msg_type):
-        """ First deletes an interval-based job and then schedules its execution. 
+        """ First unschedules an interval-based job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
         self.create_edit_interval_based(job_data, broker_msg_type, False)
@@ -186,7 +185,7 @@ class Scheduler(object):
         logger.info('Cron-style job [{0}] scheduled'.format(job_data.name))
 
     def edit_cron_style(self, job_data, broker_msg_type):
-        """ First deletes a cron-style job and then schedules its execution. 
+        """ First unschedules a cron-style job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
         self.create_cron_style(job_data, broker_msg_type)
@@ -196,7 +195,7 @@ class Scheduler(object):
     def delete(self, job_data):
         """ Deletes the job from the scheduler.
         """
-        self.sched.delete_by_name(job_data.old_name if job_data.get('old_name') else job_data.name)
+        self.sched.unschedule_by_name(job_data.old_name if job_data.get('old_name') else job_data.name)
 
 # ################################################################################################################################
 

@@ -539,7 +539,7 @@ class SchedulerTestCase(TestCase):
         scheduler.create(job2)
         scheduler.run()
 
-        scheduler.delete(job1)
+        scheduler.unschedule(job1)
 
         self.assertIn(job2, scheduler.jobs)
         self.assertNotIn(job1, scheduler.jobs)
@@ -595,7 +595,7 @@ class SchedulerTestCase(TestCase):
             self.assertTrue(job1.keep_running)
             self.assertTrue(job2.keep_running)
 
-            scheduler.delete(job1)
+            scheduler.unschedule(job1)
 
             self.assertFalse(job1.keep_running)
             self.assertTrue(job2.keep_running)
@@ -689,7 +689,7 @@ class SchedulerTestCase(TestCase):
         data = {'runs':[], 'ctx':[]}
 
         def get_context():
-            ctx = rand_string()
+            ctx = {'name': rand_string(), 'type':SCHEDULER.JOB_TYPE.INTERVAL_BASED}
             data['ctx'].append(ctx)
             return ctx
 
