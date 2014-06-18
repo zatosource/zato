@@ -1,0 +1,2 @@
+recursive-include src/zato/admin/templates *
+recursive-include src/zato/admin/static *
