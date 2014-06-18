@@ -19,8 +19,8 @@ from dateutil.parser import parse
 from gevent import sleep, spawn
 
 # Zato 
-from zato.common import ENSURE_SINGLETON_JOB, SCHEDULER_JOB_TYPE
-from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
+from zato.common import ENSURE_SINGLETON_JOB, SCHEDULER
+from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG
 from zato.common.scheduler import Interval, Job, Scheduler as _Scheduler
 
 logger = logging.getLogger('zato_scheduler')
@@ -65,7 +65,7 @@ class Scheduler(object):
         name = ctx['name']
 
         msg = {
-            'action': SCHEDULER.JOB_EXECUTED,
+            'action': SCHEDULER_MSG.JOB_EXECUTED,
             'name':name,
             'service': ctx['cb_kwargs']['service'], 
             'payload':ctx['cb_kwargs']['extra'],
@@ -130,7 +130,7 @@ class Scheduler(object):
     def create_edit_one_time(self, job_data, broker_msg_type, is_create=True):
         """ Re-/schedules the execution of a one-time job.
         """
-        self.create_edit_job(job_data.name, _start_date(job_data), SCHEDULER_JOB_TYPE.ONE_TIME, job_data.service, is_create)
+        self.create_edit_job(job_data.name, _start_date(job_data), SCHEDULER.JOB_TYPE.ONE_TIME, job_data.service, is_create)
 
     def create_one_time(self, job_data, broker_msg_type):
         """ Schedules the execution of a one-time job.
@@ -156,7 +156,7 @@ class Scheduler(object):
         seconds = job_data.seconds if job_data.get('seconds') else 0
         max_repeats = job_data.repeats if job_data.get('repeats') else None
 
-        self.create_edit_job(job_data.name, start_date, SCHEDULER_JOB_TYPE.INTERVAL_BASED, job_data.service,
+        self.create_edit_job(job_data.name, start_date, SCHEDULER.JOB_TYPE.INTERVAL_BASED, job_data.service,
             is_create, max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra, )
 
     def create_interval_based(self, job_data, broker_msg_type):
@@ -181,7 +181,7 @@ class Scheduler(object):
             year=None, month=month, day=day_of_month, hour=hour,
             minute=minute, second=None, start_date=start_date, 
             args=[job_data.name, job_data.service, job_data.extra, broker_msg_type,
-                    SCHEDULER_JOB_TYPE.CRON_STYLE], name=job_data.name)
+                    SCHEDULER.JOB_TYPE.CRON_STYLE], name=job_data.name)
 
         logger.info('Cron-style job [{0}] scheduled'.format(job_data.name))
 
