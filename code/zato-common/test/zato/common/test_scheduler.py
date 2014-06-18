@@ -607,11 +607,22 @@ class SchedulerTestCase(TestCase):
 
     def test_edit(self):
 
+        def callback():
+            pass
+
+        def on_max_repeats_reached_cb():
+            pass
+
         start_time = datetime.utcnow()
         test_wait_time = 0.5
         job_interval1, job_interval2 = 2, 3
         job_sleep_time = 10
         job_max_repeats1, job_max_repeats2 = 20, 30
+
+        scheduler = Scheduler(dummy_callback)
+        scheduler.lock = RLock()
+        scheduler.iter_cb = iter_cb
+        scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
 
         def check(scheduler, job, label):
             self.assertIn(job.name, scheduler.job_greenlets)
@@ -629,24 +640,31 @@ class SchedulerTestCase(TestCase):
                 given = getattr(clone, name)
                 self.assertEquals(expected, given, '{} != {} ({})'.format(expected, given, name))
 
+            job_cb = job.callback
+            clone_cb = clone.callback
+
+            job_on_max_cb = job.on_max_repeats_reached_cb
+            clone_on_max_cb = clone.on_max_repeats_reached_cb
+
             if label == 'first':
                 self.assertEquals(job.start_time, clone.start_time)
+                self.assertIs(job_cb.im_func, clone_cb.im_func)
+                self.assertIs(job_on_max_cb.im_func, clone_on_max_cb.im_func)
+
             else:
                 self.assertEquals(job.start_time + timedelta(seconds=job_interval2), clone.start_time)
-
-            #self.assertIs(job.callback.im_func, new_job.callback.im_func)
-            #self.assertIs(job.on_max_repeats_reached_cb.im_func, new_job.on_max_repeats_reached_cb.im_func)
+                self.assertIs(clone_cb.im_func, scheduler.on_job_executed.im_func)
+                self.assertIs(clone_on_max_cb.im_func, scheduler.on_max_repeats_reached.im_func)
 
         job1 = Job('a', Interval(seconds=job_interval1), start_time, max_repeats=job_max_repeats1)
+        job1.callback = callback
+        job1.on_max_repeats_reached_cb = on_max_repeats_reached_cb
         job1.wait_sleep_time = job_sleep_time
 
         job2 = Job('a', Interval(seconds=job_interval2), start_time, max_repeats=job_max_repeats2)
+        job2.callback = callback
+        job2.on_max_repeats_reached_cb = on_max_repeats_reached_cb
         job2.wait_sleep_time = job_sleep_time
-
-        scheduler = Scheduler(dummy_callback)
-        scheduler.lock = RLock()
-        scheduler.iter_cb = iter_cb
-        scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
 
         scheduler.run()
         scheduler.create(job1)
