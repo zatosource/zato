@@ -26,7 +26,7 @@ from paodate import Delta
 # Zato
 from zato.common.util import make_repr, new_cid
 
-logger = getLogger(__name__)
+logger = getLogger('zato_scheduler')
 
 # ################################################################################################################################
 
@@ -51,7 +51,6 @@ class Interval(object):
 class Job(object):
     def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None, on_max_repeats_reached_cb=None,
             is_active=True):
-        self.logger = getLogger(self.__class__.__name__)
         self.name = name
         self.interval = interval
         self.callback = callback
@@ -142,7 +141,7 @@ class Job(object):
                 self.max_repeats_reached_at = next_run_time
                 self.keep_running = False
 
-                self.logger.warn('Job `%s` max repeats reached at `%s`', self.name, self.max_repeats_reached_at)
+                logger.warn('Job `%s` max repeats reached at `%s`', self.name, self.max_repeats_reached_at)
 
     def get_context(self):
         ctx = {
@@ -159,8 +158,8 @@ class Job(object):
 
     def main_loop(self):
 
-        if self.logger.isEnabledFor(DEBUG):
-            self.logger.debug('Job entering main loop `%s`', self)
+        if logger.isEnabledFor(DEBUG):
+            logger.debug('Job entering main loop `%s`', self)
 
         _sleep = gevent.sleep
         _spawn = gevent.spawn
@@ -185,16 +184,16 @@ class Job(object):
                 _spawn(self.callback, **{'ctx':self.get_context()})
             except Exception, e:
                 print(format_exc(e))
-                self.logger.warn(format_exc(e))
+                logger.warn(format_exc(e))
 
-        if self.logger.isEnabledFor(DEBUG):
-            self.logger.debug('Job leaving main loop `%s` after %d iterations', self, self.current_run)
+        if logger.isEnabledFor(DEBUG):
+            logger.debug('Job leaving main loop `%s` after %d iterations', self, self.current_run)
 
         return True
 
     def run(self):
-        if self.logger.isEnabledFor(DEBUG):
-            self.logger.debug('Job starting `%s`', self)
+        if logger.isEnabledFor(DEBUG):
+            logger.debug('Job starting `%s`', self)
 
         _utcnow = datetime.datetime.utcnow
         _sleep = gevent.sleep
@@ -217,7 +216,6 @@ class Job(object):
 
 class Scheduler(object):
     def __init__(self, on_job_executed_cb=None):
-        self.logger = getLogger(self.__class__.__name__)
         self.on_job_executed_cb = on_job_executed_cb
         self.jobs = set()
         self.job_greenlets = {}
@@ -241,13 +239,13 @@ class Scheduler(object):
             if spawn:
                 self.spawn_job(job)
 
-                if self.logger.isEnabledFor(DEBUG):
-                    self.logger.debug('Job scheduled `%s`', job)
+                if logger.isEnabledFor(DEBUG):
+                    logger.debug('Job scheduled `%s`', job)
                 else:
-                    self.logger.info('Job scheduled `%s`', job.name)
+                    logger.info('Job scheduled `%s`', job.name)
 
         else:
-            self.logger.warn('Skipping inactive job `%s`', job)
+            logger.warn('Skipping inactive job `%s`', job)
 
     def create(self, *args, **kwargs):
         with self.lock:
@@ -274,10 +272,10 @@ class Scheduler(object):
         """
         self._delete(job)
 
-        if self.logger.isEnabledFor(DEBUG):
-            self.logger.debug('Job %s `%s`', message, job)
+        if logger.isEnabledFor(DEBUG):
+            logger.debug('Job %s `%s`', message, job)
         else:
-            self.logger.info('Job %s `%s`', message, job.name)
+            logger.info('Job %s `%s`', message, job.name)
 
     def delete(self, job):
         """ Deletes a job.
@@ -320,9 +318,9 @@ class Scheduler(object):
         gevent.sleep(value)
 
     def on_job_executed(self, ctx):
-        self.logger.debug('Executing `%s`', ctx)
+        logger.debug('Executing `%s`', ctx)
         self.on_job_executed_cb(ctx)
-        self.logger.info('Job executed `%s`', ctx)
+        logger.info('Job executed `%s`', ctx)
 
     def spawn_job(self, job):
         """ Spawns a job's greenlet. Must be called with self.lock held.
@@ -338,7 +336,7 @@ class Scheduler(object):
         with self.lock:
             for job in sorted(self.jobs):
                 if job.max_repeats_reached:
-                    self.logger.info('Job `%s` already reached max runs count (%s UTC)', job.name, job.max_repeats_reached_at)
+                    logger.info('Job `%s` already reached max runs count (%s UTC)', job.name, job.max_repeats_reached_at)
                 else:
                     self.spawn_job(job)
 

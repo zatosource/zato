@@ -23,7 +23,7 @@ from zato.common import ENSURE_SINGLETON_JOB, SCHEDULER_JOB_TYPE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER
 from zato.common.scheduler import Interval, Job, Scheduler as _Scheduler
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('zato_scheduler')
 
 def _start_date(job_data):
     if isinstance(job_data.start_date, basestring):
