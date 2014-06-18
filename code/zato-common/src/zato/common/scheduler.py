@@ -49,9 +49,10 @@ class Interval(object):
 # ################################################################################################################################
 
 class Job(object):
-    def __init__(self, name, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None,
+    def __init__(self, name, type, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None,
             on_max_repeats_reached_cb=None, is_active=True):
         self.name = name
+        self.type = type
         self.interval = interval
         self.callback = callback
         self.cb_kwargs = cb_kwargs or {}
@@ -82,7 +83,7 @@ class Job(object):
         return self.name == other.name
 
     def clone(self):
-        return Job(self.name, self.interval, self.start_time, self.callback, self.cb_kwargs, self.max_repeats,
+        return Job(self.name, self.type, self.interval, self.start_time, self.callback, self.cb_kwargs, self.max_repeats,
             self.on_max_repeats_reached_cb, self.is_active)
 
     def get_start_time(self, start_time):
@@ -151,7 +152,7 @@ class Job(object):
             'cb_kwargs': self.cb_kwargs
         }
 
-        for name in 'name', 'current_run', 'max_repeats_reached', 'max_repeats':
+        for name in 'name', 'current_run', 'max_repeats_reached', 'max_repeats', 'type':
             ctx[name] = getattr(self, name)
 
         return ctx
