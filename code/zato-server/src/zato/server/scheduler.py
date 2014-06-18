@@ -45,10 +45,10 @@ class Scheduler(object):
             self.init()
 
     def init(self):
+        spawn(self.sched.run)
+
         while not self.sched.ready:
             sleep(0.1)
-
-        spawn(self.sched.run)
 
 # ################################################################################################################################
 
