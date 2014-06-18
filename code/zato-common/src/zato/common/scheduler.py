@@ -51,7 +51,7 @@ class Interval(object):
 
 class Job(object):
     def __init__(self, name, type, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None,
-            on_max_repeats_reached_cb=None, is_active=True):
+            on_max_repeats_reached_cb=None, is_active=True, clone_start_time=False):
         self.name = name
         self.type = type
         self.interval = interval
@@ -66,7 +66,10 @@ class Job(object):
         self.max_repeats_reached_at = None
         self.keep_running = True
 
-        self.start_time = self.get_start_time(start_time if start_time else datetime.datetime.utcnow())
+        if clone_start_time:
+            self.start_time = start_time
+        else:
+            self.start_time = self.get_start_time(start_time if start_time is not None else datetime.datetime.utcnow())
 
         self.wait_sleep_time = 1
         self.wait_iter_cb = None
@@ -85,7 +88,7 @@ class Job(object):
 
     def clone(self):
         return Job(self.name, self.type, self.interval, self.start_time, self.callback, self.cb_kwargs, self.max_repeats,
-            self.on_max_repeats_reached_cb, self.is_active)
+            self.on_max_repeats_reached_cb, self.is_active, True)
 
     def get_start_time(self, start_time):
         """ Converts initial start time to the time the job should be invoked next.
@@ -123,6 +126,9 @@ class Job(object):
 
         now = datetime.datetime.utcnow()
         interval = datetime.timedelta(seconds=self.interval.in_seconds)
+
+        if start_time > now:
+            return start_time
 
         first_run_time = start_time + interval
 

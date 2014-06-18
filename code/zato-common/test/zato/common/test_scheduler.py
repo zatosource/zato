@@ -107,7 +107,7 @@ class JobTestCase(TestCase):
 
     def test_clone(self):
 
-        interval = Interval(seconds=rand_int(30, 50))
+        interval = Interval(seconds=5)#rand_int(30, 50))
         start_time = datetime.utcnow()
 
         def callback():
@@ -128,8 +128,7 @@ class JobTestCase(TestCase):
             given = getattr(clone, name)
             self.assertEquals(expected, given, '{} != {} ({})'.format(expected, given, name))
 
-        # It's not the same because we slept for a moment and now the clone fell into the next run time
-        self.assertEquals(job.start_time + timedelta(seconds=interval.in_seconds), clone.start_time)
+        self.assertEquals(job.start_time, clone.start_time)
 
         self.assertIs(job.callback, clone.callback)
         self.assertIs(job.on_max_repeats_reached_cb, clone.on_max_repeats_reached_cb)
@@ -656,7 +655,7 @@ class SchedulerTestCase(TestCase):
                 self.assertIs(job_on_max_cb.im_func, clone_on_max_cb.im_func)
 
             else:
-                self.assertEquals(job.start_time + timedelta(seconds=job_interval2), clone.start_time)
+                self.assertEquals(job.start_time, clone.start_time)
                 self.assertIs(clone_cb.im_func, scheduler.on_job_executed.im_func)
                 self.assertIs(clone_on_max_cb.im_func, scheduler.on_max_repeats_reached.im_func)
 
