@@ -45,41 +45,41 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     cluster_id = input.cluster_id
     name = input.name
     service_name = input.service
-    
+
     if job_type not in(SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED, 
                            SCHEDULER.JOB_TYPE.CRON_STYLE):
         msg = 'Unrecognized job type [{0}]'.format(job_type)
         logger.error(msg)
         raise ZatoException(cid, msg)
-    
+
     # For finding out if we don't have a job of that name already defined.
     existing_one_base = session.query(Job).\
         filter(Cluster.id==cluster_id).\
         filter(Job.name==name)
-    
+
     if action == 'create':
         existing_one = existing_one_base.first()
     else:
         job_id = input.id
         existing_one = existing_one_base.filter(Job.id != job_id).first()
-    
+
     if existing_one:
         raise ZatoException(cid, 'Job [{0}] already exists on this cluster'.format(name))
-    
+
     # Is the service's name correct?
     service = session.query(Service).\
         filter(Cluster.id==cluster_id).\
         filter(Service.name==service_name).first()
-    
+
     if not service:
         msg = 'Service [{0}] does not exist on this cluster'.format(service_name)
         logger.error(msg)
         raise ZatoException(cid, msg)
-    
+
     # We can create/edit a base Job object now and - optionally - another one
     # if the job type's is either interval-based or Cron-style. The base
     # instance will be enough if it's a one-time job.
-    
+
     extra = input.extra.encode('utf-8')
     is_active = input.is_active
     start_date = parse(input.start_date)
@@ -94,7 +94,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         job.start_date = start_date
         job.service = service
         job.extra = extra
-        
+
     try:
         # Add but don't commit yet.
         session.add(job)
@@ -105,7 +105,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                 msg = "At least one of ['weeks', 'days', 'hours', 'minutes', 'seconds'] must be given"
                 logger.error(msg)
                 raise ZatoException(cid, msg)
-            
+
             if action == 'create':
                 ib_job = IntervalBasedJob(None, job)
             else:
@@ -115,12 +115,12 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                 value = input[param] or None
                 if value != ZATO_NONE:
                     setattr(ib_job, param, value)
-            
+
             session.add(ib_job)
-            
+
         elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
             cron_definition = input.cron_definition.strip()
-            
+
             if cron_definition.startswith('@'):
                 if not cron_definition in PREDEFINED_CRON_DEFINITIONS:
                     msg = ('If using a predefined definition, it must be '
@@ -129,7 +129,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                                  cron_definition)
                     logger.error(msg)
                     raise ZatoException(cid, msg)
-                
+
                 cron_definition = PREDEFINED_CRON_DEFINITIONS[cron_definition]
             else:
                 splitted = cron_definition.strip().split()
@@ -140,18 +140,18 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                     logger.error(msg)
                     raise ZatoException(cid, msg)
                 cron_definition = ' '.join(splitted)
-            
+
             if action == 'create':
                 cs_job = CronStyleJob(None, job)
             else:
                 cs_job = session.query(CronStyleJob).filter_by(id=job.cron_style.id).one()
-                
+
             cs_job.cron_definition = cron_definition
             session.add(cs_job)
 
         # We can commit it all now.
         session.commit()
-        
+
         # Now send it to the broker, but only if the job is active.
         if is_active:
             msg_action = SCHEDULER_MSG.CREATE if action == 'create' else SCHEDULER_MSG.EDIT
@@ -171,9 +171,9 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                 msg['cron_definition'] = cron_definition
         else:
             msg = {'action': SCHEDULER_MSG.DELETE, 'name': name}
-            
+
         broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
-            
+
     except Exception, e:
         session.rollback()
         msg = 'Could not complete the request, e:[{e}]'.format(e=format_exc(e))
@@ -182,7 +182,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     else:
         response.payload.id = job.id
         response.payload.name = input.name
-            
+
         if job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
             # Needs to be returned because we might've been performing
             # a substitution like changing '@hourly' into '0 * * * *'.
@@ -197,7 +197,7 @@ class _CreateEdit(AdminService):
         output_required = ('id', 'name')
         output_optional = ('cron_definition',)
         default_value = ''
-        
+
     def handle(self):
         with closing(self.odb.session()) as session:
             _create_edit(self.__class__.__name__.lower(), self.cid, self.request.input, self.request.payload, 
@@ -216,7 +216,7 @@ class GetList(_Get):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
     name = _service_name_prefix + 'get-list'
-    
+
     class SimpleIO(_Get.SimpleIO):
         request_elem = 'zato_scheduler_job_get_list_request'
         response_elem = 'zato_scheduler_job_get_list_response'
@@ -227,21 +227,21 @@ class GetList(_Get):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
-            
+
         for item in self.response.payload.zato_output:
             item.start_date = item.start_date.isoformat()
-            
+
 class GetByName(_Get):
     """ Returns a job by its name.
     """
     name = _service_name_prefix + 'get-by-name'
-    
+
     class SimpleIO(_Get.SimpleIO):
         request_elem = 'zato_scheduler_job_get_by_name_request'
         response_elem = 'zato_scheduler_job_get_by_name_response'
         input_required = _Get.SimpleIO.input_required + ('name',)
         output_repeated = False
-        
+
     def get_data(self, session):
         return job_by_name(session, self.server.cluster_id, self.request.input.name)
 
@@ -254,16 +254,16 @@ class Create(_CreateEdit):
     """ Creates a new scheduler's job.
     """
     name = _service_name_prefix + 'create'
-    
+
     class SimpleIO(_CreateEdit.SimpleIO):
         request_elem = 'zato_scheduler_job_create_request'
         response_elem = 'zato_scheduler_job_create_response'
-        
+
 class Edit(_CreateEdit):
     """ Updates a scheduler's job.
     """
     name = _service_name_prefix + 'edit'
-    
+
     class SimpleIO(_CreateEdit.SimpleIO):
         request_elem = 'zato_scheduler_job_edit_request'
         response_elem = 'zato_scheduler_job_edit_response'
@@ -272,7 +272,7 @@ class Delete(AdminService):
     """ Deletes a scheduler's job.
     """
     name = _service_name_prefix + 'delete'
-    
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_scheduler_job_delete_request'
         response_elem = 'zato_scheduler_job_delete_response'
@@ -284,7 +284,7 @@ class Delete(AdminService):
                 job = session.query(Job).\
                     filter(Job.id==self.request.input.id).\
                     one()
-                
+
                 session.delete(job)
                 session.commit()
 
@@ -295,14 +295,14 @@ class Delete(AdminService):
                 session.rollback()
                 msg = 'Could not delete the job, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
-                
+
                 raise
-            
+
 class Execute(AdminService):
     """ Executes a scheduler's job.
     """
     name = _service_name_prefix + 'execute'
-    
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_scheduler_job_execute_request'
         response_elem = 'zato_scheduler_job_execute_response'
@@ -314,13 +314,13 @@ class Execute(AdminService):
                 job = session.query(Job).\
                     filter(Job.id==self.request.input.id).\
                     one()
-                
+
                 msg = {'action': SCHEDULER_MSG.EXECUTE, 'name': job.name}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
-                
+
             except Exception, e:
                 session.rollback()
                 msg = 'Could not execute the job, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
-                
+
                 raise
