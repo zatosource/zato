@@ -23,6 +23,7 @@ from gevent import sleep, spawn
 from mock import patch
 
 # Zato
+from zato.common import SCHEDULER
 from zato.common.scheduler import Interval, Job, Scheduler
 from zato.common.test import is_like_cid, rand_bool, rand_date_utc, rand_int, rand_string
 
@@ -47,7 +48,8 @@ def get_job(name=None, interval_in_seconds=None, start_time=None, max_repeats=No
     start_time = start_time or rand_date_utc()
     callback = callback or dummy_callback
     
-    return Job(name, Interval(in_seconds=interval_in_seconds), start_time, callback, max_repeats=max_repeats)
+    return Job(name, SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(in_seconds=interval_in_seconds),
+        start_time, callback, max_repeats=max_repeats)
 
 def iter_cb(scheduler, stop_time):
     """ Stop the scheduler after stop_time is reached (test_wait_time seconds from test's start time) -
@@ -103,6 +105,35 @@ class JobTestCase(TestCase):
 
         self.assertTrue(is_like_cid(ctx['cid']))
 
+    def test_clone(self):
+
+        interval = Interval(seconds=rand_int(30, 50))
+        start_time = datetime.utcnow()
+
+        def callback():
+            pass
+
+        def on_max_repeats_reached_cb():
+            pass
+
+        job = Job('a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, interval, start_time)
+        job.callback = callback
+        job.on_max_repeats_reached_cb = on_max_repeats_reached_cb
+
+        clone = job.clone()
+        sleep(0.1)
+
+        for name in 'name', 'interval', 'cb_kwargs', 'max_repeats', 'is_active':
+            expected = getattr(job, name)
+            given = getattr(clone, name)
+            self.assertEquals(expected, given, '{} != {} ({})'.format(expected, given, name))
+
+        # It's not the same because we slept for a moment and now the clone fell into the next run time
+        self.assertEquals(job.start_time + timedelta(seconds=interval.in_seconds), clone.start_time)
+
+        self.assertIs(job.callback, clone.callback)
+        self.assertIs(job.on_max_repeats_reached_cb, clone.on_max_repeats_reached_cb)
+
     def test_get_context(self):
 
         name = rand_string()
@@ -112,7 +143,7 @@ class JobTestCase(TestCase):
         current_run, max_repeats = rand_int(count=2)
         cb_kwargs = {rand_string():rand_string()}
 
-        job = Job(name, cb_kwargs=cb_kwargs, interval=Interval(in_seconds=interval_in_seconds))
+        job = Job(name, SCHEDULER.JOB_TYPE.INTERVAL_BASED, cb_kwargs=cb_kwargs, interval=Interval(in_seconds=interval_in_seconds))
         job.start_time = start_time
         job.current_run = current_run
         job.max_repeats = max_repeats
@@ -130,7 +161,8 @@ class JobTestCase(TestCase):
             'start_time': start_time.isoformat(),
             'max_repeats': max_repeats,
             'max_repeats_reached': max_repeats_reached,
-            'cb_kwargs': cb_kwargs
+            'cb_kwargs': cb_kwargs,
+            'type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
         })
 
     def test_main_loop_keep_running_false(self):
@@ -286,7 +318,7 @@ class JobStartTimeTestCase(TestCase):
         with patch('zato.common.scheduler.datetime', self._datetime):
 
             interval = Interval(days=interval)
-            job = Job(rand_string(), start_time=start_time, interval=interval)
+            job = Job(rand_string(), SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_time=start_time, interval=interval)
             job.wait_iter_cb = wait_iter_cb
             job.wait_sleep_time = 0.1
     
@@ -324,7 +356,7 @@ class JobStartTimeTestCase(TestCase):
         with patch('zato.common.scheduler.datetime', self._datetime):
 
             interval = Interval(days=3)
-            job = Job(rand_string(), start_time=start_time, interval=interval, max_repeats=5)
+            job = Job(rand_string(), SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_time=start_time, interval=interval, max_repeats=5)
 
             self.assertFalse(job.keep_running)
             self.assertTrue(job.max_repeats_reached)
@@ -411,7 +443,8 @@ class SchedulerTestCase(TestCase):
         job1, job2, job3 = [get_job(str(x)) for x in range(3)]
 
         # Already run out of max_repeats and should not be started
-        job4 = Job(rand_string(), start_time=parse('1997-12-23 21:24:27'), interval=Interval(seconds=5), max_repeats=3)
+        job4 = Job(rand_string(), SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_time=parse('1997-12-23 21:24:27'),
+            interval=Interval(seconds=5), max_repeats=3)
 
         job1.run = job_run
         job2.run = job_run
@@ -452,7 +485,7 @@ class SchedulerTestCase(TestCase):
 
         data = {'job':None, 'called':0}
 
-        job = Job('a', Interval(seconds=0.1), max_repeats=job_max_repeats)
+        job = Job('a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=0.1), max_repeats=job_max_repeats)
         job.wait_sleep_time = job_sleep_time
 
         # Just to make sure it's inactive by default.
@@ -491,10 +524,10 @@ class SchedulerTestCase(TestCase):
         job_sleep_time = 10
         job_max_repeats = 30
 
-        job1 = Job('a', Interval(seconds=0.1), max_repeats=job_max_repeats)
+        job1 = Job('a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=0.1), max_repeats=job_max_repeats)
         job1.wait_sleep_time = job_sleep_time
 
-        job2 = Job('b', Interval(seconds=0.1), max_repeats=job_max_repeats)
+        job2 = Job('b', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=0.1), max_repeats=job_max_repeats)
         job2.wait_sleep_time = job_sleep_time
 
         scheduler = Scheduler(dummy_callback)
@@ -541,10 +574,10 @@ class SchedulerTestCase(TestCase):
             job_sleep_time = 10
             job_max_repeats = 30
 
-            job1 = Job('a', Interval(seconds=0.1), max_repeats=job_max_repeats)
+            job1 = Job('a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=0.1), max_repeats=job_max_repeats)
             job1.wait_sleep_time = job_sleep_time
 
-            job2 = Job('b', Interval(seconds=0.1), max_repeats=job_max_repeats)
+            job2 = Job('b', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=0.1), max_repeats=job_max_repeats)
             job2.wait_sleep_time = job_sleep_time
 
             scheduler = Scheduler(dummy_callback)
@@ -575,35 +608,6 @@ class SchedulerTestCase(TestCase):
             self.assertIs(g.run.im_func, job1.run.im_func) # That's how we know it was job1 deleted not job2
             self.assertIs(args, ())
             self.assertDictEqual(kwargs, {'timeout':2.0})
-
-    def test_clone(self):
-
-        interval = Interval(seconds=rand_int(30, 50))
-        start_time = datetime.utcnow()
-
-        def callback():
-            pass
-
-        def on_max_repeats_reached_cb():
-            pass
-
-        job = Job('a', interval, start_time)
-        job.callback = callback
-        job.on_max_repeats_reached_cb = on_max_repeats_reached_cb
-
-        clone = job.clone()
-        sleep(0.1)
-
-        for name in 'name', 'interval', 'cb_kwargs', 'max_repeats', 'is_active':
-            expected = getattr(job, name)
-            given = getattr(clone, name)
-            self.assertEquals(expected, given, '{} != {} ({})'.format(expected, given, name))
-
-        # It's not the same because we slept for a moment and now the clone fell into the next run time
-        self.assertEquals(job.start_time + timedelta(seconds=interval.in_seconds), clone.start_time)
-
-        self.assertIs(job.callback, clone.callback)
-        self.assertIs(job.on_max_repeats_reached_cb, clone.on_max_repeats_reached_cb)
 
     def test_edit(self):
 
@@ -656,12 +660,12 @@ class SchedulerTestCase(TestCase):
                 self.assertIs(clone_cb.im_func, scheduler.on_job_executed.im_func)
                 self.assertIs(clone_on_max_cb.im_func, scheduler.on_max_repeats_reached.im_func)
 
-        job1 = Job('a', Interval(seconds=job_interval1), start_time, max_repeats=job_max_repeats1)
+        job1 = Job('a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=job_interval1), start_time, max_repeats=job_max_repeats1)
         job1.callback = callback
         job1.on_max_repeats_reached_cb = on_max_repeats_reached_cb
         job1.wait_sleep_time = job_sleep_time
 
-        job2 = Job('a', Interval(seconds=job_interval2), start_time, max_repeats=job_max_repeats2)
+        job2 = Job('a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=job_interval2), start_time, max_repeats=job_max_repeats2)
         job2.callback = callback
         job2.on_max_repeats_reached_cb = on_max_repeats_reached_cb
         job2.wait_sleep_time = job_sleep_time
@@ -696,7 +700,7 @@ class SchedulerTestCase(TestCase):
         job_sleep_time = 0.1
         job_max_repeats = 10
 
-        job = Job('a', Interval(seconds=0.1), max_repeats=job_max_repeats)
+        job = Job('a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=0.1), max_repeats=job_max_repeats)
         job.wait_sleep_time = job_sleep_time
         job.get_context = get_context
 
