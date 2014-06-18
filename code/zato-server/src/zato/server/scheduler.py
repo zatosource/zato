@@ -19,9 +19,10 @@ from dateutil.parser import parse
 from gevent import sleep, spawn
 
 # Zato 
-from zato.common import ENSURE_SINGLETON_JOB, SCHEDULER
-from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG
+from zato.common import CHANNEL, DATA_FORMAT, ENSURE_SINGLETON_JOB, SCHEDULER
+from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG, SERVICE
 from zato.common.scheduler import Interval, Job, Scheduler as _Scheduler
+from zato.common.util import new_cid
 
 logger = logging.getLogger('zato_scheduler')
 
@@ -85,6 +86,18 @@ class Scheduler(object):
                 name, ctx['cb_kwargs']['service'], ctx['cb_kwargs']['extra'])
             logger.debug(msg)
 
+        # Now, if it was a one-time job, it needs to be deactivated.
+        if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME:
+            msg = {
+                'action': SERVICE.PUBLISH,
+                'service': 'zato.scheduler.job.set-active-status',
+                'payload': {'id':ctx['id'], 'is_active':False},
+                'cid': new_cid(),
+                'channel': CHANNEL.SCHEDULER,
+                'data_format': DATA_FORMAT.JSON,
+            }
+            self.singleton.broker_client.publish(msg)
+
 # ################################################################################################################################
 
     def create_edit(self, action, job_data, broker_msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY):
@@ -109,8 +122,8 @@ class Scheduler(object):
 
 # ################################################################################################################################
 
-    def create_edit_job(self, name, start_time, job_type, service, is_create=True, max_repeats=1, days=0, hours=0, minutes=0,
-            seconds=0, extra=None):
+    def create_edit_job(self, id, name, start_time, job_type, service, is_create=True, max_repeats=1, days=0, hours=0,
+            minutes=0, seconds=0, extra=None):
         """ A base method for scheduling of jobs.
         """
         cb_kwargs = {
@@ -119,7 +132,7 @@ class Scheduler(object):
         }
 
         interval = Interval(days=days, hours=hours, minutes=minutes, seconds=seconds)
-        job = Job(name, job_type, interval, start_time, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
+        job = Job(id, name, job_type, interval, start_time, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
 
         func = self.sched.create if is_create else self.sched.edit
         func(job)
@@ -129,7 +142,8 @@ class Scheduler(object):
     def create_edit_one_time(self, job_data, broker_msg_type, is_create=True):
         """ Re-/schedules the execution of a one-time job.
         """
-        self.create_edit_job(job_data.name, _start_date(job_data), SCHEDULER.JOB_TYPE.ONE_TIME, job_data.service, is_create)
+        self.create_edit_job(job_data.id, job_data.name, _start_date(job_data), SCHEDULER.JOB_TYPE.ONE_TIME,
+            job_data.service, is_create)
 
     def create_one_time(self, job_data, broker_msg_type):
         """ Schedules the execution of a one-time job.
@@ -155,7 +169,7 @@ class Scheduler(object):
         seconds = job_data.seconds if job_data.get('seconds') else 0
         max_repeats = job_data.repeats if job_data.get('repeats') else None
 
-        self.create_edit_job(job_data.name, start_date, SCHEDULER.JOB_TYPE.INTERVAL_BASED, job_data.service,
+        self.create_edit_job(job_data.id, job_data.name, start_date, SCHEDULER.JOB_TYPE.INTERVAL_BASED, job_data.service,
             is_create, max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra, )
 
     def create_interval_based(self, job_data, broker_msg_type):

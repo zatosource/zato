@@ -50,8 +50,9 @@ class Interval(object):
 # ################################################################################################################################
 
 class Job(object):
-    def __init__(self, name, type, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None,
+    def __init__(self, id, name, type, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None,
             on_max_repeats_reached_cb=None, is_active=True, clone_start_time=False):
+        self.id = id
         self.name = name
         self.type = type
         self.interval = interval
@@ -87,7 +88,7 @@ class Job(object):
         return self.name == other.name
 
     def clone(self):
-        return Job(self.name, self.type, self.interval, self.start_time, self.callback, self.cb_kwargs, self.max_repeats,
+        return Job(self.id, self.name, self.type, self.interval, self.start_time, self.callback, self.cb_kwargs, self.max_repeats,
             self.on_max_repeats_reached_cb, self.is_active, True)
 
     def get_start_time(self, start_time):
@@ -165,7 +166,7 @@ class Job(object):
             'cb_kwargs': self.cb_kwargs
         }
 
-        for name in 'name', 'current_run', 'max_repeats_reached', 'max_repeats', 'type':
+        for name in 'id', 'name', 'current_run', 'max_repeats_reached', 'max_repeats', 'type':
             ctx[name] = getattr(self, name)
 
         return ctx
@@ -390,7 +391,8 @@ class Scheduler(object):
 
 if __name__ == '__main__':
     basicConfig(level=INFO)
-    job = Job('a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_time=datetime.datetime.utcnow(), interval=Interval(seconds=1), max_repeats=20)
+    job = Job(123, 'a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_time=datetime.datetime.utcnow(),
+        interval=Interval(seconds=1), max_repeats=20)
     scheduler = Scheduler()
     scheduler.create(job, False)
     scheduler.run()

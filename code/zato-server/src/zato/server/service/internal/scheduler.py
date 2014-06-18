@@ -158,8 +158,9 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             msg = {'action': msg_action, 'job_type': job_type,
                    'is_active':is_active, 'start_date':start_date.isoformat(),
                    'extra':extra, 'service': service.name,
-                   'name': name
+                   'id':job.id, 'name': name
                    }
+
             if action == 'edit':
                 msg['old_name'] = old_name
 
@@ -167,8 +168,10 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                 for param in ib_params:
                     value = input[param]
                     msg[param] = int(value) if value else 0
+
             elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
                 msg['cron_definition'] = cron_definition
+
         else:
             msg = {'action': SCHEDULER_MSG.DELETE, 'name': name}
 
@@ -321,6 +324,31 @@ class Execute(AdminService):
             except Exception, e:
                 session.rollback()
                 msg = 'Could not execute the job, e:[{e}]'.format(e=format_exc(e))
+                self.logger.error(msg)
+
+                raise
+
+class SetActiveStatus(AdminService):
+    """ Actives or deactivates a job.
+    """
+    name = _service_name_prefix + 'set-active-status'
+
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_scheduler_job_set_active_status_request'
+        response_elem = 'zato_scheduler_job_set_active_status_response'
+        input_required = ('id', 'is_active')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            try:
+                session.query(Job).\
+                    filter(Job.id==self.request.input.id).\
+                    one().is_active = self.request.input.is_active
+                session.commit()
+
+            except Exception, e:
+                session.rollback()
+                msg = 'Could not update is_active status, e:[{}]'.format(format_exc(e))
                 self.logger.error(msg)
 
                 raise
