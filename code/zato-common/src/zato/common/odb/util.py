@@ -22,6 +22,7 @@ django_sa_mappings = {
     'PASSWORD': 'password',
     'odb_type': 'engine',
     'db_type': 'engine',
+    'odb_db_name': 'db_name',
 }
 
 cli_sa_mappings = {
