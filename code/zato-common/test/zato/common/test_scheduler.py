@@ -576,26 +576,71 @@ class SchedulerTestCase(TestCase):
             self.assertIs(args, ())
             self.assertDictEqual(kwargs, {'timeout':2.0})
 
+    def test_clone(self):
+
+        interval = Interval(seconds=rand_int(30, 50))
+        start_time = datetime.utcnow()
+
+        def callback():
+            pass
+
+        def on_max_repeats_reached_cb():
+            pass
+
+        job = Job('a', interval, start_time)
+        job.callback = callback
+        job.on_max_repeats_reached_cb = on_max_repeats_reached_cb
+
+        clone = job.clone()
+        sleep(0.1)
+
+        for name in 'name', 'interval', 'cb_kwargs', 'max_repeats', 'is_active':
+            expected = getattr(job, name)
+            given = getattr(clone, name)
+            self.assertEquals(expected, given, '{} != {} ({})'.format(expected, given, name))
+
+        # It's not the same because we slept for a moment and now the clone fell into the next run time
+        self.assertEquals(job.start_time + timedelta(seconds=interval.in_seconds), clone.start_time)
+
+        self.assertIs(job.callback, clone.callback)
+        self.assertIs(job.on_max_repeats_reached_cb, clone.on_max_repeats_reached_cb)
+
     def test_edit(self):
 
-        def check(scheduler, job):
+        start_time = datetime.utcnow()
+        test_wait_time = 0.5
+        job_interval1, job_interval2 = 2, 3
+        job_sleep_time = 10
+        job_max_repeats1, job_max_repeats2 = 20, 30
+
+        def check(scheduler, job, label):
             self.assertIn(job.name, scheduler.job_greenlets)
             self.assertIn(job, scheduler.jobs)
 
             self.assertEquals(1, len(scheduler.job_greenlets))
             self.assertEquals(1, len(scheduler.jobs))
 
-            self.assertIs(job, list(scheduler.jobs)[0])
             self.assertIs(job.run.im_func, scheduler.job_greenlets.values()[0]._run.im_func)
 
-        test_wait_time = 0.5
-        job_sleep_time = 10
-        job_max_repeats1, job_max_repeats2 = 20, 30
+            clone = list(scheduler.jobs)[0]
 
-        job1 = Job('a', Interval(seconds=0.12), max_repeats=job_max_repeats1)
+            for name in 'name', 'interval', 'cb_kwargs', 'max_repeats', 'is_active':
+                expected = getattr(job, name)
+                given = getattr(clone, name)
+                self.assertEquals(expected, given, '{} != {} ({})'.format(expected, given, name))
+
+            if label == 'first':
+                self.assertEquals(job.start_time, clone.start_time)
+            else:
+                self.assertEquals(job.start_time + timedelta(seconds=job_interval2), clone.start_time)
+
+            #self.assertIs(job.callback.im_func, new_job.callback.im_func)
+            #self.assertIs(job.on_max_repeats_reached_cb.im_func, new_job.on_max_repeats_reached_cb.im_func)
+
+        job1 = Job('a', Interval(seconds=job_interval1), start_time, max_repeats=job_max_repeats1)
         job1.wait_sleep_time = job_sleep_time
 
-        job2 = Job('a', Interval(seconds=0.13), max_repeats=job_max_repeats2)
+        job2 = Job('a', Interval(seconds=job_interval2), start_time, max_repeats=job_max_repeats2)
         job2.wait_sleep_time = job_sleep_time
 
         scheduler = Scheduler(dummy_callback)
@@ -606,16 +651,16 @@ class SchedulerTestCase(TestCase):
         scheduler.run()
         scheduler.create(job1)
 
-        sleep(test_wait_time / 2.0)
+        sleep(test_wait_time)
 
         # We have only job1 at this point
-        check(scheduler, job1)
+        check(scheduler, job1, 'first')
 
         # Removes job1 along the way ..
         scheduler.edit(job2)
 
         # .. so now job2 is the now removed job1.
-        check(scheduler, job2)
+        check(scheduler, job2, 'second')
 
     def test_on_job_executed_cb(self):
 
