@@ -200,13 +200,7 @@ class Scheduler(object):
 # ################################################################################################################################
 
     def execute(self, job_data):
-        for job in self.sched.get_jobs():
-            if job.name == job_data.name:
-                self._on_job_execution(*job.args)
-                logger.info('Job [{0}] executed'.format(job_data.name))
-                break
-        else:
-            logger.warn('Job [{0}] is not scheduled, could not execute it'.format(job_data.name))
+        self.sched.execute(job_data.name)
 
 # ################################################################################################################################
 

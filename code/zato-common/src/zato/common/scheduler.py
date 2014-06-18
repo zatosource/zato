@@ -342,12 +342,23 @@ class Scheduler(object):
         """
         gevent.sleep(value)
 
-    def on_job_executed(self, ctx):
+    def execute(self, name):
+        """ Executes a job no matter if it's active or not. One-time job are not unscheduled afterwards.
+        """
+        with self.lock:
+            for job in self.jobs:
+                if job.name == name:
+                    self.on_job_executed(job.get_context(), False)
+                    break
+            else:
+                logger.warn('No such job `%s` in `%s`', name, [elem.get_context() for elem in self.jobs])
+
+    def on_job_executed(self, ctx, unschedule_one_time=True):
         logger.debug('Executing `%s`, `%s`', ctx['name'], ctx)
         self.on_job_executed_cb(ctx)
         logger.info('Job executed `%s`, `%s`', ctx['name'], ctx)
 
-        if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME:
+        if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME and unschedule_one_time:
             self.unschedule_by_name(ctx['name'])
 
     def spawn_job(self, job):
