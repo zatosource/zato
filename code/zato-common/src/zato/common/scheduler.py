@@ -142,7 +142,7 @@ class Job(object):
                 self.max_repeats_reached_at = next_run_time
                 self.keep_running = False
 
-                self.logger.warn('Job (%s) max repeats reached at `%s`', self.name, self.max_repeats_reached_at)
+                self.logger.warn('Job `%s` max repeats reached at `%s`', self.name, self.max_repeats_reached_at)
 
     def get_context(self):
         ctx = {
