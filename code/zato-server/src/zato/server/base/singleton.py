@@ -75,6 +75,7 @@ class SingletonServer(BrokerMessageReceiver):
         processes.
         """
         base_job_data = Bunch({
+            'id': 0, # Dummy ID
             'weeks': None, 'days': None, 
             'hours': None, 'minutes': None, 
             'seconds': connector_server_keep_alive_job_time, 
