@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
+# crontab
+from crontab import CronTab
+
 # dateutil
 from dateutil.parser import parse
 
@@ -22,17 +25,6 @@ from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
 from zato.common.odb.query import job_by_name, job_list
 from zato.server.service.internal import AdminService, AdminSIO
-
-PREDEFINED_CRON_DEFINITIONS = {
-    '@yearly': '0 0 1 1 *',
-    '@annually': '0 0 1 1 *', # Same as 'yearly'.
-    '@monthly': '0 0 1 * *',
-    '@weekly': '0 0 * * 0',
-    '@daily': '0 0 * * *',
-    '@hourly': '0 * * * *',
-    }
-
-CRON_EXPRESSION_LEN = 5
 
 _service_name_prefix = 'zato.scheduler.job.'
 
@@ -121,25 +113,8 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
             cron_definition = input.cron_definition.strip()
 
-            if cron_definition.startswith('@'):
-                if not cron_definition in PREDEFINED_CRON_DEFINITIONS:
-                    msg = ('If using a predefined definition, it must be '
-                             'one of {0} instead of [{1}]').format(
-                                 sorted(PREDEFINED_CRON_DEFINITIONS), 
-                                 cron_definition)
-                    logger.error(msg)
-                    raise ZatoException(cid, msg)
-
-                cron_definition = PREDEFINED_CRON_DEFINITIONS[cron_definition]
-            else:
-                splitted = cron_definition.strip().split()
-                if not len(splitted) == CRON_EXPRESSION_LEN:
-                    msg = ('Expression [{0}] is invalid, it needs to contain '
-                           'exactly {1} whitespace-separated fields').format(
-                               cron_definition, CRON_EXPRESSION_LEN)
-                    logger.error(msg)
-                    raise ZatoException(cid, msg)
-                cron_definition = ' '.join(splitted)
+            # Just to make sure it's syntactically correct
+            CronTab(cron_definition).next()
 
             if action == 'create':
                 cs_job = CronStyleJob(None, job)

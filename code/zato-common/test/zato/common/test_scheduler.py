@@ -13,6 +13,9 @@ from datetime import datetime, timedelta
 from random import choice, seed
 from unittest import TestCase
 
+# crontab
+from crontab import CronTab
+
 # dateutil
 from dateutil.parser import parse
 
@@ -28,6 +31,8 @@ from zato.common.scheduler import Interval, Job, Scheduler
 from zato.common.test import is_like_cid, rand_bool, rand_date_utc, rand_int, rand_string
 
 seed()
+
+DEFAULT_CRON_DEFINITION = '* * * * *'
 
 class RLock(object):
     def __init__(self):
@@ -83,14 +88,33 @@ class IntervalTestCase(TestCase):
 
 class JobTestCase(TestCase):
 
-    def check_ctx(self, ctx, job, interval_in_seconds, max_repeats, idx, cb_kwargs, len_runs_ctx):
+    def setUp(self):
+
+        class _datetime(datetime):
+
+            class datetime:
+                @staticmethod
+                def utcnow():
+                    return self.now
+
+            @staticmethod
+            def timedelta(*args, **kwargs):
+                return timedelta(*args, **kwargs)
+
+        self._datetime = _datetime
+
+    def check_ctx(self, ctx, job, interval_in_seconds, max_repeats, idx, cb_kwargs,
+            len_runs_ctx, job_type=SCHEDULER.JOB_TYPE.INTERVAL_BASED):
 
         self.assertEquals(ctx['name'], job.name)
-        self.assertEquals(ctx['interval_in_seconds'], job.interval.in_seconds)
         self.assertEquals(ctx['max_repeats'], job.max_repeats)
         self.assertDictEqual(ctx['cb_kwargs'], job.cb_kwargs)
 
-        self.assertEquals(ctx['interval_in_seconds'], interval_in_seconds)
+        if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
+            self.assertEquals(ctx['interval_in_seconds'], interval_in_seconds)
+        else:
+            self.assertEquals(ctx['cron_definition'], DEFAULT_CRON_DEFINITION)
+
         self.assertEquals(ctx['max_repeats'], max_repeats)
         self.assertEquals(ctx['current_run'], idx)
         self.assertDictEqual(ctx['cb_kwargs'], cb_kwargs)
@@ -143,28 +167,42 @@ class JobTestCase(TestCase):
         current_run, max_repeats = rand_int(count=2)
         cb_kwargs = {rand_string():rand_string()}
 
-        job = Job(id, name, SCHEDULER.JOB_TYPE.INTERVAL_BASED, cb_kwargs=cb_kwargs, interval=Interval(in_seconds=interval_in_seconds))
-        job.start_time = start_time
-        job.current_run = current_run
-        job.max_repeats = max_repeats
-        job.max_repeats_reached = max_repeats_reached
+        for job_type in SCHEDULER.JOB_TYPE.INTERVAL_BASED, SCHEDULER.JOB_TYPE.CRON_STYLE:
 
-        ctx = job.get_context()
-        cid = ctx.pop('cid')
+            interval=Interval(in_seconds=interval_in_seconds) if \
+                job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED else CronTab(DEFAULT_CRON_DEFINITION)
 
-        self.assertTrue(is_like_cid(cid))
+            job = Job(id, name, job_type, cb_kwargs=cb_kwargs, interval=interval)
+            job.start_time = start_time
+            job.current_run = current_run
+            job.max_repeats = max_repeats
+            job.max_repeats_reached = max_repeats_reached
 
-        self.assertDictEqual(ctx, {
-            'current_run': current_run,
-            'interval_in_seconds': interval_in_seconds,
-            'id': id,
-            'name': name,
-            'start_time': start_time.isoformat(),
-            'max_repeats': max_repeats,
-            'max_repeats_reached': max_repeats_reached,
-            'cb_kwargs': cb_kwargs,
-            'type': SCHEDULER.JOB_TYPE.INTERVAL_BASED,
-        })
+            if job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
+                job.cron_definition = DEFAULT_CRON_DEFINITION
+
+            ctx = job.get_context()
+            cid = ctx.pop('cid')
+
+            self.assertTrue(is_like_cid(cid))
+
+            expected = {
+                'current_run': current_run,
+                'id': id,
+                'name': name,
+                'start_time': start_time.isoformat(),
+                'max_repeats': max_repeats,
+                'max_repeats_reached': max_repeats_reached,
+                'cb_kwargs': cb_kwargs,
+                'type': job_type,
+            }
+
+            if job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
+                expected['cron_definition'] = job.cron_definition
+            else:
+                expected['interval_in_seconds'] = job.interval.in_seconds
+
+            self.assertDictEqual(ctx, expected)
 
     def test_main_loop_keep_running_false(self):
 
@@ -211,9 +249,13 @@ class JobTestCase(TestCase):
     def test_main_loop_sleep_spawn_called(self):
 
         wait_time = 0.2
+        sleep_time = rand_int()
+
+        now_values = [parse('2019-12-23 22:19:03'), parse('2021-05-13 17:35:48')]
 
         sleep_history = []
         spawn_history = []
+        sleep_time_history = []
 
         def sleep(value):
             if value != wait_time:
@@ -222,34 +264,60 @@ class JobTestCase(TestCase):
         def spawn(*args, **kwargs):
             spawn_history.append([args, kwargs])
 
+        def get_sleep_time(*args, **kwargs):
+            sleep_time_history.append(args[1])
+            return sleep_time
+
         with patch('gevent.sleep', sleep):
             with patch('gevent.spawn', spawn):
-                interval_in_seconds = 0.01
-                max_repeats = choice(range(2, 5))
+                with patch('zato.common.scheduler.Job.get_sleep_time', get_sleep_time):
+                    for now in now_values:
+                        self.now = now
+                        with patch('zato.common.scheduler.datetime', self._datetime):
+                            for job_type in SCHEDULER.JOB_TYPE.CRON_STYLE, SCHEDULER.JOB_TYPE.INTERVAL_BASED:
 
-                cb_kwargs = {
-                    rand_string():rand_string(),
-                    rand_string():rand_string()
-                }
+                                max_repeats = choice(range(2, 5))
 
-                job = get_job(interval_in_seconds=interval_in_seconds, max_repeats=max_repeats)
-                job.cb_kwargs = cb_kwargs
-                job.start_time = datetime.utcnow()
+                                cb_kwargs = {
+                                    rand_string():rand_string(),
+                                    rand_string():rand_string()
+                                }
 
-                self.assertTrue(job.main_loop())
-                sleep(0.2)
+                                interval = Interval(seconds=sleep_time) if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED \
+                                    else CronTab(DEFAULT_CRON_DEFINITION)
 
-                self.assertEquals(max_repeats, len(sleep_history))
-                self.assertEquals(max_repeats, len(spawn_history))
+                                job = Job(rand_int(), rand_string(), job_type, interval, max_repeats=max_repeats)
 
-                for item in sleep_history:
-                    self.assertEquals(interval_in_seconds, item)
+                                if job.type == SCHEDULER.JOB_TYPE.CRON_STYLE:
+                                    job.cron_definition = DEFAULT_CRON_DEFINITION
 
-                for idx, (callback, ctx_dict) in enumerate(spawn_history, 1):
-                    self.assertEquals(1, len(callback))
-                    callback = callback[0]
-                    self.check_ctx(ctx_dict['ctx'], job, interval_in_seconds, max_repeats, idx, cb_kwargs, len(spawn_history))
-                    self.assertIs(callback, dummy_callback)
+                                job.cb_kwargs = cb_kwargs
+                                job.start_time = datetime.utcnow()
+                                job.callback = dummy_callback
+
+                                self.assertTrue(job.main_loop())
+                                sleep(0.2)
+
+                                self.assertEquals(max_repeats, len(sleep_history))
+                                self.assertEquals(max_repeats, len(spawn_history))
+
+                                for item in sleep_history:
+                                    self.assertEquals(sleep_time, item)
+
+                                for idx, (callback, ctx_dict) in enumerate(spawn_history, 1):
+                                    self.assertEquals(1, len(callback))
+                                    callback = callback[0]
+                                    self.check_ctx(
+                                        ctx_dict['ctx'], job, sleep_time, max_repeats, idx, cb_kwargs, len(spawn_history), job_type)
+                                    self.assertIs(callback, dummy_callback)
+
+                                del sleep_history[:]
+                                del spawn_history[:]
+
+                            for item in sleep_time_history:
+                                self.assertEquals(item, now)
+
+                            del sleep_time_history[:]
 
     def test_run(self):
 
@@ -287,16 +355,25 @@ class JobTestCase(TestCase):
         self.assertEquals(hash(job2), hash('a'))
         self.assertEquals(hash(job3), hash('b'))
 
+    def test_get_sleep_time(self):
+        now = parse('2015-11-27 19:13:37.274')
+
+        job1 = Job(1, 'a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=5), now)
+        self.assertEquals(job1.get_sleep_time(now), 5)
+
+        job2 = Job(2, 'b', SCHEDULER.JOB_TYPE.CRON_STYLE, CronTab(DEFAULT_CRON_DEFINITION), now)
+        self.assertEquals(job2.get_sleep_time(now), 22.726)
+
 class JobStartTimeTestCase(TestCase):
     def setUp(self):
 
         class _datetime(datetime):
-        
+
             class datetime:
                 @staticmethod
                 def utcnow():
                     return self.now
-        
+
             @staticmethod
             def timedelta(*args, **kwargs):
                 return timedelta(*args, **kwargs)
@@ -322,7 +399,7 @@ class JobStartTimeTestCase(TestCase):
             job = Job(rand_int(), rand_string(), SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_time=start_time, interval=interval)
             job.wait_iter_cb = wait_iter_cb
             job.wait_sleep_time = 0.1
-    
+
             self.assertEquals(job.start_time, expected)
             self.assertTrue(job.keep_running)
             self.assertFalse(job.max_repeats_reached)

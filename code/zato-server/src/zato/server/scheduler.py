@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from traceback import format_exc
 
+# crontab
+from crontab import CronTab
+
 # dateutil
 from dateutil.parser import parse
 
@@ -49,12 +52,6 @@ class Scheduler(object):
 
         while not self.sched.ready:
             sleep(0.1)
-
-# ################################################################################################################################
-
-    def _parse_cron(self, def_):
-        minute, hour, day_of_month, month, day_of_week = [elem.strip() for elem in def_.split()]
-        return minute, hour, day_of_month, month, day_of_week
 
 # ################################################################################################################################
 
@@ -123,7 +120,7 @@ class Scheduler(object):
 # ################################################################################################################################
 
     def create_edit_job(self, id, name, start_time, job_type, service, is_create=True, max_repeats=1, days=0, hours=0,
-            minutes=0, seconds=0, extra=None):
+            minutes=0, seconds=0, extra=None, cron_definition=None):
         """ A base method for scheduling of jobs.
         """
         cb_kwargs = {
@@ -131,8 +128,13 @@ class Scheduler(object):
             'extra': extra,
         }
 
-        interval = Interval(days=days, hours=hours, minutes=minutes, seconds=seconds)
-        job = Job(id, name, job_type, interval, start_time, cb_kwargs=cb_kwargs, max_repeats=max_repeats)
+        if job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
+            interval = CronTab(cron_definition)
+        else:
+            interval = Interval(days=days, hours=hours, minutes=minutes, seconds=seconds)
+
+        job = Job(id, name, job_type, interval, start_time, cb_kwargs=cb_kwargs, max_repeats=max_repeats,
+            cron_definition=cron_definition)
 
         func = self.sched.create if is_create else self.sched.edit
         func(job)
@@ -185,24 +187,23 @@ class Scheduler(object):
 
 # ################################################################################################################################
 
-    def create_cron_style(self, job_data, broker_msg_type):
-        """ Schedules the execution of a one-time job.
+    def create_edit_cron_style(self, job_data, broker_msg_type, is_create=True):
+        """ Re-/schedules the execution of a cron-style job.
         """
         start_date = _start_date(job_data)
-        minute, hour, day_of_month, month, day_of_week = self._parse_cron(job_data.cron_definition)
-        self.sched.add_cron_job(self._on_job_execution, 
-            year=None, month=month, day=day_of_month, hour=hour,
-            minute=minute, second=None, start_date=start_date, 
-            args=[job_data.name, job_data.service, job_data.extra, broker_msg_type,
-                    SCHEDULER.JOB_TYPE.CRON_STYLE], name=job_data.name)
+        self.create_edit_job(job_data.id, job_data.name, start_date, SCHEDULER.JOB_TYPE.CRON_STYLE, job_data.service,
+            is_create, max_repeats=None, extra=job_data.extra, cron_definition=job_data.cron_definition)
 
-        logger.info('Cron-style job [{0}] scheduled'.format(job_data.name))
+    def create_cron_style(self, job_data, broker_msg_type):
+        """ Schedules the execution of a cron-style job.
+        """
+        self.create_edit_cron_style(job_data, broker_msg_type)
 
     def edit_cron_style(self, job_data, broker_msg_type):
         """ First unschedules a cron-style job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
-        self.create_cron_style(job_data, broker_msg_type)
+        self.create_edit_cron_style(job_data, broker_msg_type, False)
 
 # ################################################################################################################################
 

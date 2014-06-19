@@ -179,7 +179,7 @@ def _create_one_time(client, user_profile, cluster, params):
     
     input_dict = _get_create_edit_one_time_message(user_profile, cluster, params, create_one_time_prefix+'-')
     response = client.invoke('zato.scheduler.job.create', input_dict)
-    
+
     logger.debug('Successfully created a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
     return {'id': response.data.id, 'definition_text':_one_time_job_def(user_profile, input_dict['start_date'])}
@@ -214,13 +214,17 @@ def _create_cron_style(client, user_profile, cluster, params):
 
     input_dict = _get_create_edit_cron_style_message(user_profile, cluster, params, create_cron_style_prefix+'-')
     response = client.invoke('zato.scheduler.job.create', input_dict)
-    cron_definition = response.data.cron_definition
-    logger.debug('Successfully created a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
-    return {'id': response.data.id, 
-            'definition_text':_cron_style_job_def(user_profile,
-                input_dict['start_date'], cron_definition),
-            'cron_definition': cron_definition}
+    if response.ok:
+        cron_definition = response.data.cron_definition
+        logger.debug('Successfully created a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
+
+        return {'id': response.data.id,
+                'definition_text':_cron_style_job_def(user_profile,
+                    input_dict['start_date'], cron_definition),
+                'cron_definition': cron_definition}
+    else:
+        raise Exception(response.details)
 
 def _edit_one_time(client, user_profile, cluster, params):
     """ Updates a one_time scheduler job.
@@ -263,13 +267,17 @@ def _edit_cron_style(client, user_profile, cluster, params):
 
     input_dict = _get_create_edit_cron_style_message(user_profile, cluster, params, edit_cron_style_prefix+'-')
     response = client.invoke('zato.scheduler.job.edit', input_dict)
-    cron_definition = response.data.cron_definition
-    logger.debug('Successfully updated a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
-    start_date = _get_start_date(input_dict.get('start_date'))
-    definition = _cron_style_job_def(user_profile, start_date, cron_definition)
+    if response.ok:
+        cron_definition = response.data.cron_definition
+        logger.debug('Successfully updated a cron_style job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
 
-    return {'definition_text':definition, 'cron_definition': cron_definition, 'id':params['edit-cron_style-id']}
+        start_date = _get_start_date(input_dict.get('start_date'))
+        definition = _cron_style_job_def(user_profile, start_date, cron_definition)
+
+        return {'definition_text':definition, 'cron_definition': cron_definition, 'id':params['edit-cron_style-id']}
+    else:
+        raise Exception(response.details)
 
 @method_allowed('GET', 'POST')
 def index(req):
