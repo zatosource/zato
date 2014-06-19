@@ -51,7 +51,7 @@ class Interval(object):
 
 class Job(object):
     def __init__(self, id, name, type, interval, start_time=None, callback=None, cb_kwargs=None, max_repeats=None,
-            on_max_repeats_reached_cb=None, is_active=True, clone_start_time=False):
+            on_max_repeats_reached_cb=None, is_active=True, clone_start_time=False, cron_definition=None):
         self.id = id
         self.name = name
         self.type = type
@@ -61,6 +61,7 @@ class Job(object):
         self.max_repeats = max_repeats
         self.on_max_repeats_reached_cb = on_max_repeats_reached_cb
         self.is_active = is_active
+        self.cron_definition = cron_definition
 
         self.current_run = 0 # Starts over each time scheduler is started
         self.max_repeats_reached = False
@@ -69,6 +70,11 @@ class Job(object):
 
         if clone_start_time:
             self.start_time = start_time
+
+        elif self.type == SCHEDULER.JOB_TYPE.CRON_STYLE:
+            now = datetime.datetime.utcnow()
+            self.start_time =  now + datetime.timedelta(seconds=(self.get_sleep_time(now)))
+
         else:
             self.start_time = self.get_start_time(start_time if start_time is not None else datetime.datetime.utcnow())
 
@@ -161,15 +167,31 @@ class Job(object):
     def get_context(self):
         ctx = {
             'cid':new_cid(),
-            'interval_in_seconds': self.interval.in_seconds,
             'start_time': self.start_time.isoformat(),
             'cb_kwargs': self.cb_kwargs
         }
+
+        if self.type == SCHEDULER.JOB_TYPE.CRON_STYLE:
+            ctx['cron_definition'] = self.cron_definition
+        else:
+            ctx['interval_in_seconds'] = self.interval.in_seconds
 
         for name in 'id', 'name', 'current_run', 'max_repeats_reached', 'max_repeats', 'type':
             ctx[name] = getattr(self, name)
 
         return ctx
+
+    def get_sleep_time(self, now):
+        """ Returns a number of seconds the job should sleep for before the next run.
+        For interval-based jobs this is a constant value pre-computed well ahead by self.interval
+        but for cron-style jobs the value is obtained each time it's needed.
+        """
+        if self.type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
+            return self.interval.in_seconds
+        elif self.type == SCHEDULER.JOB_TYPE.CRON_STYLE:
+            return self.interval.next(now)
+        else:
+            raise ValueError('Unsupported job type `{}` ({})'.format(self.type, self.name))
 
     def main_loop(self):
 
@@ -200,7 +222,7 @@ class Job(object):
 
             finally:
                 # Pause the greenlet for however long is needed
-                _sleep(self.interval.in_seconds)
+                _sleep(self.get_sleep_time(datetime.datetime.utcnow()))
 
         if logger.isEnabledFor(DEBUG):
             logger.debug('Job leaving main loop `%s` after %d iterations', self, self.current_run)
