@@ -173,7 +173,7 @@ format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lin
 [logger_zato_scheduler]
 level=INFO
 handlers=rotating_file_handler_scheduler
-qualname=apscheduler.scheduler
+qualname=zato_scheduler
 propagate=0
 
 [handler_rotating_file_handler_scheduler]
