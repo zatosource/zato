@@ -23,7 +23,6 @@ from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
 from zato.server.connection.sql import PoolStore
 from zato.server.odb import ODBManager
-from zato.server.scheduler import Scheduler
 from zato.server.service.store import ServiceStore
 
 class ZatoContext(PythonConfig):
@@ -188,16 +187,11 @@ class ZatoContext(PythonConfig):
     @Object
     def singleton_server(self):
         server = SingletonServer()
-        server.scheduler = self.scheduler()
 
         return server
 
     # #######################################################
     # Scheduler management
-
-    @Object
-    def scheduler(self):
-        return Scheduler()
 
     @Object
     def startup_jobs(self):

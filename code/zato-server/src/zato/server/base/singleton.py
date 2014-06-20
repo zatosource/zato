@@ -20,6 +20,7 @@ from bunch import Bunch
 from zato.common import ENSURE_SINGLETON_JOB
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER, SINGLETON
 from zato.server.base import BrokerMessageReceiver
+from zato.server.scheduler import Scheduler
 
 _accepted_messages = SCHEDULER.values() + SINGLETON.values()
 
@@ -32,7 +33,7 @@ class SingletonServer(BrokerMessageReceiver):
                  broker_client=None, initial_sleep_time=None, is_cluster_wide=False):
         self.parallel_server = parallel_server
         self.server_id = server_id
-        self.scheduler = scheduler
+        self.scheduler = scheduler or Scheduler()
         self.broker_client = broker_client
         self.initial_sleep_time = initial_sleep_time
         self.is_cluster_wide = is_cluster_wide
@@ -50,6 +51,7 @@ class SingletonServer(BrokerMessageReceiver):
 
         # Initialize scheduler
         self.scheduler.singleton = self
+        self.scheduler.init()
 
         # Start the hot-reload pickup monitor
         self.logger.info('Pickup notifier starting')
@@ -73,6 +75,7 @@ class SingletonServer(BrokerMessageReceiver):
         processes.
         """
         base_job_data = Bunch({
+            'id': 0, # Dummy ID
             'weeks': None, 'days': None, 
             'hours': None, 'minutes': None, 
             'seconds': connector_server_keep_alive_job_time, 

@@ -17,6 +17,9 @@ from uuid import uuid4
 # anyjson
 from anyjson import loads
 
+# base32_crockford
+from base32_crockford import decode
+
 # Bunch
 from bunch import Bunch
 
@@ -26,11 +29,15 @@ from mock import MagicMock, Mock
 # nose
 from nose.tools import eq_
 
+# six
+from six import string_types
+
 # SQLAlchemy
 from sqlalchemy import create_engine
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
+from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
 from zato.common.util import new_cid
 
@@ -40,9 +47,12 @@ def rand_bool():
 def rand_datetime():
     return datetime.utcnow().isoformat() # Random in the sense of not repeating
 
-def rand_int(start=1, stop=100):
-    return randint(start, stop)
-    
+def rand_int(start=1, stop=100, count=1):
+    if count == 1:
+        return randint(start, stop)
+    else:
+        return [randint(start, stop) for x in range(count)]
+
 def rand_float(start=1.0, stop=100.0):
     return float(rand_int(start, stop))
 
@@ -57,6 +67,28 @@ def rand_object():
 
 def rand_date_utc():
     return datetime.utcnow() # Now is as random as any other date
+
+def is_like_cid(cid):
+    """ Raises ValueError if the cid given on input does not look like a genuine CID
+    produced by zato.common.util.new_cid
+    """
+    if not isinstance(cid, string_types):
+        raise ValueError('CID `{}` should be string like instead of `{}`'.format(cid, type(cid)))
+
+    len_given = len(cid)
+    len_expected = CID_LENGTH + 1 # CID_LENGTH doesn't count 'K' in
+
+    if len_given != len_expected:
+        raise ValueError('CID `{}` should have length `{}` instead of `{}`'.format(cid, len_expected, len_given))
+
+    if not cid.startswith('K'):
+        raise ValueError('CID `{}` should start with `K`'.format(cid))
+
+    value = decode(cid[1:])
+    if(value >> 128) != 0:
+        raise ValueError('There aren\'t 128 bits in CID `{}`'.format(value))
+
+    return True
 
 class Expected(object):
     """ A container for the data a test expects the service to return.
