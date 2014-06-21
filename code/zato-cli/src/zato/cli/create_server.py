@@ -59,7 +59,7 @@ port={odb_port}
 password={odb_password}
 pool_size={odb_pool_size}
 username={odb_user}
-use_async_driver=False
+use_async_driver=True
 
 [hot_deploy]
 pickup_dir=../../pickup-dir
