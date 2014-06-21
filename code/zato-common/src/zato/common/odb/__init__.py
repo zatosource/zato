@@ -17,6 +17,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
 # Zato
+from zato.common import ping_queries
 from zato.common.odb.util import get_engine_url
 
 logger = logging.getLogger(__name__)
@@ -28,19 +29,6 @@ WMQ_DEFAULT_PRIORITY = 5
 VERSION = 1
 
 SUPPORTED_DB_TYPES = (b'oracle', b'postgresql', b'mysql', b'sqlite')
-
-# Queries to use in pinging the databases.
-ping_queries = {
-    'access': 'SELECT 1',
-    'db2': 'SELECT current_date FROM sysibm.sysdummy1',
-    'firebird': 'SELECT current_timestamp FROM rdb$database',
-    'informix': 'SELECT 1 FROM systables WHERE tabid=1',
-    'mssql': 'SELECT 1',
-    'mysql+pymysql': 'SELECT 1+1',
-    'oracle': 'SELECT 1 FROM dual',
-    'postgresql': 'SELECT 1',
-    'sqlite': 'SELECT 1',
-}
 
 def create_pool(crypto_manager, engine_params):
     engine_params = copy.deepcopy(engine_params)
