@@ -9,8 +9,17 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 
+# SQLAlchemy
+from sqlalchemy import exc
+from sqlalchemy import event
+from sqlalchemy.dialects.mysql.pymysql import MySQLDialect_pymysql
+from sqlalchemy.dialects.oracle.cx_oracle import OracleDialect_cx_oracle
+from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
+from sqlalchemy.dialects.sqlite.pysqlite import SQLiteDialect_pysqlite
+from sqlalchemy.pool import Pool
+
 # Zato
-from zato.common import engine_def, engine_def_sqlite, ZATO_NOT_GIVEN
+from zato.common import engine_def, engine_def_sqlite, ping_queries, ZATO_NOT_GIVEN
 
 logger = getLogger(__name__)
 
@@ -83,3 +92,27 @@ def get_engine_url(args):
             attrs['db_name'] = sqlite_path
 
     return (engine_def_sqlite if is_sqlite else engine_def).format(**attrs)
+
+
+# Taken from http://docs.sqlalchemy.org/en/rel_0_9/core/pooling.html#disconnect-handling-pessimistic
+def ensure_sql_connections_exist():
+
+    dialects_sa_mappings = {
+        MySQLDialect_pymysql: 'mysql+pymysql',
+        OracleDialect_cx_oracle: 'oracle',
+        PGDialect_psycopg2: 'postgresql',
+        SQLiteDialect_pysqlite: 'sqlite',
+    }
+
+    _ping_queries = ping_queries
+
+    @event.listens_for(Pool, 'checkout')
+    def impl(dbapi_connection, connection_record, connection_proxy):
+
+        cursor = dbapi_connection.cursor()
+        try:
+            cursor.execute(
+                _ping_queries[dialects_sa_mappings[connection_proxy._pool._dialect.__class__]])
+        except:
+            raise exc.DisconnectionError()
+        cursor.close()
