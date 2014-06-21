@@ -33,7 +33,7 @@ from retools.lock import LockTimeout
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, \
-     SCHEDULER_JOB_TYPE, URL_TYPE
+     SCHEDULER, URL_TYPE
 from zato.common.test import FakeKVDB, rand_string, rand_int, ServiceTestCase
 from zato.server.service import List, Service
 from zato.server.service.reqresp import HTTPRequestData, Request
@@ -68,7 +68,7 @@ class HooksTestCase(ServiceTestCase):
             def after_one_time_job(self):
                 self.environ['after_one_time_job_called'] = True
             
-        instance = self.invoke(MyJob, {}, {}, channel=CHANNEL.SCHEDULER, job_type=SCHEDULER_JOB_TYPE.ONE_TIME)
+        instance = self.invoke(MyJob, {}, {}, channel=CHANNEL.SCHEDULER, job_type=SCHEDULER.JOB_TYPE.ONE_TIME)
         
         for name in('before_handle', 'before_job', 'before_one_time_job', 'after_handle', 'after_job', 'after_one_time_job'):
             eq_(instance.environ['{}_called'.format(name)], True)
