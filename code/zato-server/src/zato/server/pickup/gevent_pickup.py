@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os
+import errno, logging, os, traceback
 
 # gevent
 from gevent import sleep
@@ -24,12 +24,18 @@ __all__ = ['Pickup', 'PickupEventProcessor']
 
 logger = logging.getLogger(__name__)
 
-
 class PickupEventProcessor(BasePickupEventProcessor):
     def process(self, event):
         logger.debug('IN_MODIFY event.name:[{}], event:[{}]'.format(event.name, event))
-        self.hot_deploy(event.name)
-
+        try:
+            self.hot_deploy(event.name)
+        except(IOError, OSError), e:
+            if e.errno == errno.ENOENT:
+                # It's OK, probably there is more than gunicorn worker and the other has already deleted
+                # the deployment package before we had a chance to do the same.
+                logger.debug('Caught ENOENT `%s`, e:`%s`', event, traceback.format_exc(e))
+            else:
+                raise
 
 class Pickup(object):
     def __init__(self, pickup_dir=None, pickup_event_processor=None):
@@ -40,7 +46,7 @@ class Pickup(object):
     def watch(self):
         fd = inotifyx.init()
         inotifyx.add_watch(fd, self.pickup_dir, inotifyx.IN_CLOSE_WRITE | inotifyx.IN_MOVE)
-        
+
         while self.keep_running:
             try:
                 events = inotifyx.get_events(fd, 1.0)
