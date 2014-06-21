@@ -95,6 +95,7 @@ delivery_lock_timeout = 2
 queue_build_cap = 30 # All queue-based connections need to initialize in that many seconds
 http_proxy=
 locale=
+ensure_sql_connections_exist=True
 
 [kvdb]
 host={kvdb_host}

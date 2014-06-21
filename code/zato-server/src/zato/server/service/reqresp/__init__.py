@@ -27,7 +27,7 @@ from lxml.etree import _Element as EtreeElement
 from lxml.objectify import deannotate, Element, ElementMaker, ObjectifiedElement
 
 # SQLAlchemy
-from sqlalchemy.util import NamedTuple
+from sqlalchemy.util import KeyedTuple
 
 # Zato
 from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, SIMPLE_IO, TRACE1, ZatoException, ZATO_OK
@@ -247,7 +247,7 @@ class SimpleIOPayload(SIOConverter):
         """ Called when the user wants to set the payload to a bunch of attributes.
         """
         names = None
-        if isinstance(attrs, (dict, NamedTuple)):
+        if isinstance(attrs, (dict, KeyedTuple)):
             names = attrs.keys()
         elif self._is_sqlalchemy(attrs):
             names = attrs._sa_class_manager.keys()
@@ -327,7 +327,7 @@ class SimpleIOPayload(SIOConverter):
         if output:
 
             # All elements must be of the same type so it's OK to do it
-            is_sa_namedtuple = isinstance(output[0], NamedTuple)
+            is_sa_namedtuple = isinstance(output[0], KeyedTuple)
 
             for item in output:
                 if self.zato_is_xml:
@@ -453,7 +453,7 @@ class Response(object):
         """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
         the dicts are matched and transformed according to the SIO definition.
         """
-        if isinstance(value, (basestring, list, tuple, EtreeElement, ObjectifiedElement)) and not isinstance(value, NamedTuple):
+        if isinstance(value, (basestring, list, tuple, EtreeElement, ObjectifiedElement)) and not isinstance(value, KeyedTuple):
             self._payload = value
         else:
             if isinstance(value, dict):
