@@ -75,6 +75,7 @@ frontend front_http_plain
     mode http
     default_backend bck_http_plain
 
+    option forwardfor
     option httplog # ZATO frontend front_http_plain:option log-http-requests
     bind 127.0.0.1:11223 # ZATO frontend front_http_plain:bind
     maxconn 200 # ZATO frontend front_http_plain:maxconn
