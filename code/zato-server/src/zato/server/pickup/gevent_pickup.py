@@ -29,7 +29,7 @@ class PickupEventProcessor(BasePickupEventProcessor):
         logger.debug('IN_MODIFY event.name:[{}], event:[{}]'.format(event.name, event))
         try:
             self.hot_deploy(event.name)
-        except IOError, e:
+        except(IOError, OSError), e:
             if e.errno == errno.ENOENT:
                 # It's OK, probably there is more than gunicorn worker and the other has already deleted
                 # the deployment package before we had a chance to do the same.

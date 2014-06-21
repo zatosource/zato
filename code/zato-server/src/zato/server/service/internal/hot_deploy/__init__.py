@@ -12,8 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, shutil
 from contextlib import closing
 from datetime import datetime
-from errno import EEXIST
+from errno import EEXIST, ENOENT
 from tempfile import mkdtemp, NamedTemporaryFile
+from traceback import format_exc
 
 # anyjson
 from anyjson import dumps
@@ -224,12 +225,19 @@ class Create(AdminService):
         with Lock(lock_name, self.server.deployment_lock_expires, self.server.deployment_lock_timeout, self.server.kvdb.conn):
             with closing(self.odb.session()) as session:
 
-                # Only the first worker will get here ..
-                if not self.server.kvdb.conn.get(already_deployed_flag):
-                    self.backup_current_work_dir()
+                try:
+                    # Only the first worker will get here ..
+                    if not self.server.kvdb.conn.get(already_deployed_flag):
+                        self.backup_current_work_dir()
 
-                    self.server.kvdb.conn.set(already_deployed_flag, dumps({'create_time_utc':datetime.utcnow().isoformat()}))
-                    self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires) 
+                        self.server.kvdb.conn.set(already_deployed_flag, dumps({'create_time_utc':datetime.utcnow().isoformat()}))
+                        self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires) 
 
-                # .. all workers get here.
-                self.deploy_package(self.request.input.package_id, session)
+                    # .. all workers get here.
+                    self.deploy_package(self.request.input.package_id, session)
+
+                except(IOError, OSError), e:
+                    if e.errno == ENOENT:
+                        logger.debug('Caught ENOENT e:`%s`', format_exc(e))
+                    else:
+                        raise
