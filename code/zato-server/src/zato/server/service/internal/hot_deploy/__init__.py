@@ -12,8 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, shutil
 from contextlib import closing
 from datetime import datetime
-from errno import EEXIST
+from errno import EEXIST, ENOENT
 from tempfile import mkdtemp, NamedTemporaryFile
+from traceback import format_exc
 
 # anyjson
 from anyjson import dumps
@@ -42,7 +43,7 @@ class Create(AdminService):
         request_elem = 'zato_hot_deploy_create_request'
         response_elem = 'zato_hot_deploy_create_response'
         input_required = ('package_id',)
-        
+
     def _delete(self, items):
         for item in items:
             if os.path.isfile(item):
@@ -52,37 +53,38 @@ class Create(AdminService):
             else:
                 msg = "Could not delete [{}], it's neither file nor a directory, stat:[{}]".format(item, os.stat(item))
                 self.logger.warn(msg)
-            
+
     def _backup_last(self, fs_now, current_work_dir, backup_format, last_backup_work_dir):
-        
+
         # We want to grab the directory's contents right now, before we place the
         # new backup in there
         last_backup_contents = []
         for item in os.listdir(last_backup_work_dir):
             last_backup_contents.append(os.path.join(last_backup_work_dir, item))
-            
+
         # First make the backup to the special 'last' directory
         last_backup_path = os.path.join(last_backup_work_dir, fs_now)
+
         shutil.make_archive(last_backup_path, backup_format, current_work_dir, verbose=True, logger=self.logger)
-            
+
         # Delete everything previously found in the last backup directory
         self._delete(last_backup_contents)
-            
+
     def _backup_linear_log(self, fs_now, current_work_dir, backup_format, backup_work_dir, backup_history):
-        
+
         delete_previous_backups = False
-        
+
         # Aren't we going to exceed the limit?
         max_backups = min(backup_history, MAX_BACKUPS)
         backup_contents = []
-        
+
         for item in os.listdir(backup_work_dir):
             item = os.path.join(backup_work_dir, item)
-            
+
             # We tally files only and assume each file must be one of ours so we can safely drop it if need be
             if os.path.isfile(item):
                 backup_contents.append(item)
-                
+
         len_backups = len(backup_contents)
 
         # It's the first backup or we're past the limit so we need a fresh prefix
@@ -90,44 +92,44 @@ class Create(AdminService):
             next_prefix = _first_prefix
         else:
             next_prefix = str(len_backups).zfill(len(_first_prefix))
-        
+
         # Also, we need to delete previous backups if we're starting anew
         if len_backups >= max_backups:
             delete_previous_backups = True
-            
+
         backup_name = '{}-{}'.format(next_prefix, fs_now)
         backup_path = os.path.join(backup_work_dir, backup_name)
         shutil.make_archive(backup_path, backup_format, current_work_dir, verbose=True, logger=self.logger)
-        
+
         if delete_previous_backups:
             self._delete(backup_contents)
-        
+
     def backup_current_work_dir(self):
-        
+
         # Save a few keystrokes
         last_backup_work_dir = self.server.hot_deploy_config.last_backup_work_dir
         current_work_dir = self.server.hot_deploy_config.current_work_dir
         backup_work_dir = self.server.hot_deploy_config.backup_work_dir
         backup_history = self.server.hot_deploy_config.backup_history
         backup_format = self.server.hot_deploy_config.backup_format
-        
+
         # Safe to use as a directory name
         fs_now = fs_safe_now()
-        
+
         # Store the last backup
         self._backup_last(fs_now, current_work_dir, backup_format, last_backup_work_dir)
-            
+
         # Now store the same thing in the linear log of backups
         self._backup_linear_log(fs_now, current_work_dir, backup_format, backup_work_dir, backup_history)
-        
+
     def _deploy_file(self, current_work_dir, payload, file_name):
         f = open(file_name, 'wb')
         f.write(payload)
         f.close()
         self.server.service_store.import_services_from_file(file_name, False, current_work_dir)
-        
+
         return True
-    
+
     def _deploy_archive(self, current_work_dir, payload, payload_name):
         """ Creates a temporary file containing the archive and decompresses it
         into a temporary directory. The directory is scanned for Distutils2 modules,
@@ -158,22 +160,22 @@ class Create(AdminService):
 
             # Clean up
             shutil.rmtree(tmp_dir)
-            
+
         return True
-        
+
     def _deploy_package(self, session, package_id, payload_name, payload):
         """ Deploy a package, either a plain Python file or an archive, and update
         the deployment status.
         """
         success = False
         current_work_dir = self.server.hot_deploy_config.current_work_dir
-        
+
         if is_python_file(payload_name):
             file_name = os.path.join(current_work_dir, payload_name)
             success = self._deploy_file(current_work_dir, payload, file_name)
         elif is_archive_file(payload_name):
             success = self._deploy_archive(current_work_dir, payload, payload_name)
-            
+
         if success:
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
             msg = 'Uploaded package id:[{}], payload_name:[{}]'.format(package_id, payload_name)
@@ -189,13 +191,13 @@ class Create(AdminService):
             one()
         ds.status = status
         ds.status_change_time = datetime.utcnow()
-        
+
         session.add(ds)
         session.commit()
-        
+
     def deploy_package(self, package_id, session):
         dp = self.get_package(package_id, session)
-        
+
         if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
             self._deploy_package(session, package_id, dp.payload_name, dp.payload)
         else:
@@ -203,12 +205,12 @@ class Create(AdminService):
             # filter such things out but life is full of surprises
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
             self.logger.warn('Ignoring package id:[{}], payload_name:[{}], not a Python file nor an archive'.format(dp.id, dp.payload_name))
-                
+
     def get_package(self, package_id, session):
         return session.query(DeploymentPackage).\
             filter(DeploymentPackage.id==package_id).\
             first()
-                
+
     def handle(self):
         package_id = self.request.input.package_id
         server_token = self.server.fs_server_config.main.token
@@ -219,16 +221,23 @@ class Create(AdminService):
         # As of now any worker process will always set deployment status
         # to DEPLOYMENT_STATUS.DEPLOYED but what we really want is per-worker
         # reporting of whether the deployment succeeded or not.
-        
+
         with Lock(lock_name, self.server.deployment_lock_expires, self.server.deployment_lock_timeout, self.server.kvdb.conn):
             with closing(self.odb.session()) as session:
-                
-                # Only the first worker will get here ..
-                if not self.server.kvdb.conn.get(already_deployed_flag):
-                    self.backup_current_work_dir()
-                    
-                    self.server.kvdb.conn.set(already_deployed_flag, dumps({'create_time_utc':datetime.utcnow().isoformat()}))
-                    self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires) 
-                    
-                # .. all workers get here.
-                self.deploy_package(self.request.input.package_id, session)
+
+                try:
+                    # Only the first worker will get here ..
+                    if not self.server.kvdb.conn.get(already_deployed_flag):
+                        self.backup_current_work_dir()
+
+                        self.server.kvdb.conn.set(already_deployed_flag, dumps({'create_time_utc':datetime.utcnow().isoformat()}))
+                        self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires) 
+
+                    # .. all workers get here.
+                    self.deploy_package(self.request.input.package_id, session)
+
+                except(IOError, OSError), e:
+                    if e.errno == ENOENT:
+                        self.logger.debug('Caught ENOENT e:`%s`', format_exc(e))
+                    else:
+                        raise
