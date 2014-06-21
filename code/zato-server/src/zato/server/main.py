@@ -28,6 +28,9 @@ from paste.util.converters import asbool
 # psycopg2
 import psycopg2
 
+# psycogreen
+from psycogreen.gevent import patch_psycopg as make_psycopg_green
+
 # Repoze
 from repoze.profile import ProfileMiddleware
 
@@ -35,7 +38,7 @@ from repoze.profile import ProfileMiddleware
 from zato.common.repo import RepoManager
 from zato.common import TRACE1
 from zato.common.util import absolutize_path, clear_locks, get_app_context, get_config, get_crypto_manager, \
-     get_kvdb_config_for_log, make_psycopg_green, register_diag_handlers, store_pidfile
+     get_kvdb_config_for_log, register_diag_handlers, store_pidfile
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
