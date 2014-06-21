@@ -238,6 +238,6 @@ class Create(AdminService):
 
                 except(IOError, OSError), e:
                     if e.errno == ENOENT:
-                        logger.debug('Caught ENOENT e:`%s`', format_exc(e))
+                        self.logger.debug('Caught ENOENT e:`%s`', format_exc(e))
                     else:
                         raise
