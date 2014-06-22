@@ -92,27 +92,3 @@ def get_engine_url(args):
             attrs['db_name'] = sqlite_path
 
     return (engine_def_sqlite if is_sqlite else engine_def).format(**attrs)
-
-
-# Taken from http://docs.sqlalchemy.org/en/rel_0_9/core/pooling.html#disconnect-handling-pessimistic
-def ensure_sql_connections_exist():
-
-    dialects_sa_mappings = {
-        MySQLDialect_pymysql: 'mysql+pymysql',
-        OracleDialect_cx_oracle: 'oracle',
-        PGDialect_psycopg2: 'postgresql',
-        SQLiteDialect_pysqlite: 'sqlite',
-    }
-
-    _ping_queries = ping_queries
-
-    @event.listens_for(Pool, 'checkout')
-    def impl(dbapi_connection, connection_record, connection_proxy):
-
-        cursor = dbapi_connection.cursor()
-        try:
-            cursor.execute(
-                _ping_queries[dialects_sa_mappings[connection_proxy._pool._dialect.__class__]])
-        except:
-            raise exc.DisconnectionError()
-        cursor.close()
