@@ -141,6 +141,7 @@ ping_queries = {
     'mysql+pymysql': 'SELECT 1+1',
     'oracle': 'SELECT 1 FROM dual',
     'postgresql': 'SELECT 1',
+    'postgresql+pg8000': 'SELECT 1',
     'sqlite': 'SELECT 1',
 }
 
