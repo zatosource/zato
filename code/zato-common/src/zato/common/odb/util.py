@@ -9,17 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 from logging import getLogger
 
-# SQLAlchemy
-from sqlalchemy import exc
-from sqlalchemy import event
-from sqlalchemy.dialects.mysql.pymysql import MySQLDialect_pymysql
-from sqlalchemy.dialects.oracle.cx_oracle import OracleDialect_cx_oracle
-from sqlalchemy.dialects.postgresql.psycopg2 import PGDialect_psycopg2
-from sqlalchemy.dialects.sqlite.pysqlite import SQLiteDialect_pysqlite
-from sqlalchemy.pool import Pool
-
 # Zato
-from zato.common import engine_def, engine_def_sqlite, ping_queries, ZATO_NOT_GIVEN
+from zato.common import engine_def, engine_def_sqlite, ZATO_NOT_GIVEN
 
 logger = getLogger(__name__)
 
