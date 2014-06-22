@@ -15,8 +15,7 @@ from datetime import datetime, timedelta
 from traceback import format_exc
 
 # SQLAlchemy
-from sqlalchemy.exc import IntegrityError
-
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 
 # Bunch
 from bunch import Bunch
@@ -189,7 +188,7 @@ class ODBManager(SessionWrapper):
             self._session.add(service)
             try:
                 self._session.commit()
-            except IntegrityError, e:
+            except(IntegrityError, ProgrammingError), e:
                 logger.log(TRACE1, 'IntegrityError (Service), e:[%s]', format_exc(e).decode('utf-8'))
                 self._session.rollback()
 
@@ -225,7 +224,7 @@ class ODBManager(SessionWrapper):
             self._session.add(ds)
             try:
                 self._session.commit()
-            except IntegrityError, e:
+            except(IntegrityError, ProgrammingError), e:
 
                 logger.log(TRACE1, 'IntegrityError (DeployedService), e:[%s]', format_exc(e).decode('utf-8'))
                 self._session.rollback()

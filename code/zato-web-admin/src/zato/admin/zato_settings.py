@@ -42,9 +42,8 @@ def update_globals(config, base_dir='.'):
 
 # Maps SQLAlchemy engine's name to a UI-friendly one.
 engine_friendly_name = {
-    'postgresql': 'PostgreSQL',
+    'postgresql+pg8000': 'PostgreSQL',
     'oracle': 'Oracle',
-    'mysql': 'MySQL',
     'mysql+pymysql': 'MySQL',
 
     # These are not supported /yet/.
@@ -56,7 +55,7 @@ engine_friendly_name = {
 }
 
 odb_engine_friendly_name = {
-    'postgresql': 'PostgreSQL',
+    'postgresql+pg8000': 'PostgreSQL',
     'oracle': 'Oracle',
     'mysql+pymysql': 'MySQL',
 }

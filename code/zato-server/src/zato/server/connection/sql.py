@@ -80,9 +80,11 @@ class SQLConnectionPool(object):
         
         _extra = {}
 
-        # Postgres-only
+        # MySQL only
         if self.engine_name.startswith('mysql'):
             _extra['pool_recycle'] = 600
+
+        # Postgres-only
         elif self.engine_name.startswith('postgres'):
             _extra['connect_args'] = {'application_name': get_component_name()}
 

@@ -76,7 +76,7 @@ from springpython.remoting.http import CAValidatingHTTPSConnection
 from springpython.remoting.xmlrpc import SSLClientTransport
 
 # SQLAlchemy
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 
 # Texttable
 from texttable import Texttable
@@ -663,9 +663,9 @@ def add_startup_jobs(cluster_id, odb, stats_jobs):
                 session.add(job)
                 session.add(ib_job)
                 session.commit()
-            except IntegrityError, e:
+            except(IntegrityError, ProgrammingError), e:
                 session.rollback()
-                logger.debug('Caught an IntegrityError, carrying on anyway, e:[%s]', format_exc(e).decode('utf-8'))
+                logger.debug('Caught an expected error, carrying on anyway, e:[%s]', format_exc(e).decode('utf-8'))
 
 def hexlify(item):
     """ Returns a nice hex version of a string given on input.
