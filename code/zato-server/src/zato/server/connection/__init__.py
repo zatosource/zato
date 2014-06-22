@@ -187,11 +187,8 @@ class BaseConnector(BrokerMessageReceiver):
         #
         
         engine = config_odb.engine
-        port = config_odb.get('port')
-        
-        if not port:
-            port = 5432 if engine == 'postgresql' else 1521
-        
+        port = config_odb['port']
+
         self.odb_config = Bunch()
         self.odb_config.db_name = config_odb.db_name
         self.odb_config.is_active = True
