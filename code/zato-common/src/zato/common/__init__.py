@@ -22,6 +22,9 @@ from boto.s3.key import Key
 # Bunch
 from bunch import Bunch
 
+# candv
+from candv import Constants, ValueConstant
+
 # lxml
 from lxml import etree
 from lxml.objectify import ObjectPath as _ObjectPath
@@ -544,6 +547,21 @@ class NOTIF:
 
     class TYPE:
         OPENSTACK_SWIFT = 'openstack_swift'
+
+class CASSANDRA:
+
+    class DEFAULT(Constants):
+        CONTACT_POINTS = ValueConstant('127.0.0.1\n')
+        CQL_VERSION = ValueConstant(2)
+        EXEC_SIZE = ValueConstant(2)
+        PORT = ValueConstant(9042)
+        PROTOCOL_VERSION = ValueConstant(2)
+
+    class COMPRESSION(Constants):
+        DISABLED = ValueConstant('disabled')
+        ENABLED_NEGOTIATED = ValueConstant('enabled-negotiated')
+        ENABLED_LZ4 = ValueConstant('enabled-lz4')
+        ENABLED_SNAPPY = ValueConstant('enabled-snappy')
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

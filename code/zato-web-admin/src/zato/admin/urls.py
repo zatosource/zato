@@ -22,6 +22,7 @@ from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
 from zato.admin.web.views.definition import amqp as def_amqp
+from zato.admin.web.views.definition import cassandra as def_cassandra
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
 from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
 from zato.admin.web.views.message import json_pointer, namespace, xpath
@@ -405,6 +406,19 @@ urlpatterns = patterns('',
         login_required(def_amqp.change_password), name='def-amqp-change-password'),
     url(r'^zato/definition/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(def_amqp.Delete()), name=def_amqp.Delete.url_name),
+
+# ################################################################################################################################
+
+    # .. AMQP
+
+    url(r'^zato/definition/cassandra/$',
+        login_required(def_cassandra.Index()), name=def_cassandra.Index.url_name),
+    url(r'^zato/definition/cassandra/create/$',
+        login_required(def_cassandra.Create()), name=def_cassandra.Create.url_name),
+    url(r'^zato/definition/cassandra/edit/$',
+        login_required(def_cassandra.Edit()), name=def_cassandra.Edit.url_name),
+    url(r'^zato/definition/cassandra/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(def_cassandra.Delete()), name=def_cassandra.Delete.url_name),
 
 # ################################################################################################################################
 
