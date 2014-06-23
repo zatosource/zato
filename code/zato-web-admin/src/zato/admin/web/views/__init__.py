@@ -223,7 +223,8 @@ class Index(_BaseView):
         self.clear_user_message()
 
     def can_invoke_admin_service(self):
-        """ Returns a boolean flag indicating that we know what service to invoke,
+        """
+        Returns a boolean flag indicating that we know what service to invoke,
         what cluster on and all the required parameters were given in GET request.
         cluster_id doesn't have to be in GET, 'cluster' will suffice.
         """
@@ -253,7 +254,8 @@ class Index(_BaseView):
             return func(self.service_name, self.input)
 
     def _handle_item_list(self, item_list):
-        """ Creates a new instance of the model class for each of the element received
+        """
+        Creates a new instance of the model class for each of the element received
         and fills it in with received attributes.
         """
         names = tuple(chain(self.SimpleIO.output_required, self.SimpleIO.output_optional))
@@ -271,7 +273,8 @@ class Index(_BaseView):
         pass
 
     def __call__(self, req, *args, **kwargs):
-        """ Handles the request, taking care of common things and delegating 
+        """
+        Handles the request, taking care of common things and delegating 
         control to the subclass for fetching this view-specific data.
         """
         self.clear_user_message()

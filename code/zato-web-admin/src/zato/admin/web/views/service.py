@@ -145,7 +145,8 @@ def get_pretty_print(value, data_format):
         return stdlib_json.dumps(value, sort_keys=True, indent=2)
 
 class Index(_Index):
-    """ A view for listing the services along with their basic statistics.
+    """
+        A view for listing the services along with their basic statistics.
     """
     method_allowed = 'GET'
     url_name = 'service'
