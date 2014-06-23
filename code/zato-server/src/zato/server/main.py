@@ -35,8 +35,8 @@ from psycogreen.gevent import patch_psycopg as make_psycopg_green
 from repoze.profile import ProfileMiddleware
 
 # Zato
-from zato.common.repo import RepoManager
 from zato.common import TRACE1
+from zato.common.repo import RepoManager
 from zato.common.util import absolutize_path, clear_locks, get_app_context, get_config, get_crypto_manager, \
      get_kvdb_config_for_log, register_diag_handlers, store_pidfile
 

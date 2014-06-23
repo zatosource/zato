@@ -95,6 +95,7 @@ delivery_lock_timeout = 2
 queue_build_cap = 30 # All queue-based connections need to initialize in that many seconds
 http_proxy=
 locale=
+ensure_sql_connections_exist=True
 
 [kvdb]
 host={kvdb_host}
@@ -303,7 +304,11 @@ class Create(ZatoCommand):
     
             if show_output:
                 self.logger.debug('Logging configuration stored in {}'.format(logging_conf_loc))
-    
+
+            odb_engine=args.odb_type
+            if odb_engine.startswith('postgresql'):
+                odb_engine = 'postgresql+pg8000'
+
             server_conf_loc = os.path.join(self.target_dir, 'config/repo/server.conf')
             server_conf = open(server_conf_loc, 'w')
             server_conf.write(
@@ -311,7 +316,7 @@ class Create(ZatoCommand):
                     port=port,
                     gunicorn_workers=2,
                     odb_db_name=args.odb_db_name or args.sqlite_path,
-                    odb_engine=args.odb_type,
+                    odb_engine=odb_engine,
                     odb_host=args.odb_host or '',
                     odb_port=args.odb_port or '',
                     odb_password=encrypt(args.odb_password, priv_key) if args.odb_password else '',  
