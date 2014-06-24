@@ -29,9 +29,9 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'contact_points', 'port', 'exec_size', 'proto_version',
-            'cql_version', 'default_keyspace')
-        output_optional = ('username',)
+        output_required = ('id', 'name', 'is_active', 'contact_points', 'port', 'exec_size',
+            'proto_version', 'default_keyspace')
+        output_optional = ('username', 'cql_version')
         output_repeated = True
 
     def handle(self):
@@ -39,7 +39,6 @@ class Index(_Index):
             'default_port': CASSANDRA.DEFAULT.PORT.value,
             'default_exec_size': CASSANDRA.DEFAULT.EXEC_SIZE.value,
             'default_proto_version': CASSANDRA.DEFAULT.PROTOCOL_VERSION.value,
-            'default_cql_version': CASSANDRA.DEFAULT.CQL_VERSION.value,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm()
@@ -49,9 +48,9 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('cluster_id', 'name', 'is_active', 'contact_points', 'port', 'exec_size', 'proto_version',
-            'cql_version', 'default_keyspace')
-        input_optional = ('username',)
+        input_required = ('cluster_id', 'name', 'is_active', 'contact_points', 'port', 'exec_size',
+            'proto_version', 'default_keyspace')
+        input_optional = ('username', 'cql_version')
         output_required = ('id', 'name')
 
     def success_message(self, item):

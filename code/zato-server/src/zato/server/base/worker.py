@@ -38,7 +38,7 @@ from zato.common.broker_message import code_to_name, SERVICE, STATS
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import new_cid, pairwise, parse_extra_into_dict
 from zato.server.base import BrokerMessageReceiver
-from zato.server.connection.cassandra import CassandraConnStore
+from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.ftp import FTPStore
@@ -95,7 +95,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.xpath_store = XPathStore()
 
         # Cassandra
-        self.cassandra_conn_store = CassandraConnStore()
+        self.cassandra_api = CassandraAPI(CassandraConnStore())
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
@@ -269,7 +269,10 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init_cassandra(self):
         for k, v in self.worker_config.cassandra_conn.items():
-            self.cassandra_conn_store.add(k, v.config)
+            try:
+                self.cassandra_api.conn.add(k, v.config)
+            except Exception, e:
+                logger.warn('Could not add Cassandra connection `%s`, e:`%s`', k, format_exc(e))
 
 # ################################################################################################################################
 

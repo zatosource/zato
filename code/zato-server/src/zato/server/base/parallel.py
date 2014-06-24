@@ -29,6 +29,7 @@ from bunch import Bunch
 
 # gevent
 import gevent
+import gevent.monkey # Needed for Cassandra
 
 # parse
 from parse import compile as parse_compile
