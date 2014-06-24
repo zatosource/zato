@@ -551,27 +551,6 @@ NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
 
 ZATO_INFO_FILE = b'.zato-info'
 
-# ##############################################################################
-# Version
-# ##############################################################################
-
-major = 2
-minor = 0
-micro = 'pre0'
-revision = '$Revision$'.split()[1][:7]
-
-class VersionInfo(object):
-
-    @property
-    def version_raw(self):
-        return '{}.{}.{}.rev{}'.format(major, minor, micro, revision)
-
-    @property
-    def version(self):
-        return 'Zato {}'.format(self.version_raw)
-
-version_info = VersionInfo()
-
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):
         self.path = path
