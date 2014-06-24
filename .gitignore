@@ -10,8 +10,8 @@ code/include/*
 code/lib/*
 code/local/*
 code/parts/*
+code/release-info/revision.txt
 code/sec-wall-trunk-src/*
-code/zato-common/src/zato/common/revision.zato
 code/zato-web-admin/src/zato/admin/static/css/.sass-cache/
 code/zato_extra_paths/*
 code/*/build
