@@ -1550,10 +1550,10 @@ class NotificationOpenStackSwift(Notification):
 class CassandraConn(Base):
     """ Connections to Cassandra.
     """
-    __tablename__ = 'cass_conn'
+    __tablename__ = 'cassandra_conn'
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
 
-    id = Column(Integer, Sequence('cass_conn_seq'), primary_key=True)
+    id = Column(Integer, Sequence('cassandra_conn_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     contact_points = Column(String(400), nullable=False, default=CASSANDRA.DEFAULT.CONTACT_POINTS.value)
@@ -1565,4 +1565,4 @@ class CassandraConn(Base):
     password = Column(String(200), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('cass_conn_list', order_by=name, cascade='all, delete, delete-orphan'))
+    cluster = relationship(Cluster, backref=backref('cassandra_conn_list', order_by=name, cascade='all, delete, delete-orphan'))
