@@ -1561,9 +1561,9 @@ class CassandraConn(Base):
     exec_size = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.EXEC_SIZE.value)
     proto_version = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PROTOCOL_VERSION.value)
     cql_version = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.CQL_VERSION.value)
+    default_keyspace = Column(String(400), nullable=False)
     username = Column(String(200), nullable=True)
     password = Column(String(200), nullable=True)
-    contact_points = Column(String(400), nullable=False, default=CASSANDRA.DEFAULT.KEYSPACE.value)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('cassandra_conn_list', order_by=name, cascade='all, delete, delete-orphan'))

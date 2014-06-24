@@ -28,7 +28,9 @@
             '_edit',
             '_delete',
             'id',
-            'is_active'
+            'is_active',
+            'username',
+            'default_keyspace'
         ]
     }
     </script>
@@ -69,6 +71,8 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -86,6 +90,8 @@
                         <td><a href="javascript:$.fn.zato.definition.cassandra.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.username }}</td>
+                        <td class='ignore'>{{ item.default_keyspace }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -138,6 +144,10 @@
                                 <br/>
                                 <span class="form_hint">(Default: {{ default_cql_version }})</span></td>
                             <td>{{ create_form.cql_version }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Default keyspace</td>
+                            <td>{{ create_form.default_keyspace }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Username</td>
@@ -196,6 +206,10 @@
                                 <br/>
                                 <span class="form_hint">(Default: {{ default_cql_version }})</span></td>
                             <td>{{ edit_form.cql_version }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Default keyspace</td>
+                            <td>{{ edit_form.default_keyspace }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Username</td>

@@ -29,7 +29,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'contact_points', 'port', 'exec_size', 'proto_version', 'cql_version')
+        output_required = ('id', 'name', 'is_active', 'contact_points', 'port', 'exec_size', 'proto_version',
+            'cql_version', 'default_keyspace')
         output_optional = ('username',)
         output_repeated = True
 
@@ -48,7 +49,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('cluster_id', 'name', 'is_active', 'contact_points', 'port', 'exec_size', 'proto_version', 'cql_version')
+        input_required = ('cluster_id', 'name', 'is_active', 'contact_points', 'port', 'exec_size', 'proto_version',
+            'cql_version', 'default_keyspace')
         input_optional = ('username',)
         output_required = ('id', 'name')
 
