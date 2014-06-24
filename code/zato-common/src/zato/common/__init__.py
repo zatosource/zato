@@ -555,15 +555,19 @@ ZATO_INFO_FILE = b'.zato-info'
 # Version
 # ##############################################################################
 
-major = 1
-minor = 1
+major = 2
+minor = 0
+micro = 'a0'
+revision = '$Revision$'.split()[1]
 
 class VersionInfo(object):
-    def __init__(self, major, minor):
+    def __init__(self, major, minor, micro, revision):
         self.major = major
         self.minor = minor
+        self.micro = micro
+        self.revision = revision
 
-version_info = VersionInfo(major, minor)
+version_info = VersionInfo(major, minor, micro, revision)
 version_raw = '{}.{}'.format(version_info.major, version_info.minor)
 version = 'Zato {}'.format(version_raw)
 
