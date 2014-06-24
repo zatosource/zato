@@ -27,8 +27,8 @@ class GetList(AdminService):
         request_elem = 'zato_definition_cassandra_get_list_request'
         response_elem = 'zato_definition_cassandra_get_list_response'
         input_required = ('cluster_id',)
-        output_required = (
-            'id', 'name', 'is_active', 'contact_points', Int('port'), Int('exec_size'), 'proto_version', 'cql_version')
+        output_required = ('id', 'name', 'is_active', 'contact_points', Int('port'), Int('exec_size'), 'proto_version',
+            'cql_version', 'default_keyspace')
         output_optional = ('username',)
 
     def get_data(self, session):
@@ -53,7 +53,7 @@ class Create(_CreateEdit):
         request_elem = 'zato_definition_cassandra_create_request'
         response_elem = 'zato_definition_cassandra_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'contact_points', Int('port'), Int('exec_size'),
-                'proto_version', 'cql_version')
+                'proto_version', 'cql_version', 'default_keyspace')
         input_optional = ('username',)
         output_required = ('id', 'name')
 
@@ -98,7 +98,7 @@ class Edit(_CreateEdit):
         request_elem = 'zato_definition_cassandra_edit_request'
         response_elem = 'zato_definition_cassandra_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'contact_points', Int('port'), Int('exec_size'),
-            'proto_version', 'cql_version')
+            'proto_version', 'cql_version', 'default_keyspace')
         input_optional = ('username',)
         output_required = ('id', 'name')
 

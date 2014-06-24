@@ -18,7 +18,8 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.CassandraConn;
     $.fn.zato.data_table.new_row_func = $.fn.zato.definition.cassandra.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'contact_points', 'port', 'exec_size', 'proto_version', 'cql_version']);
+    $.fn.zato.data_table.setup_forms(['name', 'contact_points', 'port', 'exec_size', 'proto_version',
+        'cql_version', 'default_keyspace']);
 })
 
 
