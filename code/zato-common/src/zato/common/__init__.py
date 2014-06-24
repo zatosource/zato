@@ -557,20 +557,20 @@ ZATO_INFO_FILE = b'.zato-info'
 
 major = 2
 minor = 0
-micro = 'a0'
-revision = '$Revision$'.split()[1]
+micro = 'pre0'
+revision = '$Revision$'.split()[1][:7]
 
 class VersionInfo(object):
-    def __init__(self, major, minor, micro, revision):
-        self.major = major
-        self.minor = minor
-        self.micro = micro
-        self.revision = revision
 
-version_info = VersionInfo(major, minor, micro, revision)
-version_raw = '{}.{}'.format(version_info.major, version_info.minor)
-version = 'Zato {}'.format(version_raw)
+    @property
+    def version_raw(self):
+        return '{}.{}.{}.rev{}'.format(major, minor, micro, revision)
 
+    @property
+    def version(self):
+        return 'Zato {}'.format(self.version_raw)
+
+version_info = VersionInfo()
 
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):
