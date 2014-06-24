@@ -62,7 +62,6 @@ class Create(_CreateEdit):
 
         with closing(self.odb.session()) as session:
             try:
-                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
 
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
@@ -137,20 +136,20 @@ class Edit(_CreateEdit):
                 self.response.payload.id = definition.id
                 self.response.payload.name = definition.name
 
-    class ChangePassword(ChangePasswordBase):
-        """ Changes the password of an HTTP Basic Auth definition.
-        """
-        password_required = False
-        
-        class SimpleIO(ChangePasswordBase.SimpleIO):
-            request_elem = 'zato_security_basic_auth_change_password_request'
-            response_elem = 'zato_security_basic_auth_change_password_response'
-        
-        def handle(self):
-            def _auth(instance, password):
-                instance.password = password
-                
-            return self._handle(HTTPBasicAuth, _auth, SECURITY.BASIC_AUTH_CHANGE_PASSWORD)
+class ChangePassword(ChangePasswordBase):
+    """ Changes the password of a Cassandra connection definition.
+    """
+    password_required = False
+    
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        request_elem = 'zato_definition_cassandra_change_password_request'
+        response_elem = 'zato_definition_cassandra_change_password_response'
+    
+    def handle(self):
+        def _auth(instance, password):
+            instance.password = password
+            
+        return self._handle(CassandraConn, _auth, DEFINITION.CASSANDRA_CHANGE_PASSWORD)
 
 class Delete(AdminService):
     """ Deletes a definition.
