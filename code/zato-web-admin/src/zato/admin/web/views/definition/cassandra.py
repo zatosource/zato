@@ -12,8 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
+from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.definition.cassandra import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common import CASSANDRA
 from zato.common.odb.model import CassandraConn
 
@@ -39,7 +40,8 @@ class Index(_Index):
             'default_proto_version': CASSANDRA.DEFAULT.PROTOCOL_VERSION.value,
             'default_cql_version': CASSANDRA.DEFAULT.CQL_VERSION.value,
             'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit')
+            'edit_form': EditForm(prefix='edit'),
+            'change_password_form': ChangePasswordForm()
         }
 
 class _CreateEdit(CreateEdit):
@@ -66,3 +68,7 @@ class Delete(_Delete):
     url_name = 'definition-cassandra-delete'
     error_message = 'Could not delete the connection'
     service_name = 'zato.definition.cassandra.delete'
+
+@method_allowed('POST')
+def change_password(req):
+    return _change_password(req, 'zato.definition.cassandra.change-password')

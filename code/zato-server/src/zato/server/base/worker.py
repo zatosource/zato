@@ -38,6 +38,7 @@ from zato.common.broker_message import code_to_name, SERVICE, STATS
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import new_cid, pairwise, parse_extra_into_dict
 from zato.server.base import BrokerMessageReceiver
+from zato.server.connection.cassandra import CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.ftp import FTPStore
@@ -93,11 +94,15 @@ class WorkerStore(BrokerMessageReceiver):
         self.json_pointer_store = JSONPointerStore()
         self.xpath_store = XPathStore()
 
+        # Cassandra
+        self.cassandra_conn_store = CassandraConnStore()
+
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
         self.init_msg_ns_store()
         self.init_json_pointer_store()
         self.init_xpath_store()
+        self.init_cassandra()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
@@ -259,6 +264,12 @@ class WorkerStore(BrokerMessageReceiver):
     def init_notifiers(self):
         for config_dict in self.worker_config.notif_cloud_openstack_swift.values():
             self._update_cloud_openstack_swift_container(config_dict.config)
+
+# ################################################################################################################################
+
+    def init_cassandra(self):
+        for k, v in self.worker_config.cassandra_conn.items():
+            self.cassandra_conn_store.add(k, v.config)
 
 # ################################################################################################################################
 
