@@ -1560,7 +1560,7 @@ class CassandraConn(Base):
     port = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PORT.value)
     exec_size = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.EXEC_SIZE.value)
     proto_version = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PROTOCOL_VERSION.value)
-    cql_version = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.CQL_VERSION.value)
+    cql_version = Column(Integer, nullable=True)
     default_keyspace = Column(String(400), nullable=False)
     username = Column(String(200), nullable=True)
     password = Column(String(200), nullable=True)

@@ -552,7 +552,6 @@ class CASSANDRA:
 
     class DEFAULT(Constants):
         CONTACT_POINTS = ValueConstant('127.0.0.1\n')
-        CQL_VERSION = ValueConstant(2)
         EXEC_SIZE = ValueConstant(2)
         PORT = ValueConstant(9042)
         PROTOCOL_VERSION = ValueConstant(2)

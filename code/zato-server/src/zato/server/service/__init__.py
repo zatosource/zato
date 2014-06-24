@@ -235,6 +235,9 @@ class Service(object):
         self.cloud.openstack.swift = self.worker_store.worker_config.cloud_openstack_swift
         self.cloud.aws.s3 = self.worker_store.worker_config.cloud_aws_s3
 
+        # Cassandra
+        self.cassandra = self.worker_store.cassandra_api
+
         is_sio = hasattr(self, 'SimpleIO')
         self.request.http.init(self.wsgi_environ)
 
