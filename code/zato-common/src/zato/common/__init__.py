@@ -556,6 +556,7 @@ class CASSANDRA:
         EXEC_SIZE = ValueConstant(2)
         PORT = ValueConstant(9042)
         PROTOCOL_VERSION = ValueConstant(2)
+        KEYSPACE = ValueConstant('not-set')
 
     class COMPRESSION(Constants):
         DISABLED = ValueConstant('disabled')

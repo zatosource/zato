@@ -361,6 +361,17 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.config.repo_location = self.repo_location
 
         # 
+        # Cassandra - start
+        #
+
+        query = self.odb.get_cassandra_conn_list(server.cluster.id, True)
+        self.config.cassandra_conn = ConfigDict.from_query('cassandra_conn', query)
+
+        # 
+        # Cassandra - start
+        #
+
+        # 
         # Cloud - start
         #
 

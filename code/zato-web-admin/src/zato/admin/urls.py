@@ -409,7 +409,7 @@ urlpatterns = patterns('',
 
 # ################################################################################################################################
 
-    # .. AMQP
+    # .. Cassandra
 
     url(r'^zato/definition/cassandra/$',
         login_required(def_cassandra.Index()), name=def_cassandra.Index.url_name),
@@ -419,6 +419,8 @@ urlpatterns = patterns('',
         login_required(def_cassandra.Edit()), name=def_cassandra.Edit.url_name),
     url(r'^zato/definition/cassandra/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(def_cassandra.Delete()), name=def_cassandra.Delete.url_name),
+    url(r'^zato/definition/cassandra/change-password/$',
+        login_required(def_cassandra.change_password), name='definition-cassandra-change-password'),
 
 # ################################################################################################################################
 
