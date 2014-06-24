@@ -21,7 +21,7 @@ class VersionInfo(object):
 
     @property
     def version_raw(self):
-        return '{}.{}.{}.rev{}'.format(major, minor, micro, revision)
+        return '{}.{}.{}.rev-{}'.format(major, minor, micro, revision)
 
     @property
     def version(self):
