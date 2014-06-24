@@ -7,10 +7,17 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # flake8: noqa
-
+import os
+from json import loads
 from setuptools import setup, find_packages
 
-version = '2.0'
+curdir = os.path.dirname(os.path.abspath(__file__))
+release_info_dir = os.path.join(curdir, '..', 'release-info')
+release = open(os.path.join(release_info_dir, 'release.json')).read()
+release = loads(release)
+revision = open(os.path.join(release_info_dir, 'revision.txt')).read()[:8]
+
+version = '{}.{}.{}.rev-{}'.format(release['major'], release['minor'], release['micro'], revision)
 
 long_description = description = 'Convenience Python client for Zato ESB and app server (https://zato.io)'
 
@@ -34,8 +41,7 @@ setup(
           'anyjson==0.3.3',
           'bunch==1.0.1',
           'lxml==3.3.5',
-          'requests==2.3.0',
-          'zato-common >=2.0,<2.1'
+          'requests==2.3.0'
           ],
       
       keywords=('soa eai esb middleware messaging queueing asynchronous integration performance http zeromq framework events agile broker messaging server jms enterprise python middleware clustering amqp nosql websphere mq wmq mqseries ibm amqp zmq'),
