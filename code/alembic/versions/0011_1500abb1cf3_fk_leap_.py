@@ -1,4 +1,4 @@
-"""gh110 HTTP channels audit
+"""gh184 Bring Alembic migrations up to date
 
 Revision ID: 0011_1500abb1cf3
 Revises: 0010_3f03ae0ef253
