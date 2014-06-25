@@ -26,7 +26,8 @@ class BasePickupEventProcessor(ApplicationContextAware):
         super(BasePickupEventProcessor, self).__init__(*args, **kwargs)
         
     def _should_process(self, event_name):
-        """ Returns True if the file name's is either a Python source code file
+        """
+        Returns True if the file name's is either a Python source code file
         we can handle or an archive that can be uncompressed.
         """
         return is_python_file(event_name) or is_archive_file(event_name)

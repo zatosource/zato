@@ -23,8 +23,8 @@ setup(
 
     namespace_packages = ['zato'],
     install_requires = [
-        'APScheduler>=2.1.2',
         'arrow>=0.4.2',
+        'crontab>=0.20',
         'dpath>=1.2-70',
         'faulthandler>=2.3',
         'fs>=0.5.0',
@@ -38,6 +38,7 @@ setup(
         'parse>=1.6.4',
         'pesto>=25',
         'pika>=0.9.13',
+        'psycogreen>=1.0',
         'python-swiftclient>=2.1.0',
         'repoze.profile>=2.0',
         'retools>=0.4.1',

@@ -27,6 +27,7 @@ setup(
     install_requires = [
         'Importing>=1.10',
         'Django>=1.6.5',
+        'pg8000>=1.9.10',
         'pyaml>=14.05.7',
         'sarge>=0.1.3',
         'SQLAlchemy>=0.7.4',
