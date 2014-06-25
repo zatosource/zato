@@ -1,4 +1,4 @@
-"""gh110 Msg paths
+"""gh229 Msg paths
 
 Revision ID: 0009_45c5b38b620e
 Revises: 0008_4eb66feec2a6
