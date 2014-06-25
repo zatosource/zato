@@ -8,7 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # flake8: noqa
 import os
-from json import loads
 from setuptools import setup, find_packages
 
 curdir = os.path.dirname(os.path.abspath(__file__))
