@@ -23,13 +23,39 @@ from cassandra.cluster import Cluster
 from gevent.lock import RLock
 
 # Zato
-from zato.common import PASSWORD_SHADOW
+from zato.common import Inactive, PASSWORD_SHADOW
 
 logger = getLogger(__name__)
 
 class CassandraAPI(object):
     def __init__(self, conn_store):
-        self.conn = conn_store
+        self._conn_store = conn_store
+
+    def __getitem__(self, name):
+        item = self._conn_store.get(name)
+        if not item:
+            msg = 'No such connection `{}` in `{}`'.format(name, sorted(self._conn_store.sessions))
+            logger.warn(msg)
+            raise KeyError(msg)
+
+        if not item.is_active:
+            msg = 'Connection `{}` is not active'.format(name)
+            logger.warn(msg)
+            raise Inactive(msg)
+
+        return item
+
+    def create_def(self, name, msg):
+        return self._conn_store.create(name, msg)
+
+    def edit_def(self, name, msg):
+        return self._conn_store.edit(name, msg)
+
+    def delete_def(self, name):
+        return self._conn_store.edit(name)
+
+    def change_password_def(self, config):
+        return self._conn_store.change_password(config)
 
 class CassandraConnStore(object):
     """ Stores connections to Cassandra.
@@ -94,7 +120,13 @@ class CassandraConnStore(object):
         with self.lock:
             self._delete(name)
 
-    def edit(self, del_name, config):
+    def edit(self, name, config):
         with self.lock:
-            self._delete(del_name)
+            self._delete(name)
             self._add(config.name, config)
+
+    def change_password(self, password_data):
+        with self.lock:
+            new_config = deepcopy(self.sessions[password_data.name].config_no_sensitive)
+            new_config.password = password_data.password
+            self.edit(password_data.name, new_config)
