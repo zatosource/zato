@@ -270,9 +270,9 @@ class WorkerStore(BrokerMessageReceiver):
     def init_cassandra(self):
         for k, v in self.worker_config.cassandra_conn.items():
             try:
-                self.cassandra_api.conn.add(k, v.config)
+                self.cassandra_api.conn.create(k, v.config)
             except Exception, e:
-                logger.warn('Could not add Cassandra connection `%s`, e:`%s`', k, format_exc(e))
+                logger.warn('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc(e))
 
 # ################################################################################################################################
 
@@ -1082,5 +1082,19 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_NOTIF_CLOUD_OPENSTACK_SWIFT_DELETE(self, msg):
         del self.server.worker_store.worker_config.notif_cloud_openstack_swift[msg.name]
+
+# ################################################################################################################################
+
+    def on_broker_msg_DEFINITION_CASSANDRA_CREATE(self, msg):
+        self.cassandra_api.conn.create(msg.name, msg)
+
+    def on_broker_msg_DEFINITION_CASSANDRA_EDIT(self, msg):
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        self.cassandra_api.conn.edit(del_name, msg)
+
+    def on_broker_msg_DEFINITION_CASSANDRA_DELETE(self, msg):
+        self.cassandra_api.conn.delete(msg.name)
 
 # ################################################################################################################################
