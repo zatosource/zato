@@ -14,12 +14,10 @@ from json import loads
 from setuptools import setup, find_packages
 
 curdir = os.path.dirname(os.path.abspath(__file__))
-release_info_dir = os.path.join(curdir, '..', 'release-info')
-release = open(os.path.join(release_info_dir, 'release.json')).read()
-release = loads(release)
-revision = open(os.path.join(release_info_dir, 'revision.txt')).read()[:8]
-
-version = '{}.{}.{}.rev-{}'.format(release['major'], release['minor'], release['micro'], revision)
+_version_py = os.path.normpath(os.path.join(curdir, '..', '.version.py'))
+_locals = {}
+execfile(_version_py, _locals)
+version = _locals['version']
 
 setup(
       name = 'zato-server',
