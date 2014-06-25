@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import os
 from collections import OrderedDict
 from cStringIO import StringIO
 from httplib import responses
@@ -28,6 +29,9 @@ from candv import Constants, ValueConstant
 # lxml
 from lxml import etree
 from lxml.objectify import ObjectPath as _ObjectPath
+
+# setuptools
+import pkg_resources
 
 # The namespace for use in all Zato's own services.
 zato_namespace = 'https://zato.io/ns/20130518'
@@ -133,6 +137,12 @@ DEFAULT_HTTP_POOL_SIZE = 20
 # Used when there's a need for encrypting/decrypting a well-known data.
 # TODO: Move it to MISC
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
+
+# ##############################################################################
+# Version
+# ##############################################################################
+
+version_info = pkg_resources.require('zato-common')[0]
 
 # Queries to use in pinging the databases.
 ping_queries = {
@@ -568,23 +578,6 @@ class CASSANDRA:
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
 
 ZATO_INFO_FILE = b'.zato-info'
-
-# ##############################################################################
-# Version
-# ##############################################################################
-
-major = 1
-minor = 1
-
-class VersionInfo(object):
-    def __init__(self, major, minor):
-        self.major = major
-        self.minor = minor
-
-version_info = VersionInfo(major, minor)
-version_raw = '{}.{}'.format(version_info.major, version_info.minor)
-version = 'Zato {}'.format(version_raw)
-
 
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):

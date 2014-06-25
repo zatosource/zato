@@ -350,13 +350,13 @@ class Service(object):
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
 
     def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=None,
-            transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False):
+            transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None):
         """ Invokes a service asynchronously by its name.
         """
         if to_json_string:
             payload = dumps(payload)
 
-        cid = new_cid()
+        cid = cid or new_cid()
 
         msg = {}
         msg['action'] = SERVICE.PUBLISH
