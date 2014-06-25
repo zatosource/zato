@@ -62,7 +62,7 @@ def get_odb_session_from_server_config(config, cm):
     engine_args = Bunch()
     engine_args.odb_type = config.odb.engine
     engine_args.odb_user = config.odb.username
-    engine_args.odb_password = cm.decrypt(config.odb.password)
+    engine_args.odb_password = cm.decrypt(config.odb.password) if config.odb.password else ''
     engine_args.odb_host = config.odb.host
     engine_args.odb_port = config.odb.port
     engine_args.odb_db_name = config.odb.db_name

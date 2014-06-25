@@ -13,7 +13,7 @@ function symlink_py {
 
 bash $CURDIR/clean.sh
 
-sudo yum install git bzr gcc-gfortran haproxy \
+sudo yum -y install git bzr gcc-gfortran haproxy \
     gcc-c++ atlas-devel atlas blas-devel  \
     libev libev-devel \
     libevent-devel libgfortran lapack-devel lapack \

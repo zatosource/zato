@@ -20,7 +20,7 @@ from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_
      create_web_admin as create_web_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
      enmasse as enmasse_mod, FromConfig, info as info_mod, quickstart as quickstart_mod, run_command, service as service_mod, \
      start as start_mod, stop as stop_mod, web_admin_auth as web_admin_auth_mod
-from zato.common import version as zato_version
+from zato.common import version_info
 
 def add_opts(parser, opts):
     """ Adds parser-specific options.
@@ -45,7 +45,7 @@ def get_parser():
         help='Whether to store config options in a file for a later use', action='store_true')
 
     parser = argparse.ArgumentParser(prog='zato')
-    parser.add_argument('--version', action='version', version=zato_version)
+    parser.add_argument('--version', action='version', version=version_info.version)
     
     subs = parser.add_subparsers()
 
