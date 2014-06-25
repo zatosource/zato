@@ -1,4 +1,4 @@
-"""gh110 HTTP channels audit
+"""gh184 Bring Alembic migrations up to date
 
 Revision ID: 0011_1500abb1cf3
 Revises: 0010_3f03ae0ef253
@@ -16,8 +16,7 @@ from sqlalchemy.schema import CreateSequence, DropSequence
 
 # Zato
 from zato.common.odb import model
-from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, MSG_PATTERN_TYPE, PUB_SUB, \
-     SCHEDULER_JOB_TYPE
+from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, MSG_PATTERN_TYPE, PUB_SUB
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 # ################################################################################################################################

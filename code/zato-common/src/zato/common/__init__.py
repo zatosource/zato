@@ -30,8 +30,16 @@ from candv import Constants, ValueConstant
 from lxml import etree
 from lxml.objectify import ObjectPath as _ObjectPath
 
-# setuptools
-import pkg_resources
+
+# ##############################################################################
+# Version
+# ##############################################################################
+
+curdir = os.path.dirname(os.path.abspath(__file__))
+_version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
+_locals = {}
+execfile(_version_py, _locals)
+version = _locals['version']
 
 # The namespace for use in all Zato's own services.
 zato_namespace = 'https://zato.io/ns/20130518'
@@ -40,6 +48,8 @@ zato_ns_map = {None: zato_namespace}
 # SQL ODB
 engine_def = '{engine}://{username}:{password}@{host}:{port}/{db_name}'
 engine_def_sqlite = 'sqlite:///{sqlite_path}'
+
+
 
 # Convenience access functions and constants.
 
@@ -137,12 +147,6 @@ DEFAULT_HTTP_POOL_SIZE = 20
 # Used when there's a need for encrypting/decrypting a well-known data.
 # TODO: Move it to MISC
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
-
-# ##############################################################################
-# Version
-# ##############################################################################
-
-version_info = pkg_resources.require('zato-common')[0]
 
 # Queries to use in pinging the databases.
 ping_queries = {
