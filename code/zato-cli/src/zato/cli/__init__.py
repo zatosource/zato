@@ -333,7 +333,7 @@ class ZatoCommand(object):
         return getuser() + '@' + gethostname()
     
     def store_initial_info(self, target_dir, component):
-        info = {'version': common.version_raw, # noqa
+        info = {'version': common.version, # noqa
                 'created_user_host': self._get_user_host(),
                 'created_ts': datetime.utcnow().isoformat(), # noqa
                 'component': component

@@ -6,11 +6,8 @@ Copyright (C) 2010 Dariusz Suchojad <dsuch at zato.io>
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
-from setuptools import setup, find_packages
-
 # flake8: noqa
 import os
-from json import loads
 from setuptools import setup, find_packages
 
 curdir = os.path.dirname(os.path.abspath(__file__))
