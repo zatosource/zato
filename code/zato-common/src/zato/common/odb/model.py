@@ -1564,6 +1564,9 @@ class CassandraConn(Base):
     default_keyspace = Column(String(400), nullable=False)
     username = Column(String(200), nullable=True)
     password = Column(String(200), nullable=True)
+    tls_ca_certs = Column(String(200), nullable=True)
+    tls_client_cert = Column(String(200), nullable=True)
+    tls_client_priv_key = Column(String(200), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('cassandra_conn_list', order_by=name, cascade='all, delete, delete-orphan'))
