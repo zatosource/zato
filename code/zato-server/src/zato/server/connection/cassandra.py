@@ -12,11 +12,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from copy import deepcopy
 from logging import getLogger
 from traceback import format_exc
+from uuid import uuid4
 
 # bunch
 from bunch import Bunch
 
 # Cassandra
+from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 
 # gevent
@@ -52,7 +54,7 @@ class CassandraAPI(object):
         return self._conn_store.edit(name, msg)
 
     def delete_def(self, name):
-        return self._conn_store.edit(name)
+        return self._conn_store.delete(name)
 
     def change_password_def(self, config):
         return self._conn_store.change_password(config)
@@ -79,9 +81,12 @@ class CassandraConnStore(object):
         item = Bunch(config=config, config_no_sensitive=config_no_sensitive, is_connected=False, conn=None)
 
         try:
+            auth_provider = PlainTextAuthProvider(config.username, config.password) if config.username else None
+
             cluster = Cluster(
                 config.contact_points.splitlines(), int(config.port), cql_version=config.cql_version,
-                protocol_version=int(config.proto_version), executor_threads=int(config.exec_size))
+                protocol_version=int(config.proto_version), executor_threads=int(config.exec_size),
+                auth_provider=auth_provider)
 
             logger.debug('Connecting to `%s`', config_no_sensitive)
 

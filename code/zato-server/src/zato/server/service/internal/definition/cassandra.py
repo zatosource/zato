@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from itertools import chain
 from traceback import format_exc
+from uuid import uuid4
 
 # Zato
 from zato.common.broker_message import DEFINITION
@@ -72,7 +73,10 @@ class Create(_CreateEdit):
                 if existing_one:
                     raise Exception('Definition `{}` already exists on this cluster'.format(input.name))
 
+                password = uuid4().hex
+
                 definition = CassandraConn()
+                definition.password = password
                 self.populate_definition(definition)
 
                 session.add(definition)
@@ -86,6 +90,7 @@ class Create(_CreateEdit):
                 raise
             else:
                 input.action = DEFINITION.CASSANDRA_CREATE
+                input.password = password
                 self.broker_client.publish(input)
 
             self.response.payload.id = definition.id
@@ -131,6 +136,7 @@ class Edit(_CreateEdit):
             else:
                 input.action = DEFINITION.CASSANDRA_EDIT
                 input.old_name = old_name
+                input.password = definition.password
                 self.broker_client.publish(input)
 
                 self.response.payload.id = definition.id
