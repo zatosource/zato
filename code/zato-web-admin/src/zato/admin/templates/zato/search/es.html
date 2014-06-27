@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Message namespaces{% endblock %}
+{% block html_title %}ElasticSearch connections{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -40,7 +40,7 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/choose-cluster.html" with page_prompt="Show definitions"%}
+{% include "zato/choose-cluster.html" with page_prompt="Show connections"%}
 
 
     {% if cluster_id %}
