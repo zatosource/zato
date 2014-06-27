@@ -24,7 +24,7 @@ from boto.s3.key import Key
 from bunch import Bunch
 
 # candv
-from candv import Constants, ValueConstant
+from candv import ValueConstant
 
 # lxml
 from lxml import etree
