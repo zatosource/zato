@@ -23,6 +23,9 @@ from boto.s3.key import Key
 # Bunch
 from bunch import Bunch
 
+# candv
+from candv import Constants, ValueConstant
+
 # lxml
 from lxml import etree
 from lxml.objectify import ObjectPath as _ObjectPath
@@ -186,6 +189,13 @@ ZATO_ODB_POOL_NAME = 'ZATO_ODB'
 
 SOAP_VERSIONS = ('1.1', '1.2')
 SOAP_CHANNEL_VERSIONS = ('1.1',)
+
+    
+class SEARCH:
+    class ES:
+        class DEFAULTS:
+            HOSTS = ValueConstant('http://127.0.0.1:9200\n')
+            BODY_AS = ValueConstant('POST')
 
 class SEC_DEF_TYPE:
     APIKEY = 'apikey'
