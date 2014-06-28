@@ -42,7 +42,7 @@ $.fn.zato.search.es.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td>{0}</td>', is_active);
+    row += String.format('<td>{0}</td>', is_active ? "Yes":"No");
     row += String.format('<td>{0}</td>', item.hosts);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.search.es.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.search.es.delete_({0});'>Delete</a>", item.id));

@@ -11,7 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from inspect import isclass
-from logging import basicConfig, getLogger
+from logging import getLogger
+from traceback import format_exc
 
 # Bunch
 from bunch import bunchify
@@ -20,7 +21,7 @@ from bunch import bunchify
 from sqlalchemy import Boolean, Integer
 
 # Zato
-from zato.common.odb.model import Base
+from zato.common.odb.model import Base, Cluster
 from zato.server.service import Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO
 
@@ -29,6 +30,12 @@ logger = getLogger(__name__)
 sa_to_sio = {
     Boolean: BoolSIO,
     Integer: IntSIO
+}
+
+req_resp = {
+    'Create': 'create',
+    'Edit': 'edit',
+    'GetList': 'get_list'
 }
 
 def get_io(attrs, elems_name, is_edit):
@@ -64,13 +71,13 @@ def get_io(attrs, elems_name, is_edit):
 class AdminServiceMeta(type):
 
     @staticmethod
-    def get_sio(attrs):
+    def get_sio(attrs, name):
 
         # Base SIO class to be populated in subsequent steps.
 
         class SimpleIO(AdminSIO):
-            request_elem = 'zato_{}_get_list_request'.format(attrs.elem)
-            response_elem = 'zato_{}_get_list_response'.format(attrs.elem)
+            request_elem = 'zato_{}_{}_request'.format(attrs.elem, req_resp[name])
+            response_elem = 'zato_{}_{}_response'.format(attrs.elem, req_resp[name])
             input_required = ['cluster_id',]
             input_optional = []
             output_required = ['id', 'name']
@@ -91,7 +98,7 @@ class GetListMeta(AdminServiceMeta):
         # Dynamically assign all the methods/attributes the new class needs
 
         attrs = bunchify(attrs)
-        cls.SimpleIO = GetListMeta.get_sio(attrs)
+        cls.SimpleIO = GetListMeta.get_sio(attrs, name)
         cls.get_data = GetListMeta.get_data(attrs.get_data_func)
         cls.handle = GetListMeta.handle()
 
@@ -112,4 +119,63 @@ class GetListMeta(AdminServiceMeta):
         def handle_impl(self):
             with closing(self.odb.session()) as session:
                 self.response.payload[:] = self.get_data(session)
+        return handle_impl
+
+class CreateEditMeta(AdminServiceMeta):
+    is_create = False
+    output_required = ('id', 'name')
+
+    def __init__(cls, name, bases, attrs):
+        attrs = bunchify(attrs)
+        cls.SimpleIO = CreateEditMeta.get_sio(attrs, name)
+        cls.handle = CreateEditMeta.handle(attrs)
+
+    @staticmethod
+    def handle(attrs):
+        def handle_impl(self):
+            input = self.request.input
+            verb = 'edit' if attrs.is_edit else 'create'
+
+            with closing(self.odb.session()) as session:
+                try:
+
+                    # Let's see if we already have an instance of that name before committing
+                    # any stuff to the database.
+
+                    existing_one = session.query(attrs.model).\
+                        filter(Cluster.id==input.cluster_id).\
+                        filter(attrs.model.name==input.name)
+
+                    if attrs.is_edit:
+                        existing_one = existing_one.filter(attrs.model.id!=input.id)
+
+                    existing_one = existing_one.first()
+
+                    if existing_one and not attrs.is_edit:
+                        raise Exception('{} [{}] already exists on this cluster'.format(
+                            attrs.label[0].upper() + attrs.label[1:], input.name))
+
+                    if attrs.is_edit:
+                        instance = session.query(attrs.model).filter_by(id=input.id).one()
+                    else:
+                        instance = attrs.model()
+
+                    instance.fromdict(input, allow_pk=True)
+
+                    session.add(instance)
+                    session.commit()
+
+                except Exception, e:
+                    msg = 'Could not {} a namespace, e:`%s`'.format(verb)
+                    self.logger.error(msg, format_exc(e))
+                    session.rollback()
+                    raise
+                else:
+                    action = getattr(attrs.broker_message, attrs.broker_message_prefix + verb.upper())
+                    input.action = action
+                    self.broker_client.publish(input)
+
+                    self.response.payload.id = instance.id
+                    self.response.payload.name = instance.name
+
         return handle_impl
