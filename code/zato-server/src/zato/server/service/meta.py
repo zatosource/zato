@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from inspect import isclass
+from inspect import getmodule, isclass
 from logging import getLogger
 from traceback import format_exc
 
@@ -35,7 +35,8 @@ sa_to_sio = {
 req_resp = {
     'Create': 'create',
     'Edit': 'edit',
-    'GetList': 'get_list'
+    'GetList': 'get_list',
+    'Delete': 'delete'
 }
 
 def get_io(attrs, elems_name, is_edit):
@@ -68,19 +69,45 @@ def get_io(attrs, elems_name, is_edit):
 
     return elems
 
+def update_attrs(cls, name, attrs):
+
+    attrs = bunchify(attrs)
+    mod = getmodule(cls)
+
+    attrs.elem = getattr(mod, 'elem')
+    attrs.model = getattr(mod, 'model')
+    attrs.get_data_func = getattr(mod, 'list_func')
+
+    if name == 'GetList':
+        attrs.output_required = attrs.model
+    else:
+
+        attrs.broker_message = getattr(mod, 'broker_message')
+        attrs.broker_message_prefix = getattr(mod, 'broker_message_prefix')
+
+        if name in('Create', 'Edit'):
+            attrs.input_required = attrs.model
+            attrs.is_create_edit = True
+            attrs.is_edit = name == 'Edit'
+
+    return attrs
+
 class AdminServiceMeta(type):
 
     @staticmethod
-    def get_sio(attrs, name):
+    def get_sio(attrs, name, input_required=None, output_required=None):
 
-        # Base SIO class to be populated in subsequent steps.
+        sio = {
+            'input_required': input_required or ['cluster_id'],
+            'output_required': output_required if output_required is not None else ['id', 'name']
+        }
 
         class SimpleIO(AdminSIO):
             request_elem = 'zato_{}_{}_request'.format(attrs.elem, req_resp[name])
             response_elem = 'zato_{}_{}_response'.format(attrs.elem, req_resp[name])
-            input_required = ['cluster_id',]
+            input_required = sio['input_required']
             input_optional = []
-            output_required = ['id', 'name']
+            output_required = sio['output_required']
             output_optional = []
 
         for io in 'input', 'output':
@@ -90,22 +117,19 @@ class AdminServiceMeta(type):
 
         return SimpleIO
 
+    def init(cls, cls_meta, attrs, name):
+        attrs = update_attrs(cls, name, attrs)
+        cls.SimpleIO = cls_meta.get_sio(attrs, name)
+        cls.get_data = cls_meta.get_data(attrs.get_data_func)
+        cls.handle = cls_meta.handle()
+
+        return cls
+
 class GetListMeta(AdminServiceMeta):
     """ A metaclass customizing the creation of services returning lists of objects.
     """
     def __init__(cls, name, bases, attrs):
-
-        # Dynamically assign all the methods/attributes the new class needs
-
-        attrs = bunchify(attrs)
-        cls.SimpleIO = GetListMeta.get_sio(attrs, name)
-        cls.get_data = GetListMeta.get_data(attrs.get_data_func)
-        cls.handle = GetListMeta.handle()
-
-        service_name = cls.get_name()
-        service_name = service_name.split('.')[:-1]
-        cls.name = '.'.join(service_name) + cls.convert_impl_name(name)
-
+        cls = AdminServiceMeta.init(cls, GetListMeta, attrs, name)
         return super(GetListMeta, cls).__init__(cls)
 
     @staticmethod
@@ -126,7 +150,7 @@ class CreateEditMeta(AdminServiceMeta):
     output_required = ('id', 'name')
 
     def __init__(cls, name, bases, attrs):
-        attrs = bunchify(attrs)
+        attrs = update_attrs(cls, name, attrs)
         cls.SimpleIO = CreateEditMeta.get_sio(attrs, name)
         cls.handle = CreateEditMeta.handle(attrs)
 
@@ -177,5 +201,37 @@ class CreateEditMeta(AdminServiceMeta):
 
                     self.response.payload.id = instance.id
                     self.response.payload.name = instance.name
+
+        return handle_impl
+
+class DeleteMeta(AdminServiceMeta):
+    def __init__(cls, name, bases, attrs):
+        attrs = update_attrs(cls, name, attrs)
+        cls.SimpleIO = GetListMeta.get_sio(attrs, name, ['id'], [])
+        cls.handle = DeleteMeta.handle(attrs)
+
+        return super(DeleteMeta, cls).__init__(cls)
+
+    @staticmethod
+    def handle(attrs):
+        def handle_impl(self):
+            with closing(self.odb.session()) as session:
+                try:
+                    auth = session.query(attrs.model).\
+                        filter(attrs.model.id==self.request.input.id).\
+                        one()
+
+                    session.delete(auth)
+                    session.commit()
+                except Exception, e:
+                    msg = 'Could not delete {}, e:`%s`'.format(attrs.label)
+                    self.logger.error(msg, format_exc(e))
+                    session.rollback()
+
+                    raise
+                else:
+                    self.request.input.action = getattr(attrs.broker_message, attrs.broker_message_prefix + 'DELETE')
+                    self.request.input.name = auth.name
+                    self.broker_client.publish(self.request.input)
 
         return handle_impl
