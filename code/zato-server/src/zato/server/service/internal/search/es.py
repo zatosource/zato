@@ -8,17 +8,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from logging import getLogger
-
 # Zato
 from zato.common.broker_message import SEARCH
 from zato.common.odb.model import ElasticSearch
 from zato.common.odb.query import search_es_list
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
-
-logger = getLogger(__name__)
 
 elem = 'search_es'
 model = ElasticSearch
