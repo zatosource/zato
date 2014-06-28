@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.ElasticSeach;
     $.fn.zato.data_table.new_row_func = $.fn.zato.search.es.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'hosts', 'timeout', 'get_body_as']);
+    $.fn.zato.data_table.setup_forms(['name', 'hosts', 'timeout', 'body_as']);
 })
 
 
@@ -42,7 +42,8 @@ $.fn.zato.search.es.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td>{0}</td>', item.value);
+    row += String.format('<td>{0}</td>', is_active);
+    row += String.format('<td>{0}</td>', item.hosts);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.search.es.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.search.es.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
