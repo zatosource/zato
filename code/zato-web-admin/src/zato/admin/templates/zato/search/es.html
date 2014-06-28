@@ -26,7 +26,9 @@
             '_edit',
             '_delete',
             'id',
-            'is_active'
+            'is_active',
+            'timeout',
+            'body_as',
         ]
     }
     </script>
@@ -64,6 +66,8 @@
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -79,11 +83,13 @@
                         <td><a href="javascript:$.fn.zato.search.es.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.timeout }}</td>
+                        <td class='ignore'>{{ item.body_as }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='8'>No results</td>
+                        <td colspan='11'>No results</td>
                     </tr>
                 {% endif %}
 
