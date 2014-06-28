@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from ftplib import FTP_PORT
 from json import dumps
 
+# dictalchemy
+from dictalchemy import make_class_dictable
+
 # SQLAlchemy
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Sequence, \
      Boolean, LargeBinary, UniqueConstraint, Enum, SmallInteger
@@ -24,6 +27,7 @@ from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, 
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
+make_class_dictable(Base)
 
 # ################################################################################################################################
 
