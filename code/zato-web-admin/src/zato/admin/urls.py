@@ -37,6 +37,7 @@ from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import producers as pubsub_producers
+from zato.admin.web.views.search import es
 from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, \
      wss, xpath as xpath_sec
 
@@ -575,6 +576,23 @@ urlpatterns = patterns('',
         login_required(channel_zmq.Edit()), name=channel_zmq.Edit.url_name),
     url(r'^zato/channel/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_zmq.Delete()), name=channel_zmq.Delete.url_name),
+
+# ################################################################################################################################
+
+    # Search
+
+# ################################################################################################################################
+
+    # .. ElasticSearch
+
+    url(r'^zato/search/es/$',
+        login_required(es.Index()), name=es.Index.url_name),
+    url(r'^zato/search/es/create/$',
+        login_required(es.Create()), name=es.Create.url_name),
+    url(r'^zato/search/es/edit/$',
+        login_required(es.Edit()), name=es.Edit.url_name),
+    url(r'^zato/search/es/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(es.Delete()), name=es.Delete.url_name),
 
 # ################################################################################################################################
 
