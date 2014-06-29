@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os, sys
 
+# ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
+import cloghandler
+
 # Zato
 from zato.agent.load_balancer.server import LoadBalancerAgent
 from zato.common.util import store_pidfile
