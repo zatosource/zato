@@ -15,6 +15,7 @@ bash $CURDIR/clean.sh
 
 sudo yum -y install git bzr gcc-gfortran haproxy \
     gcc-c++ atlas-devel atlas blas-devel  \
+    libev libev-devel \
     libevent-devel libgfortran lapack-devel lapack \
     libpqxx-devel libyaml-devel libxml2-devel libxslt-devel suitesparse \
     openssl python-devel numpy python-pip \

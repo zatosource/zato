@@ -22,7 +22,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, MSG_PATTERN_TYPE, \
+from zato.common import CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, MSG_PATTERN_TYPE, \
      PUB_SUB, SCHEDULER
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
@@ -1551,6 +1551,32 @@ class NotificationOpenStackSwift(Notification):
 
 # ################################################################################################################################
 
+class CassandraConn(Base):
+    """ Connections to Cassandra.
+    """
+    __tablename__ = 'conn_def_cassandra'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('conn_def_cassandra_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    contact_points = Column(String(400), nullable=False, default=CASSANDRA.DEFAULT.CONTACT_POINTS.value)
+    port = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PORT.value)
+    exec_size = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.EXEC_SIZE.value)
+    proto_version = Column(Integer, nullable=False, default=CASSANDRA.DEFAULT.PROTOCOL_VERSION.value)
+    cql_version = Column(Integer, nullable=True)
+    default_keyspace = Column(String(400), nullable=False)
+    username = Column(String(200), nullable=True)
+    password = Column(String(200), nullable=True)
+    tls_ca_certs = Column(String(200), nullable=True)
+    tls_client_cert = Column(String(200), nullable=True)
+    tls_client_priv_key = Column(String(200), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('cassandra_conn_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
 class ElasticSearch(Base):
     """ A base class for all notifications, be it cloud, FTP-based or others.
     """
@@ -1568,3 +1594,4 @@ class ElasticSearch(Base):
     cluster = relationship(Cluster, backref=backref('search_es_conns', order_by=name, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
+
