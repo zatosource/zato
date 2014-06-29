@@ -66,6 +66,13 @@ zato_services = {
     'zato.definition.amqp.get-by-id':'zato.server.service.internal.definition.amqp.GetByID',
     'zato.definition.amqp.get-list':'zato.server.service.internal.definition.amqp.GetList',
 
+    # Definitions - Cassandra
+    'zato.definition.cassandra.create':'zato.server.service.internal.definition.cassandra.Create',
+    'zato.definition.cassandra.delete':'zato.server.service.internal.definition.cassandra.Delete',
+    'zato.definition.cassandra.edit':'zato.server.service.internal.definition.cassandra.Edit',
+    'zato.definition.cassandra.get-by-id':'zato.server.service.internal.definition.cassandra.GetByID',
+    'zato.definition.cassandra.get-list':'zato.server.service.internal.definition.cassandra.GetList',
+
     # Definitions - JMS WebSphere MQ
     'zato.definition.jms-wmq.create':'zato.server.service.internal.definition.jms_wmq.Create',
     'zato.definition.jms-wmq.delete':'zato.server.service.internal.definition.jms_wmq.Delete',

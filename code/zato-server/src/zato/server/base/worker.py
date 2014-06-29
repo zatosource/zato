@@ -38,6 +38,7 @@ from zato.common.broker_message import code_to_name, SERVICE, STATS
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import new_cid, pairwise, parse_extra_into_dict
 from zato.server.base import BrokerMessageReceiver
+from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.ftp import FTPStore
@@ -93,11 +94,16 @@ class WorkerStore(BrokerMessageReceiver):
         self.json_pointer_store = JSONPointerStore()
         self.xpath_store = XPathStore()
 
+        # Cassandra
+        self.cassandra_api = CassandraAPI(CassandraConnStore())
+
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
         self.init_msg_ns_store()
         self.init_json_pointer_store()
         self.init_xpath_store()
+
+        self.init_cassandra()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
@@ -259,6 +265,16 @@ class WorkerStore(BrokerMessageReceiver):
     def init_notifiers(self):
         for config_dict in self.worker_config.notif_cloud_openstack_swift.values():
             self._update_cloud_openstack_swift_container(config_dict.config)
+
+# ################################################################################################################################
+
+    def init_cassandra(self):
+        for k, v in self.worker_config.cassandra_conn.items():
+            try:
+                self.update_cassandra_conn(v.config)
+                self.cassandra_api.create_def(k, v.config)
+            except Exception, e:
+                logger.warn('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc(e))
 
 # ################################################################################################################################
 
@@ -1068,5 +1084,31 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_NOTIF_CLOUD_OPENSTACK_SWIFT_DELETE(self, msg):
         del self.server.worker_store.worker_config.notif_cloud_openstack_swift[msg.name]
+
+# ################################################################################################################################
+
+    def update_cassandra_conn(self, msg):
+        for name in 'tls_ca_certs', 'tls_client_cert', 'tls_client_priv_key':
+            value = msg.get(name)
+            if value:
+                value = os.path.join(self.server.repo_location, 'tls', value)
+                msg[name] = value
+
+    def on_broker_msg_DEFINITION_CASSANDRA_CREATE(self, msg):
+        self.update_cassandra_conn(msg)
+        self.cassandra_api.create_def(msg.name, msg)
+
+    def on_broker_msg_DEFINITION_CASSANDRA_EDIT(self, msg):
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        self.update_cassandra_conn(msg)
+        self.cassandra_api.edit_def(del_name, msg)
+
+    def on_broker_msg_DEFINITION_CASSANDRA_DELETE(self, msg):
+        self.cassandra_api.delete_def(msg.name)
+
+    def on_broker_msg_DEFINITION_CASSANDRA_CHANGE_PASSWORD(self, msg):
+        self.cassandra_api.change_password_def(msg)
 
 # ################################################################################################################################
