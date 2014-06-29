@@ -206,7 +206,11 @@ directories = (
     'work/hot-deploy/backup/last',
     'config/repo/lua',
     'config/repo/lua/internal',
-    'config/repo/lua/user'
+    'config/repo/lua/user',
+    'config/repo/tls',
+    'config/repo/tls/keys',
+    'config/repo/tls/certs',
+    'config/repo/tls/ca-certs',
 )
 
 files = {
