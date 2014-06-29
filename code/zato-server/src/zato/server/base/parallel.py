@@ -29,6 +29,7 @@ from bunch import Bunch
 
 # gevent
 import gevent
+import gevent.monkey # Needed for Cassandra
 
 # parse
 from parse import compile as parse_compile
@@ -359,6 +360,17 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # Repo location so that AMQP subprocesses know where to read
         # the server's configuration from.
         self.config.repo_location = self.repo_location
+
+        # 
+        # Cassandra - start
+        #
+
+        query = self.odb.get_cassandra_conn_list(server.cluster.id, True)
+        self.config.cassandra_conn = ConfigDict.from_query('cassandra_conn', query)
+
+        # 
+        # Cassandra - start
+        #
 
         # 
         # Cloud - start

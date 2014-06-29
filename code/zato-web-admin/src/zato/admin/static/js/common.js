@@ -63,6 +63,7 @@ $.namespace('zato.cluster.servers');
 $.namespace('zato.data_table');
 $.namespace('zato.definition');
 $.namespace('zato.definition.amqp');
+$.namespace('zato.definition.cassandra');
 $.namespace('zato.definition.jms_wmq');
 $.namespace('zato.form');
 $.namespace('zato.kvdb');
