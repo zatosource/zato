@@ -19,6 +19,9 @@ from datetime import datetime
 from subprocess import Popen
 from traceback import format_exc
 
+# ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
+import cloghandler
+
 # psutil
 import psutil
 
