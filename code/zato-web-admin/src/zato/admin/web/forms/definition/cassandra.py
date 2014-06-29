@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common import CASSANDRA
+from zato.common import CASSANDRA, TLS
 
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
@@ -20,12 +20,17 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     contact_points = forms.CharField(initial=CASSANDRA.DEFAULT.CONTACT_POINTS.value, widget=forms.Textarea(attrs={'style':'width:100%'}))
     port = forms.CharField(initial=CASSANDRA.DEFAULT.PORT.value, widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
-    exec_size = forms.CharField(initial=CASSANDRA.DEFAULT.EXEC_SIZE.value, widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
-    proto_version = forms.CharField(initial=CASSANDRA.DEFAULT.PROTOCOL_VERSION.value, widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
+    exec_size = forms.CharField(
+        initial=CASSANDRA.DEFAULT.EXEC_SIZE.value, widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
+    proto_version = forms.CharField(
+        initial=CASSANDRA.DEFAULT.PROTOCOL_VERSION.value, widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
     cql_version = forms.CharField(widget=forms.TextInput(attrs={'style':'width:15%'}))
     default_keyspace = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
     password = forms.CharField(widget=forms.PasswordInput(attrs={'class':'required', 'style':'width:50%'}))
+    tls_ca_certs = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_client_cert = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    tls_client_priv_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
 class EditForm(CreateForm):
     pass

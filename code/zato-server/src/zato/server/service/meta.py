@@ -39,7 +39,7 @@ req_resp = {
     'Delete': 'delete'
 }
 
-def get_io(attrs, elems_name, is_edit):
+def get_io(attrs, elems_name, is_edit, is_required):
 
     # This can be either a list or an SQLAlchemy object
     elems = attrs.get(elems_name) or []
@@ -50,6 +50,12 @@ def get_io(attrs, elems_name, is_edit):
     if elems and isclass(elems) and issubclass(elems, Base):
         columns = []
         for column in [elem for elem in elems._sa_class_manager.mapper.mapped_table.columns]:
+
+            # We're building SimpleIO.input/output_required here so any nullable columns
+            # should not be taken into account. They will be included the next time get_io
+            # is called, i.e. to build SimpleIO.input/output_optional.
+            if is_required and column.nullable:
+                continue
 
             if column.name == 'id':
                 if is_edit:
@@ -87,6 +93,7 @@ def update_attrs(cls, name, attrs):
 
         if name in('Create', 'Edit'):
             attrs.input_required = attrs.model
+            attrs.input_optional = attrs.model
             attrs.is_create_edit = True
             attrs.is_edit = name == 'Edit'
 
@@ -112,8 +119,8 @@ class AdminServiceMeta(type):
 
         for io in 'input', 'output':
             for req in 'required', 'optional':
-                name = '{}_{}'.format(io, req)
-                getattr(SimpleIO, name).extend(get_io(attrs, name, attrs.get('is_edit')))
+                _name = '{}_{}'.format(io, req)
+                getattr(SimpleIO, _name).extend(get_io(attrs, _name, attrs.get('is_edit'), 'required' in _name))
 
         return SimpleIO
 

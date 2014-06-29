@@ -28,6 +28,12 @@ from zato.common import Inactive, PASSWORD_SHADOW
 
 logger = getLogger(__name__)
 
+msg_to_stdlib = {
+    'tls_ca_certs': 'ca_certs',
+    'tls_client_cert': 'certfile',
+    'tls_client_priv_key': 'keyfile',
+    }
+
 class CassandraAPI(object):
     def __init__(self, conn_store):
         self._conn_store = conn_store
@@ -82,10 +88,15 @@ class CassandraConnStore(object):
         try:
             auth_provider = PlainTextAuthProvider(config.username, config.password) if config.username else None
 
+            tls_options = {}
+            for msg_name, stdlib_name in msg_to_stdlib.items():
+                if config.get(msg_name):
+                    tls_options[stdlib_name] = config[msg_name]
+
             cluster = Cluster(
                 config.contact_points.splitlines(), int(config.port), cql_version=config.cql_version,
                 protocol_version=int(config.proto_version), executor_threads=int(config.exec_size),
-                auth_provider=auth_provider)
+                auth_provider=auth_provider, ssl_options=tls_options)
 
             logger.debug('Connecting to `%s`', config_no_sensitive)
 
@@ -111,6 +122,9 @@ class CassandraConnStore(object):
         """ Actually deletes a definition. Must be called with self.lock held.
         """
         try:
+            if not name in self.sessions:
+                raise Exception('No such name `{}` among `{}`'.format(name, self.sessions.keys()))
+
             if self.sessions[name].is_connected:
                 self.sessions[name].conn.shutdown()
         except Exception, e:

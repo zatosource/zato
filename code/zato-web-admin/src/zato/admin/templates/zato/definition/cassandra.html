@@ -31,7 +31,10 @@
             'is_active',
             'username',
             'default_keyspace',
-            'cql_version'
+            'cql_version',
+            'tls_ca_certs',
+            'tls_client_cert',
+            'tls_client_priv_key'
         ]
     }
     </script>
@@ -75,6 +78,9 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -95,6 +101,9 @@
                         <td class='ignore'>{{ item.username|default:"" }}</td>
                         <td class='ignore'>{{ item.default_keyspace }}</td>
                         <td class='ignore'>{{ item.cql_version|default:"" }}</td>
+                        <td class='ignore'>{{ item.tls_ca_certs|default:"" }}</td>
+                        <td class='ignore'>{{ item.tls_client_cert|default:"" }}</td>
+                        <td class='ignore'>{{ item.tls_client_priv_key|default:"" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -154,6 +163,20 @@
                             <td style="vertical-align:middle">Username</td>
                             <td>{{ create_form.username }}</td>
                         </tr>
+                        <!--
+                        <tr>
+                            <td style="vertical-align:middle">TLS CA certs</td>
+                            <td>{{ create_form.tls_ca_certs }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">TLS client cert</td>
+                            <td>{{ create_form.tls_client_cert }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">TLS client priv key</td>
+                            <td>{{ create_form.tls_client_priv_key }}</td>
+                        </tr>
+                        -->
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -214,6 +237,20 @@
                             <td style="vertical-align:middle">Username</td>
                             <td>{{ edit_form.username }}</td>
                         </tr>
+                        <!--
+                        <tr>
+                            <td style="vertical-align:middle">TLS CA certs</td>
+                            <td>{{ edit_form.tls_ca_certs }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">TLS client cert</td>
+                            <td>{{ edit_form.tls_client_cert }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">TLS client priv key</td>
+                            <td>{{ edit_form.tls_client_priv_key }}</td>
+                        </tr>
+                        -->
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />

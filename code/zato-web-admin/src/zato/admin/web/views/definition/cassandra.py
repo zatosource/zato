@@ -50,7 +50,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('cluster_id', 'name', 'is_active', 'contact_points', 'port', 'exec_size',
             'proto_version', 'default_keyspace')
-        input_optional = ('username', 'cql_version')
+        input_optional = ('username', 'cql_version', 'tls_ca_certs', 'tls_client_cert', 'tls_client_priv_key')
         output_required = ('id', 'name')
 
     def success_message(self, item):
