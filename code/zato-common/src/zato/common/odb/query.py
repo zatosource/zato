@@ -19,9 +19,9 @@ from sqlalchemy.sql.expression import case
 # Zato
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
      URL_PARAMS_PRIORITY
-from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, ChannelAMQP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, \
-     ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, \
-     JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, \
+from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, ChannelAMQP, ChannelWMQ, ChannelZMQ, \
+     Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, \
+     ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, \
      NotificationOpenStackSwift as NotifOSS, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
      OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Server, Service, SQLConnectionPool, \
      TechnicalAccount, WSSDefinition, XPath, XPathSecurity

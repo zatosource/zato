@@ -570,7 +570,6 @@ class NOTIF:
         OPENSTACK_SWIFT = 'openstack_swift'
 
 class CASSANDRA:
-
     class DEFAULT(Constants):
         CONTACT_POINTS = ValueConstant('127.0.0.1\n')
         EXEC_SIZE = ValueConstant(2)
@@ -583,6 +582,12 @@ class CASSANDRA:
         ENABLED_NEGOTIATED = ValueConstant('enabled-negotiated')
         ENABLED_LZ4 = ValueConstant('enabled-lz4')
         ENABLED_SNAPPY = ValueConstant('enabled-snappy')
+
+class TLS:
+    class DEFAULT(Constants):
+        PREFIX_KEYS = 'tls/keys/'
+        PREFIX_CERTS = 'tls/certs/'
+        PREFIX_CA_CERTS = 'tls/ca-certs/'
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
