@@ -174,6 +174,10 @@ class Service(object):
         self.has_validate_input = False
         self.has_validate_output = False
 
+    @staticmethod
+    def get_name_static(class_):
+        return Service.get_name(class_)
+
     @classmethod
     def get_name(class_):
         """ Returns a service's name, settings its .name attribute along. This will
