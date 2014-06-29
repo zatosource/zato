@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from ftplib import FTP_PORT
 from json import dumps
 
+# dictalchemy
+from dictalchemy import make_class_dictable
+
 # SQLAlchemy
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Sequence, \
      Boolean, LargeBinary, UniqueConstraint, Enum, SmallInteger
@@ -24,6 +27,7 @@ from zato.common import CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATI
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
+make_class_dictable(Base)
 
 # ################################################################################################################################
 
@@ -1570,3 +1574,24 @@ class CassandraConn(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('cassandra_conn_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class ElasticSearch(Base):
+    """ A base class for all notifications, be it cloud, FTP-based or others.
+    """
+    __tablename__ = 'search_es'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('search_es_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False, default=True)
+    hosts = Column(String(400), nullable=False)
+    timeout = Column(Integer(), nullable=False)
+    body_as = Column(String(45), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('search_es_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+

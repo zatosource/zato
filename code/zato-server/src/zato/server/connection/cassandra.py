@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from copy import deepcopy
 from logging import getLogger
 from traceback import format_exc
-from uuid import uuid4
 
 # bunch
 from bunch import Bunch
