@@ -1,9 +1,9 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.data_table.ElasticSeach = new Class({
+$.fn.zato.data_table.ElasticSearch = new Class({
     toString: function() {
-        var s = '<ElasticSeach id:{0} name:{1} value:{2}>';
+        var s = '<ElasticSearch id:{0} name:{1} value:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.value ? this.value : '(none)');
@@ -15,7 +15,7 @@ $.fn.zato.data_table.ElasticSeach = new Class({
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
-    $.fn.zato.data_table.class_ = $.fn.zato.data_table.ElasticSeach;
+    $.fn.zato.data_table.class_ = $.fn.zato.data_table.ElasticSearch;
     $.fn.zato.data_table.new_row_func = $.fn.zato.search.es.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'hosts', 'timeout', 'body_as']);
@@ -23,11 +23,11 @@ $(document).ready(function() {
 
 
 $.fn.zato.search.es.create = function() {
-    $.fn.zato.data_table._create_edit('create', 'Create a new ElasticSeach connection', null);
+    $.fn.zato.data_table._create_edit('create', 'Create a new ElasticSearch connection', null);
 }
 
 $.fn.zato.search.es.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the ElasticSeach connection', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update the ElasticSearch connection', id);
 }
 
 $.fn.zato.search.es.data_table.new_row = function(item, data, include_tr) {
@@ -59,6 +59,6 @@ $.fn.zato.search.es.data_table.new_row = function(item, data, include_tr) {
 $.fn.zato.search.es.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'ElasticSearch connection [{0}] deleted',
-        'Are you sure you want to delete the ElasticSeach connection [{0}]?',
+        'Are you sure you want to delete the ElasticSearch connection [{0}]?',
         true);
 }
