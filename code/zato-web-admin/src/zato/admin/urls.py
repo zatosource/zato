@@ -38,6 +38,7 @@ from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
 from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import producers as pubsub_producers
+from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, \
      wss, xpath as xpath_sec
@@ -626,6 +627,23 @@ urlpatterns = patterns('',
         login_required(notif_cloud_openstack_swift.Edit()), name=notif_cloud_openstack_swift.Edit.url_name),
     url(r'^zato/notif/cloud/openstack/swift/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(notif_cloud_openstack_swift.Delete()), name=notif_cloud_openstack_swift.Delete.url_name),
+
+# ################################################################################################################################
+
+    # Query
+
+# ################################################################################################################################
+
+    # .. Cassandra
+
+    url(r'^zato/query/cassandra /$',
+        login_required(query_cassandra.Index()), name=query_cassandra.Index.url_name),
+    url(r'^zato/query/cassandra /create/$',
+        login_required(query_cassandra.Create()), name=query_cassandra.Create.url_name),
+    url(r'^zato/query/cassandra /edit/$',
+        login_required(query_cassandra.Edit()), name=query_cassandra.Edit.url_name),
+    url(r'^zato/query/cassandra /delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(query_cassandra.Delete()), name=query_cassandra.Delete.url_name),
 
 # ################################################################################################################################
 
