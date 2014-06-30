@@ -15,12 +15,14 @@ logging.setLoggerClass(ZatoLogger)
 
 # stdlib
 import errno, os, time
+from copy import deepcopy
 from datetime import datetime
 from subprocess import Popen
 from traceback import format_exc
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 import cloghandler
+cloghandler = cloghandler # For pyflakes
 
 # psutil
 import psutil
@@ -30,11 +32,15 @@ from bunch import Bunch
 
 # Zato
 from zato.broker.thread_client import BrokerClient
-from zato.common import TRACE1, ZATO_ODB_POOL_NAME
+from zato.common import Inactive, PASSWORD_SHADOW, TRACE1, ZATO_ODB_POOL_NAME
 from zato.common.delivery import DeliveryStore
 from zato.common.kvdb import KVDB
 from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable
 from zato.server.base import BrokerMessageReceiver
+
+logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
 
 class BaseConnection(object):
     """ A base class for connections to any external resourced accessed through
@@ -135,6 +141,8 @@ class BaseConnection(object):
                     self.logger.error(msg)
                     raise
 
+# ################################################################################################################################
+
 class BaseConnector(BrokerMessageReceiver):
     """ A base class for both channels and outgoing connectors.
     """
@@ -212,12 +220,130 @@ class BaseConnector(BrokerMessageReceiver):
         self._setup_odb()
         
         # Delivery store
-        self.delivery_store = DeliveryStore(self.kvdb, self.broker_client, self.odb, float(fs_server_config.misc.delivery_lock_timeout))
-        
+        self.delivery_store = DeliveryStore(
+            self.kvdb, self.broker_client, self.odb, float(fs_server_config.misc.delivery_lock_timeout))
+
+# ################################################################################################################################
+
+class BaseAPI(object):
+    """ A base class for connection APIs.
+    """
+    def __init__(self, conn_store):
+        self._conn_store = conn_store
+
+    def __getitem__(self, name):
+        item = self._conn_store.get(name)
+        if not item:
+            msg = 'No such connection `{}` in `{}`'.format(name, sorted(self._conn_store.sessions))
+            logger.warn(msg)
+            raise KeyError(msg)
+
+        if not item.is_active:
+            msg = 'Connection `{}` is not active'.format(name)
+            logger.warn(msg)
+            raise Inactive(msg)
+
+        return item
+
+    def create(self, name, msg):
+        return self._conn_store.create(name, msg)
+
+    def edit(self, name, msg):
+        return self._conn_store.edit(name, msg)
+
+    def delete(self, name):
+        return self._conn_store.delete(name)
+
+    def change_password(self, config):
+        return self._conn_store.change_password(config)
+
+# ################################################################################################################################
+
+class BaseConnStore(object):
+    """ A base class for connection stores.
+    """
+    def __init__(self):
+        self.sessions = {}
+
+        # gevent
+        from gevent.lock import RLock
+
+        self.lock = RLock()
+
+    def __getitem__(self, name):
+        return self.sessions[name]
+
+    def get(self, name):
+        return self.sessions.get(name)
+
+    def _create(self, name, config):
+        """ Actually adds a new definition, must be called with self.lock held.
+        """
+        config_no_sensitive = deepcopy(config)
+        config_no_sensitive['password'] = PASSWORD_SHADOW
+        item = Bunch(config=config, config_no_sensitive=config_no_sensitive, is_connected=False, conn=None)
+
+        try:
+            logger.debug('Connecting to `%s`', config_no_sensitive)
+            conn = self.create_impl(config, config_no_sensitive)
+            logger.debug('Connected to `%s`', config_no_sensitive)
+        except Exception, e:
+            logger.warn('Could not connect `%s`, config:`%s`, e:`%s`', name, config_no_sensitive, format_exc(e))
+        else:
+            item.conn = conn
+            item.is_connected = True
+
+        self.sessions[name] = item
+
+    def create(self, name, config):
+        """ Adds a new connection definition.
+        """
+        with self.lock:
+            self._create(name, config)
+
+    def _delete(self, name):
+        """ Actually deletes a definition. Must be called with self.lock held.
+        """
+        try:
+            if not name in self.sessions:
+                raise Exception('No such name `{}` among `{}`'.format(name, self.sessions.keys()))
+            self.delete_impl()
+        except Exception, e:
+            logger.warn('Error while shutting down connection `%s`, e:`%s`', name, format_exc(e))
+        finally:
+            del self.sessions[name]
+
+    def delete(self, name):
+        """ Deletes an existing connection.
+        """
+        with self.lock:
+            self._delete(name)
+
+    def edit(self, name, config):
+        with self.lock:
+            self._delete(name)
+            self._add(config.name, config)
+
+    def change_password(self, password_data):
+        with self.lock:
+            new_config = deepcopy(self.sessions[password_data.name].config_no_sensitive)
+            new_config.password = password_data.password
+            self.edit(password_data.name, new_config)
+
+    def create_impl(self):
+        raise NotImplementedError('Should be overridden by subclasses')
+
+    def delete_impl(self):
+        pass # It's OK - sometimes deleting a connection doesn't have to mean doing anything unusual
+
+# ################################################################################################################################
+
 def setup_logging():
     logging.addLevelName('TRACE1', TRACE1)
     from logging import config
     config.fileConfig(os.path.join(os.environ['ZATO_REPO_LOCATION'], 'logging.conf'))
+
+# ################################################################################################################################
 
 def start_connector(repo_location, file_, env_item_name, def_id, item_id):
     """ Starts a new connector process.
@@ -249,3 +375,5 @@ def start_connector(repo_location, file_, env_item_name, def_id, item_id):
     _env.update(zato_env)
     
     Popen(program, close_fds=True, shell=True, env=_env)
+
+# ################################################################################################################################

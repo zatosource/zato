@@ -691,3 +691,10 @@ class ODBManager(SessionWrapper):
         return query.cassandra_conn_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
+
+    def get_search_es_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of ElasticSearch connections.
+        """
+        return query.search_es_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
