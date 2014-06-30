@@ -45,6 +45,7 @@ from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
+from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.stats import MaintenanceTool
@@ -97,6 +98,9 @@ class WorkerStore(BrokerMessageReceiver):
         # Cassandra
         self.cassandra_api = CassandraAPI(CassandraConnStore())
 
+        # Search
+        self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
+
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
         self.init_msg_ns_store()
@@ -104,6 +108,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_xpath_store()
 
         self.init_cassandra()
+        self.init_search_es()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
@@ -275,6 +280,15 @@ class WorkerStore(BrokerMessageReceiver):
                 self.cassandra_api.create_def(k, v.config)
             except Exception, e:
                 logger.warn('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc(e))
+
+# ################################################################################################################################
+
+    def init_search_es(self):
+        for k, v in self.worker_config.search_es.items():
+            try:
+                self.search_es_api.create(k, v.config)
+            except Exception, e:
+                logger.warn('Could not create an ElasticSearch connection `%s`, e:`%s`', k, format_exc(e))
 
 # ################################################################################################################################
 
@@ -1110,5 +1124,19 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_DEFINITION_CASSANDRA_CHANGE_PASSWORD(self, msg):
         self.cassandra_api.change_password_def(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SEARCH_ES_CREATE(self, msg):
+        self.search_es_api.create(msg.name, msg)
+
+    def on_broker_msg_SEARCH_ES_EDIT(self, msg):
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        self.search_es_api.edit(del_name, msg)
+
+    def on_broker_msg_SEARCH_ES_DELETE(self, msg):
+        self.search_es_api.delete(msg.name)
 
 # ################################################################################################################################

@@ -38,6 +38,7 @@ from zato.common.util import uncamelify, new_cid, payload_from_request, service_
 from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
+from zato.server.connection.search import SearchAPI
 from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.message import MessageFacade
 from zato.server.service.reqresp import Cloud, Outgoing, Request, Response
@@ -241,6 +242,9 @@ class Service(object):
 
         # Cassandra
         self.cassandra = self.worker_store.cassandra_api
+
+        # Search
+        self.search = SearchAPI(self.worker_store.search_es_api)
 
         is_sio = hasattr(self, 'SimpleIO')
         self.request.http.init(self.wsgi_environ)
