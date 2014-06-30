@@ -238,8 +238,8 @@ class BaseAPI(object):
             logger.warn(msg)
             raise KeyError(msg)
 
-        if not item.is_active:
-            msg = 'Connection `{}` is not active'.format(name)
+        if not item.config.is_active:
+            msg = '`{}` is inactive'.format(name)
             logger.warn(msg)
             raise Inactive(msg)
 
@@ -322,7 +322,7 @@ class BaseConnStore(object):
     def edit(self, name, config):
         with self.lock:
             self._delete(name)
-            self._add(config.name, config)
+            self._create(config.name, config)
 
     def change_password(self, password_data):
         with self.lock:
