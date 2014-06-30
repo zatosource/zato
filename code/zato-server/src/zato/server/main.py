@@ -21,6 +21,7 @@ import logging.config
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 import cloghandler
+cloghandler = cloghandler # For pyflakes
 
 # gunicorn
 from gunicorn.app.base import Application
