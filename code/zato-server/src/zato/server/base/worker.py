@@ -1128,15 +1128,15 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_SEARCH_ES_CREATE(self, msg):
-        self.search_es.create(msg.name, msg)
+        self.search_es_api.create(msg.name, msg)
 
     def on_broker_msg_SEARCH_ES_EDIT(self, msg):
         # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
-        self.search_es.edit(del_name, msg)
+        self.search_es_api.edit(del_name, msg)
 
     def on_broker_msg_SEARCH_ES_DELETE(self, msg):
-        self.search_es.delete(msg.name)
+        self.search_es_api.delete(msg.name)
 
 # ################################################################################################################################
