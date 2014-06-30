@@ -166,6 +166,7 @@ class CreateEditMeta(AdminServiceMeta):
         def handle_impl(self):
             input = self.request.input
             verb = 'edit' if attrs.is_edit else 'create'
+            old_name = None
 
             with closing(self.odb.session()) as session:
                 try:
@@ -188,6 +189,7 @@ class CreateEditMeta(AdminServiceMeta):
 
                     if attrs.is_edit:
                         instance = session.query(attrs.model).filter_by(id=input.id).one()
+                        old_name = instance.name
                     else:
                         instance = attrs.model()
 
@@ -204,6 +206,7 @@ class CreateEditMeta(AdminServiceMeta):
                 else:
                     action = getattr(attrs.broker_message, attrs.broker_message_prefix + verb.upper())
                     input.action = action
+                    input.old_name = old_name
                     self.broker_client.publish(input)
 
                     self.response.payload.id = instance.id
