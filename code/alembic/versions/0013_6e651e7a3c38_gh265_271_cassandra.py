@@ -12,7 +12,6 @@ down_revision = '0012_c70a22206a1'
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.schema import CreateSequence, DropSequence
 
 # Zato
 from zato.common import CASSANDRA
