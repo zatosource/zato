@@ -368,6 +368,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_cassandra_conn_list(server.cluster.id, True)
         self.config.cassandra_conn = ConfigDict.from_query('cassandra_conn', query)
 
+        query = self.odb.get_cassandra_query_list(server.cluster.id, True)
+        self.config.cassandra_query = ConfigDict.from_query('cassandra_query', query)
+
         # 
         # Cassandra - end
         #

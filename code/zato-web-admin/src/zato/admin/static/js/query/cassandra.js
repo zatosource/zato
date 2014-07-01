@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.CassandraQuery;
     $.fn.zato.data_table.new_row_func = $.fn.zato.query.cassandra.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'value']);
+    $.fn.zato.data_table.setup_forms(['name', 'value', 'def_id']);
 })
 
 
