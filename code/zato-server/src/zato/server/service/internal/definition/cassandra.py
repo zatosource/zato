@@ -15,7 +15,7 @@ from zato.common.odb.query import cassandra_conn_list
 from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
-elem = 'search_es'
+elem = 'definition_cassandra'
 model = CassandraConn
 label = 'a Cassandra connection'
 broker_message = DEFINITION
