@@ -41,7 +41,7 @@ def upgrade():
         sa.Column('name', sa.String(200), nullable=False),
         sa.Column('is_active', sa.Boolean(), nullable=False),
         sa.Column('value', sa.LargeBinary(40000), nullable=False),
-        sa.Column('def_id', sa.Integer(), sa.ForeignKey('conn_def_cassandra.id', ondelete='CASCADE'), nullable=False)),
+        sa.Column('def_id', sa.Integer(), sa.ForeignKey('conn_def_cassandra.id', ondelete='CASCADE'), nullable=False),
         sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
 
 def downgrade():
