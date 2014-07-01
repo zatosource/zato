@@ -19,9 +19,9 @@ from sqlalchemy.sql.expression import case
 # Zato
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
      URL_PARAMS_PRIORITY
-from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, ChannelAMQP, ChannelWMQ, ChannelZMQ, \
-     Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, \
-     ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, \
+from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, CassandraQuery, ChannelAMQP, ChannelWMQ, \
+     ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, \
+     DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, \
      NotificationOpenStackSwift as NotifOSS, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
      OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Server, Service, SQLConnectionPool, \
      TechnicalAccount, WSSDefinition, XPath, XPathSecurity
@@ -967,5 +967,32 @@ def cassandra_conn_list(session, cluster_id, needs_columns=False):
     """ A list of Cassandra connection definitions.
     """
     return _cassandra_conn(session, cluster_id)
+
+# ################################################################################################################################
+
+def _cassandra_query(session, cluster_id):
+    return session.query(
+        CassandraQuery.id, CassandraQuery.name, CassandraQuery.value,
+        CassandraQuery.is_active, CassandraQuery.cluster_id,
+        CassandraConn.name.label('def_name'),
+        CassandraConn.id.label('def_id'),
+        ).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==CassandraQuery.cluster_id).\
+        filter(CassandraConn.id==CassandraQuery.def_id).\
+        order_by(CassandraQuery.name)
+
+def cassandra_query(session, cluster_id, id):
+    """ A Cassandra prepared statement.
+    """
+    return _cassandra_query(session, cluster_id).\
+        filter(CassandraQuery.id==id).\
+        one()
+
+@needs_columns
+def cassandra_query_list(session, cluster_id, needs_columns=False):
+    """ A list of Cassandra prepared statements.
+    """
+    return _cassandra_query(session, cluster_id)
 
 # ################################################################################################################################

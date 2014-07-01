@@ -48,6 +48,7 @@ from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
+from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.stats import MaintenanceTool
 
 logger = logging.getLogger(__name__)
@@ -97,6 +98,8 @@ class WorkerStore(BrokerMessageReceiver):
 
         # Cassandra
         self.cassandra_api = CassandraAPI(CassandraConnStore())
+        self.cassandra_query_store = CassandraQueryStore()
+        self.cassandra_query_api = CassandraQueryAPI(self.cassandra_query_store)
 
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
@@ -108,6 +111,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_xpath_store()
 
         self.init_cassandra()
+        self.init_cassandra_queries()
         self.init_search_es()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
@@ -280,6 +284,15 @@ class WorkerStore(BrokerMessageReceiver):
                 self.cassandra_api.create_def(k, v.config)
             except Exception, e:
                 logger.warn('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc(e))
+
+# ################################################################################################################################
+
+    def init_cassandra_queries(self):
+        for k, v in self.worker_config.cassandra_query.items():
+            try:
+                self.cassandra_query_api.create(k, v.config, def_=self.cassandra_api[v.config.def_name])
+            except Exception, e:
+                logger.warn('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc(e))
 
 # ################################################################################################################################
 
@@ -1117,13 +1130,28 @@ class WorkerStore(BrokerMessageReceiver):
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
         self.update_cassandra_conn(msg)
-        self.cassandra_api.edit_def(del_name, msg)
+        new_def = self.cassandra_api.edit_def(del_name, msg)
+        self.cassandra_query_store.update_by_def(del_name, new_def)
 
     def on_broker_msg_DEFINITION_CASSANDRA_DELETE(self, msg):
         self.cassandra_api.delete_def(msg.name)
 
     def on_broker_msg_DEFINITION_CASSANDRA_CHANGE_PASSWORD(self, msg):
         self.cassandra_api.change_password_def(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_QUERY_CASSANDRA_CREATE(self, msg):
+        self.cassandra_query_api.create(msg.name, msg, def_=self.cassandra_api[msg.def_name])
+
+    def on_broker_msg_QUERY_CASSANDRA_EDIT(self, msg):
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        self.cassandra_query_api.edit(del_name, msg, def_=self.cassandra_api[msg.def_name])
+
+    def on_broker_msg_QUERY_CASSANDRA_DELETE(self, msg):
+        self.cassandra_query_api.delete(msg.name)
 
 # ################################################################################################################################
 

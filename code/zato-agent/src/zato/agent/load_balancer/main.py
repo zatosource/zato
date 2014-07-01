@@ -13,6 +13,7 @@ import os, sys
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 import cloghandler
+cloghandler = cloghandler # For pyflakes
 
 # Zato
 from zato.agent.load_balancer.server import LoadBalancerAgent

@@ -95,6 +95,8 @@ $.namespace('zato.pubsub.consumers');
 $.namespace('zato.pubsub.message');
 $.namespace('zato.pubsub.producers');
 $.namespace('zato.pubsub.topics');
+$.namespace('zato.query');
+$.namespace('zato.query.cassandra');
 $.namespace('zato.scheduler');
 $.namespace('zato.security');
 $.namespace('zato.security.apikey');

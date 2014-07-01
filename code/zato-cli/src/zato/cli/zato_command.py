@@ -14,6 +14,7 @@ import argparse
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 import cloghandler
+cloghandler = cloghandler # For pyflakes
 
 # Zato
 from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
