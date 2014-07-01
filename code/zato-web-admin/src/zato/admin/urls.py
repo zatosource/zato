@@ -636,13 +636,13 @@ urlpatterns = patterns('',
 
     # .. Cassandra
 
-    url(r'^zato/query/cassandra /$',
+    url(r'^zato/query/cassandra/$',
         login_required(query_cassandra.Index()), name=query_cassandra.Index.url_name),
-    url(r'^zato/query/cassandra /create/$',
+    url(r'^zato/query/cassandra/create/$',
         login_required(query_cassandra.Create()), name=query_cassandra.Create.url_name),
-    url(r'^zato/query/cassandra /edit/$',
+    url(r'^zato/query/cassandra/edit/$',
         login_required(query_cassandra.Edit()), name=query_cassandra.Edit.url_name),
-    url(r'^zato/query/cassandra /delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+    url(r'^zato/query/cassandra/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(query_cassandra.Delete()), name=query_cassandra.Delete.url_name),
 
 # ################################################################################################################################

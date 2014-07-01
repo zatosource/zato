@@ -241,7 +241,8 @@ class Service(object):
         self.cloud.aws.s3 = self.worker_store.worker_config.cloud_aws_s3
 
         # Cassandra
-        self.cassandra = self.worker_store.cassandra_api
+        self.cassandra_conn = self.worker_store.cassandra_api
+        self.cassandra_query = self.worker_store.cassandra_query_api
 
         # Search
         self.search = SearchAPI(self.worker_store.search_es_api)

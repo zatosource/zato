@@ -1606,3 +1606,6 @@ class CassandraQuery(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('cassandra_queries', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def_id = Column(Integer, ForeignKey('conn_def_cassandra.id', ondelete='CASCADE'), nullable=False)
+    def_ = relationship(CassandraConn, backref=backref('queries', cascade='all, delete, delete-orphan'))

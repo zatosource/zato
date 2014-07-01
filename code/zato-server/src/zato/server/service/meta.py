@@ -82,7 +82,10 @@ def update_attrs(cls, name, attrs):
 
     attrs.elem = getattr(mod, 'elem')
     attrs.model = getattr(mod, 'model')
+    attrs.output_required_extra = getattr(mod, 'output_required_extra', [])
+    attrs.output_optional_extra = getattr(mod, 'output_optional_extra', [])
     attrs.get_data_func = getattr(mod, 'list_func')
+    attrs.def_needed = getattr(mod, 'def_needed', False)
 
     if name == 'GetList':
         attrs.output_required = attrs.model
@@ -114,8 +117,8 @@ class AdminServiceMeta(type):
             response_elem = 'zato_{}_{}_response'.format(attrs.elem, req_resp[name])
             input_required = sio['input_required']
             input_optional = []
-            output_required = sio['output_required']
-            output_optional = []
+            output_required = sio['output_required'] + attrs['output_required_extra']
+            output_optional = attrs['output_optional_extra']
 
         for io in 'input', 'output':
             for req in 'required', 'optional':
@@ -204,6 +207,11 @@ class CreateEditMeta(AdminServiceMeta):
                     session.rollback()
                     raise
                 else:
+
+                    if attrs.def_needed:
+                        def_ = session.query(attrs.def_needed).filter_by(id=input.def_id).one()
+                        input.def_name = def_.name
+
                     action = getattr(attrs.broker_message, attrs.broker_message_prefix + verb.upper())
                     input.action = action
                     input.old_name = old_name
