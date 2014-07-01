@@ -13,9 +13,6 @@ down_revision = '0008_4eb66feec2a6'
 from alembic import op
 import sqlalchemy as sa
 
-# Zato
-from zato.common.odb import model
-
 def upgrade():
     op.create_table(
         'msg_xpath',

@@ -13,9 +13,6 @@ down_revision = '0006_2538d53b16c8'
 from alembic import op
 import sqlalchemy as sa
 
-# Zato
-from zato.common.odb import model
-
 def upgrade():
     op.create_table(
         'sec_oauth',
