@@ -20,6 +20,7 @@ from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, \
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.models import ClusterColorMarker, UserProfile
 from zato.client import AnyServiceInvoker
+from zato.common import version
 from zato.common.odb.model import Cluster
 
 
@@ -96,6 +97,11 @@ class ZatoMiddleware(object):
             raise
 
     def process_template_response(self, req, resp):
+        if resp.context_data:
+            resp.context_data['zato_version'] = version
+        else:
+            resp.context_data = {'zato_version':version}
+
         try:
             ccm = ClusterColorMarker.objects.get(cluster_id=req.zato.cluster_id, user_profile=req.zato.user_profile)
         except ClusterColorMarker.DoesNotExist:
