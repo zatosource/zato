@@ -45,7 +45,7 @@ class CassandraAPI(object):
             logger.warn(msg)
             raise KeyError(msg)
 
-        if not item.is_active:
+        if not item.config.is_active:
             msg = 'Connection `{}` is not active'.format(name)
             logger.warn(msg)
             raise Inactive(msg)
@@ -112,6 +112,8 @@ class CassandraConnStore(object):
 
         self.sessions[name] = item
 
+        return item
+
     def create(self, name, config):
         """ Adds a new connection definition.
         """
@@ -141,10 +143,10 @@ class CassandraConnStore(object):
     def edit(self, name, config):
         with self.lock:
             self._delete(name)
-            self._add(config.name, config)
+            return self._add(config.name, config)
 
     def change_password(self, password_data):
         with self.lock:
             new_config = deepcopy(self.sessions[password_data.name].config_no_sensitive)
             new_config.password = password_data.password
-            self.edit(password_data.name, new_config)
+            return self.edit(password_data.name, new_config)

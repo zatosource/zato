@@ -12,13 +12,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from elasticutils import get_es
 
 # Zato
-from zato.server.connection import BaseAPI, BaseConnStore
+from zato.server.store import BaseAPI, BaseStore
 
 class ElasticSearchAPI(BaseAPI):
     """ API to obtain ElasticSearch connections through.
     """
 
-class ElasticSearchConnStore(BaseConnStore):
+class ElasticSearchConnStore(BaseStore):
     """ Stores connections to ElasticSearch.
     """
     def create_impl(self, config, config_no_sensitive):

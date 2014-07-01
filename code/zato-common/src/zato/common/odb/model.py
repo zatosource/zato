@@ -1578,8 +1578,6 @@ class CassandraConn(Base):
 # ################################################################################################################################
 
 class ElasticSearch(Base):
-    """ A base class for all notifications, be it cloud, FTP-based or others.
-    """
     __tablename__ = 'search_es'
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
 
@@ -1595,3 +1593,19 @@ class ElasticSearch(Base):
 
 # ################################################################################################################################
 
+class CassandraQuery(Base):
+    """ Cassandra query templates.
+    """
+    __tablename__ = 'query_cassandra'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('query_cassandra_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    value = Column(LargeBinary(40000), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('cassandra_queries', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def_id = Column(Integer, ForeignKey('conn_def_cassandra.id', ondelete='CASCADE'), nullable=False)
+    def_ = relationship(CassandraConn, backref=backref('queries', cascade='all, delete, delete-orphan'))
