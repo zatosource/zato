@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.ClientKey;
     $.fn.zato.data_table.new_row_func = $.fn.zato.security.tls.client_key.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name']);
+    $.fn.zato.data_table.setup_forms(['name', 'value']);
 })
 
 
@@ -45,6 +45,6 @@ $.fn.zato.security.tls.client_key.data_table.new_row = function(item, data, incl
 $.fn.zato.security.tls.client_key.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Client key [{0}] deleted',
-        'Are you sure you want to delete the client key[{0}]?',
+        'Are you sure you want to delete the client key [{0}]?',
         true);
 }
