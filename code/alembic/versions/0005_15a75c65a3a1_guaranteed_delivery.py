@@ -13,9 +13,6 @@ down_revision = '0004_1d1df3f2e67d'
 from alembic import op
 import sqlalchemy as sa
 
-# Zato
-from zato.common.odb import model
-
 def upgrade():
     op.create_table(
         'delivery_def_base',
