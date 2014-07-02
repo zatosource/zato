@@ -8,8 +8,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from inspect import isclass
+
 # Bunch
 from bunch import Bunch
+
+# candv
+from candv import Constants, ValueConstant
 
 MESSAGE = Bunch()
 MESSAGE.MESSAGE_TYPE_LENGTH = 4
@@ -59,13 +65,14 @@ TOPICS = {
 
 KEYS = {k:v.replace('/zato','').replace('/',':') for k,v in TOPICS.items()}
 
-SCHEDULER = Bunch()
-SCHEDULER.CREATE = b'10000'
-SCHEDULER.EDIT = b'10001'
-SCHEDULER.DELETE = b'10002'
-SCHEDULER.EXECUTE = b'10003'
-SCHEDULER.JOB_EXECUTED = b'10004'
+class SCHEDULER(Constants):
+    CREATE = ValueConstant('10000')
+    EDIT = ValueConstant('10001')
+    DELETE = ValueConstant('10002')
+    EXECUTE = ValueConstant('10003')
+    JOB_EXECUTED = ValueConstant('10004')
 
+'''
 ZMQ_SOCKET = Bunch()
 ZMQ_SOCKET.CLOSE = b'10100'
 
@@ -166,11 +173,11 @@ SERVICE.DELETE = b'10901'
 SERVICE.PUBLISH = b'10902'
 
 HOT_DEPLOY = Bunch()
-HOT_DEPLOY.CREATE = '11000'
+HOT_DEPLOY.CREATE = b'11000'
 
 STATS = Bunch()
-STATS.DELETE = '11100'
-STATS.DELETE_DAY = '11101'
+STATS.DELETE = b'11100'
+STATS.DELETE_DAY = b'11101'
 
 SINGLETON = Bunch()
 SINGLETON.CLOSE = b'11200'
@@ -282,17 +289,24 @@ QUERY.CASSANDRA_CREATE = b'13150'
 QUERY.CASSANDRA_EDIT = b'13151'
 QUERY.CASSANDRA_DELETE = b'13152'
 QUERY.CASSANDRA_CHANGE_PASSWORD = b'13153'
+'''
 
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'
-bunch_name, bunch = None, None
+item_name, item = None, None
 
-for bunch_name, bunch in globals().items():
-    if isinstance(bunch, Bunch) and not bunch is Bunch:
-        if bunch not in(MESSAGE, MESSAGE_TYPE):
-            for code_name, code_value in bunch.items():
-                code_name = bunch_name + '_' + code_name
-                code_to_name[code_value] = code_name
+for item_name, item in globals().items():
+    if isclass(item) and issubclass(item, Constants) and item is not Constants:
+        for attr, const in item.items():
+            code_to_name[const.value.encode('utf-8')] = '{}_{}'.format(item_name, attr)
+    '''if isinstance(bunch, Constants):
+        #for code_name, code_value in bunch.items():
+        #    code_name = bunch_name + '_' + code_name
+        #    code_to_name[code_value] = code_name
+        print(bunch)'''
 
-del bunch_name, bunch, code_name, code_value
+#del bunch_name, bunch, code_name, code_value
+
+from pprint import pprint
+pprint(code_to_name)
