@@ -89,7 +89,7 @@ class BaseStore(object):
                 def execute_impl(**kwargs):
                     if not session:
                         raise Exception('Cannot execute the query without a session')
-                    return session.execute(statement, **kwargs)
+                    return session.execute(statement, kwargs)
                 return execute_impl
 
             item.execute = execute(extra['def_'].conn, impl)
