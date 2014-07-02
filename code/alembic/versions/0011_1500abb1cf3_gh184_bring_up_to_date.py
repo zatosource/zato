@@ -16,8 +16,7 @@ from sqlalchemy.schema import CreateSequence, DropSequence
 
 # Zato
 from zato.common.odb import model
-from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, MSG_PATTERN_TYPE, PUB_SUB
-from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
+from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, MISC, MSG_PATTERN_TYPE, PUB_SUB
 
 # ################################################################################################################################
 

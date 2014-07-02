@@ -13,9 +13,6 @@ down_revision = '0007_c16781527a4'
 from alembic import op
 import sqlalchemy as sa
 
-# Zato
-from zato.common.odb import model
-
 def upgrade():
     op.create_table(
         'msg_ns',

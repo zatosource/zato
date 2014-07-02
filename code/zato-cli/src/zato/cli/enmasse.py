@@ -60,6 +60,7 @@ from zato.server.service.internal.security import oauth as sec_oauth_mod
 from zato.server.service.internal.security import tech_account as sec_tech_account_mod
 from zato.server.service.internal.security import wss as sec_wss_mod
 from zato.server.service.internal.security import xpath as sec_xpath_mod
+from zato.server.service.internal.search import es as search_es
 
 DEFAULT_COLS_WIDTH = '15,100'
 NO_SEC_DEF_NEEDED = 'zato-no-security'
@@ -722,6 +723,7 @@ class EnMasse(ManageCommand):
             'scheduler':scheduler_mod.Create,
             'xpath': xpath_mod.Create,
             'cloud_openstack_swift': cloud_openstack_swift.Create,
+            'search_es': search_es.Create,
         }
 
         def_sec_services = {
@@ -951,6 +953,7 @@ class EnMasse(ManageCommand):
             'scheduler':ImportInfo(scheduler_mod),
             'xpath':ImportInfo(xpath_mod),
             'cloud_openstack_swift': ImportInfo(cloud_openstack_swift),
+            'search_es': ImportInfo(search_es)
         }
 
         def_sec_info = {
