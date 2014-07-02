@@ -108,6 +108,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.app_context = None
         self.has_gevent = None
         self.delivery_store = None
+        self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
 
         self.access_logger = logging.getLogger('zato_access_log')
 
@@ -140,7 +141,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         wsgi_environ['zato.request_timestamp'] = wsgi_environ['zato.local_tz'].normalize(local_dt)
 
         wsgi_environ['zato.http.response.headers'] = {'X-Zato-CID': cid}
-        wsgi_environ['zato.http.remote_addr'] = wsgi_environ.get('HTTP_X_FORWARDED_FOR') or wsgi_environ.get('REMOTE_ADDR')
+
+        remote_addr = '(None)'
+        for name in self.client_address_headers:
+            remote_addr = wsgi_environ.get(name)
+            if remote_addr:
+                break
+
+        wsgi_environ['zato.http.remote_addr'] = remote_addr
 
         try:
             # We need to populate all the TLS-related environ keys so that

@@ -56,6 +56,17 @@ from zato.common.odb.model import Cluster
 # POSSIBILITY OF SUCH DAMAGE.
 ###
 
+class Client(AnyServiceInvoker):
+    def __init__(self, req, *args, **kwargs):
+        self.forwarder_for = req.META.get('HTTP_X_FORWARDED_FOR') or req.META.get('REMOTE_ADDR')
+        super(Client, self).__init__(*args, **kwargs)
+
+    def invoke(self, *args, **kwargs):
+        return super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarder_for}, **kwargs)
+
+    def invoke_async(self, *args, **kwargs):
+        return super(Client, self).invoke_async(*args, headers={'X-Zato-Forwarded-For': self.forwarder_for}, **kwargs)
+
 class ZatoMiddleware(object):
 
     def process_request(self, req):
@@ -78,7 +89,7 @@ class ZatoMiddleware(object):
 
                 url = 'http://{}:{}'.format(req.zato.cluster.lb_host, req.zato.cluster.lb_port)
                 auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
-                req.zato.client = AnyServiceInvoker(url, ADMIN_INVOKE_PATH, auth, to_bunch=True)
+                req.zato.client = Client(req, url, ADMIN_INVOKE_PATH, auth, to_bunch=True)
 
             req.zato.clusters = req.zato.odb.query(Cluster).order_by('name').all()
             req.zato.choose_cluster_form = ChooseClusterForm(req.zato.clusters, req.GET)
