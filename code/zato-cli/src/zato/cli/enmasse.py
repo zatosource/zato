@@ -33,9 +33,8 @@ from texttable import Texttable
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.client import AnyServiceInvoker
-from zato.common.odb.model import ConnDefAMQP, ConnDefWMQ, HTTPBasicAuth, \
-     HTTPSOAP, NTLM, OAuth, SecurityBase, Server, Service, TechnicalAccount, \
-     to_json, WSSDefinition, XPathSecurity
+from zato.common.odb.model import CassandraConn, ConnDefAMQP, ConnDefWMQ, HTTPBasicAuth, HTTPSOAP, NTLM, OAuth, SecurityBase, Server, \
+     Service, TechnicalAccount, to_json, WSSDefinition, XPathSecurity
 from zato.common.util import get_config
 from zato.server.service import ForceType
 from zato.server.service.internal import http_soap as http_soap_mod
@@ -45,6 +44,7 @@ from zato.server.service.internal.channel import zmq as channel_zmq_mod
 from zato.server.service.internal.cloud.openstack import swift as cloud_openstack_swift
 from zato.server.service.internal.definition import amqp as definition_amqp_mod
 from zato.server.service.internal.definition import jms_wmq as definition_jms_wmq_mod
+from zato.server.service.internal.definition import cassandra as definition_cassandra_mod
 from zato.server.service.internal.message import json_pointer as json_pointer_mod
 from zato.server.service.internal.message import namespace as namespace_mod
 from zato.server.service.internal.message import xpath as xpath_mod
@@ -54,6 +54,7 @@ from zato.server.service.internal.outgoing import jms_wmq as outgoing_jms_wmq_mo
 from zato.server.service.internal.outgoing import sql as outgoing_sql_mod
 from zato.server.service.internal.outgoing import zmq as outgoing_zmq_mod
 from zato.server.service.internal import scheduler as scheduler_mod
+from zato.server.service.internal.query import cassandra as query_cassandra_mod
 from zato.server.service.internal.security import basic_auth as sec_basic_auth_mod
 from zato.server.service.internal.security import ntlm as sec_ntlm_mod
 from zato.server.service.internal.security import oauth as sec_oauth_mod
@@ -502,6 +503,7 @@ class EnMasse(ManageCommand):
 
         self.odb_objects.def_sec = []
         self.odb_objects.def_amqp = []
+        self.odb_objects.def_cassandra = []
         self.odb_objects.def_jms_wmq = []
         self.odb_objects.http_soap = []
 
@@ -537,6 +539,10 @@ class EnMasse(ManageCommand):
             filter(ConnDefWMQ.cluster_id == self.client.cluster_id).all():
             self.odb_objects.def_jms_wmq.append(get_fields(item))
 
+        for item in self.client.odb_session.query(CassandraConn).\
+            filter(CassandraConn.cluster_id == self.client.cluster_id).all():
+            self.odb_objects.def_cassandra.append(get_fields(item))
+
         for item in self.client.odb_session.query(HTTPSOAP).\
             filter(HTTPSOAP.cluster_id == self.client.cluster_id).\
             filter(HTTPSOAP.is_internal == False).all():
@@ -558,6 +564,8 @@ class EnMasse(ManageCommand):
             'zato.outgoing.zmq.get-list':'outconn_zmq',
             'zato.scheduler.job.get-list':'scheduler',
             'zato.cloud.openstack.swift.get-list':'cloud_openstack_swift',
+            'zato.search.es.get-list':'search_es',
+            'zato.query.cassandra.get-list':'query_cassandra',
             }
 
         for value in service_key.values():
@@ -708,11 +716,13 @@ class EnMasse(ManageCommand):
             'channel_plain_http':http_soap_mod.Create,
             'channel_soap':http_soap_mod.Create,
             'channel_zmq':channel_zmq_mod.Create,
+            'cloud_openstack_swift': cloud_openstack_swift.Create,
             'def_amqp':definition_amqp_mod.Create,
             'def_jms_wmq':definition_jms_wmq_mod.Create,
+            'def_cassandra':definition_cassandra_mod.Create,
+            'def_namespace': namespace_mod.Create,
             'json_pointer': json_pointer_mod.Create,
             'http_soap':http_soap_mod.Create,
-            'def_namespace': namespace_mod.Create,
             'outconn_amqp':outgoing_amqp_mod.Create,
             'outconn_ftp':outgoing_ftp_mod.Create,
             'outconn_jms_wmq':outgoing_jms_wmq_mod.Create,
@@ -720,10 +730,10 @@ class EnMasse(ManageCommand):
             'outconn_soap':http_soap_mod.Create,
             'outconn_sql':outgoing_sql_mod.Create,
             'outconn_zmq':outgoing_zmq_mod.Create,
+            'query_cassandra': query_cassandra_mod.Create,
             'scheduler':scheduler_mod.Create,
-            'xpath': xpath_mod.Create,
-            'cloud_openstack_swift': cloud_openstack_swift.Create,
             'search_es': search_es.Create,
+            'xpath': xpath_mod.Create,
         }
 
         def_sec_services = {
@@ -869,6 +879,7 @@ class EnMasse(ManageCommand):
         items_defs = {
             'def_amqp':'zato.definition.amqp.get-list',
             'def_jms_wmq':'zato.definition.jms-wmq.get-list',
+            'def_cassandra':'zato.definition.cassandra.get-list',
             'def_sec':'zato.security.get-list',
         }
 
@@ -942,6 +953,7 @@ class EnMasse(ManageCommand):
             'channel_zmq':ImportInfo(channel_zmq_mod),
             'def_amqp':ImportInfo(definition_amqp_mod, True),
             'def_jms_wmq':ImportInfo(definition_jms_wmq_mod),
+            'def_cassandra':ImportInfo(definition_cassandra_mod),
             'json_pointer':ImportInfo(json_pointer_mod),
             'http_soap':ImportInfo(http_soap_mod),
             'def_namespace':ImportInfo(namespace_mod),
