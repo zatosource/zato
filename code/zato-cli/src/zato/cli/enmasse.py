@@ -558,6 +558,7 @@ class EnMasse(ManageCommand):
             'zato.outgoing.zmq.get-list':'outconn_zmq',
             'zato.scheduler.job.get-list':'scheduler',
             'zato.cloud.openstack.swift.get-list':'cloud_openstack_swift',
+            'zato.search.es.get-list':'search_es',
             }
 
         for value in service_key.values():
