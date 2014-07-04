@@ -744,7 +744,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             cid = new_cid()
 
             msg = {}
-            msg['action'] = SERVICE.PUBLISH
+            msg['action'] = SERVICE.PUBLISH.value
             msg['service'] = name
             msg['payload'] = payload
             msg['cid'] = cid
@@ -819,9 +819,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         if self.singleton_server:
 
             # Close all the connector subprocesses this server has possibly started
-            pairs = ((AMQP_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL),
-                    (JMS_WMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL),
-                    (ZMQ_CONNECTOR.CLOSE, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL),
+            pairs = ((AMQP_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL),
+                    (JMS_WMQ_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL),
+                    (ZMQ_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL),
                     )
 
             for action, msg_type in pairs:
@@ -872,5 +872,5 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         """ Publishes a message on the broker so all the servers (this one including
         can deploy a new package).
         """
-        msg = {'action': HOT_DEPLOY.CREATE, 'package_id': package_id}
+        msg = {'action': HOT_DEPLOY.CREATE.value, 'package_id': package_id}
         self.broker_client.publish(msg)
