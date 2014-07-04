@@ -81,6 +81,9 @@ class BaseStore(object):
         config_no_sensitive['password'] = PASSWORD_SHADOW
         item = Bunch(config=config, config_no_sensitive=config_no_sensitive, is_created=False, impl=None)
 
+        # It's optional
+        conn = extra.get('def_', {'conn':None})['conn']
+
         try:
             logger.debug('Creating `%s`', config_no_sensitive)
             impl = self.create_impl(config, config_no_sensitive, **extra)
@@ -92,13 +95,15 @@ class BaseStore(object):
                     return session.execute(statement, kwargs)
                 return execute_impl
 
-            item.execute = execute(extra['def_'].conn, impl)
+            item.execute = execute(conn, impl)
 
             logger.debug('Created `%s`', config_no_sensitive)
         except Exception, e:
             logger.warn('Could not create `%s`, config:`%s`, e:`%s`', name, config_no_sensitive, format_exc(e))
         else:
-            item.extra = weakref.proxy(extra.get('def_'))
+            if conn:
+                item.extra = weakref.proxy(conn)
+
             item.impl = impl
             item.is_created = True
 
