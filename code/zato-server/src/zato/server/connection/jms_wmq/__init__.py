@@ -67,10 +67,10 @@ class BaseJMSWMQConnector(BaseConnector):
         if super(BaseJMSWMQConnector, self).filter(msg):
             return True
         
-        elif msg.action == JMS_WMQ_CONNECTOR.CLOSE:
+        elif msg.action == JMS_WMQ_CONNECTOR.CLOSE.value:
             return self.odb.token == msg['token']
         
-        elif msg.action in(DEFINITION.JMS_WMQ_EDIT, DEFINITION.JMS_WMQ_DELETE):
+        elif msg.action in(DEFINITION.JMS_WMQ_EDIT.value, DEFINITION.JMS_WMQ_DELETE.value):
             return self.def_.id == msg.id
 
     def on_broker_msg_JMS_WMQ_CONNECTOR_CLOSE(self, msg, args=None):

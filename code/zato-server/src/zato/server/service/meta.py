@@ -212,7 +212,7 @@ class CreateEditMeta(AdminServiceMeta):
                         def_ = session.query(attrs.def_needed).filter_by(id=input.def_id).one()
                         input.def_name = def_.name
 
-                    action = getattr(attrs.broker_message, attrs.broker_message_prefix + verb.upper())
+                    action = getattr(attrs.broker_message, attrs.broker_message_prefix + verb.upper()).value
                     input.action = action
                     input.old_name = old_name
                     self.broker_client.publish(input)
@@ -248,7 +248,7 @@ class DeleteMeta(AdminServiceMeta):
 
                     raise
                 else:
-                    self.request.input.action = getattr(attrs.broker_message, attrs.broker_message_prefix + 'DELETE')
+                    self.request.input.action = getattr(attrs.broker_message, attrs.broker_message_prefix + 'DELETE').value
                     self.request.input.name = auth.name
                     self.broker_client.publish(self.request.input)
 

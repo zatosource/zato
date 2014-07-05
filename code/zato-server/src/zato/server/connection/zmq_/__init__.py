@@ -76,7 +76,7 @@ class BaseZMQConnector(BaseConnector):
         elif msg.action == ZMQ_CONNECTOR.CLOSE:
             return self.odb.token == msg['token']
         
-        elif msg.action in(DEFINITION.ZMQ_EDIT, DEFINITION.ZMQ_DELETE):
+        elif msg.action in(DEFINITION.ZMQ_EDIT.value, DEFINITION.ZMQ_DELETE.value):
             return self.def_.id == msg.id
 
     def on_broker_msg_ZMQ_CONNECTOR_CLOSE(self, msg, args=None):

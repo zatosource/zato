@@ -216,7 +216,7 @@ class DeliveryStore(object):
         for service in callback_list:
             if service:
                 broker_msg = {}
-                broker_msg['action'] = SERVICE.PUBLISH
+                broker_msg['action'] = SERVICE.PUBLISH.value
                 broker_msg['task_id'] = delivery.task_id
                 broker_msg['channel'] = CHANNEL.DELIVERY
                 broker_msg['data_format'] = DATA_FORMAT.JSON

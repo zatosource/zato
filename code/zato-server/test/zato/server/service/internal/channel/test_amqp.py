@@ -136,7 +136,7 @@ class EditTestCase(_Base):
             }
         
     def broker_client_publish(self, msg, msg_type):
-        self.assertEquals(msg['action'], CHANNEL.AMQP_DELETE)
+        self.assertEquals(msg['action'], CHANNEL.AMQP_DELETE.value)
         self.assertEquals(msg['name'], self.name)
         self.assertEquals(msg_type, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL)
     
@@ -181,7 +181,7 @@ class DeleteTestCase(_Base):
             }
         
     def broker_client_publish(self, msg, msg_type):
-        self.assertEquals(msg['action'], CHANNEL.AMQP_DELETE)
+        self.assertEquals(msg['action'], CHANNEL.AMQP_DELETE.value)
         self.assertEquals(msg['id'], self.id)
         self.assertEquals(msg['name'], self.name)
         self.assertEquals(msg_type, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL)

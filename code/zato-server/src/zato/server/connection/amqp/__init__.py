@@ -116,11 +116,11 @@ class BaseAMQPConnector(BaseConnector):
         """ The base class knows how to manage the AMQP definitions but not channels
         or outgoing connections.
         """
-        if msg.action == AMQP_CONNECTOR.CLOSE:
+        if msg.action == AMQP_CONNECTOR.CLOSE.value:
             if self.odb.token == msg['token']:
                 return True
             
-        elif msg.action in(DEFINITION.AMQP_EDIT, DEFINITION.AMQP_DELETE, DEFINITION.AMQP_CHANGE_PASSWORD):
+        elif msg.action in(DEFINITION.AMQP_EDIT.value, DEFINITION.AMQP_DELETE.value, DEFINITION.AMQP_CHANGE_PASSWORD.value):
             if self.def_amqp.id == msg.id:
                 return True
         

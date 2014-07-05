@@ -146,7 +146,7 @@ class Edit(AdminService):
                 session.add(service)
                 session.commit()
                 
-                input.action = SERVICE.EDIT
+                input.action = SERVICE.EDIT.value
                 input.impl_name = service.impl_name
                 self.broker_client.publish(input)
                 
@@ -188,7 +188,7 @@ class Delete(AdminService):
                 session.delete(service)
                 session.commit()
 
-                msg = {'action': SERVICE.DELETE, 'id': self.request.input.id, 'impl_name':service.impl_name, 
+                msg = {'action': SERVICE.DELETE.value, 'id': self.request.input.id, 'impl_name':service.impl_name, 
                        'is_internal':service.is_internal}
                 self.broker_client.publish(msg)
                 

@@ -15,7 +15,7 @@ from inspect import isclass
 from bunch import Bunch
 
 # candv
-from candv import Constants as _Constants, ValueConstant
+from candv import Constants, ValueConstant
 
 class Constants(_Constants):
     values = _Constants.constants
