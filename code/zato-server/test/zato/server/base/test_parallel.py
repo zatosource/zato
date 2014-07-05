@@ -102,7 +102,7 @@ class ParallelServerTestCase(TestCase):
         
         for expected_service, expected_payload in startup_services.items():
             msg = Bunch(broker_client.messages[expected_service])
-            eq_(msg.action, SERVICE.PUBLISH)
+            eq_(msg.action, SERVICE.PUBLISH.value)
             eq_(msg.channel, CHANNEL.STARTUP_SERVICE)
             eq_(msg.payload, expected_payload)
             eq_(msg.service, expected_service)
@@ -314,7 +314,7 @@ class AuditTestCase(TestCase):
                         # Audit 2/2 - Response
                         #
 
-                        self.assertEquals(bc.msg['action'], CHANNEL_BROKER_MESSAGE.HTTP_SOAP_AUDIT_RESPONSE)
+                        self.assertEquals(bc.msg['action'], CHANNEL_BROKER_MESSAGE.HTTP_SOAP_AUDIT_RESPONSE.value)
                         self.assertEquals(bc.msg['cid'], expected_cid)
                         self.assertEquals(bc.msg['data_format'], DATA_FORMAT.JSON)
                         self.assertEquals(bc.msg['service'], 'zato.http-soap.set-audit-response-data')

@@ -368,7 +368,7 @@ class Service(object):
         cid = cid or new_cid()
 
         msg = {}
-        msg['action'] = SERVICE.PUBLISH
+        msg['action'] = SERVICE.PUBLISH.value
         msg['service'] = name
         msg['payload'] = payload
         msg['cid'] = cid

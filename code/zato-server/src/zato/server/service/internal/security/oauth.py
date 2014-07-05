@@ -79,7 +79,7 @@ class Create(AdminService):
 
                 raise
             else:
-                input.action = SECURITY.OAUTH_CREATE
+                input.action = SECURITY.OAUTH_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.OAUTH
                 self.broker_client.publish(input)
 
@@ -129,7 +129,7 @@ class Edit(AdminService):
 
                 raise
             else:
-                input.action = SECURITY.OAUTH_EDIT
+                input.action = SECURITY.OAUTH_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.OAUTH
                 self.broker_client.publish(input)
@@ -150,7 +150,7 @@ class ChangePassword(ChangePasswordBase):
         def _auth(instance, password):
             instance.password = password
 
-        return self._handle(OAuth, _auth, SECURITY.OAUTH_CHANGE_PASSWORD)
+        return self._handle(OAuth, _auth, SECURITY.OAUTH_CHANGE_PASSWORD.value)
 
 class Delete(AdminService):
     """ Deletes an OAuth definition.
@@ -176,6 +176,6 @@ class Delete(AdminService):
 
                 raise
             else:
-                self.request.input.action = SECURITY.OAUTH_DELETE
+                self.request.input.action = SECURITY.OAUTH_DELETE.value
                 self.request.input.name = auth.name
                 self.broker_client.publish(self.request.input)

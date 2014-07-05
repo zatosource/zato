@@ -63,7 +63,7 @@ class Scheduler(object):
         name = ctx['name']
 
         msg = {
-            'action': SCHEDULER_MSG.JOB_EXECUTED,
+            'action': SCHEDULER_MSG.JOB_EXECUTED.value,
             'name':name,
             'service': ctx['cb_kwargs']['service'], 
             'payload':ctx['cb_kwargs']['extra'],
@@ -86,7 +86,7 @@ class Scheduler(object):
         # Now, if it was a one-time job, it needs to be deactivated.
         if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME:
             msg = {
-                'action': SERVICE.PUBLISH,
+                'action': SERVICE.PUBLISH.value,
                 'service': 'zato.scheduler.job.set-active-status',
                 'payload': {'id':ctx['id'], 'is_active':False},
                 'cid': new_cid(),

@@ -78,7 +78,7 @@ class PublisherFacade(object):
         AMQP connectors.
         """
         params = {}
-        params['action'] = OUTGOING.AMQP_PUBLISH
+        params['action'] = OUTGOING.AMQP_PUBLISH.value
         params['out_name'] = out_name
         params['body'] = msg
         params['exchange'] = bytes(exchange)
@@ -143,10 +143,10 @@ class OutgoingConnector(BaseAMQPConnector):
         if super(OutgoingConnector, self).filter(msg):
             return True
         
-        elif msg.action == OUTGOING.AMQP_PUBLISH:
+        elif msg.action == OUTGOING.AMQP_PUBLISH.value:
             if self.out_amqp.name == msg.out_name:
                 return True
-        elif msg.action in(OUTGOING.AMQP_EDIT, OUTGOING.AMQP_DELETE):
+        elif msg.action in(OUTGOING.AMQP_EDIT.value, OUTGOING.AMQP_DELETE.value):
             if self.out_amqp.id == msg.id:
                 return True
         else:

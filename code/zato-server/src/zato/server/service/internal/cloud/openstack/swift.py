@@ -68,7 +68,7 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
 
-                input.action = CLOUD.OPENSTACK_SWIFT_CREATE_EDIT
+                input.action = CLOUD.OPENSTACK_SWIFT_CREATE_EDIT.value
                 self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
@@ -111,7 +111,7 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
 
-                input.action = CLOUD.OPENSTACK_SWIFT_CREATE_EDIT
+                input.action = CLOUD.OPENSTACK_SWIFT_CREATE_EDIT.value
                 input.old_name = old_name
                 self.broker_client.publish(input)
                 
@@ -143,7 +143,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
 
-                msg = {'action': CLOUD.OPENSTACK_SWIFT_DELETE, 'name': item.name, 'id':item.id}
+                msg = {'action': CLOUD.OPENSTACK_SWIFT_DELETE.value, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg)
                 
             except Exception, e:

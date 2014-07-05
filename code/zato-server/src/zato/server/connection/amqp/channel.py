@@ -112,7 +112,7 @@ class ConsumingConnector(BaseAMQPConnector):
         if super(ConsumingConnector, self).filter(msg):
             return True
         
-        elif msg.action in(CHANNEL.AMQP_EDIT, CHANNEL.AMQP_DELETE):
+        elif msg.action in(CHANNEL.AMQP_EDIT.value, CHANNEL.AMQP_DELETE.value):
             if self.channel_amqp.id == msg.id:
                 return True
         else:
@@ -164,7 +164,7 @@ class ConsumingConnector(BaseAMQPConnector):
         with self.def_amqp_lock:
             with self.channel_amqp_lock:
                 params = {}
-                params['action'] = CHANNEL.AMQP_MESSAGE_RECEIVED
+                params['action'] = CHANNEL.AMQP_MESSAGE_RECEIVED.value
                 params['service'] = self.channel_amqp.service
                 params['data_format'] = self.channel_amqp.data_format
                 params['cid'] = new_cid()

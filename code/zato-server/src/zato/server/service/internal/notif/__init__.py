@@ -33,7 +33,7 @@ class InvokeRunNotifier(Service):
             'data_format': DATA_FORMAT.JSON
         }
 
-        msg = {'action': NOTIF.RUN_NOTIFIER, 'request': dumps(request)}
+        msg = {'action': NOTIF.RUN_NOTIFIER.value, 'request': dumps(request)}
         self.broker_client.publish(msg)
 
 

@@ -74,7 +74,7 @@ class Create(AdminService):
 
                 raise 
             else:
-                input.action = SECURITY.NTLM_CREATE
+                input.action = SECURITY.NTLM_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.NTLM
                 self.broker_client.publish(input)
 
@@ -120,7 +120,7 @@ class Edit(AdminService):
 
                 raise 
             else:
-                input.action = SECURITY.NTLM_EDIT
+                input.action = SECURITY.NTLM_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.NTLM
                 self.broker_client.publish(input)
@@ -141,7 +141,7 @@ class ChangePassword(ChangePasswordBase):
         def _auth(instance, password):
             instance.password = password
             
-        return self._handle(NTLM, _auth, SECURITY.NTLM_CHANGE_PASSWORD)
+        return self._handle(NTLM, _auth, SECURITY.NTLM_CHANGE_PASSWORD.value)
 
 class Delete(AdminService):
     """ Deletes an NTLM definition.
@@ -167,6 +167,6 @@ class Delete(AdminService):
 
                 raise
             else:
-                self.request.input.action = SECURITY.NTLM_DELETE
+                self.request.input.action = SECURITY.NTLM_DELETE.value
                 self.request.input.name = auth.name
                 self.broker_client.publish(self.request.input)
