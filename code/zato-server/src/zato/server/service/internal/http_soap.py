@@ -173,9 +173,9 @@ class Create(AdminService, _HTTPSOAPService):
                 input.update(sec_info)
                 
                 if input.connection == 'channel':
-                    action = CHANNEL.HTTP_SOAP_CREATE_EDIT
+                    action = CHANNEL.HTTP_SOAP_CREATE_EDIT.value
                 else:
-                    action = OUTGOING.HTTP_SOAP_CREATE_EDIT
+                    action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
                 self.notify_worker_threads(input, action)
 
                 self.response.payload.id = item.id
@@ -284,9 +284,9 @@ class Edit(AdminService, _HTTPSOAPService):
                 input.update(sec_info)
                 
                 if input.connection == 'channel':
-                    action = CHANNEL.HTTP_SOAP_CREATE_EDIT
+                    action = CHANNEL.HTTP_SOAP_CREATE_EDIT.value
                 else:
-                    action = OUTGOING.HTTP_SOAP_CREATE_EDIT
+                    action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
                 self.notify_worker_threads(input, action)
 
                 self.response.payload.id = item.id
@@ -323,9 +323,9 @@ class Delete(AdminService, _HTTPSOAPService):
                 session.commit()
                 
                 if item.connection == 'channel':
-                    action = CHANNEL.HTTP_SOAP_DELETE
+                    action = CHANNEL.HTTP_SOAP_DELETE.value
                 else:
-                    action = OUTGOING.HTTP_SOAP_DELETE
+                    action = OUTGOING.HTTP_SOAP_DELETE.value
                 
                 self.notify_worker_threads({'name':old_name, 'transport':old_transport,
                     'old_url_path':old_url_path, 'old_soap_action':old_soap_action}, action)
@@ -369,7 +369,7 @@ class ReloadWSDL(AdminService, _HTTPSOAPService):
         fields['sec_type'] = sec_info['sec_type']
         fields['security_name'] = sec_info['security_name']
 
-        action = OUTGOING.HTTP_SOAP_CREATE_EDIT
+        action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
         self.notify_worker_threads(fields, action)
 
 class GetURLSecurity(AdminService):
@@ -425,7 +425,7 @@ class SetAuditConfig(AdminService):
             session.commit()
 
             params = {
-                'action': CHANNEL.HTTP_SOAP_AUDIT_CONFIG,
+                'action': CHANNEL.HTTP_SOAP_AUDIT_CONFIG.value,
                 'audit_max_payload': item.audit_max_payload,
                 'id': item.id
             }
@@ -508,7 +508,7 @@ class SetAuditReplacePatterns(AdminService):
                 session.commit()
 
                 params = {
-                    'action': CHANNEL.HTTP_SOAP_AUDIT_PATTERNS,
+                    'action': CHANNEL.HTTP_SOAP_AUDIT_PATTERNS.value,
                     'id': conn_id,
                     'audit_repl_patt_type': self.request.input.audit_repl_patt_type,
                     'pattern_list': self.request.input.pattern_list,
@@ -537,7 +537,7 @@ class SetAuditState(AdminService):
             session.commit()
             
             params = {
-                'action': CHANNEL.HTTP_SOAP_AUDIT_STATE,
+                'action': CHANNEL.HTTP_SOAP_AUDIT_STATE.value,
                 'id': item.id,
                 'audit_enabled': item.audit_enabled,
             }

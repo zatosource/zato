@@ -78,7 +78,7 @@ class Create(AdminService):
 
                 raise 
             else:
-                input.action = PUB_SUB_PRODUCER.CREATE
+                input.action = PUB_SUB_PRODUCER.CREATE.value
                 input.name = producer.sec_def.name
                 self.broker_client.publish(input)
 
@@ -147,7 +147,7 @@ class Edit(AdminService):
                 raise 
             else:
                 msg = Bunch()
-                msg.action = PUB_SUB_PRODUCER.EDIT
+                msg.action = PUB_SUB_PRODUCER.EDIT.value
 
                 msg.is_active = producer.is_active
 
@@ -195,7 +195,7 @@ class Delete(AdminService):
                 raise
             else:
                 msg = Bunch()
-                msg.action = PUB_SUB_PRODUCER.DELETE
+                msg.action = PUB_SUB_PRODUCER.DELETE.value
 
                 msg.client_id = client_id
                 msg.client_name = client_name

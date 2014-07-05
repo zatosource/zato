@@ -129,7 +129,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
 
         # Now send it to the broker, but only if the job is active.
         if is_active:
-            msg_action = SCHEDULER_MSG.CREATE if action == 'create' else SCHEDULER_MSG.EDIT
+            msg_action = SCHEDULER_MSG.CREATE.value if action == 'create' else SCHEDULER_MSG.EDIT.value
             msg = {'action': msg_action, 'job_type': job_type,
                    'is_active':is_active, 'start_date':start_date.isoformat(),
                    'extra':extra, 'service': service.name,
@@ -148,7 +148,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                 msg['cron_definition'] = cron_definition
 
         else:
-            msg = {'action': SCHEDULER_MSG.DELETE, 'name': name}
+            msg = {'action': SCHEDULER_MSG.DELETE.value, 'name': name}
 
         broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
 
@@ -266,7 +266,7 @@ class Delete(AdminService):
                 session.delete(job)
                 session.commit()
 
-                msg = {'action': SCHEDULER_MSG.DELETE, 'name': job.name}
+                msg = {'action': SCHEDULER_MSG.DELETE.value, 'name': job.name}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
                 
             except Exception, e:
@@ -293,7 +293,7 @@ class Execute(AdminService):
                     filter(Job.id==self.request.input.id).\
                     one()
 
-                msg = {'action': SCHEDULER_MSG.EXECUTE, 'name': job.name}
+                msg = {'action': SCHEDULER_MSG.EXECUTE.value, 'name': job.name}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
 
             except Exception, e:

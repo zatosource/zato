@@ -35,7 +35,7 @@ class ZMQFacade(object):
         """ Puts a message on a ZeroMQ socket.
         """
         params = {}
-        params['action'] = OUTGOING.ZMQ_SEND
+        params['action'] = OUTGOING.ZMQ_SEND.value
         params['name'] = out_name
         params['body'] = msg
         params['args'] = args
@@ -103,7 +103,7 @@ class OutgoingConnector(BaseZMQConnector):
         if super(OutgoingConnector, self).filter(msg):
             return True
 
-        elif msg.action in(OUTGOING.ZMQ_SEND, OUTGOING.ZMQ_DELETE, OUTGOING.ZMQ_EDIT):
+        elif msg.action in(OUTGOING.ZMQ_SEND.value, OUTGOING.ZMQ_DELETE.value, OUTGOING.ZMQ_EDIT.value):
             return self.out.name == msg['name']
         
     def _stop_connection(self):

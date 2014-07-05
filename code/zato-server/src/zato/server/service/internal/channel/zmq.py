@@ -139,7 +139,7 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
 
-                input.action = CHANNEL.ZMQ_EDIT
+                input.action = CHANNEL.ZMQ_EDIT.value
                 input.sub_key = input.get('sub_key', b'')
                 input.service = service.impl_name
                 self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL)
@@ -172,7 +172,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
 
-                msg = {'action': CHANNEL.ZMQ_DELETE, 'name': item.name, 'id':item.id}
+                msg = {'action': CHANNEL.ZMQ_DELETE.value, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL)
 
             except Exception, e:

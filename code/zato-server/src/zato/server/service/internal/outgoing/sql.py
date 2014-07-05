@@ -24,7 +24,7 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class _SQLService(object):
     """ A common class for various SQL-related services.
     """
-    def notify_worker_threads(self, params, action=OUTGOING.SQL_CREATE_EDIT):
+    def notify_worker_threads(self, params, action=OUTGOING.SQL_CREATE_EDIT.value):
         """ Notify worker threads of new or updated parameters.
         """
         params['action'] = action
@@ -182,7 +182,7 @@ class Delete(AdminService, _SQLService):
                 session.delete(item)
                 session.commit()
                 
-                self.notify_worker_threads({'name':old_name}, OUTGOING.SQL_DELETE)
+                self.notify_worker_threads({'name':old_name}, OUTGOING.SQL_DELETE.value)
 
             except Exception, e:
                 session.rollback()
@@ -203,7 +203,7 @@ class ChangePassword(ChangePasswordBase):
         def _auth(instance, password):
             instance.password = password
 
-        self._handle(SQLConnectionPool, _auth, OUTGOING.SQL_CHANGE_PASSWORD)
+        self._handle(SQLConnectionPool, _auth, OUTGOING.SQL_CHANGE_PASSWORD.value)
             
 class Ping(AdminService):
     """ Pings an SQL database
