@@ -11,11 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from inspect import isclass
 
-# Bunch
-from bunch import Bunch
-
 # candv
-from candv import Constants, ValueConstant
+from candv import Constants as _Constants, ValueConstant
 
 class Constants(_Constants):
     values = _Constants.constants
