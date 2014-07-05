@@ -75,7 +75,7 @@ class Create(AdminService):
                 
                 raise 
             else:
-                input.action = SECURITY.BASIC_AUTH_CREATE
+                input.action = SECURITY.BASIC_AUTH_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
                 self.broker_client.publish(input)
             
@@ -122,7 +122,7 @@ class Edit(AdminService):
                 
                 raise 
             else:
-                input.action = SECURITY.BASIC_AUTH_EDIT
+                input.action = SECURITY.BASIC_AUTH_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
                 self.broker_client.publish(input)
@@ -143,7 +143,7 @@ class ChangePassword(ChangePasswordBase):
         def _auth(instance, password):
             instance.password = password
             
-        return self._handle(HTTPBasicAuth, _auth, SECURITY.BASIC_AUTH_CHANGE_PASSWORD)
+        return self._handle(HTTPBasicAuth, _auth, SECURITY.BASIC_AUTH_CHANGE_PASSWORD.value)
 
 class Delete(AdminService):
     """ Deletes an HTTP Basic Auth definition.
@@ -169,6 +169,6 @@ class Delete(AdminService):
                 
                 raise
             else:
-                self.request.input.action = SECURITY.BASIC_AUTH_DELETE
+                self.request.input.action = SECURITY.BASIC_AUTH_DELETE.value
                 self.request.input.name = auth.name
                 self.broker_client.publish(self.request.input)

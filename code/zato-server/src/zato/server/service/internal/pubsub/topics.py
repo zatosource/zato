@@ -132,7 +132,7 @@ class Create(AdminService):
 
                 raise 
             else:
-                input.action = PUB_SUB_TOPIC.CREATE
+                input.action = PUB_SUB_TOPIC.CREATE.value
                 self.broker_client.publish(input)
 
             self.response.payload.id = topic.id
@@ -178,7 +178,7 @@ class Edit(AdminService):
 
                 raise 
             else:
-                input.action = PUB_SUB_TOPIC.EDIT
+                input.action = PUB_SUB_TOPIC.EDIT.value
                 input.old_name = old_name
                 input.name = topic.name
                 self.broker_client.publish(input)
@@ -213,7 +213,7 @@ class Delete(AdminService):
 
                 raise
             else:
-                self.request.input.action = PUB_SUB_TOPIC.DELETE
+                self.request.input.action = PUB_SUB_TOPIC.DELETE.value
                 self.request.input.name = topic.name
                 self.broker_client.publish(self.request.input)
 

@@ -111,7 +111,7 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
                 
-                input.action = OUTGOING.ZMQ_EDIT
+                input.action = OUTGOING.ZMQ_EDIT.value
                 input.old_name = old_name
                 self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL)
                 
@@ -143,7 +143,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
 
-                msg = {'action': OUTGOING.ZMQ_DELETE, 'name': item.name, 'id':item.id}
+                msg = {'action': OUTGOING.ZMQ_DELETE.value, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL)
                 
             except Exception, e:
