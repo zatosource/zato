@@ -69,7 +69,7 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
 
-                input.action = CLOUD.AWS_S3_CREATE_EDIT
+                input.action = CLOUD.AWS_S3_CREATE_EDIT.value
                 input.username = item.security.username
                 input.password = item.security.password
 
@@ -117,7 +117,7 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
 
-                input.action = CLOUD.AWS_S3_CREATE_EDIT
+                input.action = CLOUD.AWS_S3_CREATE_EDIT.value
                 input.old_name = old_name
                 input.username = item.security.username
                 input.password = item.security.password
@@ -152,7 +152,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
 
-                msg = {'action': CLOUD.AWS_S3_DELETE, 'name': item.name, 'id':item.id}
+                msg = {'action': CLOUD.AWS_S3_DELETE.value, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg)
                 
             except Exception, e:

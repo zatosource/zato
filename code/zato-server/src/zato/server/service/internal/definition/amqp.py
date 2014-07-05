@@ -134,7 +134,7 @@ class Edit(AdminService):
                 session.add(def_amqp)
                 session.commit()
                 
-                input.action = DEFINITION.AMQP_EDIT
+                input.action = DEFINITION.AMQP_EDIT.value
                 input.old_name = old_name
                 self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL)
                 
@@ -166,7 +166,7 @@ class Delete(AdminService):
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': DEFINITION.AMQP_DELETE, 'id': self.request.input.id}
+                msg = {'action': DEFINITION.AMQP_DELETE.value, 'id': self.request.input.id}
                 self.broker_client.publish(msg, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL)
                 
             except Exception, e:
@@ -189,5 +189,5 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
             
         return self._handle(ConnDefAMQP, _auth, 
-            DEFINITION.AMQP_CHANGE_PASSWORD, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL, 
+            DEFINITION.AMQP_CHANGE_PASSWORD.value, msg_type=MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL, 
             payload=self.request.payload)

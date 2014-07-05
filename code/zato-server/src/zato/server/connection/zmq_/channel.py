@@ -69,7 +69,7 @@ class ConsumingConnector(BaseZMQConnector):
         if super(ConsumingConnector, self).filter(msg):
             return True
             
-        elif msg.action in(CHANNEL.ZMQ_DELETE, CHANNEL.ZMQ_EDIT):
+        elif msg.action in(CHANNEL.ZMQ_DELETE.value, CHANNEL.ZMQ_EDIT.value):
             return self.channel.id == msg['id']
         
     def _setup_odb(self):
@@ -130,7 +130,7 @@ class ConsumingConnector(BaseZMQConnector):
         """
         with self.channel_lock:
             params = {}
-            params['action'] = CHANNEL.ZMQ_MESSAGE_RECEIVED
+            params['action'] = CHANNEL.ZMQ_MESSAGE_RECEIVED.value
             params['service'] = self.channel.service
             params['cid'] = new_cid()
             params['payload'] = msg
