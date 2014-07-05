@@ -142,7 +142,7 @@ class Create(_CreateEdit):
 
                 raise 
             else:
-                input.action = PUB_SUB_CONSUMER.CREATE
+                input.action = PUB_SUB_CONSUMER.CREATE.value
                 input.client_name = consumer.sec_def.name
                 input.sub_key = sub_key
                 input.callback_name = callback[1]
@@ -201,7 +201,7 @@ class Edit(_CreateEdit):
                 raise 
             else:
                 msg = Bunch()
-                msg.action = PUB_SUB_CONSUMER.EDIT
+                msg.action = PUB_SUB_CONSUMER.EDIT.value
 
                 msg.is_active = consumer.is_active
                 msg.max_backlog = consumer.max_backlog
@@ -256,7 +256,7 @@ class Delete(AdminService):
                 raise
             else:
                 msg = Bunch()
-                msg.action = PUB_SUB_CONSUMER.DELETE
+                msg.action = PUB_SUB_CONSUMER.DELETE.value
 
                 msg.is_active = consumer.is_active
                 msg.max_backlog = consumer.max_backlog

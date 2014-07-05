@@ -90,7 +90,7 @@ class Create(_CreateEdit):
 
                 raise
             else:
-                input.action = MSG_JSON_POINTER.CREATE
+                input.action = MSG_JSON_POINTER.CREATE.value
                 self.broker_client.publish(input)
 
             self.response.payload.id = definition.id
@@ -138,7 +138,7 @@ class Edit(_CreateEdit):
 
                 raise
             else:
-                input.action = MSG_JSON_POINTER.EDIT
+                input.action = MSG_JSON_POINTER.EDIT.value
                 input.old_name = old_name
                 self.request.input.msg_pattern_type = MSG_PATTERN_TYPE.JSON_POINTER.id
                 self.broker_client.publish(input)
@@ -170,7 +170,7 @@ class Delete(AdminService):
 
                 raise
             else:
-                self.request.input.action = MSG_JSON_POINTER.DELETE
+                self.request.input.action = MSG_JSON_POINTER.DELETE.value
                 self.request.input.name = auth.name
                 self.request.input.msg_pattern_type = MSG_PATTERN_TYPE.JSON_POINTER.id
                 self.broker_client.publish(self.request.input)

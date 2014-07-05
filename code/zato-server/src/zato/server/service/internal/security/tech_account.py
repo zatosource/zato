@@ -95,7 +95,7 @@ class Create(AdminService):
                 
                 raise 
             else:
-                input.action = SECURITY.TECH_ACC_CREATE
+                input.action = SECURITY.TECH_ACC_CREATE.value
                 input.password = input.password
                 input.sec_type = SEC_DEF_TYPE.TECH_ACCOUNT
                 self.broker_client.publish(input)
@@ -143,7 +143,7 @@ class Edit(AdminService):
                 
                 raise 
             else:
-                input.action = SECURITY.TECH_ACC_EDIT
+                input.action = SECURITY.TECH_ACC_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.TECH_ACCOUNT
                 self.broker_client.publish(input)
@@ -166,7 +166,7 @@ class ChangePassword(ChangePasswordBase):
             instance.salt = salt
 
         return self._handle(TechnicalAccount, _auth, 
-                            SECURITY.TECH_ACC_CHANGE_PASSWORD, salt=salt)
+                            SECURITY.TECH_ACC_CHANGE_PASSWORD.value, salt=salt)
     
 class Delete(AdminService):
     """ Deletes a technical account.
@@ -199,6 +199,6 @@ class Delete(AdminService):
                 
                 raise
             else:
-                input.action = SECURITY.TECH_ACC_DELETE
+                input.action = SECURITY.TECH_ACC_DELETE.value
                 input.name = tech_account.name
                 self.broker_client.publish(input)

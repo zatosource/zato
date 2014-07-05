@@ -116,7 +116,7 @@ class ConsumingConnector(BaseJMSWMQConnector):
         if super(ConsumingConnector, self).filter(msg):
             return True
             
-        elif msg.action in(CHANNEL.JMS_WMQ_DELETE, CHANNEL.JMS_WMQ_EDIT):
+        elif msg.action in(CHANNEL.JMS_WMQ_DELETE.value, CHANNEL.JMS_WMQ_EDIT.value):
             return self.channel.id == msg['id']
         
     def _setup_odb(self):
@@ -193,7 +193,7 @@ class ConsumingConnector(BaseJMSWMQConnector):
         with self.def_lock:
             with self.channel_lock:
                 params = {}
-                params['action'] = CHANNEL.JMS_WMQ_MESSAGE_RECEIVED
+                params['action'] = CHANNEL.JMS_WMQ_MESSAGE_RECEIVED.value
                 params['service'] = self.channel.service
                 params['cid'] = new_cid()
                 params['payload'] = msg.text

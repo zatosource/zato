@@ -74,7 +74,7 @@ class Create(AdminService):
 
                 raise 
             else:
-                input.action = SECURITY.OPENSTACK_CREATE
+                input.action = SECURITY.OPENSTACK_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.OPENSTACK
                 self.broker_client.publish(input)
 
@@ -120,7 +120,7 @@ class Edit(AdminService):
 
                 raise 
             else:
-                input.action = SECURITY.OPENSTACK_EDIT
+                input.action = SECURITY.OPENSTACK_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.OPENSTACK
                 self.broker_client.publish(input)
@@ -141,7 +141,7 @@ class ChangePassword(ChangePasswordBase):
         def _auth(instance, password):
             instance.password = password
             
-        return self._handle(OpenStackSecurity, _auth, SECURITY.OPENSTACK_CHANGE_PASSWORD)
+        return self._handle(OpenStackSecurity, _auth, SECURITY.OPENSTACK_CHANGE_PASSWORD.value)
 
 class Delete(AdminService):
     """ Deletes an OpenStack definition.
@@ -167,6 +167,6 @@ class Delete(AdminService):
 
                 raise
             else:
-                self.request.input.action = SECURITY.OPENSTACK_DELETE
+                self.request.input.action = SECURITY.OPENSTACK_DELETE.value
                 self.request.input.name = auth.name
                 self.broker_client.publish(self.request.input)

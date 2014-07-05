@@ -145,7 +145,7 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
                 
-                input.action = CHANNEL.JMS_WMQ_EDIT
+                input.action = CHANNEL.JMS_WMQ_EDIT.value
                 input.old_name = old_name
                 input.service = service.impl_name
                 self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL)
@@ -178,7 +178,7 @@ class Delete(AdminService):
                 session.delete(def_)
                 session.commit()
 
-                msg = {'action': CHANNEL.JMS_WMQ_DELETE, 'name': def_.name, 'id':def_.id}
+                msg = {'action': CHANNEL.JMS_WMQ_DELETE.value, 'name': def_.name, 'id':def_.id}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL)
                 
             except Exception, e:

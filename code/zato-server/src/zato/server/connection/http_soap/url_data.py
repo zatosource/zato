@@ -869,7 +869,7 @@ class URLData(OAuthDataStore):
         self.broker_client.publish({
             'cid': cid,
             'data_format':DATA_FORMAT.JSON, 
-            'action': CHANNEL.HTTP_SOAP_AUDIT_RESPONSE,
+            'action': CHANNEL.HTTP_SOAP_AUDIT_RESPONSE.value,
             'payload': payload,
             'service': 'zato.http-soap.set-audit-response-data'
         })

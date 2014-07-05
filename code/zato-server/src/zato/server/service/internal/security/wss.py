@@ -83,7 +83,7 @@ class Create(AdminService):
                 
                 raise
             else:
-                input.action = SECURITY.WSS_CREATE
+                input.action = SECURITY.WSS_CREATE.value
                 input.password = password
                 input.sec_type = SEC_DEF_TYPE.WSS
                 self.broker_client.publish(self.request.input)
@@ -138,7 +138,7 @@ class Edit(AdminService):
                 
                 raise
             else:
-                input.action = SECURITY.WSS_EDIT
+                input.action = SECURITY.WSS_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.WSS
                 self.broker_client.publish(self.request.input)
@@ -157,7 +157,7 @@ class ChangePassword(ChangePasswordBase):
         def _auth(instance, password):
             instance.password = password
             
-        return self._handle(WSSDefinition, _auth, SECURITY.WSS_CHANGE_PASSWORD)
+        return self._handle(WSSDefinition, _auth, SECURITY.WSS_CHANGE_PASSWORD.value)
     
 class Delete(AdminService):
     """ Deletes a WS-Security definition.
@@ -184,6 +184,6 @@ class Delete(AdminService):
                 
                 raise
             else:
-                self.request.input.action = SECURITY.WSS_DELETE
+                self.request.input.action = SECURITY.WSS_DELETE.value
                 self.request.input.name = wss.name
                 self.broker_client.publish(self.request.input)

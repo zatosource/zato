@@ -8,35 +8,41 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# Bunch
-from bunch import Bunch
+# stdlib
+from inspect import isclass
 
-MESSAGE = Bunch()
-MESSAGE.MESSAGE_TYPE_LENGTH = 4
-MESSAGE.TOKEN_LENGTH = 32
-MESSAGE.TOKEN_START = MESSAGE.MESSAGE_TYPE_LENGTH
-MESSAGE.TOKEN_END = MESSAGE.MESSAGE_TYPE_LENGTH + MESSAGE.TOKEN_LENGTH
-MESSAGE.PAYLOAD_START = MESSAGE.MESSAGE_TYPE_LENGTH + MESSAGE.TOKEN_LENGTH
-MESSAGE.NULL_TOKEN = '0' * MESSAGE.TOKEN_LENGTH
+# candv
+from candv import Constants as _Constants, ValueConstant
 
-MESSAGE_TYPE = Bunch()
-MESSAGE_TYPE.TO_SINGLETON = b'0000'
-MESSAGE_TYPE.TO_PARALLEL_ANY = b'0001'
-MESSAGE_TYPE.TO_PARALLEL_ALL = b'0002'
+class Constants(_Constants):
+    values = _Constants.constants
 
-MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL = b'0003'
-MESSAGE_TYPE.TO_AMQP_CONSUMING_CONNECTOR_ALL = b'0004'
-MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL = b'0005'
+class MESSAGE:
+    MESSAGE_TYPE_LENGTH = 4
+    TOKEN_LENGTH = 32
+    TOKEN_START = MESSAGE_TYPE_LENGTH
+    TOKEN_END = MESSAGE_TYPE_LENGTH + TOKEN_LENGTH
+    PAYLOAD_START = MESSAGE_TYPE_LENGTH + TOKEN_LENGTH
+    NULL_TOKEN = '0' * TOKEN_LENGTH
 
-MESSAGE_TYPE.TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL = b'0006'
-MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL = b'0007'
-MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL = b'0008'
+class MESSAGE_TYPE:
+    TO_SINGLETON = b'0000'
+    TO_PARALLEL_ANY = b'0001'
+    TO_PARALLEL_ALL = b'0002'
 
-MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL = b'0009'
-MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL = b'0010'
-MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL = b'0011'
+    TO_AMQP_PUBLISHING_CONNECTOR_ALL = b'0003'
+    TO_AMQP_CONSUMING_CONNECTOR_ALL = b'0004'
+    TO_AMQP_CONNECTOR_ALL = b'0005'
+    
+    TO_JMS_WMQ_PUBLISHING_CONNECTOR_ALL = b'0006'
+    TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL = b'0007'
+    TO_JMS_WMQ_CONNECTOR_ALL = b'0008'
+    
+    TO_ZMQ_PUBLISHING_CONNECTOR_ALL = b'0009'
+    TO_ZMQ_CONSUMING_CONNECTOR_ALL = b'0010'
+    TO_ZMQ_CONNECTOR_ALL = b'0011'
 
-MESSAGE_TYPE.USER_DEFINED_START = b'5000'
+    USER_DEFINED_START = b'5000'
 
 TOPICS = {
     MESSAGE_TYPE.TO_SINGLETON: b'/zato/to-singleton',
@@ -59,240 +65,275 @@ TOPICS = {
 
 KEYS = {k:v.replace('/zato','').replace('/',':') for k,v in TOPICS.items()}
 
-SCHEDULER = Bunch()
-SCHEDULER.CREATE = b'10000'
-SCHEDULER.EDIT = b'10001'
-SCHEDULER.DELETE = b'10002'
-SCHEDULER.EXECUTE = b'10003'
-SCHEDULER.JOB_EXECUTED = b'10004'
+class SCHEDULER(Constants):
+    code_start = 100000
 
-ZMQ_SOCKET = Bunch()
-ZMQ_SOCKET.CLOSE = b'10100'
+    CREATE = ValueConstant('')
+    EDIT = ValueConstant('')
+    DELETE = ValueConstant('')
+    EXECUTE = ValueConstant('')
+    JOB_EXECUTED = ValueConstant('')
 
-SECURITY = Bunch()
-DEFINITION = Bunch()
-OUTGOING = Bunch()
-CHANNEL = Bunch()
-QUERY = Bunch()
+class ZMQ_SOCKET(Constants):
+    code_start = 100200
+    CLOSE = ValueConstant('')
 
-SECURITY.BASIC_AUTH_CREATE = b'10200'
-SECURITY.BASIC_AUTH_EDIT = b'10201'
-SECURITY.BASIC_AUTH_DELETE = b'10202'
-SECURITY.BASIC_AUTH_CHANGE_PASSWORD = b'10203'
+class SECURITY(Constants):
+    code_start = 100400
 
-SECURITY.TECH_ACC_CREATE = b'10300'
-SECURITY.TECH_ACC_EDIT = b'10301'
-SECURITY.TECH_ACC_DELETE = b'10302'
-SECURITY.TECH_ACC_CHANGE_PASSWORD = b'10303'
+    BASIC_AUTH_CREATE = ValueConstant('')
+    BASIC_AUTH_EDIT = ValueConstant('')
+    BASIC_AUTH_DELETE = ValueConstant('')
+    BASIC_AUTH_CHANGE_PASSWORD = ValueConstant('')
 
-SECURITY.WSS_CREATE = b'10400'
-SECURITY.WSS_EDIT = b'10401'
-SECURITY.WSS_DELETE = b'10402'
-SECURITY.WSS_CHANGE_PASSWORD = b'10403'
+    TECH_ACC_CREATE = ValueConstant('')
+    TECH_ACC_EDIT = ValueConstant('')
+    TECH_ACC_DELETE = ValueConstant('')
+    TECH_ACC_CHANGE_PASSWORD = ValueConstant('')
 
-DEFINITION.AMQP_CREATE = b'10500'
-DEFINITION.AMQP_EDIT = b'10501'
-DEFINITION.AMQP_DELETE = b'10502'
-DEFINITION.AMQP_CHANGE_PASSWORD = b'10503'
+    WSS_CREATE = ValueConstant('')
+    WSS_EDIT = ValueConstant('')
+    WSS_DELETE = ValueConstant('')
+    WSS_CHANGE_PASSWORD = ValueConstant('')
 
-DEFINITION.JMS_WMQ_CREATE = b'10504'
-DEFINITION.JMS_WMQ_EDIT = b'10505'
-DEFINITION.JMS_WMQ_DELETE = b'10506'
+    # New in 2.0
+    OAUTH_CREATE = ValueConstant('')
+    OAUTH_EDIT = ValueConstant('')
+    OAUTH_DELETE = ValueConstant('')
+    OAUTH_CHANGE_PASSWORD = ValueConstant('')
 
-DEFINITION.ZMQ_CREATE = b'10507'
-DEFINITION.ZMQ_EDIT = b'10508'
-DEFINITION.ZMQ_DELETE = b'10509'
+    # New in 2.0
+    NTLM_CREATE = ValueConstant('')
+    NTLM_EDIT = ValueConstant('')
+    NTLM_DELETE = ValueConstant('')
+    NTLM_CHANGE_PASSWORD = ValueConstant('')
 
-OUTGOING.AMQP_CREATE = b'10600'
-OUTGOING.AMQP_EDIT = b'10601'
-OUTGOING.AMQP_DELETE = b'10602'
-OUTGOING.AMQP_PUBLISH = b'10603'
+    # New in 2.0
+    AWS_CREATE = ValueConstant('')
+    AWS_EDIT = ValueConstant('')
+    AWS_DELETE = ValueConstant('')
+    AWS_CHANGE_PASSWORD = ValueConstant('')
 
-OUTGOING.JMS_WMQ_CREATE = b'10604'
-OUTGOING.JMS_WMQ_EDIT = b'10605'
-OUTGOING.JMS_WMQ_DELETE = b'10606'
-OUTGOING.JMS_WMQ_SEND = b'10607'
+    # New in 2.0
+    OPENSTACK_CREATE = ValueConstant('')
+    OPENSTACK_EDIT = ValueConstant('')
+    OPENSTACK_DELETE = ValueConstant('')
+    OPENSTACK_CHANGE_PASSWORD = ValueConstant('')
 
-OUTGOING.ZMQ_CREATE = b'10608'
-OUTGOING.ZMQ_EDIT = b'10609'
-OUTGOING.ZMQ_DELETE = b'10610'
-OUTGOING.ZMQ_SEND = b'10611'
+    # New in 2.0
+    APIKEY_CREATE = ValueConstant('')
+    APIKEY_EDIT = ValueConstant('')
+    APIKEY_DELETE = ValueConstant('')
+    APIKEY_CHANGE_PASSWORD = ValueConstant('')
 
-OUTGOING.SQL_CREATE_EDIT = b'10612' # Same for creating and updating the pools
-OUTGOING.SQL_CHANGE_PASSWORD = b'10613'
-OUTGOING.SQL_DELETE = b'10614'
+    # New in 2.0
+    XPATH_SEC_CREATE = ValueConstant('')
+    XPATH_SEC_EDIT = ValueConstant('')
+    XPATH_SEC_DELETE = ValueConstant('')
+    XPATH_SEC_CHANGE_PASSWORD = ValueConstant('')
 
-OUTGOING.HTTP_SOAP_CREATE_EDIT = b'10615' # Same for creating and updating
-OUTGOING.HTTP_SOAP_DELETE = b'10616'
+class DEFINITION(Constants):
+    code_start = 100600
 
-OUTGOING.FTP_CREATE_EDIT = b'10617' # Same for creating and updating
-OUTGOING.FTP_DELETE = b'10618'
-OUTGOING.FTP_CHANGE_PASSWORD = b'10619'
+    AMQP_CREATE = ValueConstant('')
+    AMQP_EDIT = ValueConstant('')
+    AMQP_DELETE = ValueConstant('')
+    AMQP_CHANGE_PASSWORD = ValueConstant('')
 
-CHANNEL.AMQP_CREATE = b'10700'
-CHANNEL.AMQP_EDIT = b'10701'
-CHANNEL.AMQP_DELETE = b'10702'
-CHANNEL.AMQP_MESSAGE_RECEIVED = b'10703'
+    JMS_WMQ_CREATE = ValueConstant('')
+    JMS_WMQ_EDIT = ValueConstant('')
+    JMS_WMQ_DELETE = ValueConstant('')
 
-CHANNEL.JMS_WMQ_CREATE = b'10704'
-CHANNEL.JMS_WMQ_EDIT = b'10705'
-CHANNEL.JMS_WMQ_DELETE = b'10706'
-CHANNEL.JMS_WMQ_MESSAGE_RECEIVED = b'10707'
+    ZMQ_CREATE = ValueConstant('')
+    ZMQ_EDIT = ValueConstant('')
+    ZMQ_DELETE = ValueConstant('')
 
-CHANNEL.ZMQ_CREATE = b'10708'
-CHANNEL.ZMQ_EDIT = b'10709'
-CHANNEL.ZMQ_DELETE = b'10710'
-CHANNEL.ZMQ_MESSAGE_RECEIVED = b'10711'
+    # New in 2.0
+    CASSANDRA_CREATE = ValueConstant('')
+    CASSANDRA_EDIT = ValueConstant('')
+    CASSANDRA_DELETE = ValueConstant('')
+    CASSANDRA_CHANGE_PASSWORD = ValueConstant('')
 
-CHANNEL.HTTP_SOAP_CREATE_EDIT = b'10712' # Same for creating and updating
-CHANNEL.HTTP_SOAP_DELETE = b'10713'
-CHANNEL.HTTP_SOAP_AUDIT_RESPONSE = b'10714' # New in 2.0
-CHANNEL.HTTP_SOAP_AUDIT_PATTERNS = b'10715' # New in 2.0
-CHANNEL.HTTP_SOAP_AUDIT_STATE = b'10716' # New in 2.0
-CHANNEL.HTTP_SOAP_AUDIT_CONFIG = b'10717' # New in 2.0
+class OUTGOING(Constants):
+    code_start = 100800
 
-AMQP_CONNECTOR = Bunch()
-AMQP_CONNECTOR.CLOSE = b'10801'
+    AMQP_CREATE = ValueConstant('')
+    AMQP_EDIT = ValueConstant('')
+    AMQP_DELETE = ValueConstant('')
+    AMQP_PUBLISH = ValueConstant('')
 
-JMS_WMQ_CONNECTOR = Bunch()
-JMS_WMQ_CONNECTOR.CLOSE = b'10802'
+    JMS_WMQ_CREATE = ValueConstant('')
+    JMS_WMQ_EDIT = ValueConstant('')
+    JMS_WMQ_DELETE = ValueConstant('')
+    JMS_WMQ_SEND = ValueConstant('')
 
-ZMQ_CONNECTOR = Bunch()
-ZMQ_CONNECTOR.CLOSE = b'10803'
+    ZMQ_CREATE = ValueConstant('')
+    ZMQ_EDIT = ValueConstant('')
+    ZMQ_DELETE = ValueConstant('')
+    ZMQ_SEND = ValueConstant('')
 
-SERVICE = Bunch()
-SERVICE.EDIT = b'10900'
-SERVICE.DELETE = b'10901'
-SERVICE.PUBLISH = b'10902'
+    SQL_CREATE_EDIT = ValueConstant('') # Same for creating and updating the pools
+    SQL_CHANGE_PASSWORD = ValueConstant('')
+    SQL_DELETE = ValueConstant('')
 
-HOT_DEPLOY = Bunch()
-HOT_DEPLOY.CREATE = '11000'
+    HTTP_SOAP_CREATE_EDIT = ValueConstant('') # Same for creating and updating
+    HTTP_SOAP_DELETE = ValueConstant('')
 
-STATS = Bunch()
-STATS.DELETE = '11100'
-STATS.DELETE_DAY = '11101'
+    FTP_CREATE_EDIT = ValueConstant('') # Same for creating and updating
+    FTP_DELETE = ValueConstant('')
+    FTP_CHANGE_PASSWORD = ValueConstant('')
 
-SINGLETON = Bunch()
-SINGLETON.CLOSE = b'11200'
+class CHANNEL(Constants):
+    code_start = 101000
 
-# New in 2.0
-SECURITY.OAUTH_CREATE = b'11300'
-SECURITY.OAUTH_EDIT = b'11301'
-SECURITY.OAUTH_DELETE = b'11302'
-SECURITY.OAUTH_CHANGE_PASSWORD = b'11303'
+    AMQP_CREATE = ValueConstant('')
+    AMQP_EDIT = ValueConstant('')
+    AMQP_DELETE = ValueConstant('')
+    AMQP_MESSAGE_RECEIVED = ValueConstant('')
 
-# New in 2.0
-MSG_NS = Bunch()
-MSG_NS.CREATE = b'11400'
-MSG_NS.EDIT = b'11401'
-MSG_NS.DELETE = b'11402'
+    JMS_WMQ_CREATE = ValueConstant('')
+    JMS_WMQ_EDIT = ValueConstant('')
+    JMS_WMQ_DELETE = ValueConstant('')
+    JMS_WMQ_MESSAGE_RECEIVED = ValueConstant('')
 
-# New in 2.0
-MSG_XPATH = Bunch()
-MSG_XPATH.CREATE = b'11450'
-MSG_XPATH.EDIT = b'11451'
-MSG_XPATH.DELETE = b'11452'
+    ZMQ_CREATE = ValueConstant('')
+    ZMQ_EDIT = ValueConstant('')
+    ZMQ_DELETE = ValueConstant('')
+    ZMQ_MESSAGE_RECEIVED = ValueConstant('')
 
-# New in 2.0
-MSG_JSON_POINTER = Bunch()
-MSG_JSON_POINTER.CREATE = b'11500'
-MSG_JSON_POINTER.EDIT = b'11501'
-MSG_JSON_POINTER.DELETE = b'11502'
+    HTTP_SOAP_CREATE_EDIT = ValueConstant('') # Same for creating and updating
+    HTTP_SOAP_DELETE = ValueConstant('')
+    HTTP_SOAP_AUDIT_RESPONSE = ValueConstant('') # New in 2.0
+    HTTP_SOAP_AUDIT_PATTERNS = ValueConstant('') # New in 2.0
+    HTTP_SOAP_AUDIT_STATE = ValueConstant('') # New in 2.0
+    HTTP_SOAP_AUDIT_CONFIG = ValueConstant('') # New in 2.0
 
-# New in 2.0
-PUB_SUB_TOPIC = Bunch()
-PUB_SUB_TOPIC.CREATE = b'11550'
-PUB_SUB_TOPIC.EDIT = b'11551'
-PUB_SUB_TOPIC.DELETE = b'11552'
-PUB_SUB_TOPIC.ADD_DEFAULT_PRODUCER = b'11553'
-PUB_SUB_TOPIC.DELETE_DEFAULT_PRODUCER = b'11554'
+class AMQP_CONNECTOR(Constants):
+    code_start = 101200
+    CLOSE = ValueConstant('')
 
-# New in 2.0
-PUB_SUB_PRODUCER = Bunch()
-PUB_SUB_PRODUCER.CREATE = b'11600'
-PUB_SUB_PRODUCER.EDIT = b'11601'
-PUB_SUB_PRODUCER.DELETE = b'11602'
+class JMS_WMQ_CONNECTOR(Constants):
+    code_start = 101400
+    CLOSE = ValueConstant('')
 
-# New in 2.0
-PUB_SUB_CONSUMER = Bunch()
-PUB_SUB_CONSUMER.CREATE = b'11650'
-PUB_SUB_CONSUMER.EDIT = b'11651'
-PUB_SUB_CONSUMER.DELETE = b'11652'
+class ZMQ_CONNECTOR(Constants):
+    code_start = 101600
+    CLOSE = ValueConstant('')
 
-# New in 2.0
-CLOUD = Bunch()
-CLOUD.OPENSTACK_SWIFT_CREATE_EDIT = b'11700'
-CLOUD.OPENSTACK_SWIFT_DELETE = b'11701'
+class SERVICE(Constants):
+    code_start = 101800
 
-# New in 2.0
-SECURITY.NTLM_CREATE = b'11750'
-SECURITY.NTLM_EDIT = b'11751'
-SECURITY.NTLM_DELETE = b'11752'
-SECURITY.NTLM_CHANGE_PASSWORD = b'11753'
+    EDIT = ValueConstant('')
+    DELETE = ValueConstant('')
+    PUBLISH = ValueConstant('')
 
-# New in 2.0
-SECURITY.AWS_CREATE = b'11760'
-SECURITY.AWS_EDIT = b'11761'
-SECURITY.AWS_DELETE = b'11762'
-SECURITY.AWS_CHANGE_PASSWORD = b'11763'
+class STATS(Constants):
+    code_start = 102000
 
-# New in 2.0
-CLOUD.AWS_S3_CREATE_EDIT = b'11800'
-CLOUD.AWS_S3_DELETE = b'11801'
+    DELETE = ValueConstant('')
+    DELETE_DAY = ValueConstant('')
 
-# New in 2.0
-SECURITY.OPENSTACK_CREATE = b'11850'
-SECURITY.OPENSTACK_EDIT = b'11851'
-SECURITY.OPENSTACK_DELETE = b'11852'
-SECURITY.OPENSTACK_CHANGE_PASSWORD = b'11853'
+class HOT_DEPLOY(Constants):
+    code_start = 102200
+    CREATE = ValueConstant('')
 
-# New in 2.0
-NOTIF = Bunch()
-NOTIF.RUN_NOTIFIER = b'11900'
-NOTIF.CLOUD_OPENSTACK_SWIFT_CREATE_EDIT = b'11901'
-NOTIF.CLOUD_OPENSTACK_SWIFT_DELETE = b'11902'
+class SINGLETON(Constants):
+    code_start = 102400
+    CLOSE = ValueConstant('')
 
-# New in 2.0
-SECURITY.APIKEY_CREATE = b'12000'
-SECURITY.APIKEY_EDIT = b'12001'
-SECURITY.APIKEY_DELETE = b'12002'
-SECURITY.APIKEY_CHANGE_PASSWORD = b'12003'
 
-# New in 2.0
-SECURITY.XPATH_SEC_CREATE = b'12100'
-SECURITY.XPATH_SEC_EDIT = b'12101'
-SECURITY.XPATH_SEC_DELETE = b'12102'
-SECURITY.XPATH_SEC_CHANGE_PASSWORD = b'12103'
+class MSG_NS(Constants):
+    code_start = 102600
 
-# New in 2.0
-DEFINITION.CASSANDRA_CREATE = b'12150'
-DEFINITION.CASSANDRA_EDIT = b'12151'
-DEFINITION.CASSANDRA_DELETE = b'12152'
-DEFINITION.CASSANDRA_CHANGE_PASSWORD = b'12153'
+    # New in 2.0
+    CREATE = ValueConstant('')
+    EDIT = ValueConstant('')
+    DELETE = ValueConstant('')
 
-# New in 2.0
-SEARCH = Bunch()
-SEARCH.ES_CREATE = b'13001'
-SEARCH.ES_EDIT = b'13002'
-SEARCH.ES_DELETE = b'13003'
-SEARCH.ES_CHANGE_PASSWORD = b'13004'
+class MSG_XPATH(Constants):
+    code_start = 102800
 
-# New in 2.0
-QUERY.CASSANDRA_CREATE = b'13150'
-QUERY.CASSANDRA_EDIT = b'13151'
-QUERY.CASSANDRA_DELETE = b'13152'
-QUERY.CASSANDRA_CHANGE_PASSWORD = b'13153'
+    # New in 2.0
+    CREATE = ValueConstant('')
+    EDIT = ValueConstant('')
+    DELETE = ValueConstant('')
+
+class MSG_JSON_POINTER(Constants):
+    code_start = 103000
+
+    # New in 2.0
+    CREATE = ValueConstant('')
+    EDIT = ValueConstant('')
+    DELETE = ValueConstant('')
+
+class PUB_SUB_TOPIC(Constants):
+    code_start = 103200
+
+    # New in 2.0
+    CREATE = ValueConstant('')
+    EDIT = ValueConstant('')
+    DELETE = ValueConstant('')
+    ADD_DEFAULT_PRODUCER = ValueConstant('')
+    DELETE_DEFAULT_PRODUCER = ValueConstant('')
+
+class PUB_SUB_PRODUCER(Constants):
+    code_start = 103400
+
+    # New in 2.0
+    CREATE = ValueConstant('')
+    EDIT = ValueConstant('')
+    DELETE = ValueConstant('')
+
+class PUB_SUB_CONSUMER(Constants):
+    code_start = 103600
+
+    # New in 2.0
+    CREATE = ValueConstant('')
+    EDIT = ValueConstant('')
+    DELETE = ValueConstant('')
+
+class CLOUD(Constants):
+    code_start = 103800
+
+    # New in 2.0
+    OPENSTACK_SWIFT_CREATE_EDIT = ValueConstant('')
+    OPENSTACK_SWIFT_DELETE = ValueConstant('')
+
+    # New in 2.0
+    AWS_S3_CREATE_EDIT = ValueConstant('')
+    AWS_S3_DELETE = ValueConstant('')
+
+class NOTIF(Constants):
+    code_start = 104000
+
+    # New in 2.0
+    RUN_NOTIFIER = b'11900'
+    CLOUD_OPENSTACK_SWIFT_CREATE_EDIT = b'11901'
+    CLOUD_OPENSTACK_SWIFT_DELETE = b'11902'
+
+class SEARCH(Constants):
+    code_start = 104200
+
+    ES_CREATE = b'13001'
+    ES_EDIT = b'13002'
+    ES_DELETE = b'13003'
+    ES_CHANGE_PASSWORD = b'13004'
+
+class QUERY(Constants):
+    code_start = 104400
+
+    CASSANDRA_CREATE = b'13150'
+    CASSANDRA_EDIT = b'13151'
+    CASSANDRA_DELETE = b'13152'
+    CASSANDRA_CHANGE_PASSWORD = b'13153'
 
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'
-bunch_name, bunch = None, None
+item_name, item = None, None
 
-for bunch_name, bunch in globals().items():
-    if isinstance(bunch, Bunch) and not bunch is Bunch:
-        if bunch not in(MESSAGE, MESSAGE_TYPE):
-            for code_name, code_value in bunch.items():
-                code_name = bunch_name + '_' + code_name
-                code_to_name[code_value] = code_name
-
-del bunch_name, bunch, code_name, code_value
+for item_name, item in globals().items():
+    if isclass(item) and issubclass(item, Constants) and item is not Constants:
+        for idx, (attr, const) in enumerate(item.items()):
+            const.value = str(item.code_start + idx)
+            code_to_name[const.value.encode('utf-8')] = '{}_{}'.format(item_name, attr)
