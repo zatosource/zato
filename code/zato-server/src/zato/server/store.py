@@ -31,7 +31,7 @@ class BaseAPI(object):
     def __getitem__(self, name):
         item = self._conn_store.get(name)
         if not item:
-            msg = 'No such item `{}` in `{}`'.format(name, sorted(self._conn_store.sessions))
+            msg = 'No such item `{}` in `{}`'.format(name, sorted(self._conn_store.items))
             logger.warn(msg)
             raise KeyError(msg)
 
@@ -101,11 +101,13 @@ class BaseStore(object):
         except Exception, e:
             logger.warn('Could not create `%s`, config:`%s`, e:`%s`', name, config_no_sensitive, format_exc(e))
         else:
-            if conn:
-                item.extra = weakref.proxy(conn)
-
             item.impl = impl
             item.is_created = True
+
+            if conn:
+                item.extra = weakref.proxy(conn)
+            else:
+                item.conn = item.impl
 
         self.items[name] = item
 
