@@ -91,7 +91,7 @@ class Create(_CreateEdit):
 
                 raise 
             else:
-                input.action = SECURITY.XPATH_SEC_CREATE
+                input.action = SECURITY.XPATH_SEC_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.XPATH_SEC
                 self.broker_client.publish(input)
 
@@ -140,7 +140,7 @@ class Edit(_CreateEdit):
 
                 raise 
             else:
-                input.action = SECURITY.XPATH_SEC_EDIT
+                input.action = SECURITY.XPATH_SEC_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.XPATH_SEC
                 self.broker_client.publish(input)
@@ -161,7 +161,7 @@ class ChangePassword(ChangePasswordBase):
         def _auth(instance, password):
             instance.password = password
             
-        return self._handle(XPathSecurity, _auth, SECURITY.XPATH_SEC_CHANGE_PASSWORD)
+        return self._handle(XPathSecurity, _auth, SECURITY.XPATH_SEC_CHANGE_PASSWORD.value)
 
 class Delete(AdminService):
     """ Deletes an XPath security definition.
@@ -187,6 +187,6 @@ class Delete(AdminService):
 
                 raise
             else:
-                self.request.input.action = SECURITY.XPATH_SEC_DELETE
+                self.request.input.action = SECURITY.XPATH_SEC_DELETE.value
                 self.request.input.name = auth.name
                 self.broker_client.publish(self.request.input)

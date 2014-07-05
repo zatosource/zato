@@ -71,7 +71,7 @@ class Create(AdminService):
 
                 raise
             else:
-                input.action = MSG_NS.CREATE
+                input.action = MSG_NS.CREATE.value
                 self.broker_client.publish(input)
 
             self.response.payload.id = definition.id
@@ -115,7 +115,7 @@ class Edit(AdminService):
 
                 raise
             else:
-                input.action = MSG_NS.EDIT
+                input.action = MSG_NS.EDIT.value
                 input.old_name = old_name
                 self.broker_client.publish(input)
 
@@ -146,6 +146,6 @@ class Delete(AdminService):
 
                 raise
             else:
-                self.request.input.action = MSG_NS.DELETE
+                self.request.input.action = MSG_NS.DELETE.value
                 self.request.input.name = auth.name
                 self.broker_client.publish(self.request.input)

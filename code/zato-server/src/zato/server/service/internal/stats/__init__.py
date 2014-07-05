@@ -56,7 +56,7 @@ class Delete(AdminService):
 
     def handle(self):
         self.broker_client.invoke_async(
-            {'action':STATS.DELETE, 'start':self.request.input.start, 'stop':self.request.input.stop})
+            {'action':STATS.DELETE.value, 'start':self.request.input.start, 'stop':self.request.input.stop})
         
 # ##############################################################################
 
