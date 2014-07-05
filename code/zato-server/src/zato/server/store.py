@@ -31,7 +31,7 @@ class BaseAPI(object):
     def __getitem__(self, name):
         item = self._conn_store.get(name)
         if not item:
-            msg = 'No such item `{}` in `{}`'.format(name, sorted(self._conn_store.sessions))
+            msg = 'No such item `{}` in `{}`'.format(name, sorted(self._conn_store.items))
             logger.warn(msg)
             raise KeyError(msg)
 
