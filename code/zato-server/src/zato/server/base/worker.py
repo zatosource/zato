@@ -34,7 +34,9 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, PUB_SUB, SEC_DEF_TYPE, SIMPLE_IO, \
      TRACE1, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import code_to_name, SERVICE, STATS
+from zato.common import broker_message
+from zato.common.broker_message import code_to_name
+from zato.common.dispatch import dispatcher
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import new_cid, pairwise, parse_extra_into_dict
 from zato.server.base import BrokerMessageReceiver
@@ -412,7 +414,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_APIKEY_CREATE(self, msg, *args):
         """ Creates a new API key security definition.
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_APIKEY_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.APIKEY_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_APIKEY_EDIT(self, msg, *args):
         """ Updates an existing API key security definition.
@@ -443,7 +445,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_AWS_CREATE(self, msg, *args):
         """ Creates a new AWS security definition
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_AWS_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.AWS_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_AWS_EDIT(self, msg, *args):
         """ Updates an existing AWS security definition.
@@ -474,7 +476,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_OPENSTACK_CREATE(self, msg, *args):
         """ Creates a new OpenStack security definition
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_OPENSTACK_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.OPENSTACK_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_OPENSTACK_EDIT(self, msg, *args):
         """ Updates an existing OpenStack security definition.
@@ -505,7 +507,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_NTLM_CREATE(self, msg, *args):
         """ Creates a new NTLM security definition
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_NTLM_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.NTLM_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_NTLM_EDIT(self, msg, *args):
         """ Updates an existing NTLM security definition.
@@ -536,7 +538,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.BASIC_AUTH_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
@@ -567,7 +569,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_OAUTH_CREATE(self, msg, *args):
         """ Creates a new OAuth security definition
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_OAUTH_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.OAUTH_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_OAUTH_EDIT(self, msg, *args):
         """ Updates an existing OAuth security definition.
@@ -597,22 +599,33 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
         """ Creates a new technical account.
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.TECH_ACC_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
         """ Updates an existing technical account.
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_EDIT(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.TECH_ACC_EDIT.value, msg)
 
     def on_broker_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_DELETE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.TECH_ACC_DELETE.value, msg)
 
     def on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.TECH_ACC_CHANGE_PASSWORD.value, msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_TLS_KEY_CERT_CREATE(self, msg):
+        dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_CREATE.value, msg)
+
+    def on_broker_msg_SECURITY_TLS_KEY_CERT_EDIT(self, msg):
+        dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_EDIT.value, msg)
+
+    def on_broker_msg_SECURITY_TLS_KEY_CERT_DELETE(self, msg):
+        dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_DELETE.value, msg)
 
 # ################################################################################################################################
 
@@ -624,7 +637,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_WSS_CREATE(self, msg, *args):
         """ Creates a new WS-Security definition.
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_WSS_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.WSS_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
@@ -656,7 +669,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_XPATH_SEC_CREATE(self, msg, *args):
         """ Creates a new XPath security definition
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_XPATH_SEC_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.XPATH_SEC_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_XPATH_SEC_EDIT(self, msg, *args):
         """ Updates an existing XPath security definition.
@@ -675,7 +688,6 @@ class WorkerStore(BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.XPATH_SEC,
                 self._visit_wrapper_change_password)
-
 
 # ################################################################################################################################
 
@@ -876,7 +888,7 @@ class WorkerStore(BrokerMessageReceiver):
         if(stop-start).days:
             for elem1, elem2 in pairwise(elem for elem in rrule(DAILY, dtstart=start, until=stop)):
                 self.broker_client.invoke_async(
-                    {'action':STATS.DELETE_DAY.value, 'start':elem1.isoformat(), 'stop':elem2.isoformat()})
+                    {'action':broker_message.STATS.DELETE_DAY.value, 'start':elem1.isoformat(), 'stop':elem2.isoformat()})
 
                 # So as not to drown the broker with a sudden surge of messages
                 sleep(0.02)
@@ -970,7 +982,7 @@ class WorkerStore(BrokerMessageReceiver):
             # so the list of patterns will be updated that many times.
 
             msg = {}
-            msg['action'] = SERVICE.PUBLISH.value
+            msg['action'] = broker_message.SERVICE.PUBLISH.value
             msg['service'] = 'zato.http-soap.set-audit-replace-patterns'
             msg['payload'] = {'id':item_id, 'audit_repl_patt_type':MSG_PATTERN_TYPE.JSON_POINTER.id, 'pattern_list':pattern_list}
             msg['cid'] = new_cid()

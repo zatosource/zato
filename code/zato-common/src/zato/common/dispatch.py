@@ -8,23 +8,44 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from logging import getLogger
+
 # gevent
 from gevent.lock import RLock
+
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+
+UPDATES = 'CREATES', 'EDIT', 'DELETE', 'CHANGE_PASSWORD'
 
 class Dispatcher(object):
 
     def __init__(self):
-        self.lock = RLock
+        self.lock = RLock()
         self.listeners = {}
 
-    def listen(self, event, listener):
-        with self.lock:
-            self.listeners.setdefault(event, []).append(listener)
+    def _listen(self, event, callback, **opaque):
+        self.listeners.setdefault(event, []).append((callback, opaque))
 
-    def notify(self, event, opaque):
+    def listen(self, *args, **kwargs):
         with self.lock:
-            for ev, listener in self.listeners.items():
+            self._listen(*args, **kwargs)
+
+    def listen_for_updates(self, msg, callback, **opaque):
+        with self.lock:
+            for name, value in msg.iteritems():
+                for update in UPDATES:
+                    if update in name:
+                        self._listen(value.value, callback, **opaque)
+
+    def notify(self, event, ctx):
+        with self.lock:
+            for ev, values in self.listeners.items():
                 if ev == event:
-                    listener.notify(event, opaque)
+                    for callback, opaque in values:
+                        callback(event, ctx, **opaque)
 
+# A singleton used throughout the whole application.
 dispatcher = Dispatcher()
