@@ -24,7 +24,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, \
      NotificationOpenStackSwift as NotifOSS, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
      OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Server, Service, SQLConnectionPool, \
-     TechnicalAccount, WSSDefinition, XPath, XPathSecurity
+     TechnicalAccount, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -190,6 +190,19 @@ def tech_acc_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==TechnicalAccount.cluster_id).\
         filter(SecurityBase.id==TechnicalAccount.id).\
+        order_by('sec_base.name')
+
+@needs_columns
+def tls_key_cert_list(session, cluster_id, needs_columns=False):
+    """ TLS key/cert pairs.
+    """
+    return session.query(
+        TLSKeyCertSecurity.id, TLSKeyCertSecurity.name,
+        TLSKeyCertSecurity.is_active, TLSKeyCertSecurity.fs_name, TLSKeyCertSecurity.cert_fp,
+        TLSKeyCertSecurity.cert_cn).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==TLSKeyCertSecurity.cluster_id).\
+        filter(SecurityBase.id==TLSKeyCertSecurity.id).\
         order_by('sec_base.name')
 
 @needs_columns

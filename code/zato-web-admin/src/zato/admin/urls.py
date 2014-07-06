@@ -42,7 +42,7 @@ from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, \
      wss, xpath as xpath_sec
-from zato.admin.web.views.security.tls import client_key as tls_client_key
+from zato.admin.web.views.security.tls import key_cert as tls_key_cert
 
 urlpatterns = patterns('',
 
@@ -346,14 +346,16 @@ urlpatterns = patterns('',
     url(r'^zato/security/tech-account/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(tech_account.delete), name='security-tech-account-delete'),
 
-    # .. TLS - client keys
+    # .. TLS - keys and certificates Zato itself uses
 
-    url(r'^zato/security/tls/client-key/$',
-        login_required(tls_client_key.Index()), name=tls_client_key.Index.url_name),
-    url(r'^zato/security/tls/client-key/create/$',
-        login_required(tls_client_key.Create()), name=tls_client_key.Create.url_name),
-    url(r'^zato/security/tls/client-key/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(tls_client_key.Delete()), name='security-tls-client-key-delete'),
+    url(r'^zato/security/tls/key-cert/$',
+        login_required(tls_key_cert.Index()), name=tls_key_cert.Index.url_name),
+    url(r'^zato/security/tls/key-cert/create/$',
+        login_required(tls_key_cert.Create()), name=tls_key_cert.Create.url_name),
+    url(r'^zato/security/tls/key-cert/edit/$',
+        login_required(tls_key_cert.Edit()), name=tls_key_cert.Edit.url_name),
+    url(r'^zato/security/tls/key-cert/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(tls_key_cert.Delete()), name='security-tls-key-cert-delete'),
 
 # ################################################################################################################################
 

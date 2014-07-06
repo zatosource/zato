@@ -94,6 +94,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.security.oauth',
             'zato.server.service.internal.security.openstack',
             'zato.server.service.internal.security.tech_account',
+            'zato.server.service.internal.security.tls.key_cert',
             'zato.server.service.internal.security.wss',
             'zato.server.service.internal.security.xpath',
             'zato.server.service.internal.server',
