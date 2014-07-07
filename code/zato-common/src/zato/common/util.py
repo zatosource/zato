@@ -58,6 +58,9 @@ from gevent.hub import Hub
 # lxml
 from lxml import etree, objectify
 
+# OpenSSL
+from OpenSSL import crypto
+
 # Paste
 from paste.util.converters import asbool
 
@@ -880,5 +883,23 @@ def get_kvdb_config_for_log(config):
 
 def has_redis_sentinels(config):
     return asbool(config.get('use_redis_sentinels', False))
+
+# ################################################################################################################################
+
+def get_validate_tls_key_cert(server_tls_dir, fs_name):
+    full_path = os.path.join(server_tls_dir, 'keys-certs', fs_name)
+    if not os.path.exists(full_path):
+        raise Exception('No such path `{}`'.format(full_path))
+
+    pem = open(full_path).read()
+
+    # Only validate it's there.
+    crypto.load_privatekey(crypto.FILETYPE_PEM, pem)
+
+    # Really do something with a certificate though.
+    cert = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
+    subject = sorted(dict(cert.get_subject().get_components()).items())
+
+    return cert.digest(b'sha1'), '; '.join(['{}={}'.format(k, v) for k, v in subject])
 
 # ################################################################################################################################

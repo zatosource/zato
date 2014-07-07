@@ -401,7 +401,7 @@ class TLSKeyCertSecurity(SecurityBase):
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
     fs_name = Column(String(200), nullable=False)
     cert_fp = Column(String(200), nullable=False)
-    cert_cn = Column(String(1200), nullable=False)
+    cert_subject = Column(String(1200), nullable=False)
 
 # ################################################################################################################################
 

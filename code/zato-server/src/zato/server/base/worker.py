@@ -124,7 +124,8 @@ class WorkerStore(BrokerMessageReceiver):
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.ntlm, self.worker_config.oauth, self.worker_config.tech_acc,
             self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws, self.worker_config.openstack_security,
-            self.worker_config.xpath_sec, self.kvdb, self.broker_client, self.server.odb, self.json_pointer_store, self.xpath_store)
+            self.worker_config.xpath_sec, self.worker_config.tls_key_cert, self.kvdb, self.broker_client, self.server.odb,
+            self.json_pointer_store, self.xpath_store)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
@@ -180,8 +181,8 @@ class WorkerStore(BrokerMessageReceiver):
 
         if _sec_config:
             sec_config['sec_type'] = _sec_config['sec_type']
-            sec_config['username'] = _sec_config['username']
-            sec_config['password'] = _sec_config['password']
+            sec_config['username'] = _sec_config.get('username')
+            sec_config['password'] = _sec_config.get('password')
             sec_config['password_type'] = _sec_config.get('password_type')
             sec_config['salt'] = _sec_config.get('salt')
 
@@ -618,13 +619,19 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def update_tls_key_cert(self, msg):
+        logger.warn(msg)
+
     def on_broker_msg_SECURITY_TLS_KEY_CERT_CREATE(self, msg):
+        self.update_tls_key_cert(msg)
         dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_EDIT(self, msg):
+        self.update_tls_key_cert(msg)
         dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_EDIT.value, msg)
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_DELETE(self, msg):
+        self.update_tls_key_cert(msg)
         dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_DELETE.value, msg)
 
 # ################################################################################################################################

@@ -93,6 +93,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.service_modules = None # Set programmatically in Spring
         self.service_sources = None # Set in a config file
         self.base_dir = None
+        self.tls_dir = None
         self.hot_deploy_config = None
         self.pickup = None
         self.fs_server_config = None
