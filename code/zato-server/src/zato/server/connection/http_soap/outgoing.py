@@ -73,7 +73,8 @@ class BaseHTTPSOAPWrapper(object):
         # .. invoke the other end ..
         response = self.session.request(self.config['ping_method'], self.address, 
                 auth=self.requests_auth, headers=self._create_headers(cid, {}),
-                hooks={'zato_pre_request':zato_pre_request_hook}, timeout=self.config['timeout'])
+                hooks={'zato_pre_request':zato_pre_request_hook}, timeout=self.config['timeout'],
+                cert=self.tls_key_cert, verify=False)
 
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(response.status_code))
@@ -100,7 +101,6 @@ class BaseHTTPSOAPWrapper(object):
     def set_auth(self):
         """ Configures the security for requests, if any is to be configured at all.
         """
-
         # Suds SOAP requests
         if self.config['serialization_type'] == HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id:
             self.suds_auth = {'username':self.config['username'], 'password':self.config['password']}
@@ -108,11 +108,13 @@ class BaseHTTPSOAPWrapper(object):
         # Everything else
         else:
             self.requests_auth = self.auth if self.config['sec_type'] == SEC_DEF_TYPE.BASIC_AUTH else None
+            self.tls_key_cert = self.config['tls_key_cert_full_path'] \
+                if self.config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT else None
+
             if self.config['sec_type'] == SEC_DEF_TYPE.WSS:
                 self.soap[self.config['soap_version']]['header'] = \
                     self.soap[self.config['soap_version']]['header_template'].format(
                         Username=self.config['username'], Password=self.config['password'])
-
 
     def set_address_data(self):
         """Sets the full address to invoke and parses input URL's configuration, 
@@ -275,7 +277,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         logger.info('CID:[%s], address:[%s], qs_params:[%s], auth:[%s], kwargs:[%s]', cid, address, qs_params, self.requests_auth, kwargs) 
 
         response = self.session.request(method, address, data=data,
-            auth=self.requests_auth, params=qs_params, headers=headers, timeout=self.config['timeout'], *args, **kwargs)
+            auth=self.requests_auth, params=qs_params, headers=headers, timeout=self.config['timeout'],
+            cert=self.tls_key_cert, *args, **kwargs)
 
         logger.debug('CID:[%s], response:[%s]', cid, response.text)
 

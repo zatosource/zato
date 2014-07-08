@@ -38,7 +38,7 @@ from zato.common import broker_message
 from zato.common.broker_message import code_to_name
 from zato.common.dispatch import dispatcher
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import new_cid, pairwise, parse_extra_into_dict
+from zato.common.util import new_cid, pairwise, parse_extra_into_dict, get_validate_tls_key_cert
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -185,6 +185,11 @@ class WorkerStore(BrokerMessageReceiver):
             sec_config['password'] = _sec_config.get('password')
             sec_config['password_type'] = _sec_config.get('password_type')
             sec_config['salt'] = _sec_config.get('salt')
+
+            if sec_config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT:
+                tls = self.request_dispatcher.url_data.tls_key_cert_get(security_name)
+                _, _, full_path = get_validate_tls_key_cert(self.server.tls_dir, tls.config.fs_name)
+                sec_config['tls_key_cert_full_path'] = full_path
 
         wrapper_config = {'id':config.id,
             'is_active':config.is_active, 'method':config.method,
@@ -620,7 +625,8 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def update_tls_key_cert(self, msg):
-        logger.warn(msg)
+        _, _, full_path = get_validate_tls_key_cert(self.server.tls_dir, msg.fs_name)
+        msg.full_path = full_path
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_CREATE(self, msg):
         self.update_tls_key_cert(msg)
