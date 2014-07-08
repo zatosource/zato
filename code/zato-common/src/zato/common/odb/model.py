@@ -1620,6 +1620,7 @@ class SMTP(Base):
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
 
+    host = Column(String(400), nullable=False)
     port = Column(Integer(), nullable=False)
     timeout = Column(Integer(), nullable=False)
     is_debug = Column(Boolean(), nullable=False)

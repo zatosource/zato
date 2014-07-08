@@ -51,6 +51,9 @@ def get_io(attrs, elems_name, is_edit, is_required):
         columns = []
         for column in [elem for elem in elems._sa_class_manager.mapper.mapped_table.columns]:
 
+            if attrs.elem == 'email_smtp':
+                logger.warn('111 %r %r %r %r', elems_name, is_edit, is_required, column)
+
             # We're building SimpleIO.input/output_required here so any nullable columns
             # should not be taken into account. They will be included the next time get_io
             # is called, i.e. to build SimpleIO.input/output_optional.
@@ -152,6 +155,10 @@ class GetListMeta(AdminServiceMeta):
     @staticmethod
     def handle():
         def handle_impl(self):
+
+            logger.warn(self.SimpleIO.output_required)
+            logger.warn(self.SimpleIO.output_optional)
+
             with closing(self.odb.session()) as session:
                 self.response.payload[:] = self.get_data(session)
         return handle_impl
