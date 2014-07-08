@@ -1014,6 +1014,6 @@ def email_smtp(session, cluster_id, id):
 def email_smtp_list(session, cluster_id, needs_columns=False):
     """ A list of SMTP connections.
     """
-    return _cassandra_query(session, cluster_id)
+    return _email_smtp(session, cluster_id)
 
 # ################################################################################################################################

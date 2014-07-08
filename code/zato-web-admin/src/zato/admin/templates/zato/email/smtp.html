@@ -87,7 +87,7 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.host }}</td>
                         <td>{{ item.port }}</td>
-                        <td>{{ item.username }}</td>
+                        <td>{{ item.username|default:"<span class='form_hint'>(None)</span>" }}</td>
                         <td><a href="javascript:$.fn.zato.email.smtp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.email.smtp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -169,8 +169,35 @@
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Value</td>
-                            <td>{{ edit_form.value }} </td>
+                            <td style="vertical-align:middle">Active</td>
+                            <td>{{ edit_form.is_active }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Host</td>
+                            <td>{{ edit_form.host }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Port</td>
+                            <td>{{ edit_form.port }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Timeout
+                            <br/>
+                            <span class="form_hint">(In seconds)</span>
+                            </td>
+                            <td>{{ edit_form.timeout }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Username</td>
+                            <td>{{ edit_form.username }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Mode</td>
+                            <td>{{ edit_form.mode }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Debug mode</td>
+                            <td>{{ edit_form.is_debug }} </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
