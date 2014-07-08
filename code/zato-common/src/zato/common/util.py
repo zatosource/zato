@@ -900,6 +900,6 @@ def get_validate_tls_key_cert(server_tls_dir, fs_name):
     cert = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
     subject = sorted(dict(cert.get_subject().get_components()).items())
 
-    return cert.digest(b'sha1'), '; '.join(['{}={}'.format(k, v) for k, v in subject])
+    return cert.digest(b'sha1'), '; '.join(['{}={}'.format(k, v) for k, v in subject]), full_path
 
 # ################################################################################################################################

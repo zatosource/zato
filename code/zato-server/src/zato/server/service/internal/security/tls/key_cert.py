@@ -28,7 +28,7 @@ list_func = tls_key_cert_list
 skip_input_params = ('sec_type', 'cert_fp', 'cert_subject')
 
 def instance_hook(service, input, instance, attrs):
-    cert_fp, cert_subject = get_validate_tls_key_cert(service.server.tls_dir, input.fs_name)
+    cert_fp, cert_subject, _ = get_validate_tls_key_cert(service.server.tls_dir, input.fs_name)
     input.cert_fp = instance.cert_fp = cert_fp
     input.cert_subject = instance.cert_subject = cert_subject
     instance.username = service.cid # Required by model
