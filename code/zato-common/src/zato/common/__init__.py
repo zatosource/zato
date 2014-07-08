@@ -13,6 +13,7 @@ import os
 from collections import OrderedDict
 from cStringIO import StringIO
 from httplib import responses
+from smtplib import SMTP_PORT
 from string import Template
 from sys import maxint
 from traceback import format_exc
@@ -559,6 +560,15 @@ class PUB_SUB:
         class __metaclass__(type):
             def __iter__(self):
                 return iter((self.OBJECT, self.JSON, self.XML))
+
+class EMAIL:
+    class DEFAULT:
+        TIMEOUT = 30
+    class SMTP:
+        class MODE(Constants):
+            PLAIN = ValueConstant('plain')
+            SSL = ValueConstant('ssl')
+            STARTTLS = ValueConstant('starttls')
 
 class NOTIF:
     class DEFAULT:

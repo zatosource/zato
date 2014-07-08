@@ -81,6 +81,7 @@ def update_attrs(cls, name, attrs):
     mod = getmodule(cls)
 
     attrs.elem = getattr(mod, 'elem')
+    attrs.label = getattr(mod, 'label')
     attrs.model = getattr(mod, 'model')
     attrs.output_required_extra = getattr(mod, 'output_required_extra', [])
     attrs.output_optional_extra = getattr(mod, 'output_optional_extra', [])

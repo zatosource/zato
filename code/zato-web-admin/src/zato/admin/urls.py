@@ -24,6 +24,7 @@ from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
 from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import cassandra as def_cassandra
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
+from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
 from zato.admin.web.views.message import json_pointer, namespace, xpath
 from zato.admin.web.views.notif.cloud.openstack import swift as notif_cloud_openstack_swift
@@ -654,6 +655,23 @@ urlpatterns = patterns('',
         login_required(query_cassandra.Edit()), name=query_cassandra.Edit.url_name),
     url(r'^zato/query/cassandra/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(query_cassandra.Delete()), name=query_cassandra.Delete.url_name),
+
+# ################################################################################################################################
+
+    # E-mail
+
+# ################################################################################################################################
+
+    # .. SMTP
+
+    url(r'^zato/email/smtp/$',
+        login_required(email_smtp.Index()), name=email_smtp.Index.url_name),
+    url(r'^zato/email/smtp/create/$',
+        login_required(email_smtp.Create()), name=email_smtp.Create.url_name),
+    url(r'^zato/email/smtp/edit/$',
+        login_required(email_smtp.Edit()), name=email_smtp.Edit.url_name),
+    url(r'^zato/email/smtp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(email_smtp.Delete()), name=email_smtp.Delete.url_name),
 
 # ################################################################################################################################
 

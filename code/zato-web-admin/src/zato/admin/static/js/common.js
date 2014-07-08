@@ -65,6 +65,8 @@ $.namespace('zato.definition');
 $.namespace('zato.definition.amqp');
 $.namespace('zato.definition.cassandra');
 $.namespace('zato.definition.jms_wmq');
+$.namespace('zato.email');
+$.namespace('zato.email.smtp');
 $.namespace('zato.form');
 $.namespace('zato.kvdb');
 $.namespace('zato.kvdb.data_dict');

@@ -1608,4 +1608,24 @@ class CassandraQuery(Base):
     cluster = relationship(Cluster, backref=backref('cassandra_queries', order_by=name, cascade='all, delete, delete-orphan'))
 
     def_id = Column(Integer, ForeignKey('conn_def_cassandra.id', ondelete='CASCADE'), nullable=False)
-    def_ = relationship(CassandraConn, backref=backref('queries', cascade='all, delete, delete-orphan'))
+    def_ = relationship(CassandraConn, backref=backref('cassandra_queries', cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class SMTP(Base):
+    __tablename__ = 'email_smtp'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('email_smtp_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    port = Column(Integer(), nullable=False)
+    timeout = Column(Integer(), nullable=False)
+    is_debug = Column(Boolean(), nullable=False)
+    username = Column(String(400), nullable=True)
+    password = Column(String(400), nullable=True)
+    mode = Column(String(20), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('smtp_conns', order_by=name, cascade='all, delete, delete-orphan'))
