@@ -163,6 +163,12 @@
                                 <li class='wide'><a href="{% url query-cassandra %}?cluster={{ cluster_id|default:'' }}">Cassandra</a></li>
                             </ul>
                         </li>
+                        <li>
+                            <span class="like-a">E-mail &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url email-smtp %}?cluster={{ cluster_id|default:'' }}">SMTP</a></li>
+                            </ul>
+                        </li>
                     </ul>
                 </li>
 
