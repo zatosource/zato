@@ -22,6 +22,9 @@ broker_message = EMAIL
 broker_message_prefix = 'SMTP_'
 list_func = email_smtp_list
 
+def instance_hook(service, input, instance, attrs):
+    instance.username = input.username or '' # So it's not stored as None/NULL
+
 class GetList(AdminService):
     __metaclass__ = GetListMeta
 
