@@ -93,6 +93,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.service_modules = None # Set programmatically in Spring
         self.service_sources = None # Set in a config file
         self.base_dir = None
+        self.tls_dir = None
         self.hot_deploy_config = None
         self.pickup = None
         self.fs_server_config = None
@@ -495,6 +496,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # Technical accounts
         query = self.odb.get_tech_acc_list(server.cluster.id, True)
         self.config.tech_acc = ConfigDict.from_query('tech_acc', query)
+
+        # TLS key/cert pairs
+        query = self.odb.get_tls_key_cert_list(server.cluster.id, True)
+        self.config.tls_key_cert = ConfigDict.from_query('tls_key_cert', query)
 
         # WS-Security
         query = self.odb.get_wss_list(server.cluster.id, True)

@@ -98,10 +98,9 @@
                         <li>
                             <span class="like-a">SSL/TLS &rarr;</span>
                             <ul>
-                                <li><a href="{% url security-tls-client-key %}?cluster={{ cluster_id|default:'' }}">Client keys</a></li>
-                                <li><a href="{% url message-namespace %}?cluster={{ cluster_id|default:'' }}">Client certs<br/>and bundles</a></li>
+                                <li><a href="{% url security-tls-key-cert %}?cluster={{ cluster_id|default:'' }}">Keys and certs</a></li>
+                                <li><a href="{% url message-namespace %}?cluster={{ cluster_id|default:'' }}">Partner certs</a></li>
                                 <li><a href="{% url message-xpath %}?cluster={{ cluster_id|default:'' }}">CA certs</a></li>
-                                <li><a href="{% url message-xpath %}?cluster={{ cluster_id|default:'' }}">Server certs</a></li>
                             </ul>
                         </li>
                         <li><a href="{% url security-tech-account %}?cluster={{ cluster_id|default:'' }}">Technical accounts</a></li>
