@@ -199,7 +199,7 @@ class ServiceStore(InitializingObject):
                         return True
         except TypeError, e:
             # Ignore non-class objects passed in to issubclass
-            logger.log(TRACE1, 'Ignoring exception, name:[{}], item:[{}], e:[{}]'.format(name, item, format_exc(e)))
+            logger.log(TRACE1, 'Ignoring exception, name:[%s], item:[%s], e:[%s]', name, item, format_exc(e))
 
     def _get_source_code_info(self, mod):
         """ Returns the source code of and the FS path to the given module.
