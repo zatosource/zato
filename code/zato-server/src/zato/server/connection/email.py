@@ -40,10 +40,11 @@ class SMTPConnection(object):
         if config.username or config.password:
             self.conn_class = Outbox
             self.conn_args = self.config.username, self.config.password, self.config.host, self.config.port, \
-                self.config.mode_outbox, self.config.is_debug
+                self.config.mode_outbox, self.config.is_debug, self.config.timeout
         else:
             self.conn_class = AnonymousOutbox
-            self.conn_args = self.config.host, self.config.port, self.config.mode_outbox, self.config.is_debug
+            self.conn_args = self.config.host, self.config.port, self.config.mode_outbox, self.config.is_debug, \
+                self.config.timeout
 
     def __repr__(self):
         return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
