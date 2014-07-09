@@ -14,7 +14,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # Outbox
-from outbox import Outbox
+from outbox import AnonymousOutbox, Email, Outbox
 
 # Zato
 from zato.common import EMAIL
@@ -37,16 +37,29 @@ class SMTPConnection(object):
         self.config = config
         self.config_no_sensitive = config_no_sensitive
 
+        if config.username or config.password:
+            self.conn_class = Outbox
+            self.conn_args = self.config.username, self.config.password, self.config.host, self.config.port, \
+                self.config.mode_outbox, self.config.is_debug
+        else:
+            self.conn_class = AnonymousOutbox
+            self.conn_args = self.config.host, self.config.port, self.config.mode_outbox, self.config.is_debug
+
     def __repr__(self):
         return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
 
-    def send(self, email, *attachments):
+    def send(self, to, subject, body, charset='utf8', headers={}, is_html=False, is_rfc2231=True, *attachments):
+
+        body, html_body = (None, body) if is_html else (body, None)
+        email = Email(to, subject, body, html_body, charset, headers, is_rfc2231)
+
         try:
-            with Outbox(self.config.username, self.config.password, self.config.host, self.config.port, self.config.mode_outbox,
-                    self.config.is_debug) as conn:
+            with self.conn_class(*self.conn_args) as conn:
                 conn.send(email, attachments)
         except Exception, e:
             logger.warn('Could not send an SMTP message to `%s`, e:`%s`', self.config_no_sensitive, format_exc(e))
+        else:
+            logger.info('SMTP message `%s` sent to `%s`', subject, to)
 
 class SMTPAPI(BaseAPI):
     """ API to obtain SMTP connections through.
