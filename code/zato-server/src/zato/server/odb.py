@@ -703,3 +703,10 @@ class ODBManager(SessionWrapper):
         return query.search_es_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
+
+    def get_email_smtp_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of SMTP connections.
+        """
+        return query.email_smtp_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
