@@ -132,6 +132,11 @@ class SECURITY(Constants):
     XPATH_SEC_DELETE = ValueConstant('')
     XPATH_SEC_CHANGE_PASSWORD = ValueConstant('')
 
+    # New in 2.0
+    TLS_KEY_CERT_CREATE = ValueConstant('')
+    TLS_KEY_CERT_EDIT = ValueConstant('')
+    TLS_KEY_CERT_DELETE = ValueConstant('')
+
 class DEFINITION(Constants):
     code_start = 100600
 

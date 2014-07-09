@@ -208,6 +208,7 @@ class SEC_DEF_TYPE:
     TECH_ACCOUNT = 'tech_acc'
     WSS = 'wss'
     XPATH_SEC = 'xpath_sec'
+    TLS_KEY_CERT = 'tls_key_cert'
 
 SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.APIKEY: 'API key',
@@ -219,6 +220,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.TECH_ACCOUNT: 'Tech account',
     SEC_DEF_TYPE.WSS: 'WS-Security',
     SEC_DEF_TYPE.XPATH_SEC: 'XPath',
+    SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
 }
 
 # Name of the scheduler's job that will ensure a singleton server is always
