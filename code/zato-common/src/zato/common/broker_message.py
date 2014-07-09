@@ -312,25 +312,25 @@ class NOTIF(Constants):
     code_start = 104000
 
     # New in 2.0
-    RUN_NOTIFIER = b'11900'
-    CLOUD_OPENSTACK_SWIFT_CREATE_EDIT = b'11901'
-    CLOUD_OPENSTACK_SWIFT_DELETE = b'11902'
+    RUN_NOTIFIER = ValueConstant('')
+    CLOUD_OPENSTACK_SWIFT_CREATE_EDIT = ValueConstant('')
+    CLOUD_OPENSTACK_SWIFT_DELETE = ValueConstant('')
 
 class SEARCH(Constants):
     code_start = 104200
 
-    ES_CREATE = b'13001'
-    ES_EDIT = b'13002'
-    ES_DELETE = b'13003'
-    ES_CHANGE_PASSWORD = b'13004'
+    ES_CREATE = ValueConstant('')
+    ES_EDIT = ValueConstant('')
+    ES_DELETE = ValueConstant('')
+    ES_CHANGE_PASSWORD = ValueConstant('')
 
 class QUERY(Constants):
     code_start = 104400
 
-    CASSANDRA_CREATE = b'13150'
-    CASSANDRA_EDIT = b'13151'
-    CASSANDRA_DELETE = b'13152'
-    CASSANDRA_CHANGE_PASSWORD = b'13153'
+    CASSANDRA_CREATE = ValueConstant('')
+    CASSANDRA_EDIT = ValueConstant('')
+    CASSANDRA_DELETE = ValueConstant('')
+    CASSANDRA_CHANGE_PASSWORD = ValueConstant('')
 
 code_to_name = {}
 
