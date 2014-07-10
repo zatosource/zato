@@ -799,3 +799,21 @@ class StatsElem(object):
 
     def __bool__(self):
         return bool(self.service_name) # Empty stats_elems won't have a service name set
+
+# ################################################################################################################################
+
+class SMTPMessage(object):
+    def __init__(self, from_=None, to=None, subject='', body='', attachments=None, is_html=False, headers=None,
+            charset='utf8', is_rfc2231=True):
+        self.from_ = from_
+        self.to = to
+        self.subject = subject
+        self.body = body
+        self.attachments = attachments or []
+        self.is_html = is_html
+        self.headers = headers or {}
+        self.charset = charset
+        self.is_rfc2231 = is_rfc2231
+
+    def attach(self, name, contents):
+        self.attachments.append({'name':name, 'contents':contents})

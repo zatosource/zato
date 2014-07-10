@@ -1209,3 +1209,17 @@ class WorkerStore(BrokerMessageReceiver):
         self.search_es_api.delete(msg.name)
 
 # ################################################################################################################################
+
+    def on_broker_msg_EMAIL_SMTP_CREATE(self, msg):
+        self.email_smtp_api.create(msg.name, msg)
+
+    def on_broker_msg_EMAIL_SMTP_EDIT(self, msg):
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        self.email_smtp_api.edit(del_name, msg)
+
+    def on_broker_msg_EMAIL_SMTP_DELETE(self, msg):
+        self.email_smtp_api.delete(msg.name)
+
+# ################################################################################################################################
