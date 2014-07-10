@@ -571,6 +571,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_pubsub_consumer_list(server.cluster.id, True)
         self.config.pubsub.consumers = ConfigDict.from_query('pubsub_consumers', query, list_config=True)
 
+        # E-mail - SMTP
+        query = self.odb.get_email_smtp_list(server.cluster.id, True)
+        self.config.email_smtp = ConfigDict.from_query('email_smtp', query)
+
         # Assign config to worker
         self.worker_store.worker_config = self.config
         self.worker_store.broker_client = self.broker_client

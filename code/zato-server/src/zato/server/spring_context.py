@@ -58,6 +58,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.definition.amqp',
             'zato.server.service.internal.definition.cassandra',
             'zato.server.service.internal.definition.jms_wmq',
+            'zato.server.service.internal.email.smtp',
             'zato.server.service.internal.helpers',
             'zato.server.service.internal.hot_deploy',
             'zato.server.service.internal.info',

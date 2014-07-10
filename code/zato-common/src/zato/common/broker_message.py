@@ -332,6 +332,15 @@ class QUERY(Constants):
     CASSANDRA_DELETE = ValueConstant('')
     CASSANDRA_CHANGE_PASSWORD = ValueConstant('')
 
+class EMAIL(Constants):
+    code_start = 104800
+
+    # New in 2.0
+    SMTP_CREATE = ValueConstant('')
+    SMTP_EDIT = ValueConstant('')
+    SMTP_DELETE = ValueConstant('')
+    SMTP_CHANGE_PASSWORD = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

@@ -23,8 +23,8 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, \
      DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IntervalBasedJob, Job, MsgNamespace, \
      NotificationOpenStackSwift as NotifOSS, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
-     OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Server, Service, SQLConnectionPool, \
-     TechnicalAccount, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
+     OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Server, Service, SMTP, \
+     SQLConnectionPool, TechnicalAccount, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -1007,5 +1007,26 @@ def cassandra_query_list(session, cluster_id, needs_columns=False):
     """ A list of Cassandra prepared statements.
     """
     return _cassandra_query(session, cluster_id)
+
+# ################################################################################################################################
+
+def _email_smtp(session, cluster_id):
+    return session.query(SMTP).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==SMTP.cluster_id).\
+        order_by(SMTP.name)
+
+def email_smtp(session, cluster_id, id):
+    """ An SMTP connection.
+    """
+    return _email_smtp(session, cluster_id).\
+        filter(SMTP.id==id).\
+        one()
+
+@needs_columns
+def email_smtp_list(session, cluster_id, needs_columns=False):
+    """ A list of SMTP connections.
+    """
+    return _email_smtp(session, cluster_id)
 
 # ################################################################################################################################

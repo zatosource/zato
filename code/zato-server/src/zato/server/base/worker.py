@@ -43,6 +43,7 @@ from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
+from zato.server.connection.email import SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
@@ -106,6 +107,9 @@ class WorkerStore(BrokerMessageReceiver):
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
 
+        # E-mail
+        self.email_smtp_api = SMTPAPI(SMTPConnStore())
+
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
         self.init_msg_ns_store()
@@ -115,6 +119,8 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_cassandra()
         self.init_cassandra_queries()
         self.init_search_es()
+
+        self.init_email_smtp()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
@@ -310,6 +316,15 @@ class WorkerStore(BrokerMessageReceiver):
                 self.search_es_api.create(k, v.config)
             except Exception, e:
                 logger.warn('Could not create an ElasticSearch connection `%s`, e:`%s`', k, format_exc(e))
+
+# ################################################################################################################################
+
+    def init_email_smtp(self):
+        for k, v in self.worker_config.email_smtp.items():
+            try:
+                self.email_smtp_api.create(k, v.config)
+            except Exception, e:
+                logger.warn('Could not create an SMTP connection `%s`, e:`%s`', k, format_exc(e))
 
 # ################################################################################################################################
 
@@ -1192,5 +1207,19 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_SEARCH_ES_DELETE(self, msg):
         self.search_es_api.delete(msg.name)
+
+# ################################################################################################################################
+
+    def on_broker_msg_EMAIL_SMTP_CREATE(self, msg):
+        self.email_smtp_api.create(msg.name, msg)
+
+    def on_broker_msg_EMAIL_SMTP_EDIT(self, msg):
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        self.email_smtp_api.edit(del_name, msg)
+
+    def on_broker_msg_EMAIL_SMTP_DELETE(self, msg):
+        self.email_smtp_api.delete(msg.name)
 
 # ################################################################################################################################
