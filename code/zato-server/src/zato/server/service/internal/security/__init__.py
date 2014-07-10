@@ -41,7 +41,8 @@ class GetList(AdminService):
                      (SEC_DEF_TYPE.OPENSTACK, query.openstack_security_list),
                      (SEC_DEF_TYPE.TECH_ACCOUNT, query.tech_acc_list),
                      (SEC_DEF_TYPE.WSS, query.wss_list),
-                     (SEC_DEF_TYPE.XPATH_SEC, query.xpath_sec_list))
+                     (SEC_DEF_TYPE.XPATH_SEC, query.xpath_sec_list),
+                     (SEC_DEF_TYPE.TLS_KEY_CERT, query.tls_key_cert_list))
 
             for def_type, func in pairs:
 

@@ -208,8 +208,8 @@ directories = (
     'config/repo/lua/internal',
     'config/repo/lua/user',
     'config/repo/tls',
-    'config/repo/tls/keys',
-    'config/repo/tls/certs',
+    'config/repo/tls/keys-certs',
+    'config/repo/tls/partner-certs',
     'config/repo/tls/ca-certs',
 )
 
