@@ -28,20 +28,22 @@ class BaseAPI(object):
     def __init__(self, conn_store):
         self._conn_store = conn_store
 
-    def __getitem__(self, name):
+    def get(self, name, skip_inactive):
         item = self._conn_store.get(name)
         if not item:
             msg = 'No such item `{}` in `{}`'.format(name, sorted(self._conn_store.items))
             logger.warn(msg)
             raise KeyError(msg)
 
-        if not item.config.is_active:
+        if not item.config.is_active and not skip_inactive:
             msg = '`{}` is inactive'.format(name)
             logger.warn(msg)
             raise Inactive(msg)
 
         return item
 
+    def __getitem__(self, name):
+        return self.get(name, False)
 
     def create(self, name, msg, **extra):
         return self._conn_store.create(name, msg, **extra)

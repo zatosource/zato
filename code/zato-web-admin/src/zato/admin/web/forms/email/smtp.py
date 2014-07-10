@@ -28,6 +28,7 @@ class CreateForm(forms.Form):
     is_debug = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     mode = forms.ChoiceField(widget=forms.Select())
+    ping_address = forms.CharField(initial=EMAIL.DEFAULT.PING_ADDRESS, widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)

@@ -564,8 +564,11 @@ class PUB_SUB:
                 return iter((self.OBJECT, self.JSON, self.XML))
 
 class EMAIL:
+
     class DEFAULT:
         TIMEOUT = 30
+        PING_ADDRESS = 'invalid@invalid'
+
     class SMTP:
         class MODE(Constants):
             PLAIN = ValueConstant('plain')
@@ -687,7 +690,7 @@ class Inactive(ZatoException):
     as an outgoing connection or a channel.
     """
     def __init__(self, name):
-        super(Inactive, self).__init__(None, '[{}] is inactive'.format(name))
+        super(Inactive, self).__init__(None, '`{}` is inactive'.format(name))
 
 class SourceInfo(object):
     """ A bunch of attributes dealing the service's source code.

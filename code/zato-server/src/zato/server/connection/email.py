@@ -17,7 +17,7 @@ from traceback import format_exc
 from outbox import AnonymousOutbox, Attachment, Email, Outbox
 
 # Zato
-from zato.common import EMAIL
+from zato.common import Inactive, EMAIL
 from zato.server.store import BaseAPI, BaseStore
 
 logger = getLogger(__name__)
@@ -69,7 +69,7 @@ class SMTPConnection(object):
         else:
             if logger.isEnabledFor(INFO):
                 atts_info = ', '.join(att.name for att in atts) if atts else None
-                logger.info('SMTP message `%s` sent from `%s` to `%s`, attachments:`%s`',
+                logger.info('SMTP message `%r` sent from `%r` to `%r`, attachments:`%r`',
                     msg.subject, msg.from_, msg.to, atts_info)
 
 class SMTPAPI(BaseAPI):
