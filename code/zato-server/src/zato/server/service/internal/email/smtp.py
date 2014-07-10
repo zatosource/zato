@@ -17,7 +17,7 @@ from zato.common import SMTPMessage, version
 from zato.common.broker_message import EMAIL
 from zato.common.odb.model import SMTP
 from zato.common.odb.query import email_smtp_list
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 elem = 'email_smtp'
@@ -41,6 +41,21 @@ class Edit(AdminService):
 
 class Delete(AdminService):
     __metaclass__ = DeleteMeta
+
+class ChangePassword(ChangePasswordBase):
+    """ Changes the password of an SMTP connection.
+    """
+    password_required = False
+
+    class SimpleIO(ChangePasswordBase.SimpleIO):
+        request_elem = 'zato_email_smtp_change_password_request'
+        response_elem = 'zato_email_smtp_change_password_response'
+
+    def handle(self):
+        def _auth(instance, password):
+            instance.password = password
+
+        return self._handle(SMTP, _auth, EMAIL.SMTP_CHANGE_PASSWORD.value)
 
 class Ping(AdminService):
 
@@ -69,4 +84,4 @@ class Ping(AdminService):
         self.email.smtp.get(item.name, True).conn.send(msg)
         response_time = time() - start_time
 
-        self.response.payload.info = 'Sent a ping message, took:`{0:03.4f} s`, check server logs for details.'.format(response_time)
+        self.response.payload.info = 'Ping submitted, took:`{0:03.4f} s`, check server logs for details.'.format(response_time)
