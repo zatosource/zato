@@ -53,10 +53,14 @@ class _HTTPSOAPService(object):
             # Outgoing plain HTTP connections may use HTTP Basic Auth only,
             # outgoing SOAP connections may use either WSS or HTTP Basic Auth.                
             if connection == 'outgoing':
-                if transport == URL_TYPE.PLAIN_HTTP and security.sec_type != SEC_DEF_TYPE.BASIC_AUTH:
-                    raise Exception('Only HTTP Basic Auth is supported, not [{}]'.format(security.sec_type))
+
+                if transport == URL_TYPE.PLAIN_HTTP and \
+                   security.sec_type not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT):
+                    raise Exception('Only HTTP Basic Auth/TLS keys/certs are supported, not [{}]'.format(security.sec_type))
+
                 elif transport == URL_TYPE.SOAP and security.sec_type \
                      not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.WSS):
+
                     raise Exception('Security type must be HTTP Basic Auth, NTLM or WS-Security, not [{}]'.format(
                         security.sec_type))
             

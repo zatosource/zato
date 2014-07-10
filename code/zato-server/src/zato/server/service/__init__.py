@@ -37,6 +37,7 @@ from zato.common.nav import DictNav, ListNav
 from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl
 from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
+from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.connection.zmq_.outgoing import ZMQFacade
@@ -243,6 +244,9 @@ class Service(object):
         # Cassandra
         self.cassandra_conn = self.worker_store.cassandra_api
         self.cassandra_query = self.worker_store.cassandra_query_api
+
+        # E-mail
+        self.email = EMailAPI(self.worker_store.email_smtp_api)
 
         # Search
         self.search = SearchAPI(self.worker_store.search_es_api)

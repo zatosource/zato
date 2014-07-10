@@ -13,6 +13,7 @@ import os
 from collections import OrderedDict
 from cStringIO import StringIO
 from httplib import responses
+from smtplib import SMTP_PORT
 from string import Template
 from sys import maxint
 from traceback import format_exc
@@ -207,6 +208,7 @@ class SEC_DEF_TYPE:
     TECH_ACCOUNT = 'tech_acc'
     WSS = 'wss'
     XPATH_SEC = 'xpath_sec'
+    TLS_KEY_CERT = 'tls_key_cert'
 
 SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.APIKEY: 'API key',
@@ -218,6 +220,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.TECH_ACCOUNT: 'Tech account',
     SEC_DEF_TYPE.WSS: 'WS-Security',
     SEC_DEF_TYPE.XPATH_SEC: 'XPath',
+    SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
 }
 
 # Name of the scheduler's job that will ensure a singleton server is always
@@ -560,6 +563,18 @@ class PUB_SUB:
             def __iter__(self):
                 return iter((self.OBJECT, self.JSON, self.XML))
 
+class EMAIL:
+
+    class DEFAULT:
+        TIMEOUT = 30
+        PING_ADDRESS = 'invalid@invalid'
+
+    class SMTP:
+        class MODE(Constants):
+            PLAIN = ValueConstant('plain')
+            SSL = ValueConstant('ssl')
+            STARTTLS = ValueConstant('starttls')
+
 class NOTIF:
     class DEFAULT:
         CHECK_INTERVAL = 5 # In seconds
@@ -675,7 +690,7 @@ class Inactive(ZatoException):
     as an outgoing connection or a channel.
     """
     def __init__(self, name):
-        super(Inactive, self).__init__(None, '[{}] is inactive'.format(name))
+        super(Inactive, self).__init__(None, '`{}` is inactive'.format(name))
 
 class SourceInfo(object):
     """ A bunch of attributes dealing the service's source code.
@@ -787,3 +802,21 @@ class StatsElem(object):
 
     def __bool__(self):
         return bool(self.service_name) # Empty stats_elems won't have a service name set
+
+# ################################################################################################################################
+
+class SMTPMessage(object):
+    def __init__(self, from_=None, to=None, subject='', body='', attachments=None, is_html=False, headers=None,
+            charset='utf8', is_rfc2231=True):
+        self.from_ = from_
+        self.to = to
+        self.subject = subject
+        self.body = body
+        self.attachments = attachments or []
+        self.is_html = is_html
+        self.headers = headers or {}
+        self.charset = charset
+        self.is_rfc2231 = is_rfc2231
+
+    def attach(self, name, contents):
+        self.attachments.append({'name':name, 'contents':contents})
