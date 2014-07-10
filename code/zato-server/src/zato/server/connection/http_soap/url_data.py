@@ -32,7 +32,8 @@ from secwall.wsse import WSSE
 
 # Zato
 from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, ZATO_NONE
-from zato.common.broker_message import CHANNEL
+from zato.common.broker_message import code_to_name, CHANNEL, SECURITY
+from zato.common.dispatch import dispatcher
 from zato.server.connection.http_soap import Unauthorized
 
 logger = logging.getLogger(__name__)
@@ -46,7 +47,8 @@ class URLData(OAuthDataStore):
     """
     def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, oauth_config=None,
                  tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, openstack_config=None,
-                 xpath_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None):
+                 xpath_sec_config=None, tls_key_cert_config=None, kvdb=None, broker_client=None, odb=None,
+                 json_pointer_store=None, xpath_store=None):
         self.channel_data = channel_data
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -58,6 +60,7 @@ class URLData(OAuthDataStore):
         self.aws_config = aws_config
         self.openstack_config = openstack_config
         self.xpath_sec_config = xpath_sec_config
+        self.tls_key_cert_config = tls_key_cert_config
         self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
@@ -73,6 +76,13 @@ class URLData(OAuthDataStore):
         self._oauth_server = OAuthServer(self)
         self._oauth_server.add_signature_method(OAuthSignatureMethod_HMAC_SHA1())
         self._oauth_server.add_signature_method(OAuthSignatureMethod_PLAINTEXT())
+
+        dispatcher.listen_for_updates(SECURITY, self.dispatcher_callback)
+
+# ################################################################################################################################
+
+    def dispatcher_callback(self, event, ctx, **opaque):
+        getattr(self, 'on_broker_msg_{}'.format(code_to_name[event]))(ctx)
 
 # ################################################################################################################################
 
@@ -699,6 +709,37 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             self.xpath_sec_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.XPATH_SEC)
+
+# ################################################################################################################################
+
+    def _update_tls_key_cert(self, name, config):
+        self.tls_key_cert_config[name] = Bunch()
+        self.tls_key_cert_config[name].config = config
+
+    def tls_key_cert_get(self, name):
+        with self.url_sec_lock:
+            return self.tls_key_cert_config.get(name)
+
+    def on_broker_msg_SECURITY_TLS_KEY_CERT_CREATE(self, msg, *args):
+        """ Creates a new TLS key/cert security definition.
+        """
+        with self.url_sec_lock:
+            self._update_tls_key_cert(msg.name, msg)
+
+    def on_broker_msg_SECURITY_TLS_KEY_CERT_EDIT(self, msg, *args):
+        """ Updates an existing TLS key/cert security definition.
+        """
+        with self.url_sec_lock:
+            del self.tls_key_cert_config[msg.old_name]
+            self._update_tls_key_cert(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.TLS_KEY_CERT)
+
+    def on_broker_msg_SECURITY_TLS_KEY_CERT_DELETE(self, msg, *args):
+        """ Deletes an TLS key/cert security definition.
+        """
+        with self.url_sec_lock:
+            del self.tls_key_cert_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.TLS_KEY_CERT, True)
 
 # ################################################################################################################################
 

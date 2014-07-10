@@ -132,6 +132,11 @@ class SECURITY(Constants):
     XPATH_SEC_DELETE = ValueConstant('')
     XPATH_SEC_CHANGE_PASSWORD = ValueConstant('')
 
+    # New in 2.0
+    TLS_KEY_CERT_CREATE = ValueConstant('')
+    TLS_KEY_CERT_EDIT = ValueConstant('')
+    TLS_KEY_CERT_DELETE = ValueConstant('')
+
 class DEFINITION(Constants):
     code_start = 100600
 
@@ -326,6 +331,15 @@ class QUERY(Constants):
     CASSANDRA_EDIT = ValueConstant('')
     CASSANDRA_DELETE = ValueConstant('')
     CASSANDRA_CHANGE_PASSWORD = ValueConstant('')
+
+class EMAIL(Constants):
+    code_start = 104800
+
+    # New in 2.0
+    SMTP_CREATE = ValueConstant('')
+    SMTP_EDIT = ValueConstant('')
+    SMTP_DELETE = ValueConstant('')
+    SMTP_CHANGE_PASSWORD = ValueConstant('')
 
 code_to_name = {}
 

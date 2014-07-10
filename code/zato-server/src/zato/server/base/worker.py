@@ -34,13 +34,16 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, PUB_SUB, SEC_DEF_TYPE, SIMPLE_IO, \
      TRACE1, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import code_to_name, SERVICE, STATS
+from zato.common import broker_message
+from zato.common.broker_message import code_to_name
+from zato.common.dispatch import dispatcher
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import new_cid, pairwise, parse_extra_into_dict
+from zato.common.util import new_cid, pairwise, parse_extra_into_dict, get_validate_tls_key_cert
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
+from zato.server.connection.email import SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
@@ -104,6 +107,9 @@ class WorkerStore(BrokerMessageReceiver):
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
 
+        # E-mail
+        self.email_smtp_api = SMTPAPI(SMTPConnStore())
+
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
         self.init_msg_ns_store()
@@ -114,6 +120,8 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_cassandra_queries()
         self.init_search_es()
 
+        self.init_email_smtp()
+
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
@@ -122,7 +130,8 @@ class WorkerStore(BrokerMessageReceiver):
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.ntlm, self.worker_config.oauth, self.worker_config.tech_acc,
             self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws, self.worker_config.openstack_security,
-            self.worker_config.xpath_sec, self.kvdb, self.broker_client, self.server.odb, self.json_pointer_store, self.xpath_store)
+            self.worker_config.xpath_sec, self.worker_config.tls_key_cert, self.kvdb, self.broker_client, self.server.odb,
+            self.json_pointer_store, self.xpath_store)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
@@ -178,10 +187,15 @@ class WorkerStore(BrokerMessageReceiver):
 
         if _sec_config:
             sec_config['sec_type'] = _sec_config['sec_type']
-            sec_config['username'] = _sec_config['username']
-            sec_config['password'] = _sec_config['password']
+            sec_config['username'] = _sec_config.get('username')
+            sec_config['password'] = _sec_config.get('password')
             sec_config['password_type'] = _sec_config.get('password_type')
             sec_config['salt'] = _sec_config.get('salt')
+
+            if sec_config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT:
+                tls = self.request_dispatcher.url_data.tls_key_cert_get(security_name)
+                _, _, full_path = get_validate_tls_key_cert(self.server.tls_dir, tls.config.fs_name)
+                sec_config['tls_key_cert_full_path'] = full_path
 
         wrapper_config = {'id':config.id,
             'is_active':config.is_active, 'method':config.method,
@@ -305,6 +319,15 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def init_email_smtp(self):
+        for k, v in self.worker_config.email_smtp.items():
+            try:
+                self.email_smtp_api.create(k, v.config)
+            except Exception, e:
+                logger.warn('Could not create an SMTP connection `%s`, e:`%s`', k, format_exc(e))
+
+# ################################################################################################################################
+
     def _topic_from_topic_data(self, data):
         return Topic(data.name, data.is_active, True, data.max_depth)
 
@@ -412,7 +435,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_APIKEY_CREATE(self, msg, *args):
         """ Creates a new API key security definition.
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_APIKEY_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.APIKEY_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_APIKEY_EDIT(self, msg, *args):
         """ Updates an existing API key security definition.
@@ -443,7 +466,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_AWS_CREATE(self, msg, *args):
         """ Creates a new AWS security definition
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_AWS_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.AWS_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_AWS_EDIT(self, msg, *args):
         """ Updates an existing AWS security definition.
@@ -474,7 +497,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_OPENSTACK_CREATE(self, msg, *args):
         """ Creates a new OpenStack security definition
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_OPENSTACK_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.OPENSTACK_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_OPENSTACK_EDIT(self, msg, *args):
         """ Updates an existing OpenStack security definition.
@@ -505,7 +528,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_NTLM_CREATE(self, msg, *args):
         """ Creates a new NTLM security definition
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_NTLM_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.NTLM_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_NTLM_EDIT(self, msg, *args):
         """ Updates an existing NTLM security definition.
@@ -536,7 +559,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_BASIC_AUTH_CREATE(self, msg, *args):
         """ Creates a new HTTP Basic Auth security definition
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_BASIC_AUTH_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.BASIC_AUTH_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_BASIC_AUTH_EDIT(self, msg, *args):
         """ Updates an existing HTTP Basic Auth security definition.
@@ -567,7 +590,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_OAUTH_CREATE(self, msg, *args):
         """ Creates a new OAuth security definition
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_OAUTH_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.OAUTH_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_OAUTH_EDIT(self, msg, *args):
         """ Updates an existing OAuth security definition.
@@ -597,22 +620,40 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_TECH_ACC_CREATE(self, msg, *args):
         """ Creates a new technical account.
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.TECH_ACC_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_TECH_ACC_EDIT(self, msg, *args):
         """ Updates an existing technical account.
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_EDIT(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.TECH_ACC_EDIT.value, msg)
 
     def on_broker_msg_SECURITY_TECH_ACC_DELETE(self, msg, *args):
         """ Deletes a technical account.
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_DELETE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.TECH_ACC_DELETE.value, msg)
 
     def on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(self, msg, *args):
         """ Changes the password of a technical account.
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.TECH_ACC_CHANGE_PASSWORD.value, msg)
+
+# ################################################################################################################################
+
+    def update_tls_key_cert(self, msg):
+        _, _, full_path = get_validate_tls_key_cert(self.server.tls_dir, msg.fs_name)
+        msg.full_path = full_path
+
+    def on_broker_msg_SECURITY_TLS_KEY_CERT_CREATE(self, msg):
+        self.update_tls_key_cert(msg)
+        dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_CREATE.value, msg)
+
+    def on_broker_msg_SECURITY_TLS_KEY_CERT_EDIT(self, msg):
+        self.update_tls_key_cert(msg)
+        dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_EDIT.value, msg)
+
+    def on_broker_msg_SECURITY_TLS_KEY_CERT_DELETE(self, msg):
+        self.update_tls_key_cert(msg)
+        dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_DELETE.value, msg)
 
 # ################################################################################################################################
 
@@ -624,7 +665,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_WSS_CREATE(self, msg, *args):
         """ Creates a new WS-Security definition.
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_WSS_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.WSS_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_WSS_EDIT(self, msg, *args):
         """ Updates an existing WS-Security definition.
@@ -656,7 +697,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_SECURITY_XPATH_SEC_CREATE(self, msg, *args):
         """ Creates a new XPath security definition
         """
-        self.request_dispatcher.url_data.on_broker_msg_SECURITY_XPATH_SEC_CREATE(msg, *args)
+        dispatcher.notify(broker_message.SECURITY.XPATH_SEC_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_XPATH_SEC_EDIT(self, msg, *args):
         """ Updates an existing XPath security definition.
@@ -675,7 +716,6 @@ class WorkerStore(BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.XPATH_SEC,
                 self._visit_wrapper_change_password)
-
 
 # ################################################################################################################################
 
@@ -876,7 +916,7 @@ class WorkerStore(BrokerMessageReceiver):
         if(stop-start).days:
             for elem1, elem2 in pairwise(elem for elem in rrule(DAILY, dtstart=start, until=stop)):
                 self.broker_client.invoke_async(
-                    {'action':STATS.DELETE_DAY.value, 'start':elem1.isoformat(), 'stop':elem2.isoformat()})
+                    {'action':broker_message.STATS.DELETE_DAY.value, 'start':elem1.isoformat(), 'stop':elem2.isoformat()})
 
                 # So as not to drown the broker with a sudden surge of messages
                 sleep(0.02)
@@ -970,7 +1010,7 @@ class WorkerStore(BrokerMessageReceiver):
             # so the list of patterns will be updated that many times.
 
             msg = {}
-            msg['action'] = SERVICE.PUBLISH.value
+            msg['action'] = broker_message.SERVICE.PUBLISH.value
             msg['service'] = 'zato.http-soap.set-audit-replace-patterns'
             msg['payload'] = {'id':item_id, 'audit_repl_patt_type':MSG_PATTERN_TYPE.JSON_POINTER.id, 'pattern_list':pattern_list}
             msg['cid'] = new_cid()
@@ -1167,5 +1207,19 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_SEARCH_ES_DELETE(self, msg):
         self.search_es_api.delete(msg.name)
+
+# ################################################################################################################################
+
+    def on_broker_msg_EMAIL_SMTP_CREATE(self, msg):
+        self.email_smtp_api.create(msg.name, msg)
+
+    def on_broker_msg_EMAIL_SMTP_EDIT(self, msg):
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        self.email_smtp_api.edit(del_name, msg)
+
+    def on_broker_msg_EMAIL_SMTP_DELETE(self, msg):
+        self.email_smtp_api.delete(msg.name)
 
 # ################################################################################################################################
