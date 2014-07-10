@@ -27,9 +27,11 @@
             '_username',
             '_edit',
             '_delete',
+            '_ping',
             'id',
             'is_active',
             'timeout',
+            'ping_address',
             'is_debug',
             'mode',
             'username'
@@ -70,6 +72,8 @@
                         <th><a href="#">Username</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -90,9 +94,11 @@
                         <td>{{ item.username|default:"<span class='form_hint'>(None)</span>" }}</td>
                         <td><a href="javascript:$.fn.zato.email.smtp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.email.smtp.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.email.smtp.ping('{{ item.id }}')">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.timeout }}</td>
+                        <td class='ignore'>{{ item.ping_address }}</td>
                         <td class='ignore'>{{ item.is_debug }}</td>
                         <td class='ignore'>{{ item.mode }}</td>
                         <td class='ignore'>{{ item.username|default:"" }}</td>
@@ -148,6 +154,13 @@
                             <td>{{ create_form.is_debug }} </td>
                         </tr>
                         <tr>
+                            <td style="vertical-align:middle">Ping address
+                            <br/>
+                            <span class="form_hint">(Default: {{ default_ping_address }})</span>
+                            </td>
+                            <td>{{ create_form.ping_address }} </td>
+                        </tr>
+                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -198,6 +211,13 @@
                         <tr>
                             <td style="vertical-align:middle">Debug mode</td>
                             <td>{{ edit_form.is_debug }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Ping address
+                            <br/>
+                            <span class="form_hint">(Default: {{ default_ping_address }})</span>
+                            </td>
+                            <td>{{ edit_form.ping_address }} </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">

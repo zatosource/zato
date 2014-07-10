@@ -11,9 +11,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
+# Django
+from django.http import HttpResponse, HttpResponseServerError
+
 # Zato
 from zato.admin.web.forms.email.smtp import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
+from zato.common import EMAIL
 from zato.common.odb.model import SMTP
 
 logger = logging.getLogger(__name__)
@@ -27,12 +31,13 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode')
+        output_required = ('id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address')
         output_optional = ('username',)
         output_repeated = True
 
     def handle(self):
         return {
+            'default_ping_address': EMAIL.DEFAULT.PING_ADDRESS,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit')
         }
@@ -41,7 +46,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode')
+        input_required = ('name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address')
         output_required = ('id', 'name')
 
     def success_message(self, item):
@@ -60,3 +65,10 @@ class Delete(_Delete):
     url_name = 'email-smtp-delete'
     error_message = 'Could not delete the SMTP connection'
     service_name = 'zato.email.smtp.delete'
+
+@method_allowed('POST')
+def ping(req, id, cluster_id):
+    ret = id_only_service(req, 'zato.email.smtp.ping', id, 'Could not ping the SMTP connection, e:[{e}]')
+    if isinstance(ret, HttpResponseServerError):
+        return ret
+    return HttpResponse(ret.data.info)
