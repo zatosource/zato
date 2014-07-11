@@ -25,6 +25,7 @@
             'host',
             'port',
             '_username',
+            '_change_password,',
             '_edit',
             '_delete',
             '_ping',
@@ -73,6 +74,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -92,6 +94,7 @@
                         <td>{{ item.host }}</td>
                         <td>{{ item.port }}</td>
                         <td>{{ item.username|default:"<span class='form_hint'>(None)</span>" }}</td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.email.smtp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.email.smtp.delete_('{{ item.id }}')">Delete</a></td>
                         <td><a href="javascript:$.fn.zato.email.smtp.ping('{{ item.id }}')">Ping</a></td>

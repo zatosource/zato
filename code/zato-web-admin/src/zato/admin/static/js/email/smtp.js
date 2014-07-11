@@ -47,6 +47,7 @@ $.fn.zato.email.smtp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.host);
     row += String.format('<td>{0}</td>', item.port);
     row += String.format('<td>{0}</td>', username);
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}')\">Change password</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.email.smtp.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.email.smtp.delete_({0});'>Delete</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.email.smtp.ping({0});'>Ping</a>", item.id));
