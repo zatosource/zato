@@ -569,6 +569,11 @@ class EMAIL:
         TIMEOUT = 30
         PING_ADDRESS = 'invalid@invalid'
 
+    class IMAP:
+        class MODE(Constants):
+            PLAIN = ValueConstant('plain')
+            SSL = ValueConstant('ssl')
+
     class SMTP:
         class MODE(Constants):
             PLAIN = ValueConstant('plain')

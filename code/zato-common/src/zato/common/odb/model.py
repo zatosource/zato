@@ -1644,3 +1644,26 @@ class SMTP(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('smtp_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class IMAP(Base):
+    __tablename__ = 'email_imap'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('email_imap_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    host = Column(String(400), nullable=False)
+    port = Column(Integer(), nullable=False)
+    timeout = Column(Integer(), nullable=False)
+    is_debug = Column(Boolean(), nullable=False)
+    username = Column(String(400), nullable=True)
+    password = Column(String(400), nullable=True)
+    mode = Column(String(20), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('imap_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
