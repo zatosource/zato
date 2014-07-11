@@ -15,6 +15,7 @@ import logging
 from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
+from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.email.smtp import CreateForm, EditForm
 from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
      Index as _Index, method_allowed
@@ -40,7 +41,8 @@ class Index(_Index):
         return {
             'default_ping_address': EMAIL.DEFAULT.PING_ADDRESS,
             'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit')
+            'edit_form': EditForm(prefix='edit'),
+            'change_password_form': ChangePasswordForm()
         }
 
 class _CreateEdit(CreateEdit):
