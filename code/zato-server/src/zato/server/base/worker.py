@@ -1222,4 +1222,7 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_EMAIL_SMTP_DELETE(self, msg):
         self.email_smtp_api.delete(msg.name)
 
+    def on_broker_msg_EMAIL_SMTP_CHANGE_PASSWORD(self, msg):
+        self.email_smtp_api.change_password(msg)
+
 # ################################################################################################################################
