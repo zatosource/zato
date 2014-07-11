@@ -28,9 +28,14 @@ _modes = {
     EMAIL.SMTP.MODE.STARTTLS.value: 'TLS'
 }
 
+# ################################################################################################################################
+
 class EMailAPI(object):
-    def __init__(self, smtp):
+    def __init__(self, smtp, imap):
         self.smtp = smtp
+        self.imap = imap
+
+# ################################################################################################################################
 
 class SMTPConnection(object):
     def __init__(self, config, config_no_sensitive):
@@ -72,9 +77,13 @@ class SMTPConnection(object):
                 logger.info('SMTP message `%r` sent from `%r` to `%r`, attachments:`%r`',
                     msg.subject, msg.from_, msg.to, atts_info)
 
+# ################################################################################################################################
+
 class SMTPAPI(BaseAPI):
     """ API to obtain SMTP connections through.
     """
+
+# ################################################################################################################################
 
 class SMTPConnStore(BaseStore):
     """ Stores connections to SMTP.
@@ -82,3 +91,19 @@ class SMTPConnStore(BaseStore):
     def create_impl(self, config, config_no_sensitive):
         config.mode_outbox = _modes[config.mode]
         return SMTPConnection(config, config_no_sensitive)
+
+# ################################################################################################################################
+
+class IMAPAPI(BaseAPI):
+    """ API to obtain SMTP connections through.
+    """
+
+# ################################################################################################################################
+
+class IMAPConnStore(BaseStore):
+    """ Stores connections to IMAP.
+    """
+    def create_impl(self, config, config_no_sensitive):
+        raise Exception(config)
+
+# ################################################################################################################################

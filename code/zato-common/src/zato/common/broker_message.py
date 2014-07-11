@@ -341,6 +341,12 @@ class EMAIL(Constants):
     SMTP_DELETE = ValueConstant('')
     SMTP_CHANGE_PASSWORD = ValueConstant('')
 
+    # New in 2.0
+    IMAP_CREATE = ValueConstant('')
+    IMAP_EDIT = ValueConstant('')
+    IMAP_DELETE = ValueConstant('')
+    IMAP_CHANGE_PASSWORD = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'
