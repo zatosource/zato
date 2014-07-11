@@ -46,15 +46,15 @@ class ChangePassword(ChangePasswordBase):
     """ Changes the password of an SMTP connection.
     """
     password_required = False
-    
+
     class SimpleIO(ChangePasswordBase.SimpleIO):
         request_elem = 'zato_email_smtp_change_password_request'
         response_elem = 'zato_email_smtp_change_password_response'
-    
+
     def handle(self):
         def _auth(instance, password):
             instance.password = password
-            
+
         return self._handle(SMTP, _auth, EMAIL.SMTP_CHANGE_PASSWORD.value)
 
 class Ping(AdminService):
@@ -84,4 +84,4 @@ class Ping(AdminService):
         self.email.smtp.get(item.name, True).conn.send(msg)
         response_time = time() - start_time
 
-        self.response.payload.info = 'Sent a ping message, took:`{0:03.4f} s`, check server logs for details.'.format(response_time)
+        self.response.payload.info = 'Ping submitted, took:`{0:03.4f} s`, check server logs for details.'.format(response_time)
