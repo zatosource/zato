@@ -788,6 +788,8 @@ urlpatterns += patterns('',
         login_required(email_smtp.Delete()), name=email_smtp.Delete.url_name),
     url(r'^zato/email/smtp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(email_smtp.ping), name='smtp-email-ping'),
+    url(r'^zato/email/smtp/change-password/$',
+        login_required(email_smtp.change_password), name='email-smtp-change-password'),
     )
 
 # ################################################################################################################################
