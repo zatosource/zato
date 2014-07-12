@@ -39,7 +39,7 @@ class Index(_Index):
 
     def handle(self):
         return {
-            'default_ping_address': EMAIL.DEFAULT.PING_ADDRESS,
+            'default_get_criteria': EMAIL.DEFAULT.GET_CRITERIA,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm()

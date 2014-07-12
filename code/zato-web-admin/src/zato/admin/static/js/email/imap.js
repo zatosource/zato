@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.IMAP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.email.imap.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'host', 'port', 'timeout', 'mode', 'ping_address']);
+    $.fn.zato.data_table.setup_forms(['name', 'host', 'port', 'timeout', 'mode', 'get_criteria']);
 })
 
 

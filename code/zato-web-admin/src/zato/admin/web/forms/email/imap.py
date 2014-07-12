@@ -25,11 +25,13 @@ class CreateForm(forms.Form):
 
     host = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     port = forms.CharField(initial=IMAP4_PORT, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
-    timeout = forms.CharField(initial=EMAIL.DEFAULT.TIMEOUT, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
+    timeout = forms.CharField(
+        initial=EMAIL.DEFAULT.TIMEOUT, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
     is_debug = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     mode = forms.ChoiceField(widget=forms.Select())
-    get_criteria = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%', 'class':'required'}))
+    get_criteria = forms.CharField(
+        initial=EMAIL.DEFAULT.GET_CRITERIA, widget=forms.Textarea(attrs={'style':'width:100%', 'class':'required'}))
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)

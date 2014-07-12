@@ -568,6 +568,7 @@ class EMAIL:
     class DEFAULT:
         TIMEOUT = 30
         PING_ADDRESS = 'invalid@invalid'
+        GET_CRITERIA = 'UNSEEN'
 
     class IMAP:
         class MODE(Constants):
