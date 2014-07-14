@@ -27,7 +27,6 @@ import requests
 
 # Zato
 from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, URL_TYPE
-from zato.common.broker_message import SECURITY
 from zato.common.util import get_component_name
 from zato.server.connection.queue import ConnectionQueue
 
