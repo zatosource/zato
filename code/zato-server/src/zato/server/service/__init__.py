@@ -246,7 +246,7 @@ class Service(object):
         self.cassandra_query = self.worker_store.cassandra_query_api
 
         # E-mail
-        self.email = EMailAPI(self.worker_store.email_smtp_api)
+        self.email = EMailAPI(self.worker_store.email_smtp_api, self.worker_store.email_imap_api)
 
         # Search
         self.search = SearchAPI(self.worker_store.search_es_api)

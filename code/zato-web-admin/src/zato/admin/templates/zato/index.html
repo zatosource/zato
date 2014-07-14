@@ -165,6 +165,7 @@
                         <li>
                             <span class="like-a">E-mail &rarr;</span>
                             <ul>
+                                <li class='wide'><a href="{% url email-imap %}?cluster={{ cluster_id|default:'' }}">IMAP</a></li>
                                 <li class='wide'><a href="{% url email-smtp %}?cluster={{ cluster_id|default:'' }}">SMTP</a></li>
                             </ul>
                         </li>
