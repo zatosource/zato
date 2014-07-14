@@ -43,7 +43,7 @@ from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
-from zato.server.connection.email import SMTPAPI, SMTPConnStore
+from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
 from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
@@ -109,6 +109,7 @@ class WorkerStore(BrokerMessageReceiver):
 
         # E-mail
         self.email_smtp_api = SMTPAPI(SMTPConnStore())
+        self.email_imap_api = IMAPAPI(IMAPConnStore())
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
@@ -121,6 +122,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_search_es()
 
         self.init_email_smtp()
+        self.init_email_imap()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
@@ -325,6 +327,15 @@ class WorkerStore(BrokerMessageReceiver):
                 self.email_smtp_api.create(k, v.config)
             except Exception, e:
                 logger.warn('Could not create an SMTP connection `%s`, e:`%s`', k, format_exc(e))
+
+# ################################################################################################################################
+
+    def init_email_imap(self):
+        for k, v in self.worker_config.email_imap.items():
+            try:
+                self.email_imap_api.create(k, v.config)
+            except Exception, e:
+                logger.warn('Could not create an IMAP connection `%s`, e:`%s`', k, format_exc(e))
 
 # ################################################################################################################################
 
@@ -1217,9 +1228,31 @@ class WorkerStore(BrokerMessageReceiver):
         # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
+        msg.password = self.email_smtp_api.get(del_name, True).config.password
         self.email_smtp_api.edit(del_name, msg)
 
     def on_broker_msg_EMAIL_SMTP_DELETE(self, msg):
         self.email_smtp_api.delete(msg.name)
+
+    def on_broker_msg_EMAIL_SMTP_CHANGE_PASSWORD(self, msg):
+        self.email_smtp_api.change_password(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_EMAIL_IMAP_CREATE(self, msg):
+        self.email_imap_api.create(msg.name, msg)
+
+    def on_broker_msg_EMAIL_IMAP_EDIT(self, msg):
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        msg.password = self.email_imap_api.get(del_name, True).config.password
+        self.email_imap_api.edit(del_name, msg)
+
+    def on_broker_msg_EMAIL_IMAP_DELETE(self, msg):
+        self.email_imap_api.delete(msg.name)
+
+    def on_broker_msg_EMAIL_IMAP_CHANGE_PASSWORD(self, msg):
+        self.email_imap_api.change_password(msg)
 
 # ################################################################################################################################
