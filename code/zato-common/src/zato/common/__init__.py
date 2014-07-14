@@ -207,6 +207,7 @@ class SEC_DEF_TYPE:
     TECH_ACCOUNT = 'tech_acc'
     WSS = 'wss'
     XPATH_SEC = 'xpath_sec'
+    TLS_KEY_CERT = 'tls_key_cert'
 
 SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.APIKEY: 'API key',
@@ -218,6 +219,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.TECH_ACCOUNT: 'Tech account',
     SEC_DEF_TYPE.WSS: 'WS-Security',
     SEC_DEF_TYPE.XPATH_SEC: 'XPath',
+    SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
 }
 
 # Name of the scheduler's job that will ensure a singleton server is always
@@ -560,6 +562,25 @@ class PUB_SUB:
             def __iter__(self):
                 return iter((self.OBJECT, self.JSON, self.XML))
 
+class EMAIL:
+
+    class DEFAULT:
+        TIMEOUT = 10
+        PING_ADDRESS = 'invalid@invalid'
+        GET_CRITERIA = 'UNSEEN'
+        IMAP_DEBUG_LEVEL=0
+
+    class IMAP:
+        class MODE(Constants):
+            PLAIN = ValueConstant('plain')
+            SSL = ValueConstant('ssl')
+
+    class SMTP:
+        class MODE(Constants):
+            PLAIN = ValueConstant('plain')
+            SSL = ValueConstant('ssl')
+            STARTTLS = ValueConstant('starttls')
+
 class NOTIF:
     class DEFAULT:
         CHECK_INTERVAL = 5 # In seconds
@@ -675,7 +696,7 @@ class Inactive(ZatoException):
     as an outgoing connection or a channel.
     """
     def __init__(self, name):
-        super(Inactive, self).__init__(None, '[{}] is inactive'.format(name))
+        super(Inactive, self).__init__(None, '`{}` is inactive'.format(name))
 
 class SourceInfo(object):
     """ A bunch of attributes dealing the service's source code.
@@ -787,3 +808,37 @@ class StatsElem(object):
 
     def __bool__(self):
         return bool(self.service_name) # Empty stats_elems won't have a service name set
+
+# ################################################################################################################################
+
+class SMTPMessage(object):
+    def __init__(self, from_=None, to=None, subject='', body='', attachments=None, is_html=False, headers=None,
+            charset='utf8', is_rfc2231=True):
+        self.from_ = from_
+        self.to = to
+        self.subject = subject
+        self.body = body
+        self.attachments = attachments or []
+        self.is_html = is_html
+        self.headers = headers or {}
+        self.charset = charset
+        self.is_rfc2231 = is_rfc2231
+
+    def attach(self, name, contents):
+        self.attachments.append({'name':name, 'contents':contents})
+
+class IMAPMessage(object):
+    def __init__(self, uid, conn, data):
+        self.uid = uid
+        self.conn = conn
+        self.data = data
+
+    def __repr__(self):
+        return '<{} at {}, uid:`{}`, conn.config:`{}`>'.format(
+            self.__class__.__name__, hex(id(self)), self.uid, self.conn.config_no_sensitive)
+
+    def delete(self):
+        self.conn.delete(self.uid)
+
+    def mark_seen(self):
+        self.conn.mark_seen(self.uid)

@@ -448,3 +448,15 @@ class SecurityList(object):
         return sec_list
 
 # ################################################################################################################################
+
+def id_only_service(req, service, id, error_template):
+    try:
+        result = req.zato.client.invoke(service, {'id': id})
+        if not result.ok:
+            raise Exception(result.details)
+        else:
+            return result
+    except Exception, e:
+        msg = error_template.format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
