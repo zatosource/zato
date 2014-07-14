@@ -1658,10 +1658,11 @@ class IMAP(Base):
     host = Column(String(400), nullable=False)
     port = Column(Integer(), nullable=False)
     timeout = Column(Integer(), nullable=False)
-    is_debug = Column(Boolean(), nullable=False)
+    debug_level = Column(Integer(), nullable=False)
     username = Column(String(400), nullable=True)
     password = Column(String(400), nullable=True)
     mode = Column(String(20), nullable=False)
+    get_criteria = Column(String(2000), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('imap_conns', order_by=name, cascade='all, delete, delete-orphan'))

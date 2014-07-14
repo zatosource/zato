@@ -215,7 +215,7 @@ class CreateEditMeta(AdminServiceMeta):
                     else:
                         instance = attrs.model()
 
-                    instance.fromdict(input, allow_pk=True)
+                    instance.fromdict(input, exclude=['password'], allow_pk=True)
 
                     # Now that we have an instance which is known not to be a duplicate
                     # we can possibly invoke a customization function before we commit

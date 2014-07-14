@@ -1228,6 +1228,7 @@ class WorkerStore(BrokerMessageReceiver):
         # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
+        msg.password = self.email_smtp_api.get(del_name, True).config.password
         self.email_smtp_api.edit(del_name, msg)
 
     def on_broker_msg_EMAIL_SMTP_DELETE(self, msg):
@@ -1245,6 +1246,7 @@ class WorkerStore(BrokerMessageReceiver):
         # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
+        msg.password = self.email_imap_api.get(del_name, True).config.password
         self.email_imap_api.edit(del_name, msg)
 
     def on_broker_msg_EMAIL_IMAP_DELETE(self, msg):

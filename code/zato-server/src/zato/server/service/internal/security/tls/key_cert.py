@@ -8,15 +8,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from uuid import uuid4
-
 # Zato
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import TLSKeyCertSecurity
 from zato.common.odb.query import tls_key_cert_list
 from zato.common.util import get_validate_tls_key_cert
-from zato.server.service.internal import AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 elem = 'security_tls_key_cert'
