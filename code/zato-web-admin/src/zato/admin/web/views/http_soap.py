@@ -27,7 +27,7 @@ from paste.util.converters import asbool
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.http_soap import AuditLogEntryList, ChooseClusterForm, CreateForm, EditForm, ReplacePatternsForm
-from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, method_allowed, SecurityList
+from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, method_allowed, id_only_service, SecurityList
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
      MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE
@@ -121,7 +121,7 @@ def index(req):
             # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
             if connection == 'outgoing':
                 if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in (
-                    SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TECH_ACCOUNT, SEC_DEF_TYPE.APIKEY):
+                    SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TECH_ACCOUNT, SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.TLS_KEY_CERT):
                     continue
                 elif transport == URL_TYPE.SOAP and def_item.sec_type not in (
                     SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.WSS):
@@ -208,33 +208,21 @@ def edit(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-def _id_only_service(req, service, id, error_template):
-    try:
-        result = req.zato.client.invoke(service, {'id': id})
-        if not result.ok:
-            raise Exception(result.details)
-        else:
-            return result
-    except Exception, e:
-        msg = error_template.format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-
 @method_allowed('POST')
 def delete(req, id, cluster_id):
-    _id_only_service(req, 'zato.http-soap.delete', id, 'Could not delete the object, e:[{e}]')
+    id_only_service(req, 'zato.http-soap.delete', id, 'Could not delete the object, e:[{e}]')
     return HttpResponse()
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = _id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:[{e}]')
+    ret = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:[{e}]')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse(ret.data.info)
 
 @method_allowed('POST')
 def reload_wsdl(req, id, cluster_id):
-    ret = _id_only_service(req, 'zato.http-soap.reload-wsdl', id, 'Could not reload the WSDL, e:[{e}]')
+    ret = id_only_service(req, 'zato.http-soap.reload-wsdl', id, 'Could not reload the WSDL, e:[{e}]')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse('WSDL reloaded, check server logs for details')

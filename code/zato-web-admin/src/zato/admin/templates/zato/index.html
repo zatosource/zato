@@ -98,10 +98,9 @@
                         <li>
                             <span class="like-a">SSL/TLS &rarr;</span>
                             <ul>
-                                <li><a href="{% url security-tls-client-key %}?cluster={{ cluster_id|default:'' }}">Client keys</a></li>
-                                <li><a href="{% url message-namespace %}?cluster={{ cluster_id|default:'' }}">Client certs<br/>and bundles</a></li>
+                                <li><a href="{% url security-tls-key-cert %}?cluster={{ cluster_id|default:'' }}">Keys and certs</a></li>
+                                <li><a href="{% url message-namespace %}?cluster={{ cluster_id|default:'' }}">Partner certs</a></li>
                                 <li><a href="{% url message-xpath %}?cluster={{ cluster_id|default:'' }}">CA certs</a></li>
-                                <li><a href="{% url message-xpath %}?cluster={{ cluster_id|default:'' }}">Server certs</a></li>
                             </ul>
                         </li>
                         <li><a href="{% url security-tech-account %}?cluster={{ cluster_id|default:'' }}">Technical accounts</a></li>
@@ -161,6 +160,13 @@
                             <span class="like-a">Queries &rarr;</span>
                             <ul>
                                 <li class='wide'><a href="{% url query-cassandra %}?cluster={{ cluster_id|default:'' }}">Cassandra</a></li>
+                            </ul>
+                        </li>
+                        <li>
+                            <span class="like-a">E-mail &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url email-imap %}?cluster={{ cluster_id|default:'' }}">IMAP</a></li>
+                                <li class='wide'><a href="{% url email-smtp %}?cluster={{ cluster_id|default:'' }}">SMTP</a></li>
                             </ul>
                         </li>
                     </ul>

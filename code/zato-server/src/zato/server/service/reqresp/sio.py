@@ -68,6 +68,10 @@ class ForceType(object):
             (True, DATA_FORMAT.XML): self.to_xml,
         }
 
+    def __cmp__(self, other):
+        cmp_to = getattr(other, 'name', other)
+        return cmp(self.name, cmp_to)
+
     def __repr__(self):
         return '<{} at {} name:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.name)
 

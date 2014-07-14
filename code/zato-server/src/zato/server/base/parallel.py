@@ -93,6 +93,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.service_modules = None # Set programmatically in Spring
         self.service_sources = None # Set in a config file
         self.base_dir = None
+        self.tls_dir = None
         self.hot_deploy_config = None
         self.pickup = None
         self.fs_server_config = None
@@ -496,6 +497,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_tech_acc_list(server.cluster.id, True)
         self.config.tech_acc = ConfigDict.from_query('tech_acc', query)
 
+        # TLS key/cert pairs
+        query = self.odb.get_tls_key_cert_list(server.cluster.id, True)
+        self.config.tls_key_cert = ConfigDict.from_query('tls_key_cert', query)
+
         # WS-Security
         query = self.odb.get_wss_list(server.cluster.id, True)
         self.config.wss = ConfigDict.from_query('wss', query)
@@ -565,6 +570,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         query = self.odb.get_pubsub_consumer_list(server.cluster.id, True)
         self.config.pubsub.consumers = ConfigDict.from_query('pubsub_consumers', query, list_config=True)
+
+        # E-mail - SMTP
+        query = self.odb.get_email_smtp_list(server.cluster.id, True)
+        self.config.email_smtp = ConfigDict.from_query('email_smtp', query)
+
+        # E-mail - IMAP
+        query = self.odb.get_email_imap_list(server.cluster.id, True)
+        self.config.email_imap = ConfigDict.from_query('email_imap', query)
 
         # Assign config to worker
         self.worker_store.worker_config = self.config

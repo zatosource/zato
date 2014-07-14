@@ -8,6 +8,7 @@ code/eggs/*
 code/downloads/*
 code/include/*
 code/lib/*
+code/lib64
 code/local/*
 code/parts/*
 code/release-info/revision.txt

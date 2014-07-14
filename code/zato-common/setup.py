@@ -35,7 +35,7 @@ setup(
           'anyjson==0.3.3',
           'bunch==1.0.1',
           'configobj==5.0.5',
-          'bzr==2.5',
+          'bzr==2.6',
           'distutils2==1.0a4',
           'lxml==3.3.5',
           'mock==1.0.1',

@@ -392,6 +392,19 @@ class XPathSecurity(SecurityBase):
 
 # ################################################################################################################################
 
+class TLSKeyCertSecurity(SecurityBase):
+    """ New in 2.0: Stores information regarding key/cert pairs.
+    """
+    __tablename__ = 'sec_tls_key_cert'
+    __mapper_args__ = {'polymorphic_identity':'tls_key_cert'}
+
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+    fs_name = Column(String(200), nullable=False)
+    cert_fp = Column(String(200), nullable=False)
+    cert_subject = Column(String(1200), nullable=False)
+
+# ################################################################################################################################
+
 class HTTPSOAP(Base):
     """ An incoming or outgoing HTTP/SOAP connection.
     """
@@ -1608,4 +1621,50 @@ class CassandraQuery(Base):
     cluster = relationship(Cluster, backref=backref('cassandra_queries', order_by=name, cascade='all, delete, delete-orphan'))
 
     def_id = Column(Integer, ForeignKey('conn_def_cassandra.id', ondelete='CASCADE'), nullable=False)
-    def_ = relationship(CassandraConn, backref=backref('queries', cascade='all, delete, delete-orphan'))
+    def_ = relationship(CassandraConn, backref=backref('cassandra_queries', cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class SMTP(Base):
+    __tablename__ = 'email_smtp'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('email_smtp_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    host = Column(String(400), nullable=False)
+    port = Column(Integer(), nullable=False)
+    timeout = Column(Integer(), nullable=False)
+    is_debug = Column(Boolean(), nullable=False)
+    username = Column(String(400), nullable=True)
+    password = Column(String(400), nullable=True)
+    mode = Column(String(20), nullable=False)
+    ping_address = Column(String(200), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('smtp_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class IMAP(Base):
+    __tablename__ = 'email_imap'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('email_imap_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    host = Column(String(400), nullable=False)
+    port = Column(Integer(), nullable=False)
+    timeout = Column(Integer(), nullable=False)
+    debug_level = Column(Integer(), nullable=False)
+    username = Column(String(400), nullable=True)
+    password = Column(String(400), nullable=True)
+    mode = Column(String(20), nullable=False)
+    get_criteria = Column(String(2000), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('imap_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
