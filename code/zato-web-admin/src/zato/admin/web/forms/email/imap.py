@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from imaplib import IMAP4_PORT
-from smtplib import SMTP_PORT
 
 # Django
 from django import forms
@@ -22,12 +21,12 @@ class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-
     host = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     port = forms.CharField(initial=IMAP4_PORT, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
     timeout = forms.CharField(
-        initial=EMAIL.DEFAULT.TIMEOUT, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
-    is_debug = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+        initial=EMAIL.DEFAULT.TIMEOUT, widget=forms.TextInput(attrs={'class':'required', 'style':'width:10%'}))
+    debug_level = forms.CharField(
+        initial=EMAIL.DEFAULT.IMAP_DEBUG_LEVEL, widget=forms.TextInput(attrs={'class':'required', 'style':'width:7%'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     mode = forms.ChoiceField(widget=forms.Select())
     get_criteria = forms.CharField(
@@ -43,4 +42,3 @@ class CreateForm(forms.Form):
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-    is_debug = forms.BooleanField(required=False, widget=forms.CheckboxInput())

@@ -37,7 +37,6 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
     }
 
     var is_active = item.is_active == true
-    var is_debug = item.is_debug == true
     var username = item.username ? item.username : "<span class='form_hint'>(None)</span>";
 
     row += "<td class='numbering'>&nbsp;</td>";
@@ -54,7 +53,7 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
-    row += String.format("<td class='ignore'>{0}</td>", is_debug);
+    row += String.format("<td class='ignore'>{0}</td>", item.debug_level);
     row += String.format("<td class='ignore'>{0}</td>", item.mode);
     row += String.format("<td class='ignore'>{0}</td>", item.get_criteria ? item.get_criteria : "");
     row += String.format("<td class='ignore'>{0}</td>", item.username ? item.username : "");

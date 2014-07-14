@@ -13,7 +13,6 @@ import os
 from collections import OrderedDict
 from cStringIO import StringIO
 from httplib import responses
-from smtplib import SMTP_PORT
 from string import Template
 from sys import maxint
 from traceback import format_exc
@@ -566,9 +565,10 @@ class PUB_SUB:
 class EMAIL:
 
     class DEFAULT:
-        TIMEOUT = 30
+        TIMEOUT = 10
         PING_ADDRESS = 'invalid@invalid'
         GET_CRITERIA = 'UNSEEN'
+        IMAP_DEBUG_LEVEL=0
 
     class IMAP:
         class MODE(Constants):
@@ -826,3 +826,19 @@ class SMTPMessage(object):
 
     def attach(self, name, contents):
         self.attachments.append({'name':name, 'contents':contents})
+
+class IMAPMessage(object):
+    def __init__(self, uid, conn, data):
+        self.uid = uid
+        self.conn = conn
+        self.data = data
+
+    def __repr__(self):
+        return '<{} at {}, uid:`{}`, conn.config:`{}`>'.format(
+            self.__class__.__name__, hex(id(self)), self.uid, self.conn.config_no_sensitive)
+
+    def delete(self):
+        self.conn.delete(self.uid)
+
+    def mark_seen(self):
+        self.conn.mark_seen(self.uid)

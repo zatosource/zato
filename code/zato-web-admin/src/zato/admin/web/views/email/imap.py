@@ -33,13 +33,13 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address')
+        output_required = ('id', 'name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', 'get_criteria')
         output_optional = ('username',)
         output_repeated = True
 
     def handle(self):
         return {
-            'default_get_criteria': EMAIL.DEFAULT.GET_CRITERIA,
+            'default_debug_level': EMAIL.DEFAULT.IMAP_DEBUG_LEVEL,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm()
@@ -49,7 +49,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'host', 'port', 'timeout', 'username', 'is_debug', 'mode', 'ping_address')
+        input_required = ('name', 'is_active', 'host', 'port', 'timeout', 'username', 'debug_level', 'mode', 'get_criteria')
         output_required = ('id', 'name')
 
     def success_message(self, item):
