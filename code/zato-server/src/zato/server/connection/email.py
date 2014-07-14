@@ -9,15 +9,21 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from contextlib import contextmanager
 from cStringIO import StringIO
 from logging import getLogger, INFO
 from traceback import format_exc
+
+# imbox
+from imbox import Imbox as _Imbox
+from imbox.imap import ImapTransport as _ImapTransport
+from imbox.parser import parse_email
 
 # Outbox
 from outbox import AnonymousOutbox, Attachment, Email, Outbox
 
 # Zato
-from zato.common import Inactive, EMAIL
+from zato.common import IMAPMessage, EMAIL
 from zato.server.store import BaseAPI, BaseStore
 
 logger = getLogger(__name__)
@@ -28,11 +34,68 @@ _modes = {
     EMAIL.SMTP.MODE.STARTTLS.value: 'TLS'
 }
 
-class EMailAPI(object):
-    def __init__(self, smtp):
-        self.smtp = smtp
+# ################################################################################################################################
 
-class SMTPConnection(object):
+class Imbox(_Imbox):
+
+    def __init__(self, config, config_no_sensitive):
+        self.config = config
+        self.config_no_sensitive = config_no_sensitive
+        self.server = ImapTransport(self.config.host, self.config.port, self.config.mode==EMAIL.IMAP.MODE.SSL.value)
+        self.connection = self.server.connect(self.config.username, self.config.password, self.config.debug_level)
+
+    def __repr__(self):
+        return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
+
+    def fetch_by_uid(self, uid):
+        message, data = self.connection.uid('fetch', uid, '(BODY.PEEK[])')
+        raw_email = data[0][1]
+
+        email_object = parse_email(raw_email)
+
+        return email_object
+
+    def search(self, criteria):
+        message, data = self.connection.uid('search', None, criteria)
+        return data[0].split()
+
+    def fetch_list(self, criteria):
+        uid_list = self.search(criteria)
+
+        for uid in uid_list:
+            yield (uid, self.fetch_by_uid(uid))
+
+    def close(self):
+        self.connection.close()
+
+# ################################################################################################################################
+
+class ImapTransport(_ImapTransport):
+    def connect(self, username, password, debug_level):
+        self.server = self.transport(self.hostname, self.port)
+        self.server.debug = debug_level
+        self.server.login(username, password)
+        self.server.select()
+
+        return self.server
+
+# ################################################################################################################################
+
+class EMailAPI(object):
+    def __init__(self, smtp, imap):
+        self.smtp = smtp
+        self.imap = imap
+
+# ################################################################################################################################
+
+class _Connection(object):
+
+    def __repr__(self):
+        return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
+
+# ################################################################################################################################
+
+class SMTPConnection(_Connection):
     def __init__(self, config, config_no_sensitive):
         self.config = config
         self.config_no_sensitive = config_no_sensitive
@@ -46,9 +109,6 @@ class SMTPConnection(object):
             self.conn_args.insert(0, self.config.password)
         else:
             self.conn_class = AnonymousOutbox
-
-    def __repr__(self):
-        return '<{} at {}, config:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
 
     def send(self, msg):
 
@@ -72,9 +132,13 @@ class SMTPConnection(object):
                 logger.info('SMTP message `%r` sent from `%r` to `%r`, attachments:`%r`',
                     msg.subject, msg.from_, msg.to, atts_info)
 
+# ################################################################################################################################
+
 class SMTPAPI(BaseAPI):
     """ API to obtain SMTP connections through.
     """
+
+# ################################################################################################################################
 
 class SMTPConnStore(BaseStore):
     """ Stores connections to SMTP.
@@ -82,3 +146,56 @@ class SMTPConnStore(BaseStore):
     def create_impl(self, config, config_no_sensitive):
         config.mode_outbox = _modes[config.mode]
         return SMTPConnection(config, config_no_sensitive)
+
+# ################################################################################################################################
+
+class IMAPConnection(_Connection):
+    def __init__(self, config, config_no_sensitive):
+        self.config = config
+        self.config_no_sensitive = config_no_sensitive
+
+    @contextmanager
+    def get_connection(self):
+        conn = Imbox(self.config, self.config_no_sensitive)
+        yield conn
+        conn.close()
+
+    def get(self, folder='INBOX'):
+        conn = self.get_connection()
+        conn.connection.select(folder)
+
+        for uid, msg in conn.fetch_list(' '.join(self.config.get_criteria.splitlines())):
+            yield (uid, IMAPMessage(uid, conn, msg))
+
+        conn.connection.close()
+
+    def ping(self):
+        with self.get_connection() as conn:
+            conn.connection.noop()
+
+    def delete(self, *uids):
+        with self.get_connection() as conn:
+            for uid in uids:
+                mov, data = self.connection.uid('STORE', uid, '+FLAGS', '(\\Deleted)')
+            conn.connection.expunge()
+
+    def mark_seen(self, *uids):
+        with self.get_connection() as conn:
+            for uid in uids:
+                conn.connection.uid('STORE', uid, '+FLAGS', '\\Seen')
+
+# ################################################################################################################################
+
+class IMAPAPI(BaseAPI):
+    """ API to obtain SMTP connections through.
+    """
+
+# ################################################################################################################################
+
+class IMAPConnStore(BaseStore):
+    """ Stores connections to IMAP.
+    """
+    def create_impl(self, config, config_no_sensitive):
+        return IMAPConnection(config, config_no_sensitive)
+
+# ################################################################################################################################

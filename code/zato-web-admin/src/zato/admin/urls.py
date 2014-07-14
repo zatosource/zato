@@ -24,6 +24,7 @@ from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
 from zato.admin.web.views.definition import amqp as def_amqp
 from zato.admin.web.views.definition import cassandra as def_cassandra
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
+from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
 from zato.admin.web.views.message import json_pointer, namespace, xpath
@@ -776,6 +777,21 @@ urlpatterns += patterns('',
 
 urlpatterns += patterns('',
 
+    # .. IMAP
+
+    url(r'^zato/email/imap/$',
+        login_required(email_imap.Index()), name=email_imap.Index.url_name),
+    url(r'^zato/email/imap/create/$',
+        login_required(email_imap.Create()), name=email_imap.Create.url_name),
+    url(r'^zato/email/imap/edit/$',
+        login_required(email_imap.Edit()), name=email_imap.Edit.url_name),
+    url(r'^zato/email/imap/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(email_imap.Delete()), name=email_imap.Delete.url_name),
+    url(r'^zato/email/imap/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(email_imap.ping), name='imap-email-ping'),
+    url(r'^zato/email/imap/change-password/$',
+        login_required(email_imap.change_password), name='email-imap-change-password'),
+
     # .. SMTP
 
     url(r'^zato/email/smtp/$',
@@ -790,6 +806,7 @@ urlpatterns += patterns('',
         login_required(email_smtp.ping), name='smtp-email-ping'),
     url(r'^zato/email/smtp/change-password/$',
         login_required(email_smtp.change_password), name='email-smtp-change-password'),
+
     )
 
 # ################################################################################################################################
