@@ -739,6 +739,8 @@ urlpatterns += patterns('',
         login_required(solr.Edit()), name=solr.Edit.url_name),
     url(r'^zato/search/solr/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(solr.Delete()), name=solr.Delete.url_name),
+    url(r'^zato/search/solr/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(solr.ping), name='search-solr-ping'),
 
     )
 

@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from inspect import getmodule, isclass
 from logging import getLogger
+from time import time
 from traceback import format_exc
 
 # Bunch
@@ -36,7 +37,8 @@ req_resp = {
     'Create': 'create',
     'Edit': 'edit',
     'GetList': 'get_list',
-    'Delete': 'delete'
+    'Delete': 'delete',
+    'Ping': 'ping',
 }
 
 
@@ -275,5 +277,28 @@ class DeleteMeta(AdminServiceMeta):
                     self.request.input.action = getattr(attrs.broker_message, attrs.broker_message_prefix + 'DELETE').value
                     self.request.input.name = auth.name
                     self.broker_client.publish(self.request.input)
+
+        return handle_impl
+
+class PingMeta(AdminServiceMeta):
+    def __init__(cls, name, bases, attrs):
+        attrs = update_attrs(cls, name, attrs)
+        cls.SimpleIO = PingMeta.get_sio(attrs, name, ['id'], ['info'])
+        cls.handle = PingMeta.handle(attrs)
+        return super(PingMeta, cls).__init__(cls)
+
+    @staticmethod
+    def handle(attrs):
+        def handle_impl(self):
+            with closing(self.odb.session()) as session:
+                instance = session.query(attrs.model).\
+                    filter(attrs.model.id==self.request.input.id).\
+                    one()
+
+                start_time = time()
+                self.ping(instance)
+                response_time = time() - start_time
+
+                self.response.payload.info = 'Ping submitted in {0:03.4f} s, check server logs for details.'.format(response_time)
 
         return handle_impl
