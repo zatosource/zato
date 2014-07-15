@@ -31,7 +31,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'address', 'timeout', 'ping_path', 'options')
+        output_required = ('id', 'name', 'is_active', 'address', 'timeout', 'ping_path', 'options', 'pool_size')
         output_repeated = True
 
     def handle(self):
@@ -40,13 +40,14 @@ class Index(_Index):
             'edit_form': EditForm(prefix='edit'),
             'default_timeout': SEARCH.SOLR.DEFAULTS.TIMEOUT.value,
             'default_ping_path': SEARCH.SOLR.DEFAULTS.PING_PATH.value,
+            'default_pool_size': SEARCH.SOLR.DEFAULTS.POOL_SIZE.value,
         }
 
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'address', 'timeout', 'ping_path', 'options')
+        input_required = ('name', 'is_active', 'address', 'timeout', 'ping_path', 'options', 'pool_size')
         output_required = ('id', 'name')
 
     def success_message(self, item):

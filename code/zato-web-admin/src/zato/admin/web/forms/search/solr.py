@@ -22,6 +22,8 @@ class CreateForm(forms.Form):
         widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     timeout = forms.CharField(
         initial=SEARCH.SOLR.DEFAULTS.TIMEOUT.value, widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
+    pool_size = forms.CharField(
+        initial=SEARCH.SOLR.DEFAULTS.POOL_SIZE.value, widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
     ping_path = forms.CharField(
         initial=SEARCH.SOLR.DEFAULTS.PING_PATH.value, widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     options = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%', 'class':'required'}))
