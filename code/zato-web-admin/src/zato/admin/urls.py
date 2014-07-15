@@ -42,6 +42,7 @@ from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import producers as pubsub_producers
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
+from zato.admin.web.views.search import solr
 from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, \
      wss, xpath as xpath_sec
 from zato.admin.web.views.security.tls import key_cert as tls_key_cert
@@ -727,6 +728,18 @@ urlpatterns += patterns('',
         login_required(es.Edit()), name=es.Edit.url_name),
     url(r'^zato/search/es/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(es.Delete()), name=es.Delete.url_name),
+
+    # .. Solr
+
+    url(r'^zato/search/solr/$',
+        login_required(solr.Index()), name=solr.Index.url_name),
+    url(r'^zato/search/solr/create/$',
+        login_required(solr.Create()), name=solr.Create.url_name),
+    url(r'^zato/search/solr/edit/$',
+        login_required(solr.Edit()), name=solr.Edit.url_name),
+    url(r'^zato/search/solr/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(solr.Delete()), name=solr.Delete.url_name),
+
     )
 
 # ################################################################################################################################
