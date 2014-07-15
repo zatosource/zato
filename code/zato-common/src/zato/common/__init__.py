@@ -193,9 +193,15 @@ SOAP_CHANNEL_VERSIONS = ('1.1',)
     
 class SEARCH:
     class ES:
-        class DEFAULTS:
-            HOSTS = ValueConstant('http://127.0.0.1:9200\n')
+        class DEFAULTS(Constants):
             BODY_AS = ValueConstant('POST')
+            HOSTS = ValueConstant('http://127.0.0.1:9200\n')
+
+    class SOLR:
+        class DEFAULTS(Constants):
+            ADDRESS = ValueConstant('http://127.0.0.1:8983/solr')
+            PING_PATH = ValueConstant('/solr/admin/ping')
+            TIMEOUT = ValueConstant('10')
 
 class SEC_DEF_TYPE:
     APIKEY = 'apikey'
