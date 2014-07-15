@@ -299,6 +299,7 @@ class PingMeta(AdminServiceMeta):
                 self.ping(instance)
                 response_time = time() - start_time
 
-                self.response.payload.info = 'Ping submitted in {0:03.4f} s, check server logs for details.'.format(response_time)
+                self.response.payload.info = 'Ping issued in {0:03.4f} s, check server logs for details, if any.'.format(
+                    response_time)
 
         return handle_impl
