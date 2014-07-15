@@ -49,6 +49,7 @@ from zato.server.connection.http_soap.channel import RequestDispatcher, RequestH
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
+from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
@@ -106,6 +107,7 @@ class WorkerStore(BrokerMessageReceiver):
 
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
+        self.search_solr_api = SolrAPI(SolrConnStore())
 
         # E-mail
         self.email_smtp_api = SMTPAPI(SMTPConnStore())
@@ -119,7 +121,9 @@ class WorkerStore(BrokerMessageReceiver):
 
         self.init_cassandra()
         self.init_cassandra_queries()
+
         self.init_search_es()
+        self.init_search_solr()
 
         self.init_email_smtp()
         self.init_email_imap()
@@ -312,30 +316,33 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def init_search_es(self):
-        for k, v in self.worker_config.search_es.items():
+    def init_simple(self, config, api, name):
+        for k, v in config.items():
+            v.config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
             try:
-                self.search_es_api.create(k, v.config)
+                api.create(k, v.config)
             except Exception, e:
-                logger.warn('Could not create an ElasticSearch connection `%s`, e:`%s`', k, format_exc(e))
+                logger.warn('Could not create {} connection `%s`, e:`%s`'.format(name), k, format_exc(e))
+
+# ################################################################################################################################
+
+    def init_search_es(self):
+        self.init_simple(self.worker_config.search_es, self.search_es_api, 'an ElasticSearch')
+
+# ################################################################################################################################
+
+    def init_search_solr(self):
+        self.init_simple(self.worker_config.search_solr, self.search_solr_api, 'a Solr')
 
 # ################################################################################################################################
 
     def init_email_smtp(self):
-        for k, v in self.worker_config.email_smtp.items():
-            try:
-                self.email_smtp_api.create(k, v.config)
-            except Exception, e:
-                logger.warn('Could not create an SMTP connection `%s`, e:`%s`', k, format_exc(e))
+        self.init_simple(self.worker_config.email_smtp, self.email_smtp_api, 'an SMTP')
 
 # ################################################################################################################################
 
     def init_email_imap(self):
-        for k, v in self.worker_config.email_imap.items():
-            try:
-                self.email_imap_api.create(k, v.config)
-            except Exception, e:
-                logger.warn('Could not create an IMAP connection `%s`, e:`%s`', k, format_exc(e))
+        self.init_simple(self.worker_config.email_imap, self.email_imap_api, 'an IMAP')
 
 # ################################################################################################################################
 

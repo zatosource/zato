@@ -1617,6 +1617,7 @@ class Solr(Base):
     timeout = Column(Integer(), nullable=False)
     ping_path = Column(String(40), nullable=False)
     options = Column(String(800), nullable=True)
+    pool_size = Column(Integer(), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('search_solr_conns', order_by=name, cascade='all, delete, delete-orphan'))

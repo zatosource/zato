@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.Solr;
     $.fn.zato.data_table.new_row_func = $.fn.zato.search.solr.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'address', 'timeout', 'ping_path']);
+    $.fn.zato.data_table.setup_forms(['name', 'address', 'timeout', 'ping_path', 'pool_size']);
 })
 
 
