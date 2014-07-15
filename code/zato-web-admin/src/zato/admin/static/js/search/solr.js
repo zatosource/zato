@@ -63,3 +63,15 @@ $.fn.zato.search.solr.delete_ = function(id) {
         'Are you sure you want to delete the Solr connection [{0}]?',
         true);
 }
+
+$.fn.zato.search.solr.ping = function(id) {
+
+    var callback = function(data, status) {
+        var success = status == 'success';
+        $.fn.zato.user_message(success, data.responseText);
+    }
+
+    var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+    $.fn.zato.post(url, callback, '', 'text');
+
+}

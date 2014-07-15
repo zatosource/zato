@@ -11,9 +11,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
+# Django
+from django.http import HttpResponse, HttpResponseServerError
+
 # Zato
 from zato.admin.web.forms.search.solr import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.views import CreateEdit, Delete as _Delete, id_only_service, Index as _Index, method_allowed
 from zato.common import SEARCH
 from zato.common.odb.model import Solr
 
@@ -62,3 +65,10 @@ class Delete(_Delete):
     url_name = 'search-solr-delete'
     error_msolrsage = 'Could not delete the Solr connection'
     service_name = 'zato.search.solr.delete'
+
+@method_allowed('POST')
+def ping(req, id, cluster_id):
+    ret = id_only_service(req, 'zato.search.solr.ping', id, 'Could not ping the Solr connection, e:[{e}]')
+    if isinstance(ret, HttpResponseServerError):
+        return ret
+    return HttpResponse(ret.data.info)
