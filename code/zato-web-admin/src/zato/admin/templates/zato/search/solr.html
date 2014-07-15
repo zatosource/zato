@@ -25,6 +25,7 @@
             'address',
             '_edit',
             '_delete',
+            '_ping',
             'id',
             'is_active',
             'timeout',
@@ -62,7 +63,8 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
-                        <th><a href="#">Host</a></th>
+                        <th><a href="#">Address</a></th>
+                        <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -82,6 +84,7 @@
                         <td>{{ item.address }}</td>
                         <td><a href="javascript:$.fn.zato.search.solr.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.search.solr.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.search.solr.ping('{{ item.id }}')">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.timeout }}</td>

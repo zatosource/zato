@@ -319,10 +319,17 @@ class NOTIF(Constants):
 class SEARCH(Constants):
     code_start = 104200
 
+    # New in 2.0
     ES_CREATE = ValueConstant('')
     ES_EDIT = ValueConstant('')
     ES_DELETE = ValueConstant('')
     ES_CHANGE_PASSWORD = ValueConstant('')
+
+    # New in 2.0
+    SOLR_CREATE = ValueConstant('')
+    SOLR_EDIT = ValueConstant('')
+    SOLR_DELETE = ValueConstant('')
+    SOLR_CHANGE_PASSWORD = ValueConstant('')
 
 class QUERY(Constants):
     code_start = 104400

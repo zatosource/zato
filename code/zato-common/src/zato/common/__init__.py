@@ -199,6 +199,7 @@ class SEARCH:
 
     class SOLR:
         class DEFAULTS(Constants):
+            ADDRESS = ValueConstant('http://127.0.0.1:8983/solr')
             PING_PATH = ValueConstant('/solr/admin/ping')
             TIMEOUT = ValueConstant('10')
 
