@@ -24,7 +24,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, \
      MsgNamespace, NotificationOpenStackSwift as NotifOSS, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, \
      OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Server, Service, SMTP, \
-     SQLConnectionPool, TechnicalAccount, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
+     Solr, SQLConnectionPool, TechnicalAccount, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -931,7 +931,7 @@ def notif_cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
 # ################################################################################################################################
 
 def _search_es(session, cluster_id):
-    """ All the namespaces.
+    """ ElasticSearch connections.
     """
     return session.query(ElasticSearch).\
         filter(Cluster.id==ElasticSearch.cluster_id).\
@@ -943,6 +943,22 @@ def search_es_list(session, cluster_id, needs_columns=False):
     """ All the ElasticSearch connections.
     """
     return _search_es(session, cluster_id)
+
+# ################################################################################################################################
+
+def _search_solr(session, cluster_id):
+    """ Solr sonnections.
+    """
+    return session.query(Solr).\
+        filter(Cluster.id==Solr.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(Solr.name)
+
+@needs_columns
+def search_solr_list(session, cluster_id, needs_columns=False):
+    """ All the Solr connections.
+    """
+    return _search_solr(session, cluster_id)
 
 # ################################################################################################################################
 
