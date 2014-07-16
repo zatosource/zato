@@ -156,6 +156,9 @@ class WorkerStore(BrokerMessageReceiver):
         # TODO: Fix it, worker doesn't need to accept all the messages
         return True
 
+    def _update_queue_build_cap(self, item):
+        item.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
+
     def _update_aws_config(self, msg):
         """ Parses the address to AWS we store into discrete components S3Connection objects expect.
         Also turns metadata string into a dictionary
@@ -318,7 +321,7 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init_simple(self, config, api, name):
         for k, v in config.items():
-            v.config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
+            self._update_queue_build_cap(v.config)
             try:
                 api.create(k, v.config)
             except Exception, e:
@@ -1225,6 +1228,22 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_SEARCH_ES_DELETE(self, msg):
         self.search_es_api.delete(msg.name)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SEARCH_SOLR_CREATE(self, msg):
+        self._update_queue_build_cap(msg)
+        self.search_solr_api.create(msg.name, msg)
+
+    def on_broker_msg_SEARCH_SOLR_EDIT(self, msg):
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        self._update_queue_build_cap(msg)
+        self.search_solr_api.edit(del_name, msg)
+
+    def on_broker_msg_SEARCH_SOLR_DELETE(self, msg):
+        self.search_solr_api.delete(msg.name)
 
 # ################################################################################################################################
 

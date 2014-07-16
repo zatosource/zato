@@ -92,7 +92,7 @@
                         <td class='ignore'>{{ item.timeout }}</td>
                         <td class='ignore'>{{ item.pool_size }}</td>
                         <td class='ignore'>{{ item.ping_path }}</td>
-                        <td class='ignore'>{{ item.options }}</td>
+                        <td class='ignore'>{{ item.options|default:"" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
