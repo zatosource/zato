@@ -23,6 +23,7 @@ broker_message = SECURITY
 broker_message_prefix = 'TLS_KEY_CERT_'
 list_func = tls_key_cert_list
 skip_input_params = ('sec_type', 'cert_fp', 'cert_subject')
+extra_delete_attrs = ('fs_name',)
 
 def instance_hook(service, input, instance, attrs):
     cert_fp, cert_subject, _ = get_validate_tls_key_cert(service.server.tls_dir, input.fs_name)
