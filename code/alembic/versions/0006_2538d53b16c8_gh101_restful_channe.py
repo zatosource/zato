@@ -15,16 +15,17 @@ import sqlalchemy as sa
 
 # Zato
 from zato.common.odb import model
+from zato.common import PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 
 def upgrade():
     op.add_column(model.HTTPSOAP.__tablename__,
         sa.Column('merge_url_params_req', sa.Boolean, nullable=True, default=True))
     
     op.add_column(model.HTTPSOAP.__tablename__,
-        sa.Column('url_params_pri', sa.String(200), nullable=True, default='path-then-qs'))
+        sa.Column('url_params_pri', sa.String(200), nullable=True, default=URL_PARAMS_PRIORITY.DEFAULT))
 
     op.add_column(model.HTTPSOAP.__tablename__,
-        sa.Column('params_pri', sa.String(200), nullable=True, default='url-then-msg'))
+        sa.Column('params_pri', sa.String(200), nullable=True, default=PARAMS_PRIORITY.DEFAULT))
 
 def downgrade():
     op.drop_column('http_soap', 'merge_url_params_req')
