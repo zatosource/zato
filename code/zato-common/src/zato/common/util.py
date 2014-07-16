@@ -27,6 +27,7 @@ from socket import gethostname, getfqdn
 from string import Template
 from threading import current_thread
 from traceback import format_exc
+from urlparse import urlparse
 
 # packaging/Distutils2
 try:
@@ -72,6 +73,9 @@ import psutil
 
 # pytz
 import pytz
+
+# requests
+import requests
 
 # Spring Python
 from springpython.context import ApplicationContext
@@ -901,5 +905,11 @@ def get_validate_tls_key_cert(server_tls_dir, fs_name):
     subject = sorted(dict(cert.get_subject().get_components()).items())
 
     return cert.digest(b'sha1'), '; '.join(['{}={}'.format(k, v) for k, v in subject]), full_path
+
+# ################################################################################################################################
+
+def ping_solr(config):
+    result = urlparse(config.address)
+    requests.get('{}://{}{}'.format(result.scheme, result.netloc, config.ping_path))
 
 # ################################################################################################################################

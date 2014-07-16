@@ -391,6 +391,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_search_es_list(server.cluster.id, True)
         self.config.search_es = ConfigDict.from_query('search_es', query)
 
+        query = self.odb.get_search_solr_list(server.cluster.id, True)
+        self.config.search_solr = ConfigDict.from_query('search_solr', query)
+
         # 
         # Search - end
         #

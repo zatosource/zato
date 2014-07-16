@@ -249,7 +249,7 @@ class Service(object):
         self.email = EMailAPI(self.worker_store.email_smtp_api, self.worker_store.email_imap_api)
 
         # Search
-        self.search = SearchAPI(self.worker_store.search_es_api)
+        self.search = SearchAPI(self.worker_store.search_es_api, self.worker_store.search_solr_api)
 
         is_sio = hasattr(self, 'SimpleIO')
         self.request.http.init(self.wsgi_environ)
