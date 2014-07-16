@@ -143,16 +143,13 @@ def upgrade():
     
     if is_postgresql():
         op.execute(
-            '''ALTER TABLE django_openid_auth_association ALTER COLUMN id SET DEFAULT nextval
-(\'django_openid_auth_association_id_seq\'::regclass)'''
+            '''ALTER TABLE django_openid_auth_association ALTER COLUMN id SET DEFAULT nextval(\'django_openid_auth_association_id_seq\'::regclass)'''
             )
         op.execute(
-            '''ALTER TABLE django_openid_auth_nonce ALTER COLUMN id SET DEFAULT nextval
-(\'django_openid_auth_nonce_id_seq\'::regclass)'''
+            '''ALTER TABLE django_openid_auth_nonce ALTER COLUMN id SET DEFAULT nextval(\'django_openid_auth_nonce_id_seq\'::regclass)'''
             )
         op.execute(
-            '''ALTER TABLE django_openid_auth_useropenid ALTER COLUMN id SET DEFAULT nextval
-(\'django_openid_auth_useropenid_id_seq\'::regclass)'''
+            '''ALTER TABLE django_openid_auth_useropenid ALTER COLUMN id SET DEFAULT nextval(\'django_openid_auth_useropenid_id_seq\'::regclass)'''
             )
      
           
