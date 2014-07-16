@@ -14,70 +14,42 @@ from alembic import op
 import sqlalchemy as sa
 
 # Zato
+#from zato.common.util import alter_column_nullable_false
 from zato.common import MISC, MSG_PATTERN_TYPE
 from zato.common.odb import model
 
+add_col = op.add_column
+
+def alter_column_nullable_false(table_name, column_name, default_value, column_type):
+    column = sa.sql.table(table_name, sa.sql.column(column_name))
+    op.execute(column.update().values({column_name:default_value}))
+    op.alter_column(table_name, column_name, type_=column_type, existing_type=column_type, nullable=False)
+
 def upgrade():
 
-    op.add_column(model.HTTPSOAP.__tablename__,
-        sa.Column('audit_enabled', sa.Boolean(), nullable=False, default=False)
-    )
-    
-    op.add_column(model.HTTPSOAP.__tablename__,
-        sa.Column('audit_back_log', sa.Integer(), nullable=False, default=MISC.DEFAULT_AUDIT_BACK_LOG)
-    )
-    
-    op.add_column(model.HTTPSOAP.__tablename__,
-        sa.Column('audit_max_payload', sa.Integer(), nullable=False, default=MISC.DEFAULT_AUDIT_MAX_PAYLOAD)
-    )
-    
-    op.add_column(model.HTTPSOAP.__tablename__,
-        sa.Column('audit_repl_patt_type', sa.String(), nullable=False, default=MSG_PATTERN_TYPE.ELEM_PATH.id)
-    )
-    
-    op.create_table(
-        'http_soap_audit',
-        sa.Column('id', sa.Integer, sa.Sequence('http_soap_audit_seq'), primary_key=True),
-        sa.Column('cluster_id', sa.Integer, sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False, primary_key=False),
-        sa.Column('cid', sa.String, nullable=False, index=True),
-        sa.Column('name', sa.String, nullable=False, index=True),
-        sa.Column('transport', sa.String, nullable=False, index=True),
-        sa.Column('connection', sa.String, nullable=False, index=True),
-        sa.Column('req_time', sa.DateTime, nullable=False),
-        sa.Column('resp_time', sa.DateTime, nullable=True),
-        sa.Column('user_token', sa.String, nullable=True, index=True),
-        sa.Column('invoke_ok', sa.Boolean, nullable=True),
-        sa.Column('auth_ok', sa.Boolean, nullable=True),
-        sa.Column('user_token', sa.String, nullable=False, index=True),
-        sa.Column('remote_addr', sa.String, nullable=False, index=True),
-        sa.Column('req_headers', sa.String, nullable=True, index=True),
-        sa.Column('req_payload', sa.String, nullable=True, index=True),
-        sa.Column('resp_headers', sa.String, nullable=True, index=True),
-        sa.Column('resp_payload', sa.String, nullable=True, index=True),
-    )
-    
-    op.create_table(
-        'http_soap_au_rpl_p_ep',
-        sa.Column('id', sa.Integer, sa.Sequence('htp_sp_ad_rpl_p_ep_seq'), primary_key=True),
-        sa.Column('conn_id', sa.Integer, sa.ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('pattern_id', sa.Integer, sa.ForeignKey('msg_elem_path.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('cluster_id', sa.Integer, sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False),
-    )
-    
-    op.create_table(
-        'http_soap_au_rpl_p_xp',
-        sa.Column('id', sa.Integer, sa.Sequence('htp_sp_ad_rpl_p_xp_seq'), primary_key=True),
-        sa.Column('conn_id', sa.Integer, sa.ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('pattern_id', sa.Integer, sa.ForeignKey('msg_elem_path.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('cluster_id', sa.Integer, sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False),
-    )
+    add_col(
+        model.HTTPSOAP.__tablename__, sa.Column('audit_enabled', sa.Boolean(), nullable=True))
+    alter_column_nullable_false(
+        model.HTTPSOAP.__tablename__, 'audit_enabled', False, sa.Boolean())    
 
+    add_col(
+        model.HTTPSOAP.__tablename__, sa.Column('audit_back_log', sa.Integer(), nullable=True))
+    alter_column_nullable_false(
+        model.HTTPSOAP.__tablename__, 'audit_back_log', MISC.DEFAULT_AUDIT_BACK_LOG, sa.Integer())
+
+    add_col(
+        model.HTTPSOAP.__tablename__, sa.Column(
+            'audit_max_payload', sa.Integer(), nullable=True, default=MISC.DEFAULT_AUDIT_MAX_PAYLOAD))
+    alter_column_nullable_false(
+        model.HTTPSOAP.__tablename__,'audit_max_payload', MISC.DEFAULT_AUDIT_MAX_PAYLOAD, sa.Integer())
+
+    add_col(
+        model.HTTPSOAP.__tablename__, sa.Column('audit_repl_patt_type', sa.String(200), nullable=True))
+    alter_column_nullable_false(
+        model.HTTPSOAP.__tablename__, 'audit_repl_patt_type', MSG_PATTERN_TYPE.JSON_POINTER.id, sa.String(200))
+    
 def downgrade():
     op.drop_column(model.HTTPSOAP.__tablename__, 'audit_enabled')
     op.drop_column(model.HTTPSOAP.__tablename__, 'audit_back_log')
     op.drop_column(model.HTTPSOAP.__tablename__, 'audit_max_payload')
     op.drop_column(model.HTTPSOAP.__tablename__, 'audit_repl_patt_type')
-    
-    op.drop_table('http_soap_audit')
-    op.drop_table('http_soap_ad_rpl_p_ep')
-    op.drop_table('http_soap_ad_rpl_p_xp')

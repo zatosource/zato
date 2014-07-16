@@ -17,7 +17,7 @@ def upgrade():
     op.create_table(
         'msg_ns',
         sa.Column('id', sa.Integer, sa.Sequence('msg_ns_seq'), primary_key=True),
-        sa.Column('name', sa.String(200), nullable=False, index=True),
+        sa.Column('name', sa.String(200), nullable=False),
         sa.Column('value', sa.String(500), nullable=False),
         sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False),
     )
