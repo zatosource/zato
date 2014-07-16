@@ -15,6 +15,7 @@ import sqlalchemy as sa
 from sqlalchemy.schema import CreateSequence, DropSequence
 
 # Zato
+from zato.common.util import alter_column_nullable_false
 from zato.common.odb import model
 from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, MISC, MSG_PATTERN_TYPE, PUB_SUB
 
@@ -28,17 +29,8 @@ def alter_column_nullable_false(table_name, column_name, default_value, column_t
     op.alter_column(table_name, column_name, type_=column_type, existing_type=column_type, nullable=False)
 
 def upgrade():
-    op.alter_column(model.SecurityBase.__tablename__, 'password', nullable=True)
     op.create_unique_constraint(
         'sec_base_cluster_id_username_sec_type_key', model.SecurityBase.__tablename__, ['cluster_id', 'username', 'sec_type'])
-
-    op.create_table(
-        model.OAuth.__tablename__,
-        sa.Column('id', sa.Integer(), sa.ForeignKey('sec_base.id'), primary_key=True),
-        sa.Column('proto_version', sa.String(32), nullable=False),
-        sa.Column('sig_method', sa.String(32), nullable=False),
-        sa.Column('max_nonce_log', sa.Integer(), nullable=False)
-        )
 
     op.create_table(
         model.NTLM.__tablename__,sa.Column('id', sa.Integer(), sa.ForeignKey('sec_base.id'), primary_key=True)
@@ -49,39 +41,12 @@ def upgrade():
         )
 
     op.create_table(
-        model.OAuth.__tablename__,
+        model.XPathSecurity.__tablename__,
         sa.Column('id', sa.Integer(), sa.ForeignKey('sec_base.id'), primary_key=True),
         sa.Column('username_expr', sa.String(200), nullable=False),
         sa.Column('password_expr', sa.String(200), nullable=True),
         )
-
-    add_col(model.HTTPSOAP.__tablename__, sa.Column('ping_method', sa.String(60), nullable=True))
-    add_col(model.HTTPSOAP.__tablename__, sa.Column('pool_size', sa.Integer(), nullable=True))
-    add_col(model.HTTPSOAP.__tablename__, sa.Column('merge_url_params_req', sa.Boolean(), nullable=True, default=True))
-    add_col(model.HTTPSOAP.__tablename__, sa.Column('url_params_pri', sa.String(200), nullable=True, default='path-over-qs'))
-    add_col(model.HTTPSOAP.__tablename__, sa.Column('params_pri', sa.String(200), nullable=True,
-                                                    default='channel-params-over-msg'))
-    add_col(
-        model.HTTPSOAP.__tablename__, sa.Column('audit_enabled', sa.Boolean(), nullable=True))
-    alter_column_nullable_false(
-        model.HTTPSOAP.__tablename__, 'audit_enabled', False, sa.Boolean())    
-
-    add_col(
-        model.HTTPSOAP.__tablename__, sa.Column('audit_back_log', sa.Integer(), nullable=True))
-    alter_column_nullable_false(
-        model.HTTPSOAP.__tablename__, 'audit_back_log', MISC.DEFAULT_AUDIT_BACK_LOG, sa.Integer())
-
-    add_col(
-        model.HTTPSOAP.__tablename__, sa.Column(
-            'audit_max_payload', sa.Integer(), nullable=True, default=MISC.DEFAULT_AUDIT_MAX_PAYLOAD))
-    alter_column_nullable_false(
-        model.HTTPSOAP.__tablename__,'audit_max_payload', MISC.DEFAULT_AUDIT_MAX_PAYLOAD, sa.Integer())
-
-    add_col(
-        model.HTTPSOAP.__tablename__, sa.Column('audit_repl_patt_type', sa.String(200), nullable=True))
-    alter_column_nullable_false(
-        model.HTTPSOAP.__tablename__, 'audit_repl_patt_type', MSG_PATTERN_TYPE.JSON_POINTER.id, sa.String(200))
-
+                                                   
     add_col(
         model.HTTPSOAP.__tablename__, sa.Column('serialization_type', sa.String(200), nullable=True))
     alter_column_nullable_false(
@@ -95,107 +60,14 @@ def upgrade():
     op.create_table(
         model.AWSSecurity.__tablename__, sa.Column('id', sa.Integer(), sa.ForeignKey('sec_base.id'), primary_key=True))
 
-    op.alter_column(
-        model.Service.__tablename__, 'name', type_=sa.String(300), existing_type=sa.String(length=2000), nullable=False)
-
     op.execute(CreateSequence(sa.Sequence('deliv_def_seq')))
-    op.create_table(
-        model.DeliveryDefinitionBase.__tablename__,
-        sa.Column('id', sa.Integer(), sa.Sequence('deliv_def_seq'), primary_key=True),
-        sa.Column('name', sa.String(200), nullable=False, index=True),
-        sa.Column('short_def', sa.String(200), nullable=False),
-        sa.Column('last_used', sa.DateTime(), nullable=True),
-        sa.Column('target_type', sa.String(200), nullable=False),
-        sa.Column('callback_list', sa.LargeBinary(10000), nullable=True),
-        sa.Column('expire_after', sa.Integer(), nullable=False),
-        sa.Column('expire_arch_succ_after', sa.Integer(), nullable=False),
-        sa.Column('expire_arch_fail_after', sa.Integer(), nullable=False),
-        sa.Column('check_after', sa.Integer(), nullable=False),
-        sa.Column('retry_repeats', sa.Integer(), nullable=False),
-        sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('retry_seconds', sa.Integer(), nullable=False),
-        sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-        )
-
-    op.create_table(
-        model.DeliveryDefinitionOutconnWMQ.__tablename__,
-        sa.Column('id', sa.Integer(), sa.ForeignKey('delivery_def_base.id'), primary_key=True),
-        sa.Column('target_id', sa.Integer(), sa.ForeignKey('out_wmq.id', ondelete='CASCADE'), nullable=False,
-            primary_key=False)
-        )
 
     op.execute(CreateSequence(sa.Sequence('deliv_seq')))
-    op.create_table(
-        model.Delivery.__tablename__,
-        sa.Column('id', sa.Integer(), sa.Sequence('deliv_seq'), primary_key=True),
-        sa.Column('task_id', sa.String(64), unique=True, nullable=False, index=True),
-        sa.Column('name', sa.String(200), nullable=False),
-        sa.Column('creation_time', sa.DateTime(), nullable=False),
-        sa.Column('args', sa.LargeBinary(1000000), nullable=True),
-        sa.Column('kwargs', sa.LargeBinary(1000000), nullable=True),
-        sa.Column('last_used', sa.DateTime(), nullable=True),
-        sa.Column('resubmit_count', sa.Integer(), nullable=False, default=0),
-        sa.Column('state', sa.String(200), nullable=False, index=True),
-        sa.Column('source_count', sa.Integer(), nullable=False, default=1),
-        sa.Column('target_count', sa.Integer(), nullable=False, default=0),
-        sa.Column('target_count', sa.Integer(), nullable=False, default=0),
-        sa.Column('definition_id', sa.Integer(), sa.ForeignKey('delivery_def_base.id', ondelete='CASCADE'),
-            nullable=False, primary_key=False)
-        )
-
-    op.create_table(
-        model.DeliveryPayload.__tablename__,
-        sa.Column('id', sa.Integer(), sa.Sequence('deliv_payl_seq'), primary_key=True),
-        sa.Column('task_id', sa.String(64), unique=True, nullable=False, index=True),
-        sa.Column('creation_time', sa.DateTime(), nullable=False),
-        sa.Column('payload', sa.LargeBinary(5000000), nullable=False),
-        sa.Column('delivery_id', sa.Integer(), sa.ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False,
-            primary_key=False)
-        )
 
     op.execute(CreateSequence(sa.Sequence('deliv_payl_seq')))
-    op.create_table(
-        model.DeliveryHistory.__tablename__,
-        sa.Column('id', sa.Integer(), sa.Sequence('deliv_payl_seq'), primary_key=True),
-        sa.Column('task_id', sa.String(64), nullable=False, index=True),
-        sa.Column('entry_type', sa.String(64), nullable=False),
-        sa.Column('entry_time', sa.DateTime(), nullable=False, index=True),
-        sa.Column('entry_ctx', sa.LargeBinary(6000000), nullable=False),
-        sa.Column('resubmit_count', sa.Integer(), nullable=False, default=0),
-        sa.Column('delivery_id', sa.Integer(), sa.ForeignKey('delivery.id', ondelete='CASCADE'),
-            nullable=False, primary_key=False)
-        )
 
     op.execute(CreateSequence(sa.Sequence('msg_ns_seq')))
-    op.create_table(
-        model.MsgNamespace.__tablename__,
-        sa.Column('id', sa.Integer(), sa.Sequence('msg_ns_seq'), primary_key=True),
-        sa.Column('name', sa.String(200), nullable=False),
-        sa.Column('value', sa.String(500), nullable=False),
-        sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False),
-        sa.UniqueConstraint('name','cluster_id')
-        )
-
-    op.execute(CreateSequence(sa.Sequence('msg_xpath_seq')))
-    op.create_table(
-        model.XPath.__tablename__,
-        sa.Column('id', sa.Integer(), sa.Sequence('msg_xpath_seq'), primary_key=True),
-        sa.Column('name', sa.String(200), nullable=False),
-        sa.Column('value', sa.String(1500), nullable=False),
-        sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False),
-        sa.UniqueConstraint('name','cluster_id')
-        )
-
-    op.execute(CreateSequence(sa.Sequence('msg_json_pointer_seq')))
-    op.create_table(
-        model.JSONPointer.__tablename__,
-        sa.Column('id', sa.Integer(), sa.Sequence('msg_json_pointer_seq'), primary_key=True),
-        sa.Column('name', sa.String(200), nullable=False),
-        sa.Column('value', sa.String(1500), nullable=False),
-        sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False),
-        sa.UniqueConstraint('name', 'cluster_id')
-        )
-
+    
     op.execute(CreateSequence(sa.Sequence('http_soap_audit_seq')))
     op.create_table(
         model.HTTSOAPAudit.__tablename__,
@@ -281,7 +153,6 @@ def upgrade():
         sa.Column('id', sa.Integer(), sa.Sequence('os_swift_seq'), primary_key=True),
         sa.Column('name', sa.String(200), nullable=False),
         sa.Column('is_active', sa.Boolean, nullable=False),
-        sa.Column('pool_size', sa.Integer(), nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.POOL_SIZE),
         sa.Column('auth_url', sa.String(200), nullable=False),
         sa.Column('auth_version', sa.String(200), nullable=False, default=CLOUD.OPENSTACK.SWIFT.DEFAULTS.AUTH_VERSION),
         sa.Column('user', sa.String(200), nullable=True),
@@ -326,25 +197,17 @@ def upgrade():
     op.alter_column(model.Cluster.__tablename__, 'odb_db_name', nullable=True)
 
 def downgrade():
-    op.alter_column(model.SecurityBase.__tablename__, 'password', nullable=False)
     op.drop_constraint('sec_base_cluster_id_username_sec_type_key', model.SecurityBase.__tablename__)
-    op.drop_table(model.OAuth.__tablename__)
     op.drop_table(model.NTLM.__tablename__)
     op.drop_table(model.AWSSecurity.__tablename__)
     op.drop_table(model.APIKeySecurity.__tablename__)
     op.drop_table(model.XPathSecurity.__tablename__)
-    op.alter_column(
-        model.Service.__tablename__, 'name', type_=sa.String(2000), existing_type=sa.String(length=300), nullable=False)
-    op.drop_table(model.DeliveryDefinitionOutconnWMQ.__tablename__)
-    op.drop_table(model.DeliveryPayload.__tablename__)
-    op.drop_table(model.DeliveryHistory.__tablename__)
     op.execute(DropSequence(sa.Sequence('deliv_payl_seq')))
-    op.drop_table(model.MsgNamespace.__tablename__)
     op.execute(DropSequence(sa.Sequence('msg_ns_seq')))
     op.drop_table(model.HTTSOAPAudit.__tablename__)
     op.execute(DropSequence(sa.Sequence('http_soap_audit_seq')))
     op.drop_table(model.HTTSOAPAuditReplacePatternsJSONPointer.__tablename__)
-    op.execute(DropSequence(sa.Sequence('htp_sp_ad_rpl_p_ep_seq')))
+    op.execute(DropSequence(sa.Sequence('htp_sp_ad_rpl_p_jp_seq')))
     op.drop_table(model.HTTSOAPAuditReplacePatternsXPath.__tablename__)
     op.execute(DropSequence(sa.Sequence('htp_sp_ad_rpl_p_xp_seq')))
     op.drop_table(model.PubSubConsumer.__tablename__)
@@ -354,26 +217,12 @@ def downgrade():
     op.execute(DropSequence(sa.Sequence('os_swift_seq')))
     op.drop_table(model.AWSS3.__tablename__)
     op.execute(DropSequence(sa.Sequence('aws_s3_seq')))
-    op.drop_table(model.Delivery.__tablename__)
     op.execute(DropSequence(sa.Sequence('deliv_seq')))
-    op.drop_table(model.XPath.__tablename__)
-    op.execute(DropSequence(sa.Sequence('msg_xpath_seq')))
-    op.drop_table(model.JSONPointer.__tablename__)
-    op.execute(DropSequence(sa.Sequence('msg_json_pointer_seq')))
     op.drop_table(model.PubSubTopic.__tablename__)
     op.execute(DropSequence(sa.Sequence('pub_sub_topic_seq')))
-    op.drop_table(model.DeliveryDefinitionBase.__tablename__)
     op.execute(DropSequence(sa.Sequence('deliv_def_seq')))
-    op.drop_column(model.HTTPSOAP.__tablename__, 'ping_method')
-    op.drop_column(model.HTTPSOAP.__tablename__, 'pool_size')
-    op.drop_column(model.HTTPSOAP.__tablename__, 'merge_url_params_req')
-    op.drop_column(model.HTTPSOAP.__tablename__, 'url_params_pri')
-    op.drop_column(model.HTTPSOAP.__tablename__, 'params_pri')
-    op.drop_column(model.HTTPSOAP.__tablename__, 'audit_enabled')
-    op.drop_column(model.HTTPSOAP.__tablename__, 'audit_back_log')
-    op.drop_column(model.HTTPSOAP.__tablename__, 'audit_max_payload')
-    op.drop_column(model.HTTPSOAP.__tablename__, 'audit_repl_patt_type')
     op.drop_column(model.HTTPSOAP.__tablename__, 'serialization_type')
+    op.drop_column(model.HTTPSOAP.__tablename__, 'timeout')
 
     op.alter_column(model.Cluster.__tablename__, 'odb_host', nullable=False)
     op.alter_column(model.Cluster.__tablename__, 'odb_port', nullable=False)

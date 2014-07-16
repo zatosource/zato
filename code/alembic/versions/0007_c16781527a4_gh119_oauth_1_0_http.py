@@ -17,7 +17,6 @@ def upgrade():
     op.create_table(
         'sec_oauth',
         sa.Column('id', sa.Integer, sa.ForeignKey('sec_base.id'), primary_key=True),
-        sa.Column('username', sa.String(32), nullable=False),
         sa.Column('proto_version', sa.String(32), nullable=False),
         sa.Column('sig_method', sa.String(32), nullable=False),
         sa.Column('max_nonce_log', sa.Integer(), nullable=False),
