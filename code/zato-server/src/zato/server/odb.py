@@ -710,6 +710,13 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_search_solr_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of Solr connections.
+        """
+        return query.search_solr_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
     def get_email_smtp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of SMTP connections.
         """

@@ -29,6 +29,7 @@
             'id',
             'is_active',
             'timeout',
+            'pool_size',
             'ping_path',
             'options',
         ]
@@ -71,6 +72,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -88,8 +90,9 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.timeout }}</td>
+                        <td class='ignore'>{{ item.pool_size }}</td>
                         <td class='ignore'>{{ item.ping_path }}</td>
-                        <td class='ignore'>{{ item.options }}</td>
+                        <td class='ignore'>{{ item.options|default:"" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -124,6 +127,13 @@
                             <span class="form_hint">Default: {{ default_timeout }}</span>
                             </td>
                             <td>{{ create_form.timeout }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Pool size
+                            <br/>
+                            <span class="form_hint">Default: {{ default_pool_size }}</span>
+                            </td>
+                            <td>{{ create_form.pool_size }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Ping path
@@ -171,6 +181,13 @@
                             <span class="form_hint">Default: {{ default_timeout }}</span>
                             </td>
                             <td>{{ edit_form.timeout }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Pool size
+                            <br/>
+                            <span class="form_hint">Default: {{ default_pool_size }}</span>
+                            </td>
+                            <td>{{ edit_form.pool_size }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Ping path

@@ -9,5 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 class SearchAPI(object):
-    def __init__(self, es):
+    def __init__(self, es, solr):
         self.es = es
+        self.solr = solr
