@@ -12,27 +12,36 @@ down_revision = '0008_4eb66feec2a6'
 
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.schema import CreateSequence, DropSequence
+
+# Zato
+from zato.common.odb import model
+
+# ################################################################################################################################
 
 def upgrade():
+    op.execute(CreateSequence(sa.Sequence('msg_xpath_seq')))
     op.create_table(
-        'msg_xpath',
-        sa.Column('id', sa.Integer, sa.Sequence('msg_xpath_seq'), primary_key=True),
-        sa.Column('name', sa.String(200), nullable=False, index=True),
-        sa.Column('value', sa.String(500), nullable=False),
+        model.XPath.__tablename__,
+        sa.Column('id', sa.Integer(), sa.Sequence('msg_xpath_seq'), primary_key=True),
+        sa.Column('name', sa.String(200), nullable=False),
+        sa.Column('value', sa.String(1500), nullable=False),
         sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False),
-    )
+        sa.UniqueConstraint('name','cluster_id')
+        )
 
+    op.execute(CreateSequence(sa.Sequence('msg_json_pointer_seq')))
     op.create_table(
-        'msg_elem_path',
-        sa.Column('id', sa.Integer, sa.Sequence('msg_elem_path_seq'), primary_key=True),
-        sa.Column('name', sa.String(200), nullable=False, index=True),
-        sa.Column('value', sa.String(500), nullable=False),
+        model.JSONPointer.__tablename__,
+        sa.Column('id', sa.Integer(), sa.Sequence('msg_json_pointer_seq'), primary_key=True),
+        sa.Column('name', sa.String(200), nullable=False),
+        sa.Column('value', sa.String(1500), nullable=False),
         sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False),
-    )
-
-    op.create_unique_constraint(None, 'msg_xpath', ['name', 'cluster_id'])
-    op.create_unique_constraint(None, 'msg_elem_path', ['name', 'cluster_id'])
+        sa.UniqueConstraint('name', 'cluster_id')
+        )
 
 def downgrade():
-    op.drop_table('msg_xpath')
-    op.drop_table('msg_elem_path')
+    op.drop_table(model.XPath.__tablename__)
+    op.execute(DropSequence(sa.Sequence('msg_xpath_seq')))
+    op.drop_table(model.JSONPointer.__tablename__)
+    op.execute(DropSequence(sa.Sequence('msg_json_pointer_seq')))

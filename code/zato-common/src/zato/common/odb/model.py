@@ -23,7 +23,7 @@ from sqlalchemy.orm import backref, relationship
 
 # Zato
 from zato.common import CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, MSG_PATTERN_TYPE, \
-     PUB_SUB, SCHEDULER
+     PUB_SUB, SCHEDULER, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -439,10 +439,10 @@ class HTTPSOAP(Base):
     merge_url_params_req = Column(Boolean, nullable=True, default=True)
 
     # New in 2.0
-    url_params_pri = Column(String(200), nullable=True, default='path-over-qs')
+    url_params_pri = Column(String(200), nullable=True, default=URL_PARAMS_PRIORITY.DEFAULT)
 
     # New in 2.0
-    params_pri = Column(String(200), nullable=True, default='channel-params-over-msg')
+    params_pri = Column(String(200), nullable=True, default=PARAMS_PRIORITY.DEFAULT)
     
     # New in 2.0
     audit_enabled = Column(Boolean, nullable=False, default=False)
@@ -1175,7 +1175,7 @@ class DeliveryHistory(Base):
     __tablename__ = 'delivery_history'
 
     id = Column(Integer, Sequence('deliv_payl_seq'), primary_key=True)
-    task_id = Column(String(64), nullable=False, index=True)
+    task_id = Column(String(64), unique=True, nullable=False, index=True)
 
     entry_type = Column(String(64), nullable=False)
     entry_time = Column(DateTime(), nullable=False, index=True)

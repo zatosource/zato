@@ -44,5 +44,5 @@ def upgrade():
         sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False))
 
 def downgrade():
-    op.drop_table(model.CassandraConn.__tablename__)
     op.drop_table(model.CassandraQuery.__tablename__)
+    op.drop_table(model.CassandraConn.__tablename__)

@@ -19,8 +19,8 @@ def upgrade():
         sa.Column('id', sa.Integer, sa.Sequence('deliv_def_seq'), primary_key=True),
         sa.Column('name', sa.String(200), nullable=False, index=True),
         sa.Column('short_def', sa.String(200), nullable=False),
-        sa.Column('last_used', sa.DateTime(200), nullable=True),
-        sa.Column('target_type', sa.DateTime(200), nullable=False),
+        sa.Column('last_used', sa.DateTime(), nullable=True),
+        sa.Column('target_type', sa.String(200), nullable=False),
         sa.Column('callback_list', sa.LargeBinary(10000), nullable=True),
         sa.Column('expire_after', sa.Integer(), nullable=False),
         sa.Column('expire_arch_succ_after', sa.Integer(), nullable=False),
@@ -56,7 +56,7 @@ def upgrade():
     op.create_table(
         'delivery_payload',
         sa.Column('id', sa.Integer, sa.Sequence('deliv_payl_seq'), primary_key=True),
-        sa.Column('task_id', sa.String(64), unique=True, nullable=False, index=True),
+        sa.Column('task_id', sa.String(64), nullable=False, unique=True, index=True),
         sa.Column('creation_time', sa.DateTime(), nullable=False),
         sa.Column('payload', sa.LargeBinary(5000000), nullable=False),
         sa.Column('delivery_id', sa.Integer, sa.ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False),
@@ -73,6 +73,7 @@ def upgrade():
         sa.Column('resubmit_count', sa.Integer, nullable=False, default=0),
         sa.Column('delivery_id', sa.Integer, sa.ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False),
     )
+    #op.create_index('ix_delivery_history_task_id', 'delivery_history', ['task_id'])
 
 def downgrade():
     op.drop_table('delivery_history')
