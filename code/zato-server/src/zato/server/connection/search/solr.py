@@ -11,7 +11,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from logging import getLogger
 
+# pysolr
+from pysolr import Solr
+
 # Zato
+from zato.common.util import ping_solr
 from zato.server.connection.queue import Wrapper
 from zato.server.store import BaseAPI, BaseStore
 
@@ -23,8 +27,12 @@ class SolrWrapper(Wrapper):
         super(SolrWrapper, self).__init__(config, 'Solr')
 
     def add_client(self):
-        logger.warn(self.config)
-        self.client.put_client(None)
+
+        # Make sure everything is OK
+        ping_solr(self.config)
+
+        # Create a client now
+        self.client.put_client(Solr(self.config.address, timeout=self.config.timeout))
 
 class SolrAPI(BaseAPI):
     """ API to obtain ElasticSearch connections through.
