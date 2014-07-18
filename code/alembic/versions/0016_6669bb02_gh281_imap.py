@@ -1,4 +1,4 @@
-"""gh118 TLS outconns
+"""gh281 imap
 
 Revision ID: 0016_6669bb02
 Revises: 0015_f67f3ea1
@@ -36,10 +36,22 @@ def upgrade():
         sa.Column('get_criteria', sa.String(2000), nullable=False),
         sa.Column('cluster_id', sa.Integer(), nullable=False),
         sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False),
+        )        
+    op.create_unique_constraint(
+        'email_imap_name_cluster_id_key', model.IMAP.__tablename__, ['name', 'cluster_id']
         )
+    
+    op.drop_column(model.TLSKeyCertSecurity.__tablename__, 'cert_cn')    
+    op.add_column(model.TLSKeyCertSecurity.__tablename__, sa.Column('cert_subject', sa.String(1200), nullable=False))
+    
+    op.drop_constraint('sec_tls_key_cert_id_fkey', model.TLSKeyCertSecurity.__tablename__)
+    op.create_foreign_key('sec_tls_key_cert_id_fkey', model.TLSKeyCertSecurity.__tablename__, 'sec_base', ['id'], ['id'])
+    
 
     
 def downgrade():
     op.drop_table(model.IMAP.__tablename__)
     op.execute(DropSequence(sa.Sequence('email_imap_seq')))
     op.execute(DropSequence(sa.Sequence('email_smtp_seq')))
+    op.drop_column(model.TLSKeyCertSecurity.__tablename__, 'cert_subject')    
+    op.add_column(model.TLSKeyCertSecurity.__tablename__, sa.Column('cert_cn', sa.String(1200), nullable=False))

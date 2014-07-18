@@ -22,7 +22,7 @@ from zato.common import CLOUD
 
 def is_postgresql():
     config = context.config.get_section('alembic')
-    return config.get('sqlalchemy.url').startswith('postgresql')
+    return config.get('sqlalchemy.url').startswith('postgres')
 
 def upgrade():
     op.drop_constraint('http_soap_url_path_connection_soap_action_cluster_id_key', model.HTTPSOAP.__tablename__)
