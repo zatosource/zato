@@ -1606,6 +1606,24 @@ class ElasticSearch(Base):
 
 # ################################################################################################################################
 
+class Solr(Base):
+    __tablename__ = 'search_solr'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('search_solr_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False, default=True)
+    address = Column(String(400), nullable=False)
+    timeout = Column(Integer(), nullable=False)
+    ping_path = Column(String(40), nullable=False)
+    options = Column(String(800), nullable=True)
+    pool_size = Column(Integer(), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('search_solr_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
 class CassandraQuery(Base):
     """ Cassandra query templates.
     """

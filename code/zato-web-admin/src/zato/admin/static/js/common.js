@@ -117,6 +117,7 @@ $.namespace('zato.security.wss');
 $.namespace('zato.security.xpath');
 $.namespace('zato.search');
 $.namespace('zato.search.es');
+$.namespace('zato.search.solr');
 $.namespace('zato.service');
 $.namespace('zato.stats');
 $.namespace('zato.stats.top_n');
