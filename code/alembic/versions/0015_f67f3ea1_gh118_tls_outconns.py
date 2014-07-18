@@ -1,14 +1,14 @@
 """gh118 TLS outconns
 
-Revision ID: 0014_f67f3ea1
-Revises: 0013_6e651e7a3c38
+Revision ID: 0015_f67f3ea1
+Revises: 0014_50465d9c19e0
 Create Date: 2014-07-05 20:53:05
 
 """
 
 # revision identifiers, used by Alembic.
-revision = '0014_f67f3ea1'
-down_revision = '0013_6e651e7a3c38'
+revision = '0015_f67f3ea1'
+down_revision = '0014_50465d9c19e0'
 
 from alembic import op
 import sqlalchemy as sa

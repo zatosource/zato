@@ -65,15 +65,13 @@ def upgrade():
     op.create_table(
         'delivery_history',
         sa.Column('id', sa.Integer, sa.Sequence('deliv_payl_seq'), primary_key=True),
-        sa.Column('task_id', sa.String(64), unique=True, nullable=False, index=True),
-        
+        sa.Column('task_id', sa.String(64), nullable=False, unique=True, index=True),
         sa.Column('entry_type', sa.String(64), nullable=False),
         sa.Column('entry_time', sa.DateTime(), nullable=False, index=True),
         sa.Column('entry_ctx', sa.LargeBinary(6000000), nullable=False),
         sa.Column('resubmit_count', sa.Integer, nullable=False, default=0),
         sa.Column('delivery_id', sa.Integer, sa.ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False),
     )
-    #op.create_index('ix_delivery_history_task_id', 'delivery_history', ['task_id'])
 
 def downgrade():
     op.drop_table('delivery_history')
