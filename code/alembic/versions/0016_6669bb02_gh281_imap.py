@@ -17,6 +17,8 @@ from sqlalchemy.schema import CreateSequence, DropSequence
 # Zato
 from zato.common.odb import model
 
+# ################################################################################################################################
+
 def upgrade():
     op.execute(CreateSequence(sa.Sequence('email_imap_seq')))
     
@@ -33,7 +35,6 @@ def upgrade():
         sa.Column('password', sa.String(400), nullable=True),
         sa.Column('mode', sa.String(20), nullable=False),
         sa.Column('get_criteria', sa.String(2000), nullable=False),
-        sa.Column('cluster_id', sa.Integer(), nullable=False),
         sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False),
         )        
     op.create_unique_constraint(
