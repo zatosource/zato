@@ -22,7 +22,7 @@ from zato.common import CLOUD
 
 def is_postgresql():
     config = context.config.get_section('alembic')
-    return config.get('sqlalchemy.url').startswith('postgres')
+    return config.get('sqlalchemy.url').startswith('postgresa')
 
 def upgrade():
     op.drop_constraint('http_soap_url_path_connection_soap_action_cluster_id_key', model.HTTPSOAP.__tablename__)
@@ -35,7 +35,7 @@ def upgrade():
     
     op.create_table(
         'django_openid_auth_association',
-        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('id', sa.INTEGER(), server_default=sa.text("nextval('django_openid_auth_association_id_seq'::regclass)"), nullable=False),
         sa.Column('server_url', sa.Text(), nullable=False),
         sa.Column('handle', sa.String(255), nullable=False),
         sa.Column('secret', sa.Text(), nullable=False),
@@ -47,7 +47,7 @@ def upgrade():
         
     op.create_table(
         'django_openid_auth_nonce',
-        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('id', sa.INTEGER(), server_default=sa.text("nextval('django_openid_auth_nonce_id_seq'::regclass)"), nullable=False),
         sa.Column('server_url', sa.String(2047), nullable=False),
         sa.Column('timestamp', sa.Integer(), nullable=False),
         sa.Column('salt', sa.String(40), nullable=False),
@@ -56,7 +56,7 @@ def upgrade():
     
     op.create_table(
         'django_openid_auth_useropenid',
-        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('id', sa.INTEGER(), server_default=sa.text("nextval('django_openid_auth_useropenid_id_seq'::regclass)"), nullable=False),
         sa.Column('user_id', sa.Integer(), nullable=False),
         sa.Column('claimed_id', sa.String(255), nullable=False),
         sa.Column('display_id', sa.Text(), nullable=False),
@@ -143,13 +143,16 @@ def upgrade():
     
     if is_postgresql():
         op.execute(
-            '''ALTER TABLE django_openid_auth_association ALTER COLUMN id SET DEFAULT nextval(\'django_openid_auth_association_id_seq\'::regclass)'''
+            '''ALTER TABLE django_openid_auth_association ALTER COLUMN id SET DEFAULT nextval
+            (\'django_openid_auth_association_id_seq\'::regclass)'''
             )
         op.execute(
-            '''ALTER TABLE django_openid_auth_nonce ALTER COLUMN id SET DEFAULT nextval(\'django_openid_auth_nonce_id_seq\'::regclass)'''
+            '''ALTER TABLE django_openid_auth_nonce ALTER COLUMN id SET DEFAULT nextval
+            (\'django_openid_auth_nonce_id_seq\'::regclass)'''
             )
         op.execute(
-            '''ALTER TABLE django_openid_auth_useropenid ALTER COLUMN id SET DEFAULT nextval(\'django_openid_auth_useropenid_id_seq\'::regclass)'''
+            '''ALTER TABLE django_openid_auth_useropenid ALTER COLUMN id SET DEFAULT nextval
+            (\'django_openid_auth_useropenid_id_seq\'::regclass)'''
             )
      
           
