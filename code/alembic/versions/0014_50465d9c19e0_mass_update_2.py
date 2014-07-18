@@ -22,7 +22,7 @@ from zato.common import CLOUD
 
 def is_postgresql():
     config = context.config.get_section('alembic')
-    return config.get('sqlalchemy.url').startswith('postgresql')
+    return config.get('sqlalchemy.url').startswith('postgres')
 
 def upgrade():
     op.drop_constraint('http_soap_url_path_connection_soap_action_cluster_id_key', model.HTTPSOAP.__tablename__)
@@ -143,16 +143,13 @@ def upgrade():
     
     if is_postgresql():
         op.execute(
-            '''ALTER TABLE django_openid_auth_association ALTER COLUMN id SET DEFAULT nextval
-(\'django_openid_auth_association_id_seq\'::regclass)'''
+            '''ALTER TABLE django_openid_auth_association ALTER COLUMN id SET DEFAULT nextval(\'django_openid_auth_association_id_seq\'::regclass)'''
             )
         op.execute(
-            '''ALTER TABLE django_openid_auth_nonce ALTER COLUMN id SET DEFAULT nextval
-(\'django_openid_auth_nonce_id_seq\'::regclass)'''
+            '''ALTER TABLE django_openid_auth_nonce ALTER COLUMN id SET DEFAULT nextval(\'django_openid_auth_nonce_id_seq\'::regclass)'''
             )
         op.execute(
-            '''ALTER TABLE django_openid_auth_useropenid ALTER COLUMN id SET DEFAULT nextval
-(\'django_openid_auth_useropenid_id_seq\'::regclass)'''
+            '''ALTER TABLE django_openid_auth_useropenid ALTER COLUMN id SET DEFAULT nextval(\'django_openid_auth_useropenid_id_seq\'::regclass)'''
             )
      
           
