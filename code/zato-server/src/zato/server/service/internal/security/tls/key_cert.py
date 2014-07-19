@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
+from zato.common import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import TLSKeyCertSecurity
 from zato.common.odb.query import tls_key_cert_list
@@ -27,8 +28,11 @@ extra_delete_attrs = ('fs_name',)
 
 def instance_hook(service, input, instance, attrs):
     cert_fp, cert_subject, _ = get_validate_tls_key_cert(service.server.tls_dir, input.fs_name)
+
     input.cert_fp = instance.cert_fp = cert_fp
     input.cert_subject = instance.cert_subject = cert_subject
+    input.sec_type = SEC_DEF_TYPE.TLS_KEY_CERT
+
     instance.username = service.cid # Required by model
 
 class GetList(AdminService):
