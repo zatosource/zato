@@ -277,7 +277,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         response = self.session.request(method, address, data=data,
             auth=self.requests_auth, params=qs_params, headers=headers, timeout=self.config['timeout'],
-            cert=self.tls_key_cert, *args, **kwargs)
+            cert=self.tls_key_cert, verify=False, *args, **kwargs)
 
         logger.debug('CID:[%s], response:[%s]', cid, response.text)
 

@@ -18,7 +18,7 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-UPDATES = 'CREATES', 'EDIT', 'DELETE', 'CHANGE_PASSWORD'
+UPDATES = 'CREATE', 'EDIT', 'DELETE', 'CHANGE_PASSWORD'
 
 class Dispatcher(object):
 
