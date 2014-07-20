@@ -103,6 +103,7 @@ def update_attrs(cls, name, attrs):
     attrs.initial_input = getattr(mod, 'initial_input', {})
     attrs.skip_input_params = getattr(mod, 'skip_input_params', [])
     attrs.instance_hook = getattr(mod, 'instance_hook', None)
+    attrs.extra_delete_attrs = getattr(mod, 'extra_delete_attrs', [])
 
     if name == 'GetList':
         # get_sio sorts out what is required and what is optional.
@@ -261,11 +262,11 @@ class DeleteMeta(AdminServiceMeta):
         def handle_impl(self):
             with closing(self.odb.session()) as session:
                 try:
-                    auth = session.query(attrs.model).\
+                    instance = session.query(attrs.model).\
                         filter(attrs.model.id==self.request.input.id).\
                         one()
 
-                    session.delete(auth)
+                    session.delete(instance)
                     session.commit()
                 except Exception, e:
                     msg = 'Could not delete {}, e:`%s`'.format(attrs.label)
@@ -275,7 +276,11 @@ class DeleteMeta(AdminServiceMeta):
                     raise
                 else:
                     self.request.input.action = getattr(attrs.broker_message, attrs.broker_message_prefix + 'DELETE').value
-                    self.request.input.name = auth.name
+                    self.request.input.name = instance.name
+
+                    for name in attrs.extra_delete_attrs:
+                        self.request.input[name] = getattr(instance, name)
+
                     self.broker_client.publish(self.request.input)
 
         return handle_impl
