@@ -79,6 +79,7 @@ def _get_edit_create_message(params, prefix=''):
         'ping_method': params.get(prefix + 'ping_method'),
         'pool_size': params.get(prefix + 'pool_size'),
         'timeout': params.get(prefix + 'timeout'),
+        'sec_tls_ca_cert_id': params.get(prefix + 'sec_tls_ca_cert_id'),
         'security_id': security_id,
     }
 
@@ -110,7 +111,7 @@ def index(req):
     create_form = None
     edit_form = None
 
-    colspan = 16
+    colspan = 17
     
     if transport == 'soap':
         colspan += 2
@@ -129,14 +130,15 @@ def index(req):
 
         _soap_versions = SOAP_CHANNEL_VERSIONS if connection == 'channel' else SOAP_VERSIONS
 
-        create_form = CreateForm(_security, _soap_versions)
-        edit_form = EditForm(_security, _soap_versions, prefix='edit')
+        create_form = CreateForm(_security, [], _soap_versions)
+        edit_form = EditForm(_security, [], _soap_versions, prefix='edit')
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,
             'connection': connection,
             'transport': transport,
         }
+
         for item in req.zato.client.invoke('zato.http-soap.get-list', input_dict):
 
             _security_name = item.security_name
@@ -151,12 +153,17 @@ def index(req):
             else:
                 security_id = ZATO_NONE
 
+            if _security_id and item.sec_type == SEC_DEF_TYPE.TLS_KEY_CERT:
+                sec_tls_ca_cert_id = item.sec_tls_ca_cert_id if item.sec_tls_ca_cert_id else ZATO_NONE
+            else:
+                sec_tls_ca_cert_id = None
+
             item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection, 
                     transport, item.host, item.url_path, item.method, item.soap_action,
                     item.soap_version, item.data_format, item.ping_method, 
                     item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri, 
-                    item.serialization_type, item.timeout, service_id=item.service_id, service_name=item.service_name,
-                    security_id=security_id, security_name=security_name)
+                    item.serialization_type, item.timeout, sec_tls_ca_cert_id, service_id=item.service_id,
+                    service_name=item.service_name, security_id=security_id, security_name=security_name)
             items.append(item)
 
     return_data = {'zato_clusters':req.zato.clusters,
