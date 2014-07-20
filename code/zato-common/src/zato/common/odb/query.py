@@ -24,7 +24,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, \
      MsgNamespace, NotificationOpenStackSwift as NotifOSS, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, \
      OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Server, Service, SMTP, \
-     Solr, SQLConnectionPool, TechnicalAccount, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
+     Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -204,6 +204,15 @@ def tls_key_cert_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==TLSKeyCertSecurity.cluster_id).\
         filter(SecurityBase.id==TLSKeyCertSecurity.id).\
         order_by('sec_base.name')
+
+@needs_columns
+def tls_ca_cert_list(session, cluster_id, needs_columns=False):
+    """ TLS CA certs.
+    """
+    return session.query(TLSCACert).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==TLSCACert.cluster_id).\
+        order_by('sec_tls_ca_cert.name')
 
 @needs_columns
 def wss_list(session, cluster_id, needs_columns=False):
