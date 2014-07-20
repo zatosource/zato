@@ -7,3 +7,57 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+import logging
+
+# Zato
+from zato.admin.web.views import CreateEdit as _CreateEdit, Delete as _Delete, Index as _Index
+from zato.common.odb.model import TLSKeyCertSecurity
+
+logger = logging.getLogger(__name__)
+
+class Index(_Index):
+    method_allowed = 'GET'
+    output_class = TLSKeyCertSecurity
+    url_name = 'security-tls-key-cert'
+    template = 'zato/security/tls/key-cert.html'
+    service_name = 'zato.security.tls.key-cert.get-list'
+    create_form = None
+    edit_form = None
+
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id',)
+        output_required = ('id', 'name', 'is_active', 'fs_name')
+        output_repeated = True
+
+    def handle(self):
+        return {
+            'create_form': self.create_form(),
+            'edit_form': self.edit_form(prefix='edit')
+        }
+
+class CreateEdit(_CreateEdit):
+    method_allowed = 'POST'
+    item_type = None
+
+    class SimpleIO(_CreateEdit.SimpleIO):
+        input_required = ('name', 'is_active', 'fs_name')
+        output_required = ('id', 'name')
+
+    def success_message(self, item):
+        return 'Successfully {} the {} `{}`'.format(self.verb, self.item_type, item.name)
+
+class Create(_CreateEdit):
+    url_name = 'security-tls-key-cert-create'
+    service_name = 'zato.security.tls.key-cert.create'
+
+class Edit(_CreateEdit):
+    url_name = 'security-tls-key-cert-edit'
+    form_prefix = 'edit-'
+    service_name = 'zato.security.tls.key-cert.edit'
+
+class Delete(_Delete):
+    url_name = 'security-tls-key-cert-delete'
+    error_message = 'Could not delete the key/cert pair'
+    service_name = 'zato.security.tls.key-cert.delete'

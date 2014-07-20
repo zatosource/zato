@@ -117,8 +117,6 @@ def index(req):
 
     if req.zato.cluster_id:
         for def_item in req.zato.client.invoke('zato.security.get-list', {'cluster_id': req.zato.cluster.id}):
-            # Outgoing plain HTTP connections may use HTTP Basic Auth only,
-            # outgoing SOAP connections may use either WSS or HTTP Basic Auth.
             if connection == 'outgoing':
                 if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in (
                     SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TECH_ACCOUNT, SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.TLS_KEY_CERT):

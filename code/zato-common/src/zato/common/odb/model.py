@@ -405,6 +405,21 @@ class TLSKeyCertSecurity(SecurityBase):
 
 # ################################################################################################################################
 
+class TLSCACert(Base):
+    """ New in 2.0: Stores information regarding CA certs.
+    """
+    __tablename__ = 'sec_tls_ca_cert'
+
+    id = Column(Integer, Sequence('sec_tls_ca_cert_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    fs_name = Column(String(200), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('ca_cert_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
 class HTTPSOAP(Base):
     """ An incoming or outgoing HTTP/SOAP connection.
     """
@@ -461,6 +476,10 @@ class HTTPSOAP(Base):
 
     # New in 2.0
     timeout = Column(Integer(), nullable=False, default=MISC.DEFAULT_HTTP_TIMEOUT)
+
+    # New in 2.0
+    sec_tls_ca_cert_id = Column(Integer, ForeignKey('sec_tls_ca_cert.id', ondelete='CASCADE'), nullable=True)
+    sec_tls_ca_cert = relationship('TLSCACert', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
