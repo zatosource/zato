@@ -493,7 +493,7 @@ class HTTPSOAP(Base):
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, connection=None, transport=None, host=None, \
                  url_path=None, method=None, soap_action=None, soap_version=None, data_format=None, ping_method=None,
                  pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None, \
-                 timeout=None, service_id=None, service=None, security=None, cluster_id=None, cluster=None, service_name=None, \
+                 timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None, cluster=None, service_name=None, \
                  security_id=None, security_name=None):
         self.id = id
         self.name = name
@@ -514,6 +514,7 @@ class HTTPSOAP(Base):
         self.params_pri = params_pri
         self.serialization_type = serialization_type
         self.timeout = timeout
+        self.sec_tls_ca_cert_id = sec_tls_ca_cert_id
         self.service_id = service_id
         self.service = service
         self.security = security
