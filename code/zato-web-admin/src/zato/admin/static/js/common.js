@@ -86,6 +86,7 @@ $.namespace('zato.notif');
 $.namespace('zato.notif.cloud');
 $.namespace('zato.notif.cloud.openstack');
 $.namespace('zato.notif.cloud.openstack.swift');
+$.namespace('zato.notif.sql');
 $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.ftp');

@@ -22,11 +22,14 @@ from bunch import bunchify
 from sqlalchemy import Boolean, Integer
 
 # Zato
+from zato.common import NO_DEFAULT_VALUE
 from zato.common.odb.model import Base, Cluster
 from zato.server.service import Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO
 
 logger = getLogger(__name__)
+
+singleton = object()
 
 sa_to_sio = {
     Boolean: BoolSIO,
@@ -105,6 +108,10 @@ def update_attrs(cls, name, attrs):
     attrs.instance_hook = getattr(mod, 'instance_hook', None)
     attrs.extra_delete_attrs = getattr(mod, 'extra_delete_attrs', [])
 
+    default_value = getattr(mod, 'default_value', singleton)
+    default_value = NO_DEFAULT_VALUE if default_value is singleton else default_value
+    attrs.default_value = default_value
+
     if name == 'GetList':
         # get_sio sorts out what is required and what is optional.
         attrs.output_required = attrs.model
@@ -139,6 +146,7 @@ class AdminServiceMeta(type):
             input_optional = []
             output_required = sio['output_required'] + attrs['output_required_extra']
             output_optional = attrs['output_optional_extra']
+            default_value = attrs.default_value
 
         for io in 'input', 'output':
             for req in 'required', 'optional':
@@ -230,7 +238,7 @@ class CreateEditMeta(AdminServiceMeta):
                     session.commit()
 
                 except Exception, e:
-                    msg = 'Could not {} a namespace, e:`%s`'.format(verb)
+                    msg = 'Could not {} the object, e:`%s`'.format(verb)
                     self.logger.error(msg, format_exc(e))
                     session.rollback()
                     raise
