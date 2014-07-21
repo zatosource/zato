@@ -22,9 +22,10 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_S
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, CassandraQuery, ChannelAMQP, ChannelWMQ, \
      ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, \
      DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, \
-     MsgNamespace, NotificationOpenStackSwift as NotifOSS, NTLM, OAuth, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, \
-     OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, SecurityBase, Server, Service, SMTP, \
-     Solr, SQLConnectionPool, TechnicalAccount, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
+     MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OpenStackSecurity, \
+     OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, \
+     SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSKeyCertSecurity, WSSDefinition, \
+     XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -927,6 +928,22 @@ def notif_cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
     """ OpenStack Swift connection definitions.
     """
     return _notif_cloud_openstack_swift(session, cluster_id)
+
+# ################################################################################################################################
+
+def _notif_sql(session, cluster_id):
+    """ SQL notifications.
+    """
+    return session.query(NotifSQL.id, NotifSQL.is_active, NotifSQL.name, NotifSQL.query).\
+        filter(Cluster.id==NotifSQL.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(NotifSQL.name)
+
+@needs_columns
+def notif_sql_list(session, cluster_id, needs_columns=False):
+    """ All the SQL notifications.
+    """
+    return _notif_sql(session, cluster_id)
 
 # ################################################################################################################################
 
