@@ -115,6 +115,7 @@ def update_attrs(cls, name, attrs):
     attrs.extra_delete_attrs = getattr(mod, 'extra_delete_attrs', [])
     attrs.input_required_extra = getattr(mod, 'input_required_extra', [])
     attrs.create_edit_input_required_extra = getattr(mod, 'create_edit_input_required_extra', [])
+    attrs.create_edit_rewrite = getattr(mod, 'create_edit_rewrite', [])
 
     default_value = getattr(mod, 'default_value', singleton)
     default_value = NO_DEFAULT_VALUE if default_value is singleton else default_value
@@ -175,11 +176,6 @@ class AdminServiceMeta(type):
 
                 # Sorts and removes duplicates
                 setattr(SimpleIO, _name, sorted(list(set(sio_elem))))
-
-        if 'sql' in attrs.label.lower():
-            logger.warn('555555 %r', SimpleIO.input_required)
-            logger.warn('555555 %r', attrs)
-            logger.warn('')
 
         for skip_name in attrs.skip_output_params:
             for attr_names in chain([SimpleIO.output_required, SimpleIO.output_optional]):
@@ -281,8 +277,12 @@ class CreateEditMeta(AdminServiceMeta):
                     input.old_name = old_name
                     self.broker_client.publish(input)
 
-                    self.response.payload.id = instance.id
-                    self.response.payload.name = instance.name
+                    for name in chain(attrs.create_edit_rewrite, self.SimpleIO.output_required):
+                        value = getattr(instance, name, singleton)
+                        if value is singleton:
+                            value = input[name]
+
+                        setattr(self.response.payload, name, value)
 
         return handle_impl
 
