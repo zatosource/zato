@@ -98,4 +98,4 @@ class NotifierService(AdminService):
             spawn(self.run_notifier, config)
             sleep(config.interval)
 
-        self.logger.info('Stopped {} notifier `%s`', self.notif_type, config.name)
+        self.logger.info('Stopped `%s` notifier `%s`', self.notif_type, config.name)
