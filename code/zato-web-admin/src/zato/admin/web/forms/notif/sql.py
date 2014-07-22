@@ -20,7 +20,8 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     def_id = forms.ChoiceField(widget=forms.Select())
-    interval = forms.CharField(initial=NOTIF.DEFAULT.CHECK_INTERVAL_SQL, widget=forms.TextInput(attrs={'style':'width:20%'}))
+    interval = forms.CharField(initial=NOTIF.DEFAULT.CHECK_INTERVAL_SQL, widget=forms.TextInput(attrs={'style':'width:15%'}))
+    service_name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     query = forms.CharField(widget=forms.Textarea(attrs={'class':'required', 'style':'width:100%'}))
 
     def __init__(self, prefix=None, post_data=None, sql_defs=None):

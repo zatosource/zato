@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.SQLNotification;
     $.fn.zato.data_table.new_row_func = $.fn.zato.notif.sql.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['id', 'name', 'def_id', 'interval', 'query']);
+    $.fn.zato.data_table.setup_forms(['id', 'name', 'def_id', 'interval', 'query', 'service_name']);
 })
 
 

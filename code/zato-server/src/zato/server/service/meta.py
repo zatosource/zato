@@ -46,7 +46,7 @@ req_resp = {
 }
 
 
-def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list):
+def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_cluster_id):
 
     # This can be either a list or an SQLAlchemy object
     elems = attrs.get(elems_name) or []
@@ -59,6 +59,10 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list):
 
             # Each model has a cluster_id column but it's not really needed for anything on output
             if column.name == 'cluster_id' and is_output:
+                continue
+
+            # We already have cluster_id and don't need a ForceType'd one.
+            if column.name == 'cluster_id' and has_cluster_id:
                 continue
 
             if column.name in attrs.skip_input_params:
@@ -83,10 +87,6 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list):
             for k, v in sa_to_sio.items():
                 if isinstance(column.type, k):
                     columns.append(v(column.name))
-
-                    if column.name == 'cluster_id' and 'cluster_id' in columns:
-                        columns.remove('cluster_id')
-
                     break
             else:
                 columns.append(column.name)
@@ -104,7 +104,6 @@ def update_attrs(cls, name, attrs):
     attrs.elem = getattr(mod, 'elem')
     attrs.label = getattr(mod, 'label')
     attrs.model = getattr(mod, 'model')
-    attrs.input_required_extra = getattr(mod, 'input_required_extra', [])
     attrs.output_required_extra = getattr(mod, 'output_required_extra', [])
     attrs.output_optional_extra = getattr(mod, 'output_optional_extra', [])
     attrs.get_data_func = getattr(mod, 'list_func')
@@ -114,10 +113,15 @@ def update_attrs(cls, name, attrs):
     attrs.skip_output_params = getattr(mod, 'skip_output_params', [])
     attrs.instance_hook = getattr(mod, 'instance_hook', None)
     attrs.extra_delete_attrs = getattr(mod, 'extra_delete_attrs', [])
+    attrs.input_required_extra = getattr(mod, 'input_required_extra', [])
+    attrs.create_edit_input_required_extra = getattr(mod, 'create_edit_input_required_extra', [])
 
     default_value = getattr(mod, 'default_value', singleton)
     default_value = NO_DEFAULT_VALUE if default_value is singleton else default_value
     attrs.default_value = default_value
+
+    attrs.is_edit = False
+    attrs.is_create_edit = False
 
     if name == 'GetList':
         # get_sio sorts out what is required and what is optional.
@@ -131,8 +135,8 @@ def update_attrs(cls, name, attrs):
         if name in('Create', 'Edit'):
             attrs.input_required = attrs.model
             attrs.input_optional = attrs.model
-            attrs.is_create_edit = True
             attrs.is_edit = name == 'Edit'
+            attrs.is_create_edit = True
 
     return attrs
 
@@ -159,11 +163,23 @@ class AdminServiceMeta(type):
             for req in 'required', 'optional':
                 _name = '{}_{}'.format(io, req)
 
+                is_required = 'required' in req
+                is_output = 'output' in io
+                is_get_list = name=='GetList'
+
                 sio_elem = getattr(SimpleIO, _name)
-                sio_elem.extend(get_io(attrs, _name, attrs.get('is_edit'), 'required' in req, 'output' in io, name=='GetList'))
+                sio_elem.extend(get_io(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, 'cluster_id' in sio_elem))
+
+                if attrs.is_create_edit and is_required:
+                    sio_elem.extend(attrs.create_edit_input_required_extra)
 
                 # Sorts and removes duplicates
                 setattr(SimpleIO, _name, sorted(list(set(sio_elem))))
+
+        if 'sql' in attrs.label.lower():
+            logger.warn('555555 %r', SimpleIO.input_required)
+            logger.warn('555555 %r', attrs)
+            logger.warn('')
 
         for skip_name in attrs.skip_output_params:
             for attr_names in chain([SimpleIO.output_required, SimpleIO.output_optional]):
