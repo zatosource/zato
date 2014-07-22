@@ -30,6 +30,7 @@
             'is_active',
             'query',
             'def_id',
+            'service_name',
         ]
     }
     </script>
@@ -69,6 +70,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -86,6 +88,7 @@
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.query }}</td>
                         <td class='ignore'>{{ item.def_id }}</td>
+                        <td class='ignore'>{{ item.service_name }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -117,6 +120,10 @@
                         <tr>
                             <td style="vertical-align:middle">Interval <span class="form_hint">(s)</span></td>
                             <td colspan="5" >{{ create_form.interval }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_form.service_name }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Query</td>
@@ -154,6 +161,10 @@
                         <tr>
                             <td style="vertical-align:middle">Interval <span class="form_hint">(s)</span></td>
                             <td colspan="5" >{{ edit_form.interval }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_form.service_name }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Query</td>
