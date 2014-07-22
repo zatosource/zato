@@ -22,13 +22,14 @@
             '_numbering',
             '_selection',
             'name',
-            'interval',
             '_is_active',
+            'interval',
             '_edit',
             '_delete',
             'id',
             'is_active',
             'query',
+            'def_id',
         ]
     }
     </script>
@@ -67,6 +68,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -83,6 +85,7 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.query }}</td>
+                        <td class='ignore'>{{ item.def_id }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}

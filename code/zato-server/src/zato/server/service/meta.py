@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from inspect import getmodule, isclass
+from itertools import chain
 from logging import getLogger
 from time import time
 from traceback import format_exc
@@ -82,6 +83,10 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list):
             for k, v in sa_to_sio.items():
                 if isinstance(column.type, k):
                     columns.append(v(column.name))
+
+                    if column.name == 'cluster_id' and 'cluster_id' in columns:
+                        columns.remove('cluster_id')
+
                     break
             else:
                 columns.append(column.name)
@@ -99,12 +104,14 @@ def update_attrs(cls, name, attrs):
     attrs.elem = getattr(mod, 'elem')
     attrs.label = getattr(mod, 'label')
     attrs.model = getattr(mod, 'model')
+    attrs.input_required_extra = getattr(mod, 'input_required_extra', [])
     attrs.output_required_extra = getattr(mod, 'output_required_extra', [])
     attrs.output_optional_extra = getattr(mod, 'output_optional_extra', [])
     attrs.get_data_func = getattr(mod, 'list_func')
     attrs.def_needed = getattr(mod, 'def_needed', False)
     attrs.initial_input = getattr(mod, 'initial_input', {})
     attrs.skip_input_params = getattr(mod, 'skip_input_params', [])
+    attrs.skip_output_params = getattr(mod, 'skip_output_params', [])
     attrs.instance_hook = getattr(mod, 'instance_hook', None)
     attrs.extra_delete_attrs = getattr(mod, 'extra_delete_attrs', [])
 
@@ -142,7 +149,7 @@ class AdminServiceMeta(type):
         class SimpleIO(AdminSIO):
             request_elem = 'zato_{}_{}_request'.format(attrs.elem, req_resp[name])
             response_elem = 'zato_{}_{}_response'.format(attrs.elem, req_resp[name])
-            input_required = sio['input_required']
+            input_required = sio['input_required'] + attrs['input_required_extra']
             input_optional = []
             output_required = sio['output_required'] + attrs['output_required_extra']
             output_optional = attrs['output_optional_extra']
@@ -157,6 +164,11 @@ class AdminServiceMeta(type):
 
                 # Sorts and removes duplicates
                 setattr(SimpleIO, _name, sorted(list(set(sio_elem))))
+
+        for skip_name in attrs.skip_output_params:
+            for attr_names in chain([SimpleIO.output_required, SimpleIO.output_optional]):
+                if skip_name in attr_names:
+                    attr_names.remove(skip_name)
 
         return SimpleIO
 

@@ -934,8 +934,13 @@ def notif_cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
 def _notif_sql(session, cluster_id):
     """ SQL notifications.
     """
-    return session.query(NotifSQL.id, NotifSQL.is_active, NotifSQL.name, NotifSQL.query).\
+    return session.query(
+        NotifSQL.id, NotifSQL.is_active, NotifSQL.name, NotifSQL.query,
+        NotifSQL.notif_type, NotifSQL.interval, NotifSQL.def_id,
+        SQLConnectionPool.name.label('def_name'), Service.name.label('service_name')).\
         filter(Cluster.id==NotifSQL.cluster_id).\
+        filter(SQLConnectionPool.id==NotifSQL.def_id).\
+        filter(Service.id==NotifSQL.service_id).\
         filter(Cluster.id==cluster_id).\
         order_by(NotifSQL.name)
 

@@ -24,6 +24,7 @@ from zato.common.broker_message import NOTIF
 from zato.common.odb.model import NotificationOpenStackSwift, Service
 from zato.common.odb.query import notif_cloud_openstack_swift_list
 from zato.server.service import Bool, ForceType, Int
+from zato.server.service.internal.notif import NotifierService
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -177,9 +178,11 @@ class Delete(AdminService):
 
 # ################################################################################################################################
 
-class RunNotifier(AdminService):
+class RunNotifier(NotifierService):
     """ Runs a background gevent-based notifier of new data in OpenStack Swift containers.
     """
+    notif_type = COMMON_NOTIF.TYPE.OPENSTACK_SWIFT
+
     def _name_matches(self, pattern, string, negate):
         """ Matches a string against a pattern and returns True if it found it. 'negate' reverses the result,
         only those not matching the pattern will yield True.
