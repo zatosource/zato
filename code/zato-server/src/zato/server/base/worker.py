@@ -32,8 +32,8 @@ from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, PUB_SUB, SEC_DEF_TYPE, SIMPLE_IO, \
-     TRACE1, ZATO_ODB_POOL_NAME
+from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, SEC_DEF_TYPE, \
+     SIMPLE_IO, TRACE1, ZATO_ODB_POOL_NAME
 from zato.common import broker_message
 from zato.common.broker_message import code_to_name
 from zato.common.dispatch import dispatcher
@@ -297,6 +297,12 @@ class WorkerStore(BrokerMessageReceiver):
     def init_notifiers(self):
         for config_dict in self.worker_config.notif_cloud_openstack_swift.values():
             self._update_cloud_openstack_swift_container(config_dict.config)
+
+    def get_notif_config(self, notif_type, name):
+        return {
+            NOTIF.TYPE.OPENSTACK_SWIFT: self.worker_config.notif_cloud_openstack_swift,
+            NOTIF.TYPE.SQL: self.worker_config.notif_sql,
+        }[notif_type][name]
 
 # ################################################################################################################################
 

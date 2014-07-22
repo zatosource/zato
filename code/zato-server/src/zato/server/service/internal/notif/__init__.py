@@ -22,6 +22,7 @@ from zato.common.broker_message import NOTIF
 from zato.common import DATA_FORMAT
 from zato.common.util import new_cid
 from zato.server.service import Service
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
@@ -62,7 +63,7 @@ class InitNotifiers(Service):
 
 # ################################################################################################################################
 
-class NotifierService(object):
+class NotifierService(AdminService):
     notif_type = None
 
     def run_notifier_impl(self, config):
@@ -72,7 +73,7 @@ class NotifierService(object):
         """ Invoked as a greenlet - fetches data from a remote data source and invokes the target service.
         """
         # It's possible our config has changed since the last time we run so we need to check the current one.
-        current_config = self.server.worker_store.worker_config.notif_cloud_openstack_swift.get(config.name)
+        current_config = self.server.worker_store.get_notif_config(self.notif_type, config.name)
 
         # The notification definition has been deleted in between the invocations of ours so we need to stop now.
         if not current_config:
