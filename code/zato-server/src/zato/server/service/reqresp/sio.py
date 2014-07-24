@@ -263,7 +263,7 @@ class ListOfDicts(ForceType):
 
 # ################################################################################################################################
 
-class Nested(ForceType):
+class Opaque(ForceType):
     """ Allows for embedding arbitrary sub-elements, including simple strings, ForceType or other Nested elements.
     """
 
@@ -274,6 +274,8 @@ class Nested(ForceType):
 
     def __iter__(self):
         return iter(self.args)
+
+Nested = Opaque
 
 # ################################################################################################################################
 
