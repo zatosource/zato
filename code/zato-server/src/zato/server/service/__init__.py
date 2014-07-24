@@ -98,7 +98,7 @@ class TimeUtil(object):
         """
         return arrow.utcnow().format(format)
 
-    def today(self, format='YYYY-MM-DD', tz='UTC'):
+    def today(self, format='YYYY-MM-DD', tz='UTC', needs_format=True):
         """ Returns current day in a given timezone.
         """
         now = arrow.utcnow()
@@ -109,7 +109,10 @@ class TimeUtil(object):
         if format.startswith('kvdb:'):
             format = self.get_format_from_kvdb(format)
 
-        return now.format(format)
+        if needs_format:
+            return now.format(format)
+        else:
+            return now
 
     def reformat(self, value, from_, to):
         """ Reformats value from one datetime format to another, for instance
