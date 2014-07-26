@@ -30,6 +30,9 @@ from lxml.objectify import ObjectifiedElement
 # retools
 from retools.lock import Lock
 
+# gevent
+from gevent import Timeout, spawn
+
 # Zato
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException
 from zato.common.broker_message import SERVICE
@@ -328,7 +331,7 @@ class Service(object):
         return set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
     def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=DATA_FORMAT.DICT,
-            transport=None, serialize=False, as_bunch=False, **kwargs):
+            transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
         if self.impl_name == impl_name:
@@ -345,10 +348,22 @@ class Service(object):
 
         set_response_func = kwargs.pop('set_response_func', self.set_response_data)
 
-        return self.update_handle(set_response_func, service, payload, channel,
-            data_format, transport, self.server, self.broker_client, self.worker_store,
-            self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch,
-            **kwargs)
+        if timeout:
+            try:
+                g = spawn(self.update_handle, set_response_func, service, payload, channel,
+                    data_format, transport, self.server, self.broker_client, self.worker_store,
+                    self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch,
+                    **kwargs)
+                return g.get(block=True, timeout=timeout)
+            except Timeout:
+                g.kill()
+                if raise_timeout:
+                    raise
+        else:
+            return self.update_handle(set_response_func, service, payload, channel,
+                data_format, transport, self.server, self.broker_client, self.worker_store,
+                self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch,
+                **kwargs)
 
     def invoke(self, name, *args, **kwargs):
         """ Invokes a service synchronously by its name.
