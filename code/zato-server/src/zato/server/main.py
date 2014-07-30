@@ -24,6 +24,7 @@ import cloghandler
 cloghandler = cloghandler # For pyflakes
 
 # gunicorn
+import gunicorn
 from gunicorn.app.base import Application
 
 # Paste
@@ -135,6 +136,9 @@ def run(base_dir, start_gunicorn_app=True):
         newrelic.agent.initialize(
             config.newrelic.config, config.newrelic.environment or None, config.newrelic.ignore_errors or None,
             config.newrelic.log_file or None, config.newrelic.log_level or None)
+
+    # New in 2.0 - override gunicorn-set Server HTTP header
+    gunicorn.SERVER_SOFTWARE = config.misc.get('http_server_header', 'Zato')
 
     # Store KVDB config in logs, possibly replacing its password if told to
     kvdb_config = get_kvdb_config_for_log(config.kvdb)
