@@ -1549,14 +1549,14 @@ class Notification(Base):
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     interval = Column(Integer, nullable=False, default=NOTIF.DEFAULT.CHECK_INTERVAL)
-    name_pattern = Column(String(2000), nullable=False, default=NOTIF.DEFAULT.NAME_PATTERN)
-    name_pattern_neg = Column(Boolean(), nullable=False, default=False)
+    name_pattern = Column(String(2000), nullable=True, default=NOTIF.DEFAULT.NAME_PATTERN)
+    name_pattern_neg = Column(Boolean(), nullable=True, default=False)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    get_data = Column(Boolean(), nullable=False, default=False)
-    get_data_patt = Column(String(2000), nullable=False, default=NOTIF.DEFAULT.GET_DATA_PATTERN)
-    get_data_patt_neg = Column(Boolean(), nullable=False, default=False)
+    get_data = Column(Boolean(), nullable=True, default=False)
+    get_data_patt = Column(String(2000), nullable=True, default=NOTIF.DEFAULT.GET_DATA_PATTERN)
+    get_data_patt_neg = Column(Boolean(), nullable=True, default=False)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('notification_list', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1573,7 +1573,7 @@ class NotificationOpenStackSwift(Notification):
     __mapper_args__ = {'polymorphic_identity': 'openstack_swift'}
 
     id = Column(Integer, ForeignKey('notif.id'), primary_key=True)
-    
+
     containers = Column(String(20000), nullable=False)
 
     def_id = Column(Integer, ForeignKey('os_swift.id'), primary_key=True)
@@ -1581,6 +1581,21 @@ class NotificationOpenStackSwift(Notification):
 
     def to_json(self):
         return to_json(self)
+
+# ################################################################################################################################
+
+class NotificationSQL(Notification):
+    """ New in 2.0: Stores SQL notifications.
+    """
+    __tablename__ = 'notif_sql'
+    __mapper_args__ = {'polymorphic_identity': 'sql'}
+
+    id = Column(Integer, ForeignKey('notif.id'), primary_key=True)
+
+    query = Column(String(200000), nullable=False)
+
+    def_id = Column(Integer, ForeignKey('sql_pool.id'), primary_key=True)
+    definition = relationship(SQLConnectionPool, backref=backref('notif_sql_list', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 

@@ -15,9 +15,6 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch, bunchify
 
-# gevent
-from gevent import sleep, spawn
-
 # globre
 from globre import match as globre_match
 
@@ -27,6 +24,7 @@ from zato.common.broker_message import NOTIF
 from zato.common.odb.model import NotificationOpenStackSwift, Service
 from zato.common.odb.query import notif_cloud_openstack_swift_list
 from zato.server.service import Bool, ForceType, Int
+from zato.server.service.internal.notif import NotifierService
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -180,9 +178,10 @@ class Delete(AdminService):
 
 # ################################################################################################################################
 
-class RunNotifier(AdminService):
+class RunNotifier(NotifierService):
     """ Runs a background gevent-based notifier of new data in OpenStack Swift containers.
     """
+    notif_type = COMMON_NOTIF.TYPE.OPENSTACK_SWIFT
 
     def _name_matches(self, pattern, string, negate):
         """ Matches a string against a pattern and returns True if it found it. 'negate' reverses the result,
@@ -208,65 +207,34 @@ class RunNotifier(AdminService):
 
         return req
 
-    def _run_notifier(self, config):
-        """ Invoked as a greenlet - fetches data from a container(s) and invokes the target service.
-        """
-        # It's possible our config has changed since the last time we run so we need to check the current one.
-        current_config = self.server.worker_store.worker_config.notif_cloud_openstack_swift.get(config.name)
+    def run_notifier_impl(self, config):
+        conn = self.cloud.openstack.swift[config.def_name].conn
+        with conn.client() as client:
+            for container, path, full_name in config.containers:
 
-        # The notification definition has been deleted in between the invocations of ours so we need to stop now.
-        if not current_config:
-            self.keep_running = False
-            return
+                # Results of the call to an external resource - first element is result's metadata
+                # and elements 1: are the actual data, if any.
+                ext_result = client.get_container(container, path=path)
 
-        if not current_config.config['is_active']:
-            return
+                # Iterate over elements skipping directories - we're interested only in files.
+                for items in ext_result[1:]:
+                    for item in items:
+                        if item['content_type'] != 'application/directory':
 
-        # Ok, overwrite old config with current one.
-        config.update(current_config.config)
+                            if not self._name_matches(config.name_pattern, item['name'], config.name_pattern_neg):
+                                continue
 
-        # Grab a distributed lock so we are sure it is only us who connect to pull newest data.
-        with self.lock(config.name):
-            conn = self.cloud.openstack.swift[config.def_name].conn
-            with conn.client() as client:
-                for container, path, full_name in config.containers:
+                            # Prepare a service request ..
+                            req = self._prepare_service_request(ext_result, item, container, path, full_name)
 
-                    # Results of the call to an external resource - first element is result's metadata
-                    # and elements 1: are the actual data, if any.
-                    ext_result = client.get_container(container, path=path)
+                            # .. but don't necessarily pull data from the container.
+                            if config.get_data and self._name_matches(config.get_data_patt, item['name'], config.get_data_patt_neg):
+                                req.item.payload = self._get_data(client, config, container, item['name'])
 
-                    # Iterate over elements skipping directories - we're interested only in files.
-                    for items in ext_result[1:]:
-                        for item in items:
-                            if item['content_type'] != 'application/directory':
+                            # Invoke the target service and see what next to do with its response
+                            srv_result = self.invoke(config.service_name, req)
 
-                                if not self._name_matches(config.name_pattern, item['name'], config.name_pattern_neg):
-                                    continue
-
-                                # Prepare a service request ..
-                                req = self._prepare_service_request(ext_result, item, container, path, full_name)
-
-                                # .. but don't necessarily pull data from the container.
-                                if config.get_data and self._name_matches(config.get_data_patt, item['name'], config.get_data_patt_neg):
-                                    req.item.payload = self._get_data(client, config, container, item['name'])
-
-                                self.logger.warn(item)
-                                self.logger.warn(config)
-
-                                # Invoke the target service and see what next to do with its response
-                                srv_result = self.invoke(config.service_name, req)
-
-                                # Ok, we are to delete the just pulled document. Note that 'srv_result' can be either
-                                # an empty string or dict hence two conditions.
-                                if 'delete' in srv_result and srv_result.get('delete'):
-                                    client.delete_object(container, req.item_meta.name)
-
-    def handle(self):
-        self.keep_running = True
-        config = bunchify(self.request.payload)
-
-        while self.keep_running:
-            spawn(self._run_notifier, config)
-            sleep(config.interval)
-
-        self.logger.info('Stopped OpenStack Swift notifier `%s`', config.name)
+                            # Ok, we are to delete the just pulled document. Note that 'srv_result' can be either
+                            # an empty string or dict hence two conditions.
+                            if 'delete' in srv_result and srv_result.get('delete'):
+                                client.delete_object(container, req.item_meta.name)

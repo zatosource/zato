@@ -318,8 +318,13 @@ class NOTIF(Constants):
 
     # New in 2.0
     RUN_NOTIFIER = ValueConstant('')
+
     CLOUD_OPENSTACK_SWIFT_CREATE_EDIT = ValueConstant('')
     CLOUD_OPENSTACK_SWIFT_DELETE = ValueConstant('')
+
+    SQL_CREATE = ValueConstant('')
+    SQL_EDIT = ValueConstant('')
+    SQL_DELETE = ValueConstant('')
 
 class SEARCH(Constants):
     code_start = 104200

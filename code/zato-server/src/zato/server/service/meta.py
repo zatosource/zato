@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from inspect import getmodule, isclass
+from itertools import chain
 from logging import getLogger
 from time import time
 from traceback import format_exc
@@ -22,11 +23,14 @@ from bunch import bunchify
 from sqlalchemy import Boolean, Integer
 
 # Zato
+from zato.common import NO_DEFAULT_VALUE
 from zato.common.odb.model import Base, Cluster
 from zato.server.service import Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO
 
 logger = getLogger(__name__)
+
+singleton = object()
 
 sa_to_sio = {
     Boolean: BoolSIO,
@@ -42,7 +46,7 @@ req_resp = {
 }
 
 
-def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list):
+def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_cluster_id):
 
     # This can be either a list or an SQLAlchemy object
     elems = attrs.get(elems_name) or []
@@ -55,6 +59,10 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list):
 
             # Each model has a cluster_id column but it's not really needed for anything on output
             if column.name == 'cluster_id' and is_output:
+                continue
+
+            # We already have cluster_id and don't need a ForceType'd one.
+            if column.name == 'cluster_id' and has_cluster_id:
                 continue
 
             if column.name in attrs.skip_input_params:
@@ -102,8 +110,19 @@ def update_attrs(cls, name, attrs):
     attrs.def_needed = getattr(mod, 'def_needed', False)
     attrs.initial_input = getattr(mod, 'initial_input', {})
     attrs.skip_input_params = getattr(mod, 'skip_input_params', [])
+    attrs.skip_output_params = getattr(mod, 'skip_output_params', [])
     attrs.instance_hook = getattr(mod, 'instance_hook', None)
     attrs.extra_delete_attrs = getattr(mod, 'extra_delete_attrs', [])
+    attrs.input_required_extra = getattr(mod, 'input_required_extra', [])
+    attrs.create_edit_input_required_extra = getattr(mod, 'create_edit_input_required_extra', [])
+    attrs.create_edit_rewrite = getattr(mod, 'create_edit_rewrite', [])
+
+    default_value = getattr(mod, 'default_value', singleton)
+    default_value = NO_DEFAULT_VALUE if default_value is singleton else default_value
+    attrs.default_value = default_value
+
+    attrs.is_edit = False
+    attrs.is_create_edit = False
 
     if name == 'GetList':
         # get_sio sorts out what is required and what is optional.
@@ -117,8 +136,8 @@ def update_attrs(cls, name, attrs):
         if name in('Create', 'Edit'):
             attrs.input_required = attrs.model
             attrs.input_optional = attrs.model
-            attrs.is_create_edit = True
             attrs.is_edit = name == 'Edit'
+            attrs.is_create_edit = True
 
     return attrs
 
@@ -135,20 +154,33 @@ class AdminServiceMeta(type):
         class SimpleIO(AdminSIO):
             request_elem = 'zato_{}_{}_request'.format(attrs.elem, req_resp[name])
             response_elem = 'zato_{}_{}_response'.format(attrs.elem, req_resp[name])
-            input_required = sio['input_required']
+            input_required = sio['input_required'] + attrs['input_required_extra']
             input_optional = []
             output_required = sio['output_required'] + attrs['output_required_extra']
             output_optional = attrs['output_optional_extra']
+            default_value = attrs.default_value
 
         for io in 'input', 'output':
             for req in 'required', 'optional':
                 _name = '{}_{}'.format(io, req)
 
+                is_required = 'required' in req
+                is_output = 'output' in io
+                is_get_list = name=='GetList'
+
                 sio_elem = getattr(SimpleIO, _name)
-                sio_elem.extend(get_io(attrs, _name, attrs.get('is_edit'), 'required' in req, 'output' in io, name=='GetList'))
+                sio_elem.extend(get_io(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, 'cluster_id' in sio_elem))
+
+                if attrs.is_create_edit and is_required:
+                    sio_elem.extend(attrs.create_edit_input_required_extra)
 
                 # Sorts and removes duplicates
                 setattr(SimpleIO, _name, sorted(list(set(sio_elem))))
+
+        for skip_name in attrs.skip_output_params:
+            for attr_names in chain([SimpleIO.output_required, SimpleIO.output_optional]):
+                if skip_name in attr_names:
+                    attr_names.remove(skip_name)
 
         return SimpleIO
 
@@ -230,7 +262,7 @@ class CreateEditMeta(AdminServiceMeta):
                     session.commit()
 
                 except Exception, e:
-                    msg = 'Could not {} a namespace, e:`%s`'.format(verb)
+                    msg = 'Could not {} the object, e:`%s`'.format(verb)
                     self.logger.error(msg, format_exc(e))
                     session.rollback()
                     raise
@@ -245,8 +277,12 @@ class CreateEditMeta(AdminServiceMeta):
                     input.old_name = old_name
                     self.broker_client.publish(input)
 
-                    self.response.payload.id = instance.id
-                    self.response.payload.name = instance.name
+                    for name in chain(attrs.create_edit_rewrite, self.SimpleIO.output_required):
+                        value = getattr(instance, name, singleton)
+                        if value is singleton:
+                            value = input[name]
+
+                        setattr(self.response.payload, name, value)
 
         return handle_impl
 
