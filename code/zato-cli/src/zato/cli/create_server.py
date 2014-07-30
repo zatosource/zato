@@ -207,6 +207,7 @@ directories = (
     'config/repo/lua',
     'config/repo/lua/internal',
     'config/repo/lua/user',
+    'config/repo/static',
     'config/repo/tls',
     'config/repo/tls/keys-certs',
     'config/repo/tls/partner-certs',
