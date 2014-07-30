@@ -14,6 +14,9 @@ from decimal import Decimal
 from threading import RLock
 from traceback import format_exc
 
+# Arrow
+from arrow import get as arrow_get
+
 # Bunch
 from bunch import Bunch
 
@@ -292,7 +295,7 @@ class Mapper(object):
         self.skip_missing = skip_missing
         self.default = default
         self.subs = {}
-        self.funcs = {'int':int, 'bool':asbool, 'dec':Decimal}
+        self.funcs = {'int':int, 'long':long, 'bool':asbool, 'dec':Decimal, 'arrow':arrow_get}
         self.func_keys = self.funcs.keys()
         self.times = {}
         self.cache = {}

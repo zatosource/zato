@@ -46,7 +46,7 @@ from zato.server.service.reqresp import Cloud, Outgoing, Request, Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, Float, ForceType, Integer, List, ListOfDicts, Nested, \
-     Unicode, UTC
+     Opaque, Unicode, UTC
 
 # So pyflakes doesn't complain about names being imported but not used
 AsIs
@@ -59,6 +59,7 @@ Integer
 List
 ListOfDicts
 Nested
+Opaque
 Unicode
 UTC
 
@@ -102,17 +103,18 @@ class TimeUtil(object):
         """ Returns current day in a given timezone.
         """
         now = arrow.utcnow()
+        today = arrow.Arrow(year=now.year, month=now.month, day=now.day)
 
         if tz != 'UTC':
-            now = now.to(tz)
+            today = today.to(tz)
 
         if format.startswith('kvdb:'):
             format = self.get_format_from_kvdb(format)
 
         if needs_format:
-            return now.format(format)
+            return today.format(format)
         else:
-            return now
+            return today
 
     def reformat(self, value, from_, to):
         """ Reformats value from one datetime format to another, for instance
