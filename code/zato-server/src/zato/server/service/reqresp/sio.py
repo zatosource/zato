@@ -305,6 +305,13 @@ class ServiceInput(Bunch):
     def deepcopy(self):
         return deepcopy(self)
 
+    def require_any(self, *elems):
+        for name in elems:
+            if self.get(name):
+                break
+        else:
+            raise ValueError('At least one of `{}` is required'.format(elems))
+
 # ################################################################################################################################
 
 COMPLEX_VALUE = (Dict, List, ListOfDicts, Nested)
