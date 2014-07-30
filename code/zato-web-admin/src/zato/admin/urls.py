@@ -29,6 +29,7 @@ from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
 from zato.admin.web.views.message import json_pointer, namespace, xpath
 from zato.admin.web.views.notif.cloud.openstack import swift as notif_cloud_openstack_swift
+from zato.admin.web.views.notif import sql as notif_sql
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
@@ -775,6 +776,16 @@ urlpatterns += patterns('',
         login_required(notif_cloud_openstack_swift.Edit()), name=notif_cloud_openstack_swift.Edit.url_name),
     url(r'^zato/notif/cloud/openstack/swift/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(notif_cloud_openstack_swift.Delete()), name=notif_cloud_openstack_swift.Delete.url_name),
+
+    url(r'^zato/notif/sql/$',
+        login_required(notif_sql.Index()), name=notif_sql.Index.url_name),
+    url(r'^zato/notif/sql/create/$',
+        login_required(notif_sql.Create()), name=notif_sql.Create.url_name),
+    url(r'^zato/notif/sql/edit/$',
+        login_required(notif_sql.Edit()), name=notif_sql.Edit.url_name),
+    url(r'^zato/notif/sql/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(notif_sql.Delete()), name=notif_sql.Delete.url_name),
+
     )
 
 # ################################################################################################################################

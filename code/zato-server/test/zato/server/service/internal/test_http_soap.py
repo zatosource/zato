@@ -43,7 +43,8 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'is_internal', 'url_path'))
         self.assertEquals(self.sio.output_optional, ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 
-            'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type', 'timeout'))
+            'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type', 'timeout',
+            'sec_tls_ca_cert_id'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
 
@@ -75,7 +76,7 @@ class CreateTestCase(ServiceTestCase):
         self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path'))
         self.assertEquals(self.sio.input_optional, ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 'host', 
             'ping_method', 'pool_size', ForceTypeWrapper(Bool('merge_url_params_req')), 'url_params_pri', 'params_pri',
-            'serialization_type', 'timeout'))
+            'serialization_type', 'timeout', 'sec_tls_ca_cert_id'))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
@@ -107,7 +108,8 @@ class EditTestCase(ServiceTestCase):
         self.assertEquals(self.sio.response_elem, 'zato_http_soap_edit_response')
         self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path'))
         self.assertEquals(self.sio.input_optional, ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 'host', 
-            'ping_method', 'pool_size', ForceTypeWrapper(Bool('merge_url_params_req')), 'url_params_pri', 'params_pri', 'serialization_type', 'timeout')) 
+            'ping_method', 'pool_size', ForceTypeWrapper(Bool('merge_url_params_req')), 'url_params_pri', 'params_pri',
+            'serialization_type', 'timeout', 'sec_tls_ca_cert_id')) 
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
