@@ -44,7 +44,7 @@ from anyjson import dumps, loads
 from base32_crockford import encode as b32_crockford_encode
 
 # Bunch
-from bunch import bunchify
+from bunch import Bunch, bunchify
 
 # ConfigObj
 from configobj import ConfigObj
@@ -924,3 +924,15 @@ def ping_solr(config):
     requests.get('{}://{}{}'.format(result.scheme, result.netloc, config.ping_path))
 
 # ################################################################################################################################
+
+class StaticConfig(Bunch):
+    def __init__(self, path):
+        super(StaticConfig, self).__init__()
+        self.read(path)
+
+    def read(self, path):
+        for item in os.listdir(path):
+            f = open(os.path.join(path, item))
+            value = f.read()
+            f.close()
+            self[item] = value
