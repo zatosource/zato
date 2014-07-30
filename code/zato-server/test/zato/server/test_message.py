@@ -338,19 +338,15 @@ class TestMapper(TestCase):
         m = Mapper(source)
 
         # 1:1 mappings
-        m.map('/aa', '/a/b')
-        m.map('/bb', '/a/c/d')
+        m.map('/a/b', '/aa')
+        m.map('/a/c/d', '/bb')
 
         # Force conversion to int
-        m.map('/cc/dd', 'int:/a/c/d')
-
-        # Manually signal /cc/ee/ff should be a list here ..
-        m.set('/cc/ee/ff', [])
-        m.map('/cc/ee/ff/19', 'int:/a/c/d')
+        m.map('int:/a/c/d', '/cc/dd')
+        m.map('int:/a/c/d', '/cc/ee/ff/19')
 
         target = bunchify(m.target)
 
         self.assertListEqual(target.aa, [1, 2, '3', 4])
         self.assertEquals(target.bb, '123')
         self.assertEquals(target.cc.dd, 123)
-        self.assertEquals(target.cc.ee.ff, [None] * 19 + [123])
