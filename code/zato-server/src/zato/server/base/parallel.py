@@ -56,7 +56,7 @@ from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, KVDB, MISC, SERVER_JOIN_S
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
      JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
 from zato.common.pubsub import PubSubAPI, RedisPubSub
-from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, new_cid, register_diag_handlers
+from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, new_cid, StaticConfig, register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore
@@ -109,6 +109,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.app_context = None
         self.has_gevent = None
         self.delivery_store = None
+        self.static_config = None
         self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
 
         self.access_logger = logging.getLogger('zato_access_log')
@@ -283,6 +284,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         server's been allowed to join the cluster or not.
         """
         self.worker_store = WorkerStore(self.config, self)
+
+        # Static config files
+        self.static_config = StaticConfig(os.path.join(self.repo_location, 'static'))
 
         # Key-value DB
         kvdb_config = get_kvdb_config_for_log(self.fs_server_config.kvdb)
