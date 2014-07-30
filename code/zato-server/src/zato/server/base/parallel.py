@@ -459,8 +459,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         #
 
         # OpenStack Swift
-        query = self.odb.get_notif_cloud_openstack_swift(server.cluster.id, True)
+        query = self.odb.get_notif_cloud_openstack_swift_list(server.cluster.id, True)
         self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift', query)
+
+        # SQL
+        query = self.odb.get_notif_sql_list(server.cluster.id, True)
+        self.config.notif_sql = ConfigDict.from_query('notif_sql', query)
 
         #
         # Notifications - end

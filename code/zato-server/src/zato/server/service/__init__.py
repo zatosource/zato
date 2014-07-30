@@ -365,7 +365,7 @@ class Service(object):
         """
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
 
-    def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=None,
+    def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=DATA_FORMAT.DICT,
             transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None):
         """ Invokes a service asynchronously by its name.
         """

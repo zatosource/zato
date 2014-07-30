@@ -32,8 +32,8 @@ from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, PUB_SUB, SEC_DEF_TYPE, SIMPLE_IO, \
-     TRACE1, ZATO_ODB_POOL_NAME
+from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, SEC_DEF_TYPE, \
+     SIMPLE_IO, TRACE1, ZATO_ODB_POOL_NAME
 from zato.common import broker_message
 from zato.common.broker_message import code_to_name
 from zato.common.dispatch import dispatcher
@@ -297,6 +297,36 @@ class WorkerStore(BrokerMessageReceiver):
     def init_notifiers(self):
         for config_dict in self.worker_config.notif_cloud_openstack_swift.values():
             self._update_cloud_openstack_swift_container(config_dict.config)
+
+    def get_notif_config(self, notif_type, name):
+        config_dict = {
+            NOTIF.TYPE.OPENSTACK_SWIFT: self.worker_config.notif_cloud_openstack_swift,
+            NOTIF.TYPE.SQL: self.worker_config.notif_sql,
+        }[notif_type]
+
+        return config_dict.get(name)
+
+    def create_edit_notifier(self, msg, action, config_dict, update_func=None):
+
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg.name
+
+        config_dict.pop(del_name, None) # Delete and ignore if it doesn't exit (it's CREATE then)
+        config_dict[msg.name] = Bunch()
+        config_dict[msg.name].config = msg
+
+        if update_func:
+            update_func(msg)
+
+        # Start a new background notifier either if it's a create action or on rename.
+        if msg.source_service_type == 'create' or (old_name and old_name != msg.name):
+
+            self._on_message_invoke_service({
+                'service': 'zato.notif.invoke-run-notifier',
+                'payload': {'config': msg},
+                'cid': new_cid(),
+            }, CHANNEL.NOTIFIER_RUN, action)
 
 # ################################################################################################################################
 
@@ -1149,30 +1179,30 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_NOTIF_RUN_NOTIFIER(self, msg):
         self._on_message_invoke_service(loads(msg.request), CHANNEL.NOTIFIER_RUN, 'NOTIF_RUN_NOTIFIER')
 
+# ################################################################################################################################
+
     def on_broker_msg_NOTIF_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT(self, msg):
-
-        # It might be a rename
-        old_name = msg.get('old_name')
-        del_name = old_name if old_name else msg.name
-
-        config_dict = self.server.worker_store.worker_config.notif_cloud_openstack_swift
-        config_dict.pop(del_name, None) # Delete and ignore if it doesn't exit (it's CREATE then)
-        config_dict[msg.name] = Bunch()
-        config_dict[msg.name].config = msg
-
-        self._update_cloud_openstack_swift_container(msg)
-
-        # Start a new background notifier either if it's a create action or on rename.
-        if msg.source_service_type == 'create' or (old_name and old_name != msg.name):
-
-            self._on_message_invoke_service({
-                'service': 'zato.notif.invoke-run-notifier',
-                'payload': {'config': msg},
-                'cid': new_cid(),
-            }, CHANNEL.NOTIFIER_RUN, 'NOTIF_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT')
+        self.create_edit_notifier(msg, 'NOTIF_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT',
+            self.server.worker_store.worker_config.notif_cloud_openstack_swift, 
+            self._update_cloud_openstack_swift_container)
 
     def on_broker_msg_NOTIF_CLOUD_OPENSTACK_SWIFT_DELETE(self, msg):
         del self.server.worker_store.worker_config.notif_cloud_openstack_swift[msg.name]
+
+# ################################################################################################################################
+
+    def _on_broker_msg_NOTIF_SQL_CREATE_EDIT(self, msg, source_service_type):
+        msg.source_service_type = source_service_type
+        self.create_edit_notifier(msg, 'NOTIF_SQL', self.server.worker_store.worker_config.notif_sql)
+
+    def on_broker_msg_NOTIF_SQL_CREATE(self, msg):
+        self._on_broker_msg_NOTIF_SQL_CREATE_EDIT(msg, 'create')
+
+    def on_broker_msg_NOTIF_SQL_EDIT(self, msg):
+        self._on_broker_msg_NOTIF_SQL_CREATE_EDIT(msg, 'edit')
+
+    def on_broker_msg_NOTIF_SQL_DELETE(self, msg):
+        del self.server.worker_store.worker_config.notif_sql[msg.name]
 
 # ################################################################################################################################
 
