@@ -19,6 +19,7 @@ from bunch import Bunch
 # Cassandra
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
+from cassandra.query import dict_factory
 
 # gevent
 from gevent.lock import RLock
@@ -101,6 +102,7 @@ class CassandraConnStore(object):
             logger.debug('Connecting to `%s`', config_no_sensitive)
 
             session = cluster.connect()
+            session.row_factory = dict_factory
             session.set_keyspace(config.default_keyspace)
 
             logger.debug('Connected to `%s`', config_no_sensitive)

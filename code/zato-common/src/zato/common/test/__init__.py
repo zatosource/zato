@@ -167,7 +167,9 @@ class ForceTypeWrapper(object):
         self.value = value
         
     def __cmp__(self, other):
-        return cmp(self.value.name, other.name)
+        # Compare to either other's name or to other directly. In the latter case it means it's a plain string name
+        # of a SIO attribute.
+        return cmp(self.value.name, getattr(other, 'name', other))
         
 class ServiceTestCase(TestCase):
     
