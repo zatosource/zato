@@ -96,6 +96,7 @@ queue_build_cap = 30 # All queue-based connections need to initialize in that ma
 http_proxy=
 locale=
 ensure_sql_connections_exist=True
+http_server_header=Zato
 
 [kvdb]
 host={kvdb_host}
