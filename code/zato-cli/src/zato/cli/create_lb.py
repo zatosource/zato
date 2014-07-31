@@ -48,6 +48,8 @@ defaults
     timeout client 15000 # ZATO defaults:timeout client
     timeout server 15000 # ZATO defaults:timeout server
 
+    errorfile 503 {http_503_path}
+
     stats enable
     stats realm   Haproxy\ Statistics
 
@@ -133,9 +135,15 @@ class Create(ZatoCommand):
         else:
             backend = '\n# ZATO default_backend_empty'
 
-        zato_config = zato_config_template.format(stats_socket=stats_socket, stats_password=uuid.uuid4().hex, default_backend=backend) # noqa
+        zato_config = zato_config_template.format(
+            stats_socket=stats_socket,
+            stats_password=uuid.uuid4().hex,
+            default_backend=backend,
+            http_503_path=os.path.join(repo_dir, '503.http')) # noqa
+
         open(os.path.join(repo_dir, 'zato.config'), 'w').write(zato_config) # noqa
         open(os.path.join(repo_dir, '503.http'), 'w').write(http_503) # noqa
+
         self.copy_lb_crypto(repo_dir, args)
         
         # Initial info
