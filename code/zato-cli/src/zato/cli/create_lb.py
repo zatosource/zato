@@ -48,6 +48,8 @@ defaults
     timeout client 15000 # ZATO defaults:timeout client
     timeout server 15000 # ZATO defaults:timeout server
 
+    errorfile 503 {http_503_path}
+
     stats enable
     stats realm   Haproxy\ Statistics
 
@@ -88,6 +90,18 @@ default_backend = """
     server http_plain--server2 127.0.0.1:{server02_port} check inter 2s rise 2 fall 2 # ZATO backend bck_http_plain:server--server2
 """
 
+http_503 = """HTTP/1.0 503 Service Unavailable
+Cache-Control: no-cache
+Connection: close
+Content-Type: application/json
+
+{"zato_env":
+  {"details": "No server is available to handle the request",
+  "result": "ZATO_ERROR",
+  "cid": "K012345678901234567890123456"}
+}
+"""
+
 class Create(ZatoCommand):
     """ Creates a new Zato load-balancer
     """
@@ -121,8 +135,15 @@ class Create(ZatoCommand):
         else:
             backend = '\n# ZATO default_backend_empty'
 
-        zato_config = zato_config_template.format(stats_socket=stats_socket, stats_password=uuid.uuid4().hex, default_backend=backend) # noqa
+        zato_config = zato_config_template.format(
+            stats_socket=stats_socket,
+            stats_password=uuid.uuid4().hex,
+            default_backend=backend,
+            http_503_path=os.path.join(repo_dir, '503.http')) # noqa
+
         open(os.path.join(repo_dir, 'zato.config'), 'w').write(zato_config) # noqa
+        open(os.path.join(repo_dir, '503.http'), 'w').write(http_503) # noqa
+
         self.copy_lb_crypto(repo_dir, args)
         
         # Initial info
