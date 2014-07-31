@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from httplib import OK
+
 # Django
 from django.core.urlresolvers import resolve
 
@@ -62,10 +65,14 @@ class Client(AnyServiceInvoker):
         super(Client, self).__init__(*args, **kwargs)
 
     def invoke(self, *args, **kwargs):
-        return super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarder_for}, **kwargs)
+        response = super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarder_for}, **kwargs)
+        if response.inner.status_code != OK:
+            raise Exception(response.inner.text)
+        return response
 
     def invoke_async(self, *args, **kwargs):
-        return super(Client, self).invoke_async(*args, headers={'X-Zato-Forwarded-For': self.forwarder_for}, **kwargs)
+        response = super(Client, self).invoke_async(*args, headers={'X-Zato-Forwarded-For': self.forwarder_for}, **kwargs)
+        return response
 
 class ZatoMiddleware(object):
 
