@@ -22,6 +22,7 @@ from time import time
 # SQLAlchemy
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, scoped_session
+from sqlalchemy.pool import NullPool
 
 # Spring Python
 from springpython.context import DisposableObject
@@ -94,6 +95,8 @@ class SQLConnectionPool(object):
         # SQLite has no pools
         if self.engine_name != 'sqlite':
             _extra['pool_size'] = int(config.get('pool_size', 1))
+            if _extra['pool_size'] == 0:
+                _extra['poolclass'] = NullPool
 
         engine_url = get_engine_url(config)
         self.engine = create_engine(engine_url, **_extra)
