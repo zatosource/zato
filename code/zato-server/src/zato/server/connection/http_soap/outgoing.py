@@ -26,7 +26,7 @@ from parse import PARSE_RE
 import requests
 
 # Zato
-from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, URL_TYPE
+from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
 from zato.common.util import get_component_name
 from zato.server.connection.queue import ConnectionQueue
 
@@ -73,7 +73,7 @@ class BaseHTTPSOAPWrapper(object):
         response = self.session.request(self.config['ping_method'], self.address, 
                 auth=self.requests_auth, headers=self._create_headers(cid, {}),
                 hooks={'zato_pre_request':zato_pre_request_hook}, timeout=self.config['timeout'],
-                cert=self.tls_key_cert, verify=False)
+                cert=self.tls_key_cert, verify=False if self.config['tls_verify'] == ZATO_NONE else self.config['tls_verify'])
 
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(response.status_code))
