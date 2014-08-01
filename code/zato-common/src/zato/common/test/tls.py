@@ -15,14 +15,34 @@ from threading import Thread
 from time import sleep
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
+# psutil
+import psutil
+
 # Zato
+from zato.common import ZATO_OK
 from zato.common.test.tls_material import ca_cert, server1_cert, server1_key
 
 TLS_PORT = 37443
 
+def get_free_port(start=20001, end=50000):
+    taken = []
+    for c in psutil.net_connections(kind='inet'):
+        if c.status == psutil.CONN_LISTEN:
+            taken.append(c.laddr[1])
+
+    for port in xrange(start, end):
+        if port not in taken:
+            return port
+
+class _HTTPHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.wfile.write(ZATO_OK)
+        self.send_response(200)
+
 class _TLSServer(HTTPServer):
     def __init__(self, cert_reqs, ca_cert):
-        HTTPServer.__init__(self, ('0.0.0.0', TLS_PORT), BaseHTTPRequestHandler)
+        self.port = get_free_port()
+        HTTPServer.__init__(self, ('0.0.0.0', self.port), _HTTPHandler)
         self.cert_reqs = cert_reqs
         self.ca_cert=None
 
@@ -56,6 +76,12 @@ class TLSServer(Thread):
         self.server = None
         self.cert_reqs = cert_reqs
         self.ca_cert=None
+
+    def get_port(self):
+        return self.server.port
+
+    def stop(self):
+        self.server.server_close()
 
     def run(self):
         self.server = _TLSServer(self.cert_reqs, self.ca_cert)

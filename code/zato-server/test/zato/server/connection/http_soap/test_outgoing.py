@@ -9,7 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import ssl
+from logging import getLogger
+from tempfile import NamedTemporaryFile
 from time import sleep
+from traceback import format_exc
 from unittest import TestCase
 
 # bunch
@@ -18,11 +22,17 @@ from bunch import Bunch
 # nose
 from nose.tools import eq_
 
+# requests
+import requests
+
 # Zato
-from zato.common import URL_TYPE
+from zato.common import URL_TYPE, ZATO_NONE
 from zato.common.test import rand_float, rand_int, rand_string
 from zato.common.test.tls import TLS_PORT, TLSServer
+from zato.common.test.tls_material import ca_cert_invalid
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
+
+logger = getLogger(__name__)
 
 class _FakeSession(object):
     def __init__(self, *ignored, **kwargs):
@@ -44,12 +54,15 @@ class _FakeRequestsModule(object):
         self.session_obj = _FakeSession(*args, **kwargs)
         return self.session_obj
 
-class HTTPSOAPWrapperTestCase(TestCase):
-    
+class Base(object):
+
     def _get_config(self):
         return {'is_active':True, 'sec_type':rand_string(), 'address_host':rand_string(), 
             'address_url_path':rand_string(), 'ping_method':rand_string(), 'soap_version':'1.1',
-            'pool_size':rand_int(), 'serialization_type':'string', 'timeout':rand_int()}
+            'pool_size':rand_int(), 'serialization_type':'string', 'timeout':rand_int(),
+            'tls_verify':ZATO_NONE}
+
+class HTTPSOAPWrapperTestCase(TestCase, Base):
     
     def xtest_ping_method(self):
         """ https://github.com/zatosource/zato/issues/44 (outconn HTTP/SOAP ping method)
@@ -218,12 +231,54 @@ class HTTPSOAPWrapperTestCase(TestCase):
                     
                     eq_(http_request_value, expected_http_request_valuex)
 
-class TLSTestCase(TestCase):
-    def test_unknown_ca_verify_false(self):
+class TLSTestCase(TestCase, Base):
+
+    def test_ping_unknown_ca_verify_false(self):
         server = TLSServer()
         server.start()
-        sleep(0.1) # So the server thread really starts
 
-        from requests import get
-        response = get('https://localhost:{}/'.format(TLS_PORT), verify=False)
-        print(33333333, response)
+        sleep(0.3)
+
+        port = server.get_port()
+
+        config = self._get_config()
+        config['address_host'] = 'https://localhost:{}/'.format(port)
+        config['address_url_path'] = ''
+        config['ping_method'] = 'GET'
+        config['tls_verify'] = ZATO_NONE
+
+        requests_module = _FakeRequestsModule()
+        wrapper = HTTPSOAPWrapper(config, requests)
+
+        self.assertIn('Code: 200', wrapper.ping(rand_string()))
+
+
+    def test_ping_unknown_ca_verify_invalid_ca_cert(self):
+
+        with NamedTemporaryFile(prefix='zato-tls', delete=False) as ca_cert_tf:
+
+            ca_cert_tf.write(ca_cert_invalid)
+            ca_cert_tf.flush()
+
+            server = TLSServer()
+            server.start()
+
+            sleep(0.3)
+
+            port = server.get_port()
+
+            config = self._get_config()
+            config['address_host'] = 'https://localhost:{}/'.format(port)
+            config['address_url_path'] = ''
+            config['ping_method'] = 'GET'
+            config['tls_verify'] = ca_cert_tf.name
+
+            requests_module = _FakeRequestsModule()
+            wrapper = HTTPSOAPWrapper(config, requests)
+
+            try:
+                wrapper.ping(rand_string())
+            except Exception, e:
+                self.assertIn('SSL3_GET_SERVER_CERTIFICATE:certificate verify failed', e.message[0][1])
+            else:
+                self.fail('Excepted a TLS error here because the CA is invalid')
