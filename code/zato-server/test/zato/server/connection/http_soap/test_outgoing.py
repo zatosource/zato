@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from time import sleep
 from unittest import TestCase
 
 # bunch
@@ -20,6 +21,7 @@ from nose.tools import eq_
 # Zato
 from zato.common import URL_TYPE
 from zato.common.test import rand_float, rand_int, rand_string
+from zato.common.test.tls import TLS_PORT, TLSServer
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 
 class _FakeSession(object):
@@ -49,7 +51,7 @@ class HTTPSOAPWrapperTestCase(TestCase):
             'address_url_path':rand_string(), 'ping_method':rand_string(), 'soap_version':'1.1',
             'pool_size':rand_int(), 'serialization_type':'string', 'timeout':rand_int()}
     
-    def test_ping_method(self):
+    def xtest_ping_method(self):
         """ https://github.com/zatosource/zato/issues/44 (outconn HTTP/SOAP ping method)
         """
         config = self._get_config()
@@ -63,7 +65,7 @@ class HTTPSOAPWrapperTestCase(TestCase):
         ping_method = requests_module.session_obj.request_args[0]
         eq_(expected_ping_method, ping_method)
 
-    def test_pool_size(self):
+    def xtest_pool_size(self):
         """ https://github.com/zatosource/zato/issues/77 (outconn HTTP/SOAP pool size)
         """
         config = self._get_config()
@@ -76,7 +78,7 @@ class HTTPSOAPWrapperTestCase(TestCase):
         
         eq_(expected_pool_size, requests_module.session_obj.pool_size)
 
-    def test_timeout(self):
+    def xtest_timeout(self):
         """ https://github.com/zatosource/zato/issues/112 (HTTP timeouts)
         """
         for name in 'ping', 'get', 'delete', 'options', 'post', 'send', 'put', 'patch':
@@ -94,7 +96,7 @@ class HTTPSOAPWrapperTestCase(TestCase):
                 self.assertIn('timeout', requests_module.session_obj.request_kwargs)
                 eq_(expected_timeout, requests_module.session_obj.request_kwargs['timeout'])
 
-    def test_set_address(self):
+    def xtest_set_address(self):
         address_host = rand_string()
         config = self._get_config()
         config['address_host'] = address_host
@@ -111,7 +113,7 @@ class HTTPSOAPWrapperTestCase(TestCase):
             else:
                 eq_(wrapper.path_params, ['customer', 'order', 'process'])
         
-    def test_format_address(self):
+    def xtest_format_address(self):
         cid = rand_string()
         address_host = rand_string()
         address_url_path = '/a/{a}/b{b}/c-{c}/{d}d/'
@@ -151,7 +153,7 @@ class HTTPSOAPWrapperTestCase(TestCase):
         else:
             self.fail('Expected ValueError (not enough keys in params)')
     
-    def test_http_methods(self):
+    def xtest_http_methods(self):
         address_host = rand_string()
         
         config = self._get_config()
@@ -214,4 +216,14 @@ class HTTPSOAPWrapperTestCase(TestCase):
                             _cid, _data, expected_params, expected_args1, expected_args2,
                             foo=expected_kwargs1, bar=expected_kwargs2)
                     
-                    eq_(http_request_value, expected_http_request_value)
+                    eq_(http_request_value, expected_http_request_valuex)
+
+class TLSTestCase(TestCase):
+    def test_unknown_ca_verify_false(self):
+        server = TLSServer()
+        server.start()
+        sleep(0.1) # So the server thread really starts
+
+        from requests import get
+        response = get('https://localhost:{}/'.format(TLS_PORT), verify=False)
+        print(33333333, response)
