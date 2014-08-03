@@ -1,0 +1,11 @@
+--- authorize/schemas.py.orig	2014-08-03 18:11:32.476361484 +0200
++++ authorize/schemas.py	2014-08-03 18:11:47.944360861 +0200
+@@ -314,7 +314,7 @@
+                                  validator=colander.Range(0, 20000),
+                                  required=True)
+     start_date = colander.SchemaNode(colander.Date(),
+-                                     missing=today)
++                                     missing=colander.drop)
+     trial_amount = colander.SchemaNode(colander.Decimal('0.01'),
+                                        validator=colander.Range(0, 20000),
+                                        missing=colander.drop)

@@ -1,0 +1,16 @@
+--- authorize/apis/recurring_api.py.orig	2014-08-03 17:17:46.948491410 +0200
++++ authorize/apis/recurring_api.py	2014-08-03 17:18:23.972489918 +0200
+@@ -58,8 +58,11 @@
+             E.SubElement(interval, 'length').text = str(params['interval_length'])
+             E.SubElement(interval, 'unit').text = params['interval_unit']
+ 
+-        E.SubElement(schedule, 'startDate').text = str(params['start_date'])
+-        E.SubElement(schedule, 'totalOccurrences').text = str(params['total_occurrences'])
++        if 'start_date' in params:
++            E.SubElement(schedule, 'startDate').text = str(params['start_date'])
++
++        if 'total_occurrences' in params:
++            E.SubElement(schedule, 'totalOccurrences').text = str(params['total_occurrences'])
+ 
+         if 'trial_occurrences' in params:
+             E.SubElement(schedule, 'trialOccurrences').text = str(params['trial_occurrences'])
