@@ -29,7 +29,7 @@ import requests
 from zato.common import URL_TYPE, ZATO_NONE
 from zato.common.test import rand_float, rand_int, rand_string
 from zato.common.test.tls import TLS_PORT, TLSServer
-from zato.common.test.tls_material import ca_cert_invalid
+from zato.common.test.tls_material import ca_cert, ca_cert_invalid, client1_cert, client1_key
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 
 logger = getLogger(__name__)
@@ -252,7 +252,6 @@ class TLSTestCase(TestCase, Base):
 
         self.assertIn('Code: 200', wrapper.ping(rand_string()))
 
-
     def test_ping_unknown_ca_verify_invalid_ca_cert(self):
 
         with NamedTemporaryFile(prefix='zato-tls', delete=False) as ca_cert_tf:
@@ -282,3 +281,65 @@ class TLSTestCase(TestCase, Base):
                 self.assertIn('SSL3_GET_SERVER_CERTIFICATE:certificate verify failed', e.message[0][1])
             else:
                 self.fail('Excepted a TLS error here because the CA is invalid')
+
+    def test_ping_client_cert_required_no_client_cert(self):
+
+        with NamedTemporaryFile(prefix='zato-tls', delete=False) as ca_cert_tf:
+
+            ca_cert_tf.write(ca_cert)
+            ca_cert_tf.flush()
+
+            server = TLSServer(cert_reqs=ssl.CERT_REQUIRED)
+            server.start()
+
+            sleep(0.3)
+
+            port = server.get_port()
+
+            config = self._get_config()
+            config['address_host'] = 'https://localhost:{}/'.format(port)
+            config['address_url_path'] = ''
+            config['ping_method'] = 'GET'
+            config['tls_verify'] = ca_cert_tf.name
+
+            requests_module = _FakeRequestsModule()
+            wrapper = HTTPSOAPWrapper(config, requests)
+
+            try:
+                wrapper.ping(rand_string())
+            except Exception, e:
+                self.assertIn('SSL3_READ_BYTES:sslv3 alert handshake failure', e.message[0][1])
+            else:
+                self.fail('Excepted a TLS error here because no TLS cert has been provided by client')
+
+    def test_ping_client_cert_required_has_client_cert(self):
+
+        with NamedTemporaryFile(prefix='zato-tls', delete=False) as ca_cert_tf:
+
+            ca_cert_tf.write(ca_cert)
+            ca_cert_tf.flush()
+
+            with NamedTemporaryFile(prefix='zato-tls', delete=False) as client_cert_tf:
+
+                client_cert_tf.write(client1_cert)
+                client_cert_tf.write('\n')
+                client_cert_tf.write(client1_key)
+
+                server = TLSServer(cert_reqs=ssl.CERT_REQUIRED)
+                server.start()
+    
+                sleep(0.3)
+    
+                port = server.get_port()
+    
+                config = self._get_config()
+                config['address_host'] = 'https://localhost:{}/'.format(port)
+                config['address_url_path'] = ''
+                config['ping_method'] = 'GET'
+                config['tls_verify'] = ca_cert_tf.name
+                SEC
+    
+                requests_module = _FakeRequestsModule()
+                wrapper = HTTPSOAPWrapper(config, requests)
+    
+                wrapper.ping(rand_string())

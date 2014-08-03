@@ -42,9 +42,9 @@ class _HTTPHandler(BaseHTTPRequestHandler):
 class _TLSServer(HTTPServer):
     def __init__(self, cert_reqs, ca_cert):
         self.port = get_free_port()
-        HTTPServer.__init__(self, ('0.0.0.0', self.port), _HTTPHandler)
         self.cert_reqs = cert_reqs
         self.ca_cert=None
+        HTTPServer.__init__(self, ('0.0.0.0', self.port), _HTTPHandler)
 
     def server_bind(self):
 
@@ -61,10 +61,11 @@ class _TLSServer(HTTPServer):
                     ca_cert_tf.flush()
 
                     self.socket = ssl.wrap_socket(
-                        self.socket, server1_key_tf.name, server1_cert_tf.name, True, ca_certs=ca_cert_tf.name)
+                        self.socket, server1_key_tf.name, server1_cert_tf.name, True, self.cert_reqs, ca_certs=ca_cert_tf.name)
 
                     if self.allow_reuse_address:
-                        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
+
                     self.socket.bind(self.server_address)
                     self.server_address = self.socket.getsockname()
 
