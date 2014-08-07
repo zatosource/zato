@@ -112,6 +112,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.static_config = None
         self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
 
+        # Allows users store arbitrary data across service invocations
+        self.user_ctx = Bunch()
+        self.user_ctx_lock = gevent.lock.RLock()
+
         self.access_logger = logging.getLogger('zato_access_log')
 
         # The main config store
