@@ -378,6 +378,7 @@ class CHANNEL(Attrs):
     JMS_WMQ = 'jms-wmq'
     NOTIFIER_RUN = 'notifier-run' # New in 2.0
     NOTIFIER_TARGET = 'notifier-target' # New in 2.0
+    PUBLISH = 'publish' # New in 2.0
     SCHEDULER = 'scheduler'
     STARTUP_SERVICE = 'startup-service' # New in 2.0
     WORKER = 'worker' # New in 2.0
