@@ -426,10 +426,10 @@ def payload_from_request(cid, request, data_format, transport):
                     payload = request
                 else:
                     payload = objectify.fromstring(request)
-        elif data_format == DATA_FORMAT.JSON:
+        elif data_format in(DATA_FORMAT.DICT, DATA_FORMAT.JSON):
             if not request:
                 return ''
-            if isinstance(request, basestring):
+            if isinstance(request, basestring) and data_format == DATA_FORMAT.JSON:
                 payload = loads(request)
             else:
                 payload = request
