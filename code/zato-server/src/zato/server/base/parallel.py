@@ -755,7 +755,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         else:
             return payload
 
-    def invoke_startup_services(self):
+    def invoke_startup_services(self, key):
         """ We are the first worker and we know we have a broker client and all the other config ready
         so we can publish the request to execute startup services. In the worst
         case the requests will get back to us but it's also possible that other
@@ -763,7 +763,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         server or worker in particular will receive the requests, only that there
         will be exactly one.
         """
-        for name, payload in self.fs_server_config.get('startup_services', {}).items():
+        for name, payload in self.fs_server_config.get(key, {}).items():
             if payload.startswith('file://'):
                 payload = self._startup_service_payload_from_path(name, payload, self.repo_location)
                 if not payload:
@@ -824,8 +824,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.delivery_store.odb = parallel_server.odb
         parallel_server.delivery_store.delivery_lock_timeout = float(parallel_server.fs_server_config.misc.delivery_lock_timeout)
 
-        if is_first:
-            parallel_server.invoke_startup_services()
+        parallel_server.invoke_startup_services('startup_services_first_worker' if is_first else 'startup_services_any_worker')
 
     @staticmethod
     def post_fork(arbiter, worker):
