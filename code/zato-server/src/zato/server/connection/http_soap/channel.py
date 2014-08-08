@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from httplib import INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNAUTHORIZED
+from httplib import FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNAUTHORIZED
 from traceback import format_exc
 
 # anyjson
@@ -23,7 +23,7 @@ from django.http import QueryDict
 from zato.common import CHANNEL, DATA_FORMAT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, \
      ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.util import payload_from_request
-from zato.server.connection.http_soap import ClientHTTPError, NotFound, Unauthorized
+from zato.server.connection.http_soap import ClientHTTPError, Forbidden, NotFound, Unauthorized
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 _status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
 _status_not_found = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
 _status_unauthorized = b'{} {}'.format(UNAUTHORIZED, responses[UNAUTHORIZED])
+_status_forbidden = b'{} {}'.format(FORBIDDEN, responses[FORBIDDEN])
 
 soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>""" # noqa
 
@@ -188,19 +189,23 @@ class RequestDispatcher(object):
                 return response.payload
 
             except Exception, e:
-
                 _format_exc = format_exc(e)
                 status = _status_internal_server_error
 
                 if isinstance(e, ClientHTTPError):
+
                     response = e.msg
                     status_code = e.status
 
                     if isinstance(e, Unauthorized):
                         status = _status_unauthorized
                         wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
+
                     elif isinstance(e, NotFound):
                         status = _status_not_found
+
+                    elif isinstance(e, Forbidden):
+                        status = _status_forbidden
                 else:
                     status_code = INTERNAL_SERVER_ERROR
                     response = _format_exc
