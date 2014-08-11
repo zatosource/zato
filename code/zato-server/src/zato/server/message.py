@@ -10,8 +10,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from decimal import Decimal
 from threading import RLock
 from traceback import format_exc
+
+# Arrow
+from arrow import get as arrow_get
 
 # Bunch
 from bunch import Bunch
@@ -283,13 +287,15 @@ class JSONPointerStore(BaseStore):
 # ################################################################################################################################
 
 class Mapper(object):
-    def __init__(self, source, target=None, time_util=None, *args, **kwargs):
+    def __init__(self, source, target=None, time_util=None, skip_missing=True, default=None, *args, **kwargs):
         self.target = target if target is not None else {}
         self.map_type = kwargs.get('msg_type', MSG_MAPPER.DICT_TO_DICT)
         self.skip_ns = kwargs.get('skip_ns', True)
         self.time_util = time_util
+        self.skip_missing = skip_missing
+        self.default = default
         self.subs = {}
-        self.funcs = {'int':int, 'bool':asbool}
+        self.funcs = {'int':int, 'long':long, 'bool':asbool, 'dec':Decimal, 'arrow':arrow_get}
         self.func_keys = self.funcs.keys()
         self.times = {}
         self.cache = {}
@@ -310,10 +316,16 @@ class Mapper(object):
         self.funcs[name] = func
         self.func_keys = self.funcs.keys()
 
-    def map(self, to,  from_, separator='/', skip_missing=True, default=ZATO_NOT_GIVEN):
+    def map(self, from_, to, separator='/', skip_missing=ZATO_NOT_GIVEN, default=ZATO_NOT_GIVEN):
         """ Maps 'from_' into 'to', splitting from using the 'separator' and applying
         transformation functions along the way.
         """
+        if skip_missing == ZATO_NOT_GIVEN:
+            skip_missing = self.skip_missing
+
+        if default == ZATO_NOT_GIVEN:
+            default = self.default
+
         # Store for later use, such as in log entries.
         orig_from = from_
         force_func = None

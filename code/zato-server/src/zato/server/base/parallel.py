@@ -56,7 +56,7 @@ from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, KVDB, MISC, SERVER_JOIN_S
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
      JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
 from zato.common.pubsub import PubSubAPI, RedisPubSub
-from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, new_cid, register_diag_handlers
+from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, new_cid, StaticConfig, register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore
@@ -109,7 +109,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.app_context = None
         self.has_gevent = None
         self.delivery_store = None
+        self.static_config = None
         self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
+
+        # Allows users store arbitrary data across service invocations
+        self.user_ctx = Bunch()
+        self.user_ctx_lock = gevent.lock.RLock()
 
         self.access_logger = logging.getLogger('zato_access_log')
 
@@ -283,6 +288,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         server's been allowed to join the cluster or not.
         """
         self.worker_store = WorkerStore(self.config, self)
+
+        # Static config files
+        self.static_config = StaticConfig(os.path.join(self.repo_location, 'static'))
 
         # Key-value DB
         kvdb_config = get_kvdb_config_for_log(self.fs_server_config.kvdb)
@@ -459,8 +467,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         #
 
         # OpenStack Swift
-        query = self.odb.get_notif_cloud_openstack_swift(server.cluster.id, True)
+        query = self.odb.get_notif_cloud_openstack_swift_list(server.cluster.id, True)
         self.config.notif_cloud_openstack_swift = ConfigDict.from_query('notif_cloud_openstack_swift', query)
+
+        # SQL
+        query = self.odb.get_notif_sql_list(server.cluster.id, True)
+        self.config.notif_sql = ConfigDict.from_query('notif_sql', query)
 
         #
         # Notifications - end
@@ -743,7 +755,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         else:
             return payload
 
-    def invoke_startup_services(self):
+    def invoke_startup_services(self, key):
         """ We are the first worker and we know we have a broker client and all the other config ready
         so we can publish the request to execute startup services. In the worst
         case the requests will get back to us but it's also possible that other
@@ -751,7 +763,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         server or worker in particular will receive the requests, only that there
         will be exactly one.
         """
-        for name, payload in self.fs_server_config.get('startup_services', {}).items():
+        for name, payload in self.fs_server_config.get(key, {}).items():
             if payload.startswith('file://'):
                 payload = self._startup_service_payload_from_path(name, payload, self.repo_location)
                 if not payload:
@@ -812,8 +824,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.delivery_store.odb = parallel_server.odb
         parallel_server.delivery_store.delivery_lock_timeout = float(parallel_server.fs_server_config.misc.delivery_lock_timeout)
 
-        if is_first:
-            parallel_server.invoke_startup_services()
+        parallel_server.invoke_startup_services('startup_services_first_worker' if is_first else 'startup_services_any_worker')
 
     @staticmethod
     def post_fork(arbiter, worker):

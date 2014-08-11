@@ -96,6 +96,7 @@ queue_build_cap = 30 # All queue-based connections need to initialize in that ma
 http_proxy=
 locale=
 ensure_sql_connections_exist=True
+http_server_header=Zato
 
 [kvdb]
 host={kvdb_host}
@@ -112,14 +113,17 @@ redis_sentinels_master=
 shadow_password_in_logs=True
 log_connection_info_sleep_time=5 # In seconds
 
-[startup_services]
-zato.helpers.input-logger=Sample payload for a startup service
+[startup_services_first_worker]
+zato.helpers.input-logger=Sample payload for a startup service (first worker)
 zato.notif.init-notifiers=
 zato.pattern.delivery.dispatch-auto-resubmit=
 zato.pubsub.move-to-target-queues=
 zato.pubsub.delete-expired=
 zato.pubsub.invoke-callbacks=
 zato.kvdb.log-connection-info=
+
+[startup_services_any_worker]
+zato.helpers.input-logger=Sample payload for a startup service (any worker)
 
 [pubsub]
 move_to_target_queues_interval=3 # In seconds
@@ -207,6 +211,7 @@ directories = (
     'config/repo/lua',
     'config/repo/lua/internal',
     'config/repo/lua/user',
+    'config/repo/static',
     'config/repo/tls',
     'config/repo/tls/keys-certs',
     'config/repo/tls/partner-certs',
