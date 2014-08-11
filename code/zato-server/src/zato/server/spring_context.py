@@ -73,6 +73,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.message.json_pointer',
             'zato.server.service.internal.notif',
             'zato.server.service.internal.notif.cloud.openstack.swift',
+            'zato.server.service.internal.notif.sql',
             'zato.server.service.internal.outgoing.amqp',
             'zato.server.service.internal.outgoing.ftp',
             'zato.server.service.internal.outgoing.jms_wmq',

@@ -87,20 +87,20 @@ class ParallelServerTestCase(TestCase):
                 
         broker_client = FakeBrokerClient()
         
-        startup_services = Bunch()
+        startup_services_any_worker = Bunch()
         for x in range(10):
             name =  rand_string()
             payload = rand_string()
-            startup_services[name] = payload
+            startup_services_any_worker[name] = payload
         
         ps = ParallelServer()
         ps.broker_client = broker_client
         ps.fs_server_config = Bunch()
-        ps.fs_server_config.startup_services = startup_services
+        ps.fs_server_config.startup_services_any_worker = startup_services_any_worker
         
-        ps.invoke_startup_services()
+        ps.invoke_startup_services('startup_services_any_worker')
         
-        for expected_service, expected_payload in startup_services.items():
+        for expected_service, expected_payload in startup_services_any_worker.items():
             msg = Bunch(broker_client.messages[expected_service])
             eq_(msg.action, SERVICE.PUBLISH.value)
             eq_(msg.channel, CHANNEL.STARTUP_SERVICE)
