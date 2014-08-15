@@ -53,6 +53,7 @@ from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
+from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
 
 logger = logging.getLogger(__name__)
@@ -87,9 +88,8 @@ class WorkerStore(BrokerMessageReceiver):
         self.update_lock = RLock()
         self.kvdb = server.kvdb
         self.broker_client = None
-
         self.pubsub = None
-        """:type: zato.common.pubsub.PubSubAPI"""
+        self.rbac = RBAC()
 
     def init(self):
 
@@ -119,14 +119,20 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_json_pointer_store()
         self.init_xpath_store()
 
+        # Cassandra
         self.init_cassandra()
         self.init_cassandra_queries()
 
+        # Search
         self.init_search_es()
         self.init_search_solr()
 
+        # E-mail
         self.init_email_smtp()
         self.init_email_imap()
+
+        # RBAC
+        self.init_rbac()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
@@ -376,6 +382,12 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init_email_imap(self):
         self.init_simple(self.worker_config.email_imap, self.email_imap_api, 'an IMAP')
+
+# ################################################################################################################################
+
+    def init_rbac(self):
+        for name in self.worker_config.rbac_permission:
+            self.rbac.create_permission(name)
 
 # ################################################################################################################################
 
@@ -1310,5 +1322,16 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_EMAIL_IMAP_CHANGE_PASSWORD(self, msg):
         self.email_imap_api.change_password(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_RBAC_PERMISSION_CREATE(self, msg):
+        self.rbac.create_permission(msg.name)
+
+    def on_broker_msg_RBAC_PERMISSION_EDIT(self, msg):
+        self.rbac.edit_permission(msg.old_name, msg.name)
+
+    def on_broker_msg_RBAC_PERMISSION_DELETE(self, msg):
+        self.rbac.delete_permission(msg.name)
 
 # ################################################################################################################################

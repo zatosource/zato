@@ -359,6 +359,14 @@ class EMAIL(Constants):
     IMAP_DELETE = ValueConstant('')
     IMAP_CHANGE_PASSWORD = ValueConstant('')
 
+class RBAC(Constants):
+    code_start = 105200
+
+    # New in 2.0
+    PERMISSION_CREATE = ValueConstant('')
+    PERMISSION_EDIT = ValueConstant('')
+    PERMISSION_DELETE = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

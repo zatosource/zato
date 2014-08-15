@@ -24,8 +24,8 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, \
      MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OpenStackSecurity, \
      OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, \
-     SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSKeyCertSecurity, WSSDefinition, \
-     XPath, XPathSecurity
+     RBACPermission, SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSKeyCertSecurity, \
+     WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -1087,5 +1087,26 @@ def email_imap_list(session, cluster_id, needs_columns=False):
     """ A list of IMAP connections.
     """
     return _email_imap(session, cluster_id)
+
+# ################################################################################################################################
+
+def _rbac_permission(session, cluster_id):
+    return session.query(RBACPermission).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==RBACPermission.cluster_id).\
+        order_by(RBACPermission.name)
+
+def rbac_permission(session, cluster_id, id):
+    """ An RBAC permission.
+    """
+    return _rbac_permission(session, cluster_id).\
+        filter(RBACPermission.id==id).\
+        one()
+
+@needs_columns
+def rbac_permission_list(session, cluster_id, needs_columns=False):
+    """ A list of RBAC permissions.
+    """
+    return _rbac_permission(session, cluster_id)
 
 # ################################################################################################################################
