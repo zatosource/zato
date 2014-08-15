@@ -20,7 +20,7 @@ from sqlalchemy.exc import IntegrityError
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
 from zato.common import SIMPLE_IO
-from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, Service, WSSDefinition
+from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, RBACPermission, Service, WSSDefinition
 
 zato_services = {
 
@@ -294,6 +294,7 @@ class Create(ZatoCommand):
         self.add_soap_services(session, cluster, admin_invoke_sec, pubapi_sec)
         self.add_ping_services(session, cluster)
         self.add_default_pubsub_accounts(session, cluster)
+        self.add_default_rbac_permissions(session, cluster)
 
         try:
             session.commit()
@@ -439,4 +440,13 @@ class Create(ZatoCommand):
         for suffix in('consumer', 'producer'):
             name = 'zato.pubsub.default-{}'.format(suffix)
             item = HTTPBasicAuth(None, name, True, name, 'Zato pub/sub', uuid4().hex, cluster)
+            session.add(item)
+
+    def add_default_rbac_permissions(self, session, cluster):
+        """ Adds default CRUD permissions used by RBAC.
+        """
+        for name in('Create', 'Read', 'Update', 'Delete'):
+            item = RBACPermission()
+            item.name = name
+            item.cluster = cluster
             session.add(item)
