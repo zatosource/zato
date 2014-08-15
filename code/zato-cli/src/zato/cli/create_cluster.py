@@ -192,6 +192,12 @@ zato_services = {
     'zato.security.openstack.edit':'zato.server.service.internal.security.openstack.Edit',
     'zato.security.openstack.get-list':'zato.server.service.internal.security.openstack.GetList',
 
+    # Security - RBAC
+    'zato.security.rbac.permission.create':'zato.server.service.internal.security.rbac.permission.Create',
+    'zato.security.rbac.permission.delete':'zato.server.service.internal.security.rbac.permission.Delete',
+    'zato.security.rbac.permission.edit':'zato.server.service.internal.security.rbac.permission.Edit',
+    'zato.security.rbac.permission.get-list':'zato.server.service.internal.security.rbac.permission.get-list',
+    
     # Security - Technical accounts
     'zato.security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',
     'zato.security.tech-account.create':'zato.server.service.internal.security.tech_account.Create',

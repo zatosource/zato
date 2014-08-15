@@ -737,3 +737,10 @@ class ODBManager(SessionWrapper):
         return query.email_imap_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
+
+    def get_rbac_permission_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of RBAC permissions.
+        """
+        return query.rbac_permission_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################

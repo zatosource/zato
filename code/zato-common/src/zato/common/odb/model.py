@@ -462,6 +462,9 @@ class HTTPSOAP(Base):
     # New in 2.0
     timeout = Column(Integer(), nullable=False, default=MISC.DEFAULT_HTTP_TIMEOUT)
 
+    # New in 2.0
+    has_rbac = Column(Boolean, nullable=False, default=False)
+
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -1699,5 +1702,59 @@ class IMAP(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('imap_conns', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class RBACRole(Base):
+    """ All the roles known within a particular cluster.
+    """
+    __tablename__ = 'rbac_role'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('rbac_role_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    parent_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('rbac_roles', order_by=name, cascade='all, delete, delete-orphan'))
+
+class RBACPermission(Base):
+    """ Permissions defined in a given cluster.
+    """
+    __tablename__ = 'rbac_perm'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('rbac_perm_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('rbac_permissions', order_by=name, cascade='all, delete, delete-orphan'))
+
+class RBACClientRole(Base):
+    """ Mappings between clients and roles they have.
+    """
+    __tablename__ = 'rbac_client_role'
+    __table_args__ = (UniqueConstraint('client_def', 'role_id', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('rbac_cli_rol_seq'), primary_key=True)
+    client_def = Column(String(200), nullable=False)
+    role_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('rbac_client_roles', order_by=client_def, cascade='all, delete, delete-orphan'))
+
+class RBACRolePermission(Base):
+    """ Mappings between roles and permissions they have on given services.
+    """
+    __tablename__ = 'rbac_role_perm'
+    __table_args__ = (UniqueConstraint('role_id', 'perm_id', 'service_id', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('rbac_role_perm_seq'), primary_key=True)
+    role_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=False)
+    perm_id = Column(Integer, ForeignKey('rbac_perm.id', ondelete='CASCADE'), nullable=False)
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('rbac_role_permissions', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################

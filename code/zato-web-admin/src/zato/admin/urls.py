@@ -44,8 +44,8 @@ from zato.admin.web.views.pubsub import producers as pubsub_producers
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
-from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, \
-     wss, xpath as xpath_sec
+from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, rbac, \
+     tech_account, wss, xpath as xpath_sec
 from zato.admin.web.views.security.tls import key_cert as tls_key_cert
 
 urlpatterns = patterns('',
@@ -373,6 +373,24 @@ urlpatterns += patterns('',
         login_required(openstack_security.change_password), name='security-openstack-change-password'),
     url(r'^zato/security/openstack_security/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(openstack_security.Delete()), name=openstack_security.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
+    # .. RBAC
+
+    url(r'^zato/security/rbac/permission/$',
+        login_required(rbac.permission.Index()), name=rbac.permission.Index.url_name),
+    url(r'^zato/security/rbac/permission/$',
+        login_required(rbac.permission.Index()), name=rbac.permission.Index.url_name),
+    url(r'^zato/security/rbac/permission/create/$',
+        login_required(rbac.permission.Create()), name=rbac.permission.Create.url_name),
+    url(r'^zato/security/rbac/permission/edit/$',
+        login_required(rbac.permission.Edit()), name=rbac.permission.Edit.url_name),
+    url(r'^zato/security/rbac/permission/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(rbac.permission.Delete()), name=rbac.permission.Delete.url_name),
     )
 
 # ################################################################################################################################

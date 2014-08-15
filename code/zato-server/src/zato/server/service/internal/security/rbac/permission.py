@@ -1,0 +1,35 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# Zato
+from zato.common.broker_message import RBAC
+from zato.common.odb.model import RBACPermission
+from zato.common.odb.query import rbac_permission_list
+from zato.server.service.internal import AdminService
+from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+
+elem = 'security_rbac_permission'
+model = RBACPermission
+label = 'an RBAC permission'
+broker_message = RBAC
+broker_message_prefix = 'PERMISSION_'
+list_func = rbac_permission_list
+
+class GetList(AdminService):
+    __metaclass__ = GetListMeta
+
+class Create(AdminService):
+    __metaclass__ = CreateEditMeta
+
+class Edit(AdminService):
+    __metaclass__ = CreateEditMeta
+
+class Delete(AdminService):
+    __metaclass__ = DeleteMeta
