@@ -25,6 +25,7 @@ broker_message = RBAC
 broker_message_prefix = 'ROLE_'
 list_func = rbac_role_list
 output_optional_extra = ['parent_id', 'parent_name']
+create_edit_rewrite = ['id']
 
 def instance_hook(service, input, instance, attrs):
     is_root = input.name.lower() == 'root'
@@ -35,7 +36,7 @@ def instance_hook(service, input, instance, attrs):
     if input.parent_id == instance.id:
         raise ValueError('A role cannot be its own parent')
 
-def response_payload_hook(service, input, instance, attrs):
+def response_hook(service, input, instance, attrs):
     service.response.payload.parent_id = instance.parent_id
 
     with closing(service.odb.session()) as session:
@@ -43,6 +44,9 @@ def response_payload_hook(service, input, instance, attrs):
             filter(attrs.model.id==instance.parent_id).one()
 
     service.response.payload.parent_name = parent.name
+
+def broker_message_hook(service, input, instance, attrs):
+    input.id = instance.id
 
 class GetList(AdminService):
     __metaclass__ = GetListMeta
