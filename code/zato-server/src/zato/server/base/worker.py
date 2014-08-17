@@ -389,6 +389,9 @@ class WorkerStore(BrokerMessageReceiver):
         for name in self.worker_config.rbac_permission:
             self.rbac.create_permission(name)
 
+        for value in self.worker_config.rbac_role.values():
+            self.rbac.create_role(value.config.id, value.config.name, value.config.parent_id)
+
 # ################################################################################################################################
 
     def _topic_from_topic_data(self, data):
@@ -1333,5 +1336,16 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_RBAC_PERMISSION_DELETE(self, msg):
         self.rbac.delete_permission(msg.name)
+
+# ################################################################################################################################
+
+    def on_broker_msg_RBAC_ROLE_CREATE(self, msg):
+        self.rbac.create_role(msg.id, msg.name, msg.parent_id)
+
+    def on_broker_msg_RBAC_ROLE_EDIT(self, msg):
+        self.rbac.edit_role(msg.id, msg.old_name, msg.name)
+
+    def on_broker_msg_RBAC_ROLE_DELETE(self, msg):
+        self.rbac.delete_role(msg.name)
 
 # ################################################################################################################################

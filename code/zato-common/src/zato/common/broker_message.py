@@ -367,6 +367,11 @@ class RBAC(Constants):
     PERMISSION_EDIT = ValueConstant('')
     PERMISSION_DELETE = ValueConstant('')
 
+    # New in 2.0
+    ROLE_CREATE = ValueConstant('')
+    ROLE_EDIT = ValueConstant('')
+    ROLE_DELETE = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

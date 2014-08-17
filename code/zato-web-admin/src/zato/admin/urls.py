@@ -379,10 +379,8 @@ urlpatterns += patterns('',
 
 urlpatterns += patterns('',
 
-    # .. RBAC
+    # .. RBAC - Permissions
 
-    url(r'^zato/security/rbac/permission/$',
-        login_required(rbac.permission.Index()), name=rbac.permission.Index.url_name),
     url(r'^zato/security/rbac/permission/$',
         login_required(rbac.permission.Index()), name=rbac.permission.Index.url_name),
     url(r'^zato/security/rbac/permission/create/$',
@@ -391,6 +389,22 @@ urlpatterns += patterns('',
         login_required(rbac.permission.Edit()), name=rbac.permission.Edit.url_name),
     url(r'^zato/security/rbac/permission/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(rbac.permission.Delete()), name=rbac.permission.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
+    # .. RBAC - Roles
+
+    url(r'^zato/security/rbac/role/$',
+        login_required(rbac.role.Index()), name=rbac.role.Index.url_name),
+    url(r'^zato/security/rbac/role/create/$',
+        login_required(rbac.role.Create()), name=rbac.role.Create.url_name),
+    url(r'^zato/security/rbac/role/edit/$',
+        login_required(rbac.role.Edit()), name=rbac.role.Edit.url_name),
+    url(r'^zato/security/rbac/role/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(rbac.role.Delete()), name=rbac.role.Delete.url_name),
     )
 
 # ################################################################################################################################

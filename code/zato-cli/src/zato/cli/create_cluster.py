@@ -20,7 +20,7 @@ from sqlalchemy.exc import IntegrityError
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
 from zato.common import SIMPLE_IO
-from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, RBACPermission, Service, WSSDefinition
+from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, RBACPermission, RBACRole, Service, WSSDefinition
 
 zato_services = {
 
@@ -192,12 +192,18 @@ zato_services = {
     'zato.security.openstack.edit':'zato.server.service.internal.security.openstack.Edit',
     'zato.security.openstack.get-list':'zato.server.service.internal.security.openstack.GetList',
 
-    # Security - RBAC
+    # Security - RBAC - Permissions
     'zato.security.rbac.permission.create':'zato.server.service.internal.security.rbac.permission.Create',
     'zato.security.rbac.permission.delete':'zato.server.service.internal.security.rbac.permission.Delete',
     'zato.security.rbac.permission.edit':'zato.server.service.internal.security.rbac.permission.Edit',
     'zato.security.rbac.permission.get-list':'zato.server.service.internal.security.rbac.permission.get-list',
-    
+
+    # Security - RBAC - Roles
+    'zato.security.rbac.role.create':'zato.server.service.internal.security.rbac.role.Create',
+    'zato.security.rbac.role.delete':'zato.server.service.internal.security.rbac.role.Delete',
+    'zato.security.rbac.role.edit':'zato.server.service.internal.security.rbac.role.Edit',
+    'zato.security.rbac.role.get-list':'zato.server.service.internal.security.rbac.role.get-list',
+
     # Security - Technical accounts
     'zato.security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',
     'zato.security.tech-account.create':'zato.server.service.internal.security.tech_account.Create',
@@ -295,6 +301,7 @@ class Create(ZatoCommand):
         self.add_ping_services(session, cluster)
         self.add_default_pubsub_accounts(session, cluster)
         self.add_default_rbac_permissions(session, cluster)
+        self.add_default_rbac_roles(session, cluster)
 
         try:
             session.commit()
@@ -450,3 +457,13 @@ class Create(ZatoCommand):
             item.name = name
             item.cluster = cluster
             session.add(item)
+
+    def add_default_rbac_roles(self, session, cluster):
+        """ Adds default roles used by RBAC.
+        """
+        item = RBACRole()
+        item.id = 0
+        item.name = 'Root'
+        item.parent_id = 0
+        item.cluster = cluster
+        session.add(item)

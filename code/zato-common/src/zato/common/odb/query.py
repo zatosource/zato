@@ -14,6 +14,7 @@ from functools import wraps
 
 # SQLAlchemy
 from sqlalchemy import func, not_
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import case
 
 # Zato
@@ -24,8 +25,8 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, \
      MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OpenStackSecurity, \
      OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, \
-     RBACPermission, SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSKeyCertSecurity, \
-     WSSDefinition, XPath, XPathSecurity
+     RBACPermission, RBACRole, SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, \
+     TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -1108,5 +1109,28 @@ def rbac_permission_list(session, cluster_id, needs_columns=False):
     """ A list of RBAC permissions.
     """
     return _rbac_permission(session, cluster_id)
+
+# ################################################################################################################################
+
+def _rbac_role(session, cluster_id):
+    rbac_parent = aliased(RBACRole)
+    return session.query(RBACRole.id, RBACRole.name, RBACRole.parent_id, rbac_parent.name.label('parent_name')).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==RBACRole.cluster_id).\
+        filter(rbac_parent.id==RBACRole.parent_id).\
+        order_by(RBACRole.name)
+
+def rbac_role(session, cluster_id, id):
+    """ An RBAC role.
+    """
+    return _rbac_role(session, cluster_id).\
+        filter(RBACRole.id==id).\
+        one()
+
+@needs_columns
+def rbac_role_list(session, cluster_id, needs_columns=False):
+    """ A list of RBAC roles.
+    """
+    return _rbac_role(session, cluster_id)
 
 # ################################################################################################################################

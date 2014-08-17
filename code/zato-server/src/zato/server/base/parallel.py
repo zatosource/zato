@@ -512,6 +512,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_rbac_permission_list(server.cluster.id, True)
         self.config.rbac_permission = ConfigDict.from_query('rbac_permission', query)
 
+        # RBAC - roles
+        query = self.odb.get_rbac_role_list(server.cluster.id, True)
+        self.config.rbac_role = ConfigDict.from_query('rbac_role', query)
+
         # Technical accounts
         query = self.odb.get_tech_acc_list(server.cluster.id, True)
         self.config.tech_acc = ConfigDict.from_query('tech_acc', query)
