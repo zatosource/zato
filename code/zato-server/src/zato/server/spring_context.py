@@ -99,6 +99,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.security.openstack',
             'zato.server.service.internal.security.rbac',
             'zato.server.service.internal.security.rbac.permission',
+            'zato.server.service.internal.security.rbac.role',
             'zato.server.service.internal.security.tech_account',
             'zato.server.service.internal.security.tls.key_cert',
             'zato.server.service.internal.security.wss',

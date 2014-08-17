@@ -3,10 +3,9 @@
 
 $.fn.zato.data_table.RBACPermission = new Class({
     toString: function() {
-        var s = '<RBACPermission id:{0} name:{1} username:{2} realm:{3}>';
+        var s = '<RBACPermission id:{0} name:{1}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                this.name ? this.name : '(none)',
-                                this.username ? this.username : '(none)');
+                                this.name ? this.name : '(none)');
     }
 });
 
@@ -18,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.RBACPermission;
     $.fn.zato.data_table.new_row_func = $.fn.zato.security.rbac.permission.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'username']);
+    $.fn.zato.data_table.setup_forms(['name']);
 })
 
 

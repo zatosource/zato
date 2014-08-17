@@ -744,3 +744,10 @@ class ODBManager(SessionWrapper):
         return query.rbac_permission_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
+
+    def get_rbac_role_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of RBAC roles.
+        """
+        return query.rbac_role_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
