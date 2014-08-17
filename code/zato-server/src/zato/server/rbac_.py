@@ -18,6 +18,9 @@ from rbac.acl import Registry as _Registry
 # gevent
 from gevent.lock import RLock
 
+# Zato
+from zato.common.util import make_repr
+
 # ################################################################################################################################
 
 logger = getLogger('zato_rbac')
@@ -31,7 +34,7 @@ class Registry(_Registry):
     def delete_role(self, delete_role):
         del self._roles[delete_role]
 
-        for item in cycle(self._allowed, self._denied):
+        for item in cycle([self._allowed, self._denied]):
             for role, operation, resource in item:
                 if role == delete_role:
                     item.remove([role, operation, resource])
@@ -45,6 +48,11 @@ class RBAC(object):
         self.permissions = set()
         self.role_id_to_name = {}
         self.role_name_to_id = {}
+
+# ################################################################################################################################
+
+    def __repr__(self):
+        return make_repr(self)
 
 # ################################################################################################################################
 
@@ -73,17 +81,18 @@ class RBAC(object):
 
     def create_role(self, id, name, parent_id):
         with self.update_lock:
-            self.registry.add_role(name, parents=[parent_id] if id != parent_id else [])
+            self.registry.add_role(id, parents=[parent_id] if id != parent_id else [])
             self._rbac_create_role(id, name)
 
     def edit_role(self, id, old_name, name):
         with self.update_lock:
+            self._rbac_delete_role(id, old_name)
             self._rbac_create_role(id, name)
-            self._rbac_delete_role(id, name)
 
     def delete_role(self, id, name):
-        with self.update_lock:
+        logger.warn('delete %r %r', id, name)
+        '''with self.update_lock:
             self._rbac_delete_role(id, name)
-            self.registry.delete_role(id)
+            self.registry.delete_role(id)'''
 
 # ################################################################################################################################

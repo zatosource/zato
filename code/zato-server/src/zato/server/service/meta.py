@@ -112,7 +112,8 @@ def update_attrs(cls, name, attrs):
     attrs.skip_input_params = getattr(mod, 'skip_input_params', [])
     attrs.skip_output_params = getattr(mod, 'skip_output_params', [])
     attrs.instance_hook = getattr(mod, 'instance_hook', None)
-    attrs.response_payload_hook = getattr(mod, 'response_payload_hook', None)
+    attrs.response_hook = getattr(mod, 'response_hook', None)
+    attrs.broker_message_hook = getattr(mod, 'broker_message_hook', None)
     attrs.extra_delete_attrs = getattr(mod, 'extra_delete_attrs', [])
     attrs.input_required_extra = getattr(mod, 'input_required_extra', [])
     attrs.create_edit_input_required_extra = getattr(mod, 'create_edit_input_required_extra', [])
@@ -276,6 +277,10 @@ class CreateEditMeta(AdminServiceMeta):
                     action = getattr(attrs.broker_message, attrs.broker_message_prefix + verb.upper()).value
                     input.action = action
                     input.old_name = old_name
+
+                    if attrs.broker_message_hook:
+                        attrs.broker_message_hook(self, input, instance, attrs)
+
                     self.broker_client.publish(input)
 
                     for name in chain(attrs.create_edit_rewrite, self.SimpleIO.output_required):
@@ -285,8 +290,8 @@ class CreateEditMeta(AdminServiceMeta):
 
                         setattr(self.response.payload, name, value)
 
-                    if attrs.response_payload_hook:
-                        attrs.response_payload_hook(self, input, instance, attrs)
+                    if attrs.response_hook:
+                        attrs.response_hook(self, input, instance, attrs)
 
         return handle_impl
 
