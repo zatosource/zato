@@ -425,6 +425,20 @@ urlpatterns += patterns('',
 
 urlpatterns += patterns('',
 
+    # .. RBAC - Role Permissions
+
+    url(r'^zato/security/rbac/role_permission/$',
+        login_required(rbac.role_permission.Index()), name=rbac.role_permission.Index.url_name),
+    url(r'^zato/security/rbac/role_permission/create/$',
+        login_required(rbac.role_permission.Create()), name=rbac.role_permission.Create.url_name),
+    url(r'^zato/security/rbac/role_permission/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(rbac.role_permission.Delete()), name=rbac.role_permission.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
     # .. Technical accounts
 
     url(r'^zato/security/tech-account/$',

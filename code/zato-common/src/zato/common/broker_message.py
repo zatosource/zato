@@ -363,6 +363,11 @@ class RBAC(Constants):
     code_start = 105200
 
     # New in 2.0
+    ROLE_CREATE = ValueConstant('')
+    ROLE_EDIT = ValueConstant('')
+    ROLE_DELETE = ValueConstant('')
+
+    # New in 2.0
     CLIENT_ROLE_CREATE = ValueConstant('')
     CLIENT_ROLE_DELETE = ValueConstant('')
 
@@ -372,9 +377,9 @@ class RBAC(Constants):
     PERMISSION_DELETE = ValueConstant('')
 
     # New in 2.0
-    ROLE_CREATE = ValueConstant('')
-    ROLE_EDIT = ValueConstant('')
-    ROLE_DELETE = ValueConstant('')
+    ROLE_PERMISSION_CREATE = ValueConstant('')
+    ROLE_PERMISSION_EDIT = ValueConstant('')
+    ROLE_PERMISSION_DELETE = ValueConstant('')
 
 code_to_name = {}
 
