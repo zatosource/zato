@@ -396,6 +396,8 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
         name = instance.name;
     }
 
+    console.log('Instance: ' + instance);
+
     var _callback = function(data, status) {
         var success = status == 'success';
         if(success) {

@@ -28,5 +28,3 @@ class CreateForm(forms.Form):
         self.fields['role_id'].choices = []
         for item in role_id_list:
             self.fields['role_id'].choices.append([item.id, item.name])
-
-EditForm = CreateForm

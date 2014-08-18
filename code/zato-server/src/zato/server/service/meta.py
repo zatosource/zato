@@ -291,9 +291,6 @@ class CreateEditMeta(AdminServiceMeta):
 
                     self.broker_client.publish(input)
 
-                    logger.warn(attrs.create_edit_rewrite)
-                    logger.warn(self.SimpleIO.output_required)
-
                     for name in chain(attrs.create_edit_rewrite, self.SimpleIO.output_required):
                         value = getattr(instance, name, singleton)
                         if value is singleton:

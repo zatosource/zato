@@ -101,12 +101,12 @@ class RBAC(object):
 
     def create_client_role(self, client_def, role_id):
         with self.update_lock:
-            item_list = self.client_def_to_role_id.setdefault(client_def, set())
-            item_list.add(role_id)
+            self.client_def_to_role_id.setdefault(client_def, set()).add(role_id)
+            self.role_id_to_client_def.setdefault(role_id, set()).add(client_def)
 
     def delete_client_role(self, client_def, role_id):
         with self.update_lock:
-            item_list = self.role_id_to_client_def.setdefault(role_id, set())
-            item_list.add(client_def)
+            self.client_def_to_role_id[client_def].remove(role_id)
+            self.role_id_to_client_def[role_id].remove(client_def)
 
 # ################################################################################################################################

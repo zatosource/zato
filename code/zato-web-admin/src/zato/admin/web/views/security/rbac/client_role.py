@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
-from zato.admin.web.forms.security.rbac.client_role import CreateForm, EditForm
+from zato.admin.web.forms.security.rbac.client_role import CreateForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.odb.model import RBACRole
 
@@ -48,8 +48,7 @@ class Index(_Index):
                 role_id_list = response.data
 
         return {
-            'create_form': CreateForm(client_def_list, role_id_list),
-            'edit_form': EditForm(client_def_list, role_id_list, prefix='edit')
+            'create_form': CreateForm(client_def_list, role_id_list)
         }
 
 class _CreateEdit(CreateEdit):
