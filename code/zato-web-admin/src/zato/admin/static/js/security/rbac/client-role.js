@@ -3,11 +3,13 @@
 
 $.fn.zato.data_table.RBACClientRole = new Class({
     toString: function() {
-        var s = '<RBACClientRole id:{0} client_def:{1} role_id:{2}>';
+        var s = '<RBACClientRole id:{0} name:{1} client_def:{2} role_id:{3}>';
         return String.format(s, this.id ? this.id : '(none)',
+                this.name ? this.name : '(none)',
                 this.client_def ? this.client_def : '(none)',
                 this.role_id ? this.role_id : '(none)');
     }
+
 });
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -37,6 +39,12 @@ $.fn.zato.security.rbac.client_role.data_table.new_row = function(item, data, in
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
+    console.log('$.fn.zato.security.rbac.client_role.data_table.new_row - dir(data) - ' + $.fn.zato.dir(data));
+    console.log('$.fn.zato.security.rbac.client_role.data_table.new_row - data.client_name - ' + data.client_name);
+    console.log('$.fn.zato.security.rbac.client_role.data_table.new_row - data.role_name - ' + data.role_name);
+
+    item.name = String.format("{0}:::{1}", item.client_def, data.role_name);
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', data.client_name);
@@ -45,6 +53,7 @@ $.fn.zato.security.rbac.client_role.data_table.new_row = function(item, data, in
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", item.client_def);
     row += String.format("<td class='ignore'>{0}</td>", item.role_id);
+    row += String.format("<td class='ignore'>{0}:::{1}</td>", item.client_def, data.role_name);
 
     if(include_tr) {
         row += '</tr>';
