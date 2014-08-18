@@ -72,9 +72,30 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
-                        <td>{{ item.parent_name }}</td>
-                        <td><a href="javascript:$.fn.zato.security.rbac.role.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.security.rbac.role.delete_('{{ item.id }}')">Delete</a></td>
+                        <td>
+                            {% ifequal item.name|lower "root" %}
+                                <span class="form_hint"><i>---</i></span>
+                            {% else %}
+                                {{ item.parent_name }}
+                            {% endifequal %}
+                        </td>
+
+                        {% ifequal item.name|lower "root" %}
+                            <td>
+                                <span class="form_hint"><i>---</i></span>
+                            </td>
+                            <td>
+                                <span class="form_hint"><i>---</i></span>
+                            </td>
+                        {% else %}
+                            <td>
+                                <a href="javascript:$.fn.zato.security.rbac.role.edit('{{ item.id }}')">Edit</a>
+                            </td>
+                            <td>
+                                <a href="javascript:$.fn.zato.security.rbac.role.delete_('{{ item.id }}')">Delete</a>
+                            </td>
+                        {% endifequal %}
+
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.parent_id }}</td>
                     </tr>
