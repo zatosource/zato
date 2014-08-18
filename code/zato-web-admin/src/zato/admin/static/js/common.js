@@ -110,6 +110,7 @@ $.namespace('zato.security.ntlm');
 $.namespace('zato.security.oauth');
 $.namespace('zato.security.openstack');
 $.namespace('zato.security.rbac');
+$.namespace('zato.security.rbac.client_role');
 $.namespace('zato.security.rbac.permission');
 $.namespace('zato.security.rbac.role');
 $.namespace('zato.security.tech_account');

@@ -363,6 +363,10 @@ class RBAC(Constants):
     code_start = 105200
 
     # New in 2.0
+    CLIENT_ROLE_CREATE = ValueConstant('')
+    CLIENT_ROLE_DELETE = ValueConstant('')
+
+    # New in 2.0
     PERMISSION_CREATE = ValueConstant('')
     PERMISSION_EDIT = ValueConstant('')
     PERMISSION_DELETE = ValueConstant('')

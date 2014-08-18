@@ -1349,3 +1349,11 @@ class WorkerStore(BrokerMessageReceiver):
         self.rbac.delete_role(msg.id, msg.name)
 
 # ################################################################################################################################
+
+    def on_broker_msg_RBAC_CLIENT_ROLE_CREATE(self, msg):
+        self.rbac.create_client_role(msg.client_def, msg.role_id)
+
+    def on_broker_msg_RBAC_CLIENT_ROLE_DELETE(self, msg):
+        self.rbac.delete_client_role(msg.client_def, msg.role_id)
+
+# ################################################################################################################################

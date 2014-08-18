@@ -48,6 +48,8 @@ class RBAC(object):
         self.permissions = set()
         self.role_id_to_name = {}
         self.role_name_to_id = {}
+        self.client_def_to_role_id = {}
+        self.role_id_to_client_def = {}
 
 # ################################################################################################################################
 
@@ -94,5 +96,17 @@ class RBAC(object):
         '''with self.update_lock:
             self._rbac_delete_role(id, name)
             self.registry.delete_role(id)'''
+
+# ################################################################################################################################
+
+    def create_client_role(self, client_def, role_id):
+        with self.update_lock:
+            item_list = self.client_def_to_role_id.setdefault(client_def, set())
+            item_list.add(role_id)
+
+    def delete_client_role(self, client_def, role_id):
+        with self.update_lock:
+            item_list = self.role_id_to_client_def.setdefault(role_id, set())
+            item_list.add(client_def)
 
 # ################################################################################################################################
