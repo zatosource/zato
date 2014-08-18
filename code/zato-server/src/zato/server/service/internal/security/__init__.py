@@ -24,7 +24,7 @@ class GetList(AdminService):
         request_elem = 'zato_security_get_list_request'
         response_elem = 'zato_security_get_list_response'
         input_required = ('cluster_id',)
-        input_optional = (List('sec_type'),)
+        input_optional = (List('sec_type'), Boolean('needs_internal', default=True))
         output_required = ('id', 'name', 'is_active', 'sec_type')
         output_optional = ('username', 'realm', 'password_type',
             Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'), Integer('reject_expiry_limit'),
@@ -32,6 +32,14 @@ class GetList(AdminService):
         output_repeated = True
 
     def handle(self):
+
+        has_needs_internal = self.request.input.get('needs_internal') != ''
+
+        if has_needs_internal:
+            needs_internal = True if self.request.input.get('needs_internal') is True else False
+        else:
+            needs_internal = True
+
         with closing(self.odb.session()) as session:
             pairs = ((SEC_DEF_TYPE.APIKEY, query.apikey_security_list),
                      (SEC_DEF_TYPE.AWS, query.aws_security_list),
@@ -51,4 +59,9 @@ class GetList(AdminService):
                     continue
 
                 for definition in func(session, self.request.input.cluster_id, False):
+
+                    if definition.name.startswith('zato') or definition.name in('admin.invoke', 'pubapi'):
+                        if not needs_internal:
+                            continue
+
                     self.response.payload.append(definition)

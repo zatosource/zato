@@ -1737,6 +1737,7 @@ class RBACClientRole(Base):
     __table_args__ = (UniqueConstraint('client_def', 'role_id', 'cluster_id'), {})
 
     id = Column(Integer, Sequence('rbac_cli_rol_seq'), primary_key=True)
+    name = Column(String(400), nullable=False)
     client_def = Column(String(200), nullable=False)
     role_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=False)
 

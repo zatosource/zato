@@ -118,6 +118,7 @@ def update_attrs(cls, name, attrs):
     attrs.input_required_extra = getattr(mod, 'input_required_extra', [])
     attrs.create_edit_input_required_extra = getattr(mod, 'create_edit_input_required_extra', [])
     attrs.create_edit_rewrite = getattr(mod, 'create_edit_rewrite', [])
+    attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
 
     default_value = getattr(mod, 'default_value', singleton)
     default_value = NO_DEFAULT_VALUE if default_value is singleton else default_value
@@ -207,6 +208,10 @@ class GetListMeta(AdminServiceMeta):
         def handle_impl(self):
             with closing(self.odb.session()) as session:
                 self.response.payload[:] = self.get_data(session)
+
+            if attrs.response_hook:
+                attrs.response_hook(self, self.request.input, None, attrs, 'get_list')
+
         return handle_impl
 
 class CreateEditMeta(AdminServiceMeta):
@@ -230,21 +235,24 @@ class CreateEditMeta(AdminServiceMeta):
             with closing(self.odb.session()) as session:
                 try:
 
-                    # Let's see if we already have an instance of that name before committing
-                    # any stuff to the database.
+                    if attrs.check_existing_one:
 
-                    existing_one = session.query(attrs.model).\
-                        filter(Cluster.id==input.cluster_id).\
-                        filter(attrs.model.name==input.name)
-
-                    if attrs.is_edit:
-                        existing_one = existing_one.filter(attrs.model.id!=input.id)
-
-                    existing_one = existing_one.first()
-
-                    if existing_one and not attrs.is_edit:
-                        raise Exception('{} [{}] already exists on this cluster'.format(
-                            attrs.label[0].upper() + attrs.label[1:], input.name))
+                        # Let's see if we already have an instance of that name before committing
+                        # any stuff to the database. However, this is wrapped in an if condition
+                        # because certain models don't have the .name attribute.
+    
+                        existing_one = session.query(attrs.model).\
+                            filter(Cluster.id==input.cluster_id).\
+                            filter(attrs.model.name==input.name)
+    
+                        if attrs.is_edit:
+                            existing_one = existing_one.filter(attrs.model.id!=input.id)
+    
+                        existing_one = existing_one.first()
+    
+                        if existing_one and not attrs.is_edit:
+                            raise Exception('{} [{}] already exists on this cluster'.format(
+                                attrs.label[0].upper() + attrs.label[1:], input.name))
 
                     if attrs.is_edit:
                         instance = session.query(attrs.model).filter_by(id=input.id).one()
@@ -265,7 +273,7 @@ class CreateEditMeta(AdminServiceMeta):
 
                 except Exception, e:
                     msg = 'Could not {} the object, e:`%s`'.format(verb)
-                    self.logger.error(msg, format_exc(e))
+                    logger.error(msg, format_exc(e))
                     session.rollback()
                     raise
                 else:
@@ -283,6 +291,9 @@ class CreateEditMeta(AdminServiceMeta):
 
                     self.broker_client.publish(input)
 
+                    logger.warn(attrs.create_edit_rewrite)
+                    logger.warn(self.SimpleIO.output_required)
+
                     for name in chain(attrs.create_edit_rewrite, self.SimpleIO.output_required):
                         value = getattr(instance, name, singleton)
                         if value is singleton:
@@ -291,7 +302,7 @@ class CreateEditMeta(AdminServiceMeta):
                         setattr(self.response.payload, name, value)
 
                     if attrs.response_hook:
-                        attrs.response_hook(self, input, instance, attrs)
+                        attrs.response_hook(self, input, instance, attrs, 'create_edit')
 
         return handle_impl
 
