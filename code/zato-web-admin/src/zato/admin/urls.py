@@ -427,11 +427,11 @@ urlpatterns += patterns('',
 
     # .. RBAC - Role Permissions
 
-    url(r'^zato/security/rbac/role_permission/$',
+    url(r'^zato/security/rbac/role-permission/$',
         login_required(rbac.role_permission.Index()), name=rbac.role_permission.Index.url_name),
-    url(r'^zato/security/rbac/role_permission/create/$',
+    url(r'^zato/security/rbac/role-permission/create/$',
         login_required(rbac.role_permission.Create()), name=rbac.role_permission.Create.url_name),
-    url(r'^zato/security/rbac/role_permission/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+    url(r'^zato/security/rbac/role-permission/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(rbac.role_permission.Delete()), name=rbac.role_permission.Delete.url_name),
     )
 

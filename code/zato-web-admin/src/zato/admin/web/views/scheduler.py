@@ -92,8 +92,13 @@ def _interval_based_job_def(user_profile, start_date, repeats, weeks, days, hour
                     ('hour',hours), ('minute',minutes),
                     ('second',seconds)):
         if value:
-            value = int(value)
-            interval.append('{0} {1}{2}'.format(value, name, 's' if value > 1 else ''))
+            try:
+                value = int(value)
+            except ValueError:
+                logger.warn('Cannot convert `%s` `%s` to an int, `%s` `%s` `%s` `%s` `%s` `%s` `%s`',
+                    name, value, start_date, repeats, weeks, days, hours, minutes, seconds)
+            else:
+                interval.append('{0} {1}{2}'.format(value, name, 's' if value > 1 else ''))
 
     buf.write(', '.join(interval))
     buf.write('.')

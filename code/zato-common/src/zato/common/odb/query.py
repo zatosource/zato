@@ -25,8 +25,8 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, \
      MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OpenStackSecurity, \
      OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, \
-     RBACClientRole, RBACPermission, RBACRole, SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, \
-     TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
+     RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, \
+     TechnicalAccount, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -1153,5 +1153,26 @@ def rbac_client_role_list(session, cluster_id, needs_columns=False):
     """ A list of mappings between clients and roles.
     """
     return _rbac_client_role(session, cluster_id)
+
+# ################################################################################################################################
+
+def _rbac_role_permission(session, cluster_id):
+    return session.query(RBACRolePermission).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==RBACRolePermission.cluster_id).\
+        order_by(RBACRolePermission.role_id)
+
+def rbac_role_permission(session, cluster_id, id):
+    """ An individual permission for a given role against a service.
+    """
+    return _rbac_role_permission(session, cluster_id).\
+        filter(RBACRolePermission.id==id).\
+        one()
+
+@needs_columns
+def rbac_role_permission_list(session, cluster_id, needs_columns=False):
+    """ A list of permissions for roles against services.
+    """
+    return _rbac_role_permission(session, cluster_id)
 
 # ################################################################################################################################

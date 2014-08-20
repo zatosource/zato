@@ -13,8 +13,8 @@ from contextlib import closing
 
 # Zato
 from zato.common.broker_message import RBAC
-from zato.common.odb.model import RBACRolePermission
-from zato.common.odb.query import rbac_client_role_list
+from zato.common.odb.model import RBACRole, RBACPermission, RBACRolePermission, Service
+from zato.common.odb.query import rbac_role_permission_list
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -23,36 +23,69 @@ model = RBACRolePermission
 label = 'an RBAC role permission'
 broker_message = RBAC
 broker_message_prefix = 'ROLE_PERMISSION_'
-list_func = rbac_client_role_list
-output_optional_extra = ['client_name', 'role_name', 'service_name'] husd fdes'pfds ;f pkisd'f'
+list_func = rbac_role_permission_list
+output_optional_extra = ['role_name', 'service_name', 'perm_name']
 create_edit_rewrite = ['id']
 skip_input_params = ['name']
-extra_delete_attrs = ['client_def', 'role_id']
+extra_delete_attrs = ['role_id']
 check_existing_one = False
+
+def get_extra(service, role_id, service_id, perm_id):
+
+    with closing(service.odb.session()) as session:
+
+        role = session.query(RBACRole).\
+            filter(RBACRole.id==role_id).one()
+
+        _service = session.query(Service).\
+            filter(Service.id==service_id).one()
+
+        perm = session.query(RBACPermission).\
+            filter(RBACPermission.id==perm_id).one()
+
+        return '{}:::{}::{}'.format(role.name, service.name, perm.name), role.name, _service.name, perm.name
 
 def instance_hook(service, input, instance, attrs):
     with closing(service.odb.session()) as session:
+
         role = session.query(RBACRole).\
             filter(RBACRole.id==input.role_id).one()
 
-    instance.name = '{}:::{}'.format(instance.client_def, role.name)
+        _service = session.query(Service).\
+            filter(Service.id==input.service_id).one()
+
+        perm = session.query(RBACPermission).\
+            filter(RBACPermission.id==input.perm_id).one()
+
+    instance.name = '{}:::{}::{}'.format(role.name, _service.name, perm.name)
 
 def response_hook(service, input, instance, attrs, service_type):
     if service_type == 'get_list':
         for item in service.response.payload:
-            with closing(service.odb.session()) as session:
-                role = session.query(RBACRole).\
-                    filter(RBACRole.id==item.role_id).one()
-                item.client_name = item.client_def
-                item.role_name = role.name
+
+            item_name, role_name, service_name, perm_name = get_extra(service, item.role_id, item.service_id, item.perm_id)
+
+            item.name = item_name
+            item.role_name = role_name
+            item.service_name = _service_name
+            item.perm_name = perm_name
 
     elif service_type == 'create_edit':
+
         with closing(service.odb.session()) as session:
+
             role = session.query(RBACRole).\
                 filter(RBACRole.id==instance.role_id).one()
 
-        service.response.payload.client_name = instance.client_def
+            _service = session.query(Service).\
+                filter(Service.id==instance.service_id).one()
+
+            perm = session.query(RBACPermission).\
+                filter(RBACPermission.id==input.perm_id).one()
+
         service.response.payload.role_name = role.name
+        service.response.payload.service_name = _service.name
+        service.response.payload.perm_name = perm.name
 
 class GetList(AdminService):
     __metaclass__ = GetListMeta
