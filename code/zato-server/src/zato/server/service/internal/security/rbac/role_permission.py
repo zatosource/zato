@@ -27,7 +27,7 @@ list_func = rbac_role_permission_list
 output_optional_extra = ['role_name', 'service_name', 'perm_name']
 create_edit_rewrite = ['id']
 skip_input_params = ['name']
-extra_delete_attrs = ['role_id']
+extra_delete_attrs = ['role_id', 'service_id', 'perm_id']
 check_existing_one = False
 
 def get_extra(service, role_id, service_id, perm_id):
@@ -67,7 +67,7 @@ def response_hook(service, input, instance, attrs, service_type):
 
             item.name = item_name
             item.role_name = role_name
-            item.service_name = _service_name
+            item.service_name = service_name
             item.perm_name = perm_name
 
     elif service_type == 'create_edit':

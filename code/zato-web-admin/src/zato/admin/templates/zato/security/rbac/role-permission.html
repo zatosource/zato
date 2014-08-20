@@ -21,14 +21,14 @@
         return [
             '_numbering',
             '_selection',
-            'client_name',
-            'service_name',
             'role_name',
+            'service_name',
+            'perm_name',
             '_delete',
             'id',
-            'client_def',
-            'service_id',
             'role_id',
+            'service_id',
+            'perm_id',
             'name'
         ]
     }
@@ -60,8 +60,9 @@
                     <tr class='ignore'>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th><a href="#">Client</a></th>
                         <th><a href="#">Role</a></th>
+                        <th><a href="#">Service</a></th>
+                        <th><a href="#">Permission</a></th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -74,19 +75,20 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>{{ item.client_name }}</td>
                         <td>{{ item.role_name }}</td>
+                        <td>{{ item.service_name }}</td>
+                        <td>{{ item.perm_name }}</td>
                         <td><a href="javascript:$.fn.zato.security.rbac.role_permission.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-                        <td class='ignore'>{{ item.client_def }}</td>
-                        <td class='ignore'>{{ item.service_id }}</td>
                         <td class='ignore'>{{ item.role_id }}</td>
-                        <td class='ignore'>{{ item.client_def }}:::{{ item.role_name }}::{{ item.service_name }}</td>
+                        <td class='ignore'>{{ item.service_id }}</td>
+                        <td class='ignore'>{{ item.perm_id }}</td>
+                        <td class='ignore'>{{ item.role_name }}:::{{ item.service_name }}:::{{ item.perm_name }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='8'>No results</td>
+                        <td colspan='11'>No results</td>
                     </tr>
                 {% endif %}
 

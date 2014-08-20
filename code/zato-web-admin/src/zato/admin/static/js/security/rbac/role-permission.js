@@ -34,29 +34,26 @@ $.fn.zato.security.rbac.role_permission.edit = function(id) {
 }
 
 $.fn.zato.security.rbac.role_permission.data_table.new_row = function(item, data, include_tr) {
+
     var row = '';
 
     if(include_tr) {
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
-    console.log('$.fn.zato.security.rbac.role_permission.data_table.new_row - dir(data) - ' + $.fn.zato.dir(data));
-    console.log('$.fn.zato.security.rbac.role_permission.data_table.new_row - data.client_name - ' + data.client_name);
-    console.log('$.fn.zato.security.rbac.role_permission.data_table.new_row - data.role_name - ' + data.role_name);
-
-    item.name = String.format("{0}:::{1}:::{2}", item.client_def, data.role_name, data.service_name);
+    item.name = String.format("{0}:::{1}:::{2}", data.role_name, data.service_name, data.perm_name);
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', data.client_name);
-    row += String.format('<td>{0}</td>', data.service_name);
     row += String.format('<td>{0}</td>', data.role_name);
+    row += String.format('<td>{0}</td>', data.service_name);
+    row += String.format('<td>{0}</td>', data.perm_name);
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.rbac.role_permission.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
-    row += String.format("<td class='ignore'>{0}</td>", item.client_def);
-    row += String.format("<td class='ignore'>{0}</td>", item.service_id);
     row += String.format("<td class='ignore'>{0}</td>", item.role_id);
-    row += String.format("<td class='ignore'>{0}:::{1}:::{2}</td>", item.client_def, data.role_name, data.service_name);
+    row += String.format("<td class='ignore'>{0}</td>", item.service_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.perm_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.name);
 
     if(include_tr) {
         row += '</tr>';
