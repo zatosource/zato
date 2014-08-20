@@ -797,11 +797,6 @@ class WorkerStore(BrokerMessageReceiver):
         wsgi_environ = {'zato.request_ctx.async_msg':msg}
 
         service = self.server.service_store.new_instance_by_name(msg['service'])
-
-        logger.warn(service)
-        logger.warn(msg.get('data_format'))
-        logger.warn(msg)
-
         service.update_handle(self._set_service_response_data, service, msg['payload'],
             channel, msg.get('data_format'), msg.get('transport'), self.server,
             self.broker_client, self, msg['cid'], self.worker_config.simple_io,
