@@ -110,3 +110,13 @@ class RBAC(object):
             self.role_id_to_client_def[role_id].remove(client_def)
 
 # ################################################################################################################################
+
+    def create_role_permission(self, role_id, service_id, perm_id):
+        with self.update_lock:
+            pass
+
+    def delete_role_permission(self, role_id, service_id, perm_id):
+        with self.update_lock:
+            pass
+
+# ################################################################################################################################

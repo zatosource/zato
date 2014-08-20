@@ -23,7 +23,7 @@ from bunch import bunchify
 from sqlalchemy import Boolean, Integer
 
 # Zato
-from zato.common import NO_DEFAULT_VALUE
+from zato.common import NO_DEFAULT_VALUE, ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
 from zato.server.service import Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO
@@ -329,7 +329,7 @@ class DeleteMeta(AdminServiceMeta):
                     raise
                 else:
                     self.request.input.action = getattr(attrs.broker_message, attrs.broker_message_prefix + 'DELETE').value
-                    self.request.input.name = instance.name
+                    self.request.input.name = getattr(instance, 'name', ZATO_NOT_GIVEN)
 
                     for name in attrs.extra_delete_attrs:
                         self.request.input[name] = getattr(instance, name)
