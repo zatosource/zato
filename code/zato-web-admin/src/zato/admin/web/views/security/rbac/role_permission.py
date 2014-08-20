@@ -27,21 +27,16 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'client_def', 'client_name', 'role_id', 'role_name', 'service_id', 'service_name')
+        output_required = ('id', 'role_id', 'role_name', 'service_id', 'service_name', 'perm_id', 'perm_name')
         output_repeated = True
 
     def handle(self):
 
-        client_def_list = []
         role_id_list = []
         service_id_list = []
+        perm_id_list = []
 
         if self.req.zato.cluster_id:
-
-            service_name = 'zato.security.rbac.role-permission.get-client-def-list'
-            response = self.req.zato.client.invoke(service_name, {'cluster_id':self.req.zato.cluster_id})
-            if response.has_data:
-                client_def_list = response.data
 
             service_name = 'zato.security.rbac.role.get-list'
             response = self.req.zato.client.invoke(service_name, {'cluster_id':self.req.zato.cluster_id})
@@ -49,20 +44,25 @@ class Index(_Index):
                 role_id_list = response.data
 
             service_name = 'zato.service.get-list'
-            response = self.req.zato.client.invoke(service_name, {'cluster_id':self.req.zato.cluster_id})
+            response = self.req.zato.client.invoke(service_name, {'cluster_id':self.req.zato.cluster_id, 'name_filter':'*'})
             if response.has_data:
                 service_id_list = response.data
 
+            service_name = 'zato.security.rbac.permission.get-list'
+            response = self.req.zato.client.invoke(service_name, {'cluster_id':self.req.zato.cluster_id})
+            if response.has_data:
+                perm_id_list = response.data
+
         return {
-            'create_form': CreateForm(client_def_list, role_id_list, service_id_list)
+            'create_form': CreateForm(role_id_list, service_id_list, perm_id_list)
         }
 
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('client_def', 'role_id')
-        output_required = ('id', 'client_name', 'role_name')
+        input_required = ('cluster_id', 'role_id', 'service_id', 'perm_id')
+        output_required = ('id', 'role_name', 'service_name', 'perm_name')
 
     def success_message(self, item):
         return 'Successfully {} the role permission `{}`'.format(self.verb, item.name)

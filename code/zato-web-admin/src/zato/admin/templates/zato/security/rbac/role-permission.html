@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}RBAC client roles{% endblock %}
+{% block html_title %}RBAC permissions for roles{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -14,7 +14,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/security/rbac/client-role.js"></script>
+    <script type="text/javascript" src="/static/js/security/rbac/role-permission.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -37,7 +37,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">RBAC client roles</h2>
+<h2 class="zato">RBAC permissions for roles</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -45,13 +45,13 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/choose-cluster.html" with page_prompt="Show client roles"%}
+{% include "zato/choose-cluster.html" with page_prompt="Show permissions for roles"%}
 
 
     {% if cluster_id %}
 
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.security.rbac.client_role.create()">Create a new client role</a>
+            <a href="javascript:$.fn.zato.security.rbac.role_permission.create()">Create a new permission for role</a>
         </div>
 
         <div id="markup">
@@ -76,7 +76,7 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.client_name }}</td>
                         <td>{{ item.role_name }}</td>
-                        <td><a href="javascript:$.fn.zato.security.rbac.client_role.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.security.rbac.role_permission.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.client_def }}</td>
                         <td class='ignore'>{{ item.service_id }}</td>
@@ -96,15 +96,19 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url security-rbac-client-role-create %}" method="post" id="create-form">
+                <form action="{% url security-rbac-role-permission-create %}" method="post" id="create-form">
                     <table class="form-data">
-                        <tr>
-                            <td style="vertical-align:middle">Client</td>
-                            <td>{{ create_form.client_def }}</td>
-                        </tr>
                         <tr>
                             <td style="vertical-align:middle">Role</td>
                             <td>{{ create_form.role_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_form.service_id }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Permission</td>
+                            <td>{{ create_form.perm_id }}</td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">

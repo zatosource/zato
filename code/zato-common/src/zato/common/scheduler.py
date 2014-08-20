@@ -24,7 +24,7 @@ from gevent import lock
 from paodate import Delta
 
 # Zato
-from zato.common import SCHEDULER
+from zato.common import DATA_FORMAT, SCHEDULER
 from zato.common.util import make_repr, new_cid
 
 logger = getLogger('zato_scheduler')
@@ -378,7 +378,7 @@ class Scheduler(object):
 
     def on_job_executed(self, ctx, unschedule_one_time=True):
         logger.debug('Executing `%s`, `%s`', ctx['name'], ctx)
-        self.on_job_executed_cb(ctx)
+        self.on_job_executed_cb(ctx, DATA_FORMAT.JSON)
         logger.info('Job executed `%s`, `%s`', ctx['name'], ctx)
 
         if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME and unschedule_one_time:
