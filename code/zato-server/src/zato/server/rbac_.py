@@ -73,9 +73,10 @@ class RBAC(object):
 
 # ################################################################################################################################
 
-    def _rbac_create_role(self, id, name):
+    def _rbac_create_role(self, id, name, parent_id):
         self.role_id_to_name[id] = name
         self.role_name_to_id[name] = id
+        self.registry.add_role(id, parents=[parent_id] if parent_id and id != parent_id else [])
 
     def _rbac_delete_role(self, id, name):
         self.role_id_to_name.pop(id)
@@ -83,13 +84,13 @@ class RBAC(object):
 
     def create_role(self, id, name, parent_id):
         with self.update_lock:
-            self.registry.add_role(id, parents=[parent_id] if id != parent_id else [])
-            self._rbac_create_role(id, name)
+            self._rbac_create_role(id, name, parent_id)
 
-    def edit_role(self, id, old_name, name):
+    def edit_role(self, id, old_name, name, parent_id):
         with self.update_lock:
             self._rbac_delete_role(id, old_name)
-            self._rbac_create_role(id, name)
+            self.registry._roles[id].clear() # Roles can have one parent only
+            self._rbac_create_role(id, name, parent_id)
 
     def delete_role(self, id, name):
         logger.warn('delete %r %r', id, name)

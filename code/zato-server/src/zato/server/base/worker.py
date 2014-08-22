@@ -1343,7 +1343,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.rbac.create_role(msg.id, msg.name, msg.parent_id)
 
     def on_broker_msg_RBAC_ROLE_EDIT(self, msg):
-        self.rbac.edit_role(msg.id, msg.old_name, msg.name)
+        self.rbac.edit_role(msg.id, msg.old_name, msg.name, msg.parent_id)
 
     def on_broker_msg_RBAC_ROLE_DELETE(self, msg):
         self.rbac.delete_role(msg.id, msg.name)
