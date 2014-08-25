@@ -13,6 +13,9 @@ from logging import getLogger
 from unittest import TestCase
 from uuid import uuid4
 
+# simple-rbac
+from rbac.acl import get_family
+
 # Zato
 from zato.common.test import rand_int, rand_string
 from zato.server.rbac_ import RBAC
@@ -73,6 +76,8 @@ class RBACTestCase(TestCase):
         self.assertIn(id, rbac.registry._roles)
         self.assertEquals(rbac.registry._roles[id], set())
 
+# ################################################################################################################################
+
     def test_create_role_parent_different_than_id(self):
 
         id, parent_id = rand_int(count=2)
@@ -86,6 +91,8 @@ class RBACTestCase(TestCase):
         self.assertIn(id, rbac.registry._roles)
         self.assertEquals(rbac.registry._roles[id], set([parent_id]))
 
+# ################################################################################################################################
+
     def test_create_role_parent_same_as_id(self):
 
         id = parent_id = rand_int()
@@ -98,6 +105,42 @@ class RBACTestCase(TestCase):
         self.assertEqual(rbac.role_name_to_id[name], id)
         self.assertIn(id, rbac.registry._roles)
         self.assertEquals(rbac.registry._roles[id], set())
+
+# ################################################################################################################################
+
+    def test_create_role_parent_hierarchy(self):
+
+        # Unlike in previous tests, here we set the IDs/names manually to ensure they are unique
+        id1, parent_id1 = 1, 11
+        id2, id3, id4 = 2, 3, 4
+
+        name1, name2, name3, name4 = 'name1', 'name2', 'name3', 'name4'
+
+        rbac = RBAC()
+        rbac.create_role(id1, name1, parent_id1)
+        rbac.create_role(id2, name2, id1)
+        rbac.create_role(id3, name3, id1)
+        rbac.create_role(id4, name4, id2)
+
+        self.assertEqual(rbac.role_id_to_name[id1], name1)
+        self.assertEqual(rbac.role_id_to_name[id2], name2)
+        self.assertEqual(rbac.role_id_to_name[id3], name3)
+        self.assertEqual(rbac.role_id_to_name[id4], name4)
+
+        self.assertIn(id1, rbac.registry._roles)
+        self.assertIn(id2, rbac.registry._roles)
+        self.assertIn(id3, rbac.registry._roles)
+        self.assertIn(id4, rbac.registry._roles)
+
+        self.assertEquals(rbac.registry._roles[id1], set([parent_id1]))
+        self.assertEquals(rbac.registry._roles[id2], set([id1]))
+        self.assertEquals(rbac.registry._roles[id3], set([id1]))
+        self.assertEquals(rbac.registry._roles[id4], set([id2]))
+
+        self.assertEquals(sorted(get_family(rbac.registry._roles, id1)), [None, 1, 11])
+        self.assertEquals(sorted(get_family(rbac.registry._roles, id2)), [None, 1, 2, 11])
+        self.assertEquals(sorted(get_family(rbac.registry._roles, id3)), [None, 1, 3, 11])
+        self.assertEquals(sorted(get_family(rbac.registry._roles, id4)), [None, 1, 2, 4, 11])
 
 # ################################################################################################################################
 
