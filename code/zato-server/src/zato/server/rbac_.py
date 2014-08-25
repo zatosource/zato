@@ -114,6 +114,10 @@ class RBAC(object):
 
     def create_client_role(self, client_def, role_id):
         with self.update_lock:
+
+            if role_id not in self.role_id_to_name:
+                raise ValueError('Role `{}` not found among `{}`'.format(role_id, self.role_id_to_name))
+
             self.client_def_to_role_id.setdefault(client_def, set()).add(role_id)
             self.role_id_to_client_def.setdefault(role_id, set()).add(client_def)
 
