@@ -28,7 +28,7 @@ class RBACTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_create_permission(self):
+    def test_create_permission(self):
 
         name = rand_string()
 
@@ -39,7 +39,7 @@ class RBACTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_edit_permission(self):
+    def test_edit_permission(self):
 
         old_name, new_name = rand_string(2)
 
@@ -52,7 +52,7 @@ class RBACTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_delete_permission(self):
+    def test_delete_permission(self):
 
         name = rand_string()
 
@@ -64,7 +64,7 @@ class RBACTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_create_role_parent_not_given(self):
+    def test_create_role_parent_not_given(self):
 
         id, name = rand_int(), rand_string()
 
@@ -78,7 +78,7 @@ class RBACTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_create_role_parent_different_than_id(self):
+    def test_create_role_parent_different_than_id(self):
 
         id, parent_id = rand_int(count=2)
         name = rand_string()
@@ -93,7 +93,7 @@ class RBACTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_create_role_parent_same_as_id(self):
+    def test_create_role_parent_same_as_id(self):
 
         id = parent_id = rand_int()
         name = rand_string()
@@ -108,9 +108,8 @@ class RBACTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_create_role_parent_hierarchy(self):
+    def test_create_role_parent_hierarchy(self):
 
-        # Unlike in previous tests, here we set the IDs/names manually to ensure they are unique
         id1, parent_id1 = 1, 11
         id2, id3, id4 = 2, 3, 4
 
@@ -144,7 +143,7 @@ class RBACTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_edit_role_parent_not_given(self):
+    def test_edit_role_parent_not_given(self):
 
         id = rand_int()
         old_name, new_name = rand_string(2)
@@ -160,7 +159,7 @@ class RBACTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_edit_role_change_name_only(self):
+    def test_edit_role_change_name_only(self):
 
         id, parent_id = rand_int(count=2)
         old_name, new_name = rand_string(2)
@@ -176,7 +175,7 @@ class RBACTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_edit_role_change_parent_id_only(self):
+    def test_edit_role_change_parent_id_only(self):
 
         id = rand_int()
         old_parent_id, new_parent_id = uuid4().int, uuid4().int # Using uuid4 to make sure they really are unique
@@ -195,7 +194,6 @@ class RBACTestCase(TestCase):
 
     def test_edit_role_parent_hierarchy(self):
 
-        # Unlike in previous tests, here we set the IDs/names manually to ensure they are unique
         id1, parent_id1 = 1, 11
         id2, id3, id4 = 2, 3, 4
 
@@ -235,6 +233,127 @@ class RBACTestCase(TestCase):
         # whereas the second one should update id4's name.
         rbac.edit_role(id2, name2, name2, parent_id2_new)
         rbac.edit_role(id4, name4, name4_new, id2)
+
         self.assertEquals(sorted(get_family(rbac.registry._roles, id4)), [None, id2, id4, parent_id2_new])
+        self.assertEqual(rbac.role_id_to_name[id4], name4_new)
+
+# ################################################################################################################################
+
+    def test_delete_role_parent_not_given(self):
+
+        id, name = rand_int(), rand_string()
+
+        rbac = RBAC()
+
+        # Create and confirm it was added
+        rbac.create_role(id, name, None)
+
+        self.assertEqual(rbac.role_id_to_name[id], name)
+        self.assertEqual(rbac.role_name_to_id[name], id)
+        self.assertIn(id, rbac.registry._roles)
+        self.assertEquals(rbac.registry._roles[id], set())
+
+        # Delete and confirm the action
+        rbac.delete_role(id, name)
+
+        self.assertNotIn(id, rbac.role_id_to_name)
+        self.assertNotIn(name, rbac.role_name_to_id)
+        self.assertNotIn(id, rbac.registry._roles)
+
+# ################################################################################################################################
+
+    def test_delete_role_parent_hierarchy_delete_root_id(self):
+
+        id1, parent_id1 = 1, 11
+        id2, id3, id4 = 2, 3, 4
+
+        name1, name2, name3, name4 = 'name1', 'name2', 'name3', 'name4'
+
+        rbac = RBAC()
+        rbac.create_role(id1, name1, parent_id1)
+        rbac.create_role(id2, name2, id1)
+        rbac.create_role(id3, name3, id1)
+        rbac.create_role(id4, name4, id2)
+
+        rbac.delete_role(id1, name1)
+
+        self.assertNotIn(id1, rbac.role_id_to_name)
+        self.assertNotIn(id2, rbac.role_id_to_name)
+        self.assertNotIn(id3, rbac.role_id_to_name)
+        self.assertNotIn(id4, rbac.role_id_to_name)
+
+        self.assertNotIn(name1, rbac.role_name_to_id)
+        self.assertNotIn(name2, rbac.role_name_to_id)
+        self.assertNotIn(name3, rbac.role_name_to_id)
+        self.assertNotIn(name4, rbac.role_name_to_id)
+
+        self.assertNotIn(id1, rbac.registry._roles)
+        self.assertNotIn(id2, rbac.registry._roles)
+        self.assertNotIn(id3, rbac.registry._roles)
+        self.assertNotIn(id4, rbac.registry._roles)
+
+# ################################################################################################################################
+
+    def test_delete_role_parent_hierarchy_delete_branch(self):
+
+        id1, parent_id1 = 1, 11
+        id2, id3, id4 = 2, 3, 4
+
+        name1, name2, name3, name4 = 'name1', 'name2', 'name3', 'name4'
+
+        rbac = RBAC()
+        rbac.create_role(id1, name1, parent_id1)
+        rbac.create_role(id2, name2, id1)
+        rbac.create_role(id3, name3, id1)
+        rbac.create_role(id4, name4, id2)
+
+        rbac.delete_role(id2, name2)
+
+        self.assertIn(id1, rbac.role_id_to_name)
+        self.assertNotIn(id2, rbac.role_id_to_name)
+        self.assertIn(id3, rbac.role_id_to_name)
+        self.assertNotIn(id4, rbac.role_id_to_name)
+
+        self.assertIn(name1, rbac.role_name_to_id)
+        self.assertNotIn(name2, rbac.role_name_to_id)
+        self.assertIn(name3, rbac.role_name_to_id)
+        self.assertNotIn(name4, rbac.role_name_to_id)
+
+        self.assertIn(id1, rbac.registry._roles)
+        self.assertNotIn(id2, rbac.registry._roles)
+        self.assertIn(id3, rbac.registry._roles)
+        self.assertNotIn(id4, rbac.registry._roles)
+
+# ################################################################################################################################
+
+    def test_delete_role_parent_hierarchy_delete_leaf(self):
+
+        id1, parent_id1 = 1, 11
+        id2, id3, id4 = 2, 3, 4
+
+        name1, name2, name3, name4 = 'name1', 'name2', 'name3', 'name4'
+
+        rbac = RBAC()
+        rbac.create_role(id1, name1, parent_id1)
+        rbac.create_role(id2, name2, id1)
+        rbac.create_role(id3, name3, id1)
+        rbac.create_role(id4, name4, id2)
+
+        rbac.delete_role(id4, name4)
+
+        self.assertIn(id1, rbac.role_id_to_name)
+        self.assertIn(id2, rbac.role_id_to_name)
+        self.assertIn(id3, rbac.role_id_to_name)
+        self.assertNotIn(id4, rbac.role_id_to_name)
+
+        self.assertIn(name1, rbac.role_name_to_id)
+        self.assertIn(name2, rbac.role_name_to_id)
+        self.assertIn(name3, rbac.role_name_to_id)
+        self.assertNotIn(name4, rbac.role_name_to_id)
+
+        self.assertIn(id1, rbac.registry._roles)
+        self.assertIn(id2, rbac.registry._roles)
+        self.assertIn(id3, rbac.registry._roles)
+        self.assertNotIn(id4, rbac.registry._roles)
 
 # ################################################################################################################################

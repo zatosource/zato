@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from itertools import cycle
+from itertools import chain
 from logging import getLogger
 
 # simple-rbac
@@ -28,13 +28,24 @@ logger = getLogger('zato_rbac')
 # ################################################################################################################################
 
 class Registry(_Registry):
-    def __init__(self):
+    def __init__(self, delete_callback):
         super(Registry, self).__init__()
+        self.delete_callback = delete_callback
 
     def delete_role(self, delete_role):
+
+        self.delete_callback(delete_role)
+
+        # Delete the role itself.
         del self._roles[delete_role]
 
-        for item in cycle([self._allowed, self._denied]):
+        # Recursively delete any children along with their own children.
+        for child_id, child_parents in self._roles.items():
+            if delete_role in child_parents:
+                self.delete_role(child_id)
+
+        # Remove the role from any permissions it may have been involved in.
+        for item in chain(self._allowed, self._denied):
             for role, operation, resource in item:
                 if role == delete_role:
                     item.remove([role, operation, resource])
@@ -43,7 +54,7 @@ class Registry(_Registry):
 
 class RBAC(object):
     def __init__(self):
-        self.registry = Registry()
+        self.registry = Registry(self._delete_callback)
         self.update_lock = RLock()
         self.permissions = set()
         self.role_id_to_name = {}
@@ -78,6 +89,9 @@ class RBAC(object):
         self.role_name_to_id[name] = id
         self.registry.add_role(id, parents=[parent_id] if parent_id and id != parent_id else [])
 
+    def _delete_callback(self, id):
+        self._rbac_delete_role(id, self.role_id_to_name[id])
+
     def _rbac_delete_role(self, id, name):
         self.role_id_to_name.pop(id)
         self.role_name_to_id.pop(name)
@@ -93,10 +107,8 @@ class RBAC(object):
             self._rbac_create_role(id, name, parent_id)
 
     def delete_role(self, id, name):
-        logger.warn('delete %r %r', id, name)
-        '''with self.update_lock:
-            self._rbac_delete_role(id, name)
-            self.registry.delete_role(id)'''
+        with self.update_lock:
+            self.registry.delete_role(id)
 
 # ################################################################################################################################
 
