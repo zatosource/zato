@@ -24,43 +24,7 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-class RBACTestCase(TestCase):
-
-# ################################################################################################################################
-
-    def test_create_permission(self):
-
-        name = rand_string()
-
-        rbac = RBAC()
-        rbac.create_permission(name)
-
-        self.assertTrue(name in rbac.permissions)
-
-# ################################################################################################################################
-
-    def test_edit_permission(self):
-
-        old_name, new_name = rand_string(2)
-
-        rbac = RBAC()
-        rbac.create_permission(old_name)
-        rbac.edit_permission(old_name, new_name)
-
-        self.assertTrue(old_name not in rbac.permissions)
-        self.assertTrue(new_name in rbac.permissions)
-
-# ################################################################################################################################
-
-    def test_delete_permission(self):
-
-        name = rand_string()
-
-        rbac = RBAC()
-        rbac.create_permission(name)
-        rbac.delete_permission(name)
-
-        self.assertTrue(name not in rbac.permissions)
+class RoleTestCase(TestCase):
 
 # ################################################################################################################################
 
@@ -355,5 +319,45 @@ class RBACTestCase(TestCase):
         self.assertIn(id2, rbac.registry._roles)
         self.assertIn(id3, rbac.registry._roles)
         self.assertNotIn(id4, rbac.registry._roles)
+
+# ################################################################################################################################
+
+class PermissionTestCase(TestCase):
+
+# ################################################################################################################################
+
+    def test_create_permission(self):
+
+        name = rand_string()
+
+        rbac = RBAC()
+        rbac.create_permission(name)
+
+        self.assertTrue(name in rbac.permissions)
+
+# ################################################################################################################################
+
+    def test_edit_permission(self):
+
+        old_name, new_name = rand_string(2)
+
+        rbac = RBAC()
+        rbac.create_permission(old_name)
+        rbac.edit_permission(old_name, new_name)
+
+        self.assertTrue(old_name not in rbac.permissions)
+        self.assertTrue(new_name in rbac.permissions)
+
+# ################################################################################################################################
+
+    def test_delete_permission(self):
+
+        name = rand_string()
+
+        rbac = RBAC()
+        rbac.create_permission(name)
+        rbac.delete_permission(name)
+
+        self.assertTrue(name not in rbac.permissions)
 
 # ################################################################################################################################
