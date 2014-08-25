@@ -361,3 +361,46 @@ class PermissionTestCase(TestCase):
         self.assertTrue(name not in rbac.permissions)
 
 # ################################################################################################################################
+
+class ClientRoleTestCase(TestCase):
+
+# ################################################################################################################################
+
+    def test_create_client_role_valid_role(self):
+        role_id1, role_name1 = rand_int(), rand_string()
+        role_id2, role_name2 = rand_int(), rand_string()
+        role_id3, role_name3 = rand_int(), rand_string()
+
+        client_def1 = rand_string()
+        client_def2 = rand_string()
+
+        rbac = RBAC()
+
+        rbac.create_role(role_id1, role_name1, None)
+        rbac.create_role(role_id2, role_name2, None)
+        rbac.create_role(role_id3, role_name3, None)
+
+        rbac.create_client_role(client_def1, role_id1)
+        rbac.create_client_role(client_def1, role_id2)
+
+        rbac.create_client_role(client_def2, role_id2)
+        rbac.create_client_role(client_def2, role_id3)
+
+        self.assertEquals(rbac.client_def_to_role_id[client_def1], set([role_id1, role_id2]))
+        self.assertEquals(rbac.client_def_to_role_id[client_def2], set([role_id2, role_id3]))
+
+# ################################################################################################################################
+
+    def test_create_client_role_invalid_role(self):
+        role_id, role_name = rand_int(), rand_string()
+        client_def = rand_string()
+
+        rbac = RBAC()
+        self.assertRaises(ValueError, rbac.create_client_role, client_def, role_id)
+
+# ################################################################################################################################
+
+    def test_delete_client_role(self):
+        pass
+
+# ################################################################################################################################
