@@ -65,7 +65,7 @@ class RBAC(object):
     def __init__(self):
         self.registry = Registry(self._delete_callback)
         self.update_lock = RLock()
-        self.permissions = set()
+        self.permissions = {}
         self.role_id_to_name = {}
         self.role_name_to_id = {}
         self.client_def_to_role_id = {}
@@ -78,18 +78,24 @@ class RBAC(object):
 
 # ################################################################################################################################
 
-    def create_permission(self, name):
+    def create_permission(self, id, name):
         with self.update_lock:
-            self.permissions.add(name)
+            self.permissions[id] = name
 
-    def edit_permission(self, old_name, name):
+    def edit_permission(self, id, new_name):
         with self.update_lock:
-            self.permissions.remove(old_name)
-            self.permissions.add(name)
+            if not id in self.permissions:
+                raise ValueError('Permission ID `{}` ({}) not found among `{}`'.format(id, new_name, self.permissions))
+            self.permissions[id] = new_name
 
-    def delete_permission(self, name):
+    def delete_permission(self, id):
         with self.update_lock:
-            self.permissions.remove(name)
+            del self.permissions[id]
+
+            for item in chain(self.registry._allowed, self.registry._denied):
+                for role, operation, resource in item:
+                    if operation == id:
+                        item.remove([role, operation, resource])
 
 # ################################################################################################################################
 
@@ -147,11 +153,11 @@ class RBAC(object):
 
 # ################################################################################################################################
 
-    def create_role_permission(self, role_id, resource_def, perm_id):
+    def create_role_permission(self, role_id, resource, perm_id):
         with self.update_lock:
-            pass
+            self.registry.allow(role_id, perm_id, resource)
 
-    def delete_role_permission(self, role_id, resource_def, perm_id):
+    def delete_role_permission(self, role_id, resource, perm_id):
         with self.update_lock:
             pass
 
