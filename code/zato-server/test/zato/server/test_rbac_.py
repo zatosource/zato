@@ -549,4 +549,24 @@ class ResourceTestCase(TestCase):
         rbac.create_permission(perm_id1, perm_name1)
         rbac.create_permission(perm_id2, perm_name2)
 
+        rbac.create_role_permission_allow(role_id1, res_name1, perm_id1)
+        rbac.create_role_permission_allow(role_id1, res_name1, perm_id2)
+
+        rbac.create_role_permission_allow(role_id2, res_name2, perm_id1)
+        rbac.create_role_permission_allow(role_id2, res_name2, perm_id2)
+
+        self.assertIn((role_id1, perm_id1, res_name1), rbac.registry._allowed)
+        self.assertIn((role_id1, perm_id2, res_name1), rbac.registry._allowed)
+
+        self.assertIn((role_id2, perm_id1, res_name2), rbac.registry._allowed)
+        self.assertIn((role_id2, perm_id2, res_name2), rbac.registry._allowed)
+
+        rbac.delete_resource(res_name1)
+
+        self.assertNotIn((role_id1, perm_id1, res_name1), rbac.registry._allowed)
+        self.assertNotIn((role_id1, perm_id2, res_name1), rbac.registry._allowed)
+
+        self.assertIn((role_id2, perm_id1, res_name2), rbac.registry._allowed)
+        self.assertIn((role_id2, perm_id2, res_name2), rbac.registry._allowed)
+
 # ################################################################################################################################
