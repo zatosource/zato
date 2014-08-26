@@ -400,11 +400,11 @@ class PermissionTestCase(TestCase):
         rbac.create_resource(res_name1)
         rbac.create_resource(res_name2)
 
-        rbac.create_role_permission_allow(role_id1, res_name1, perm_id1)
-        rbac.create_role_permission_allow(role_id1, res_name1, perm_id2)
+        rbac.create_role_permission_allow(role_id1, perm_id1, res_name1)
+        rbac.create_role_permission_allow(role_id1, perm_id2, res_name1)
 
-        rbac.create_role_permission_allow(role_id2, res_name2, perm_id1)
-        rbac.create_role_permission_allow(role_id2, res_name2, perm_id2)
+        rbac.create_role_permission_allow(role_id2, perm_id1, res_name2)
+        rbac.create_role_permission_allow(role_id2, perm_id2, res_name2)
 
         self.assertIn((role_id1, perm_id1, res_name1), rbac.registry._allowed)
         self.assertIn((role_id1, perm_id2, res_name1), rbac.registry._allowed)
@@ -525,10 +525,6 @@ class ResourceTestCase(TestCase):
         self.assertEquals(rbac.registry._resources[name1], set())
         self.assertNotIn(name2, rbac.registry._resources)
 
-# ################################################################################################################################
-
-class ResourceTestCase(TestCase):
-
     def test_delete_resource_has_roles(self):
         role_id1, role_id2 = 1, 2
         role_name1, role_name2 = 'role_name1', 'role_name2'
@@ -549,11 +545,11 @@ class ResourceTestCase(TestCase):
         rbac.create_permission(perm_id1, perm_name1)
         rbac.create_permission(perm_id2, perm_name2)
 
-        rbac.create_role_permission_allow(role_id1, res_name1, perm_id1)
-        rbac.create_role_permission_allow(role_id1, res_name1, perm_id2)
+        rbac.create_role_permission_allow(role_id1, perm_id1, res_name1)
+        rbac.create_role_permission_allow(role_id1, perm_id2, res_name1)
 
-        rbac.create_role_permission_allow(role_id2, res_name2, perm_id1)
-        rbac.create_role_permission_allow(role_id2, res_name2, perm_id2)
+        rbac.create_role_permission_allow(role_id2, perm_id1, res_name2)
+        rbac.create_role_permission_allow(role_id2, perm_id2, res_name2)
 
         self.assertIn((role_id1, perm_id1, res_name1), rbac.registry._allowed)
         self.assertIn((role_id1, perm_id2, res_name1), rbac.registry._allowed)
@@ -568,5 +564,163 @@ class ResourceTestCase(TestCase):
 
         self.assertIn((role_id2, perm_id1, res_name2), rbac.registry._allowed)
         self.assertIn((role_id2, perm_id2, res_name2), rbac.registry._allowed)
+
+# ################################################################################################################################
+
+class RolePermissionAllowTestCase(TestCase):
+
+    def test_create_role_permission_allow(self):
+
+        role_id1, role_id2 = 1, 2
+        role_name1, role_name2 = 'role_name1', 'role_name2'
+
+        res_name1, res_name2 = 'res_name1', 'res_name2'
+
+        perm_id1, perm_id2 = 11, 22
+        perm_name1, perm_name2 = 'perm_name1', 'perm_name2'
+
+        rbac = RBAC()
+
+        rbac.create_role(role_id1, role_name1, None)
+        rbac.create_role(role_id2, role_name2, None)
+
+        rbac.create_resource(res_name1)
+        rbac.create_resource(res_name2)
+
+        rbac.create_permission(perm_id1, perm_name1)
+        rbac.create_permission(perm_id2, perm_name2)
+
+        rbac.create_role_permission_allow(role_id1, perm_id1, res_name1)
+        rbac.create_role_permission_allow(role_id1, perm_id2, res_name1)
+
+        rbac.create_role_permission_allow(role_id2, perm_id1, res_name2)
+        rbac.create_role_permission_allow(role_id2, perm_id2, res_name2)
+
+        self.assertIn((role_id1, perm_id1, res_name1), rbac.registry._allowed)
+        self.assertIn((role_id1, perm_id2, res_name1), rbac.registry._allowed)
+
+        self.assertIn((role_id2, perm_id1, res_name2), rbac.registry._allowed)
+        self.assertIn((role_id2, perm_id2, res_name2), rbac.registry._allowed)
+
+    def test_delete_role_permission_allow(self):
+
+        role_id1, role_id2 = 1, 2
+        role_name1, role_name2 = 'role_name1', 'role_name2'
+
+        res_name1, res_name2 = 'res_name1', 'res_name2'
+
+        perm_id1, perm_id2 = 11, 22
+        perm_name1, perm_name2 = 'perm_name1', 'perm_name2'
+
+        rbac = RBAC()
+
+        rbac.create_role(role_id1, role_name1, None)
+        rbac.create_role(role_id2, role_name2, None)
+
+        rbac.create_resource(res_name1)
+        rbac.create_resource(res_name2)
+
+        rbac.create_permission(perm_id1, perm_name1)
+        rbac.create_permission(perm_id2, perm_name2)
+
+        rbac.create_role_permission_allow(role_id1, perm_id1, res_name1)
+        rbac.create_role_permission_allow(role_id1, perm_id2, res_name1)
+
+        rbac.create_role_permission_allow(role_id2, perm_id1, res_name2)
+        rbac.create_role_permission_allow(role_id2, perm_id2, res_name2)
+
+        self.assertIn((role_id1, perm_id1, res_name1), rbac.registry._allowed)
+        self.assertIn((role_id1, perm_id2, res_name1), rbac.registry._allowed)
+
+        self.assertIn((role_id2, perm_id1, res_name2), rbac.registry._allowed)
+        self.assertIn((role_id2, perm_id2, res_name2), rbac.registry._allowed)
+
+        rbac.delete_role_permission_allow(role_id1, perm_id1, res_name1)
+        rbac.delete_role_permission_allow(role_id2, perm_id1, res_name2)
+
+        self.assertNotIn((role_id1, perm_id1, res_name1), rbac.registry._allowed)
+        self.assertIn((role_id1, perm_id2, res_name1), rbac.registry._allowed)
+
+        self.assertNotIn((role_id2, perm_id1, res_name2), rbac.registry._allowed)
+        self.assertIn((role_id2, perm_id2, res_name2), rbac.registry._allowed)
+
+# ################################################################################################################################
+
+class RolePermissionDeleteTestCase(TestCase):
+
+    def test_create_role_permission_deny(self):
+
+        role_id1, role_id2 = 1, 2
+        role_name1, role_name2 = 'role_name1', 'role_name2'
+
+        res_name1, res_name2 = 'res_name1', 'res_name2'
+
+        perm_id1, perm_id2 = 11, 22
+        perm_name1, perm_name2 = 'perm_name1', 'perm_name2'
+
+        rbac = RBAC()
+
+        rbac.create_role(role_id1, role_name1, None)
+        rbac.create_role(role_id2, role_name2, None)
+
+        rbac.create_resource(res_name1)
+        rbac.create_resource(res_name2)
+
+        rbac.create_permission(perm_id1, perm_name1)
+        rbac.create_permission(perm_id2, perm_name2)
+
+        rbac.create_role_permission_deny(role_id1, perm_id1, res_name1)
+        rbac.create_role_permission_deny(role_id1, perm_id2, res_name1)
+
+        rbac.create_role_permission_deny(role_id2, perm_id1, res_name2)
+        rbac.create_role_permission_deny(role_id2, perm_id2, res_name2)
+
+        self.assertIn((role_id1, perm_id1, res_name1), rbac.registry._denied)
+        self.assertIn((role_id1, perm_id2, res_name1), rbac.registry._denied)
+
+        self.assertIn((role_id2, perm_id1, res_name2), rbac.registry._denied)
+        self.assertIn((role_id2, perm_id2, res_name2), rbac.registry._denied)
+
+    def test_delete_role_permission_deny(self):
+
+        role_id1, role_id2 = 1, 2
+        role_name1, role_name2 = 'role_name1', 'role_name2'
+
+        res_name1, res_name2 = 'res_name1', 'res_name2'
+
+        perm_id1, perm_id2 = 11, 22
+        perm_name1, perm_name2 = 'perm_name1', 'perm_name2'
+
+        rbac = RBAC()
+
+        rbac.create_role(role_id1, role_name1, None)
+        rbac.create_role(role_id2, role_name2, None)
+
+        rbac.create_resource(res_name1)
+        rbac.create_resource(res_name2)
+
+        rbac.create_permission(perm_id1, perm_name1)
+        rbac.create_permission(perm_id2, perm_name2)
+
+        rbac.create_role_permission_deny(role_id1, perm_id1, res_name1)
+        rbac.create_role_permission_deny(role_id1, perm_id2, res_name1)
+
+        rbac.create_role_permission_deny(role_id2, perm_id1, res_name2)
+        rbac.create_role_permission_deny(role_id2, perm_id2, res_name2)
+
+        self.assertIn((role_id1, perm_id1, res_name1), rbac.registry._denied)
+        self.assertIn((role_id1, perm_id2, res_name1), rbac.registry._denied)
+
+        self.assertIn((role_id2, perm_id1, res_name2), rbac.registry._denied)
+        self.assertIn((role_id2, perm_id2, res_name2), rbac.registry._denied)
+
+        rbac.delete_role_permission_deny(role_id1, perm_id1, res_name1)
+        rbac.delete_role_permission_deny(role_id2, perm_id1, res_name2)
+
+        self.assertNotIn((role_id1, perm_id1, res_name1), rbac.registry._denied)
+        self.assertIn((role_id1, perm_id2, res_name1), rbac.registry._denied)
+
+        self.assertNotIn((role_id2, perm_id1, res_name2), rbac.registry._denied)
+        self.assertIn((role_id2, perm_id2, res_name2), rbac.registry._denied)
 
 # ################################################################################################################################

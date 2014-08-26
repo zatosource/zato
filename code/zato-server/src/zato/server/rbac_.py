@@ -68,6 +68,12 @@ class Registry(_Registry):
             for value in reg_del[name]:
                 del item[value]
 
+    def delete_allow(self, config):
+        del self._allowed[config]
+
+    def delete_deny(self, config):
+        del self._denied[config]
+
 # ################################################################################################################################
 
 class RBAC(object):
@@ -158,16 +164,20 @@ class RBAC(object):
 
 # ################################################################################################################################
 
-    def create_role_permission_allow(self, role_id, resource, perm_id):
+    def create_role_permission_allow(self, role_id, perm_id, resource):
         with self.update_lock:
             self.registry.allow(role_id, perm_id, resource)
 
-    def create_role_permission_deny(self, role_id, resource, perm_id):
+    def create_role_permission_deny(self, role_id, perm_id, resource):
         with self.update_lock:
             self.registry.deny(role_id, perm_id, resource)
 
-    def delete_role_permission(self, role_id, resource, perm_id):
+    def delete_role_permission_allow(self, role_id, perm_id, resource):
         with self.update_lock:
-            pass
+            self.registry.delete_allow((role_id, perm_id, resource))
+
+    def delete_role_permission_deny(self, role_id, perm_id, resource):
+        with self.update_lock:
+            self.registry.delete_deny((role_id, perm_id, resource))
 
 # ################################################################################################################################
