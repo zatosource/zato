@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from itertools import chain
 from logging import getLogger
 
 # simple-rbac
@@ -45,19 +44,29 @@ class Registry(_Registry):
                 self.delete_role(child_id)
 
         # Remove the role from any permissions it may have been involved in.
-        for item in chain(self._allowed, self._denied):
-            for role, operation, resource in item:
-                if role == delete_role:
-                    item.remove([role, operation, resource])
+        self.delete_from_permissions('role', delete_role)
 
     def delete_resource(self, delete_resource):
         del self._resources[delete_resource]
 
         # Remove the resource from any grants it may have been involved in.
-        for item in chain(self._allowed, self._denied):
-            for role, operation, resource in item:
-                if resource == delete_resource:
-                    item.remove([role, operation, resource])
+        self.delete_from_permissions('resource', delete_resource)
+
+    def delete_from_permissions(self, compare_name, delete_item):
+
+        reg_del = {'_allowed':[], '_denied':[]}
+        name_to_idx = {'role':0, 'operation':1, 'resource':2}
+
+        for name in reg_del:
+            item = getattr(self, name)
+            for values in item:
+                if values[name_to_idx[compare_name]] == delete_item:
+                    reg_del[name].append(values)
+
+        for name in reg_del:
+            item = getattr(self, name)
+            for value in reg_del[name]:
+                del item[value]
 
 # ################################################################################################################################
 
@@ -91,11 +100,7 @@ class RBAC(object):
     def delete_permission(self, id):
         with self.update_lock:
             del self.permissions[id]
-
-            for item in chain(self.registry._allowed, self.registry._denied):
-                for role, operation, resource in item:
-                    if operation == id:
-                        item.remove([role, operation, resource])
+            self.registry.delete_from_permissions('operation', id)
 
 # ################################################################################################################################
 
@@ -153,9 +158,13 @@ class RBAC(object):
 
 # ################################################################################################################################
 
-    def create_role_permission(self, role_id, resource, perm_id):
+    def create_role_permission_allow(self, role_id, resource, perm_id):
         with self.update_lock:
             self.registry.allow(role_id, perm_id, resource)
+
+    def create_role_permission_deny(self, role_id, resource, perm_id):
+        with self.update_lock:
+            self.registry.deny(role_id, perm_id, resource)
 
     def delete_role_permission(self, role_id, resource, perm_id):
         with self.update_lock:
