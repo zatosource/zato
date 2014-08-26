@@ -367,12 +367,12 @@ class ClientRoleTestCase(TestCase):
 # ################################################################################################################################
 
     def test_create_client_role_valid_role(self):
-        role_id1, role_name1 = rand_int(), rand_string()
-        role_id2, role_name2 = rand_int(), rand_string()
-        role_id3, role_name3 = rand_int(), rand_string()
+        client_def1 = 'def1'
+        client_def2 = 'def2'
 
-        client_def1 = rand_string()
-        client_def2 = rand_string()
+        role_id1, role_name1 = 1, 'name1'
+        role_id2, role_name2 = 2, 'name2'
+        role_id3, role_name3 = 3, 'name3'
 
         rbac = RBAC()
 
@@ -389,11 +389,14 @@ class ClientRoleTestCase(TestCase):
         self.assertEquals(rbac.client_def_to_role_id[client_def1], set([role_id1, role_id2]))
         self.assertEquals(rbac.client_def_to_role_id[client_def2], set([role_id2, role_id3]))
 
+        self.assertEquals(rbac.role_id_to_client_def[role_id1], set([client_def1]))
+        self.assertEquals(rbac.role_id_to_client_def[role_id2], set([client_def1, client_def2]))
+
 # ################################################################################################################################
 
     def test_create_client_role_invalid_role(self):
-        role_id, role_name = rand_int(), rand_string()
         client_def = rand_string()
+        role_id, role_name = rand_int(), rand_string()
 
         rbac = RBAC()
         self.assertRaises(ValueError, rbac.create_client_role, client_def, role_id)
@@ -401,6 +404,65 @@ class ClientRoleTestCase(TestCase):
 # ################################################################################################################################
 
     def test_delete_client_role(self):
-        pass
+
+        client_def1 = 'def1'
+        client_def2 = 'def2'
+
+        role_id1, role_name1 = 1, 'name1'
+        role_id2, role_name2 = 2, 'name2'
+        role_id3, role_name3 = 3, 'name3'
+
+        rbac = RBAC()
+
+        rbac.create_role(role_id1, role_name1, None)
+        rbac.create_role(role_id2, role_name2, None)
+        rbac.create_role(role_id3, role_name3, None)
+
+        rbac.create_client_role(client_def1, role_id1)
+        rbac.create_client_role(client_def1, role_id2)
+
+        rbac.create_client_role(client_def2, role_id2)
+        rbac.create_client_role(client_def2, role_id3)
+
+        rbac.delete_client_role(client_def1, role_id1)
+        rbac.delete_client_role(client_def2, role_id3)
+
+        self.assertEquals(rbac.client_def_to_role_id[client_def1], set([role_id2]))
+        self.assertEquals(rbac.client_def_to_role_id[client_def2], set([role_id2]))
+
+        rbac.delete_client_role(client_def1, role_id2)
+        rbac.delete_client_role(client_def2, role_id2)
+
+        self.assertEquals(rbac.client_def_to_role_id[client_def1], set([]))
+        self.assertEquals(rbac.client_def_to_role_id[client_def2], set([]))
+
+# ################################################################################################################################
+
+class ResourceTestCase(TestCase):
+
+# ################################################################################################################################
+
+    def test_create_resource(self):
+        name1, name2 = 'name1', 'name2'
+
+        rbac = RBAC()
+        rbac.create_resource(name1)
+        rbac.create_resource(name2)
+
+        self.assertEquals(rbac.registry._resources[name1], set())
+        self.assertEquals(rbac.registry._resources[name2], set())
+
+# ################################################################################################################################
+
+    def test_delete_resource_no_roles(self):
+        name1, name2 = 'name1', 'name2'
+
+        rbac = RBAC()
+        rbac.create_resource(name1)
+        rbac.create_resource(name2)
+        rbac.delete_resource(name2)
+
+        self.assertEquals(rbac.registry._resources[name1], set())
+        self.assertNotIn(name2, rbac.registry._resources)
 
 # ################################################################################################################################

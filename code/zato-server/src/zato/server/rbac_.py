@@ -28,13 +28,13 @@ logger = getLogger('zato_rbac')
 # ################################################################################################################################
 
 class Registry(_Registry):
-    def __init__(self, delete_callback):
+    def __init__(self, delete_role_callback):
         super(Registry, self).__init__()
-        self.delete_callback = delete_callback
+        self.delete_role_callback = delete_role_callback
 
     def delete_role(self, delete_role):
 
-        self.delete_callback(delete_role)
+        self.delete_role_callback(delete_role)
 
         # Delete the role itself.
         del self._roles[delete_role]
@@ -48,6 +48,15 @@ class Registry(_Registry):
         for item in chain(self._allowed, self._denied):
             for role, operation, resource in item:
                 if role == delete_role:
+                    item.remove([role, operation, resource])
+
+    def delete_resource(self, delete_resource):
+        del self._resources[delete_resource]
+
+        # Remove the resource from any grants it may have been involved in.
+        for item in chain(self._allowed, self._denied):
+            for role, operation, resource in item:
+                if resource == delete_resource:
                     item.remove([role, operation, resource])
 
 # ################################################################################################################################
@@ -128,11 +137,21 @@ class RBAC(object):
 
 # ################################################################################################################################
 
-    def create_role_permission(self, role_id, service_id, perm_id):
+    def create_resource(self, resource):
+        with self.update_lock:
+            self.registry.add_resource(resource)
+
+    def delete_resource(self, resource):
+        with self.update_lock:
+            self.registry.delete_resource(resource)
+
+# ################################################################################################################################
+
+    def create_role_permission(self, role_id, resource_def, perm_id):
         with self.update_lock:
             pass
 
-    def delete_role_permission(self, role_id, service_id, perm_id):
+    def delete_role_permission(self, role_id, resource_def, perm_id):
         with self.update_lock:
             pass
 
