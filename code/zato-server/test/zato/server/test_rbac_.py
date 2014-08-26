@@ -328,35 +328,52 @@ class PermissionTestCase(TestCase):
 
     def test_create_permission(self):
 
-        name = rand_string()
+        id1, name1 = 1, 'name1'
+        id2, name2 = 2, 'name2'
 
         rbac = RBAC()
-        rbac.create_permission(name)
+        rbac.create_permission(id1, name1)
+        rbac.create_permission(id2, name2)
 
-        self.assertTrue(name in rbac.permissions)
+        self.assertEquals(rbac.permissions[id1], name1)
+        self.assertEquals(rbac.permissions[id2], name2)
 
 # ################################################################################################################################
 
-    def test_edit_permission(self):
+    def test_edit_permission_exists(self):
 
-        old_name, new_name = rand_string(2)
+        id1, name1 = 1, 'name1'
+        id2, name2 = 2, 'name2'
+
+        new_name1 = 'new_name1'
 
         rbac = RBAC()
-        rbac.create_permission(old_name)
-        rbac.edit_permission(old_name, new_name)
+        rbac.create_permission(id1, name1)
+        rbac.create_permission(id2, name2)
+        rbac.edit_permission(id1, new_name1)
 
-        self.assertTrue(old_name not in rbac.permissions)
-        self.assertTrue(new_name in rbac.permissions)
+        self.assertEquals(rbac.permissions[id1], new_name1)
+        self.assertEquals(rbac.permissions[id2], name2)
+
+# ################################################################################################################################
+
+    def test_edit_permission_exists(self):
+
+        id, name = 1, 'name'
+
+        rbac = RBAC()
+        rbac.create_permission(id, name)
+        self.assertRaises(ValueError, rbac.edit_permission, 1234, 'new_name')
 
 # ################################################################################################################################
 
     def test_delete_permission(self):
 
-        name = rand_string()
+        id, name = 1, 'name'
 
         rbac = RBAC()
-        rbac.create_permission(name)
-        rbac.delete_permission(name)
+        rbac.create_permission(id, name)
+        rbac.delete_permission(id)
 
         self.assertTrue(name not in rbac.permissions)
 
@@ -464,5 +481,29 @@ class ResourceTestCase(TestCase):
 
         self.assertEquals(rbac.registry._resources[name1], set())
         self.assertNotIn(name2, rbac.registry._resources)
+
+# ################################################################################################################################
+
+class ResourceTestCase(TestCase):
+
+    def test_delete_resource_has_roles(self):
+        role_id1, role_id2 = 1, 2
+        role_name1, role_name2 = 'role_name1', 'role_name2'
+
+        res_name1, res_name2 = 'res_name1', 'res_name2'
+
+        perm_id1, perm_id2 = 11, 22
+        perm_name1, perm_name2 = 'perm_name1', 'perm_name2'
+
+        rbac = RBAC()
+
+        rbac.create_role(role_id1, role_name1, None)
+        rbac.create_role(role_id2, role_name2, None)
+
+        rbac.create_resource(res_name1)
+        rbac.create_resource(res_name2)
+
+        rbac.create_permission(perm_id1, perm_name1)
+        rbac.create_permission(perm_id2, perm_name2)
 
 # ################################################################################################################################
