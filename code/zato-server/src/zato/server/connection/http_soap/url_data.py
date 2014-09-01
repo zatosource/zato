@@ -298,15 +298,23 @@ class URLData(OAuthDataStore):
 
         return None, None
 
-    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data):
+    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store):
         """ Authenticates and authorizes a given request. Returns None on success
         or raises an exception otherwise.
         """
         if sec.sec_def != ZATO_NONE:
+
+            # Regular security permissions
+
             sec_def, sec_def_type = sec.sec_def, sec.sec_def.sec_type
             handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
             getattr(self, handler_name)(
                 cid, sec_def, path_info, payload, wsgi_environ, post_data)
+
+            # Ok, we now know that the credentials are valid so we can check RBAC permissions.
+            service_id = worker_store.server.service_store.impl_name_to_id[channel_item.service_impl_name]
+            logger.warn(service_id)
+            logger.warn(sec.sec_def.id)
 
     def _update_url_sec(self, msg, sec_def_type, delete=False):
         """ Updates URL security definitions that use the security configuration
@@ -325,6 +333,8 @@ class URLData(OAuthDataStore):
                         for key, new_value in msg.items():
                             if key in sec_def:
                                 sec_def[key] = msg[key]
+
+# ################################################################################################################################
 
 # ################################################################################################################################
 
@@ -776,6 +786,7 @@ class URLData(OAuthDataStore):
         """ Creates a security info bunch out of an incoming CREATE_EDIT message.
         """
         sec_info = Bunch()
+        sec_info.id = msg.id
         sec_info.is_active = msg.is_active
         sec_info.data_format = msg.data_format
         sec_info.transport = msg.transport
