@@ -60,6 +60,7 @@ class ServiceStore(InitializingObject):
         self.service_store_config = service_store_config
         self.odb = odb
         self.id_to_impl_name = {}
+        self.impl_name_to_id = {}
         self.name_to_impl_name = {}
         self.update_lock = RLock()
 
@@ -258,6 +259,7 @@ class ServiceStore(InitializingObject):
                             self.services[impl_name]['slow_threshold'] = slow_threshold
 
                             self.id_to_impl_name[service_id] = impl_name
+                            self.impl_name_to_id[impl_name] = service_id
                             self.name_to_impl_name[name] = impl_name
 
                             logger.debug('Imported service:[{}]'.format(name))

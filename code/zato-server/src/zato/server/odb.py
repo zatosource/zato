@@ -144,6 +144,7 @@ class ODBManager(SessionWrapper):
                             one()
 
                     # Common things first
+                    result[target].sec_def.id = sec_def.id
                     result[target].sec_def.name = sec_def.name
                     result[target].sec_def.password = sec_def.password
                     result[target].sec_def.sec_type = item.sec_type
