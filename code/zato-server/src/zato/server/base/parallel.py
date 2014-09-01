@@ -424,6 +424,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+        # Services
+        query = self.odb.get_service_list(server.cluster.id, True)
+        self.config.service = ConfigDict.from_query('service_list', query)
+
         #
         # Outgoing connections - start
         #
@@ -515,6 +519,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # RBAC - roles
         query = self.odb.get_rbac_role_list(server.cluster.id, True)
         self.config.rbac_role = ConfigDict.from_query('rbac_role', query)
+
+        # RBAC - client roles
+        query = self.odb.get_rbac_client_role_list(server.cluster.id, True)
+        self.config.rbac_client_role = ConfigDict.from_query('rbac_client_role', query)
+
+        # RBAC - role permission
+        query = self.odb.get_rbac_role_permission_list(server.cluster.id, True)
+        self.config.rbac_role_permission = ConfigDict.from_query('rbac_role_permission', query)
 
         # Technical accounts
         query = self.odb.get_tech_acc_list(server.cluster.id, True)

@@ -166,7 +166,7 @@ class ServiceStore(InitializingObject):
                 mod_name, file_name, format_exc(e))
             logger.error(msg)
         else:
-            self._visit_module(mod, is_internal, file_name)
+            return self._visit_module(mod, is_internal, file_name)
 
     def import_services_from_directory(self, dir_name, base_dir, dist2):
         """ dir_name points to a directory. 
@@ -226,6 +226,7 @@ class ServiceStore(InitializingObject):
     def _visit_module(self, mod, is_internal, fs_location):
         """ Actually imports services from a module object.
         """
+        deployed = []
         try:
             for name in sorted(dir(mod)):
                 with self.update_lock:
@@ -251,6 +252,8 @@ class ServiceStore(InitializingObject):
                             service_id, is_active, slow_threshold = self.odb.add_service(
                                 name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
 
+                            deployed.append(service_id)
+
                             self.services[impl_name]['is_active'] = is_active
                             self.services[impl_name]['slow_threshold'] = slow_threshold
 
@@ -269,6 +272,8 @@ class ServiceStore(InitializingObject):
             msg = 'Exception while visit mod:[{}], is_internal:[{}], fs_location:[{}], e:[{}]'.format(
                 mod, is_internal, fs_location, format_exc(e))
             logger.error(msg)
+        else:
+            return deployed
 
 if __name__ == '__main__':
     store = ServiceStore()

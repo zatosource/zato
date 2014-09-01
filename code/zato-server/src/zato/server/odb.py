@@ -406,6 +406,14 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_service_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of services defined on the given cluster.
+        """
+        with closing(self.session()) as session:
+            return query.service_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
     def get_apikey_security_list(self, cluster_id, needs_columns=False):
         """ Returns a list of API keys existing on the given cluster.
         """
@@ -749,5 +757,19 @@ class ODBManager(SessionWrapper):
         """ Returns a list of RBAC roles.
         """
         return query.rbac_role_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_rbac_client_role_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of RBAC roles assigned to clients.
+        """
+        return query.rbac_client_role_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_rbac_role_permission_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of RBAC permissions for roles.
+        """
+        return query.rbac_role_permission_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
