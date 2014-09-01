@@ -80,6 +80,7 @@ def _get_edit_create_message(params, prefix=''):
         'pool_size': params.get(prefix + 'pool_size'),
         'timeout': params.get(prefix + 'timeout'),
         'security_id': security_id,
+        'has_rbac': bool(params.get(prefix + 'has_rbac')),
     }
 
 def _edit_create_response(id, verb, transport, connection, name):
@@ -158,7 +159,7 @@ def index(req):
                     item.soap_version, item.data_format, item.ping_method, 
                     item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri, 
                     item.serialization_type, item.timeout, service_id=item.service_id, service_name=item.service_name,
-                    security_id=security_id, security_name=security_name)
+                    security_id=security_id, has_rbac=item.has_rbac, security_name=security_name)
             items.append(item)
 
     return_data = {'zato_clusters':req.zato.clusters,

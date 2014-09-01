@@ -242,10 +242,12 @@ class HOT_DEPLOY(Constants):
     code_start = 102200
     CREATE = ValueConstant('')
 
+    # New in 2.0
+    AFTER_DEPLOY = ValueConstant('')
+
 class SINGLETON(Constants):
     code_start = 102400
     CLOSE = ValueConstant('')
-
 
 class MSG_NS(Constants):
     code_start = 102600

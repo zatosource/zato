@@ -724,3 +724,72 @@ class RolePermissionDeleteTestCase(TestCase):
         self.assertIn((role_id2, perm_id2, res_name2), rbac.registry._denied)
 
 # ################################################################################################################################
+
+class IsAllowedTestCase(TestCase):
+
+    def test_is_allowed_basic(self):
+
+        role_id1, role_id2 = 1, 2
+        role_name1, role_name2 = 'role_name1', 'role_name2'
+
+        res_name1, res_name2 = 'res_name1', 'res_name2'
+
+        perm_id1, perm_id2 = 11, 22
+        perm_name1, perm_name2 = 'perm_name1', 'perm_name2'
+
+        rbac = RBAC()
+
+        rbac.create_role(role_id1, role_name1, None)
+        rbac.create_role(role_id2, role_name2, None)
+
+        rbac.create_resource(res_name1)
+        rbac.create_resource(res_name2)
+
+        rbac.create_permission(perm_id1, perm_name1)
+        rbac.create_permission(perm_id2, perm_name2)
+
+        rbac.create_role_permission_allow(role_id1, perm_id1, res_name1)
+        rbac.create_role_permission_allow(role_id2, perm_id1, res_name2)
+        rbac.create_role_permission_deny(role_id2, perm_id2, res_name2)
+
+        self.assertTrue(rbac.is_allowed(role_id1, perm_id1, res_name1))
+        self.assertTrue(rbac.is_allowed(role_id2, perm_id1, res_name2))
+
+        # Denied implicitly because there is no explicit 'allow'
+        self.assertFalse(rbac.is_allowed(role_id1, perm_id2, res_name1))
+
+        # Denied explicitly
+        self.assertFalse(rbac.is_allowed(role_id2, perm_id2, res_name2))
+
+
+    def test_is_allowed_parent_hierarchy(self):
+
+        role_id1, role_id2 = 1, 2
+        role_name1, role_name2 = 'role_name1', 'role_name2'
+
+        res_name1, res_name2 = 'res_name1', 'res_name2'
+
+        perm_id1 = 11
+        perm_name1 = 'perm_name1'
+
+        rbac = RBAC()
+
+        rbac.create_role(role_id1, role_name1, None)
+        rbac.create_role(role_id2, role_name2, role_id1)
+
+        rbac.create_resource(res_name1)
+        rbac.create_resource(res_name2)
+
+        rbac.create_permission(perm_id1, perm_name1)
+
+        rbac.create_role_permission_allow(role_id2, perm_id1, res_name1)
+        rbac.create_role_permission_deny(role_id2, perm_id1, res_name2)
+
+        self.assertTrue(rbac.is_allowed(role_id2, perm_id1, res_name1))
+        self.assertFalse(rbac.is_allowed(role_id2, perm_id1, res_name2))
+
+        # Denied implicitly because there is no explicit 'allow'
+        self.assertFalse(rbac.is_allowed(role_id1, perm_id1, res_name1))
+        self.assertFalse(rbac.is_allowed(role_id1, perm_id1, res_name2))
+
+# ################################################################################################################################

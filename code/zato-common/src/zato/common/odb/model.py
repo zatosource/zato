@@ -478,7 +478,7 @@ class HTTPSOAP(Base):
                  url_path=None, method=None, soap_action=None, soap_version=None, data_format=None, ping_method=None,
                  pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None, \
                  timeout=None, service_id=None, service=None, security=None, cluster_id=None, cluster=None, service_name=None, \
-                 security_id=None, security_name=None):
+                 security_id=None, has_rbac=None, security_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -505,6 +505,7 @@ class HTTPSOAP(Base):
         self.cluster = cluster
         self.service_name = service_name # Not used by the DB
         self.security_id = security_id
+        self.has_rbac = has_rbac
         self.security_name = security_name
 
 # ################################################################################################################################
@@ -1753,9 +1754,14 @@ class RBACRolePermission(Base):
     id = Column(Integer, Sequence('rbac_role_perm_seq'), primary_key=True)
     role_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=False)
     perm_id = Column(Integer, ForeignKey('rbac_perm.id', ondelete='CASCADE'), nullable=False)
+
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
+    service = relationship('Service', backref=backref('role_perm', order_by=id, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('rbac_role_permissions', order_by=id, cascade='all, delete, delete-orphan'))
+
+    def get_name(self):
+        return '{}/{}/{}/{}'.format(self.id, self.role_id, self.perm_id, self.service_id)
 
 # ################################################################################################################################

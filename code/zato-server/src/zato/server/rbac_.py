@@ -47,10 +47,10 @@ class Registry(_Registry):
         self.delete_from_permissions('role', delete_role)
 
     def delete_resource(self, delete_resource):
-        del self._resources[delete_resource]
-
-        # Remove the resource from any grants it may have been involved in.
-        self.delete_from_permissions('resource', delete_resource)
+        """ Remove the resource from any grants it may have been involved in but only if we actually had it.
+        """
+        if self._resources.pop(delete_resource, None):
+            self.delete_from_permissions('resource', delete_resource)
 
     def delete_from_permissions(self, compare_name, delete_item):
 
@@ -179,5 +179,10 @@ class RBAC(object):
     def delete_role_permission_deny(self, role_id, perm_id, resource):
         with self.update_lock:
             self.registry.delete_deny((role_id, perm_id, resource))
+
+# ################################################################################################################################
+
+    def is_allowed(self, role_id, perm_id, resource):
+        return self.registry.is_allowed(role_id, perm_id, resource)
 
 # ################################################################################################################################

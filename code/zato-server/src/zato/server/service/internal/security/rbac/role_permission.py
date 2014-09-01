@@ -45,8 +45,8 @@ def get_extra(service, role_id, service_id, perm_id):
 
         return '{}:::{}::{}'.format(role.name, service.name, perm.name), role.name, _service.name, perm.name
 
-def instance_hook(service, input, instance, attrs):
-    with closing(service.odb.session()) as session:
+def instance_hook(self, input, instance, attrs):
+    with closing(self.odb.session()) as session:
 
         role = session.query(RBACRole).\
             filter(RBACRole.id==input.role_id).one()
@@ -59,11 +59,12 @@ def instance_hook(service, input, instance, attrs):
 
     instance.name = '{}:::{}::{}'.format(role.name, _service.name, perm.name)
 
-def response_hook(service, input, instance, attrs, service_type):
-    if service_type == 'get_list':
-        for item in service.response.payload:
+def response_hook(self, input, instance, attrs, service_type):
 
-            item_name, role_name, service_name, perm_name = get_extra(service, item.role_id, item.service_id, item.perm_id)
+    if service_type == 'get_list':
+        for item in self.response.payload:
+
+            item_name, role_name, service_name, perm_name = get_extra(self, item.role_id, item.service_id, item.perm_id)
 
             item.name = item_name
             item.role_name = role_name
@@ -72,7 +73,7 @@ def response_hook(service, input, instance, attrs, service_type):
 
     elif service_type == 'create_edit':
 
-        with closing(service.odb.session()) as session:
+        with closing(self.odb.session()) as session:
 
             role = session.query(RBACRole).\
                 filter(RBACRole.id==instance.role_id).one()
@@ -83,9 +84,9 @@ def response_hook(service, input, instance, attrs, service_type):
             perm = session.query(RBACPermission).\
                 filter(RBACPermission.id==input.perm_id).one()
 
-        service.response.payload.role_name = role.name
-        service.response.payload.service_name = _service.name
-        service.response.payload.perm_name = perm.name
+        self.response.payload.role_name = role.name
+        self.response.payload.service_name = _service.name
+        self.response.payload.perm_name = perm.name
 
 class GetList(AdminService):
     __metaclass__ = GetListMeta

@@ -386,11 +386,22 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def init_rbac(self):
-        for name in self.worker_config.rbac_permission:
-            self.rbac.create_permission(name)
+
+        for value in self.worker_config.service.values():
+            self.rbac.create_resource(value.config.id)
+
+        for value in self.worker_config.rbac_permission.values():
+            self.rbac.create_permission(value.config.id, value.config.name)
 
         for value in self.worker_config.rbac_role.values():
             self.rbac.create_role(value.config.id, value.config.name, value.config.parent_id)
+
+        for value in self.worker_config.rbac_client_role.values():
+            self.rbac.create_client_role(value.config.client_def, value.config.role_id)
+
+        # TODO - handle 'deny' as well
+        for value in self.worker_config.rbac_role_permission.values():
+            self.rbac.create_role_permission_allow(value.config.role_id, value.config.perm_id, value.config.service_id)
 
 # ################################################################################################################################
 
@@ -916,6 +927,9 @@ class WorkerStore(BrokerMessageReceiver):
         """ Deletes the service from the service store and removes it from the filesystem
         if it's not an internal one.
         """
+        # Delete the service from RBAC resources
+        self.rbac.delete_resource(msg.id)
+
         # Module this service is in so it can be removed from sys.modules
         mod = inspect.getmodule(self.server.service_store.services[msg.impl_name]['service_class'])
 
@@ -966,6 +980,7 @@ class WorkerStore(BrokerMessageReceiver):
         msg.payload = {'package_id': msg.package_id}
         msg.data_format = SIMPLE_IO.FORMAT.JSON
         return self._on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)
+
 
 # ################################################################################################################################
 
@@ -1359,9 +1374,9 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_RBAC_ROLE_PERMISSION_CREATE(self, msg):
-        self.rbac.create_role_permission(msg.role_id, msg.perm_id, msg.service_id)
+        self.rbac.create_role_permission_allow(msg.role_id, msg.perm_id, msg.service_id)
 
     def on_broker_msg_RBAC_ROLE_PERMISSION_DELETE(self, msg):
-        self.rbac.delete_role_permission(msg.role_id, msg.perm_id, msg.service_id)
+        self.rbac.delete_role_permission_allow(msg.role_id, msg.perm_id, msg.service_id)
 
 # ################################################################################################################################
