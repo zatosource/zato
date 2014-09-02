@@ -130,6 +130,9 @@ class URLDataTestCase(TestCase):
             def __init__(self, match_target):
                 self.match_target = match_target
 
+            def __getitem__(self, key):
+                return False
+
         class DummySecWrapper(object):
             def __init__(self, sec_def):
                 self.sec_def = sec_def
@@ -179,7 +182,7 @@ class URLDataTestCase(TestCase):
 
         ud.check_security(
             wrapper1, expected_cid, match1, expected_path_info,
-            expected_payload, expected_wsgi_environ, expected_post_data)
+            expected_payload, expected_wsgi_environ, expected_post_data, None)
 
         eq_(dummy_basic_auth.cid, expected_cid)
         eq_(dummy_basic_auth.sec_def, sec_def1)
@@ -195,7 +198,7 @@ class URLDataTestCase(TestCase):
 
         ud.check_security(
             wrapper2, expected_cid, match2, expected_path_info, expected_payload,
-            expected_wsgi_environ, None)
+            expected_wsgi_environ, None, None)
 
         eq_(dummy_basic_auth.cid, ZATO_NONE)
         eq_(dummy_basic_auth.sec_def, ZATO_NONE)
@@ -1346,6 +1349,7 @@ class URLDataTestCase(TestCase):
         for sec_name in(None, security_name):
 
             msg = Bunch()
+            msg.id = 1
             msg.security_name = security_name
             msg.sec_type = 'basic_auth'
             msg.is_active = uuid4().hex

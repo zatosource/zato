@@ -75,12 +75,24 @@ class GetClientDefList(AdminService):
 
     def get_data(self, session):
 
+        out = []
         service = 'zato.security.get-list'
         request = {'cluster_id':self.request.input.cluster_id, 'needs_internal':False}
 
         for item in self.invoke(service, request, as_bunch=True)['zato_security_get_list_response']:
             client_name = '{}:::{}'.format(item.sec_type, item.name)
-            yield {'client_def':'sec_def:::{}'.format(client_name), 'client_name':client_name}
+            out.append({'client_def':'sec_def:::{}'.format(client_name), 'client_name':client_name})
+
+        # It's possible users defined their own security definitions outside of Zato
+        # and they also need to be taken into account.
+
+        custom_auth_list_service = self.server.fs_server_config.rbac.custom_auth_list_service
+        if custom_auth_list_service:
+            out.extend(self.invoke(custom_auth_list_service, {})['response']['items'])
+
+        self.logger.warn(out)
+
+        return out
 
     def handle(self):
         with closing(self.odb.session()) as session:

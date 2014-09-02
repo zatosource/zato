@@ -91,7 +91,8 @@ class SIOLiveTestCase(TestCase):
             'url_path': path,
             'service': service,
             'security_id': None,
-            'data_format': data_format
+            'data_format': data_format,
+            'has_rbac': False,
         })
 
         if data_format == 'json':

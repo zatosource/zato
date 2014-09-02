@@ -210,7 +210,8 @@ class RBAC(object):
         """ Returns True/False depending on whether a given client is allowed to obtain a selected permission for a resource.
         All of the client's roles are consulted and if any is allowed, True is returned. If none is, False is returned.
         """
-        return self.registry.is_any_allowed(self.client_def_to_role_id[client_def], perm_id, resource)
+        roles = self.client_def_to_role_id.get(client_def, ZATO_NONE)
+        return self.registry.is_any_allowed(roles, perm_id, resource) if roles != ZATO_NONE else False
 
     def is_http_client_allowed(self, client_def, http_verb, resource):
         """ Same as is_client_allowed but accepts a HTTP verb rather than a permission ID.
