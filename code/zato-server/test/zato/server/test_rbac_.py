@@ -727,7 +727,7 @@ class RolePermissionDeleteTestCase(TestCase):
 
 class IsAllowedTestCase(TestCase):
 
-    def test_is_allowed_basic(self):
+    def test_is_role_allowed_basic(self):
 
         role_id1, role_id2 = 1, 2
         role_name1, role_name2 = 'role_name1', 'role_name2'
@@ -752,17 +752,17 @@ class IsAllowedTestCase(TestCase):
         rbac.create_role_permission_allow(role_id2, perm_id1, res_name2)
         rbac.create_role_permission_deny(role_id2, perm_id2, res_name2)
 
-        self.assertTrue(rbac.is_allowed(role_id1, perm_id1, res_name1))
-        self.assertTrue(rbac.is_allowed(role_id2, perm_id1, res_name2))
+        self.assertTrue(rbac.is_role_allowed(role_id1, perm_id1, res_name1))
+        self.assertTrue(rbac.is_role_allowed(role_id2, perm_id1, res_name2))
 
         # Denied implicitly because there is no explicit 'allow'
-        self.assertFalse(rbac.is_allowed(role_id1, perm_id2, res_name1))
+        self.assertFalse(rbac.is_role_allowed(role_id1, perm_id2, res_name1))
 
         # Denied explicitly
-        self.assertFalse(rbac.is_allowed(role_id2, perm_id2, res_name2))
+        self.assertFalse(rbac.is_role_allowed(role_id2, perm_id2, res_name2))
 
 
-    def test_is_allowed_parent_hierarchy(self):
+    def test_is_role_allowed_parent_hierarchy(self):
 
         role_id1, role_id2 = 1, 2
         role_name1, role_name2 = 'role_name1', 'role_name2'
@@ -785,11 +785,11 @@ class IsAllowedTestCase(TestCase):
         rbac.create_role_permission_allow(role_id2, perm_id1, res_name1)
         rbac.create_role_permission_deny(role_id2, perm_id1, res_name2)
 
-        self.assertTrue(rbac.is_allowed(role_id2, perm_id1, res_name1))
-        self.assertFalse(rbac.is_allowed(role_id2, perm_id1, res_name2))
+        self.assertTrue(rbac.is_role_allowed(role_id2, perm_id1, res_name1))
+        self.assertFalse(rbac.is_role_allowed(role_id2, perm_id1, res_name2))
 
         # Denied implicitly because there is no explicit 'allow'
-        self.assertFalse(rbac.is_allowed(role_id1, perm_id1, res_name1))
-        self.assertFalse(rbac.is_allowed(role_id1, perm_id1, res_name2))
+        self.assertFalse(rbac.is_role_allowed(role_id1, perm_id1, res_name1))
+        self.assertFalse(rbac.is_role_allowed(role_id1, perm_id1, res_name2))
 
 # ################################################################################################################################

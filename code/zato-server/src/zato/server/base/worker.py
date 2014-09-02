@@ -403,6 +403,8 @@ class WorkerStore(BrokerMessageReceiver):
         for value in self.worker_config.rbac_role_permission.values():
             self.rbac.create_role_permission_allow(value.config.role_id, value.config.perm_id, value.config.service_id)
 
+        self.rbac.set_http_permissions()
+
 # ################################################################################################################################
 
     def _topic_from_topic_data(self, data):
