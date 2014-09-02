@@ -315,7 +315,7 @@ class URLData(OAuthDataStore):
             if channel_item['has_rbac']:
                 is_allowed = worker_store.rbac.is_http_client_allowed(
                     'sec_def:::{}:::{}'.format(sec.sec_def.sec_type, sec.sec_def.name), wsgi_environ['REQUEST_METHOD'],
-                    worker_store.server.service_store.impl_name_to_id[channel_item.service_impl_name])
+                    channel_item.service_id)
 
                 if not is_allowed:
                     raise Forbidden(cid, 'You are not allowed to access this URL\n')

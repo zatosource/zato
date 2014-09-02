@@ -983,6 +983,8 @@ class WorkerStore(BrokerMessageReceiver):
         msg.data_format = SIMPLE_IO.FORMAT.JSON
         return self._on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)
 
+    def on_broker_msg_HOT_DEPLOY_AFTER_DEPLOY(self, msg, *args):
+        self.rbac.create_resource(msg.id)
 
 # ################################################################################################################################
 
