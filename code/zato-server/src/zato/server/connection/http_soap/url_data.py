@@ -34,7 +34,7 @@ from secwall.wsse import WSSE
 from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, ZATO_NONE
 from zato.common.broker_message import code_to_name, CHANNEL, SECURITY
 from zato.common.dispatch import dispatcher
-from zato.server.connection.http_soap import Unauthorized
+from zato.server.connection.http_soap import Forbidden, Unauthorized
 
 logger = logging.getLogger(__name__)
 
@@ -311,10 +311,14 @@ class URLData(OAuthDataStore):
             getattr(self, handler_name)(
                 cid, sec_def, path_info, payload, wsgi_environ, post_data)
 
-            # Ok, we now know that the credentials are valid so we can check RBAC permissions.
-            service_id = worker_store.server.service_store.impl_name_to_id[channel_item.service_impl_name]
-            logger.warn(service_id)
-            logger.warn(sec.sec_def.id)
+            # Ok, we now know that the credentials are valid so we can check RBAC permissions if need be.
+            if channel_item['has_rbac']:
+                is_allowed = worker_store.rbac.is_http_client_allowed(
+                    'sec_def:::{}:::{}'.format(sec.sec_def.sec_type, sec.sec_def.name), wsgi_environ['REQUEST_METHOD'],
+                    worker_store.server.service_store.impl_name_to_id[channel_item.service_impl_name])
+
+                if not is_allowed:
+                    raise Forbidden(cid, 'You are not allowed to access this URL\n')
 
     def _update_url_sec(self, msg, sec_def_type, delete=False):
         """ Updates URL security definitions that use the security configuration
@@ -333,8 +337,6 @@ class URLData(OAuthDataStore):
                         for key, new_value in msg.items():
                             if key in sec_def:
                                 sec_def[key] = msg[key]
-
-# ################################################################################################################################
 
 # ################################################################################################################################
 

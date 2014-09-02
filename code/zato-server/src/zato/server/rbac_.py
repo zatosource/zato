@@ -18,6 +18,7 @@ from rbac.acl import Registry as _Registry
 from gevent.lock import RLock
 
 # Zato
+from zato.common import ZATO_NONE
 from zato.common.util import make_repr
 
 # ################################################################################################################################
@@ -49,7 +50,7 @@ class Registry(_Registry):
     def delete_resource(self, delete_resource):
         """ Remove the resource from any grants it may have been involved in but only if we actually had it.
         """
-        if self._resources.pop(delete_resource, None):
+        if self._resources.pop(delete_resource, ZATO_NONE) != ZATO_NONE:
             self.delete_from_permissions('resource', delete_resource)
 
     def delete_from_permissions(self, compare_name, delete_item):
@@ -81,6 +82,7 @@ class RBAC(object):
         self.registry = Registry(self._delete_callback)
         self.update_lock = RLock()
         self.permissions = {}
+        self.http_permissions = {}
         self.role_id_to_name = {}
         self.role_name_to_id = {}
         self.client_def_to_role_id = {}
@@ -107,6 +109,23 @@ class RBAC(object):
         with self.update_lock:
             del self.permissions[id]
             self.registry.delete_from_permissions('operation', id)
+
+    def set_http_permissions(self):
+        """ Maps HTTP verbs to CRUD permissions.
+        """
+        verb_map = {
+            'GET': 'Read',
+            'POST': 'Create',
+            'PATCH': 'Update',
+            'PUT': 'Update',
+            'DELETE': 'Delete',
+        }
+
+        for verb, target_perm_name in verb_map.items():
+            for perm_id, perm_name in self.permissions.items():
+                if target_perm_name == perm_name:
+                    self.http_permissions[verb] = perm_id
+                    break
 
 # ################################################################################################################################
 
@@ -182,7 +201,20 @@ class RBAC(object):
 
 # ################################################################################################################################
 
-    def is_allowed(self, role_id, perm_id, resource):
+    def is_role_allowed(self, role_id, perm_id, resource):
+        """ Returns True/False depending on whether a given role is allowed to obtain a selected permission for a resource.
+        """
         return self.registry.is_allowed(role_id, perm_id, resource)
+
+    def is_client_allowed(self, client_def, perm_id, resource):
+        """ Returns True/False depending on whether a given client is allowed to obtain a selected permission for a resource.
+        All of the client's roles are consulted and if any is allowed, True is returned. If none is, False is returned.
+        """
+        return self.registry.is_any_allowed(self.client_def_to_role_id[client_def], perm_id, resource)
+
+    def is_http_client_allowed(self, client_def, http_verb, resource):
+        """ Same as is_client_allowed but accepts a HTTP verb rather than a permission ID.
+        """
+        return self.is_client_allowed(client_def, self.http_permissions[http_verb], resource)
 
 # ################################################################################################################################
