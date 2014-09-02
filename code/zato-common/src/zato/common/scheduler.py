@@ -24,7 +24,7 @@ from gevent import lock
 from paodate import Delta
 
 # Zato
-from zato.common import SCHEDULER
+from zato.common import DATA_FORMAT, SCHEDULER
 from zato.common.util import make_repr, new_cid
 
 logger = getLogger('zato_scheduler')

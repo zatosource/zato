@@ -154,6 +154,9 @@ environment=
 ignore_errors=
 log_file=
 log_level=
+
+[rbac]
+custom_auth_list_service=
 """.encode('utf-8')
 
 service_sources_contents = """# Visit https://zato.io/docs for more information.

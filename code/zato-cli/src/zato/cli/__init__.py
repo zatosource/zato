@@ -85,13 +85,13 @@ def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
 
 common_logging_conf_contents = """
 [loggers]
-keys=root, zato, zato_access_log, zato_pubsub, zato_kvdb, zato_scheduler
+keys=root, zato, zato_access_log, zato_kvdb, zato_pubsub, zato_rbac, zato_scheduler
 
 [handlers]
-keys=rotating_file_handler, rotating_file_handler_access_log, stdout_handler, rotating_file_handler_pubsub, rotating_file_handler_kvdb, rotating_file_handler_scheduler
+keys=rotating_file_handler, rotating_file_handler_access_log, rotating_file_handler_kvdb, rotating_file_handler_pubsub, rotating_file_handler_rbac, rotating_file_handler_scheduler, stdout_handler
 
 [formatters]
-keys=default_formatter, formatter_access_log, colour_formatter, formatter_pubsub, formatter_kvdb, formatter_scheduler
+keys=colour_formatter, default_formatter, formatter_access_log, formatter_kvdb, formatter_pubsub, formatter_rbac, formatter_scheduler
 
 [logger_root]
 level=INFO
@@ -182,6 +182,22 @@ formatter=formatter_scheduler
 args=('./logs/scheduler.log', 'a', 20000000, 10)
 
 [formatter_formatter_scheduler]
+format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
+
+# ######################################################################################################################
+
+[logger_zato_rbac]
+level=INFO
+handlers=rotating_file_handler_rbac
+qualname=zato_rbac
+propagate=0
+
+[handler_rotating_file_handler_rbac]
+class=handlers.ConcurrentRotatingFileHandler
+formatter=formatter_rbac
+args=('./logs/rbac.log', 'a', 20000000, 10)
+
+[formatter_formatter_rbac]
 format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
 """
 
