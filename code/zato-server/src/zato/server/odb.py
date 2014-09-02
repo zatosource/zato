@@ -144,6 +144,7 @@ class ODBManager(SessionWrapper):
                             one()
 
                     # Common things first
+                    result[target].sec_def.id = sec_def.id
                     result[target].sec_def.name = sec_def.name
                     result[target].sec_def.password = sec_def.password
                     result[target].sec_def.sec_type = item.sec_type
@@ -403,6 +404,14 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.job_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_service_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of services defined on the given cluster.
+        """
+        with closing(self.session()) as session:
+            return query.service_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
@@ -735,5 +744,33 @@ class ODBManager(SessionWrapper):
         """ Returns a list of IMAP connections.
         """
         return query.email_imap_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_rbac_permission_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of RBAC permissions.
+        """
+        return query.rbac_permission_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_rbac_role_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of RBAC roles.
+        """
+        return query.rbac_role_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_rbac_client_role_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of RBAC roles assigned to clients.
+        """
+        return query.rbac_client_role_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_rbac_role_permission_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of RBAC permissions for roles.
+        """
+        return query.rbac_role_permission_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################

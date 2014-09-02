@@ -14,6 +14,7 @@ from functools import wraps
 
 # SQLAlchemy
 from sqlalchemy import func, not_
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import case
 
 # Zato
@@ -24,8 +25,8 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, \
      MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OpenStackSecurity, \
      OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, \
-     SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSKeyCertSecurity, WSSDefinition, \
-     XPath, XPathSecurity
+     RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, \
+     TechnicalAccount, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -456,6 +457,7 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.is_internal, HTTPSOAP.transport, HTTPSOAP.host,
         HTTPSOAP.url_path, HTTPSOAP.method, HTTPSOAP.soap_action,
         HTTPSOAP.soap_version, HTTPSOAP.data_format, HTTPSOAP.security_id,
+        HTTPSOAP.has_rbac,
         HTTPSOAP.connection,
         case([(HTTPSOAP.ping_method != None, HTTPSOAP.ping_method)], else_=DEFAULT_HTTP_PING_METHOD).label('ping_method'), # noqa
         case([(HTTPSOAP.pool_size != None, HTTPSOAP.pool_size)], else_=DEFAULT_HTTP_POOL_SIZE).label('pool_size'),
@@ -1087,5 +1089,91 @@ def email_imap_list(session, cluster_id, needs_columns=False):
     """ A list of IMAP connections.
     """
     return _email_imap(session, cluster_id)
+
+# ################################################################################################################################
+
+def _rbac_permission(session, cluster_id):
+    return session.query(RBACPermission).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==RBACPermission.cluster_id).\
+        order_by(RBACPermission.name)
+
+def rbac_permission(session, cluster_id, id):
+    """ An RBAC permission.
+    """
+    return _rbac_permission(session, cluster_id).\
+        filter(RBACPermission.id==id).\
+        one()
+
+@needs_columns
+def rbac_permission_list(session, cluster_id, needs_columns=False):
+    """ A list of RBAC permissions.
+    """
+    return _rbac_permission(session, cluster_id)
+
+# ################################################################################################################################
+
+def _rbac_role(session, cluster_id):
+    rbac_parent = aliased(RBACRole)
+    return session.query(RBACRole.id, RBACRole.name, RBACRole.parent_id, rbac_parent.name.label('parent_name')).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==RBACRole.cluster_id).\
+        filter(rbac_parent.id==RBACRole.parent_id).\
+        order_by(RBACRole.name)
+
+def rbac_role(session, cluster_id, id):
+    """ An RBAC role.
+    """
+    return _rbac_role(session, cluster_id).\
+        filter(RBACRole.id==id).\
+        one()
+
+@needs_columns
+def rbac_role_list(session, cluster_id, needs_columns=False):
+    """ A list of RBAC roles.
+    """
+    return _rbac_role(session, cluster_id)
+
+# ################################################################################################################################
+
+def _rbac_client_role(session, cluster_id):
+    return session.query(RBACClientRole).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==RBACClientRole.cluster_id).\
+        order_by(RBACClientRole.client_def)
+
+def rbac_client_role(session, cluster_id, id):
+    """ An individual mapping between a client and role.
+    """
+    return _rbac_client_role(session, cluster_id).\
+        filter(RBACClientRole.id==id).\
+        one()
+
+@needs_columns
+def rbac_client_role_list(session, cluster_id, needs_columns=False):
+    """ A list of mappings between clients and roles.
+    """
+    return _rbac_client_role(session, cluster_id)
+
+# ################################################################################################################################
+
+def _rbac_role_permission(session, cluster_id):
+    return session.query(RBACRolePermission).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==RBACRolePermission.cluster_id).\
+        order_by(RBACRolePermission.role_id)
+
+def rbac_role_permission(session, cluster_id, id):
+    """ An individual permission for a given role against a service.
+    """
+    return _rbac_role_permission(session, cluster_id).\
+        filter(RBACRolePermission.id==id).\
+        one()
+
+@needs_columns
+def rbac_role_permission_list(session, cluster_id, needs_columns=False):
+    """ A list of permissions for roles against services.
+    """
+    return _rbac_role_permission(session, cluster_id)
 
 # ################################################################################################################################

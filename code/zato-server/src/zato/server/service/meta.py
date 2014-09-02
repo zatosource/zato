@@ -23,7 +23,7 @@ from bunch import bunchify
 from sqlalchemy import Boolean, Integer
 
 # Zato
-from zato.common import NO_DEFAULT_VALUE
+from zato.common import NO_DEFAULT_VALUE, ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
 from zato.server.service import Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO
@@ -112,10 +112,13 @@ def update_attrs(cls, name, attrs):
     attrs.skip_input_params = getattr(mod, 'skip_input_params', [])
     attrs.skip_output_params = getattr(mod, 'skip_output_params', [])
     attrs.instance_hook = getattr(mod, 'instance_hook', None)
+    attrs.response_hook = getattr(mod, 'response_hook', None)
+    attrs.broker_message_hook = getattr(mod, 'broker_message_hook', None)
     attrs.extra_delete_attrs = getattr(mod, 'extra_delete_attrs', [])
     attrs.input_required_extra = getattr(mod, 'input_required_extra', [])
     attrs.create_edit_input_required_extra = getattr(mod, 'create_edit_input_required_extra', [])
     attrs.create_edit_rewrite = getattr(mod, 'create_edit_rewrite', [])
+    attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
 
     default_value = getattr(mod, 'default_value', singleton)
     default_value = NO_DEFAULT_VALUE if default_value is singleton else default_value
@@ -205,6 +208,10 @@ class GetListMeta(AdminServiceMeta):
         def handle_impl(self):
             with closing(self.odb.session()) as session:
                 self.response.payload[:] = self.get_data(session)
+
+            if attrs.response_hook:
+                attrs.response_hook(self, self.request.input, None, attrs, 'get_list')
+
         return handle_impl
 
 class CreateEditMeta(AdminServiceMeta):
@@ -228,21 +235,24 @@ class CreateEditMeta(AdminServiceMeta):
             with closing(self.odb.session()) as session:
                 try:
 
-                    # Let's see if we already have an instance of that name before committing
-                    # any stuff to the database.
+                    if attrs.check_existing_one:
 
-                    existing_one = session.query(attrs.model).\
-                        filter(Cluster.id==input.cluster_id).\
-                        filter(attrs.model.name==input.name)
-
-                    if attrs.is_edit:
-                        existing_one = existing_one.filter(attrs.model.id!=input.id)
-
-                    existing_one = existing_one.first()
-
-                    if existing_one and not attrs.is_edit:
-                        raise Exception('{} [{}] already exists on this cluster'.format(
-                            attrs.label[0].upper() + attrs.label[1:], input.name))
+                        # Let's see if we already have an instance of that name before committing
+                        # any stuff to the database. However, this is wrapped in an if condition
+                        # because certain models don't have the .name attribute.
+    
+                        existing_one = session.query(attrs.model).\
+                            filter(Cluster.id==input.cluster_id).\
+                            filter(attrs.model.name==input.name)
+    
+                        if attrs.is_edit:
+                            existing_one = existing_one.filter(attrs.model.id!=input.id)
+    
+                        existing_one = existing_one.first()
+    
+                        if existing_one and not attrs.is_edit:
+                            raise Exception('{} [{}] already exists on this cluster'.format(
+                                attrs.label[0].upper() + attrs.label[1:], input.name))
 
                     if attrs.is_edit:
                         instance = session.query(attrs.model).filter_by(id=input.id).one()
@@ -263,7 +273,7 @@ class CreateEditMeta(AdminServiceMeta):
 
                 except Exception, e:
                     msg = 'Could not {} the object, e:`%s`'.format(verb)
-                    self.logger.error(msg, format_exc(e))
+                    logger.error(msg, format_exc(e))
                     session.rollback()
                     raise
                 else:
@@ -275,6 +285,10 @@ class CreateEditMeta(AdminServiceMeta):
                     action = getattr(attrs.broker_message, attrs.broker_message_prefix + verb.upper()).value
                     input.action = action
                     input.old_name = old_name
+
+                    if attrs.broker_message_hook:
+                        attrs.broker_message_hook(self, input, instance, attrs)
+
                     self.broker_client.publish(input)
 
                     for name in chain(attrs.create_edit_rewrite, self.SimpleIO.output_required):
@@ -283,6 +297,9 @@ class CreateEditMeta(AdminServiceMeta):
                             value = input[name]
 
                         setattr(self.response.payload, name, value)
+
+                    if attrs.response_hook:
+                        attrs.response_hook(self, input, instance, attrs, 'create_edit')
 
         return handle_impl
 
@@ -312,7 +329,7 @@ class DeleteMeta(AdminServiceMeta):
                     raise
                 else:
                     self.request.input.action = getattr(attrs.broker_message, attrs.broker_message_prefix + 'DELETE').value
-                    self.request.input.name = instance.name
+                    self.request.input.name = getattr(instance, 'name', ZATO_NOT_GIVEN)
 
                     for name in attrs.extra_delete_attrs:
                         self.request.input[name] = getattr(instance, name)

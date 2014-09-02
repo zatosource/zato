@@ -126,22 +126,27 @@ class ConfigDict(object):
 
             for item in query:
 
+                if hasattr(item, 'name'):
+                    item_name = item.name
+                else:
+                    item_name = item.get_name()
+
                 if list_config:
                     list_dict = Bunch()
-                    if item.name not in config_dict._impl:
-                        config_dict._impl[item.name] = []
-                    config_dict._impl[item.name].append(list_dict)
+                    if item_name not in config_dict._impl:
+                        config_dict._impl[item_name] = []
+                    config_dict._impl[item_name].append(list_dict)
                 else:
-                    config_dict._impl[item.name] = item_class()
+                    config_dict._impl[item_name] = item_class()
 
                 if list_config:
                     for attr_name in attrs.keys():
                         list_dict[attr_name] = getattr(item, attr_name)
 
                 else:
-                    config_dict._impl[item.name].config = item_class()
+                    config_dict._impl[item_name].config = item_class()
                     for attr_name in attrs.keys():
-                        config_dict._impl[item.name]['config'][attr_name] = getattr(item, attr_name)
+                        config_dict._impl[item_name]['config'][attr_name] = getattr(item, attr_name)
 
         return config_dict
 

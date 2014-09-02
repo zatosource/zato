@@ -88,7 +88,7 @@ class ForceType(object):
         raise NotImplementedError('Subclasses should override it')
 
     def convert(self, value, param_name, data_type, from_sio_to_external):
-        return self.serialize_dispatch[(from_sio_to_external, data_type)](value, param_name)
+        return self.serialize_dispatch[(from_sio_to_external, data_type)](value, param_name) if value else value
 
     def get_xml_dict(self, _dict, name):
         xml_dict = Element(name)
@@ -389,8 +389,12 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
     """ Converts request parameters from any data format supported into Python objects.
     """
     param_name = param.name if isinstance(param, ForceType) else param
-    value = convert_impl[data_format](payload, param_name, cid, is_required, isinstance(param, COMPLEX_VALUE), 
-                                      default_value, path_prefix, use_text)
+
+    if payload:
+        value = convert_impl[data_format](payload, param_name, cid, is_required, isinstance(param, COMPLEX_VALUE), 
+                                          default_value, path_prefix, use_text)
+    else:
+        value = NOT_GIVEN
 
     if value == NOT_GIVEN:
         if default_value != NO_DEFAULT_VALUE:

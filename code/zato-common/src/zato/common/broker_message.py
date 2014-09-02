@@ -242,10 +242,12 @@ class HOT_DEPLOY(Constants):
     code_start = 102200
     CREATE = ValueConstant('')
 
+    # New in 2.0
+    AFTER_DEPLOY = ValueConstant('')
+
 class SINGLETON(Constants):
     code_start = 102400
     CLOSE = ValueConstant('')
-
 
 class MSG_NS(Constants):
     code_start = 102600
@@ -358,6 +360,28 @@ class EMAIL(Constants):
     IMAP_EDIT = ValueConstant('')
     IMAP_DELETE = ValueConstant('')
     IMAP_CHANGE_PASSWORD = ValueConstant('')
+
+class RBAC(Constants):
+    code_start = 105200
+
+    # New in 2.0
+    ROLE_CREATE = ValueConstant('')
+    ROLE_EDIT = ValueConstant('')
+    ROLE_DELETE = ValueConstant('')
+
+    # New in 2.0
+    CLIENT_ROLE_CREATE = ValueConstant('')
+    CLIENT_ROLE_DELETE = ValueConstant('')
+
+    # New in 2.0
+    PERMISSION_CREATE = ValueConstant('')
+    PERMISSION_EDIT = ValueConstant('')
+    PERMISSION_DELETE = ValueConstant('')
+
+    # New in 2.0
+    ROLE_PERMISSION_CREATE = ValueConstant('')
+    ROLE_PERMISSION_EDIT = ValueConstant('')
+    ROLE_PERMISSION_DELETE = ValueConstant('')
 
 code_to_name = {}
 

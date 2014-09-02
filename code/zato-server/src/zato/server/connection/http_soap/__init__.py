@@ -23,7 +23,7 @@ class BadRequest(ClientHTTPError):
         super(BadRequest, self).__init__(cid, msg, BAD_REQUEST)
         
 class Forbidden(ClientHTTPError):
-    def __init__(self, cid, msg):
+    def __init__(self, cid, msg, *ignored_args, **ignored_kwargs):
         super(Forbidden, self).__init__(cid, msg, FORBIDDEN)
         
 class NotFound(ClientHTTPError):
