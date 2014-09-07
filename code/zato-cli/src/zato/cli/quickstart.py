@@ -200,7 +200,7 @@ class Create(ZatoCommand):
         """
 
         if args.odb_type == 'sqlite':
-            args.sqlite_path = os.path.join(args.path, 'zato.db')
+            args.sqlite_path = os.path.abspath(os.path.join(args.path, 'zato.db'))
 
         next_step = count(1)
         next_port = count(http_plain_server_port)
