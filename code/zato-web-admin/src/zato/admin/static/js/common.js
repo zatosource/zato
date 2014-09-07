@@ -109,6 +109,11 @@ $.namespace('zato.security.basic_auth');
 $.namespace('zato.security.ntlm');
 $.namespace('zato.security.oauth');
 $.namespace('zato.security.openstack');
+$.namespace('zato.security.rbac');
+$.namespace('zato.security.rbac.client_role');
+$.namespace('zato.security.rbac.permission');
+$.namespace('zato.security.rbac.role');
+$.namespace('zato.security.rbac.role_permission');
 $.namespace('zato.security.tech_account');
 $.namespace('zato.security.tls');
 $.namespace('zato.security.tls.key_cert');
@@ -391,6 +396,8 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
     else {
         name = instance.name;
     }
+
+    console.log('Instance: ' + instance);
 
     var _callback = function(data, status) {
         var success = status == 'success';

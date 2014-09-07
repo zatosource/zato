@@ -64,9 +64,8 @@
             'id',
             'is_active',
             'security',
+            'has_rbac',
             'data_format',
-
-            {% comment %} New in 2.0 {% endcomment %}
 
             'timeout',
             'sec_tls_ca_cert_id',
@@ -159,6 +158,7 @@
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
 
                         {% ifequal connection 'outgoing' %}
                             <th class='ignore'>&nbsp;</th>
@@ -222,6 +222,8 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.security_id }}</td>
+
+                        <td class='ignore'>{{ item.has_rbac }}</td>
                         <td class='ignore'>{{ item.data_format }}</td>
                         <td class='ignore'>{{ item.timeout }}</td>
                         <td class='ignore'>{{ item.sec_tls_ca_cert_id }}</td>
@@ -374,6 +376,13 @@
                             <td>{{ create_form.security }}</td>
                         </tr>
 
+                        {% ifequal connection 'channel' %}
+                        <tr>
+                            <td style="vertical-align:middle">RBAC</td>
+                            <td>{{ create_form.has_rbac }}</td>
+                        </tr>
+                        {% endifequal %}
+
                         <tr>
                             <td style="vertical-align:middle">TLS CA certs</td>
                             <td>{{ create_form.sec_tls_ca_cert_id }}</td>
@@ -506,6 +515,13 @@
                             <td style="vertical-align:middle">Security</td>
                             <td>{{ edit_form.security }}</td>
                         </tr>
+
+                        {% ifequal connection 'channel' %}
+                        <tr>
+                            <td style="vertical-align:middle">RBAC</td>
+                            <td>{{ edit_form.has_rbac }}</td>
+                        </tr>
+                        {% endifequal %}
 
                         <tr>
                             <td style="vertical-align:middle">TLS CA certs</td>

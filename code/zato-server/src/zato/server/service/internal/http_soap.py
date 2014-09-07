@@ -83,9 +83,8 @@ class GetList(AdminService):
         input_required = ('cluster_id', 'connection', 'transport')
         output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type', 
-                           'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method',
-                           'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type',
-                           'timeout', 'sec_tls_ca_cert_id')
+            'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
+            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'))
         output_repeated = True
 
     def get_data(self, session):
@@ -106,7 +105,7 @@ class Create(AdminService, _HTTPSOAPService):
         input_required = ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id')
+            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'))
         output_required = ('id', 'name')
 
     def handle(self):
@@ -169,6 +168,7 @@ class Create(AdminService, _HTTPSOAPService):
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+                item.has_rbac = input.get('has_rbac', False)
 
                 session.add(item)
                 session.commit()
@@ -206,7 +206,7 @@ class Edit(AdminService, _HTTPSOAPService):
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id')
+            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'))
         output_required = ('id', 'name')
 
     def handle(self):
@@ -274,6 +274,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+                item.has_rbac = input.get('has_rbac', False)
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id != ZATO_NONE else None

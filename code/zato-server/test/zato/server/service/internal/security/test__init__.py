@@ -50,8 +50,9 @@ class GetListTestCase(ServiceTestCase):
             ))
         self.assertEquals(self.sio.namespace, zato_namespace)
 
-        self.assertEquals(len(self.sio.input_optional), 1)
+        self.assertEquals(len(self.sio.input_optional), 2)
         self.assertEquals(self.sio.input_optional[0].name, 'sec_type')
+        self.assertEquals(self.sio.input_optional[1].name, 'needs_internal')
 
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.security.get-list')
