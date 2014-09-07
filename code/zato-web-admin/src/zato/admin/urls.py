@@ -44,10 +44,9 @@ from zato.admin.web.views.pubsub import producers as pubsub_producers
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
-from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, \
-     wss, xpath as xpath_sec
+from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, rbac, \
+     tech_account, wss, xpath as xpath_sec
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert
-from zato.admin.web.views.security.tls import key_cert as tls_key_cert
 
 urlpatterns = patterns('',
 
@@ -374,6 +373,66 @@ urlpatterns += patterns('',
         login_required(openstack_security.change_password), name='security-openstack-change-password'),
     url(r'^zato/security/openstack_security/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(openstack_security.Delete()), name=openstack_security.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
+    # .. RBAC - Roles
+
+    url(r'^zato/security/rbac/role/$',
+        login_required(rbac.role.Index()), name=rbac.role.Index.url_name),
+    url(r'^zato/security/rbac/role/create/$',
+        login_required(rbac.role.Create()), name=rbac.role.Create.url_name),
+    url(r'^zato/security/rbac/role/edit/$',
+        login_required(rbac.role.Edit()), name=rbac.role.Edit.url_name),
+    url(r'^zato/security/rbac/role/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(rbac.role.Delete()), name=rbac.role.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
+    # .. RBAC - Client roles
+
+    url(r'^zato/security/rbac/client-role/$',
+        login_required(rbac.client_role.Index()), name=rbac.client_role.Index.url_name),
+    url(r'^zato/security/rbac/client-role/create/$',
+        login_required(rbac.client_role.Create()), name=rbac.client_role.Create.url_name),
+    url(r'^zato/security/rbac/client-role/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(rbac.client_role.Delete()), name=rbac.client_role.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
+    # .. RBAC - Permissions
+
+    url(r'^zato/security/rbac/permission/$',
+        login_required(rbac.permission.Index()), name=rbac.permission.Index.url_name),
+    url(r'^zato/security/rbac/permission/create/$',
+        login_required(rbac.permission.Create()), name=rbac.permission.Create.url_name),
+    url(r'^zato/security/rbac/permission/edit/$',
+        login_required(rbac.permission.Edit()), name=rbac.permission.Edit.url_name),
+    url(r'^zato/security/rbac/permission/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(rbac.permission.Delete()), name=rbac.permission.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
+    # .. RBAC - Role Permissions
+
+    url(r'^zato/security/rbac/role-permission/$',
+        login_required(rbac.role_permission.Index()), name=rbac.role_permission.Index.url_name),
+    url(r'^zato/security/rbac/role-permission/create/$',
+        login_required(rbac.role_permission.Create()), name=rbac.role_permission.Create.url_name),
+    url(r'^zato/security/rbac/role-permission/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(rbac.role_permission.Delete()), name=rbac.role_permission.Delete.url_name),
     )
 
 # ################################################################################################################################

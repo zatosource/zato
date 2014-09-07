@@ -88,7 +88,7 @@ class DummyURLData(object):
     def match(self, *ignored_args, **ignored_kwargs):
         return self.match_return_value, self.channel_item_return_value
 
-    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data):
+    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store):
         self.sec = sec
         self.cid = cid
         self.channel_item = channel_item

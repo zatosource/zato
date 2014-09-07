@@ -44,6 +44,7 @@ class CreateForm(DataFormatForm):
     pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
     timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=MISC.DEFAULT_HTTP_TIMEOUT)
     security = forms.ChoiceField(widget=forms.Select())
+    has_rbac = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
 
@@ -81,6 +82,7 @@ class CreateForm(DataFormatForm):
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     merge_url_params_req = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    has_rbac = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 class ChooseClusterForm(_ChooseClusterForm):
     connection = forms.CharField(widget=forms.HiddenInput())
