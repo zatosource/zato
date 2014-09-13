@@ -46,7 +46,7 @@ from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
 from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, rbac, \
      tech_account, wss, xpath as xpath_sec
-from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert
+from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, key_cert as tls_key_cert
 
 urlpatterns = patterns('',
 
