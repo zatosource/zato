@@ -68,6 +68,7 @@
             'data_format',
 
             'timeout',
+            'sec_tls_ca_cert_id',
 
             {% ifequal connection 'outgoing' %}
                 'ping_method',
@@ -83,6 +84,7 @@
 
             '_edit',
             '_delete',
+
             {% ifequal connection 'outgoing' %}
                 '_ping',
             {% endifequal %}
@@ -153,6 +155,8 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -222,6 +226,7 @@
                         <td class='ignore'>{{ item.has_rbac }}</td>
                         <td class='ignore'>{{ item.data_format }}</td>
                         <td class='ignore'>{{ item.timeout }}</td>
+                        <td class='ignore'>{{ item.sec_tls_ca_cert_id }}</td>
 
                         {% ifequal connection 'outgoing' %}
                             <td class='ignore'>{{ item.ping_method }}</td>
@@ -379,6 +384,11 @@
                         {% endifequal %}
 
                         <tr>
+                            <td style="vertical-align:middle">TLS CA certs</td>
+                            <td>{{ create_form.sec_tls_ca_cert_id }}</td>
+                        </tr>
+
+                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -512,6 +522,11 @@
                             <td>{{ edit_form.has_rbac }}</td>
                         </tr>
                         {% endifequal %}
+
+                        <tr>
+                            <td style="vertical-align:middle">TLS CA certs</td>
+                            <td>{{ edit_form.sec_tls_ca_cert_id }}</td>
+                        </tr>
 
                         <tr>
                             <td colspan="2" style="text-align:right">

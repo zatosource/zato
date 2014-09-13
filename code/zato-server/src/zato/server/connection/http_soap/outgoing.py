@@ -26,7 +26,7 @@ from parse import PARSE_RE
 import requests
 
 # Zato
-from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, URL_TYPE
+from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
 from zato.common.util import get_component_name
 from zato.server.connection.queue import ConnectionQueue
 
@@ -52,6 +52,11 @@ class BaseHTTPSOAPWrapper(object):
         self.set_address_data()
         self.set_auth()
 
+    def invoke_http(self, method, address, headers, hooks, *args, **kwargs):
+        return self.session.request(method, address, auth=self.requests_auth, headers=headers, hooks=hooks,
+            timeout=self.config['timeout'], cert=self.tls_key_cert,
+            verify=False if self.config['tls_verify'] == ZATO_NONE else self.config['tls_verify'], *args, **kwargs)
+
     def ping(self, cid):
         """ Pings a given HTTP/SOAP resource
         """
@@ -70,10 +75,8 @@ class BaseHTTPSOAPWrapper(object):
             verbose.write(entry)
 
         # .. invoke the other end ..
-        response = self.session.request(self.config['ping_method'], self.address, 
-                auth=self.requests_auth, headers=self._create_headers(cid, {}),
-                hooks={'zato_pre_request':zato_pre_request_hook}, timeout=self.config['timeout'],
-                cert=self.tls_key_cert, verify=False)
+        response = self.invoke_http(self.config['ping_method'], self.address, self._create_headers(cid, {}),
+            {'zato_pre_request':zato_pre_request_hook})
 
         # .. store additional info, get and close the stream.
         verbose.write('Code: {}'.format(response.status_code))
@@ -275,9 +278,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         logger.info('CID:[%s], address:[%s], qs_params:[%s], auth:[%s], kwargs:[%s]', cid, address, qs_params, self.requests_auth, kwargs) 
 
-        response = self.session.request(method, address, data=data,
-            auth=self.requests_auth, params=qs_params, headers=headers, timeout=self.config['timeout'],
-            cert=self.tls_key_cert, verify=False, *args, **kwargs)
+        response = self.invoke_http(method, address, headers, {}, params=qs_params, *args, **kwargs)
 
         logger.debug('CID:[%s], response:[%s]', cid, response.text)
 

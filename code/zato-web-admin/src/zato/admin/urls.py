@@ -46,7 +46,7 @@ from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
 from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, rbac, \
      tech_account, wss, xpath as xpath_sec
-from zato.admin.web.views.security.tls import key_cert as tls_key_cert
+from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, key_cert as tls_key_cert
 
 urlpatterns = patterns('',
 
@@ -469,6 +469,18 @@ urlpatterns += patterns('',
         login_required(tls_key_cert.Edit()), name=tls_key_cert.Edit.url_name),
     url(r'^zato/security/tls/key-cert/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(tls_key_cert.Delete()), name='security-tls-key-cert-delete'),
+
+    # .. TLS - CA certs signing off certificates of endpoints Zato services invoke
+
+    url(r'^zato/security/tls/ca-cert/$',
+        login_required(tls_ca_cert.Index()), name=tls_ca_cert.Index.url_name),
+    url(r'^zato/security/tls/ca-cert/create/$',
+        login_required(tls_ca_cert.Create()), name=tls_ca_cert.Create.url_name),
+    url(r'^zato/security/tls/ca-cert/edit/$',
+        login_required(tls_ca_cert.Edit()), name=tls_ca_cert.Edit.url_name),
+    url(r'^zato/security/tls/ca-cert/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(tls_ca_cert.Delete()), name='security-tls-ca-cert-delete'),
+
     )
 
 # ################################################################################################################################

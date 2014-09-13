@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Keys and certificates{% endblock %}
+{% block html_title %}CA certificates{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -14,7 +14,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/security/tls/key-cert.js"></script>
+    <script type="text/javascript" src="/static/js/security/tls/ca-cert.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -25,8 +25,7 @@
             'fs_name',
             '_edit',
             '_delete',
-            'id',
-            'is_active'
+            'id'
         ]
     }
     </script>
@@ -34,7 +33,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Keys and certificates</h2>
+<h2 class="zato">CA certificates</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -42,13 +41,13 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/choose-cluster.html" with page_prompt="Show keys and certificates"%}
+{% include "zato/choose-cluster.html" with page_prompt="Show CA certificates"%}
 
 
     {% if cluster_id %}
 
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.security.tls.key_cert.create()">Create a new key/cert pair</a>
+            <a href="javascript:$.fn.zato.security.tls.ca_cert.create()">Create a new CA cert</a>
         </div>
 
         <div id="markup">
@@ -72,8 +71,8 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.fs_name }}</td>
-                        <td><a href="javascript:$.fn.zato.security.tls.key_cert.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.security.tls.key_cert.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.security.tls.ca_cert.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.security.tls.ca_cert.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                     </tr>
                 {% endfor %}
@@ -89,7 +88,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url security-tls-key-cert-create %}" method="post" id="create-form">
+                <form action="{% url security-tls-ca-cert-create %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -115,7 +114,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url security-tls-key-cert-edit %}" method="post" id="edit-form">
+                <form action="{% url security-tls-ca-cert-edit %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
