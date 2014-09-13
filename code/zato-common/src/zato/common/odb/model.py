@@ -405,6 +405,21 @@ class TLSKeyCertSecurity(SecurityBase):
 
 # ################################################################################################################################
 
+class TLSCACert(Base):
+    """ New in 2.0: Stores information regarding CA certs.
+    """
+    __tablename__ = 'sec_tls_ca_cert'
+
+    id = Column(Integer, Sequence('sec_tls_ca_cert_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    fs_name = Column(String(200), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('ca_cert_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
 class HTTPSOAP(Base):
     """ An incoming or outgoing HTTP/SOAP connection.
     """
@@ -463,6 +478,12 @@ class HTTPSOAP(Base):
     timeout = Column(Integer(), nullable=False, default=MISC.DEFAULT_HTTP_TIMEOUT)
 
     # New in 2.0
+    sec_tls_ca_cert_id = Column(Integer, ForeignKey('sec_tls_ca_cert.id', ondelete='CASCADE'), nullable=True)
+
+    # New in 2.0
+    sec_tls_ca_cert = relationship('TLSCACert', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
+
+    # New in 2.0
     has_rbac = Column(Boolean, nullable=False, default=False)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
@@ -477,8 +498,8 @@ class HTTPSOAP(Base):
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, connection=None, transport=None, host=None, \
                  url_path=None, method=None, soap_action=None, soap_version=None, data_format=None, ping_method=None,
                  pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None, \
-                 timeout=None, service_id=None, service=None, security=None, cluster_id=None, cluster=None, service_name=None, \
-                 security_id=None, has_rbac=None, security_name=None):
+                 timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None, \
+                 cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -498,6 +519,7 @@ class HTTPSOAP(Base):
         self.params_pri = params_pri
         self.serialization_type = serialization_type
         self.timeout = timeout
+        self.sec_tls_ca_cert_id = sec_tls_ca_cert_id
         self.service_id = service_id
         self.service = service
         self.security = security

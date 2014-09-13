@@ -137,6 +137,11 @@ class SECURITY(Constants):
     TLS_KEY_CERT_EDIT = ValueConstant('')
     TLS_KEY_CERT_DELETE = ValueConstant('')
 
+    # New in 2.0
+    TLS_CA_CERT_CREATE = ValueConstant('')
+    TLS_CA_CERT_EDIT = ValueConstant('')
+    TLS_CA_CERT_DELETE = ValueConstant('')
+
 class DEFINITION(Constants):
     code_start = 100600
 
