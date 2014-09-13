@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import ssl
+import httplib, ssl
 from logging import getLogger
 from tempfile import NamedTemporaryFile
 from time import sleep
@@ -26,13 +26,15 @@ from nose.tools import eq_
 import requests
 
 # Zato
-from zato.common import URL_TYPE, ZATO_NONE
+from zato.common import SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
 from zato.common.test import rand_float, rand_int, rand_string
-from zato.common.test.tls import TLS_PORT, TLSServer
+from zato.common.test.tls import TLSServer
 from zato.common.test.tls_material import ca_cert, ca_cert_invalid, client1_cert, client1_key
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
 
 class _FakeSession(object):
     def __init__(self, *ignored, **kwargs):
@@ -46,6 +48,8 @@ class _FakeSession(object):
 
         return Bunch({'status_code':rand_string(), 'text':rand_string()})
 
+# ################################################################################################################################
+
 class _FakeRequestsModule(object):
     def __init__(self):
         self.session_obj = None
@@ -54,6 +58,8 @@ class _FakeRequestsModule(object):
         self.session_obj = _FakeSession(*args, **kwargs)
         return self.session_obj
 
+# ################################################################################################################################
+
 class Base(object):
 
     def _get_config(self):
@@ -61,6 +67,8 @@ class Base(object):
             'address_url_path':rand_string(), 'ping_method':rand_string(), 'soap_version':'1.1',
             'pool_size':rand_int(), 'serialization_type':'string', 'timeout':rand_int(),
             'tls_verify':ZATO_NONE}
+
+# ################################################################################################################################
 
 class HTTPSOAPWrapperTestCase(TestCase, Base):
     
@@ -231,7 +239,9 @@ class HTTPSOAPWrapperTestCase(TestCase, Base):
 
                     eq_(http_request_value, expected_http_request_value)
 
-class TLSTestCase(TestCase, Base):
+# ################################################################################################################################
+
+class TLSPingTestCase(TestCase, Base):
 
     def test_ping_unknown_ca_verify_false(self):
         server = TLSServer()
@@ -321,13 +331,14 @@ class TLSTestCase(TestCase, Base):
 
             with NamedTemporaryFile(prefix='zato-tls', delete=False) as client_cert_tf:
 
-                client_cert_tf.write(client1_cert)
-                client_cert_tf.write('\n')
                 client_cert_tf.write(client1_key)
+                client_cert_tf.write('\n')
+                client_cert_tf.write(client1_cert)
+                client_cert_tf.flush()
 
                 server = TLSServer(cert_reqs=ssl.CERT_REQUIRED)
                 server.start()
-    
+
                 sleep(0.3)
 
                 port = server.get_port()
@@ -337,9 +348,133 @@ class TLSTestCase(TestCase, Base):
                 config['address_url_path'] = ''
                 config['ping_method'] = 'GET'
                 config['tls_verify'] = ca_cert_tf.name
-                SEC
+                config['tls_key_cert_full_path'] = client_cert_tf.name
+                config['sec_type'] = SEC_DEF_TYPE.TLS_KEY_CERT
 
                 requests_module = _FakeRequestsModule()
                 wrapper = HTTPSOAPWrapper(config, requests)
 
                 wrapper.ping(rand_string())
+
+# ################################################################################################################################
+
+class TLSHTTPTestCase(TestCase, Base):
+
+    def test_http_get_unknown_ca_verify_false(self):
+        server = TLSServer()
+        server.start()
+
+        sleep(0.3)
+
+        port = server.get_port()
+
+        config = self._get_config()
+        config['address_host'] = 'https://localhost:{}/'.format(port)
+        config['address_url_path'] = ''
+        config['ping_method'] = 'GET'
+        config['transport'] = URL_TYPE.PLAIN_HTTP
+        config['tls_verify'] = ZATO_NONE
+
+        requests_module = _FakeRequestsModule()
+        wrapper = HTTPSOAPWrapper(config, requests)
+
+        self.assertEquals(httplib.OK, wrapper.get('123').status_code)
+
+    def test_http_get_unknown_ca_verify_invalid_ca_cert(self):
+
+        with NamedTemporaryFile(prefix='zato-tls', delete=False) as ca_cert_tf:
+
+            ca_cert_tf.write(ca_cert_invalid)
+            ca_cert_tf.flush()
+
+            server = TLSServer()
+            server.start()
+
+            sleep(0.3)
+
+            port = server.get_port()
+
+            config = self._get_config()
+            config['address_host'] = 'https://localhost:{}/'.format(port)
+            config['address_url_path'] = ''
+            config['ping_method'] = 'GET'
+            config['transport'] = URL_TYPE.PLAIN_HTTP
+            config['tls_verify'] = ca_cert_tf.name
+
+            requests_module = _FakeRequestsModule()
+            wrapper = HTTPSOAPWrapper(config, requests)
+
+            try:
+                wrapper.get('123')
+            except Exception, e:
+                self.assertIn('SSL3_GET_SERVER_CERTIFICATE:certificate verify failed', e.message[0][1])
+            else:
+                self.fail('Excepted a TLS error here because the CA is invalid')
+
+    def test_http_get_client_cert_required_no_client_cert(self):
+
+        with NamedTemporaryFile(prefix='zato-tls', delete=False) as ca_cert_tf:
+
+            ca_cert_tf.write(ca_cert)
+            ca_cert_tf.flush()
+
+            server = TLSServer(cert_reqs=ssl.CERT_REQUIRED)
+            server.start()
+
+            sleep(0.3)
+
+            port = server.get_port()
+
+            config = self._get_config()
+            config['address_host'] = 'https://localhost:{}/'.format(port)
+            config['address_url_path'] = ''
+            config['ping_method'] = 'GET'
+            config['transport'] = URL_TYPE.PLAIN_HTTP
+            config['tls_verify'] = ca_cert_tf.name
+
+            requests_module = _FakeRequestsModule()
+            wrapper = HTTPSOAPWrapper(config, requests)
+
+            try:
+                wrapper.get('123')
+            except Exception, e:
+                self.assertIn('SSL3_READ_BYTES:sslv3 alert handshake failure', e.message[0][1])
+            else:
+                self.fail('Excepted a TLS error here because no TLS cert has been provided by client')
+
+    def test_http_get_client_cert_required_has_client_cert(self):
+
+        with NamedTemporaryFile(prefix='zato-tls', delete=False) as ca_cert_tf:
+
+            ca_cert_tf.write(ca_cert)
+            ca_cert_tf.flush()
+
+            with NamedTemporaryFile(prefix='zato-tls', delete=False) as client_cert_tf:
+
+                client_cert_tf.write(client1_key)
+                client_cert_tf.write('\n')
+                client_cert_tf.write(client1_cert)
+                client_cert_tf.flush()
+
+                server = TLSServer(cert_reqs=ssl.CERT_REQUIRED)
+                server.start()
+
+                sleep(0.3)
+
+                port = server.get_port()
+
+                config = self._get_config()
+                config['address_host'] = 'https://localhost:{}/'.format(port)
+                config['address_url_path'] = ''
+                config['ping_method'] = 'GET'
+                config['transport'] = URL_TYPE.PLAIN_HTTP
+                config['tls_verify'] = ca_cert_tf.name
+                config['tls_key_cert_full_path'] = client_cert_tf.name
+                config['sec_type'] = SEC_DEF_TYPE.TLS_KEY_CERT
+
+                requests_module = _FakeRequestsModule()
+                wrapper = HTTPSOAPWrapper(config, requests)
+
+                wrapper.get('123')
+
+# ################################################################################################################################

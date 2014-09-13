@@ -22,8 +22,6 @@ import psutil
 from zato.common import ZATO_OK
 from zato.common.test.tls_material import ca_cert, server1_cert, server1_key
 
-TLS_PORT = 37443
-
 def get_free_port(start=20001, end=50000):
     taken = []
     for c in psutil.net_connections(kind='inet'):
