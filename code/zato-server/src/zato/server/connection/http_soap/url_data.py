@@ -312,7 +312,7 @@ class URLData(OAuthDataStore):
                 cid, sec_def, path_info, payload, wsgi_environ, post_data)
 
             # Ok, we now know that the credentials are valid so we can check RBAC permissions if need be.
-            if channel_item['has_rbac']:
+            if channel_item.get('has_rbac'):
                 is_allowed = worker_store.rbac.is_http_client_allowed(
                     'sec_def:::{}:::{}'.format(sec.sec_def.sec_type, sec.sec_def.name), wsgi_environ['REQUEST_METHOD'],
                     channel_item.service_id)
@@ -904,7 +904,7 @@ class URLData(OAuthDataStore):
         if not remote_addr:
             remote_addr = wsgi_environ.get('REMOTE_ADDR', '(None)')
 
-        self.odb.audit_set_request_http_soap(channel_item['id'], channel_item['name'], cid, 
+        self.odb.audit_set_request_http_soap(channel_item['id'], channel_item['name'], cid,
             channel_item['transport'], channel_item['connection'], datetime.utcnow(),
             channel_item.get('username'), remote_addr, self._dump_wsgi_environ(wsgi_environ), payload)
 
@@ -922,7 +922,7 @@ class URLData(OAuthDataStore):
 
         self.broker_client.publish({
             'cid': cid,
-            'data_format':DATA_FORMAT.JSON, 
+            'data_format':DATA_FORMAT.JSON,
             'action': CHANNEL.HTTP_SOAP_AUDIT_RESPONSE.value,
             'payload': payload,
             'service': 'zato.http-soap.set-audit-response-data'
@@ -954,9 +954,9 @@ class URLData(OAuthDataStore):
     def _yield_pattern_list(self, msg):
         for item in self.channel_data:
             if msg.msg_pattern_type == MSG_PATTERN_TYPE.JSON_POINTER.id:
-                pattern_list = item.replace_patterns_json_pointer 
+                pattern_list = item.replace_patterns_json_pointer
             else:
-                pattern_list = item.replace_patterns_xpath 
+                pattern_list = item.replace_patterns_xpath
 
             if pattern_list:
                 yield item, pattern_list

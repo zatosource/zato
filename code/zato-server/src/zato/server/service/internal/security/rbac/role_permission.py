@@ -15,7 +15,7 @@ from contextlib import closing
 from zato.common.broker_message import RBAC
 from zato.common.odb.model import RBACRole, RBACPermission, RBACRolePermission, Service
 from zato.common.odb.query import rbac_role_permission_list
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 elem = 'security_rbac_role_permission'
