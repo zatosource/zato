@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import socket, ssl
 from tempfile import NamedTemporaryFile
 from threading import Thread
-from time import sleep
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 # psutil

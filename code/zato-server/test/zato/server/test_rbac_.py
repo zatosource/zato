@@ -164,7 +164,7 @@ class RoleTestCase(TestCase):
         parent_id1_new, parent_id2_new, parent_id3_new = 111, 222, 333
 
         name1, name2, name3, name4 = 'name1', 'name2', 'name3', 'name4'
-        name1_new, name2_new, name3_new, name4_new = 'name1_new', 'name2_new', 'name3_new', 'name4_new'
+        name1_new, name3_new, name4_new = 'name1_new', 'name3_new', 'name4_new'
 
         rbac = RBAC()
         rbac.create_role(id1, name1, parent_id1)
@@ -357,7 +357,7 @@ class PermissionTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_edit_permission_exists(self):
+    def test_edit_permission_does_not_exist(self):
 
         id, name = 1, 'name'
 
@@ -456,7 +456,7 @@ class ClientRoleTestCase(TestCase):
 
     def test_create_client_role_invalid_role(self):
         client_def = rand_string()
-        role_id, role_name = rand_int(), rand_string()
+        role_id = rand_int()
 
         rbac = RBAC()
         self.assertRaises(ValueError, rbac.create_client_role, client_def, role_id)

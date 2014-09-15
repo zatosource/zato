@@ -13,7 +13,6 @@ import httplib, ssl
 from logging import getLogger
 from tempfile import NamedTemporaryFile
 from time import sleep
-from traceback import format_exc
 from unittest import TestCase
 
 # bunch
@@ -257,7 +256,6 @@ class TLSPingTestCase(TestCase, Base):
         config['ping_method'] = 'GET'
         config['tls_verify'] = ZATO_NONE
 
-        requests_module = _FakeRequestsModule()
         wrapper = HTTPSOAPWrapper(config, requests)
 
         self.assertIn('Code: 200', wrapper.ping(rand_string()))
@@ -282,7 +280,6 @@ class TLSPingTestCase(TestCase, Base):
             config['ping_method'] = 'GET'
             config['tls_verify'] = ca_cert_tf.name
 
-            requests_module = _FakeRequestsModule()
             wrapper = HTTPSOAPWrapper(config, requests)
 
             try:
@@ -312,7 +309,6 @@ class TLSPingTestCase(TestCase, Base):
             config['ping_method'] = 'GET'
             config['tls_verify'] = ca_cert_tf.name
 
-            requests_module = _FakeRequestsModule()
             wrapper = HTTPSOAPWrapper(config, requests)
 
             try:
@@ -351,7 +347,6 @@ class TLSPingTestCase(TestCase, Base):
                 config['tls_key_cert_full_path'] = client_cert_tf.name
                 config['sec_type'] = SEC_DEF_TYPE.TLS_KEY_CERT
 
-                requests_module = _FakeRequestsModule()
                 wrapper = HTTPSOAPWrapper(config, requests)
 
                 wrapper.ping(rand_string())
@@ -375,7 +370,6 @@ class TLSHTTPTestCase(TestCase, Base):
         config['transport'] = URL_TYPE.PLAIN_HTTP
         config['tls_verify'] = ZATO_NONE
 
-        requests_module = _FakeRequestsModule()
         wrapper = HTTPSOAPWrapper(config, requests)
 
         self.assertEquals(httplib.OK, wrapper.get('123').status_code)
@@ -401,7 +395,6 @@ class TLSHTTPTestCase(TestCase, Base):
             config['transport'] = URL_TYPE.PLAIN_HTTP
             config['tls_verify'] = ca_cert_tf.name
 
-            requests_module = _FakeRequestsModule()
             wrapper = HTTPSOAPWrapper(config, requests)
 
             try:
@@ -432,7 +425,6 @@ class TLSHTTPTestCase(TestCase, Base):
             config['transport'] = URL_TYPE.PLAIN_HTTP
             config['tls_verify'] = ca_cert_tf.name
 
-            requests_module = _FakeRequestsModule()
             wrapper = HTTPSOAPWrapper(config, requests)
 
             try:
@@ -472,7 +464,6 @@ class TLSHTTPTestCase(TestCase, Base):
                 config['tls_key_cert_full_path'] = client_cert_tf.name
                 config['sec_type'] = SEC_DEF_TYPE.TLS_KEY_CERT
 
-                requests_module = _FakeRequestsModule()
                 wrapper = HTTPSOAPWrapper(config, requests)
 
                 wrapper.get('123')

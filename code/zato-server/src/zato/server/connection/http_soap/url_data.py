@@ -312,7 +312,7 @@ class URLData(OAuthDataStore):
                 cid, sec_def, path_info, payload, wsgi_environ, post_data)
 
             # Ok, we now know that the credentials are valid so we can check RBAC permissions if need be.
-            if channel_ite.get('has_rbac'):
+            if channel_item.get('has_rbac'):
                 is_allowed = worker_store.rbac.is_http_client_allowed(
                     'sec_def:::{}:::{}'.format(sec.sec_def.sec_type, sec.sec_def.name), wsgi_environ['REQUEST_METHOD'],
                     channel_item.service_id)
