@@ -133,6 +133,9 @@ class URLDataTestCase(TestCase):
             def __getitem__(self, key):
                 return False
 
+            def get(self, ignored):
+                return False
+
         class DummySecWrapper(object):
             def __init__(self, sec_def):
                 self.sec_def = sec_def
