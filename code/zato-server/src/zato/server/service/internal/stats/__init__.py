@@ -170,7 +170,12 @@ class BaseAggregatingService(AdminService):
         
     def hset_aggr_key(self, aggr_key, hash_key, hash_value):
         self.server.kvdb.conn.hset(aggr_key, hash_key, hash_value)
-        
+
+        # Expire the aggregated key after that many hours
+        expire_after = int(self.server.fs_server_config.get('stats', {}).get('expire_after', 24))
+        expire_after = expire_after * 60 * 60 # Hours times minutes in an hour and seconds in a minute
+        self.server.kvdb.conn.expire(aggr_key, expire_after)
+
 # ##############################################################################
         
 class ProcessRawTimes(BaseAggregatingService):
