@@ -474,6 +474,6 @@ class Create(ZatoCommand):
         item = RBACRole()
         item.id = 0
         item.name = 'Root'
-        item.parent_id = 0
+        item.parent_id = None
         item.cluster = cluster
         session.add(item)
