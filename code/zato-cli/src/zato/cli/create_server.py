@@ -89,14 +89,17 @@ context_class=zato.server.spring_context.ZatoContext
 [misc]
 return_internal_objects=False
 internal_services_may_be_deleted=False
-initial_cluster_name = {initial_cluster_name}
-initial_server_name = {initial_server_name}
-delivery_lock_timeout = 2
-queue_build_cap = 30 # All queue-based connections need to initialize in that many seconds
+initial_cluster_name={initial_cluster_name}
+initial_server_name={initial_server_name}
+delivery_lock_timeout=2
+queue_build_cap=30 # All queue-based connections need to initialize in that many seconds
 http_proxy=
 locale=
 ensure_sql_connections_exist=True
 http_server_header=Zato
+
+[stats]
+expire_after=168 # In hours, 168 = 7 days = 1 week
 
 [kvdb]
 host={kvdb_host}
