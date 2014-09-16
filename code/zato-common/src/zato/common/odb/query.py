@@ -1127,7 +1127,7 @@ def _rbac_role(session, cluster_id):
     return session.query(RBACRole.id, RBACRole.name, RBACRole.parent_id, rbac_parent.name.label('parent_name')).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==RBACRole.cluster_id).\
-        filter(rbac_parent.id==RBACRole.parent_id).\
+        outerjoin(rbac_parent, rbac_parent.id==RBACRole.parent_id).\
         order_by(RBACRole.name)
 
 def rbac_role(session, cluster_id, id):
