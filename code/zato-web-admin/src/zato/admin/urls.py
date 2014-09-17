@@ -474,12 +474,10 @@ urlpatterns += patterns('',
 
     url(r'^zato/security/tls/ca-cert/$',
         login_required(tls_ca_cert.Index()), name=tls_ca_cert.Index.url_name),
-    url(r'^zato/security/tls/ca-cert/create/$',
-        login_required(tls_ca_cert.Create()), name=tls_ca_cert.Create.url_name),
-    url(r'^zato/security/tls/ca-cert/edit/$',
-        login_required(tls_ca_cert.Edit()), name=tls_ca_cert.Edit.url_name),
     url(r'^zato/security/tls/ca-cert/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(tls_ca_cert.Delete()), name='security-tls-ca-cert-delete'),
+    url(r'^zato/security/tls/ca-cert/cluster/(?P<cluster_id>.*)/upload/$',
+        login_required(tls_ca_cert.upload), name='security-tls-ca-cert-upload'),
 
     )
 

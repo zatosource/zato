@@ -460,3 +460,21 @@ def id_only_service(req, service, id, error_template):
         msg = error_template.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+
+def upload_to_server(req, cluster_id, service, error_msg_template):
+    try:
+        input_dict = {
+            'cluster_id': cluster_id,
+            'payload': req.read().encode('base64'),
+            'payload_name': req.GET['qqfile']
+        }
+        req.zato.client.invoke(service, input_dict)
+
+        return HttpResponse(dumps({'success': True}))
+
+    except Exception, e:
+        msg = error_msg_template.format(format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
