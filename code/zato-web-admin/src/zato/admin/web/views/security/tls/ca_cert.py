@@ -13,6 +13,7 @@ import logging
 
 # Zato
 from zato.admin.web.forms.security.tls.ca_cert import CreateForm, EditForm
+from zato.admin.web.views import method_allowed, upload_to_server
 from zato.admin.web.views.security.tls import CreateEdit as _CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.odb.model import TLSCACert
 
@@ -26,17 +27,9 @@ class Index(_Index):
     create_form = CreateForm
     edit_form = EditForm
 
-class CreateEdit(_CreateEdit):
-    item_type = 'CA cert'
-
-class Create(CreateEdit):
-    url_name = 'security-tls-ca-cert-create'
-    service_name = 'zato.security.tls.ca-cert.create'
-
-class Edit(CreateEdit):
-    url_name = 'security-tls-ca-cert-edit'
-    form_prefix = 'edit-'
-    service_name = 'zato.security.tls.ca-cert.edit'
+@method_allowed('POST')
+def upload(req, cluster_id):
+    return upload_to_server(req, cluster_id, 'zato.security.tls.ca-cert.upload', 'Could not upload the CA certificate, e:`{}`')
 
 class Delete(_Delete):
     url_name = 'security-tls-ca-cert-delete'

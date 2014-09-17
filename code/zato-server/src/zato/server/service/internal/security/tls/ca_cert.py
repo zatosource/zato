@@ -13,7 +13,7 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import TLSCACert
 from zato.common.odb.query import tls_ca_cert_list
 from zato.common.util import validate_tls_ca_cert
-from zato.server.service.internal import AdminService
+from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 elem = 'security_tls_ca_cert'
@@ -31,11 +31,15 @@ def instance_hook(service, input, instance, attrs):
 class GetList(AdminService):
     __metaclass__ = GetListMeta
 
-class Create(AdminService):
-    __metaclass__ = CreateEditMeta
-
-class Edit(AdminService):
-    __metaclass__ = CreateEditMeta
-
 class Delete(AdminService):
     __metaclass__ = DeleteMeta
+
+class Upload(AdminService):
+
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_security_tls_ca_cert_request'
+        response_elem = 'zato_security_tls_ca_cert_response'
+        input_required = ('cluster_id', 'payload', 'payload_name')
+
+    def handle(self):
+        self.logger.warn(self.request.input)
