@@ -55,7 +55,7 @@ class BaseHTTPSOAPWrapper(object):
     def invoke_http(self, method, address, headers, hooks, *args, **kwargs):
         return self.session.request(method, address, auth=self.requests_auth, headers=headers, hooks=hooks,
             timeout=self.config['timeout'], cert=self.tls_key_cert,
-            verify=False if self.config['tls_verify'] == ZATO_NONE else self.config['tls_verify'], *args, **kwargs)
+            verify=False if self.config.get('tls_verify', ZATO_NONE) == ZATO_NONE else self.config['tls_verify'], *args, **kwargs)
 
     def ping(self, cid):
         """ Pings a given HTTP/SOAP resource
