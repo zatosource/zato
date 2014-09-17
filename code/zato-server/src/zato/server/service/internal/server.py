@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from datetime import datetime
+from logging import getLogger
 from traceback import format_exc
 
 # Bunch
@@ -20,6 +21,8 @@ from bunch import Bunch
 from zato.common import ZatoException
 from zato.common.odb.model import Cluster, Server
 from zato.server.service.internal import AdminService, AdminSIO
+
+logger = getLogger('zato_singleton')
 
 class ClusterWideSingletonKeepAlive(AdminService):
     """ Makes all the other servers know that this particular singleton, the one that
@@ -45,7 +48,7 @@ class ClusterWideSingletonKeepAlive(AdminService):
             session.commit()
 
             msg = 'Cluster-wide singleton keep-alive OK, server id:[{}], name:[{}] '.format(server.id, server.name)
-            self.logger.info(msg)
+            logger.info(msg)
 
 class EnsureClusterWideSingleton(AdminService):
     """ Initializes connectors and scheduler jobs.
@@ -55,7 +58,7 @@ class EnsureClusterWideSingleton(AdminService):
             if self.server.singleton_server.is_cluster_wide:
                 msg = 'Ignoring event, cid:[{}], server id:[{}], name:[{}], singleton is already cluster-wide'.format(
                     self.cid, self.server.id, self.server.name)
-                self.logger.debug(msg)
+                logger.debug(msg)
             else:
                 if self.server.singleton_server.become_cluster_wide(
                     self.server.connector_server_keep_alive_job_time, self.server.connector_server_grace_time,
@@ -66,10 +69,10 @@ class EnsureClusterWideSingleton(AdminService):
                 else:
                     msg = 'Not becoming a cluster-wide singleton, cid:[{}], server id:[{}], name:[{}]'.format(
                         self.cid, self.server.id, self.server.name)
-                    self.logger.info(msg)
+                    logger.info(msg)
         else:
             msg = 'Ignoring event, cid:[{}], server id:[{}], name:[{}] has no singleton attached'.format(self.cid, self.server.id, self.server.name)
-            self.logger.debug(msg)
+            logger.debug(msg)
 
 
 class Edit(AdminService):
