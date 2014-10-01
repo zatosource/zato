@@ -13,6 +13,9 @@ from contextlib import closing
 from json import dumps
 from traceback import format_exc
 
+# dateutil
+from dateutil.parser import parse
+
 # Paste
 from paste.util.converters import asbool
 
@@ -574,7 +577,7 @@ class SetAuditResponseData(AdminService):
 
             item.invoke_ok = asbool(payload_req['invoke_ok'])
             item.auth_ok = asbool(payload_req['auth_ok'])
-            item.resp_time = payload_req['resp_time']
+            item.resp_time = parse(payload_req['resp_time'])
             item.resp_headers = payload_req['resp_headers'].encode('utf-8')
             item.resp_payload = payload_req['resp_payload'].encode('utf-8')
 
