@@ -21,7 +21,7 @@ from zato.server.service import Service
 success_code = 0
 success = '<error_code>{}</error_code>'.format(success_code)
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('zato_admin')
 
 class AdminService(Service):
     """ A Zato admin service, part of the API.
@@ -30,13 +30,13 @@ class AdminService(Service):
         super(AdminService, self).__init__()
         
     def before_handle(self):
-        if self.logger.isEnabledFor(logging.INFO):
+        if logger.isEnabledFor(logging.INFO):
             request = dict(self.request.input)
             for k, v in request.items():
                 if 'password' in k:
                     request[k] = '*****'
     
-            self.logger.info('cid:[%s], name:[%s], SIO request:[%s]', self.cid, self.name, request)
+            logger.info('cid:[%s], name:[%s], SIO request:[%s]', self.cid, self.name, request)
         
     def handle(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
@@ -45,7 +45,7 @@ class AdminService(Service):
         payload = self.response.payload
         response = payload if isinstance(payload, basestring) else payload.getvalue()
             
-        self.logger.info('cid:[{}], name:[{}], response:[{}]'.format(self.cid, self.name, response))
+        logger.info('cid:[{}], name:[{}], response:[{}]'.format(self.cid, self.name, response))
     
     def get_data(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
