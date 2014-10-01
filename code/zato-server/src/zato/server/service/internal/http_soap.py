@@ -280,7 +280,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 item.has_rbac = input.get('has_rbac', False)
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
-                sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id != ZATO_NONE else None
+                sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
 
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id
 
