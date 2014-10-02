@@ -58,15 +58,6 @@
                 <li><span class="like-a">Services &darr;</span>
                     <ul>
                         <li><a href="{% url service %}?cluster={{ cluster_id|default:'' }}">List services</a></li>
-                        <li>
-                            <span class="like-a">Patterns &rarr;</span>
-                            <ul>
-                                <!-- <li class='wide'><a href="?cluster={{ cluster_id|default:'' }}">Fan-out/fan-in</a></li> -->
-                                <li class='wide'><a href="{% url pattern-delivery %}?cluster={{ cluster_id|default:'' }}">Guaranteed delivery</a></li>
-                                <!-- <li class='wide'><a href="?cluster={{ cluster_id|default:'' }}">List invoke</a></li> -->
-                                <!-- <li class='wide'><a href="?cluster={{ cluster_id|default:'' }}">Serialize access</a></li> -->
-                            </ul>
-                        </li>
                     </ul>
                 </li>
 
