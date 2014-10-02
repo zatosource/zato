@@ -235,10 +235,4 @@ class ZatoContext(PythonConfig):
 
             {'name': 'zato.stats.summary.create-summary-by-year', 'minutes':60,
              'service':'zato.stats.summary.create-summary-by-year'},
-
-            {'name': 'zato.pattern.delivery.update-counters', 'seconds':30,
-             'service':'zato.pattern.delivery.update-counters'},
-
-            {'name': 'zato.pattern.delivery.dispatch-auto-resubmit', 'seconds':300,
-             'service':'zato.pattern.delivery.dispatch-auto-resubmit'},
         ]
