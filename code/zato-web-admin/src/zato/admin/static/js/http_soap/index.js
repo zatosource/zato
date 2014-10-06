@@ -21,7 +21,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.HTTPSOAP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.http_soap.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security']);
+    $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security', 'sec_tls_ca_cert_id']);
 })
 
 $.fn.zato.http_soap.create = function() {
