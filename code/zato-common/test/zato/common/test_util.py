@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import os, tempfile
 from unittest import TestCase
 from uuid import uuid4
 
@@ -18,9 +19,11 @@ from lxml import etree
 # Zato
 from zato.common import ParsingException, soap_body_xpath, zato_path
 from zato.common import util
+from zato.common.test import rand_string
+from zato.common.test.tls_material import ca_cert
 
 class ZatoPathTestCase(TestCase):
-    def test_zato_path(self):
+    def xtest_zato_path(self):
         xml = etree.fromstring("""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
          xmlns="https://zato.io/ns/20130518">
       <soap:Body>
@@ -48,9 +51,8 @@ class ZatoPathTestCase(TestCase):
         else:
             raise AssertionError('Expected an ParsingException with path:[{}]'.format(path))
 
-
 class UtilsTestCase(TestCase):
-    def test_uncamelify(self):
+    def xtest_uncamelify(self):
         original = 'ILikeToReadWSDLDocsNotReallyNOPENotMeQ'
         expected1 = 'i-like-to-read-wsdl-docs-not-really-nope-not-me-q'
         expected2 = 'I_LIKE_TO_READ_WSDL_DOCS_NOT_REALLY_NOPE_NOT_ME_Q'
@@ -59,6 +61,18 @@ class UtilsTestCase(TestCase):
         self.assertEquals(util.uncamelify(original, '_', unicode.upper), expected2)
 
 class XPathTestCase(TestCase):
-    def test_validate_xpath(self):
+    def xtest_validate_xpath(self):
         self.assertRaises(etree.XPathSyntaxError, util.validate_xpath, 'a b c')
         self.assertTrue(util.validate_xpath('//node'))
+
+
+class TLSTestCase(TestCase):
+    def test_store_tls_ca_cert(self):
+        root_dir = tempfile.mkdtemp('-zato-tls-test')
+        ca_certs_dir = os.path.join(root_dir, 'ca-certs')
+        payload_name = rand_string()
+
+        os.mkdir(ca_certs_dir)
+
+        pem_file_path = util.store_tls_ca_cert(root_dir, ca_cert, payload_name)
+        self.assertEquals(pem_file_path, os.path.join(ca_certs_dir, payload_name))
