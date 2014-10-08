@@ -90,8 +90,6 @@ class GetClientDefList(AdminService):
         if custom_auth_list_service:
             out.extend(self.invoke(custom_auth_list_service, {})['response']['items'])
 
-        self.logger.warn(out)
-
         return out
 
     def handle(self):
