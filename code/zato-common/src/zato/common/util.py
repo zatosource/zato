@@ -930,8 +930,8 @@ def _validate_tls_ca_cert(root_dir, fs_name):
 
     return full_path'''
 
-def validate_tls_cert_from_paths(root_dir, fs_name):
-    full_path = os.path.join(root_dir, fs_name)
+def validate_tls_cert_from_paths(root_dir, component, fs_name):
+    full_path = os.path.join(root_dir, component, fs_name)
     validate_tls_cert_from_payload(open(full_path).read())
     return full_path
 
@@ -946,7 +946,7 @@ def validate_tls_cert_from_payload(payload):
 def store_tls_ca_cert(root_dir, payload, payload_name):
 
     # Raises exception if it's not really a certificate.
-    validate_tls_cert_from_payload(payload)
+    validate_tls_cert_from_payload(payload, 'ca-certs')
 
     pem_file_path = os.path.join(root_dir, 'ca-certs', payload_name)
     pem_file = open(pem_file_path, 'w')

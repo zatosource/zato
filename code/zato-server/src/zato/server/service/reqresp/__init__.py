@@ -153,8 +153,8 @@ class Request(SIOConverter):
                 params[param_name] = value
 
             except Exception, e:
-                msg = 'Caught an exception, param:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
-                    param, self.has_simple_io_config, format_exc(e))
+                msg = 'Caught an exception, param:`{}`, request_params:`{}`, has_simple_io_config:`{}`, e:`{}`'.format(
+                    param, request_params, self.has_simple_io_config, format_exc(e))
                 self.logger.error(msg)
                 raise Exception(msg)
 

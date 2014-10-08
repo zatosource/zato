@@ -736,7 +736,7 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def update_tls_ca_cert(self, msg):
-        msg.full_path = validate_tls_cert_from_paths(self.server.tls_dir, msg.fs_name)
+        msg.full_path = validate_tls_cert_from_paths(self.server.tls_dir, 'ca-certs', msg.fs_name)
 
     def on_broker_msg_SECURITY_TLS_CA_CERT_CREATE(self, msg):
         self.update_tls_ca_cert(msg)
