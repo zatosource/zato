@@ -350,10 +350,14 @@ class Service(object):
 
         set_response_func = kwargs.pop('set_response_func', self.set_response_data)
 
-        return self.update_handle(set_response_func, service, payload, channel,
-            data_format, transport, self.server, self.broker_client, self.worker_store,
-            self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch,
-            **kwargs)
+        try:
+            return self.update_handle(set_response_func, service, payload, channel,
+                data_format, transport, self.server, self.broker_client, self.worker_store,
+                self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch,
+                **kwargs)
+        except Exception, e:
+            logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc(e))
+            raise
 
     def invoke(self, name, *args, **kwargs):
         """ Invokes a service synchronously by its name.

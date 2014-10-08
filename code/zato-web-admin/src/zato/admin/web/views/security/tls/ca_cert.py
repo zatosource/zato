@@ -9,7 +9,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from json import dumps
 import logging
+from traceback import format_exc
+
+# Django
+from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
 from zato.admin.web.forms.security.tls.ca_cert import CreateForm, EditForm
@@ -29,7 +34,24 @@ class Index(_Index):
 
 @method_allowed('POST')
 def upload(req, cluster_id):
-    return upload_to_server(req, cluster_id, 'zato.security.tls.ca-cert.upload', 'Could not upload the CA certificate, e:`{}`')
+
+    name = req.GET['qqfile']
+
+    try:
+        req.zato.client.invoke('zato.security.tls.ca-cert.create', {
+            'cluster_id': cluster_id,
+            'payload': req.read().encode('base64'),
+            'fs_name': name,
+            'name': name,
+            'is_active': True
+        })
+
+        return HttpResponse(dumps({'success': True}))
+
+    except Exception, e:
+        msg = 'Could not upload the CA certificate, e:`{}`'.format(format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
 
 class Delete(_Delete):
     url_name = 'security-tls-ca-cert-delete'
