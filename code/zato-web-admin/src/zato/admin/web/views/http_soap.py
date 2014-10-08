@@ -154,10 +154,7 @@ def index(req):
             else:
                 security_id = ZATO_NONE
 
-            if _security_id and item.sec_type == SEC_DEF_TYPE.TLS_KEY_CERT:
-                sec_tls_ca_cert_id = item.sec_tls_ca_cert_id if item.sec_tls_ca_cert_id else ZATO_NONE
-            else:
-                sec_tls_ca_cert_id = None
+            sec_tls_ca_cert_id = item.sec_tls_ca_cert_id if item.sec_tls_ca_cert_id else ZATO_NONE
 
             item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection,
                     transport, item.host, item.url_path, item.method, item.soap_action,
