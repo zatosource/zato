@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import copy, gc, inspect, json, linecache, logging, os, random, re, signal, threading, sys
+import copy, gc, inspect, json, linecache, logging, os, random, re, signal, string, threading, sys
 from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
@@ -448,11 +448,14 @@ def is_python_file(name):
         if name.endswith(suffix):
             return True
 
+def fs_safe_name(value):
+    return re.sub('[{}]'.format(string.punctuation + string.whitespace), '_', value)
+
 def fs_safe_now():
     """ Returns a UTC timestamp with any characters unsafe for filesystem names
     removed.
     """
-    return re.sub('[-:. ]', '_', str(datetime.utcnow()))
+    return fs_safe_name(str(datetime.utcnow()))
 
 class _DummyLink(object):
     """ A dummy class for staying consistent with pip's API in certain places
@@ -902,53 +905,28 @@ def alter_column_nullable_false(table_name, column_name, default_value, column_t
 
 # ################################################################################################################################
 
-def get_full_tls(server_tls_dir, type, fs_name):
-    full_path = os.path.join(server_tls_dir, type, fs_name)
-    if not os.path.exists(full_path):
-        raise Exception('No such path `{}`'.format(full_path))
-    return open(full_path).read(), full_path
-
-'''
-def get_validate_tls_key_cert(server_tls_dir, fs_name):
-
-    pem, full_path = get_full_tls(server_tls_dir, 'keys-certs', fs_name)
-
-    # Only validate the key is there.
-    crypto.load_privatekey(crypto.FILETYPE_PEM, pem)
-
-    # Really attempt to obtain a few things from the certificate though.
-    cert = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
-    subject = sorted(dict(cert.get_subject().get_components()).items())
-
-    return cert.digest(b'sha1'), '; '.join(['{}={}'.format(k, v) for k, v in subject]), full_path
-
-def _validate_tls_ca_cert(root_dir, fs_name):
-    pem, full_path = get_full_tls(server_tls_dir, 'ca-certs', fs_name)
-
-    # Validate it's really a certificate and say, a public key
-    crypto.load_certificate(crypto.FILETYPE_PEM, pem)
-
-    return full_path'''
-
-def validate_tls_cert_from_paths(root_dir, component, fs_name):
-    full_path = os.path.join(root_dir, component, fs_name)
-    validate_tls_cert_from_payload(open(full_path).read())
-    return full_path
-
 def validate_tls_cert_from_payload(payload):
     with NamedTemporaryFile(prefix='zato-tls-') as tf:
         tf.write(payload)
         tf.flush()
 
         # Checks if it's a certificate at all by raising an exception if it isn't.
-        crypto.load_certificate(crypto.FILETYPE_PEM, open(tf.name).read())
+        info = crypto.load_certificate(crypto.FILETYPE_PEM, open(tf.name).read())
 
-def store_tls_ca_cert(root_dir, payload, payload_name):
+        info = sorted(dict(info.get_subject().get_components()).items())
+        return '; '.join('{}={}'.format(k, v) for k, v in info)
+
+get_tls_cert_info_from_payload = validate_tls_cert_from_payload
+
+def get_tls_cert_full_path(root_dir, info):
+    return os.path.join(root_dir, 'ca-certs', fs_safe_name(info) + '.pem')
+
+def store_tls_ca_cert(root_dir, payload):
 
     # Raises exception if it's not really a certificate.
-    validate_tls_cert_from_payload(payload, 'ca-certs')
+    info = get_tls_cert_info_from_payload(payload)
 
-    pem_file_path = os.path.join(root_dir, 'ca-certs', payload_name)
+    pem_file_path = get_tls_cert_full_path(root_dir, info)
     pem_file = open(pem_file_path, 'w')
     pem_file.write(payload)
     pem_file.close()
