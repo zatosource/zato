@@ -27,7 +27,8 @@
             'info',
             '_edit',
             '_delete',
-            'id'
+            'id',
+            'value'
         ]
     }
 
@@ -72,6 +73,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -85,6 +87,7 @@
                         <td><a href="javascript:$.fn.zato.security.tls.ca_cert.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.security.tls.ca_cert.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.value }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -142,7 +145,8 @@
                         </tr>
                     </table>
                     <input type="hidden" name="is_active" value="on" />
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
         </div>
