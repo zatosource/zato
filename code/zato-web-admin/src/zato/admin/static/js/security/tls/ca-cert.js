@@ -32,7 +32,7 @@ $.fn.zato.security.tls.ca_cert.data_table.new_row = function(item, data, include
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td>{0}</td>', item.info);
+    row += String.format('<td>{0}</td>', data.info);
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.tls.ca_cert.edit({0});'>Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.tls.ca_cert.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
