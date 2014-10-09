@@ -12,8 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 
 # Zato
+
 from zato.admin.web.forms.security.tls.key_cert import CreateForm, EditForm
-from zato.admin.web.views.security.tls import CreateEdit as _CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.views import CreateEdit as _CreateEdit, Delete as _Delete, Index as _Index
 from zato.common.odb.model import TLSKeyCertSecurity
 
 logger = logging.getLogger(__name__)

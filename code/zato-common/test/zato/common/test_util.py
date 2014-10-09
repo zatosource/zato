@@ -65,14 +65,7 @@ class XPathTestCase(TestCase):
         self.assertRaises(etree.XPathSyntaxError, util.validate_xpath, 'a b c')
         self.assertTrue(util.validate_xpath('//node'))
 
-
 class TLSTestCase(TestCase):
-    def test_store_tls_ca_cert(self):
-        root_dir = tempfile.mkdtemp('-zato-tls-test')
-        ca_certs_dir = os.path.join(root_dir, 'ca-certs')
-        payload_name = rand_string()
-
-        os.mkdir(ca_certs_dir)
-
-        pem_file_path = util.store_tls_ca_cert(root_dir, ca_cert, payload_name)
-        self.assertEquals(pem_file_path, os.path.join(ca_certs_dir, payload_name))
+    def test_get_tls_ca_cert(self):
+        info = util.get_tls_cert_from_payload(ca_cert)
+        self.assertEquals(info, 'C=AU; CN=CA2')
