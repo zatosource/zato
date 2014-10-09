@@ -22,7 +22,8 @@ label = 'a TLS CA cert'
 broker_message = SECURITY
 broker_message_prefix = 'TLS_CA_CERT_'
 list_func = tls_ca_cert_list
-skip_input_params = ('info',)
+skip_input_params = ['info',]
+output_required_extra = ['info',]
 
 def instance_hook(service, input, instance, attrs):
 
