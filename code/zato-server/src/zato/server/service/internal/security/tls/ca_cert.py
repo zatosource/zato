@@ -59,3 +59,6 @@ class Delete(AdminService):
 
 class Create(AdminService):
     __metaclass__ = CreateEditMeta
+
+class Edit(AdminService):
+    __metaclass__ = CreateEditMeta
