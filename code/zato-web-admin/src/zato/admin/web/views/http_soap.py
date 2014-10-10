@@ -27,7 +27,8 @@ from paste.util.converters import asbool
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.http_soap import AuditLogEntryList, ChooseClusterForm, CreateForm, EditForm, ReplacePatternsForm
-from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, method_allowed, id_only_service, SecurityList
+from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, get_tls_ca_cert_list, method_allowed, \
+     id_only_service, SecurityList
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
      MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE
@@ -131,8 +132,8 @@ def index(req):
 
         _soap_versions = SOAP_CHANNEL_VERSIONS if connection == 'channel' else SOAP_VERSIONS
 
-        create_form = CreateForm(_security, [], _soap_versions)
-        edit_form = EditForm(_security, [], _soap_versions, prefix='edit')
+        create_form = CreateForm(_security, get_tls_ca_cert_list(req.zato.client, req.zato.cluster), _soap_versions)
+        edit_form = EditForm(_security, get_tls_ca_cert_list(req.zato.client, req.zato.cluster), _soap_versions, prefix='edit')
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,
