@@ -639,7 +639,14 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
         else {
             form_id = '#create-form';
         }
-        $(form_id).bValidator();
+
+        var options = {};
+        if($.fn.zato.http_soap.data_table.on_before_element_validation) {
+            options['onBeforeElementValidation'] = $.fn.zato.http_soap.data_table.on_before_element_validation;
+        }
+
+        $(form_id).bValidator(options);
+
     });
 
     /* Assign form submition handlers.
@@ -659,6 +666,13 @@ $.fn.zato.data_table.on_submit = function(action) {
             return $.fn.zato.data_table.on_submit_complete(data,
                 status, action);
         }
+
+    if($.fn.zato.data_table.before_submit_hook) {
+        if(!$.fn.zato.data_table.before_submit_hook(form)) {
+            return false;
+        }
+    }
+
     return $.fn.zato.data_table._on_submit(form, callback);
 }
 

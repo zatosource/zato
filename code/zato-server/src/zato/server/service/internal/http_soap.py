@@ -172,6 +172,7 @@ class Create(AdminService, _HTTPSOAPService):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
                 item.has_rbac = input.get('has_rbac', False)
+                item.sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
 
                 session.add(item)
                 session.commit()
@@ -278,11 +279,7 @@ class Edit(AdminService, _HTTPSOAPService):
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
                 item.has_rbac = input.get('has_rbac', False)
-
-                sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
-                sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
-
-                item.sec_tls_ca_cert_id = sec_tls_ca_cert_id
+                item.sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
 
                 session.add(item)
                 session.commit()
