@@ -481,6 +481,7 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.audit_max_payload,
         HTTPSOAP.audit_repl_patt_type,
         HTTPSOAP.timeout,
+        HTTPSOAP.sec_tls_ca_cert_id,
         SecurityBase.sec_type,
         Service.name.label('service_name'),
         Service.id.label('service_id'),

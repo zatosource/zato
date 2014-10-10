@@ -35,7 +35,7 @@ def instance_hook(service, input, instance, attrs):
 
     with service.lock():
         full_path = store_tls_ca_cert(service.server.tls_dir, service.request.input.value)
-        service.logger.info('CA certificate saved under `%s`'.format(full_path))
+        service.logger.info('CA certificate saved under `%s`', full_path)
 
 def response_hook(service, input, instance, attrs, service_type):
     if service_type == 'create_edit':
