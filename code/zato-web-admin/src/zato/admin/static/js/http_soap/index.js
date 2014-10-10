@@ -22,7 +22,20 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.http_soap.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security', 'sec_tls_ca_cert_id']);
+    $.fn.zato.data_table.before_submit_hook = $.fn.zato.http_soap.data_table.before_submit_hook;
 })
+
+$.fn.zato.http_soap.data_table.on_before_element_validation = function(elem) {
+    var elem = $(elem);
+    if(elem.attr('id').endsWith('sec_tls_ca_cert_id')) {
+        var form = elem.closest('form');
+        var host = $(form.find("input[id$='host']")[0]);
+        var is_https = host.val().startsWith('https');
+        if(!is_https) {
+            return false;
+        }
+    }
+}
 
 $.fn.zato.http_soap.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new object', null);

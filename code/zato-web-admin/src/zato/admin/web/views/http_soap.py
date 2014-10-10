@@ -154,13 +154,11 @@ def index(req):
             else:
                 security_id = ZATO_NONE
 
-            sec_tls_ca_cert_id = item.sec_tls_ca_cert_id if item.sec_tls_ca_cert_id else ZATO_NONE
-
             item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection,
                     transport, item.host, item.url_path, item.method, item.soap_action,
                     item.soap_version, item.data_format, item.ping_method,
                     item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri,
-                    item.serialization_type, item.timeout, sec_tls_ca_cert_id, service_id=item.service_id,
+                    item.serialization_type, item.timeout, item.sec_tls_ca_cert_id, service_id=item.service_id,
                     service_name=item.service_name, security_id=security_id, has_rbac=item.has_rbac,
                     security_name=security_name)
             items.append(item)
