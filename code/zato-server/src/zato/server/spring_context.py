@@ -235,4 +235,8 @@ class ZatoContext(PythonConfig):
 
             {'name': 'zato.stats.summary.create-summary-by-year', 'minutes':60,
              'service':'zato.stats.summary.create-summary-by-year'},
+
+            {'name': 'zato.outgoing.sql.auto-ping', 'minutes':3,
+             'service':'zato.outgoing.sql.auto-ping'},
+
         ]
