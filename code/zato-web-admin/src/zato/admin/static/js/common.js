@@ -219,7 +219,7 @@ form's fields may use custom prefixes that will be taken into account accordingl
 */
 $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
 
-    console.log(instance);
+    console.log('Populating form with `'+ instance +'`');
 
     if(!name_prefix) {
         name_prefix = '';
@@ -267,6 +267,10 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
                 }
             }
         }
+    }
+
+    if($.fn.zato.http_soap.data_table.after_populate) {
+        $.fn.zato.http_soap.data_table.after_populate();
     }
 
 }

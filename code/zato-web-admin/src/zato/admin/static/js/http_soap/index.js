@@ -28,12 +28,20 @@ $(document).ready(function() {
 
         var elem = $(String.format('#id_{0}serialization_type', suffix));
         elem.ready(function() {
+            console.log(elem);
+            console.log(elem.val());
             $.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id(suffix, elem.val() == 'suds');
             elem.change($.fn.zato.http_soap.data_table.on_serialization_change);
         });
-
     });
 })
+
+$.fn.zato.http_soap.data_table.after_populate = function() {
+    $.each(['', 'edit-'], function(ignored, suffix) {
+        var elem = $(String.format('#id_{0}serialization_type', suffix));
+        $.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id(suffix, elem.val() == 'suds');
+    });
+}
 
 $.fn.zato.http_soap.data_table.on_before_element_validation = function(elem) {
     var elem = $(elem);
