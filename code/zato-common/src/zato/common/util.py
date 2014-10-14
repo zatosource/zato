@@ -954,3 +954,19 @@ class StaticConfig(Bunch):
             value = f.read()
             f.close()
             self[item] = value
+
+# ################################################################################################################################
+
+def add_scheduler_jobs(server):
+    for(id, name, is_active, job_type, start_date, extra, service_name, _,
+        _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
+            in server.odb.get_job_list(server.cluster_id):
+
+        if is_active:
+            job_data = Bunch({'id':id, 'name':name, 'is_active':is_active,
+                'job_type':job_type, 'start_date':start_date,
+                'extra':extra, 'service':service_name, 'weeks':weeks,
+                'days':days, 'hours':hours, 'minutes':minutes,
+                'seconds':seconds, 'repeats':repeats,
+                'cron_definition':cron_definition})
+            server.singleton_server.scheduler.create_edit('create', job_data)
