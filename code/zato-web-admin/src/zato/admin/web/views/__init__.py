@@ -42,14 +42,23 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-def get_definition_list(client, cluster, def_type):
-    """ Returns all definitions of a given type existing on a given cluster.
-    """
+def _get_list(client, cluster, service):
+
     out = {}
-    for item in client.invoke('zato.definition.{}.get-list'.format(def_type), {'cluster_id':cluster.id}):
+    for item in client.invoke(service, {'cluster_id':cluster.id}):
         out[item.id] = item.name
 
     return out
+
+def get_definition_list(client, cluster, def_type):
+    """ Returns all definitions of a given type existing on a given cluster.
+    """
+    return _get_list(client, cluster, 'zato.definition.{}.get-list'.format(def_type))
+
+def get_tls_ca_cert_list(client, cluster):
+    """ Returns all TLS CA certs on a given cluster.
+    """
+    return _get_list(client, cluster, 'zato.security.tls.ca-cert.get-list')
 
 def get_sample_dt(user_profile):
     """ A sample date and time an hour in the future serving as a hint as to what 
@@ -458,5 +467,23 @@ def id_only_service(req, service, id, error_template):
             return result
     except Exception, e:
         msg = error_template.format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+
+def upload_to_server(req, cluster_id, service, error_msg_template):
+    try:
+        input_dict = {
+            'cluster_id': cluster_id,
+            'payload': req.read().encode('base64'),
+            'payload_name': req.GET['qqfile']
+        }
+        req.zato.client.invoke(service, input_dict)
+
+        return HttpResponse(dumps({'success': True}))
+
+    except Exception, e:
+        msg = error_msg_template.format(format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)

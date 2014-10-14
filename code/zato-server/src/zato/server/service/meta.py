@@ -113,6 +113,7 @@ def update_attrs(cls, name, attrs):
     attrs.skip_output_params = getattr(mod, 'skip_output_params', [])
     attrs.instance_hook = getattr(mod, 'instance_hook', None)
     attrs.response_hook = getattr(mod, 'response_hook', None)
+    attrs.delete_hook = getattr(mod, 'delete_hook', None)
     attrs.broker_message_hook = getattr(mod, 'broker_message_hook', None)
     attrs.extra_delete_attrs = getattr(mod, 'extra_delete_attrs', [])
     attrs.input_required_extra = getattr(mod, 'input_required_extra', [])
@@ -158,6 +159,11 @@ class AdminServiceMeta(type):
             request_elem = 'zato_{}_{}_request'.format(attrs.elem, req_resp[name])
             response_elem = 'zato_{}_{}_response'.format(attrs.elem, req_resp[name])
             input_required = sio['input_required'] + attrs['input_required_extra']
+
+            for param in attrs['skip_input_params']:
+                if param in input_required:
+                    input_required.remove(param)
+
             input_optional = []
             output_required = sio['output_required'] + attrs['output_required_extra']
             output_optional = attrs['output_optional_extra']
@@ -335,6 +341,9 @@ class DeleteMeta(AdminServiceMeta):
                         self.request.input[name] = getattr(instance, name)
 
                     self.broker_client.publish(self.request.input)
+
+                    if attrs.delete_hook:
+                        attrs.delete_hook(self, input, instance, attrs)
 
         return handle_impl
 

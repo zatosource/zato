@@ -27,7 +27,8 @@ from paste.util.converters import asbool
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.http_soap import AuditLogEntryList, ChooseClusterForm, CreateForm, EditForm, ReplacePatternsForm
-from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, method_allowed, id_only_service, SecurityList
+from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, get_tls_ca_cert_list, method_allowed, \
+     id_only_service, SecurityList
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
      MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE
@@ -131,8 +132,8 @@ def index(req):
 
         _soap_versions = SOAP_CHANNEL_VERSIONS if connection == 'channel' else SOAP_VERSIONS
 
-        create_form = CreateForm(_security, [], _soap_versions)
-        edit_form = EditForm(_security, [], _soap_versions, prefix='edit')
+        create_form = CreateForm(_security, get_tls_ca_cert_list(req.zato.client, req.zato.cluster), _soap_versions)
+        edit_form = EditForm(_security, get_tls_ca_cert_list(req.zato.client, req.zato.cluster), _soap_versions, prefix='edit')
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,
@@ -154,16 +155,11 @@ def index(req):
             else:
                 security_id = ZATO_NONE
 
-            if _security_id and item.sec_type == SEC_DEF_TYPE.TLS_KEY_CERT:
-                sec_tls_ca_cert_id = item.sec_tls_ca_cert_id if item.sec_tls_ca_cert_id else ZATO_NONE
-            else:
-                sec_tls_ca_cert_id = None
-
             item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection,
                     transport, item.host, item.url_path, item.method, item.soap_action,
                     item.soap_version, item.data_format, item.ping_method,
                     item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri,
-                    item.serialization_type, item.timeout, sec_tls_ca_cert_id, service_id=item.service_id,
+                    item.serialization_type, item.timeout, item.sec_tls_ca_cert_id, service_id=item.service_id,
                     service_name=item.service_name, security_id=security_id, has_rbac=item.has_rbac,
                     security_name=security_name)
             items.append(item)

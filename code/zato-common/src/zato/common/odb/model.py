@@ -412,8 +412,9 @@ class TLSCACert(Base):
 
     id = Column(Integer, Sequence('sec_tls_ca_cert_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
+    value = Column(LargeBinary(200000), nullable=False)
+    info = Column(LargeBinary(200000), nullable=False)
     is_active = Column(Boolean(), nullable=False)
-    fs_name = Column(String(200), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('ca_cert_list', order_by=name, cascade='all, delete, delete-orphan'))
