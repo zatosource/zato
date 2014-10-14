@@ -200,8 +200,7 @@ def tls_key_cert_list(session, cluster_id, needs_columns=False):
     """
     return session.query(
         TLSKeyCertSecurity.id, TLSKeyCertSecurity.name,
-        TLSKeyCertSecurity.is_active, TLSKeyCertSecurity.fs_name, TLSKeyCertSecurity.cert_fp,
-        TLSKeyCertSecurity.cert_subject, SecurityBase.sec_type).\
+        TLSKeyCertSecurity.is_active, TLSKeyCertSecurity.info).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==TLSKeyCertSecurity.cluster_id).\
         filter(SecurityBase.id==TLSKeyCertSecurity.id).\

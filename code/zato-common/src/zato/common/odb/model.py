@@ -393,15 +393,13 @@ class XPathSecurity(SecurityBase):
 # ################################################################################################################################
 
 class TLSKeyCertSecurity(SecurityBase):
-    """ New in 2.0: Stores information regarding key/cert pairs.
+    """ New in 2.0: Stores information regarding TLS key/cert pairs used in outgoing connections.
     """
     __tablename__ = 'sec_tls_key_cert'
     __mapper_args__ = {'polymorphic_identity':'tls_key_cert'}
 
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-    fs_name = Column(String(200), nullable=False)
-    cert_fp = Column(String(200), nullable=False)
-    cert_subject = Column(String(1200), nullable=False)
+    info = Column(LargeBinary(200000), nullable=False)
 
 # ################################################################################################################################
 
