@@ -33,12 +33,13 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, SEC_DEF_TYPE, \
-     SIMPLE_IO, TRACE1, ZATO_ODB_POOL_NAME
+     SIMPLE_IO, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common import broker_message
 from zato.common.broker_message import code_to_name
 from zato.common.dispatch import dispatcher
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import get_tls_cert_full_path, get_tls_cert_info_from_payload, new_cid, pairwise, parse_extra_into_dict
+from zato.common.util import get_tls_cert_full_path, get_tls_cert_info_from_payload, new_cid, pairwise, parse_extra_into_dict, \
+     store_tls_ca_cert
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -222,6 +223,14 @@ class WorkerStore(BrokerMessageReceiver):
             'pool_size':config.pool_size, 'serialization_type':config.serialization_type,
             'timeout':config.timeout}
         wrapper_config.update(sec_config)
+
+        if config.sec_tls_ca_cert_id and config.sec_tls_ca_cert_id != ZATO_NONE:
+            tls_verify = get_tls_cert_full_path(self.server.tls_dir, get_tls_cert_info_from_payload(
+                self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name].config.value))
+        else:
+            tls_verify = ZATO_NONE
+
+        wrapper_config['tls_verify'] = tls_verify
 
         if wrapper_config['serialization_type'] == HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id:
             wrapper_config['queue_build_cap'] = float(self.server.fs_server_config.misc.queue_build_cap)

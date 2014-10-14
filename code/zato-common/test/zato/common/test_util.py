@@ -23,7 +23,7 @@ from zato.common.test import rand_string
 from zato.common.test.tls_material import ca_cert
 
 class ZatoPathTestCase(TestCase):
-    def xtest_zato_path(self):
+    def test_zato_path(self):
         xml = etree.fromstring("""<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"
          xmlns="https://zato.io/ns/20130518">
       <soap:Body>
@@ -52,7 +52,7 @@ class ZatoPathTestCase(TestCase):
             raise AssertionError('Expected an ParsingException with path:[{}]'.format(path))
 
 class UtilsTestCase(TestCase):
-    def xtest_uncamelify(self):
+    def test_uncamelify(self):
         original = 'ILikeToReadWSDLDocsNotReallyNOPENotMeQ'
         expected1 = 'i-like-to-read-wsdl-docs-not-really-nope-not-me-q'
         expected2 = 'I_LIKE_TO_READ_WSDL_DOCS_NOT_REALLY_NOPE_NOT_ME_Q'
@@ -61,11 +61,11 @@ class UtilsTestCase(TestCase):
         self.assertEquals(util.uncamelify(original, '_', unicode.upper), expected2)
 
 class XPathTestCase(TestCase):
-    def xtest_validate_xpath(self):
+    def test_validate_xpath(self):
         self.assertRaises(etree.XPathSyntaxError, util.validate_xpath, 'a b c')
         self.assertTrue(util.validate_xpath('//node'))
 
 class TLSTestCase(TestCase):
-    def test_get_tls_ca_cert(self):
+    def validate_tls_cert_from_payload(self):
         info = util.get_tls_cert_from_payload(ca_cert)
         self.assertEquals(info, 'C=AU; CN=CA2')
