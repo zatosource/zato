@@ -536,6 +536,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_tls_key_cert_list(server.cluster.id, True)
         self.config.tls_key_cert = ConfigDict.from_query('tls_key_cert', query)
 
+        # TLS CA certs
+        query = self.odb.get_tls_ca_cert_list(server.cluster.id, True)
+        self.config.tls_ca_cert = ConfigDict.from_query('tls_ca_cert', query)
+
         # WS-Security
         query = self.odb.get_wss_list(server.cluster.id, True)
         self.config.wss = ConfigDict.from_query('wss', query)

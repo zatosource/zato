@@ -27,7 +27,7 @@ from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_P
      MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, JSONPointer, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsJSONPointer, \
-     HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, to_json, XPath
+     HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, TLSCACert, to_json, XPath
 from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap_list
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO
@@ -99,7 +99,14 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
-class Create(AdminService, _HTTPSOAPService):
+class _CreateEdit(AdminService, _HTTPSOAPService):
+    def add_tls_ca_cert(self, input, sec_tls_ca_cert_id):
+        with closing(self.odb.session()) as session:
+            input.sec_tls_ca_cert_name = session.query(TLSCACert.name).\
+                filter(TLSCACert.id==sec_tls_ca_cert_id).\
+                one()[0]
+
+class Create(_CreateEdit):
     """ Creates a new HTTP/SOAP connection.
     """
     class SimpleIO(AdminSIO):
@@ -182,6 +189,9 @@ class Create(AdminService, _HTTPSOAPService):
                     input.service_id = service.id
                     input.service_name = service.name
 
+                if item.sec_tls_ca_cert_id and item.sec_tls_ca_cert_id != ZATO_NONE:
+                    self.add_tls_ca_cert(input, item.sec_tls_ca_cert_id)
+
                 input.id = item.id
                 input.update(sec_info)
 
@@ -201,7 +211,7 @@ class Create(AdminService, _HTTPSOAPService):
 
                 raise
 
-class Edit(AdminService, _HTTPSOAPService):
+class Edit(_CreateEdit):
     """ Updates an HTTP/SOAP connection.
     """
     class SimpleIO(AdminSIO):
@@ -300,6 +310,9 @@ class Edit(AdminService, _HTTPSOAPService):
                 input.old_url_path = old_url_path
                 input.old_soap_action = old_soap_action
                 input.update(sec_info)
+
+                if item.sec_tls_ca_cert_id and item.sec_tls_ca_cert_id != ZATO_NONE:
+                    self.add_tls_ca_cert(input, item.sec_tls_ca_cert_id)
 
                 if input.connection == 'channel':
                     action = CHANNEL.HTTP_SOAP_CREATE_EDIT.value
