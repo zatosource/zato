@@ -463,6 +463,12 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.tls_key_cert_list(session, cluster_id, needs_columns)
 
+    def get_tls_ca_cert_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of TLS CA certs on the given cluster.
+        """
+        with closing(self.session()) as session:
+            return query.tls_ca_cert_list(session, cluster_id, needs_columns)
+
     def get_wss_list(self, cluster_id, needs_columns=False):
         """ Returns a list of WS-Security definitions on the given cluster.
         """

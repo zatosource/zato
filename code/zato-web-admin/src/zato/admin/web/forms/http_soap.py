@@ -48,7 +48,7 @@ class CreateForm(DataFormatForm):
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
 
-    def __init__(self, security_list=[], sec_tls_ca_cert_list=[], soap_versions=SOAP_VERSIONS, prefix=None, post_data=None):
+    def __init__(self, security_list=[], sec_tls_ca_cert_list={}, soap_versions=SOAP_VERSIONS, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
         self.fields['url_params_pri'].choices = []
@@ -71,7 +71,7 @@ class CreateForm(DataFormatForm):
         self.fields['sec_tls_ca_cert_id'].choices.append(INITIAL_CHOICES)
         self.fields['sec_tls_ca_cert_id'].choices.append([ZATO_NONE, 'Skip validation'])
 
-        for value, label in sec_tls_ca_cert_list:
+        for value, label in sec_tls_ca_cert_list.items():
             self.fields['sec_tls_ca_cert_id'].choices.append([value, label])
 
         self.fields['ping_method'].initial = DEFAULT_HTTP_PING_METHOD
