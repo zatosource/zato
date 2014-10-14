@@ -48,7 +48,7 @@ class _CreateEdit(CreateEdit):
         output_required = ('id', 'name', 'info')
 
     def success_message(self, item):
-        return 'Successfully {0} the TLS CA certificate [{1}]'.format(self.verb, item.name)
+        return 'Successfully {} the TLS CA certificate [{}]'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'security-tls-ca-cert-create'

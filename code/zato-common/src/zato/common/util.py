@@ -933,6 +933,8 @@ def store_tls_ca_cert(root_dir, payload):
 
     return pem_file_path
 
+#def delete_tls_material_from_fs(
+
 # ################################################################################################################################
 
 def ping_solr(config):
