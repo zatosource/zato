@@ -32,7 +32,6 @@
             '_is_internal',
             'rate_1h',
             'mean_1h',
-            'trend_1h',
             '_edit',
             '_delete',
             'id',
@@ -107,7 +106,6 @@
                         <th><a href="#">Internal</a></th>
                         <th>1h req/s</th>
                         <th>1h mean</th>
-                        <th>1h mean trend</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -128,9 +126,6 @@
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
                         <td id="rate_1h_{{ item.id }}">&lt;0.01</td>
                         <td id="mean_1h_{{ item.id }}">&lt;0.01</td>
-                        <td>
-                            <span id="trend_mean_1h_{{ item.id }}"></span>
-                        </td>
                         <td><a href="javascript:$.fn.zato.service.edit('{{ item.id }}')">Edit</a></td>
                         <td>
                             {% if item.may_be_deleted %}
@@ -145,7 +140,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='14'>No results</td>
+                        <td colspan='13'>No results</td>
                     </tr>
                 {% endif %}
 
