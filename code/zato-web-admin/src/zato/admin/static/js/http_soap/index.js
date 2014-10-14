@@ -23,6 +23,16 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.setup_forms(['name', 'url_path', 'service', 'security', 'sec_tls_ca_cert_id']);
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.http_soap.data_table.before_submit_hook;
+
+    $.each(['', 'edit-'], function(ignored, suffix) {
+
+        var elem = $(String.format('#id_{0}serialization_type', suffix));
+        elem.ready(function() {
+            $.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id(suffix, elem.val() == 'suds');
+            elem.change($.fn.zato.http_soap.data_table.on_serialization_change);
+        });
+
+    });
 })
 
 $.fn.zato.http_soap.data_table.on_before_element_validation = function(elem) {
@@ -194,4 +204,15 @@ $.fn.zato.http_soap.reload_wsdl = function(id) {
     var url = String.format('./reload-wsdl/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
     $.fn.zato.post(url, callback, '', 'text');
 
+}
+
+$.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id = function(suffix, is_suds) {
+    $(String.format('#id_{0}sec_tls_ca_cert_id', suffix)).prop('disabled', is_suds);
+}
+
+$.fn.zato.http_soap.data_table.on_serialization_change = function() {
+
+    var is_edit = this.id.indexOf('edit') > 1;
+    var suffix = is_edit ? 'edit-' : '';
+    $.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id(suffix, this.value == 'suds');
 }
