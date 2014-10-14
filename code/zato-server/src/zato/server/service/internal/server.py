@@ -20,6 +20,7 @@ from bunch import Bunch
 # Zato
 from zato.common import ZatoException
 from zato.common.odb.model import Cluster, Server
+from zato.common.util import add_scheduler_jobs
 from zato.server.service.internal import AdminService, AdminSIO
 
 logger = getLogger('zato_singleton')
@@ -66,6 +67,8 @@ class EnsureClusterWideSingleton(AdminService):
                     
                     self.server.singleton_server.scheduler.delete(Bunch(name='zato.server.ensure-cluster-wide-singleton'))
                     self.server.init_connectors()
+                    add_scheduler_jobs(self.server)
+
                 else:
                     msg = 'Not becoming a cluster-wide singleton, cid:[{}], server id:[{}], name:[{}]'.format(
                         self.cid, self.server.id, self.server.name)
