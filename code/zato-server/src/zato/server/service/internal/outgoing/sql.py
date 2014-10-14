@@ -14,7 +14,7 @@ from traceback import format_exc
 from uuid import uuid4
 
 # Zato
-from zato.common import ZatoException
+from zato.common import ZatoException, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import SQLConnectionPool
 from zato.common.odb.query import out_sql_list
@@ -229,3 +229,18 @@ class Ping(AdminService):
                 self.logger.error(msg)
 
                 raise
+
+class AutoPing(AdminService):
+    """ Invoked periodically from the scheduler - pings all the existing SQL connections.
+    """
+    def handle(self):
+        try:
+            self.server.sql_pool_store[ZATO_ODB_POOL_NAME].pool.ping()
+        except Exception, e:
+            self.logger.warn('Could not ping ODB, e:`%s`', format_exc(e))
+
+        for item in self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id})['zato_outgoing_sql_get_list_response']:
+            try:
+                self.invoke(Ping.get_name(), {'id': item['id']})
+            except Exception, e:
+                self.logger.warn('Could not ping SQL pool `%s`, config:`%s`, e:`%s`', item['name'], item, format_exc(e))
