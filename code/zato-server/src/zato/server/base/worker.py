@@ -38,8 +38,7 @@ from zato.common import broker_message
 from zato.common.broker_message import code_to_name
 from zato.common.dispatch import dispatcher
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import get_tls_cert_full_path, get_tls_cert_info_from_payload, new_cid, pairwise, parse_extra_into_dict, \
-     store_tls_ca_cert
+from zato.common.util import get_tls_cert_full_path, get_tls_cert_info_from_payload, new_cid, pairwise, parse_extra_into_dict
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
