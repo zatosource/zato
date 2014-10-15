@@ -15,7 +15,7 @@ from zato.common import engine_def, engine_def_sqlite, ZATO_NOT_GIVEN
 logger = getLogger(__name__)
 
 django_sa_mappings = {
-    'NAME': 'sqlite_path',
+    'NAME': 'db_name',
     'HOST': 'host',
     'PORT': 'port',
     'USER': 'username',

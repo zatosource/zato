@@ -125,10 +125,10 @@ if 'DATABASES' in globals():
     ssl_key_file = os.path.abspath(os.path.join(config_dir, SSL_KEY_FILE))
     ssl_cert_file = os.path.abspath(os.path.join(config_dir, SSL_CERT_FILE))
     ssl_ca_certs = os.path.abspath(os.path.join(config_dir, SSL_CA_CERTS))
-    
+
     # SQLAlchemy setup
     SASession = scoped_session(sessionmaker())
-    engine = create_engine(get_engine_url(db_data))
+    engine = create_engine(get_engine_url(db_data), **{'pool_recycle':600} if db_data['db_type'] == 'mysql' else {})
     SASession.configure(bind=engine)
     
     TEMPLATE_DEBUG = True

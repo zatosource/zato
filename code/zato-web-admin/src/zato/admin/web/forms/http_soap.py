@@ -12,9 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_security_select, ChooseClusterForm as _ChooseClusterForm, DataFormatForm
+from zato.admin.web.forms import add_security_select, ChooseClusterForm as _ChooseClusterForm, DataFormatForm, INITIAL_CHOICES
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY
+     MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
 
 params_priority = (
     (PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG, 'URL over message'),
@@ -35,6 +35,7 @@ class CreateForm(DataFormatForm):
     url_params_pri = forms.ChoiceField(widget=forms.Select())
     params_pri = forms.ChoiceField(widget=forms.Select())
     serialization_type = forms.ChoiceField(widget=forms.Select())
+    sec_tls_ca_cert_id = forms.ChoiceField(widget=forms.Select())
     method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     soap_version = forms.ChoiceField(widget=forms.Select())
@@ -43,10 +44,11 @@ class CreateForm(DataFormatForm):
     pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
     timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=MISC.DEFAULT_HTTP_TIMEOUT)
     security = forms.ChoiceField(widget=forms.Select())
+    has_rbac = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
 
-    def __init__(self, security_list=[], soap_versions=SOAP_VERSIONS, prefix=None, post_data=None):
+    def __init__(self, security_list=[], sec_tls_ca_cert_list=[], soap_versions=SOAP_VERSIONS, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
         self.fields['url_params_pri'].choices = []
@@ -65,6 +67,13 @@ class CreateForm(DataFormatForm):
         for name in sorted(soap_versions):
             self.fields['soap_version'].choices.append([name, name])
 
+        self.fields['sec_tls_ca_cert_id'].choices = []
+        self.fields['sec_tls_ca_cert_id'].choices.append(INITIAL_CHOICES)
+        self.fields['sec_tls_ca_cert_id'].choices.append([ZATO_NONE, 'Skip validation'])
+
+        for value, label in sec_tls_ca_cert_list:
+            self.fields['sec_tls_ca_cert_id'].choices.append([value, label])
+
         self.fields['ping_method'].initial = DEFAULT_HTTP_PING_METHOD
         self.fields['pool_size'].initial = DEFAULT_HTTP_POOL_SIZE
 
@@ -73,6 +82,7 @@ class CreateForm(DataFormatForm):
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     merge_url_params_req = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    has_rbac = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
 class ChooseClusterForm(_ChooseClusterForm):
     connection = forms.CharField(widget=forms.HiddenInput())

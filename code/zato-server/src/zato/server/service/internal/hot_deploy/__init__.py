@@ -27,8 +27,9 @@ from retools.lock import Lock
 
 # Zato
 from zato.common import DEPLOYMENT_STATUS, KVDB
+from zato.common.broker_message import HOT_DEPLOY
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
-from zato.common.util import decompress, fs_safe_now, is_python_file, visit_py_source_from_distribution
+from zato.common.util import decompress, fs_safe_now, is_python_file, new_cid, visit_py_source_from_distribution
 from zato.server.service.internal import AdminService, AdminSIO
 
 MAX_BACKUPS = 1000
@@ -126,7 +127,13 @@ class Create(AdminService):
         f = open(file_name, 'wb')
         f.write(payload)
         f.close()
-        self.server.service_store.import_services_from_file(file_name, False, current_work_dir)
+
+        for service_id in self.server.service_store.import_services_from_file(file_name, False, current_work_dir):
+            msg = {}
+            msg['cid'] = new_cid()
+            msg['id'] = service_id
+            msg['action'] = HOT_DEPLOY.AFTER_DEPLOY.value
+            self.broker_client.publish(msg)
 
         return True
 

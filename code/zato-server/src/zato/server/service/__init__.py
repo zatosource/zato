@@ -97,10 +97,13 @@ class TimeUtil(object):
 
         return format
 
-    def utcnow(self, format='YYYY-MM-DD HH:mm:ss'):
+    def utcnow(self, format='YYYY-MM-DD HH:mm:ss', needs_format=True):
         """ Returns now in UTC formatted as given in 'format'.
         """
-        return arrow.utcnow().format(format)
+        now = arrow.utcnow()
+        if needs_format:
+            return now.format(format)
+        return now
 
     def today(self, format='YYYY-MM-DD', tz='UTC', needs_format=True):
         """ Returns current day in a given timezone.

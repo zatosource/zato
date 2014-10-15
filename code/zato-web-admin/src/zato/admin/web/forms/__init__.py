@@ -21,7 +21,7 @@ INITIAL_CHOICES = INITIAL_CHOICES_DICT.items()[0]
 
 def add_security_select(form, security_list, needs_no_security=True, field_name='security'):
     form.fields[field_name].choices = []
-    form.fields[field_name].choices.append(['', '----------'])
+    form.fields[field_name].choices.append(INITIAL_CHOICES)
 
     if needs_no_security:
         form.fields[field_name].choices.append([ZATO_NONE, 'No security'])

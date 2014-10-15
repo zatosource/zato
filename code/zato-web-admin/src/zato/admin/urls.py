@@ -35,8 +35,6 @@ from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import zmq as out_zmq
-from zato.admin.web.views.pattern import delivery as pattern_delivery
-from zato.admin.web.views.pattern.delivery import definition as pattern_delivery_def
 from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
 from zato.admin.web.views.pubsub import message as pubsub_message
@@ -44,9 +42,9 @@ from zato.admin.web.views.pubsub import producers as pubsub_producers
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
-from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, tech_account, \
-     wss, xpath as xpath_sec
-from zato.admin.web.views.security.tls import key_cert as tls_key_cert
+from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, rbac, \
+     tech_account, wss, xpath as xpath_sec
+from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, key_cert as tls_key_cert
 
 urlpatterns = patterns('',
 
@@ -169,42 +167,7 @@ urlpatterns += patterns('',
 
 # ################################################################################################################################
 
-    # Patterns ..
-
-# ################################################################################################################################
-
-urlpatterns += patterns('',
-
-    # Delivery
-
-    url(r'^zato/pattern/delivery/(?P<def_name>.*)/(?P<target_type>.*)/(?P<target>.*)/(?P<state>.*)/(?P<cluster_id>.*)/$',
-        login_required(pattern_delivery.Index()), name=pattern_delivery.Index.url_name),
-    url(r'^zato/pattern/delivery/delete/(?P<task_id>.*)/(?P<cluster_id>.*)/$',
-        login_required(pattern_delivery.Delete()), name=pattern_delivery.Delete.url_name),
-    url(r'^zato/pattern/delivery/delete-many/(?P<cluster_id>.*)/$',
-        login_required(pattern_delivery.delete_many), name='pattern-delivery-delete-many'),
-    url(r'^zato/pattern/delivery/details/(?P<task_id>.*)/$',
-        login_required(pattern_delivery.Details()), name=pattern_delivery.Details.url_name),
-    url(r'^zato/pattern/delivery/edit/(?P<task_id>.*)/(?P<cluster_id>.*)/$',
-        login_required(pattern_delivery.Edit()), name=pattern_delivery.Edit.url_name),
-    url(r'^zato/pattern/delivery/resubmit/(?P<task_id>.*)/(?P<cluster_id>.*)/$',
-        login_required(pattern_delivery.Resubmit()), name=pattern_delivery.Resubmit.url_name),
-    url(r'^zato/pattern/delivery/resubmit-many/(?P<cluster_id>.*)/$',
-        login_required(pattern_delivery.resubmit_many), name='pattern-delivery-resubmit-many'),
-
-    url(r'^zato/pattern/delivery/definition/$',
-        login_required(pattern_delivery_def.Index()), name=pattern_delivery_def.Index.url_name),
-    url(r'^zato/pattern/delivery/definition/create/$',
-        login_required(pattern_delivery_def.Create()), name=pattern_delivery_def.Create.url_name),
-    url(r'^zato/pattern/delivery/definition/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(pattern_delivery_def.Delete()), name=pattern_delivery_def.Delete.url_name),
-    url(r'^zato/pattern/delivery/definition/edit/$',
-        login_required(pattern_delivery_def.Edit()), name=pattern_delivery_def.Edit.url_name),
-    )
-
-# ################################################################################################################################
-
-    # Messages..
+# Messages..
 
 # ################################################################################################################################
 
@@ -379,6 +342,66 @@ urlpatterns += patterns('',
 
 urlpatterns += patterns('',
 
+    # .. RBAC - Roles
+
+    url(r'^zato/security/rbac/role/$',
+        login_required(rbac.role.Index()), name=rbac.role.Index.url_name),
+    url(r'^zato/security/rbac/role/create/$',
+        login_required(rbac.role.Create()), name=rbac.role.Create.url_name),
+    url(r'^zato/security/rbac/role/edit/$',
+        login_required(rbac.role.Edit()), name=rbac.role.Edit.url_name),
+    url(r'^zato/security/rbac/role/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(rbac.role.Delete()), name=rbac.role.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
+    # .. RBAC - Client roles
+
+    url(r'^zato/security/rbac/client-role/$',
+        login_required(rbac.client_role.Index()), name=rbac.client_role.Index.url_name),
+    url(r'^zato/security/rbac/client-role/create/$',
+        login_required(rbac.client_role.Create()), name=rbac.client_role.Create.url_name),
+    url(r'^zato/security/rbac/client-role/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(rbac.client_role.Delete()), name=rbac.client_role.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
+    # .. RBAC - Permissions
+
+    url(r'^zato/security/rbac/permission/$',
+        login_required(rbac.permission.Index()), name=rbac.permission.Index.url_name),
+    url(r'^zato/security/rbac/permission/create/$',
+        login_required(rbac.permission.Create()), name=rbac.permission.Create.url_name),
+    url(r'^zato/security/rbac/permission/edit/$',
+        login_required(rbac.permission.Edit()), name=rbac.permission.Edit.url_name),
+    url(r'^zato/security/rbac/permission/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(rbac.permission.Delete()), name=rbac.permission.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
+    # .. RBAC - Role Permissions
+
+    url(r'^zato/security/rbac/role-permission/$',
+        login_required(rbac.role_permission.Index()), name=rbac.role_permission.Index.url_name),
+    url(r'^zato/security/rbac/role-permission/create/$',
+        login_required(rbac.role_permission.Create()), name=rbac.role_permission.Create.url_name),
+    url(r'^zato/security/rbac/role-permission/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(rbac.role_permission.Delete()), name=rbac.role_permission.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
     # .. Technical accounts
 
     url(r'^zato/security/tech-account/$',
@@ -409,6 +432,18 @@ urlpatterns += patterns('',
         login_required(tls_key_cert.Edit()), name=tls_key_cert.Edit.url_name),
     url(r'^zato/security/tls/key-cert/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(tls_key_cert.Delete()), name='security-tls-key-cert-delete'),
+
+    # .. TLS - CA certs signing off certificates of endpoints Zato services invoke
+
+    url(r'^zato/security/tls/ca-cert/$',
+        login_required(tls_ca_cert.Index()), name=tls_ca_cert.Index.url_name),
+    url(r'^zato/security/tls/ca-cert/create/$',
+        login_required(tls_ca_cert.Create()), name=tls_ca_cert.Create.url_name),
+    url(r'^zato/security/tls/ca-cert/edit/$',
+        login_required(tls_ca_cert.Edit()), name=tls_ca_cert.Edit.url_name),
+    url(r'^zato/security/tls/ca-cert/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(tls_ca_cert.Delete()), name='security-tls-ca-cert-delete'),
+
     )
 
 # ################################################################################################################################

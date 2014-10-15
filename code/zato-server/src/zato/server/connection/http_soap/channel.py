@@ -175,7 +175,7 @@ class RequestDispatcher(object):
 
                 # Will raise an exception on any security violation
                 self.url_data.check_security(
-                    sec, cid, channel_item, path_info, payload, wsgi_environ, post_data)
+                    sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
 
                 # OK, no security exception at that point means we can finally
                 # invoke the service.
