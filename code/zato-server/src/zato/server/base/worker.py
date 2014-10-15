@@ -38,7 +38,8 @@ from zato.common import broker_message
 from zato.common.broker_message import code_to_name
 from zato.common.dispatch import dispatcher
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import get_tls_cert_full_path, get_tls_cert_info_from_payload, new_cid, pairwise, parse_extra_into_dict
+from zato.common.util import get_tls_cert_full_path, get_tls_cert_info_from_payload, new_cid, pairwise, parse_extra_into_dict, \
+     store_tls_ca_cert
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -241,6 +242,14 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def yield_outconn_http_config_dicts(self):
+        for transport in('soap', 'plain_http'):
+            config_dict = getattr(self.worker_config, 'out_' + transport)
+            for name in config_dict:
+                yield config_dict[name]
+
+# ################################################################################################################################
+
     def init_sql(self):
         """ Initializes SQL connections, first to ODB and then any user-defined ones.
         """
@@ -268,16 +277,12 @@ class WorkerStore(BrokerMessageReceiver):
     def init_http_soap(self):
         """ Initializes plain HTTP/SOAP connections.
         """
-        for transport in('soap', 'plain_http'):
-            config_dict = getattr(self.worker_config, 'out_' + transport)
-            for name in config_dict:
-                config = config_dict[name].config
+        for config_dict in self.yield_outconn_http_config_dicts():
+            wrapper = self._http_soap_wrapper_from_config(config_dict.config)
+            config_dict.conn = wrapper
 
-                wrapper = self._http_soap_wrapper_from_config(config)
-                config_dict[name].conn = wrapper
-
-                # To make the API consistent with that of SQL connection pools
-                config_dict[name].ping = wrapper.ping
+            # To make the API consistent with that of SQL connection pools
+            config_dict.ping = wrapper.ping
 
     def init_cloud(self):
         """ Initializes all the cloud connections.
@@ -726,6 +731,13 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def _update_tls_outconns(self, material_type_id, update_key, msg):
+        for config_dict in self.yield_outconn_http_config_dicts():
+            if config_dict.config[material_type_id] == msg.id:
+                config_dict.conn.config[update_key] = msg.full_path
+
+# ################################################################################################################################
+
     def update_tls_key_cert(self, msg):
         msg.full_path = get_tls_cert_info_from_payload(self.server.tls_dir, msg.fs_name)
 
@@ -743,19 +755,31 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def _add_tls_ca_cert_to_msg(self, msg):
+        self.worker_config.tls_ca_cert[msg.name] = Bunch(config=Bunch(value=msg.value))
+
     def update_tls_ca_cert(self, msg):
         msg.full_path = get_tls_cert_full_path(self.server.tls_dir, get_tls_cert_info_from_payload(msg.value))
 
+# ################################################################################################################################
+
     def on_broker_msg_SECURITY_TLS_CA_CERT_CREATE(self, msg):
         self.update_tls_ca_cert(msg)
+        self._add_tls_ca_cert_to_msg(msg)
+        store_tls_ca_cert(self.server.tls_dir, msg.value)
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_TLS_CA_CERT_EDIT(self, msg):
         self.update_tls_ca_cert(msg)
+        del self.worker_config.tls_ca_cert[msg.old_name]
+        self._add_tls_ca_cert_to_msg(msg)
+        store_tls_ca_cert(self.server.tls_dir, msg.value)
+        self._update_tls_outconns('sec_tls_ca_cert_id', 'tls_verify', msg)
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_EDIT.value, msg)
 
     def on_broker_msg_SECURITY_TLS_CA_CERT_DELETE(self, msg):
         self.update_tls_ca_cert(msg)
+        del self.worker_config.tls_ca_cert[msg.name]
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_DELETE.value, msg)
 
 # ################################################################################################################################

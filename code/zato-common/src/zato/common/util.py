@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import copy, gc, inspect, json, linecache, logging, os, random, re, signal, string, threading, sys
+import copy, errno, gc, inspect, json, linecache, logging, os, random, re, signal, string, threading, sys
 from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
@@ -68,6 +68,9 @@ from paste.util.converters import asbool
 
 # pip
 from pip.download import is_archive_file, unpack_file_url
+
+# portalocker
+import portalocker
 
 # psutil
 import psutil
@@ -928,12 +931,27 @@ def store_tls_ca_cert(root_dir, payload):
 
     pem_file_path = get_tls_cert_full_path(root_dir, info)
     pem_file = open(pem_file_path, 'w')
-    pem_file.write(payload)
-    pem_file.close()
 
-    return pem_file_path
+    try:
+        lock = portalocker.lock(pem_file, portalocker.LOCK_EX)
 
-#def delete_tls_material_from_fs(
+        pem_file.write(payload)
+        pem_file.close()
+
+        return pem_file_path
+
+    except portalocker.LockException:
+        pass # It's OK, somethingelse is doing the same thing right now
+
+def delete_tls_material_from_fs(server, info, full_path_func):
+    try:
+        os.remove(full_path_func(server.tls_dir, info))
+    except OSError, e:
+        if e.errno == errno.ENOENT:
+            # It's ok - some other worker must have deleted it already
+            pass
+        else:
+            raise
 
 # ################################################################################################################################
 
