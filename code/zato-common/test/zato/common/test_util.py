@@ -18,6 +18,7 @@ from lxml import etree
 # Zato
 from zato.common import ParsingException, soap_body_xpath, zato_path
 from zato.common import util
+from zato.common.test.tls_material import ca_cert
 
 class ZatoPathTestCase(TestCase):
     def test_zato_path(self):
@@ -48,7 +49,6 @@ class ZatoPathTestCase(TestCase):
         else:
             raise AssertionError('Expected an ParsingException with path:[{}]'.format(path))
 
-
 class UtilsTestCase(TestCase):
     def test_uncamelify(self):
         original = 'ILikeToReadWSDLDocsNotReallyNOPENotMeQ'
@@ -62,3 +62,8 @@ class XPathTestCase(TestCase):
     def test_validate_xpath(self):
         self.assertRaises(etree.XPathSyntaxError, util.validate_xpath, 'a b c')
         self.assertTrue(util.validate_xpath('//node'))
+
+class TLSTestCase(TestCase):
+    def test_validate_tls_cert_from_payload(self):
+        info = util.get_tls_cert_info_from_payload(ca_cert)
+        self.assertEquals(info, 'C=AU; CN=CA2')

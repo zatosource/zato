@@ -56,7 +56,8 @@ from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, KVDB, MISC, SERVER_JOIN_S
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
      JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
 from zato.common.pubsub import PubSubAPI, RedisPubSub
-from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, new_cid, StaticConfig, register_diag_handlers
+from zato.common.util import add_scheduler_jobs, add_startup_jobs, get_kvdb_config_for_log, new_cid, StaticConfig, \
+     register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore
@@ -536,6 +537,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_tls_key_cert_list(server.cluster.id, True)
         self.config.tls_key_cert = ConfigDict.from_query('tls_key_cert', query)
 
+        # TLS CA certs
+        query = self.odb.get_tls_ca_cert_list(server.cluster.id, True)
+        self.config.tls_ca_cert = ConfigDict.from_query('tls_ca_cert', query)
+
         # WS-Security
         query = self.odb.get_wss_list(server.cluster.id, True)
         self.config.wss = ConfigDict.from_query('wss', query)
@@ -635,18 +640,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                     self.connector_server_keep_alive_job_time, self.connector_server_grace_time,
                     server.id, server.cluster_id, True):
                 self.init_connectors()
-
-                for(id, name, is_active, job_type, start_date, extra, service_name, _,
-                    _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
-                        in self.odb.get_job_list(server.cluster.id):
-                    if is_active:
-                        job_data = Bunch({'id':id, 'name':name, 'is_active':is_active,
-                            'job_type':job_type, 'start_date':start_date,
-                            'extra':extra, 'service':service_name, 'weeks':weeks,
-                            'days':days, 'hours':hours, 'minutes':minutes,
-                            'seconds':seconds, 'repeats':repeats,
-                            'cron_definition':cron_definition})
-                        self.singleton_server.scheduler.create_edit('create', job_data)
+                add_scheduler_jobs(self)
 
         # Signal to ODB that we are done with deploying everything
         self.odb.on_deployment_finished()
