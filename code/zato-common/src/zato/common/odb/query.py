@@ -481,6 +481,8 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.audit_max_payload,
         HTTPSOAP.audit_repl_patt_type,
         HTTPSOAP.timeout,
+        HTTPSOAP.sec_tls_ca_cert_id,
+        TLSCACert.name.label('sec_tls_ca_cert_name'),
         SecurityBase.sec_type,
         Service.name.label('service_name'),
         Service.id.label('service_id'),
@@ -490,6 +492,7 @@ def _http_soap(session, cluster_id):
         SecurityBase.password.label('password'),
         SecurityBase.password_type.label('password_type'),).\
         outerjoin(Service, Service.id==HTTPSOAP.service_id).\
+        outerjoin(TLSCACert, TLSCACert.id==HTTPSOAP.sec_tls_ca_cert_id).\
         outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id).\
         filter(Cluster.id==HTTPSOAP.cluster_id).\
         filter(Cluster.id==cluster_id).\

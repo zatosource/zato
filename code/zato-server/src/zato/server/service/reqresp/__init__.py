@@ -140,12 +140,12 @@ class Request(SIOConverter):
             if self.merge_channel_params:
                 self.input.update(self.channel_params)
 
-    def get_params(self, request_params, path_prefix='', default_value=NO_DEFAULT_VALUE, use_text=True, is_required=True):
+    def get_params(self, params_to_visit, path_prefix='', default_value=NO_DEFAULT_VALUE, use_text=True, is_required=True):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
         params = {}
 
-        for param in request_params:
+        for param in params_to_visit:
             try:
                 param_name, value = convert_param(self.cid, self.payload, param, self.data_format, is_required, default_value,
                         path_prefix, use_text, self.channel_params, self.has_simple_io_config,
@@ -153,8 +153,8 @@ class Request(SIOConverter):
                 params[param_name] = value
 
             except Exception, e:
-                msg = 'Caught an exception, param:[{}], self.has_simple_io_config:[{}], e:[{}]'.format(
-                    param, self.has_simple_io_config, format_exc(e))
+                msg = 'Caught an exception, param:`{}`, params_to_visit:`{}`, has_simple_io_config:`{}`, e:`{}`'.format(
+                    param, params_to_visit, self.has_simple_io_config, format_exc(e))
                 self.logger.error(msg)
                 raise Exception(msg)
 

@@ -104,7 +104,6 @@ sBQseOvrJQ1CouAMnwc9Z8vxOOThqtMTZsGGawi+16+5NmpLwW53V/wtHUZuk39F
 29ICmBRa3wrCyhNMb+AFhaPjO34jtRGqeOJA98eS29GooycDnh/Uwi3txZu6DNmZ
 NVRV1A==
 -----END CERTIFICATE-----
-
 """.strip()
 
 ca_cert_invalid = """

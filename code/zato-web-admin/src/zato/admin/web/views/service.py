@@ -44,7 +44,7 @@ from validate import is_boolean
 # Zato
 from zato.admin.web import from_utc_to_user, last_hour_start_stop
 from zato.admin.web.forms.service import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed, upload_to_server
 from zato.common import DATA_FORMAT, SourceInfo, ZATO_NONE
 from zato.common.odb.model import Service
 
@@ -413,21 +413,8 @@ class Delete(_Delete):
 def package_upload(req, cluster_id):
     """ Handles a service package file upload.
     """
-    try:
-        input_dict = {
-            'cluster_id': cluster_id,
-            'payload': req.read().encode('base64'),
-            'payload_name': req.GET['qqfile']
-        }
-        req.zato.client.invoke('zato.service.upload-package', input_dict)
+    return upload_to_server(req, cluster_id, 'zato.service.upload-package', 'Could not upload the service package, e:`{}`')
 
-        return HttpResponse(dumps({'success': True}))
-
-    except Exception, e:
-        msg = 'Could not upload the service package, e:[{e}]'.format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
-    
 @method_allowed('POST')
 def last_stats(req, service_id, cluster_id):
     
