@@ -89,14 +89,17 @@ context_class=zato.server.spring_context.ZatoContext
 [misc]
 return_internal_objects=False
 internal_services_may_be_deleted=False
-initial_cluster_name = {initial_cluster_name}
-initial_server_name = {initial_server_name}
-delivery_lock_timeout = 2
-queue_build_cap = 30 # All queue-based connections need to initialize in that many seconds
+initial_cluster_name={initial_cluster_name}
+initial_server_name={initial_server_name}
+delivery_lock_timeout=2
+queue_build_cap=30 # All queue-based connections need to initialize in that many seconds
 http_proxy=
 locale=
 ensure_sql_connections_exist=True
 http_server_header=Zato
+
+[stats]
+expire_after=168 # In hours, 168 = 7 days = 1 week
 
 [kvdb]
 host={kvdb_host}
@@ -116,7 +119,6 @@ log_connection_info_sleep_time=5 # In seconds
 [startup_services_first_worker]
 zato.helpers.input-logger=Sample payload for a startup service (first worker)
 zato.notif.init-notifiers=
-zato.pattern.delivery.dispatch-auto-resubmit=
 zato.pubsub.move-to-target-queues=
 zato.pubsub.delete-expired=
 zato.pubsub.invoke-callbacks=
@@ -154,6 +156,9 @@ environment=
 ignore_errors=
 log_file=
 log_level=
+
+[rbac]
+custom_auth_list_service=
 """.encode('utf-8')
 
 service_sources_contents = """# Visit https://zato.io/docs for more information.

@@ -38,7 +38,7 @@ from zato.common import broker_message
 from zato.common.broker_message import code_to_name
 from zato.common.dispatch import dispatcher
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import new_cid, pairwise, parse_extra_into_dict, get_validate_tls_key_cert
+from zato.common.util import get_validate_tls_key_cert, new_cid, pairwise, parse_extra_into_dict, validate_tls_ca_cert
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -53,6 +53,7 @@ from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
+from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
 
 logger = logging.getLogger(__name__)
@@ -87,9 +88,8 @@ class WorkerStore(BrokerMessageReceiver):
         self.update_lock = RLock()
         self.kvdb = server.kvdb
         self.broker_client = None
-
         self.pubsub = None
-        """:type: zato.common.pubsub.PubSubAPI"""
+        self.rbac = RBAC()
 
     def init(self):
 
@@ -119,14 +119,20 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_json_pointer_store()
         self.init_xpath_store()
 
+        # Cassandra
         self.init_cassandra()
         self.init_cassandra_queries()
 
+        # Search
         self.init_search_es()
         self.init_search_solr()
 
+        # E-mail
         self.init_email_smtp()
         self.init_email_imap()
+
+        # RBAC
+        self.init_rbac()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
@@ -376,6 +382,28 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init_email_imap(self):
         self.init_simple(self.worker_config.email_imap, self.email_imap_api, 'an IMAP')
+
+# ################################################################################################################################
+
+    def init_rbac(self):
+
+        for value in self.worker_config.service.values():
+            self.rbac.create_resource(value.config.id)
+
+        for value in self.worker_config.rbac_permission.values():
+            self.rbac.create_permission(value.config.id, value.config.name)
+
+        for value in self.worker_config.rbac_role.values():
+            self.rbac.create_role(value.config.id, value.config.name, value.config.parent_id)
+
+        for value in self.worker_config.rbac_client_role.values():
+            self.rbac.create_client_role(value.config.client_def, value.config.role_id)
+
+        # TODO - handle 'deny' as well
+        for value in self.worker_config.rbac_role_permission.values():
+            self.rbac.create_role_permission_allow(value.config.role_id, value.config.perm_id, value.config.service_id)
+
+        self.rbac.set_http_permissions()
 
 # ################################################################################################################################
 
@@ -708,6 +736,24 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def update_tls_ca_cert(self, msg):
+        full_path = validate_tls_ca_cert(self.server.tls_dir, msg.fs_name)
+        msg.full_path = full_path
+
+    def on_broker_msg_SECURITY_TLS_CA_CERT_CREATE(self, msg):
+        self.update_tls_ca_cert(msg)
+        dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_CREATE.value, msg)
+
+    def on_broker_msg_SECURITY_TLS_CA_CERT_EDIT(self, msg):
+        self.update_tls_ca_cert(msg)
+        dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_EDIT.value, msg)
+
+    def on_broker_msg_SECURITY_TLS_CA_CERT_DELETE(self, msg):
+        self.update_tls_ca_cert(msg)
+        dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_DELETE.value, msg)
+
+# ################################################################################################################################
+
     def wss_get(self, name):
         """ Returns the configuration of the WSS definition of the given name.
         """
@@ -901,6 +947,9 @@ class WorkerStore(BrokerMessageReceiver):
         """ Deletes the service from the service store and removes it from the filesystem
         if it's not an internal one.
         """
+        # Delete the service from RBAC resources
+        self.rbac.delete_resource(msg.id)
+
         # Module this service is in so it can be removed from sys.modules
         mod = inspect.getmodule(self.server.service_store.services[msg.impl_name]['service_class'])
 
@@ -951,6 +1000,9 @@ class WorkerStore(BrokerMessageReceiver):
         msg.payload = {'package_id': msg.package_id}
         msg.data_format = SIMPLE_IO.FORMAT.JSON
         return self._on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)
+
+    def on_broker_msg_HOT_DEPLOY_AFTER_DEPLOY(self, msg, *args):
+        self.rbac.create_resource(msg.id)
 
 # ################################################################################################################################
 
@@ -1310,5 +1362,43 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_EMAIL_IMAP_CHANGE_PASSWORD(self, msg):
         self.email_imap_api.change_password(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_RBAC_PERMISSION_CREATE(self, msg):
+        self.rbac.create_permission(msg.name)
+
+    def on_broker_msg_RBAC_PERMISSION_EDIT(self, msg):
+        self.rbac.edit_permission(msg.old_name, msg.name)
+
+    def on_broker_msg_RBAC_PERMISSION_DELETE(self, msg):
+        self.rbac.delete_permission(msg.name)
+
+# ################################################################################################################################
+
+    def on_broker_msg_RBAC_ROLE_CREATE(self, msg):
+        self.rbac.create_role(msg.id, msg.name, msg.parent_id)
+
+    def on_broker_msg_RBAC_ROLE_EDIT(self, msg):
+        self.rbac.edit_role(msg.id, msg.old_name, msg.name, msg.parent_id)
+
+    def on_broker_msg_RBAC_ROLE_DELETE(self, msg):
+        self.rbac.delete_role(msg.id, msg.name)
+
+# ################################################################################################################################
+
+    def on_broker_msg_RBAC_CLIENT_ROLE_CREATE(self, msg):
+        self.rbac.create_client_role(msg.client_def, msg.role_id)
+
+    def on_broker_msg_RBAC_CLIENT_ROLE_DELETE(self, msg):
+        self.rbac.delete_client_role(msg.client_def, msg.role_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_RBAC_ROLE_PERMISSION_CREATE(self, msg):
+        self.rbac.create_role_permission_allow(msg.role_id, msg.perm_id, msg.service_id)
+
+    def on_broker_msg_RBAC_ROLE_PERMISSION_DELETE(self, msg):
+        self.rbac.delete_role_permission_allow(msg.role_id, msg.perm_id, msg.service_id)
 
 # ################################################################################################################################

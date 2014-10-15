@@ -14,16 +14,11 @@ from alembic import op
 import sqlalchemy as sa
 
 # Zato
-#from zato.common.util import alter_column_nullable_false
+from zato.common.util import alter_column_nullable_false
 from zato.common import MISC, MSG_PATTERN_TYPE
 from zato.common.odb import model
 
 add_col = op.add_column
-
-def alter_column_nullable_false(table_name, column_name, default_value, column_type):
-    column = sa.sql.table(table_name, sa.sql.column(column_name))
-    op.execute(column.update().values({column_name:default_value}))
-    op.alter_column(table_name, column_name, type_=column_type, existing_type=column_type, nullable=False)
 
 def upgrade():
 

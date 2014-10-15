@@ -22,7 +22,7 @@ from dateutil.parser import parse
 from gevent import sleep, spawn
 
 # Zato 
-from zato.common import CHANNEL, DATA_FORMAT, ENSURE_SINGLETON_JOB, SCHEDULER
+from zato.common import CHANNEL, DATA_FORMAT, ENSURE_SINGLETON_JOB, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG, SERVICE
 from zato.common.scheduler import Interval, Job, Scheduler as _Scheduler
 from zato.common.util import new_cid
@@ -55,7 +55,7 @@ class Scheduler(object):
 
 # ################################################################################################################################
 
-    def on_job_executed(self, ctx):
+    def on_job_executed(self, ctx, extra_data_format=ZATO_NONE):
         """ Invoked by the underlying scheduler when a job is executed. Sends
         the actual execution request to the broker so it can be picked up by
         one of the parallel server's broker clients.
@@ -70,6 +70,9 @@ class Scheduler(object):
             'cid':ctx['cid'],
             'job_type': ctx['type']
         }
+
+        if extra_data_format != ZATO_NONE:
+            msg['data_format'] = extra_data_format
 
         # Special case an internal job that needs to be delivered to all parallel
         # servers.

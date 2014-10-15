@@ -79,8 +79,6 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.outgoing.jms_wmq',
             'zato.server.service.internal.outgoing.sql',
             'zato.server.service.internal.outgoing.zmq',
-            'zato.server.service.internal.pattern.delivery',
-            'zato.server.service.internal.pattern.delivery.definition',
             'zato.server.service.internal.pubsub',
             'zato.server.service.internal.pubsub.consumers',
             'zato.server.service.internal.pubsub.message',
@@ -97,7 +95,13 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.security.ntlm',
             'zato.server.service.internal.security.oauth',
             'zato.server.service.internal.security.openstack',
+            'zato.server.service.internal.security.rbac',
+            'zato.server.service.internal.security.rbac.client_role',
+            'zato.server.service.internal.security.rbac.permission',
+            'zato.server.service.internal.security.rbac.role',
+            'zato.server.service.internal.security.rbac.role_permission',
             'zato.server.service.internal.security.tech_account',
+            'zato.server.service.internal.security.tls.ca_cert',
             'zato.server.service.internal.security.tls.key_cert',
             'zato.server.service.internal.security.wss',
             'zato.server.service.internal.security.xpath',
@@ -231,10 +235,4 @@ class ZatoContext(PythonConfig):
 
             {'name': 'zato.stats.summary.create-summary-by-year', 'minutes':60,
              'service':'zato.stats.summary.create-summary-by-year'},
-
-            {'name': 'zato.pattern.delivery.update-counters', 'seconds':30,
-             'service':'zato.pattern.delivery.update-counters'},
-
-            {'name': 'zato.pattern.delivery.dispatch-auto-resubmit', 'seconds':300,
-             'service':'zato.pattern.delivery.dispatch-auto-resubmit'},
         ]

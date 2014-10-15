@@ -34,7 +34,7 @@ from secwall.wsse import WSSE
 from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, ZATO_NONE
 from zato.common.broker_message import code_to_name, CHANNEL, SECURITY
 from zato.common.dispatch import dispatcher
-from zato.server.connection.http_soap import Unauthorized
+from zato.server.connection.http_soap import Forbidden, Unauthorized
 
 logger = logging.getLogger(__name__)
 
@@ -298,15 +298,27 @@ class URLData(OAuthDataStore):
 
         return None, None
 
-    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data):
+    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store):
         """ Authenticates and authorizes a given request. Returns None on success
         or raises an exception otherwise.
         """
         if sec.sec_def != ZATO_NONE:
+
+            # Regular security permissions
+
             sec_def, sec_def_type = sec.sec_def, sec.sec_def.sec_type
             handler_name = '_handle_security_{0}'.format(sec_def_type.replace('-', '_'))
             getattr(self, handler_name)(
                 cid, sec_def, path_info, payload, wsgi_environ, post_data)
+
+            # Ok, we now know that the credentials are valid so we can check RBAC permissions if need be.
+            if channel_item.get('has_rbac'):
+                is_allowed = worker_store.rbac.is_http_client_allowed(
+                    'sec_def:::{}:::{}'.format(sec.sec_def.sec_type, sec.sec_def.name), wsgi_environ['REQUEST_METHOD'],
+                    channel_item.service_id)
+
+                if not is_allowed:
+                    raise Forbidden(cid, 'You are not allowed to access this URL\n')
 
     def _update_url_sec(self, msg, sec_def_type, delete=False):
         """ Updates URL security definitions that use the security configuration
@@ -776,6 +788,7 @@ class URLData(OAuthDataStore):
         """ Creates a security info bunch out of an incoming CREATE_EDIT message.
         """
         sec_info = Bunch()
+        sec_info.id = msg.id
         sec_info.is_active = msg.is_active
         sec_info.data_format = msg.data_format
         sec_info.transport = msg.transport
@@ -891,7 +904,7 @@ class URLData(OAuthDataStore):
         if not remote_addr:
             remote_addr = wsgi_environ.get('REMOTE_ADDR', '(None)')
 
-        self.odb.audit_set_request_http_soap(channel_item['id'], channel_item['name'], cid, 
+        self.odb.audit_set_request_http_soap(channel_item['id'], channel_item['name'], cid,
             channel_item['transport'], channel_item['connection'], datetime.utcnow(),
             channel_item.get('username'), remote_addr, self._dump_wsgi_environ(wsgi_environ), payload)
 
@@ -909,7 +922,7 @@ class URLData(OAuthDataStore):
 
         self.broker_client.publish({
             'cid': cid,
-            'data_format':DATA_FORMAT.JSON, 
+            'data_format':DATA_FORMAT.JSON,
             'action': CHANNEL.HTTP_SOAP_AUDIT_RESPONSE.value,
             'payload': payload,
             'service': 'zato.http-soap.set-audit-response-data'
@@ -941,9 +954,9 @@ class URLData(OAuthDataStore):
     def _yield_pattern_list(self, msg):
         for item in self.channel_data:
             if msg.msg_pattern_type == MSG_PATTERN_TYPE.JSON_POINTER.id:
-                pattern_list = item.replace_patterns_json_pointer 
+                pattern_list = item.replace_patterns_json_pointer
             else:
-                pattern_list = item.replace_patterns_xpath 
+                pattern_list = item.replace_patterns_xpath
 
             if pattern_list:
                 yield item, pattern_list

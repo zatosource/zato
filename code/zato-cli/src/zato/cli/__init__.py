@@ -85,13 +85,13 @@ def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
 
 common_logging_conf_contents = """
 [loggers]
-keys=root, zato, zato_access_log, zato_pubsub, zato_kvdb, zato_scheduler
+keys=root, zato, zato_admin, zato_access_log, zato_kvdb, zato_pubsub, zato_rbac, zato_scheduler, zato_singleton
 
 [handlers]
-keys=rotating_file_handler, rotating_file_handler_access_log, stdout_handler, rotating_file_handler_pubsub, rotating_file_handler_kvdb, rotating_file_handler_scheduler
+keys=rotating_file_handler, rotating_file_handler_admin, rotating_file_handler_access_log, rotating_file_handler_kvdb, rotating_file_handler_pubsub, rotating_file_handler_rbac, rotating_file_handler_scheduler, rotating_file_handler_singleton, stdout_handler
 
 [formatters]
-keys=default_formatter, formatter_access_log, colour_formatter, formatter_pubsub, formatter_kvdb, formatter_scheduler
+keys=colour_formatter, default_formatter, formatter_admin, formatter_access_log, formatter_kvdb, formatter_pubsub, formatter_rbac, formatter_scheduler, formatter_singleton
 
 [logger_root]
 level=INFO
@@ -119,6 +119,22 @@ format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lin
 [formatter_colour_formatter]
 format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
 class=zato.common.util.ColorFormatter
+
+# ######################################################################################################################
+
+[logger_zato_admin]
+level=INFO
+handlers=rotating_file_handler_admin
+qualname=zato_admin
+propagate=0
+
+[handler_rotating_file_handler_admin]
+class=handlers.ConcurrentRotatingFileHandler
+formatter=formatter_kvdb
+args=('./logs/admin.log', 'a', 20000000, 10)
+
+[formatter_formatter_admin]
+format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
 
 # ######################################################################################################################
 
@@ -170,6 +186,22 @@ format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lin
 
 # ######################################################################################################################
 
+[logger_zato_rbac]
+level=INFO
+handlers=rotating_file_handler_rbac
+qualname=zato_rbac
+propagate=0
+
+[handler_rotating_file_handler_rbac]
+class=handlers.ConcurrentRotatingFileHandler
+formatter=formatter_rbac
+args=('./logs/rbac.log', 'a', 20000000, 10)
+
+[formatter_formatter_rbac]
+format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
+
+# ######################################################################################################################
+
 [logger_zato_scheduler]
 level=INFO
 handlers=rotating_file_handler_scheduler
@@ -183,6 +215,24 @@ args=('./logs/scheduler.log', 'a', 20000000, 10)
 
 [formatter_formatter_scheduler]
 format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
+
+# ######################################################################################################################
+
+[logger_zato_singleton]
+level=INFO
+handlers=rotating_file_handler_singleton
+qualname=zato_singleton
+propagate=0
+
+[handler_rotating_file_handler_singleton]
+class=handlers.ConcurrentRotatingFileHandler
+formatter=formatter_singleton
+args=('./logs/singleton.log', 'a', 20000000, 10)
+
+[formatter_formatter_singleton]
+format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
+
+# ######################################################################################################################
 """
 
 # ######################################################################################################################
