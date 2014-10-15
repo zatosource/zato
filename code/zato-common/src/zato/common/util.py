@@ -941,7 +941,9 @@ def store_tls_ca_cert(root_dir, payload):
         return pem_file_path
 
     except portalocker.LockException:
-        pass # It's OK, somethingelse is doing the same thing right now
+        pass # It's OK, something else is doing the same thing right now
+
+# ################################################################################################################################
 
 def delete_tls_material_from_fs(server, info, full_path_func):
     try:
