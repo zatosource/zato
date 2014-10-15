@@ -16,7 +16,7 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import TLSCACert
 from zato.common.odb.query import tls_ca_cert_list
 from zato.common.util import get_tls_cert_full_path, get_tls_cert_info_from_payload, store_tls_ca_cert
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 elem = 'security_tls_ca_cert'
