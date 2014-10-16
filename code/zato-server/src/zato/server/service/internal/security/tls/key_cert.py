@@ -16,7 +16,7 @@ from zato.common import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import TLSKeyCertSecurity
 from zato.common.odb.query import tls_key_cert_list
-from zato.common.util import delete_tls_material_from_fs, get_tls_cert_full_path, get_tls_from_payload, store_tls
+from zato.common.util import delete_tls_material_from_fs, get_tls_ca_cert_full_path, get_tls_from_payload, store_tls
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -49,7 +49,7 @@ def broker_message_hook(service, input, instance, attrs, service_type):
         input.value = instance.value
 
 def delete_hook(service, input, instance, attrs):
-    delete_tls_material_from_fs(service.server, instance.info, get_tls_cert_full_path)
+    delete_tls_material_from_fs(service.server, instance.info, get_tls_ca_cert_full_path)
 
 class GetList(AdminService):
     __metaclass__ = GetListMeta
