@@ -16,6 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common import SECRET_SHADOW, zato_namespace
 from zato.common.broker_message import MESSAGE_TYPE
+from zato.common.util import replace_private_key
 from zato.server.service import Service
 
 success_code = 0
@@ -33,11 +34,11 @@ class AdminService(Service):
         if logger.isEnabledFor(logging.INFO):
             request = dict(self.request.input)
             for k, v in request.items():
+
+                v = replace_private_key(v)
+
                 if 'password' in k:
                     request[k] = SECRET_SHADOW
-
-                logger.warn('k %r', k)
-                logger.warn('v %r', v)
 
             logger.info('cid:[%s], name:[%s], SIO request:[%s]', self.cid, self.name, request)
         
@@ -46,9 +47,7 @@ class AdminService(Service):
 
     def after_handle(self):
         payload = self.response.payload
-        response = payload if isinstance(payload, basestring) else payload.getvalue()
-
-        logger.warn('resp %r', response)
+        response = replace_private_key(payload if isinstance(payload, basestring) else payload.getvalue())
 
         logger.info('cid:[{}], name:[{}], response:[{}]'.format(self.cid, self.name, response))
 

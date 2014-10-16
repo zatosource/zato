@@ -3,10 +3,11 @@
 
 $.fn.zato.data_table.KeyCert = new Class({
     toString: function() {
-        var s = '<KeyCert id:{0} name:{1} info:{2}>';
+        var s = '<KeyCert id:{0} name:{1} info:{2} value:{3}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
-                                this.info ? this.info : '(none)');
+                                this.info ? this.info : '(none)',
+                                this.value ? this.value : '(none)');
     }
 });
 
@@ -36,6 +37,7 @@ $.fn.zato.security.tls.key_cert.data_table.new_row = function(item, data, includ
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.tls.key_cert.edit({0});'>Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.tls.key_cert.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
+    row += String.format("<td class='ignore'>{0}</td>", item.value);
 
     if(include_tr) {
         row += '</tr>';
