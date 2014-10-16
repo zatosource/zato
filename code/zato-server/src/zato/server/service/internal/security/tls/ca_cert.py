@@ -15,8 +15,7 @@ import errno, os
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import TLSCACert
 from zato.common.odb.query import tls_ca_cert_list
-from zato.common.util import delete_tls_material_from_fs, get_tls_cert_full_path, get_tls_cert_info_from_payload, \
-     store_tls_ca_cert
+from zato.common.util import delete_tls_material_from_fs, get_tls_cert_full_path, get_tls_from_payload, store_tls
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -32,10 +31,10 @@ output_optional_extra = ['info',]
 def instance_hook(service, input, instance, attrs):
 
     instance.username = service.cid # Required by model
-    instance.info = get_tls_cert_info_from_payload(input.value)
+    instance.info = get_tls_from_payload(input.value)
 
     with service.lock():
-        full_path = store_tls_ca_cert(service.server.tls_dir, service.request.input.value)
+        full_path = store_tls(service.server.tls_dir, service.request.input.value)
         service.logger.info('CA certificate saved under `%s`', full_path)
 
 def response_hook(service, input, instance, attrs, service_type):

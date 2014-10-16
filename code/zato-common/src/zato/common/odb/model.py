@@ -400,9 +400,7 @@ class TLSKeyCertSecurity(SecurityBase):
 
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
     info = Column(LargeBinary(200000), nullable=False)
-
-    def __init__(self):
-        value = None # Not used by the DB
+    value = Column(LargeBinary(200000), nullable=False)
 
 # ################################################################################################################################
 
