@@ -14,7 +14,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common import zato_namespace
+from zato.common import SECRET_SHADOW, zato_namespace
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.server.service import Service
 
@@ -28,28 +28,33 @@ class AdminService(Service):
     """
     def __init__(self):
         super(AdminService, self).__init__()
-        
+
     def before_handle(self):
         if logger.isEnabledFor(logging.INFO):
             request = dict(self.request.input)
             for k, v in request.items():
                 if 'password' in k:
-                    request[k] = '*****'
-    
+                    request[k] = SECRET_SHADOW
+
+                logger.warn('k %r', k)
+                logger.warn('v %r', v)
+
             logger.info('cid:[%s], name:[%s], SIO request:[%s]', self.cid, self.name, request)
         
     def handle(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
-    
+
     def after_handle(self):
         payload = self.response.payload
         response = payload if isinstance(payload, basestring) else payload.getvalue()
-            
+
+        logger.warn('resp %r', response)
+
         logger.info('cid:[{}], name:[{}], response:[{}]'.format(self.cid, self.name, response))
-    
+
     def get_data(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
-    
+
 class AdminSIO(object):
     namespace = zato_namespace
 
@@ -57,10 +62,10 @@ class Ping(AdminService):
     class SimpleIO(AdminSIO):
         output_required = ('pong',)
         response_elem = 'zato_ping_response'
-        
+
     def handle(self):
         self.response.payload.pong = 'zato'
-    
+
 class Ping2(Ping):
     class SimpleIO(Ping.SimpleIO):
         response_elem = 'zato_ping2_response'
@@ -70,7 +75,7 @@ class ChangePasswordBase(AdminService):
     """
     # Subclasses may wish to set it to False to special-case what they need to deal with 
     password_required = True
-    
+
     class SimpleIO(AdminSIO):
         input_required = ('id', 'password1', 'password2')
 
@@ -80,7 +85,7 @@ class ChangePasswordBase(AdminService):
         with closing(self.odb.session()) as session:
             password1 = self.request.input.get('password1', '')
             password2 = self.request.input.get('password2', '')
-            
+
             try:
                 if self.password_required:
                     if not password1:
