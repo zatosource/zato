@@ -119,7 +119,7 @@ _epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
 # All the BEGIN/END blocks we don't want to store in logs.
 # Taken from https://github.com/openssl/openssl/blob/master/crypto/pem/pem.h
 # Note that the last one really is empty to denote 'BEGIN PRIVATE KEY' alone.
-TLS_BEGIN_END = ('ANY', 'RSA', 'DSA', 'EC', 'ENCRYPTED', '')
+TLS_BEGIN_END = ('ANY ', 'RSA ', 'DSA ', 'EC ', 'ENCRYPTED ', '')
 
 random.seed()
 
@@ -963,15 +963,16 @@ def store_tls(root_dir, payload, is_key=False):
 # ################################################################################################################################
 
 def replace_private_key(orig_payload):
-    for item in TLS_BEGIN_END:
-        begin = '-----BEGIN {} PRIVATE KEY-----'.format(item)
-        if begin in orig_payload:
-            end = '-----END {} PRIVATE KEY-----'.format(item)
+    if isinstance(orig_payload, basestring):
+        for item in TLS_BEGIN_END:
+            begin = '-----BEGIN {}PRIVATE KEY-----'.format(item)
+            if begin in orig_payload:
+                end = '-----END {}PRIVATE KEY-----'.format(item)
 
-            begin_last_idx = orig_payload.find(begin) + len(begin) + 1
-            end_preceeding_idx = orig_payload.find(end) -1
+                begin_last_idx = orig_payload.find(begin) + len(begin) + 1
+                end_preceeding_idx = orig_payload.find(end) -1
 
-            return orig_payload[0:begin_last_idx] + SECRET_SHADOW + orig_payload[end_preceeding_idx:]
+                return orig_payload[0:begin_last_idx] + SECRET_SHADOW + orig_payload[end_preceeding_idx:]
 
     # No private key at all in payload
     return orig_payload
