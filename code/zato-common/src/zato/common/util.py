@@ -938,15 +938,21 @@ def validate_tls_from_payload(payload, is_key=False):
 
 get_tls_from_payload = validate_tls_from_payload
 
-def get_tls_cert_full_path(root_dir, info):
+def get_tls_full_path(root_dir, component, info):
     return os.path.join(root_dir, 'ca-certs', fs_safe_name(info) + '.pem')
+
+def get_tls_ca_cert_full_path(root_dir, info):
+    return get_tls_full_path(root_dir, 'ca-certs', info)
+
+def get_tls_key_cert_full_path(root_dir, info):
+    return get_tls_full_path(root_dir, 'key-certs', info)
 
 def store_tls(root_dir, payload, is_key=False):
 
     # Raises exception if it's not really a certificate.
     info = get_tls_from_payload(payload, is_key)
 
-    pem_file_path = get_tls_cert_full_path(root_dir, info)
+    pem_file_path = get_tls_ca_cert_full_path(root_dir, info)
     pem_file = open(pem_file_path, 'w')
 
     try:

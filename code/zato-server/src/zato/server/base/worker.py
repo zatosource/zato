@@ -38,8 +38,8 @@ from zato.common import broker_message
 from zato.common.broker_message import code_to_name
 from zato.common.dispatch import dispatcher
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import get_tls_cert_full_path, get_tls_from_payload, new_cid, pairwise, parse_extra_into_dict, \
-     store_tls
+from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
+     parse_extra_into_dict, store_tls
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -226,7 +226,7 @@ class WorkerStore(BrokerMessageReceiver):
         wrapper_config.update(sec_config)
 
         if config.sec_tls_ca_cert_id and config.sec_tls_ca_cert_id != ZATO_NONE:
-            tls_verify = get_tls_cert_full_path(self.server.tls_dir, get_tls_from_payload(
+            tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(
                 self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name].config.value))
         else:
             tls_verify = ZATO_NONE
@@ -739,8 +739,16 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def _add_tls_ca_cert_from_msg(self, msg):
+        self.worker_config.tls_ca_cert[msg.name] = Bunch(config=Bunch(value=msg.value))
+
+    def update_tls_ca_cert(self, msg):
+        msg.full_path = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(msg.value))
+
     def update_tls_key_cert(self, msg):
-        msg.full_path = get_tls_from_payload(self.server.tls_dir, msg.fs_name)
+        msg.full_path = get_tls_key_cert_full_path(self.server.tls_dir, get_tls_from_payload(msg.value))
+
+# ################################################################################################################################
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_CREATE(self, msg):
         self.update_tls_key_cert(msg)
@@ -756,24 +764,16 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _add_tls_ca_cert_to_msg(self, msg):
-        self.worker_config.tls_ca_cert[msg.name] = Bunch(config=Bunch(value=msg.value))
-
-    def update_tls_ca_cert(self, msg):
-        msg.full_path = get_tls_cert_full_path(self.server.tls_dir, get_tls_from_payload(msg.value))
-
-# ################################################################################################################################
-
     def on_broker_msg_SECURITY_TLS_CA_CERT_CREATE(self, msg):
         self.update_tls_ca_cert(msg)
-        self._add_tls_ca_cert_to_msg(msg)
+        self._add_tls_ca_cert_from_msg(msg)
         store_tls(self.server.tls_dir, msg.value)
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_TLS_CA_CERT_EDIT(self, msg):
         self.update_tls_ca_cert(msg)
         del self.worker_config.tls_ca_cert[msg.old_name]
-        self._add_tls_ca_cert_to_msg(msg)
+        self._add_tls_ca_cert_from_msg(msg)
         store_tls(self.server.tls_dir, msg.value)
         self._update_tls_outconns('sec_tls_ca_cert_id', 'tls_verify', msg)
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_EDIT.value, msg)
