@@ -108,7 +108,7 @@ zato_cid_xpath = etree.XPath(zato_result_path, namespaces=common_namespaces)
 zato_details_path = '//zato:zato_env/zato:details'
 zato_details_xpath = etree.XPath(zato_details_path, namespaces=common_namespaces)
 
-PASSWORD_SHADOW = '***'
+SECRET_SHADOW = '******'
 
 # TRACE1 logging level, even more details than DEBUG
 TRACE1 = 6
@@ -446,7 +446,7 @@ class ADAPTER_PARAMS:
     APPLY_AFTER_REQUEST = 'apply-after-request'
 
 class AUDIT_LOG:
-    REPLACE_WITH = '******'
+    REPLACE_WITH = SECRET_SHADOW
 
 class INFO_FORMAT:
     DICT = 'dict'

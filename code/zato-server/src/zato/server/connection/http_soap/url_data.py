@@ -981,3 +981,10 @@ class URLData(OAuthDataStore):
                 yield item.id, pattern_list
 
 # ################################################################################################################################
+
+
+    def on_broker_msg_SECURITY_TLS_CA_CERT_CREATE(self, msg):
+        # Ignored, does nothing.
+        pass
+
+    on_broker_msg_SECURITY_TLS_CA_CERT_DELETE = on_broker_msg_SECURITY_TLS_CA_CERT_EDIT = on_broker_msg_SECURITY_TLS_CA_CERT_CREATE

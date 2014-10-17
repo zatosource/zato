@@ -13,7 +13,6 @@
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
-    <script type="text/javascript" src="/static/js/fileuploader.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/security/tls/ca-cert.js"></script>
@@ -47,19 +46,10 @@
 
 {% include "zato/choose-cluster.html" with page_prompt="Show CA certificates"%}
 
-
     {% if cluster_id %}
 
         <div class='page_prompt'>
             <a href="javascript:$.fn.zato.security.tls.ca_cert.create()">Upload a CA certificate</a>
-        </div>
-
-        <div class='page_prompt'>
-            <div id="uploader">
-                <noscript>
-                    <p>Please enable JavaScript to use file uploader</p>
-                </noscript>
-            </div>
         </div>
 
         <div id="markup">

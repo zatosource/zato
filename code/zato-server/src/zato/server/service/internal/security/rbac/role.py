@@ -46,7 +46,7 @@ def response_hook(service, input, instance, attrs, service_type):
     
         service.response.payload.parent_name = parent.name
 
-def broker_message_hook(service, input, instance, attrs):
+def broker_message_hook(service, input, instance, attrs, service_type):
     input.id = instance.id
 
 class GetList(AdminService):
