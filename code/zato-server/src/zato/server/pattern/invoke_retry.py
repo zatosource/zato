@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from logging import getLogger
 from traceback import format_exc
 
 # anyjson
@@ -19,6 +20,8 @@ from gevent import sleep
 
 # Zato
 from zato.common import ZatoException
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 
@@ -34,12 +37,13 @@ def retry_limit_reached_msg(retry_repeats, service_name, retry_seconds, orig_cid
 
 class NeedsRetry(ZatoException):
     def __init__(self, cid, inner_exc):
-        self.cid = cid
+        self.invoking_service.cid = cid
         self.inner_exc = inner_exc
 
     def __repr__(self):
         return '<{} at {} cid:`{}` inner_exc:`{}`>'.format(
-            self.__class__.__name__, hex(id(self)), self.cid, format_exc(self.inner_exc) if self.inner_exc else None)
+            self.__class__.__name__, hex(id(self)), self.invoking_service.cid,
+            format_exc(self.inner_exc) if self.inner_exc else None)
 
 # ################################################################################################################################
 
@@ -65,41 +69,41 @@ class InvokeRetry(object):
     def _get_retry_settings(self, target, **kwargs):
         async_fallback = kwargs.get('async_fallback')
         callback = kwargs.get('callback')
-        callback_context = kwargs.get('callback_context')
-        retry_repeats = kwargs.get('retry_repeats')
-        retry_seconds = kwargs.get('retry_seconds')
-        retry_minutes = kwargs.get('retry_minutes')
+        callback_context = kwargs.get('context')
+        retry_repeats = kwargs.get('repeats')
+        retry_seconds = kwargs.get('seconds')
+        retry_minutes = kwargs.get('minutes')
 
         if async_fallback:
-            items = ('callback', 'retry_repeats')
+            items = ('callback', 'repeats')
             for item in items:
                 value = kwargs.get(item)
                 if not value:
                     msg = 'Could not invoke `{}`, {}:`{}` was not given'.format(target, item, value)
-                    self.logger.error(msg)
+                    logger.error(msg)
                     raise ValueError(msg)
 
             if retry_seconds and retry_minutes:
                 msg = 'Could not invoke `{}`, only one of retry_seconds:`{}` and retry_minutes:`{}` can be given'.format(
                     target, retry_seconds, retry_minutes)
-                self.logger.error(msg)
+                logger.error(msg)
                 raise ValueError(msg)
 
             if not(retry_seconds or retry_minutes):
                 msg = 'Could not invoke `{}`, exactly one of retry_seconds:`{}` or retry_minutes:`{}` must be given'.format(
                     target, retry_seconds, retry_minutes)
-                self.logger.error(msg)
+                logger.error(msg)
                 raise ValueError(msg)
 
             try:
-                self.server.service_store.name_to_impl_name[callback]
+                self.invoking_service.server.service_store.name_to_impl_name[callback]
             except KeyError, e:
                 msg = 'Service:`{}` does not exist, e:`{}`'.format(callback, format_exc(e))
-                self.logger.error(msg)
+                logger.error(msg)
                 raise ValueError(msg)
 
         # Get rid of arguments our superclass doesn't understand
-        for item in('async_fallback', 'callback', 'callback_context', 'retry_repeats', 'retry_seconds', 'retry_minutes'):
+        for item in('async_fallback', 'callback', 'context', 'repeats', 'seconds', 'minutes'):
             kwargs.pop(item, True)
 
         # Note that internally we use seconds only.
@@ -126,30 +130,34 @@ class InvokeRetry(object):
 # ################################################################################################################################
 
     def invoke_async_retry(self, target, *args, **kwargs):
-        async_fallback, callback, callback_context, retry_repeats, retry_seconds, kwargs = self._get_retry_settings(target, **kwargs)
-        return self._invoke_async_retry(target, retry_repeats, retry_seconds, self.cid, callback, callback_context, args, kwargs)
+        async_fallback, callback, callback_context, retry_repeats, retry_seconds, kwargs = self._get_retry_settings(
+            target, **kwargs)
+        return self._invoke_async_retry(
+            target, retry_repeats, retry_seconds, self.invoking_service.cid, callback, callback_context, args, kwargs)
 
 # ################################################################################################################################
 
     def invoke_retry(self, target, *args, **kwargs):
-        async_fallback, callback, callback_context, retry_repeats, retry_seconds, kwargs = self._get_retry_settings(target, **kwargs)
+        async_fallback, callback, callback_context, retry_repeats, retry_seconds, kwargs = self._get_retry_settings(
+            target, **kwargs)
 
         # Let's invoke the service and find out if it works, maybe we don't need
         # to retry anything.
 
         try:
-            result = self.invoke(target, *args, **kwargs)
+            result = self.invoking_service.invoke(target, *args, **kwargs)
         except Exception, e:
 
-            msg = 'Could not invoke:`{}`, cid:`{}`, e:`{}`'.format(target, self.cid, format_exc(e))
-            self.logger.warn(msg)
+            msg = 'Could not invoke:`{}`, cid:`{}`, e:`{}`'.format(target, self.invoking_service.cid, format_exc(e))
+            logger.warn(msg)
 
             # How we handle the exception depends on whether the caller wants us
             # to block or prefers if we retry in background.
             if async_fallback:
 
                 # .. invoke the background service and return CID to the caller.
-                cid = self._invoke_async_retry(target, retry_repeats, retry_seconds, self.cid, callback, callback_context, args, kwargs)
+                cid = self._invoke_async_retry(
+                    target, retry_repeats, retry_seconds, self.invoking_service.cid, callback, callback_context, args, kwargs)
                 raise NeedsRetry(cid, e)
 
             # We are to block while repeating
@@ -160,17 +168,18 @@ class InvokeRetry(object):
                 
                 while remaining > 0:
                     try:
-                        result = self.invoke(target, *args, **kwargs)
+                        result = self.invoking_service.invoke(target, *args, **kwargs)
                     except Exception, e:
-                        msg = retry_failed_msg((retry_repeats-remaining)+1, retry_repeats, target, retry_seconds, self.cid, e)
-                        self.logger.info(msg)
+                        msg = retry_failed_msg(
+                            (retry_repeats-remaining)+1, retry_repeats, target, retry_seconds, self.invoking_service.cid, e)
+                        logger.info(msg)
                         sleep(retry_seconds)
                         remaining -= 1
 
                 # OK, give up now, there's nothing more we can do
                 if not result:
-                    msg = retry_limit_reached_msg(retry_repeats, target, retry_seconds, self.cid)
-                    self.logger.warn(msg)
+                    msg = retry_limit_reached_msg(retry_repeats, target, retry_seconds, self.invoking_service.cid)
+                    logger.warn(msg)
                     raise ZatoException(None, msg)
         else:
             # All good, simply return the response
