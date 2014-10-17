@@ -35,7 +35,7 @@ class ChooseClusterForm(forms.Form):
 
     cluster = forms.ChoiceField(widget=forms.Select())
     name_filter = forms.CharField(widget=forms.TextInput(
-        attrs={'style':'width:30%', 'class':'required', 'placeholder':'Enter * or part of a service name, e.g. http soap'}))
+        attrs={'style':'width:30%', 'class':'required', 'placeholder':"'Enter * or part of a service's name, e.g. http json"}))
 
     def __init__(self, clusters, data=None):
         super(ChooseClusterForm, self).__init__(data)
