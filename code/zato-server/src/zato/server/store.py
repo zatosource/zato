@@ -18,7 +18,7 @@ from traceback import format_exc
 from bunch import Bunch
 
 # Zato
-from zato.common import Inactive, PASSWORD_SHADOW
+from zato.common import Inactive, SECRET_SHADOW
 
 logger = getLogger(__name__)
 
@@ -81,7 +81,7 @@ class BaseStore(object):
         """
         config_no_sensitive = deepcopy(config)
         if 'password' in config:
-            config_no_sensitive['password'] = PASSWORD_SHADOW
+            config_no_sensitive['password'] = SECRET_SHADOW
         item = Bunch(config=config, config_no_sensitive=config_no_sensitive, is_created=False, impl=None)
 
         # It's optional

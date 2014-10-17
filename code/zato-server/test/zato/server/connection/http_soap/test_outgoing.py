@@ -47,6 +47,9 @@ class _FakeSession(object):
 
         return Bunch({'status_code':rand_string(), 'text':rand_string()})
 
+    def mount(self, *ignored):
+        pass
+
 # ################################################################################################################################
 
 class _FakeRequestsModule(object):
