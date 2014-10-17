@@ -34,6 +34,15 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+class HTTPSAdapter(requests.adapters.HTTPAdapter):
+    """ An adapter which exposes a method for clearing out the underlying pool. Useful with HTTPS as it allows to update TLS
+    material on fly.
+    """
+    def clear_pool(self):
+        self.poolmanager.clear()
+
+# ################################################################################################################################
+
 class BaseHTTPSOAPWrapper(object):
     """ Base class for HTTP/SOAP connections wrappers.
     """
@@ -44,6 +53,8 @@ class BaseHTTPSOAPWrapper(object):
         self.config_no_sensitive['password'] = '***'
         self.requests_module = requests_module or requests
         self.session = self.requests_module.session(pool_maxsize=self.config['pool_size'])
+        self.https_adapter = HTTPSAdapter()
+        self.session.mount('https://', self.https_adapter)
         self._component_name = get_component_name()
 
         self.address = None
@@ -53,9 +64,12 @@ class BaseHTTPSOAPWrapper(object):
         self.set_auth()
 
     def invoke_http(self, method, address, headers, hooks, *args, **kwargs):
+
+        cert = self.config['tls_key_cert_full_path'] if self.config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT else None
+        verify = False if self.config.get('tls_verify', ZATO_NONE) == ZATO_NONE else self.config['tls_verify']
+
         return self.session.request(method, address, auth=self.requests_auth, headers=headers, hooks=hooks,
-            timeout=self.config['timeout'], cert=self.tls_key_cert,
-            verify=False if self.config.get('tls_verify', ZATO_NONE) == ZATO_NONE else self.config['tls_verify'], *args, **kwargs)
+            cert=cert, verify=verify, timeout=self.config['timeout'], *args, **kwargs)
 
     def ping(self, cid):
         """ Pings a given HTTP/SOAP resource
@@ -110,8 +124,6 @@ class BaseHTTPSOAPWrapper(object):
         # Everything else
         else:
             self.requests_auth = self.auth if self.config['sec_type'] == SEC_DEF_TYPE.BASIC_AUTH else None
-            self.tls_key_cert = self.config['tls_key_cert_full_path'] \
-                if self.config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT else None
 
             if self.config['sec_type'] == SEC_DEF_TYPE.WSS:
                 self.soap[self.config['soap_version']]['header'] = \
