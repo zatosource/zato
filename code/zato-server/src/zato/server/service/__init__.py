@@ -42,6 +42,7 @@ from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.message import MessageFacade
+from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.service.reqresp import Cloud, Outgoing, Request, Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
@@ -139,7 +140,19 @@ class TimeUtil(object):
                 value, from_, to)
             raise
 
-# ##############################################################################
+# ################################################################################################################################
+
+class PatternsFacade(object):
+    """ The API through which services make use of integration patterns.
+    """
+    def __init__(self, invoking_service):
+        self._invoke_retry = InvokeRetry(invoking_service)
+
+        # Convenience API
+        self.invoke_retry = self._invoke_retry.invoke_retry
+        self.invoke_async_retry = self._invoke_retry.invoke_async_retry
+
+# ################################################################################################################################
 
 class Service(object):
     """ A base class for all services deployed on Zato servers, no matter
@@ -176,6 +189,7 @@ class Service(object):
         self.name = self.__class__.get_name()
         self.impl_name = self.__class__.get_impl_name()
         self.time = TimeUtil(None)
+        self.pattern = PatternsFacade(self)
         self.from_passthrough = False
         self.passthrough_request = None
         self.user_config = None
@@ -505,7 +519,7 @@ class Service(object):
         backend = backend or self.kvdb.conn
         return Lock(name, expires, timeout, backend)
 
-# ##############################################################################
+# ################################################################################################################################
 
     def call_job_hooks(self, prefix):
         if self.channel == CHANNEL.SCHEDULER and prefix != 'finalize':
@@ -607,7 +621,7 @@ class Service(object):
         """ Invoked right after handle. Any exception raised means further hooks will not be called.
         """
 
-# ##############################################################################
+# ################################################################################################################################
 
     def _log_input_output(self, user_msg, level, suppress_keys, is_response):
 
@@ -646,7 +660,7 @@ class Service(object):
     def log_output(self, user_msg='', level=logging.INFO, suppress_keys=('wsgi_environ',)):
         return self._log_input_output(user_msg, level, suppress_keys, True)
 
-# ##############################################################################
+# ################################################################################################################################
 
     @staticmethod
     def update(service, channel, server, broker_client, worker_store, cid, payload,
@@ -682,4 +696,4 @@ class Service(object):
         if init:
             service._init()
 
-# ##############################################################################
+# ################################################################################################################################
