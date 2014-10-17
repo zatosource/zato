@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import copy, gc, inspect, json, linecache, logging, os, random, re, signal, string, threading, sys
+import copy, errno, gc, inspect, json, linecache, logging, os, random, re, signal, string, threading, sys
 from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
@@ -69,6 +69,9 @@ from paste.util.converters import asbool
 # pip
 from pip.download import is_archive_file, unpack_file_url
 
+# portalocker
+import portalocker
+
 # psutil
 import psutil
 
@@ -98,7 +101,7 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import DATA_FORMAT, KVDB, MISC, NoDistributionFound, PASSWORD_SHADOW, soap_body_path, soap_body_xpath, \
+from zato.common import DATA_FORMAT, KVDB, MISC, NoDistributionFound, SECRET_SHADOW, soap_body_path, soap_body_xpath, \
      TRACE1, ZatoException
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import IntervalBasedJob, Job, Service
@@ -113,9 +116,26 @@ _uncamelify_re = re.compile(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))')
 
 _epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
 
+class TLS:
+    # All the BEGIN/END blocks we don't want to store in logs.
+    # Taken from https://github.com/openssl/openssl/blob/master/crypto/pem/pem.h
+    # Note that the last one really is empty to denote 'BEGIN PRIVATE KEY' alone.
+    BEGIN_END = ('ANY ', 'RSA ', 'DSA ', 'EC ', 'ENCRYPTED ', '')
+
+    # Directories in a server's config/tls directory keeping the material
+    DIR_CA_CERTS = 'ca-certs'
+    DIR_KEYS_CERTS = 'keys-certs'
+
 random.seed()
 
-################################################################################
+# ################################################################################################################################
+
+TLS_KEY_TYPE = {
+    crypto.TYPE_DSA: 'DSA',
+    crypto.TYPE_RSA: 'RSA'
+}
+
+# ################################################################################################################################
 
 def absolutize_path(base, path):
     """ Turns a path into an absolute path if it's relative to the base
@@ -890,7 +910,7 @@ def store_pidfile(component_dir):
 def get_kvdb_config_for_log(config):
     config = copy.deepcopy(config)
     if config.shadow_password_in_logs:
-        config.password = PASSWORD_SHADOW
+        config.password = SECRET_SHADOW
     return config
 
 def has_redis_sentinels(config):
@@ -905,33 +925,84 @@ def alter_column_nullable_false(table_name, column_name, default_value, column_t
 
 # ################################################################################################################################
 
-def validate_tls_cert_from_payload(payload):
+def validate_tls_from_payload(payload, is_key=False):
     with NamedTemporaryFile(prefix='zato-tls-') as tf:
         tf.write(payload)
         tf.flush()
 
-        # Checks if it's a certificate at all by raising an exception if it isn't.
-        info = crypto.load_certificate(crypto.FILETYPE_PEM, open(tf.name).read())
+        pem = open(tf.name).read()
 
-        info = sorted(dict(info.get_subject().get_components()).items())
-        return '; '.join('{}={}'.format(k, v) for k, v in info)
+        cert_info = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
+        cert_info = sorted(dict(cert_info.get_subject().get_components()).items())
+        cert_info = '; '.join('{}={}'.format(k, v) for k, v in cert_info)
 
-get_tls_cert_info_from_payload = validate_tls_cert_from_payload
+        if is_key:
+            key_info = crypto.load_privatekey(crypto.FILETYPE_PEM, pem)
+            key_info = '{}; {} bits'.format(TLS_KEY_TYPE[key_info.type()], key_info.bits())
+            return '{}; {}'.format(key_info, cert_info)
+        else:
+            return cert_info
 
-def get_tls_cert_full_path(root_dir, info):
-    return os.path.join(root_dir, 'ca-certs', fs_safe_name(info) + '.pem')
+get_tls_from_payload = validate_tls_from_payload
 
-def store_tls_ca_cert(root_dir, payload):
+def get_tls_full_path(root_dir, component, info):
+    return os.path.join(root_dir, component, fs_safe_name(info) + '.pem')
+
+def get_tls_ca_cert_full_path(root_dir, info):
+    return get_tls_full_path(root_dir, TLS.DIR_CA_CERTS, info)
+
+def get_tls_key_cert_full_path(root_dir, info):
+    return get_tls_full_path(root_dir, TLS.DIR_KEYS_CERTS, info)
+
+def store_tls(root_dir, payload, is_key=False):
 
     # Raises exception if it's not really a certificate.
-    info = get_tls_cert_info_from_payload(payload)
+    info = get_tls_from_payload(payload, is_key)
 
-    pem_file_path = get_tls_cert_full_path(root_dir, info)
+    pem_file_path = get_tls_full_path(root_dir, TLS.DIR_KEYS_CERTS if is_key else TLS.DIR_CA_CERTS, info)
     pem_file = open(pem_file_path, 'w')
-    pem_file.write(payload)
-    pem_file.close()
 
-    return pem_file_path
+    try:
+        portalocker.lock(pem_file, portalocker.LOCK_EX)
+
+        pem_file.write(payload)
+        pem_file.close()
+
+        os.chmod(pem_file_path, 0o640)
+
+        return pem_file_path
+
+    except portalocker.LockException:
+        pass # It's OK, something else is doing the same thing right now
+
+# ################################################################################################################################
+
+def replace_private_key(orig_payload):
+    if isinstance(orig_payload, basestring):
+        for item in TLS.BEGIN_END:
+            begin = '-----BEGIN {}PRIVATE KEY-----'.format(item)
+            if begin in orig_payload:
+                end = '-----END {}PRIVATE KEY-----'.format(item)
+
+                begin_last_idx = orig_payload.find(begin) + len(begin) + 1
+                end_preceeding_idx = orig_payload.find(end) -1
+
+                return orig_payload[0:begin_last_idx] + SECRET_SHADOW + orig_payload[end_preceeding_idx:]
+
+    # No private key at all in payload
+    return orig_payload
+
+# ################################################################################################################################
+
+def delete_tls_material_from_fs(server, info, full_path_func):
+    try:
+        os.remove(full_path_func(server.tls_dir, info))
+    except OSError, e:
+        if e.errno == errno.ENOENT:
+            # It's ok - some other worker must have deleted it already
+            pass
+        else:
+            raise
 
 # ################################################################################################################################
 

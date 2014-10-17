@@ -293,7 +293,7 @@ class CreateEditMeta(AdminServiceMeta):
                     input.old_name = old_name
 
                     if attrs.broker_message_hook:
-                        attrs.broker_message_hook(self, input, instance, attrs)
+                        attrs.broker_message_hook(self, input, instance, attrs, 'create_edit')
 
                     self.broker_client.publish(input)
 
@@ -339,6 +339,9 @@ class DeleteMeta(AdminServiceMeta):
 
                     for name in attrs.extra_delete_attrs:
                         self.request.input[name] = getattr(instance, name)
+
+                    if attrs.broker_message_hook:
+                        attrs.broker_message_hook(self, self.request.input, instance, attrs, 'delete')
 
                     self.broker_client.publish(self.request.input)
 

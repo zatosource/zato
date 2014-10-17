@@ -38,7 +38,8 @@ from zato.common import broker_message
 from zato.common.broker_message import code_to_name
 from zato.common.dispatch import dispatcher
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import get_tls_cert_full_path, get_tls_cert_info_from_payload, new_cid, pairwise, parse_extra_into_dict
+from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
+     parse_extra_into_dict, store_tls
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -209,8 +210,8 @@ class WorkerStore(BrokerMessageReceiver):
 
             if sec_config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT:
                 tls = self.request_dispatcher.url_data.tls_key_cert_get(security_name)
-                full_path = get_tls_cert_info_from_payload(self.server.tls_dir, tls.config.fs_name)
-                sec_config['tls_key_cert_full_path'] = full_path
+                sec_config['tls_key_cert_full_path'] = get_tls_key_cert_full_path(
+                    self.server.tls_dir, get_tls_from_payload(tls.config.value, True))
 
         wrapper_config = {'id':config.id,
             'is_active':config.is_active, 'method':config.method,
@@ -224,7 +225,7 @@ class WorkerStore(BrokerMessageReceiver):
         wrapper_config.update(sec_config)
 
         if config.sec_tls_ca_cert_id and config.sec_tls_ca_cert_id != ZATO_NONE:
-            tls_verify = get_tls_cert_full_path(self.server.tls_dir, get_tls_cert_info_from_payload(
+            tls_verify = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(
                 self.worker_config.tls_ca_cert[config.sec_tls_ca_cert_name].config.value))
         else:
             tls_verify = ZATO_NONE
@@ -238,6 +239,14 @@ class WorkerStore(BrokerMessageReceiver):
             return wrapper
 
         return HTTPSOAPWrapper(wrapper_config)
+
+# ################################################################################################################################
+
+    def yield_outconn_http_config_dicts(self):
+        for transport in('soap', 'plain_http'):
+            config_dict = getattr(self.worker_config, 'out_' + transport)
+            for name in config_dict:
+                yield config_dict[name]
 
 # ################################################################################################################################
 
@@ -268,16 +277,12 @@ class WorkerStore(BrokerMessageReceiver):
     def init_http_soap(self):
         """ Initializes plain HTTP/SOAP connections.
         """
-        for transport in('soap', 'plain_http'):
-            config_dict = getattr(self.worker_config, 'out_' + transport)
-            for name in config_dict:
-                config = config_dict[name].config
+        for config_dict in self.yield_outconn_http_config_dicts():
+            wrapper = self._http_soap_wrapper_from_config(config_dict.config)
+            config_dict.conn = wrapper
 
-                wrapper = self._http_soap_wrapper_from_config(config)
-                config_dict[name].conn = wrapper
-
-                # To make the API consistent with that of SQL connection pools
-                config_dict[name].ping = wrapper.ping
+            # To make the API consistent with that of SQL connection pools
+            config_dict.ping = wrapper.ping
 
     def init_cloud(self):
         """ Initializes all the cloud connections.
@@ -726,36 +731,64 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def _update_tls_outconns(self, material_type_id, update_key, msg):
+        for config_dict in self.yield_outconn_http_config_dicts():
+            if config_dict.config[material_type_id] == msg.id:
+                config_dict.conn.config[update_key] = msg.full_path
+                config_dict.conn.https_adapter.clear_pool()
+
+# ################################################################################################################################
+
+    def _add_tls_from_msg(self, config_attr, msg):
+        config = getattr(self.worker_config, config_attr)
+        config[msg.name] = Bunch(config=Bunch(value=msg.value))
+
+    def update_tls_ca_cert(self, msg):
+        msg.full_path = get_tls_ca_cert_full_path(self.server.tls_dir, get_tls_from_payload(msg.value))
+
     def update_tls_key_cert(self, msg):
-        msg.full_path = get_tls_cert_info_from_payload(self.server.tls_dir, msg.fs_name)
+        msg.full_path = get_tls_key_cert_full_path(self.server.tls_dir, get_tls_from_payload(msg.value, True))
+
+# ################################################################################################################################
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_CREATE(self, msg):
         self.update_tls_key_cert(msg)
+        self._add_tls_from_msg('tls_key_cert', msg)
+        store_tls(self.server.tls_dir, msg.value, True)
         dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_EDIT(self, msg):
         self.update_tls_key_cert(msg)
+        del self.worker_config.tls_key_cert[msg.old_name]
+        self._add_tls_from_msg('tls_key_cert', msg)
+        store_tls(self.server.tls_dir, msg.value, True)
+        self._update_tls_outconns('security_id', 'tls_key_cert_full_path', msg)
         dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_EDIT.value, msg)
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_DELETE(self, msg):
         self.update_tls_key_cert(msg)
+        del self.worker_config.tls_key_cert[msg.name]
         dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_DELETE.value, msg)
 
 # ################################################################################################################################
 
-    def update_tls_ca_cert(self, msg):
-        msg.full_path = get_tls_cert_full_path(self.server.tls_dir, get_tls_cert_info_from_payload(msg.value))
-
     def on_broker_msg_SECURITY_TLS_CA_CERT_CREATE(self, msg):
         self.update_tls_ca_cert(msg)
+        self._add_tls_from_msg('tls_ca_cert', msg)
+        store_tls(self.server.tls_dir, msg.value)
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_CREATE.value, msg)
 
     def on_broker_msg_SECURITY_TLS_CA_CERT_EDIT(self, msg):
         self.update_tls_ca_cert(msg)
+        del self.worker_config.tls_ca_cert[msg.old_name]
+        self._add_tls_from_msg('tls_ca_cert', msg)
+        store_tls(self.server.tls_dir, msg.value)
+        self._update_tls_outconns('sec_tls_ca_cert_id', 'tls_verify', msg)
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_EDIT.value, msg)
 
     def on_broker_msg_SECURITY_TLS_CA_CERT_DELETE(self, msg):
         self.update_tls_ca_cert(msg)
+        del self.worker_config.tls_ca_cert[msg.name]
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_DELETE.value, msg)
 
 # ################################################################################################################################

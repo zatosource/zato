@@ -1,9 +1,10 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}Keys and certificates{% endblock %}
+{% block html_title %}Client keys and certificates{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/fileuploader.css">
 {% endblock %}
 
 {% block extra_js %}
@@ -22,19 +23,20 @@
             '_numbering',
             '_selection',
             'name',
-            'fs_name',
+            'info',
             '_edit',
             '_delete',
             'id',
-            'is_active'
+            'value'
         ]
     }
+
     </script>
 
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Keys and certificates</h2>
+<h2 class="zato">client keys and certificates</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -42,13 +44,13 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/choose-cluster.html" with page_prompt="Show keys and certificates"%}
+{% include "zato/choose-cluster.html" with page_prompt="Show client keys and certificates"%}
 
 
     {% if cluster_id %}
 
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.security.tls.key_cert.create()">Create a new key/cert pair</a>
+            <a href="javascript:$.fn.zato.security.tls.key_cert.create()">Upload a client key/certificate pair</a>
         </div>
 
         <div id="markup">
@@ -58,9 +60,10 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
-                        <th><a href="#">FS name</a></th>
+                        <th><a href="#">Info</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -71,10 +74,11 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
-                        <td>{{ item.fs_name }}</td>
+                        <td>{{ item.info }}</td>
                         <td><a href="javascript:$.fn.zato.security.tls.key_cert.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.security.tls.key_cert.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.value }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -96,9 +100,8 @@
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">File
-                            </td>
-                            <td>{{ create_form.fs_name }} </td>
+                            <td style="vertical-align:middle">Value<br/><span class="form_hint">(in PEM)</span></td>
+                            <td>{{ create_form.value }}</td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -122,9 +125,8 @@
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">File
-                            </td>
-                            <td>{{ edit_form.fs_name }} </td>
+                            <td style="vertical-align:middle">Value<br/><span class="form_hint">(in PEM)</span></td>
+                            <td>{{ edit_form.value }}</td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">

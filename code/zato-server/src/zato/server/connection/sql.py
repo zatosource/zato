@@ -28,7 +28,7 @@ from sqlalchemy.pool import NullPool
 from springpython.context import DisposableObject
 
 # Zato
-from zato.common import Inactive, PASSWORD_SHADOW
+from zato.common import Inactive, SECRET_SHADOW
 from zato.common.odb import ping_queries
 from zato.common.odb.util import get_engine_url
 from zato.common.util import get_component_name, parse_extra_into_dict
@@ -196,7 +196,7 @@ class PoolStore(DisposableObject):
                 del self[name]
                 
             config_no_sensitive = deepcopy(config)
-            config_no_sensitive['password'] = PASSWORD_SHADOW
+            config_no_sensitive['password'] = SECRET_SHADOW
             pool = self.sql_conn_class(name, config, config_no_sensitive)
 
             wrapper = SessionWrapper()
