@@ -308,6 +308,7 @@ $.fn.zato.data_table.parse = function() {
                 instance[attr_name] = attr_value;
             }
         });
+        console.log('Found instance in data_table ' + instance);
         $.fn.zato.data_table.data[instance.id] = instance;
     });
 

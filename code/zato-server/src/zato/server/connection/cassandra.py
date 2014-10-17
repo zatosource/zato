@@ -25,7 +25,7 @@ from cassandra.query import dict_factory
 from gevent.lock import RLock
 
 # Zato
-from zato.common import Inactive, PASSWORD_SHADOW
+from zato.common import Inactive, SECRET_SHADOW
 
 logger = getLogger(__name__)
 
@@ -82,7 +82,7 @@ class CassandraConnStore(object):
         """ Actually adds a new definition, must be called with self.lock held.
         """
         config_no_sensitive = deepcopy(config)
-        config_no_sensitive['password'] = PASSWORD_SHADOW
+        config_no_sensitive['password'] = SECRET_SHADOW
 
         item = Bunch(config=config, config_no_sensitive=config_no_sensitive, is_connected=False, conn=None)
 

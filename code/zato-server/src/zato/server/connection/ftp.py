@@ -18,7 +18,7 @@ from traceback import format_exc
 from fs.ftpfs import FTPFS, _GLOBAL_DEFAULT_TIMEOUT
 
 # Zato
-from zato.common import Inactive, PASSWORD_SHADOW, TRACE1
+from zato.common import Inactive, SECRET_SHADOW, TRACE1
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class FTPStore(object):
 
         elif logger.isEnabledFor(logging.DEBUG):
             params = deepcopy(params)
-            params['password'] = PASSWORD_SHADOW
+            params['password'] = SECRET_SHADOW
             logger.debug(params)
 
     def add_params(self, params_list):
