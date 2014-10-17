@@ -116,10 +116,15 @@ _uncamelify_re = re.compile(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))')
 
 _epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
 
-# All the BEGIN/END blocks we don't want to store in logs.
-# Taken from https://github.com/openssl/openssl/blob/master/crypto/pem/pem.h
-# Note that the last one really is empty to denote 'BEGIN PRIVATE KEY' alone.
-TLS_BEGIN_END = ('ANY ', 'RSA ', 'DSA ', 'EC ', 'ENCRYPTED ', '')
+class TLS:
+    # All the BEGIN/END blocks we don't want to store in logs.
+    # Taken from https://github.com/openssl/openssl/blob/master/crypto/pem/pem.h
+    # Note that the last one really is empty to denote 'BEGIN PRIVATE KEY' alone.
+    BEGIN_END = ('ANY ', 'RSA ', 'DSA ', 'EC ', 'ENCRYPTED ', '')
+
+    # Directories in a server's config/tls directory keeping the material
+    DIR_CA_CERTS = 'ca-certs'
+    DIR_KEYS_CERTS = 'keys-certs'
 
 random.seed()
 
@@ -925,12 +930,14 @@ def validate_tls_from_payload(payload, is_key=False):
         tf.write(payload)
         tf.flush()
 
-        cert_info = crypto.load_certificate(crypto.FILETYPE_PEM, open(tf.name).read())
+        pem = open(tf.name).read()
+
+        cert_info = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
         cert_info = sorted(dict(cert_info.get_subject().get_components()).items())
         cert_info = '; '.join('{}={}'.format(k, v) for k, v in cert_info)
 
         if is_key:
-            key_info = crypto.load_privatekey(crypto.FILETYPE_PEM, payload)
+            key_info = crypto.load_privatekey(crypto.FILETYPE_PEM, pem)
             key_info = '{}; {} bits'.format(TLS_KEY_TYPE[key_info.type()], key_info.bits())
             return '{}; {}'.format(key_info, cert_info)
         else:
@@ -939,20 +946,20 @@ def validate_tls_from_payload(payload, is_key=False):
 get_tls_from_payload = validate_tls_from_payload
 
 def get_tls_full_path(root_dir, component, info):
-    return os.path.join(root_dir, 'ca-certs', fs_safe_name(info) + '.pem')
+    return os.path.join(root_dir, component, fs_safe_name(info) + '.pem')
 
 def get_tls_ca_cert_full_path(root_dir, info):
-    return get_tls_full_path(root_dir, 'ca-certs', info)
+    return get_tls_full_path(root_dir, TLS.DIR_CA_CERTS, info)
 
 def get_tls_key_cert_full_path(root_dir, info):
-    return get_tls_full_path(root_dir, 'key-certs', info)
+    return get_tls_full_path(root_dir, TLS.DIR_KEYS_CERTS, info)
 
 def store_tls(root_dir, payload, is_key=False):
 
     # Raises exception if it's not really a certificate.
     info = get_tls_from_payload(payload, is_key)
 
-    pem_file_path = get_tls_ca_cert_full_path(root_dir, info)
+    pem_file_path = get_tls_full_path(root_dir, TLS.DIR_KEYS_CERTS if is_key else TLS.DIR_CA_CERTS, info)
     pem_file = open(pem_file_path, 'w')
 
     try:
@@ -960,6 +967,8 @@ def store_tls(root_dir, payload, is_key=False):
 
         pem_file.write(payload)
         pem_file.close()
+
+        os.chmod(pem_file_path, 0o640)
 
         return pem_file_path
 
@@ -970,7 +979,7 @@ def store_tls(root_dir, payload, is_key=False):
 
 def replace_private_key(orig_payload):
     if isinstance(orig_payload, basestring):
-        for item in TLS_BEGIN_END:
+        for item in TLS.BEGIN_END:
             begin = '-----BEGIN {}PRIVATE KEY-----'.format(item)
             if begin in orig_payload:
                 end = '-----END {}PRIVATE KEY-----'.format(item)
