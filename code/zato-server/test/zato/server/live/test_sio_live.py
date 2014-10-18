@@ -150,10 +150,10 @@ class SIOLiveTestCase(LiveTestCase):
             return
 
         service_data = (
-            ('zato-test-live-sio.roundtrip', zato_test_sio_live.Roundtrip),
-            ('zato-test-live-sio.from-dict', zato_test_sio_live.FromDict),
-            ('zato-test-live-sio.passthrough-to-roundtrip', zato_test_sio_live.PassthroughToRoundtrip),
-            ('zato-test-live-sio.passthrough-to-from-dict', zato_test_sio_live.PassthroughToFromDict),
+            ('zato-test-sio-live.roundtrip', zato_test_sio_live.Roundtrip),
+            ('zato-test-sio-live.from-dict', zato_test_sio_live.FromDict),
+            ('zato-test-sio-live.passthrough-to-roundtrip', zato_test_sio_live.PassthroughToRoundtrip),
+            ('zato-test-sio-live.passthrough-to-from-dict', zato_test_sio_live.PassthroughToFromDict),
         )
 
         for service_info in service_data:
@@ -165,7 +165,7 @@ class SIOLiveTestCase(LiveTestCase):
         if not self.should_run:
             return
 
-        service_name = 'zato-test-live-sio.from-sql-alchemy'
+        service_name = 'zato-test-sio-live.from-sql-alchemy'
 
         expected = [
             ('impl_name', 'zato.server.service.internal.Ping'),
