@@ -118,14 +118,14 @@ class FromDict(_TestBase):
 class PassthroughToRoundtrip(_TestBase):
     """ Passes everything on to the next service.
     """
-    passthrough_to = 'zato-test-live-sio.roundtrip'
+    passthrough_to = 'zato-test-sio-live.roundtrip'
 
 # ################################################################################################################################
 
 class PassthroughToFromDict(_TestBase):
     """ Passes everything on to the next service.
     """
-    passthrough_to = 'zato-test-live-sio.from-dict'
+    passthrough_to = 'zato-test-sio-live.from-dict'
 
 # ################################################################################################################################
 
