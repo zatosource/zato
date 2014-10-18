@@ -353,25 +353,22 @@ class Service(object):
 
         set_response_func = kwargs.pop('set_response_func', self.set_response_data)
 
+        invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
+                        self.broker_client, self.worker_store, self.cid, self.request.simple_io_config)
+        kwargs.update({"serialize":serialize, "as_bunch":as_bunch})
+
         try:
             if timeout:
                 try:
-                    g = spawn(self.update_handle, set_response_func, service, payload, channel,
-                        data_format, transport, self.server, self.broker_client, self.worker_store,
-                        self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch,
-                        **kwargs)
+                    g = spawn(self.update_handle, *invoke_args, **kwargs)
                     return g.get(block=True, timeout=timeout)
                 except Timeout:
                     g.kill()
+                    logger.warn('[{}] - Service {} timed out.'.format(self.cid, service.name))
                     if raise_timeout:
                         raise
             else:
-                return self.update_handle(set_response_func, service, payload, channel,
-                    data_format, transport, self.server, self.broker_client, self.worker_store,
-                    self.cid, self.request.simple_io_config, serialize=serialize, as_bunch=as_bunch,
-                    **kwargs)
-        except Timeout:
-            raise
+                return self.update_handle(*invoke_args, **kwargs)
         except Exception, e:
             logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc(e))
             raise
