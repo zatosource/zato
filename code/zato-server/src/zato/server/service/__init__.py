@@ -364,7 +364,7 @@ class Service(object):
                     return g.get(block=True, timeout=timeout)
                 except Timeout:
                     g.kill()
-                    logger.warn('[{}] - Service {} timed out.'.format(self.cid, service.name))
+                    logger.warn('Service `%s` timed out (%s)', service.name, self.cid)
                     if raise_timeout:
                         raise
             else:
