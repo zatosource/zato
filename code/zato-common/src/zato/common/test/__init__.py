@@ -106,8 +106,19 @@ class Expected(object):
             return self.data[0]
         
 class FakeBrokerClient(object):
+
+    def __init__(self):
+        self.publish_args = []
+        self.publish_kwargs = []
+        self.invoke_async_args = []
+        self.invoke_async_kwargs = []
+
     def publish(self, *args, **kwargs):
         raise NotImplementedError()
+
+    def invoke_async(self, *args, **kwargs):
+        self.invoke_async_args.append(args)
+        self.invoke_async_kwargs.append(kwargs)
 
 class FakeKVDB(object):
 
@@ -144,15 +155,20 @@ class FakeServices(object):
         return {'slow_threshold': 1234}
     
 class FakeServiceStore(object):
-    def __init__(self):
+    def __init__(self, name_to_impl_name=None, impl_name_to_service=None):
         self.services = FakeServices()
-        
+        self.name_to_impl_name = name_to_impl_name or {}
+        self.impl_name_to_service = impl_name_to_service or {}
+
+    def new_instance(self, impl_name):
+        return self.impl_name_to_service[impl_name]()
+
 class FakeServer(object):
     """ A fake mock server used in test cases.
     """
-    def __init__(self):
+    def __init__(self, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None):
         self.kvdb = FakeKVDB()
-        self.service_store = FakeServiceStore()
+        self.service_store = FakeServiceStore(service_store_name_to_impl_name, service_store_impl_name_to_service)
         self.fs_server_config = Bunch()
         self.fs_server_config.misc = Bunch()
         self.fs_server_config.misc.internal_services_may_be_deleted = False
@@ -173,8 +189,8 @@ class ForceTypeWrapper(object):
         
 class ServiceTestCase(TestCase):
     
-    def invoke(self, class_, request_data, expected, mock_data={}, 
-               channel=CHANNEL.HTTP_SOAP, job_type=None, data_format=DATA_FORMAT.JSON):
+    def invoke(self, class_, request_data, expected, mock_data={}, channel=CHANNEL.HTTP_SOAP, job_type=None,
+        data_format=DATA_FORMAT.JSON, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None):
         """ Sets up a service's invocation environment, then invokes and returns
         an instance of the service.
         """
@@ -192,8 +208,9 @@ class ServiceTestCase(TestCase):
         }
         
         class_.update(
-            instance, channel, FakeServer(), None, worker_store, new_cid(), request_data, request_data,
-            simple_io_config=simple_io_config, data_format=data_format, job_type=job_type)
+            instance, channel, FakeServer(service_store_name_to_impl_name, service_store_impl_name_to_service),
+            None, worker_store, new_cid(), request_data, request_data, simple_io_config=simple_io_config,
+            data_format=data_format, job_type=job_type)
 
         def get_data(self, *ignored_args, **ignored_kwargs):
             return expected.get_data()
@@ -219,8 +236,6 @@ class ServiceTestCase(TestCase):
         instance.handle()
         instance.call_hooks('after')
 
-        instance.handle()
-        
         return instance
     
     def _check_sio_request_input(self, instance, request_data):

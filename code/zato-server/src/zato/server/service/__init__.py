@@ -384,7 +384,7 @@ class Service(object):
             else:
                 return self.update_handle(*invoke_args, **kwargs)
         except Exception, e:
-            logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc(e))
+            #logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc(e))
             raise
 
     def invoke(self, name, *args, **kwargs):
@@ -423,19 +423,6 @@ class Service(object):
         self.broker_client.invoke_async(msg, expiration=expiration)
 
         return cid
-
-    def deliver(self, def_name, payload, task_id=None, *args, **kwargs):
-        """ Uses guaranteed delivery to send payload using a delivery definition known by def_name.
-        *args and **kwargs will be passed directly as-is to the target behind the def_name.
-        """
-        task_id = task_id or new_cid()
-        self.delivery_store.deliver(
-            self.server.cluster_id, def_name, payload, task_id, self.invoke,
-            kwargs.pop('is_resubmit', False),
-            kwargs.pop('is_auto', False),
-            *args, **kwargs)
-
-        return task_id
 
     def pre_handle(self):
         """ An internal method run just before the service sets to process the payload.

@@ -25,6 +25,8 @@ from zato.server.pattern.invoke_retry import RetryFailed, retry_failed_msg, retr
 
 class InvokeRetry(Service):
 
+# ################################################################################################################################
+
     def _retry(self, remaining):
 
         try:
@@ -38,6 +40,8 @@ class InvokeRetry(Service):
         else:
             return response
 
+# ################################################################################################################################
+
     def _notify_callback(self, is_ok):
         callback_request = {
             'ok': is_ok,
@@ -49,6 +53,8 @@ class InvokeRetry(Service):
         }
 
         self.invoke_async(self.req_bunch.callback, dumps(callback_request))
+
+# ################################################################################################################################
 
     def _on_retry_finished(self, g):
         """ A callback method invoked when a retry finishes. Will decide whether it should be
@@ -68,12 +74,14 @@ class InvokeRetry(Service):
             else:
                 msg = retry_limit_reached_msg(self.req_bunch.retry_repeats,
                     self.req_bunch.target, self.req_bunch.retry_seconds, self.req_bunch.orig_cid)
-                self.logger.warn(msg)
+                #self.logger.warn(msg)
                 self._notify_callback(False)
 
         # Let the callback know it's all good
         else:
             self._notify_callback(True)
+
+# ################################################################################################################################
 
     def handle(self):
         # Convert to bunch so it's easier to read everything
@@ -82,3 +90,5 @@ class InvokeRetry(Service):
         # Initial retry linked to a retry callback
         g = spawn(self._retry, self.req_bunch.retry_repeats)
         g.link(self._on_retry_finished)
+
+# ################################################################################################################################
