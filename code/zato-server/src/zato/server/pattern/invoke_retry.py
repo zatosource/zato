@@ -37,12 +37,11 @@ def retry_limit_reached_msg(retry_repeats, service_name, retry_seconds, orig_cid
 
 class NeedsRetry(ZatoException):
     def __init__(self, cid, inner_exc):
-        self.invoking_service.cid = cid
+        self.cid = cid
         self.inner_exc = inner_exc
 
     def __repr__(self):
-        return '<{} at {} cid:`{}` inner_exc:`{}`>'.format(
-            self.__class__.__name__, hex(id(self)), self.invoking_service.cid,
+        return '<{} at {} cid:`{}` inner_exc:`{}`>'.format(self.__class__.__name__, hex(id(self)), self.cid,
             format_exc(self.inner_exc) if self.inner_exc else None)
 
 # ################################################################################################################################
@@ -79,18 +78,18 @@ class InvokeRetry(object):
             for item in items:
                 value = kwargs.get(item)
                 if not value:
-                    msg = 'Could not invoke `{}`, {}:`{}` was not given'.format(target, item, value)
+                    msg = 'Could not invoke `{}`, `{}` was not provided ({})'.format(target, item, value)
                     logger.error(msg)
                     raise ValueError(msg)
 
             if retry_seconds and retry_minutes:
-                msg = 'Could not invoke `{}`, only one of retry_seconds:`{}` and retry_minutes:`{}` can be given'.format(
+                msg = 'Could not invoke `{}`, only one of seconds:`{}` and minutes:`{}` can be given'.format(
                     target, retry_seconds, retry_minutes)
                 logger.error(msg)
                 raise ValueError(msg)
 
             if not(retry_seconds or retry_minutes):
-                msg = 'Could not invoke `{}`, exactly one of retry_seconds:`{}` or retry_minutes:`{}` must be given'.format(
+                msg = 'Could not invoke `{}`, exactly one of seconds:`{}` or minutes:`{}` must be given'.format(
                     target, retry_seconds, retry_minutes)
                 logger.error(msg)
                 raise ValueError(msg)
@@ -166,7 +165,7 @@ class InvokeRetry(object):
                 remaining = retry_repeats
                 result = None
                 
-                while remaining > 0:
+                while remaining > 1:
                     try:
                         result = self.invoking_service.invoke(target, *args, **kwargs)
                     except Exception, e:
@@ -180,7 +179,7 @@ class InvokeRetry(object):
                 if not result:
                     msg = retry_limit_reached_msg(retry_repeats, target, retry_seconds, self.invoking_service.cid)
                     logger.warn(msg)
-                    raise ZatoException(None, msg)
+                    raise ZatoException(self.invoking_service.cid, msg)
         else:
             # All good, simply return the response
             return result
