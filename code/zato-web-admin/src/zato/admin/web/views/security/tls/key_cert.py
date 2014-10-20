@@ -9,12 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from json import dumps
 import logging
-from traceback import format_exc
-
-# Django
-from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
 from zato.admin.web.forms.security.tls.key_cert import CreateForm, EditForm

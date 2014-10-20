@@ -79,6 +79,8 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.outgoing.jms_wmq',
             'zato.server.service.internal.outgoing.sql',
             'zato.server.service.internal.outgoing.zmq',
+            'zato.server.service.internal.pattern',
+            'zato.server.service.internal.pattern.invoke_retry',
             'zato.server.service.internal.pubsub',
             'zato.server.service.internal.pubsub.consumers',
             'zato.server.service.internal.pubsub.message',
