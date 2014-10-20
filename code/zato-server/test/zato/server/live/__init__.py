@@ -18,8 +18,8 @@ from bunch import bunchify
 # configobj
 from configobj import ConfigObj
 
-# nose
-from nose.tools import eq_
+# lxml
+from lxml import etree
 
 # Zato
 from zato.cli.util import Util
