@@ -8,9 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import errno, os
-
 # Zato
 from zato.common import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
