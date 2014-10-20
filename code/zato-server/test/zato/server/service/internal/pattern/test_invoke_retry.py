@@ -65,7 +65,7 @@ class InvokeRetryTestCase(ServiceTestCase):
             payload = {
                 'orig_cid': cid,
                 'callback': callback,
-                'callback_context': {rand_string():rand_string(), rand_int():rand_int()},
+                'callback_context': {rand_string():rand_string()},
                 'target': target,
                 'retry_repeats': 4,
                 'retry_seconds': 0.1,
