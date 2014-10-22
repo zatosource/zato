@@ -101,6 +101,20 @@ zato_qs_stop_template = """#!/bin/bash
 export ZATO_CLI_DONT_SHOW_OUTPUT=1
 
 {script_dir}
+
+if [[ "$1" = "--delete-pidfiles" ]]
+then
+  echo Deleting PID files
+
+  rm -f $BASE_DIR/load-balancer/pidfile
+  rm -f $BASE_DIR/load-balancer/zato-lb-agent.pid
+  rm -f $BASE_DIR/server1/pidfile
+  rm -f $BASE_DIR/server2/pidfile
+  rm -f $BASE_DIR/web-admin/pidfile
+
+  echo PID files deleted
+fi
+
 ZATO_BIN={zato_bin}
 STEPS={stop_steps}
 CLUSTER={cluster_name}
