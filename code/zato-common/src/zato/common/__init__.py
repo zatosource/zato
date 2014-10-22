@@ -571,12 +571,11 @@ class PUB_SUB:
                 return iter((self.OBJECT, self.JSON, self.XML))
 
 class EMAIL:
-
     class DEFAULT:
         TIMEOUT = 10
         PING_ADDRESS = 'invalid@invalid'
         GET_CRITERIA = 'UNSEEN'
-        IMAP_DEBUG_LEVEL=0
+        IMAP_DEBUG_LEVEL = 0
 
     class IMAP:
         class MODE(Constants):
@@ -619,6 +618,11 @@ class TLS:
         PREFIX_KEYS = 'tls/keys/'
         PREFIX_CERTS = 'tls/certs/'
         PREFIX_CA_CERTS = 'tls/ca-certs/'
+
+class ODOO:
+    class DEFAULT:
+        PORT = 8069
+        POOL_SIZE = 20
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
