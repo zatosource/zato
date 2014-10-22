@@ -77,6 +77,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.outgoing.amqp',
             'zato.server.service.internal.outgoing.ftp',
             'zato.server.service.internal.outgoing.jms_wmq',
+            'zato.server.service.internal.outgoing.odoo',
             'zato.server.service.internal.outgoing.sql',
             'zato.server.service.internal.outgoing.zmq',
             'zato.server.service.internal.pattern',

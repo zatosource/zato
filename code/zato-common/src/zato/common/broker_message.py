@@ -193,6 +193,11 @@ class OUTGOING(Constants):
     FTP_DELETE = ValueConstant('')
     FTP_CHANGE_PASSWORD = ValueConstant('')
 
+    ODOO_CREATE = ValueConstant('')
+    ODOO_EDIT = ValueConstant('')
+    ODOO_DELETE = ValueConstant('')
+    ODOO_CHANGE_PASSWORD = ValueConstant('')
+
 class CHANNEL(Constants):
     code_start = 101000
 

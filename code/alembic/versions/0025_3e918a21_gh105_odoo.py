@@ -34,6 +34,7 @@ def upgrade():
         sa.Column('database', sa.String(200), nullable=False),
         sa.Column('protocol', sa.String(200), nullable=False),
         sa.Column('pool_size', sa.Integer(), nullable=False),
+        sa.Column('password', sa.String(400), nullable=False),
         sa.Column('cluster_id', sa.Integer(), sa.ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False),
         )
     op.create_unique_constraint(

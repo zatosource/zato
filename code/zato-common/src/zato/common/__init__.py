@@ -624,6 +624,16 @@ class ODOO:
         PORT = 8069
         POOL_SIZE = 20
 
+    class PROTOCOL:
+        XML_RPC = NameId('XML-RPC', 'xml-rpc')
+        XML_RPCS = NameId('XML-RPCS', 'xml-rpcs')
+        JSON_RPC = NameId('JSON-RPC', 'json-rpc')
+        JSON_RPCS = NameId('JSON-RPCS', 'json-rpcs')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.XML_RPC, self.XML_RPCS, self.JSON_RPC, self.JSON_RPCS))
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
