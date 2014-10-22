@@ -33,6 +33,7 @@ from zato.admin.web.views.notif import sql as notif_sql
 from zato.admin.web.views.outgoing import amqp as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
+from zato.admin.web.views.outgoing import odoo as out_odoo
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import topics as pubsub_topics
@@ -608,6 +609,24 @@ urlpatterns += patterns('',
         login_required(out_jms_wmq.edit), name='out-jms-wmq-edit'),
     url(r'^zato/outgoing/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_jms_wmq.Delete()), name=out_jms_wmq.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
+    # .. Odoo
+
+    url(r'^zato/outgoing/odoo/$',
+        login_required(out_odoo.Index()), name=out_odoo.Index.url_name),
+    url(r'^zato/outgoing/odoo/create/$',
+        login_required(out_odoo.Create()), name=out_odoo.Create.url_name),
+    url(r'^zato/outgoing/odoo/edit/$',
+        login_required(out_odoo.Edit()), name=out_odoo.Edit.url_name),
+    url(r'^zato/outgoing/odoo/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_odoo.Delete()), name=out_odoo.Delete.url_name),
+    url(r'^zato/outgoing/odoo/change-password/$',
+        login_required(out_odoo.change_password), name='out-odoo-change-password'),
     )
 
 # ################################################################################################################################

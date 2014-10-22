@@ -930,14 +930,18 @@ class OutgoingOdoo(Base):
     is_active = Column(Boolean(), nullable=False)
 
     host = Column(String(200), nullable=False)
-    port = Column(Integer, server_default=ODOO.DEFAULT.PORT, nullable=False)
+    port = Column(Integer(), nullable=False, server_default=str(ODOO.DEFAULT.PORT))
     user = Column(String(200), nullable=False)
     database = Column(String(200), nullable=False)
     protocol = Column(String(200), nullable=False)
-    pool_size = Column(Integer, nullable=False)
+    pool_size = Column(Integer(), nullable=False, server_default=str(ODOO.DEFAULT.POOL_SIZE))
+    password = Column(String(400), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_odoo', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self):
+        self.protocol_name = None # Not used by the DB
 
 class OutgoingWMQ(Base):
     """ An outgoing WebSphere MQ connection.

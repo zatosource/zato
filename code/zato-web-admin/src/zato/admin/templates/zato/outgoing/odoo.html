@@ -30,7 +30,7 @@
             'port',
             'user',
             'database',
-            'protocol',
+            '_protocol_name',
             '_ping',
             '_change_password',
             '_edit',
@@ -38,6 +38,7 @@
             'id',
             'is_active',
             'pool_size',
+            'protocol'
         ]
     }
     </script>
@@ -61,7 +62,6 @@
             <a href="javascript:$.fn.zato.outgoing.odoo.create()">Create a new outgoing Odoo connection</a>
         </div>
 
-
         <div id="markup">
             <table id="data-table">
                 <thead>
@@ -82,6 +82,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -96,7 +97,7 @@
                         <td>{{ item.port }}</td>
                         <td>{{ item.user }}</td>
                         <td>{{ item.database }}</td>
-                        <td>{{ item.protocol }}</td>
+                        <td>{{ item.protocol_name }}</td>
                         <td><a href="javascript:$.fn.zato.outgoing.odoo.ping('{{ item.id }}')">Ping</a></td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.odoo.edit('{{ item.id }}')">Edit</a></td>
@@ -104,6 +105,7 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.pool_size }}</td>
+                        <td class='ignore'>{{ item.protocol }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -162,7 +164,7 @@
                             <td style="vertical-align:middle">Pool size
                                <br/><span class="form_hint">(default: {{ default_pool_size }})</span>
                             </td>
-                            <td>{{ create_form.protocol }}</td>
+                            <td>{{ create_form.pool_size }}</td>
                         </tr>
 
                         <tr>
@@ -195,32 +197,36 @@
                             <td style="vertical-align:middle">Host</td>
                             <td>{{ edit_form.host }}</td>
                         </tr>
-                        
+
                         <tr>
-                            <td style="vertical-align:middle">Port</td>
+                            <td style="vertical-align:middle">Port
+                                <br/><span class="form_hint">(default: {{ default_port }})</span>
+                            </td>
                             <td>{{ edit_form.port }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">User</td>
                             <td>{{ edit_form.user }}</td>
                         </tr>
-                        
+
                         <tr>
-                            <td style="vertical-align:middle">Accounting info</td>
-                            <td>{{ edit_form.acct }}</td>
+                            <td style="vertical-align:middle">Database</td>
+                            <td>{{ edit_form.database }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Timeout <span class='form_hint'>(seconds)</span></td>
-                            <td>{{ edit_form.timeout }}</td>
+                            <td style="vertical-align:middle">Protocol</td>
+                            <td>{{ edit_form.protocol }}</td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Cache directories</td>
-                            <td>{{ edit_form.dircache }}</td>
+                            <td style="vertical-align:middle">Pool size
+                               <br/><span class="form_hint">(default: {{ default_pool_size }})</span>
+                            </td>
+                            <td>{{ edit_form.pool_size }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
