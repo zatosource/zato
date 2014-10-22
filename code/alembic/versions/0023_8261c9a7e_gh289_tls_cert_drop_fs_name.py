@@ -9,6 +9,7 @@ revision = '0023_8261c9a7e'
 down_revision = '0022_a78ac9178'
 
 from alembic import op
+import sqlalchemy as sa
 
 # Zato
 from zato.common.odb import model
