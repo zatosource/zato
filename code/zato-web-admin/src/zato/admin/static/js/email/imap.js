@@ -49,7 +49,7 @@ $.fn.zato.email.imap.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.change_password('{0}')\">Change password</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.email.imap.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.email.imap.delete_({0});'>Delete</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.email.imap.ping({0});'>Ping</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.timeout);
@@ -70,16 +70,4 @@ $.fn.zato.email.imap.delete_ = function(id) {
         'IMAP connection [{0}] deleted',
         'Are you sure you want to delete the IMAP connection [{0}]?',
         true);
-}
-
-$.fn.zato.email.imap.ping = function(id) {
-
-    var callback = function(data, status) {
-        var success = status == 'success';
-        $.fn.zato.user_message(success, data.responseText);
-    }
-
-    var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
-    $.fn.zato.post(url, callback, '', 'text');
-
 }
