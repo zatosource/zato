@@ -901,8 +901,8 @@ def _pubsub_consumer(session, cluster_id, needs_columns=False):
         SecurityBase.name,
         SecurityBase.sec_type,
         PubSubTopic.name.label('topic_name')).\
+        outerjoin(HTTPSOAP, HTTPSOAP.id==PubSubConsumer.callback_id).\
         filter(Cluster.id==cluster_id).\
-        filter(PubSubConsumer.callback_id==HTTPSOAP.id).\
         filter(PubSubConsumer.topic_id==PubSubTopic.id).\
         filter(PubSubConsumer.cluster_id==Cluster.id).\
         filter(PubSubConsumer.sec_def_id==SecurityBase.id).\
@@ -919,50 +919,59 @@ def pubsub_consumer_list(session, cluster_id, topic_name, needs_columns=False):
 
 # ################################################################################################################################
 
-def _notif_cloud_openstack_swift(session, cluster_id):
-    return session.query(NotifOSS.id, NotifOSS.name, NotifOSS.is_active, NotifOSS.notif_type, NotifOSS.def_id,
-        NotifOSS.containers, NotifOSS.interval, NotifOSS.name_pattern, NotifOSS.name_pattern_neg,
-        NotifOSS.get_data, NotifOSS.get_data_patt, NotifOSS.get_data_patt_neg, OpenStackSwift.name.label('def_name'),
-        Service.name.label('service_name')).\
+def _notif_cloud_openstack_swift(session, cluster_id, needs_password):
+    """ OpenStack Swift notifications.
+    """
+
+    columns = [NotifOSS.id, NotifOSS.name, NotifOSS.is_active, NotifOSS.notif_type, NotifOSS.def_id, NotifOSS.containers,
+        NotifOSS.interval, NotifOSS.name_pattern, NotifOSS.name_pattern_neg, NotifOSS.get_data, NotifOSS.get_data_patt,
+        NotifOSS.get_data_patt_neg, OpenStackSwift.name.label('def_name'), Service.name.label('service_name')]
+
+    #if needs_password:
+
+    return session.query(*columns).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==NotifOSS.cluster_id).\
         filter(NotifOSS.def_id==OpenStackSwift.id).\
         filter(NotifOSS.service_id==Service.id).\
         order_by(NotifOSS.name)
 
-def notif_cloud_openstack_swift(session, cluster_id, id):
+def notif_cloud_openstack_swift(session, cluster_id, id, needs_password=False):
     """ An OpenStack Swift notification definition.
     """
-    return _notif_cloud_openstack_swift(session, cluster_id).\
+    return _notif_cloud_openstack_swift(session, cluster_id, needs_password).\
         filter(NotifOSS.id==id).\
         one()
 
 @needs_columns
-def notif_cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
+def notif_cloud_openstack_swift_list(session, cluster_id, needs_password=False, needs_columns=False):
     """ OpenStack Swift connection definitions.
     """
-    return _notif_cloud_openstack_swift(session, cluster_id)
+    return _notif_cloud_openstack_swift(session, cluster_id, needs_password)
 
 # ################################################################################################################################
 
-def _notif_sql(session, cluster_id):
+def _notif_sql(session, cluster_id, needs_password):
     """ SQL notifications.
     """
-    return session.query(
-        NotifSQL.id, NotifSQL.is_active, NotifSQL.name, NotifSQL.query,
-        NotifSQL.notif_type, NotifSQL.interval, NotifSQL.def_id,
-        SQLConnectionPool.name.label('def_name'), Service.name.label('service_name')).\
+
+    columns = [NotifSQL.id, NotifSQL.is_active, NotifSQL.name, NotifSQL.query, NotifSQL.notif_type, NotifSQL.interval, \
+        NotifSQL.def_id, SQLConnectionPool.name.label('def_name'), Service.name.label('service_name')]
+
+    if needs_password:
+        columns.append(SQLConnectionPool.password)
+
+    return session.query(*columns).\
         filter(Cluster.id==NotifSQL.cluster_id).\
         filter(SQLConnectionPool.id==NotifSQL.def_id).\
         filter(Service.id==NotifSQL.service_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(NotifSQL.name)
+        filter(Cluster.id==cluster_id)
 
 @needs_columns
-def notif_sql_list(session, cluster_id, needs_columns=False):
+def notif_sql_list(session, cluster_id, needs_password=False, needs_columns=False):
     """ All the SQL notifications.
     """
-    return _notif_sql(session, cluster_id)
+    return _notif_sql(session, cluster_id, needs_password)
 
 # ################################################################################################################################
 

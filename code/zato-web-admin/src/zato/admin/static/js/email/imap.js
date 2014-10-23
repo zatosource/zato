@@ -3,7 +3,7 @@
 
 $.fn.zato.data_table.IMAP = new Class({
     toString: function() {
-        var s = '<IMAP id:{0} name:{1} host:{2}>';
+        var s = '<IMAP id:{0} name:{1}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)');
     }

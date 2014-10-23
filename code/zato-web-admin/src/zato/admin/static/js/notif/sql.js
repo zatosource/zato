@@ -3,7 +3,7 @@
 
 $.fn.zato.data_table.SQLNotification = new Class({
     toString: function() {
-        var s = '<SQLNotification id:{0} name:{1} name:{2}>';
+        var s = '<SQLNotification id:{0} name:{1}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)');
     }

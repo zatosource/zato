@@ -1786,7 +1786,9 @@ class RBACClientRole(Base):
     id = Column(Integer, Sequence('rbac_cli_rol_seq'), primary_key=True)
     name = Column(String(400), nullable=False)
     client_def = Column(String(200), nullable=False)
+
     role_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=False)
+    role = relationship(RBACRole, backref=backref('rbac_client_roles', order_by=name, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('rbac_client_roles', order_by=client_def, cascade='all, delete, delete-orphan'))
@@ -1798,8 +1800,12 @@ class RBACRolePermission(Base):
     __table_args__ = (UniqueConstraint('role_id', 'perm_id', 'service_id', 'cluster_id'), {})
 
     id = Column(Integer, Sequence('rbac_role_perm_seq'), primary_key=True)
+
     role_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=False)
+    role = relationship(RBACRole, backref=backref('rbac_role_perms', order_by=id, cascade='all, delete, delete-orphan'))
+
     perm_id = Column(Integer, ForeignKey('rbac_perm.id', ondelete='CASCADE'), nullable=False)
+    perm = relationship(RBACPermission, backref=backref('rbac_role_perms', order_by=id, cascade='all, delete, delete-orphan'))
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship('Service', backref=backref('role_perm', order_by=id, cascade='all, delete, delete-orphan'))
