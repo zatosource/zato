@@ -5,6 +5,7 @@ $.fn.zato.data_table.Topics = new Class({
     toString: function() {
         var s = '<Topics id:{0} name:{1} max_depth:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
+                                this.name ? this.name : '(none)',
                                 this.max_depth ? this.max_depth : '(none)');
     }
 });
