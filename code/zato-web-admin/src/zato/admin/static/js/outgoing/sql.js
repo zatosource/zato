@@ -48,7 +48,7 @@ $.fn.zato.outgoing.sql.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.db_name);
     row += String.format('<td>{0}</td>', item.username);
     row += String.format('<td>{0}</td>', item.pool_size);
-    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.sql.ping('{0}', {1})\">Ping</a>", item.id, data.cluster_id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.data_table.ping('{0}')\">Ping</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.sql.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.sql.delete_({0});'>Delete</a>", item.id));
@@ -68,21 +68,4 @@ $.fn.zato.outgoing.sql.delete_ = function(id) {
         'Outgoing SQL connection [{0}] deleted',
         'Are you sure you want to delete the outgoing SQL connection [{0}]?',
         true);
-}
-
-$.fn.zato.outgoing.sql.ping = function(cluster_id, id) {
-
-    var _callback = function(data, status) {
-        var success = status == 'success';
-        msg = data.responseText;
-        $.fn.zato.user_message(success, msg);
-    }
-
-    $.ajax({
-        type: 'POST',
-        url: String.format('./ping/{0}/cluster/{1}/', cluster_id, id),
-        data: '',
-        headers: {'X-CSRFToken': $.cookie('csrftoken')},
-        complete: _callback
-    });
 }

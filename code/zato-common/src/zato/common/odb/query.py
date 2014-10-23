@@ -23,9 +23,9 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_S
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, CassandraQuery, ChannelAMQP, ChannelWMQ, \
      ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, \
      DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, \
-     MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OpenStackSecurity, \
-     OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, \
-     RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMTP, Solr, \
+     MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
+     OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, \
+     PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMTP, Solr, \
      SQLConnectionPool, TechnicalAccount, TLSCACert, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
@@ -1187,5 +1187,26 @@ def rbac_role_permission_list(session, cluster_id, needs_columns=False):
     """ A list of permissions for roles against services.
     """
     return _rbac_role_permission(session, cluster_id)
+
+# ################################################################################################################################
+
+def _out_odoo(session, cluster_id):
+    return session.query(OutgoingOdoo).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==OutgoingOdoo.cluster_id).\
+        order_by(OutgoingOdoo.name)
+
+def out_odoo(session, cluster_id, id):
+    """ An individual Odoo connection.
+    """
+    return _out_odoo(session, cluster_id).\
+        filter(OutgoingOdoo.id==id).\
+        one()
+
+@needs_columns
+def out_odoo_list(session, cluster_id, needs_columns=False):
+    """ A list of Odoo connections.
+    """
+    return _out_odoo(session, cluster_id)
 
 # ################################################################################################################################
