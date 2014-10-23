@@ -49,6 +49,7 @@ from zato.server.connection.ftp import FTPStore
 from zato.server.connection.http_soap.channel import RequestDispatcher, RequestHandler
 from zato.server.connection.http_soap.outgoing import HTTPSOAPWrapper, SudsSOAPWrapper
 from zato.server.connection.http_soap.url_data import URLData
+from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.sql import PoolStore, SessionWrapper
@@ -131,6 +132,9 @@ class WorkerStore(BrokerMessageReceiver):
         # E-mail
         self.init_email_smtp()
         self.init_email_imap()
+
+        # Odoo
+        self.init_odoo()
 
         # RBAC
         self.init_rbac()
@@ -395,6 +399,17 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init_email_imap(self):
         self.init_simple(self.worker_config.email_imap, self.email_imap_api, 'an IMAP')
+
+# ################################################################################################################################
+
+    def init_odoo(self):
+        names = self.worker_config.out_odoo.keys()
+        for name in names:
+            item = config = self.worker_config.out_odoo[name]
+            config = item['config']
+            config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
+            item.conn = OdooWrapper(config)
+            item.conn.build_queue()
 
 # ################################################################################################################################
 
@@ -1223,6 +1238,20 @@ class WorkerStore(BrokerMessageReceiver):
         """ Closes and deletes an AWS S3 connection.
         """
         self._delete_config_close_wrapper(msg['name'], self.worker_config.cloud_aws_s3, 'AWS S3', logger.debug)
+
+# ################################################################################################################################
+
+    def on_broker_msg_OUTGOING_ODOO_CREATE(self, msg, *args):
+        """ Creates or updates an Odoo connection.
+        """
+        self._on_broker_msg_cloud_create_edit(msg, 'Odoo', self.worker_config.out_odoo, OdooWrapper)
+
+    on_broker_msg_OUTGOING_ODOO_CHANGE_PASSWORD = on_broker_msg_OUTGOING_ODOO_EDIT = on_broker_msg_OUTGOING_ODOO_CREATE
+
+    def on_broker_msg_OUTGOING_ODOO_DELETE(self, msg, *args):
+        """ Closes and deletes an Odoo connection.
+        """
+        self._delete_config_close_wrapper(msg['name'], self.worker_config.out_odoo, 'Odoo', logger.debug)
 
 # ################################################################################################################################
 

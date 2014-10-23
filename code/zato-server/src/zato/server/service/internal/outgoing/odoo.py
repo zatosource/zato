@@ -16,7 +16,8 @@ from uuid import uuid4
 # Zato
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingOdoo
-from zato.common.odb.query import odoo_connection_list
+from zato.common.odb.query import out_odoo_list
+from zato.common.util import ping_odoo
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -25,11 +26,16 @@ model = OutgoingOdoo
 label = 'an Odoo connection'
 broker_message = OUTGOING
 broker_message_prefix = 'ODOO_'
-list_func = odoo_connection_list
+list_func = out_odoo_list
 skip_input_params = ['password']
 
 def instance_hook(service, input, instance, attrs):
-    instance.password = uuid4().hex
+    if 'create' in service.get_name().lower():
+        instance.password = uuid4().hex
+
+def broker_message_hook(service, input, instance, attrs, service_type):
+    if service_type == 'create_edit':
+        input.password = instance.password
 
 class GetList(AdminService):
     __metaclass__ = GetListMeta
@@ -56,7 +62,8 @@ class ChangePassword(ChangePasswordBase):
         def _auth(instance, password):
             instance.password = password
 
-        return self._handle(OutgoingOdoo, _auth, OUTGOING.ODOO_CHANGE_PASSWORD.value)
+        return self._handle(OutgoingOdoo, _auth, OUTGOING.ODOO_CHANGE_PASSWORD.value,
+            publish_instance_attrs=['host', 'protocol', 'port', 'database', 'user', 'password', 'pool_size'])
 
 class Ping(AdminService):
 
@@ -71,8 +78,10 @@ class Ping(AdminService):
         with closing(self.odb.session()) as session:
             item = session.query(OutgoingOdoo).filter_by(id=self.request.input.id).one()
 
-        start_time = time()
-        self.email.imap.get(item.name, True).conn.ping()
-        response_time = time() - start_time
+        with self.outgoing.odoo[item.name].conn.client() as client:
 
-        self.response.payload.info = 'Ping OK, took:`{0:03.4f} s`'.format(response_time)
+            start_time = time()
+            ping_odoo(client)
+            response_time = time() - start_time
+
+            self.response.payload.info = 'Ping OK, took:`{0:03.4f} s`'.format(response_time)

@@ -1190,23 +1190,23 @@ def rbac_role_permission_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def _odoo(session, cluster_id):
+def _out_odoo(session, cluster_id):
     return session.query(OutgoingOdoo).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==OutgoingOdoo.cluster_id).\
         order_by(OutgoingOdoo.name)
 
-def odoo_connection(session, cluster_id, id):
+def out_odoo(session, cluster_id, id):
     """ An individual Odoo connection.
     """
-    return _odoo(session, cluster_id).\
+    return _out_odoo(session, cluster_id).\
         filter(OutgoingOdoo.id==id).\
         one()
 
 @needs_columns
-def odoo_connection_list(session, cluster_id, needs_columns=False):
+def out_odoo_list(session, cluster_id, needs_columns=False):
     """ A list of Odoo connections.
     """
-    return _odoo(session, cluster_id)
+    return _out_odoo(session, cluster_id)
 
 # ################################################################################################################################

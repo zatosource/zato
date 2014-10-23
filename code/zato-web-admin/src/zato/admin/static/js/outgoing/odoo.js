@@ -39,10 +39,10 @@ $.fn.zato.outgoing.odoo.data_table.new_row = function(item, data, include_tr) {
     var is_active = item.is_active == true;
 
     var protocol_to_name = {
-        'xml-rpc': 'XML-RPC',
-        'xml-rpcs': 'XML-RPCS',
-        'json-rpc': 'JSON-RPC',
-        'json-rpcs': 'JSON-RPCS',
+        'xmlrpc': 'XML-RPC',
+        'xmlrpcs': 'XML-RPCS',
+        'jsonrpc': 'JSON-RPC',
+        'jsonrpcs': 'JSON-RPCS',
     }
 
     row += "<td class='numbering'>&nbsp;</td>";
@@ -67,4 +67,11 @@ $.fn.zato.outgoing.odoo.data_table.new_row = function(item, data, include_tr) {
     }
 
     return row;
+}
+
+$.fn.zato.outgoing.odoo.delete_ = function(id) {
+    $.fn.zato.data_table.delete_(id, 'td.item_id_',
+        'Odoo connection [{0}] deleted',
+        'Are you sure you want to delete the outgoing Odoo connection [{0}]?',
+        true);
 }
