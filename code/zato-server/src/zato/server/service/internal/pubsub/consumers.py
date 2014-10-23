@@ -36,6 +36,7 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active', 'sec_type', Int('max_backlog'), Int('current_depth'), 
             'sub_key', 'delivery_mode')
         output_optional = (UTC('last_seen'), 'callback')
+        output_repeated = True
 
     def get_data(self, session):
         for item in pubsub_consumer_list(session, self.request.input.cluster_id, self.request.input.topic_name)[0]:
