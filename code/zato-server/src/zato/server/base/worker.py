@@ -1244,7 +1244,7 @@ class WorkerStore(BrokerMessageReceiver):
                 msg.delivery_mode, msg.callback_id, msg.callback_name, msg.callback_type),
             Topic(msg.topic_name))
 
-    def _on_broker_msg_PUB_SUB_CONSUMER_CREATE(self, msg):
+    def on_broker_msg_PUB_SUB_CONSUMER_CREATE(self, msg):
         self._on_broker_msg_pub_sub_consumer_create_edit(msg)
 
     def on_broker_msg_PUB_SUB_CONSUMER_EDIT(self, msg):
