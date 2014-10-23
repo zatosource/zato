@@ -1012,6 +1012,13 @@ def ping_solr(config):
 
 # ################################################################################################################################
 
+def ping_odoo(conn):
+    user_model = conn.get_model('res.users')
+    ids = user_model.search([('login', '=', conn.login)])
+    user_model.read(ids[0], ['login'])['login']
+
+# ################################################################################################################################
+
 class StaticConfig(Bunch):
     def __init__(self, path):
         super(StaticConfig, self).__init__()

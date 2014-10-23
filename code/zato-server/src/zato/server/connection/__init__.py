@@ -35,7 +35,7 @@ import psutil
 
 # Zato
 from zato.broker.thread_client import BrokerClient
-from zato.common import Inactive, TRACE1, ZATO_ODB_POOL_NAME
+from zato.common import Inactive, SECRET_SHADOW, TRACE1, ZATO_ODB_POOL_NAME
 from zato.common.delivery import DeliveryStore
 from zato.common.kvdb import KVDB
 from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable
@@ -290,6 +290,8 @@ class BasePoolAPI(object):
     def create_def(self, name, msg):
         return self._conn_store.create(name, msg)
 
+    create = create_def
+
     def edit_def(self, name, msg):
         return self._conn_store.edit(name, msg)
 
@@ -304,6 +306,8 @@ class BasePoolAPI(object):
 class BaseConnPoolStore(object):
     """ Base connection store for pool-based outgoing connections.
     """
+    conn_name = None
+
     def __init__(self):
         self.sessions = {}
         self.lock = RLock()
@@ -314,18 +318,41 @@ class BaseConnPoolStore(object):
     def get(self, name):
         return self.sessions.get(name)
 
-    def create_connection(self, name, config):
+    def create_session(self, name, config):
         """ Actually adds a new definition, must be called with self.lock held.
         """
         raise NotImplementedError('Must be overridden in subclasses')
+
+    def _create(self, name, config):
+        config_no_sensitive = deepcopy(config)
+        config_no_sensitive['password'] = SECRET_SHADOW
+
+        item = Bunch(config=config, config_no_sensitive=config_no_sensitive, is_connected=False, conn=None)
+
+        try:
+            logger.debug('Connecting to `%s`', config_no_sensitive)
+
+            # Will be overridden in a subclass
+            session = self.create_session(name, config, config_no_sensitive)
+
+        except Exception, e:
+            logger.warn('Could not connect to %s `%s`, config:`%s`, e:`%s`', self.conn_name, name, config_no_sensitive, format_exc(e))
+        else:
+            logger.debug('Connected to `%s`', config_no_sensitive)
+            item.conn = session
+            item.is_connected = True
+
+        self.sessions[name] = item
+
+        return item
 
     def create(self, name, config):
         """ Adds a new connection definition.
         """
         with self.lock:
-            self.create_connection(name, config)
+            return self._create(name, config)
 
-    def delete_connection(self, name):
+    def delete_session(self, name):
         """ Actually deletes a definition. Must be called with self.lock held.
         """
         raise NotImplementedError('Must be overridden in subclasses')
@@ -334,15 +361,29 @@ class BaseConnPoolStore(object):
         """ Deletes an existing connection.
         """
         with self.lock:
-            self.delete_connection(name)
+            try:
+                if not name in self.sessions:
+                    raise Exception('No such name `{}` among `{}`'.format(name, self.sessions.keys()))
+
+                if self.sessions[name].is_connected:
+
+                    # Will be overridden in a subclass
+                    self.delete_session(name)
+
+            except Exception, e:
+                logger.warn('Error while shutting down session `%s`, e:`%s`', name, format_exc(e))
+            finally:
+                del self.sessions[name]
 
     def edit(self, name, config):
         with self.lock:
-            self.delete_connection(name)
-            return self.create_connection(config.name, config)
+            self.delete_session(name)
+            return self._create(config.name, config)
 
     def change_password(self, password_data):
         with self.lock:
             new_config = deepcopy(self.sessions[password_data.name].config_no_sensitive)
             new_config.password = password_data.password
             return self.edit(password_data.name, new_config)
+
+# ################################################################################################################################

@@ -14,7 +14,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common import SECRET_SHADOW, zato_namespace
+from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.util import replace_private_key
 from zato.server.service import Service
@@ -112,6 +112,10 @@ class ChangePasswordBase(AdminService):
                     self.request.input.name = name
                     self.request.input.password = auth.password
                     self.request.input.salt = kwargs.get('salt')
+
+                    for attr in kwargs.get('publish_instance_attrs', []):
+                        self.request.input[attr] = getattr(auth, attr, ZATO_NONE)
+
                     self.broker_client.publish(self.request.input, msg_type=msg_type)
 
             except Exception, e:

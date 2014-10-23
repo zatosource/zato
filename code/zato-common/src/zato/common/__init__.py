@@ -622,13 +622,13 @@ class TLS:
 class ODOO:
     class DEFAULT:
         PORT = 8069
-        POOL_SIZE = 20
+        POOL_SIZE = 3
 
     class PROTOCOL:
-        XML_RPC = NameId('XML-RPC', 'xml-rpc')
-        XML_RPCS = NameId('XML-RPCS', 'xml-rpcs')
-        JSON_RPC = NameId('JSON-RPC', 'json-rpc')
-        JSON_RPCS = NameId('JSON-RPCS', 'json-rpcs')
+        XML_RPC = NameId('XML-RPC', 'xmlrpc')
+        XML_RPCS = NameId('XML-RPCS', 'xmlrpcs')
+        JSON_RPC = NameId('JSON-RPC', 'jsonrpc')
+        JSON_RPCS = NameId('JSON-RPCS', 'jsonrpcs')
 
         class __metaclass__(type):
             def __iter__(self):
