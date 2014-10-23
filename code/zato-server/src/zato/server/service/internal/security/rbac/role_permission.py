@@ -43,7 +43,7 @@ def get_extra(service, role_id, service_id, perm_id):
         perm = session.query(RBACPermission).\
             filter(RBACPermission.id==perm_id).one()
 
-        return '{}:::{}::{}'.format(role.name, service.name, perm.name), role.name, _service.name, perm.name
+        return '{}:::{}::{}'.format(role.name, _service.name, perm.name), role.name, _service.name, perm.name
 
 def instance_hook(self, input, instance, attrs):
     with closing(self.odb.session()) as session:
@@ -93,6 +93,12 @@ class GetList(AdminService):
 
 class Create(AdminService):
     __metaclass__ = CreateEditMeta
+
+class Edit(AdminService):
+    """ This service is a no-op added only for API completeness.
+    """
+    def handle(self):
+        pass
 
 class Delete(AdminService):
     __metaclass__ = DeleteMeta
