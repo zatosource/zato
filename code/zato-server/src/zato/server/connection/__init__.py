@@ -15,23 +15,27 @@ logging.setLoggerClass(ZatoLogger)
 
 # stdlib
 import errno, os, time
+from copy import deepcopy
 from datetime import datetime
 from subprocess import Popen
 from traceback import format_exc
+
+# Bunch
+from bunch import Bunch
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 import cloghandler
 cloghandler = cloghandler # For pyflakes
 
+# gevent
+from gevent.lock import RLock
+
 # psutil
 import psutil
 
-# Bunch
-from bunch import Bunch
-
 # Zato
 from zato.broker.thread_client import BrokerClient
-from zato.common import TRACE1, ZATO_ODB_POOL_NAME
+from zato.common import Inactive, TRACE1, ZATO_ODB_POOL_NAME
 from zato.common.delivery import DeliveryStore
 from zato.common.kvdb import KVDB
 from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable
@@ -262,3 +266,83 @@ def start_connector(repo_location, file_, env_item_name, def_id, item_id):
     Popen(program, close_fds=True, shell=True, env=_env)
 
 # ################################################################################################################################
+
+class BasePoolAPI(object):
+    """ API for pool-based outgoing connections.
+    """
+    def __init__(self, conn_store):
+        self._conn_store = conn_store
+
+    def __getitem__(self, name):
+        item = self._conn_store.get(name)
+        if not item:
+            msg = 'No such connection `{}` in `{}`'.format(name, sorted(self._conn_store.sessions))
+            logger.warn(msg)
+            raise KeyError(msg)
+
+        if not item.config.is_active:
+            msg = 'Connection `{}` is not active'.format(name)
+            logger.warn(msg)
+            raise Inactive(msg)
+
+        return item
+
+    def create_def(self, name, msg):
+        return self._conn_store.create(name, msg)
+
+    def edit_def(self, name, msg):
+        return self._conn_store.edit(name, msg)
+
+    def delete_def(self, name):
+        return self._conn_store.delete(name)
+
+    def change_password_def(self, config):
+        return self._conn_store.change_password(config)
+
+# ################################################################################################################################
+
+class BaseConnPoolStore(object):
+    """ Base connection store for pool-based outgoing connections.
+    """
+    def __init__(self):
+        self.sessions = {}
+        self.lock = RLock()
+
+    def __getitem__(self, name):
+        return self.sessions[name]
+
+    def get(self, name):
+        return self.sessions.get(name)
+
+    def create_connection(self, name, config):
+        """ Actually adds a new definition, must be called with self.lock held.
+        """
+        raise NotImplementedError('Must be overridden in subclasses')
+
+    def create(self, name, config):
+        """ Adds a new connection definition.
+        """
+        with self.lock:
+            self.create_connection(name, config)
+
+    def delete_connection(self, name):
+        """ Actually deletes a definition. Must be called with self.lock held.
+        """
+        raise NotImplementedError('Must be overridden in subclasses')
+
+    def delete(self, name):
+        """ Deletes an existing connection.
+        """
+        with self.lock:
+            self.delete_connection(name)
+
+    def edit(self, name, config):
+        with self.lock:
+            self.delete_connection(name)
+            return self.create_connection(config.name, config)
+
+    def change_password(self, password_data):
+        with self.lock:
+            new_config = deepcopy(self.sessions[password_data.name].config_no_sensitive)
+            new_config.password = password_data.password
+            return self.edit(password_data.name, new_config)

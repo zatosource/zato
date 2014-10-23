@@ -11,11 +11,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
+# Django
+from django.http import HttpResponse, HttpResponseServerError
+
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.odoo import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, Index as _Index, \
-     method_allowed
+from zato.admin.web.views import change_password as _change_password, CreateEdit, Delete as _Delete, id_only_service, \
+     Index as _Index, method_allowed
 from zato.common import ODOO
 from zato.common.odb.model import OutgoingOdoo
 
@@ -75,3 +78,10 @@ class Delete(_Delete):
 @method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.outgoing.odoo.change-password')
+
+@method_allowed('POST')
+def ping(req, id, cluster_id):
+    ret = id_only_service(req, 'zato.outgoing.odoo.ping', id, 'Could not ping the Odoo connection, e:[{e}]')
+    if isinstance(ret, HttpResponseServerError):
+        return ret
+    return HttpResponse(ret.data.info)

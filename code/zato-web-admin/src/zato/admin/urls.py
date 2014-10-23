@@ -627,6 +627,8 @@ urlpatterns += patterns('',
         login_required(out_odoo.Delete()), name=out_odoo.Delete.url_name),
     url(r'^zato/outgoing/odoo/change-password/$',
         login_required(out_odoo.change_password), name='out-odoo-change-password'),
+    url(r'^zato/outgoing/odoo/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_odoo.ping), name='out-odoo-ping'),
     )
 
 # ################################################################################################################################
