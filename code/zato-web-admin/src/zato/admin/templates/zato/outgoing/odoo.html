@@ -31,10 +31,10 @@
             'user',
             'database',
             '_protocol_name',
-            '_ping',
             '_change_password',
             '_edit',
             '_delete',
+            '_ping',
             'id',
             'is_active',
             'pool_size',
@@ -98,10 +98,10 @@
                         <td>{{ item.user }}</td>
                         <td>{{ item.database }}</td>
                         <td>{{ item.protocol_name }}</td>
-                        <td><a href="javascript:$.fn.zato.outgoing.odoo.ping('{{ item.id }}')">Ping</a></td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.odoo.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.odoo.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.pool_size }}</td>

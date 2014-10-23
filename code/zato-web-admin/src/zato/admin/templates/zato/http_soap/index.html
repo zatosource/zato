@@ -243,7 +243,7 @@
                         <td><a href="javascript:$.fn.zato.http_soap.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.http_soap.delete_('{{ item.id }}')">Delete</a></td>
                         {% ifequal connection 'outgoing' %}
-                            <td><a href="javascript:$.fn.zato.http_soap.ping('{{ item.id }}')">Ping</a></td>
+                            <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
                         {% endifequal %}
 
                         {% ifequal connection 'outgoing' %}
