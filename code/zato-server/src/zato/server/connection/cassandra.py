@@ -21,13 +21,15 @@ from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
 from cassandra.query import dict_factory
 
-# gevent
-from gevent.lock import RLock
-
 # Zato
-from zato.common import Inactive, SECRET_SHADOW
+from zato.common import SECRET_SHADOW
+from zato.server.connection import BaseConnPoolStore, BasePoolAPI
+
+# ################################################################################################################################
 
 logger = getLogger(__name__)
+
+# ################################################################################################################################
 
 msg_to_stdlib = {
     'tls_ca_certs': 'ca_certs',
@@ -35,52 +37,21 @@ msg_to_stdlib = {
     'tls_client_priv_key': 'keyfile',
     }
 
-class CassandraAPI(object):
-    def __init__(self, conn_store):
-        self._conn_store = conn_store
+# ################################################################################################################################
 
-    def __getitem__(self, name):
-        item = self._conn_store.get(name)
-        if not item:
-            msg = 'No such connection `{}` in `{}`'.format(name, sorted(self._conn_store.sessions))
-            logger.warn(msg)
-            raise KeyError(msg)
+class CassandraAPI(BasePoolAPI):
+    """ API through which connections to Cassandra can be obtained.
+    """
 
-        if not item.config.is_active:
-            msg = 'Connection `{}` is not active'.format(name)
-            logger.warn(msg)
-            raise Inactive(msg)
+# ################################################################################################################################
 
-        return item
-
-    def create_def(self, name, msg):
-        return self._conn_store.create(name, msg)
-
-    def edit_def(self, name, msg):
-        return self._conn_store.edit(name, msg)
-
-    def delete_def(self, name):
-        return self._conn_store.delete(name)
-
-    def change_password_def(self, config):
-        return self._conn_store.change_password(config)
-
-class CassandraConnStore(object):
+class CassandraConnStore(BaseConnPoolStore):
     """ Stores connections to Cassandra.
     """
-    def __init__(self):
-        self.sessions = {}
-        self.lock = RLock()
 
-    def __getitem__(self, name):
-        return self.sessions[name]
+# ################################################################################################################################
 
-    def get(self, name):
-        return self.sessions.get(name)
-
-    def _add(self, name, config):
-        """ Actually adds a new definition, must be called with self.lock held.
-        """
+    def create_connection(self, name, config):
         config_no_sensitive = deepcopy(config)
         config_no_sensitive['password'] = SECRET_SHADOW
 
@@ -116,13 +87,9 @@ class CassandraConnStore(object):
 
         return item
 
-    def create(self, name, config):
-        """ Adds a new connection definition.
-        """
-        with self.lock:
-            self._add(name, config)
+# ################################################################################################################################
 
-    def _delete(self, name):
+    def delete_connection(self, name):
         """ Actually deletes a definition. Must be called with self.lock held.
         """
         try:
@@ -136,19 +103,4 @@ class CassandraConnStore(object):
         finally:
             del self.sessions[name]
 
-    def delete(self, name):
-        """ Deletes an existing connection.
-        """
-        with self.lock:
-            self._delete(name)
-
-    def edit(self, name, config):
-        with self.lock:
-            self._delete(name)
-            return self._add(config.name, config)
-
-    def change_password(self, password_data):
-        with self.lock:
-            new_config = deepcopy(self.sessions[password_data.name].config_no_sensitive)
-            new_config.password = password_data.password
-            return self.edit(password_data.name, new_config)
+# ################################################################################################################################
