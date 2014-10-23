@@ -166,7 +166,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.delete_({0});'>Delete</a>", item.id));
 
     if(is_outgoing) {
-        row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.ping({0});'>Ping</a>", item.id));
+        row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.ping({0});'>Ping</a>", item.id));
         if(item.serialization_type == 'suds') {
             row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.http_soap.reload_wsdl({0});'>Reload WSDL</a>", item.id));
         }
@@ -188,18 +188,6 @@ $.fn.zato.http_soap.delete_ = function(id) {
         'Object [{0}] deleted',
         'Are you sure you want to delete the object [{0}]?',
         true);
-}
-
-$.fn.zato.http_soap.ping = function(id) {
-
-    var callback = function(data, status) {
-        var success = status == 'success';
-        $.fn.zato.user_message(success, data.responseText);
-    }
-
-    var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
-    $.fn.zato.post(url, callback, '', 'text');
-
 }
 
 $.fn.zato.http_soap.reload_wsdl = function(id) {

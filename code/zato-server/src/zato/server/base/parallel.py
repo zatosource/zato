@@ -433,9 +433,21 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # Outgoing connections - start
         #
 
+        # AMQP
+        query = self.odb.get_out_amqp_list(server.cluster.id, True)
+        self.config.out_amqp = ConfigDict.from_query('out_amqp', query)
+
         # FTP
         query = self.odb.get_out_ftp_list(server.cluster.id, True)
         self.config.out_ftp = ConfigDict.from_query('out_ftp', query)
+
+        # JMS WMQ
+        query = self.odb.get_out_jms_wmq_list(server.cluster.id, True)
+        self.config.out_jms_wmq = ConfigDict.from_query('out_jms_wmq', query)
+
+        # Odoo
+        query = self.odb.get_out_odoo_list(server.cluster.id, True)
+        self.config.out_odoo = ConfigDict.from_query('out_odoo', query)
 
         # Plain HTTP
         query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'plain_http', True)
@@ -448,14 +460,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # SQL
         query = self.odb.get_out_sql_list(server.cluster.id, True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query)
-
-        # AMQP
-        query = self.odb.get_out_amqp_list(server.cluster.id, True)
-        self.config.out_amqp = ConfigDict.from_query('out_amqp', query)
-
-        # JMS WMQ
-        query = self.odb.get_out_jms_wmq_list(server.cluster.id, True)
-        self.config.out_jms_wmq = ConfigDict.from_query('out_jms_wmq', query)
 
         # ZMQ
         query = self.odb.get_out_zmq_list(server.cluster.id, True)

@@ -15,9 +15,8 @@ import sqlalchemy as sa
 from sqlalchemy.schema import CreateSequence, DropSequence
 
 # Zato
-from zato.common.util import alter_column_nullable_false
 from zato.common.odb import model
-from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, MISC, MSG_PATTERN_TYPE, PUB_SUB
+from zato.common import CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, MISC, PUB_SUB
 
 # ################################################################################################################################
 

@@ -23,7 +23,7 @@ from sqlalchemy.orm import backref, relationship
 
 # Zato
 from zato.common import CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, MSG_PATTERN_TYPE, \
-     PUB_SUB, SCHEDULER, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
+     ODOO, PUB_SUB, SCHEDULER, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -918,6 +918,30 @@ class OutgoingFTP(Base):
         self.port = port
         self.dircache = dircache
         self.cluster_id = cluster_id
+
+class OutgoingOdoo(Base):
+    """ An outgoing Odoo connection.
+    """
+    __tablename__ = 'out_odoo'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('out_odoo_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    host = Column(String(200), nullable=False)
+    port = Column(Integer(), nullable=False, server_default=str(ODOO.DEFAULT.PORT))
+    user = Column(String(200), nullable=False)
+    database = Column(String(200), nullable=False)
+    protocol = Column(String(200), nullable=False)
+    pool_size = Column(Integer(), nullable=False, server_default=str(ODOO.DEFAULT.POOL_SIZE))
+    password = Column(String(400), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('out_conns_odoo', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self):
+        self.protocol_name = None # Not used by the DB
 
 class OutgoingWMQ(Base):
     """ An outgoing WebSphere MQ connection.

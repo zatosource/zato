@@ -91,6 +91,7 @@ $.namespace('zato.outgoing');
 $.namespace('zato.outgoing.amqp');
 $.namespace('zato.outgoing.ftp');
 $.namespace('zato.outgoing.jms_wmq');
+$.namespace('zato.outgoing.odoo');
 $.namespace('zato.outgoing.sql');
 $.namespace('zato.outgoing.zmq');
 $.namespace('zato.pattern.delivery');
@@ -717,6 +718,18 @@ $.fn.zato.data_table.on_submit_complete = function(data, status,
 
 $.fn.zato.data_table.service_text = function(service, cluster_id) {
     return String.format('<a href="/zato/service/overview/{0}/?cluster={1}">{0}</a>', service, cluster_id);
+}
+
+$.fn.zato.data_table.ping = function(id) {
+
+    var callback = function(data, status) {
+        var success = status == 'success';
+        $.fn.zato.user_message(success, data.responseText);
+    }
+
+    var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
+    $.fn.zato.post(url, callback, '', 'text');
+
 }
 
 // /////////////////////////////////////////////////////////////////////////////

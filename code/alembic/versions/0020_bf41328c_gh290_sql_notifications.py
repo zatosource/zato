@@ -12,7 +12,6 @@ down_revision = '0019_e77a8c06'
 
 from alembic import op
 import sqlalchemy as sa
-from sqlalchemy.schema import CreateSequence, DropSequence
 
 # Zato
 from zato.common.odb import model

@@ -91,7 +91,7 @@ class ConnectionQueue(object):
                     self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.queue_build_cap)
                 return
 
-            self.logger.info('%d/%d %s clients connected to `%s` (%s) after %s (cap: %ss)',
+            self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
                 self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.conn_name, now - start,
                 self.queue_build_cap)
 

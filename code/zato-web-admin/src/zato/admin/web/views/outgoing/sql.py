@@ -130,13 +130,18 @@ class Delete(_Delete):
 def ping(req, cluster_id, id):
     """ Pings a database and returns the time it took, in milliseconds.
     """
-    response = req.zato.client.invoke('zato.outgoing.sql.ping', {'id':id})
-    
-    if response.ok:
-        return TemplateResponse(req, 'zato/outgoing/sql-ping-ok.html', 
-            {'response_time':'%.3f' % float(response.data.response_time)})
-    else:
-        return HttpResponseServerError(response.details)
+    try:
+        response = req.zato.client.invoke('zato.outgoing.sql.ping', {'id':id})
+        
+        if response.ok:
+            return TemplateResponse(req, 'zato/outgoing/sql-ping-ok.html', 
+                {'response_time':'%.3f' % float(response.data.response_time)})
+        else:
+            return HttpResponseServerError(response.details)
+    except Exception, e:
+        msg = 'Could not ping the outgoing SQL connection, e:[{}]'.format(format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
 
 @method_allowed('POST')
 def change_password(req):

@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}SMTP{% endblock %}
+{% block html_title %}Odoo outconns{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -8,12 +8,16 @@
 
 {% block extra_js %}
 
+    {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
+    {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/email/smtp.js"></script>
+
+    {% comment %} Odoo {% endcomment %}
+    <script type="text/javascript" src="/static/js/outgoing/odoo.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -24,18 +28,17 @@
             '_is_active',
             'host',
             'port',
-            '_username',
-            '_change_password,',
+            'user',
+            'database',
+            '_protocol_name',
+            '_change_password',
             '_edit',
             '_delete',
             '_ping',
             'id',
             'is_active',
-            'timeout',
-            'ping_address',
-            'is_debug',
-            'mode',
-            'username'
+            'pool_size',
+            'protocol'
         ]
     }
     </script>
@@ -43,7 +46,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">SMTP</h2>
+<h2 class="zato">Outgoing Odoo connections</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -51,13 +54,12 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/choose-cluster.html" with page_prompt="Show connections"%}
+{% include "zato/choose-cluster.html" with page_prompt="Show Odoo connections"%}
 
 
     {% if cluster_id %}
-
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.email.smtp.create()">Create a new SMTP connection</a>
+            <a href="javascript:$.fn.zato.outgoing.odoo.create()">Create a new outgoing Odoo connection</a>
         </div>
 
         <div id="markup">
@@ -70,13 +72,13 @@
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Host</a></th>
                         <th><a href="#">Port</a></th>
-                        <th><a href="#">Username</a></th>
+                        <th><a href="#">User</a></th>
+                        <th><a href="#">Database</a></th>
+                        <th><a href="#">Protocol</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -93,133 +95,78 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.host }}</td>
                         <td>{{ item.port }}</td>
-                        <td>{{ item.username|default:"<span class='form_hint'>(None)</span>" }}</td>
+                        <td>{{ item.user }}</td>
+                        <td>{{ item.database }}</td>
+                        <td>{{ item.protocol_name }}</td>
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
-                        <td><a href="javascript:$.fn.zato.email.smtp.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.email.smtp.delete_('{{ item.id }}')">Delete</a></td>
-                        <td><a href="javascript:$.fn.$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.odoo.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.odoo.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.timeout }}</td>
-                        <td class='ignore'>{{ item.ping_address }}</td>
-                        <td class='ignore'>{{ item.is_debug }}</td>
-                        <td class='ignore'>{{ item.mode }}</td>
-                        <td class='ignore'>{{ item.username|default:"" }}</td>
+                        <td class='ignore'>{{ item.pool_size }}</td>
+                        <td class='ignore'>{{ item.protocol }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='8'>No results</td>
+                        <td colspan='16'>No results</td>
                     </tr>
-                {% endif %}        <div id="create-div" class='data-popup ignore'>
-            <div class="bd">
-                <form action="{% url email-smtp-create %}" method="post" id="create-form">
-                    <table class="form-data">
-                        <tr>
-                            <td style="vertical-align:middle">Name</td>
-                            <td>{{ create_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td>{{ create_form.is_active }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Host</td>
-                            <td>{{ create_form.host }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Port</td>
-                            <td>{{ create_form.port }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Timeout
-                            <br/>
-                            <span class="form_hint">(In seconds)</span>
-                            </td>
-                            <td>{{ create_form.timeout }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Username</td>
-                            <td>{{ create_form.username }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Mode</td>
-                            <td>{{ create_form.mode }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Debug mode</td>
-                            <td>{{ create_form.is_debug }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Ping address
-                            <br/>
-                            <span class="form_hint">(Default: {{ default_ping_address }})</span>
-                            </td>
-                            <td>{{ create_form.ping_address }} </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                            </td>
-                        </tr>
-                    </table>
-                    <input type="hidden" name="is_active" value="on" />
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                </form>
-            </div>
-        </div>
+                {% endif %}
 
                 </tbody>
             </table>
         </div>
 
+
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url email-smtp-create %}" method="post" id="create-form">
+                <form action="{% url out-odoo-create %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ create_form.is_active }}</td>
                         </tr>
+
                         <tr>
                             <td style="vertical-align:middle">Host</td>
-                            <td>{{ create_form.host }} </td>
+                            <td>{{ create_form.host }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Port</td>
-                            <td>{{ create_form.port }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Timeout
-                            <br/>
-                            <span class="form_hint">(In seconds)</span>
+                            <td style="vertical-align:middle">Port
+                                <br/><span class="form_hint">(default: {{ default_port }})</span>
                             </td>
-                            <td>{{ create_form.timeout }} </td>
+                            <td>{{ create_form.port }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Username</td>
-                            <td>{{ create_form.username }} </td>
+                            <td style="vertical-align:middle">User</td>
+                            <td>{{ create_form.user }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Mode</td>
-                            <td>{{ create_form.mode }} </td>
+                            <td style="vertical-align:middle">Database</td>
+                            <td>{{ create_form.database }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Debug mode</td>
-                            <td>{{ create_form.is_debug }} </td>
+                            <td style="vertical-align:middle">Protocol</td>
+                            <td>{{ create_form.protocol }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Ping address
-                            <br/>
-                            <span class="form_hint">(Default: {{ default_ping_address }})</span>
+                            <td style="vertical-align:middle">Pool size
+                               <br/><span class="form_hint">(default: {{ default_pool_size }})</span>
                             </td>
-                            <td>{{ create_form.ping_address }} </td>
+                            <td>{{ create_form.pool_size }}</td>
                         </tr>
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -227,7 +174,6 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
@@ -235,50 +181,52 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url email-smtp-edit %}" method="post" id="edit-form">
+                <form action="{% url out-odoo-edit %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle">Name</td>
+                            <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ edit_form.is_active }}</td>
                         </tr>
+
                         <tr>
                             <td style="vertical-align:middle">Host</td>
-                            <td>{{ edit_form.host }} </td>
+                            <td>{{ edit_form.host }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Port</td>
-                            <td>{{ edit_form.port }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Timeout
-                            <br/>
-                            <span class="form_hint">(In seconds)</span>
+                            <td style="vertical-align:middle">Port
+                                <br/><span class="form_hint">(default: {{ default_port }})</span>
                             </td>
-                            <td>{{ edit_form.timeout }} </td>
+                            <td>{{ edit_form.port }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Username</td>
-                            <td>{{ edit_form.username }} </td>
+                            <td style="vertical-align:middle">User</td>
+                            <td>{{ edit_form.user }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Mode</td>
-                            <td>{{ edit_form.mode }} </td>
+                            <td style="vertical-align:middle">Database</td>
+                            <td>{{ edit_form.database }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Debug mode</td>
-                            <td>{{ edit_form.is_debug }} </td>
+                            <td style="vertical-align:middle">Protocol</td>
+                            <td>{{ edit_form.protocol }}</td>
                         </tr>
+
                         <tr>
-                            <td style="vertical-align:middle">Ping address
-                            <br/>
-                            <span class="form_hint">(Default: {{ default_ping_address }})</span>
+                            <td style="vertical-align:middle">Pool size
+                               <br/><span class="form_hint">(default: {{ default_pool_size }})</span>
                             </td>
-                            <td>{{ edit_form.ping_address }} </td>
+                            <td>{{ edit_form.pool_size }}</td>
                         </tr>
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -286,16 +234,15 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
         </div>
-
+        
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url email-smtp-change-password %}" method="post" id="change_password-form">
+                <form action="{% url out-odoo-change-password %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -323,7 +270,8 @@
             </div>
         </div>
 
-    {% endif %} {% comment %}cluster_id{% endcomment %}
+    {% endif %}
+
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
 
