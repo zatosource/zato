@@ -240,6 +240,8 @@ class ServiceStore(InitializingObject):
                             timestamp = datetime.utcnow()
                             depl_info = deployment_info('service-store', item, timestamp, fs_location)
 
+                            item.add_http_method_handlers()
+
                             name = item.get_name()
                             impl_name = item.get_impl_name()
 
