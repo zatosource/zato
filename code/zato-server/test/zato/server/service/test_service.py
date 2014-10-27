@@ -449,3 +449,30 @@ class TestNav(TestCase):
 
     def test_listnav(self):
         self.test_dictnav() # Right now dictnav and listnav do the same thing
+
+# ################################################################################################################################
+
+class RESTTargetType(ServiceTestCase):
+    # https://github.com/zatosource/zato/issues/177
+
+    def test_add_http_method_handlers(self):
+
+        class MyService(Service):
+        
+            def handle(self):
+                pass
+        
+            def handle_GET(self):
+                pass
+        
+            def handle_POST(self):
+                pass
+        
+        class MyService2(Service):
+            pass
+
+        MyService.add_http_method_handlers()
+        self.assertIs(MyService.http_method_handlers['POST'].im_func, MyService.handle_POST.im_func)
+
+        MyService2.add_http_method_handlers()
+        self.assertDictEqual(MyService2.http_method_handlers, {})
