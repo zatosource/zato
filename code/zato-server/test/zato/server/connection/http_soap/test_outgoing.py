@@ -245,6 +245,9 @@ class HTTPSOAPWrapperTestCase(TestCase, Base):
 
 class TLSPingTestCase(TestCase, Base):
 
+    def tearDown(self):
+        sleep(1) # So the server's thread can shut down cleanly
+
     def test_ping_unknown_ca_verify_false(self):
         server = TLSServer()
         server.start()
