@@ -17,6 +17,9 @@ from bunch import bunchify
 # gevent
 from gevent import sleep, spawn
 
+# retools
+from retools.lock import LockTimeout
+
 # Zato
 from zato.common.broker_message import NOTIF
 from zato.common import DATA_FORMAT
@@ -86,9 +89,15 @@ class NotifierService(AdminService):
         # Ok, overwrite old config with current one.
         config.update(current_config.config)
 
-        # Grab a distributed lock so we are sure it is only us who connect to pull newest data.
-        with self.lock(config.name):
-            self.run_notifier_impl(config)
+        try:
+
+            # Grab a distributed lock so we are sure it is only us who connect to pull newest data.
+            with self.lock(config.name):
+                self.run_notifier_impl(config)
+
+        except LockTimeout:
+            # It's OK, another greenlet must have beaten us to it.
+            pass
 
     def handle(self):
         self.keep_running = True

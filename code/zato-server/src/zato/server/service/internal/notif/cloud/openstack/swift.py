@@ -88,12 +88,12 @@ class _CreateEdit(AdminService):
                 item.service_id = session.query(Service.id).\
                     filter(Service.name==input.service_name).\
                     filter(Service.cluster_id==self.server.cluster_id).\
-                    one()
+                    one()[0]
 
                 session.add(item)
                 session.commit()
 
-                input.action = NOTIF.CLOUD_OPENSTACK_SWIFT_CREATE_EDIT
+                input.action = NOTIF.CLOUD_OPENSTACK_SWIFT_CREATE_EDIT.value
                 input.notif_type = COMMON_NOTIF.TYPE.OPENSTACK_SWIFT
                 input.source_service_type = self.source_service_type
                 input.def_name = item.definition.name
@@ -166,7 +166,7 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
 
-                msg = {'action': NOTIF.CLOUD_OPENSTACK_SWIFT_DELETE, 'name': item.name, 'id':item.id}
+                msg = {'action': NOTIF.CLOUD_OPENSTACK_SWIFT_DELETE.value, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg)
                 
             except Exception, e:

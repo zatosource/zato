@@ -782,7 +782,6 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_SECURITY_TLS_KEY_CERT_DELETE(self, msg):
         self.update_tls_key_cert(msg)
-        del self.worker_config.tls_key_cert[msg.name]
         dispatcher.notify(broker_message.SECURITY.TLS_KEY_CERT_DELETE.value, msg)
 
 # ################################################################################################################################
@@ -803,7 +802,6 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_SECURITY_TLS_CA_CERT_DELETE(self, msg):
         self.update_tls_ca_cert(msg)
-        del self.worker_config.tls_ca_cert[msg.name]
         dispatcher.notify(broker_message.SECURITY.TLS_CA_CERT_DELETE.value, msg)
 
 # ################################################################################################################################
@@ -1434,13 +1432,13 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_RBAC_PERMISSION_CREATE(self, msg):
-        self.rbac.create_permission(msg.name)
+        self.rbac.create_permission(msg.id, msg.name)
 
     def on_broker_msg_RBAC_PERMISSION_EDIT(self, msg):
-        self.rbac.edit_permission(msg.old_name, msg.name)
+        self.rbac.edit_permission(msg.id, msg.name)
 
     def on_broker_msg_RBAC_PERMISSION_DELETE(self, msg):
-        self.rbac.delete_permission(msg.name)
+        self.rbac.delete_permission(msg.id)
 
 # ################################################################################################################################
 

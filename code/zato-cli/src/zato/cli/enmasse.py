@@ -33,35 +33,50 @@ from texttable import Texttable
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.client import AnyServiceInvoker
-from zato.common.odb.model import CassandraConn, ConnDefAMQP, ConnDefWMQ, HTTPBasicAuth, HTTPSOAP, NTLM, OAuth, SecurityBase, Server, \
-     Service, TechnicalAccount, to_json, WSSDefinition, XPathSecurity
+from zato.common.odb.model import APIKeySecurity, AWSSecurity, Base, CassandraConn, Cluster, ConnDefAMQP, ConnDefWMQ, \
+     HTTPBasicAuth, HTTPSOAP, IMAP, NotificationOpenStackSwift, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
+     SecurityBase, Server, Service, SMTP, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSKeyCertSecurity, to_json, \
+     WSSDefinition, XPathSecurity
+from zato.common.odb.query import cloud_openstack_swift_list, notif_cloud_openstack_swift_list, notif_sql_list, out_sql_list
 from zato.common.util import get_config
 from zato.server.service import ForceType
 from zato.server.service.internal import http_soap as http_soap_mod
 from zato.server.service.internal.channel import amqp as channel_amqp_mod
 from zato.server.service.internal.channel import jms_wmq as channel_jms_wmq_mod
 from zato.server.service.internal.channel import zmq as channel_zmq_mod
-from zato.server.service.internal.cloud.openstack import swift as cloud_openstack_swift
+from zato.server.service.internal.cloud.aws import s3 as cloud_aws_s3
+from zato.server.service.internal.cloud.openstack import swift as cloud_openstack_swift_mod
 from zato.server.service.internal.definition import amqp as definition_amqp_mod
 from zato.server.service.internal.definition import jms_wmq as definition_jms_wmq_mod
 from zato.server.service.internal.definition import cassandra as definition_cassandra_mod
+from zato.server.service.internal.email import imap as email_imap_mod
+from zato.server.service.internal.email import smtp as email_smtp_mod
 from zato.server.service.internal.message import json_pointer as json_pointer_mod
 from zato.server.service.internal.message import namespace as namespace_mod
 from zato.server.service.internal.message import xpath as xpath_mod
+from zato.server.service.internal.notif.cloud.openstack import swift as notif_cloud_openstack_swift_mod
+from zato.server.service.internal.notif import sql as notif_sql_mod
 from zato.server.service.internal.outgoing import amqp as outgoing_amqp_mod
 from zato.server.service.internal.outgoing import ftp as outgoing_ftp_mod
 from zato.server.service.internal.outgoing import jms_wmq as outgoing_jms_wmq_mod
+from zato.server.service.internal.outgoing import odoo as outgoing_odoo_mod
 from zato.server.service.internal.outgoing import sql as outgoing_sql_mod
 from zato.server.service.internal.outgoing import zmq as outgoing_zmq_mod
 from zato.server.service.internal import scheduler as scheduler_mod
 from zato.server.service.internal.query import cassandra as query_cassandra_mod
+from zato.server.service.internal.search import es as search_es
+from zato.server.service.internal.search import solr as search_solr
+from zato.server.service.internal.security import apikey as sec_apikey_mod
+from zato.server.service.internal.security import aws as sec_aws_mod
 from zato.server.service.internal.security import basic_auth as sec_basic_auth_mod
 from zato.server.service.internal.security import ntlm as sec_ntlm_mod
 from zato.server.service.internal.security import oauth as sec_oauth_mod
+from zato.server.service.internal.security import rbac as rbac_mod
 from zato.server.service.internal.security import tech_account as sec_tech_account_mod
 from zato.server.service.internal.security import wss as sec_wss_mod
 from zato.server.service.internal.security import xpath as sec_xpath_mod
-from zato.server.service.internal.search import es as search_es
+from zato.server.service.internal.security.tls import ca_cert as sec_tls_ca_cert_mod
+from zato.server.service.internal.security.tls import key_cert as sec_tls_key_cert_mod
 
 DEFAULT_COLS_WIDTH = '15,100'
 NO_SEC_DEF_NEEDED = 'zato-no-security'
@@ -498,14 +513,52 @@ class EnMasse(ManageCommand):
 
             return item
 
-        def get_fields(model):
+        def get_fields(item):
             return Bunch(loads(to_json(item))[0]['fields'])
 
-        self.odb_objects.def_sec = []
+        def add_from_model_query(query, target, needs_password=False):
+            args = (True, True) if needs_password else (True,)
+            rows, columns = query(self.client.odb_session, self.client.cluster_id, *args)
+            columns = columns.keys()
+
+            for row in rows:
+                item = Bunch()
+                if isinstance(row, Base):
+                    for idx, (key, value) in enumerate(row):
+                        item[key] = value
+                else:
+                    for idx, value in enumerate(row):
+                        key = columns[idx]
+                        item[key] = value
+                target.append(item)
+
+        def add_from_simple_query(queries, target):
+            for query in queries:
+                for item in query.all():
+                    name = item.name.lower()
+                    if not 'zato' in name and name not in('admin.invoke', 'pubapi'):
+                        target.append(get_fields(item))
+
         self.odb_objects.def_amqp = []
         self.odb_objects.def_cassandra = []
+        self.odb_objects.def_cloud_openstack_swift = []
         self.odb_objects.def_jms_wmq = []
+        self.odb_objects.def_sec = []
+        self.odb_objects.email_imap = []
+        self.odb_objects.email_smtp = []
         self.odb_objects.http_soap = []
+        self.odb_objects.notif_cloud_openstack_swift = []
+        self.odb_objects.notif_sql = []
+        self.odb_objects.outconn_odoo = []
+        self.odb_objects.outconn_sql = []
+
+        # Security definitions
+
+        apikey = self.client.odb_session.query(APIKeySecurity).\
+            filter(APIKeySecurity.cluster_id == self.client.cluster_id)
+
+        aws = self.client.odb_session.query(AWSSecurity).\
+            filter(AWSSecurity.cluster_id == self.client.cluster_id)
 
         basic_auth = self.client.odb_session.query(HTTPBasicAuth).\
             filter(HTTPBasicAuth.cluster_id == self.client.cluster_id)
@@ -519,17 +572,37 @@ class EnMasse(ManageCommand):
         tech_acc = self.client.odb_session.query(TechnicalAccount).\
             filter(TechnicalAccount.cluster_id == self.client.cluster_id)
 
+        tls_key_cert = self.client.odb_session.query(TLSKeyCertSecurity).\
+            filter(TLSKeyCertSecurity.cluster_id == self.client.cluster_id)
+
         wss = self.client.odb_session.query(WSSDefinition).\
             filter(WSSDefinition.cluster_id == self.client.cluster_id)
 
         xpath_sec = self.client.odb_session.query(XPathSecurity).\
             filter(XPathSecurity.cluster_id == self.client.cluster_id)
 
-        for query in(basic_auth, ntlm, oauth, tech_acc, wss, xpath_sec):
-            for item in query.all():
-                name = item.name.lower()
-                if not 'zato' in name and name not in('admin.invoke', 'pubapi'):
-                    self.odb_objects.def_sec.append(get_fields(item))
+        # Connections that need passwords - get-list doesn't return passwords.
+
+        email_imap = self.client.odb_session.query(IMAP).\
+            filter(IMAP.cluster_id == self.client.cluster_id)
+
+        email_smtp = self.client.odb_session.query(SMTP).\
+            filter(SMTP.cluster_id == self.client.cluster_id)
+
+        outconn_odoo = self.client.odb_session.query(OutgoingOdoo).\
+            filter(OutgoingOdoo.cluster_id == self.client.cluster_id)
+
+        add_from_simple_query(
+            [apikey, aws, basic_auth, ntlm, oauth, tech_acc, tls_key_cert, wss, xpath_sec], self.odb_objects.def_sec)
+        add_from_simple_query([email_imap], self.odb_objects.email_imap)
+        add_from_simple_query([email_smtp], self.odb_objects.email_smtp)
+        add_from_simple_query([outconn_odoo], self.odb_objects.outconn_odoo)
+
+        add_from_model_query(notif_cloud_openstack_swift_list, self.odb_objects.notif_cloud_openstack_swift, True)
+        add_from_model_query(cloud_openstack_swift_list, self.odb_objects.def_cloud_openstack_swift, False)
+
+        add_from_model_query(notif_sql_list, self.odb_objects.notif_sql, True)
+        add_from_model_query(out_sql_list, self.odb_objects.outconn_sql)
 
         for item in self.client.odb_session.query(ConnDefAMQP).\
             filter(ConnDefAMQP.cluster_id == self.client.cluster_id).all():
@@ -553,6 +626,7 @@ class EnMasse(ManageCommand):
             'zato.channel.amqp.get-list':'channel_amqp',
             'zato.channel.jms-wmq.get-list':'channel_jms_wmq',
             'zato.channel.zmq.get-list':'channel_zmq',
+            'zato.cloud.aws.s3.get-list':'cloud_aws_s3',
             'zato.message.json-pointer.get-list':'json_pointer',
             'zato.message.namespace.get-list':'def_namespace',
             'zato.message.xpath.get-list':'xpath',
@@ -560,12 +634,16 @@ class EnMasse(ManageCommand):
             'zato.outgoing.amqp.get-list':'outconn_amqp',
             'zato.outgoing.ftp.get-list':'outconn_ftp',
             'zato.outgoing.jms-wmq.get-list':'outconn_jms_wmq',
-            'zato.outgoing.sql.get-list':'outconn_sql',
             'zato.outgoing.zmq.get-list':'outconn_zmq',
             'zato.scheduler.job.get-list':'scheduler',
-            'zato.cloud.openstack.swift.get-list':'cloud_openstack_swift',
             'zato.search.es.get-list':'search_es',
+            'zato.search.solr.get-list':'search_solr',
             'zato.query.cassandra.get-list':'query_cassandra',
+            'zato.security.rbac.client-role.get-list':'rbac_client_role',
+            'zato.security.rbac.permission.get-list':'rbac_permission',
+            'zato.security.rbac.role.get-list':'rbac_role',
+            'zato.security.rbac.role-permission.get-list':'rbac_role_permission',
+            'zato.security.tls.ca-cert.get-list':'tls_ca_cert',
             }
 
         for value in service_key.values():
@@ -716,16 +794,22 @@ class EnMasse(ManageCommand):
             'channel_plain_http':http_soap_mod.Create,
             'channel_soap':http_soap_mod.Create,
             'channel_zmq':channel_zmq_mod.Create,
-            'cloud_openstack_swift': cloud_openstack_swift.Create,
+            'cloud_aws_s3': cloud_aws_s3.Create,
+            'def_cloud_openstack_swift': cloud_openstack_swift_mod.Create,
             'def_amqp':definition_amqp_mod.Create,
             'def_jms_wmq':definition_jms_wmq_mod.Create,
             'def_cassandra':definition_cassandra_mod.Create,
             'def_namespace': namespace_mod.Create,
+            'email_imap': email_imap_mod.Create,
+            'email_smtp': email_smtp_mod.Create,
             'json_pointer': json_pointer_mod.Create,
             'http_soap':http_soap_mod.Create,
+            'notif_cloud_openstack_swift':notif_cloud_openstack_swift_mod.Create,
+            'notif_sql':notif_sql_mod.Create,
             'outconn_amqp':outgoing_amqp_mod.Create,
             'outconn_ftp':outgoing_ftp_mod.Create,
             'outconn_jms_wmq':outgoing_jms_wmq_mod.Create,
+            'outconn_odoo':outgoing_odoo_mod.Create,
             'outconn_plain_http':http_soap_mod.Create,
             'outconn_soap':http_soap_mod.Create,
             'outconn_sql':outgoing_sql_mod.Create,
@@ -733,16 +817,25 @@ class EnMasse(ManageCommand):
             'query_cassandra': query_cassandra_mod.Create,
             'scheduler':scheduler_mod.Create,
             'search_es': search_es.Create,
+            'search_solr': search_solr.Create,
             'xpath': xpath_mod.Create,
+            'rbac_client_role': rbac_mod.client_role.Create,
+            'rbac_permission': rbac_mod.permission.Create,
+            'rbac_role': rbac_mod.role.Create,
+            'rbac_role_permission': rbac_mod.role_permission.Create,
+            'tls_ca_cert':sec_tls_ca_cert_mod.Create,
         }
 
         def_sec_services = {
+            'apikey':sec_apikey_mod.Create,
+            'aws':sec_aws_mod.Create,
             'basic_auth':sec_basic_auth_mod.Create,
             'ntlm':sec_ntlm_mod.Create,
             'oauth':sec_oauth_mod.Create,
             'tech_acc':sec_tech_account_mod.Create,
             'wss':sec_wss_mod.Create,
             'xpath_sec':sec_xpath_mod.Create,
+            'tls_key_cert':sec_tls_key_cert_mod.Create,
         }
 
         create_services_keys = sorted(create_services)
@@ -954,27 +1047,42 @@ class EnMasse(ManageCommand):
             'def_amqp':ImportInfo(definition_amqp_mod, True),
             'def_jms_wmq':ImportInfo(definition_jms_wmq_mod),
             'def_cassandra':ImportInfo(definition_cassandra_mod),
+            'email_imap':ImportInfo(email_imap_mod, MAYBE_NEEDS_PASSWORD),
+            'email_smtp':ImportInfo(email_smtp_mod, MAYBE_NEEDS_PASSWORD),
             'json_pointer':ImportInfo(json_pointer_mod),
             'http_soap':ImportInfo(http_soap_mod),
             'def_namespace':ImportInfo(namespace_mod),
+            'notif_cloud_openstack_swift':ImportInfo(notif_cloud_openstack_swift_mod),
+            'notif_sql':ImportInfo(notif_sql_mod),
             'outconn_amqp':ImportInfo(outgoing_amqp_mod),
             'outconn_ftp':ImportInfo(outgoing_ftp_mod, MAYBE_NEEDS_PASSWORD),
+            'outconn_odoo':ImportInfo(outgoing_odoo_mod, True),
             'outconn_jms_wmq':ImportInfo(outgoing_jms_wmq_mod),
             'outconn_sql':ImportInfo(outgoing_sql_mod, True),
             'outconn_zmq':ImportInfo(outgoing_zmq_mod),
             'scheduler':ImportInfo(scheduler_mod),
             'xpath':ImportInfo(xpath_mod),
-            'cloud_openstack_swift': ImportInfo(cloud_openstack_swift),
-            'search_es': ImportInfo(search_es)
+            'cloud_aws_s3': ImportInfo(cloud_aws_s3),
+            'def_cloud_openstack_swift': ImportInfo(cloud_openstack_swift_mod),
+            'search_es': ImportInfo(search_es),
+            'search_solr': ImportInfo(search_solr),
+            'rbac_permission': ImportInfo(rbac_mod.permission),
+            'rbac_role': ImportInfo(rbac_mod.role),
+            'rbac_client_role': ImportInfo(rbac_mod.client_role),
+            'rbac_role_permission': ImportInfo(rbac_mod.role_permission),
+            'tls_ca_cert':ImportInfo(sec_tls_ca_cert_mod),
         }
 
         def_sec_info = {
+            'apikey':ImportInfo(sec_apikey_mod, True),
+            'aws':ImportInfo(sec_aws_mod, True),
             'basic_auth':ImportInfo(sec_basic_auth_mod, True),
             'ntlm':ImportInfo(sec_ntlm_mod, True),
             'oauth':ImportInfo(sec_oauth_mod, True),
             'tech_acc':ImportInfo(sec_tech_account_mod, True),
             'wss':ImportInfo(sec_wss_mod, True),
             'xpath_sec':ImportInfo(sec_xpath_mod, True),
+            'tls_key_cert':ImportInfo(sec_tls_key_cert_mod),
         }
 
         def get_odb_item(item_type, name):
@@ -1037,8 +1145,7 @@ class EnMasse(ManageCommand):
                         if not response.ok:
                             return service_name, response.details
                         else:
-                            self.logger.info("Updated password '{}' ({} {})".format(
-                                attrs.name, item_type, service_name))
+                            self.logger.info("Updated password '{}' ({} {})".format(attrs.name, item_type, service_name))
 
             return None, None
 
@@ -1052,6 +1159,12 @@ class EnMasse(ManageCommand):
                             # Name is unique, we can stop now
                             return
 
+        def should_skip_item(item_type, attrs, is_edit):
+
+            # Root RBAC role cannot be edited
+            if item_type == 'rbac_role' and attrs.name == 'Root':
+                return True
+
         def _import(item_type, attrs, is_edit):
             attrs_dict = attrs.toDict()
             attrs.cluster_id = self.client.cluster_id
@@ -1060,8 +1173,8 @@ class EnMasse(ManageCommand):
             # We quit on first error encountered
             if error_response:
                 raw = (item_type, attrs_dict, error_response)
-                value = "Could not import '{}' with '{}', response from '{}' was '{}'".format(
-                    attrs.name, attrs_dict, service_name, error_response)
+                value = "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'".format(
+                    is_edit, attrs.name, attrs_dict, service_name, error_response)
                 errors.append(Error(raw, value, ERROR_COULD_NOT_IMPORT_OBJECT))
                 return Results(warnings, errors)
 
@@ -1088,6 +1201,10 @@ class EnMasse(ManageCommand):
         #
         for w in chain(existing_defs, existing_other):
             item_type, attrs = w.value_raw
+
+            if should_skip_item(item_type, attrs, True):
+                continue
+
             results = _import(item_type, attrs, True)
             if results:
                 return results
@@ -1105,6 +1222,10 @@ class EnMasse(ManageCommand):
         for elem in chain(new_defs, new_other):
             for item_type, attr_list in elem.items():
                 for attrs in attr_list:
+
+                    if should_skip_item(item_type, attrs, False):
+                        continue
+
                     results = _import(item_type, attrs, False)
                     if results:
                         return results

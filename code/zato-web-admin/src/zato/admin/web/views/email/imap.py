@@ -40,6 +40,7 @@ class Index(_Index):
     def handle(self):
         return {
             'default_debug_level': EMAIL.DEFAULT.IMAP_DEBUG_LEVEL,
+            'default_get_criteria': EMAIL.DEFAULT.GET_CRITERIA,
             'create_form': CreateForm(),
             'edit_form': EditForm(prefix='edit'),
             'change_password_form': ChangePasswordForm()

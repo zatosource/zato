@@ -11,7 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 
-# 
+# SQLAlchemy
+from sqlalchemy.orm.exc import NoResultFound
 
 # Zato
 from zato.common.broker_message import NOTIF
@@ -42,6 +43,10 @@ def instance_hook(service, input, instance, attrs):
             filter(Service.cluster_id==input.cluster_id).\
             one().id
 
+def broker_message_hook(service, input, instance, attrs, service_type):
+    if service_type == 'create_edit':
+        input.notif_type = COMMON_NOTIF.TYPE.SQL
+
 class GetList(AdminService):
     __metaclass__ = GetListMeta
 
@@ -58,11 +63,16 @@ class RunNotifier(NotifierService):
     notif_type = COMMON_NOTIF.TYPE.SQL
 
     def run_notifier_impl(self, config):
-        with closing(self.odb.session()) as session:
-            def_name = session.query(SQLConnectionPool).\
-                filter(SQLConnectionPool.id==config.def_id).\
-                filter(SQLConnectionPool.cluster_id==self.server.cluster_id).\
-                one().name
+        try:
+            with closing(self.odb.session()) as session:
+                def_name = session.query(SQLConnectionPool).\
+                    filter(SQLConnectionPool.id==config.def_id).\
+                    filter(SQLConnectionPool.cluster_id==self.server.cluster_id).\
+                    one().name
+        except NoResultFound:
+            self.logger.info('Stopping notifier, could not find an SQL pool for config `%s`', config)
+            self.keep_running = False
+            return
 
         with closing(self.outgoing.sql[def_name].session()) as session:
             self.invoke_async(config.service_name, {'data':session.execute(config.query)})
