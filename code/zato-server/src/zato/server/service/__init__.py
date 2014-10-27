@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from datetime import datetime
+from httplib import METHOD_NOT_ALLOWED
 from sys import maxint
 from traceback import format_exc
 
@@ -163,6 +164,7 @@ class Service(object):
     regardless whether they're built-in or user-defined ones.
     """
     passthrough_to = ''
+    http_method_handlers = {}
 
     def __init__(self, *ignored_args, **ignored_kwargs):
         self.logger = logging.getLogger(self.get_name())
@@ -238,6 +240,18 @@ class Service(object):
         class_name = class_name.replace('.-', '.').replace('_-', '_')
 
         return '{}.{}'.format('.'.join(path), class_name)
+
+    @classmethod
+    def add_http_method_handlers(class_):
+
+        for name in dir(class_):
+            if name.startswith('handle_'):
+
+                if not getattr(class_, 'http_method_handlers', False):
+                    setattr(class_, 'http_method_handlers', {})
+
+                method = name.replace('handle_', '')
+                class_.http_method_handlers[method] = getattr(class_, name)
 
     def _init(self):
         """ Actually initializes the service.
@@ -341,7 +355,41 @@ class Service(object):
                 channel_item=channel_item)
         else:
             service.validate_input()
-            service.handle()
+
+            #
+            # If channel is HTTP and there are any per-HTTP verb methods, it means we want for the service to be a REST target.
+            # Let's say it is POST. If we have handle_POST, it is invoked. If there is no handle_POST,
+            # '405 Method Not Allowed is returned'.
+            #
+            # However, if we have 'handle' only, it means this is always invoked and no default 405 is returned.
+            #
+            # In short, implement handle_* if you want REST behaviour. Otherwise, keep everything in handle.
+            #
+
+            # Ok, this is HTTP
+            if channel == CHANNEL.HTTP_SOAP:
+
+                # We have at least one per-HTTP verb handler
+                if service.http_method_handlers:
+
+                    # But do we have any handler matching current request's verb?
+                    if service.request.http.method in service.http_method_handlers:
+
+                        # Yes, call the handler
+                        service.http_method_handlers[service.request.http.method](service)
+
+                    # No, return 405
+                    else:
+                        service.response.status_code = METHOD_NOT_ALLOWED
+
+                # We have no customer handlers so we always call 'handle'
+                else:
+                    service.handle()
+
+            # It's not HTTP so we simply call 'handle'
+            else:
+                service.handle()
+
             service.validate_output()
 
         service.call_hooks('after')
