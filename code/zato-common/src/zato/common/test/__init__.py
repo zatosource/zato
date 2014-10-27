@@ -197,7 +197,7 @@ class ServiceTestCase(TestCase):
         instance = class_()
         worker_store = MagicMock()
         worker_store.worker_config = MagicMock
-        worker_store.worker_config.outgoing_connections = MagicMock(return_value=(None, None, None))
+        worker_store.worker_config.outgoing_connections = MagicMock(return_value=(None, None, None, None))
         worker_store.worker_config.cloud_openstack_swift = MagicMock(return_value=None)
         worker_store.worker_config.cloud_aws_s3 = MagicMock(return_value=None)
         
