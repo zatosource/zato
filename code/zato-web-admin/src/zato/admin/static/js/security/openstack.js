@@ -3,7 +3,7 @@
 
 $.fn.zato.data_table.OpenStack = new Class({
     toString: function() {
-        var s = '<OpenStack id:{0} name:{1} username:{2} realm:{3}>';
+        var s = '<OpenStack id:{0} name:{1} username:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.username ? this.username : '(none)');

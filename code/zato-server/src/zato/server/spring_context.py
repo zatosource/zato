@@ -97,7 +97,6 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.security.basic_auth',
             'zato.server.service.internal.security.ntlm',
             'zato.server.service.internal.security.oauth',
-            'zato.server.service.internal.security.openstack',
             'zato.server.service.internal.security.rbac',
             'zato.server.service.internal.security.rbac.client_role',
             'zato.server.service.internal.security.rbac.permission',
