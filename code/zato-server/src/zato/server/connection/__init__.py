@@ -27,9 +27,6 @@ from bunch import Bunch
 import cloghandler
 cloghandler = cloghandler # For pyflakes
 
-# gevent
-from gevent.lock import RLock
-
 # psutil
 import psutil
 
@@ -288,7 +285,7 @@ class BasePoolAPI(object):
         return item
 
     def create_def(self, name, msg):
-        return self._conn_store.create(name, msg)
+        self._conn_store.create(name, msg)
 
     create = create_def
 
@@ -309,8 +306,17 @@ class BaseConnPoolStore(object):
     conn_name = None
 
     def __init__(self):
+
+        # Import gevent here because connectors may not want to use it
+        import gevent
+        from gevent.lock import RLock
+
+        self._gevent = gevent
+        self._RLock = RLock
+
         self.sessions = {}
-        self.lock = RLock()
+        self.lock = self._RLock()
+        self.keep_connecting = True
 
     def __getitem__(self, name):
         return self.sessions[name]
@@ -323,6 +329,10 @@ class BaseConnPoolStore(object):
         """
         raise NotImplementedError('Must be overridden in subclasses')
 
+    def _log_connection_error(self, name, config_no_sensitive, e, additional=''):
+        logger.warn('Could not connect to %s `%s`, config:`%s`, e:`%s`%s', self.conn_name, name, config_no_sensitive,
+            format_exc(e), additional)
+
     def _create(self, name, config):
         config_no_sensitive = deepcopy(config)
         config_no_sensitive['password'] = SECRET_SHADOW
@@ -332,11 +342,21 @@ class BaseConnPoolStore(object):
         try:
             logger.debug('Connecting to `%s`', config_no_sensitive)
 
-            # Will be overridden in a subclass
-            session = self.create_session(name, config, config_no_sensitive)
+            while self.keep_connecting:
+                try:
+                    # Will be overridden in a subclass
+                    session = self.create_session(name, config, config_no_sensitive)
+                    self.keep_connecting = False
+
+                except KeyboardInterrupt:
+                    self.keep_connecting = False
+
+                except Exception, e:
+                    self._log_connection_error(name, config_no_sensitive, e, ', sleeping for 30 s')
+                    self._gevent.sleep(30) # TODO: Should be configurable
 
         except Exception, e:
-            logger.warn('Could not connect to %s `%s`, config:`%s`, e:`%s`', self.conn_name, name, config_no_sensitive, format_exc(e))
+            self._log_connection_error(name, config_no_sensitive, e)
         else:
             logger.debug('Connected to `%s`', config_no_sensitive)
             item.conn = session
@@ -350,7 +370,7 @@ class BaseConnPoolStore(object):
         """ Adds a new connection definition.
         """
         with self.lock:
-            return self._create(name, config)
+            self._gevent.spawn(self._create, name, config)
 
     def delete_session(self, name):
         """ Actually deletes a definition. Must be called with self.lock held.
