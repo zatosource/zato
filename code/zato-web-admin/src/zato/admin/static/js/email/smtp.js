@@ -3,7 +3,7 @@
 
 $.fn.zato.data_table.SMTP = new Class({
     toString: function() {
-        var s = '<SMTP id:{0} name:{1} host:{2}>';
+        var s = '<SMTP id:{0} name:{1}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)');
     }
