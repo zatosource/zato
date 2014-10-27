@@ -61,6 +61,7 @@ class ConnectionQueue(object):
         self.conn_type = conn_type
         self.address = address
         self.add_client_func = add_client_func
+        self.keep_connecting = True
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -71,6 +72,40 @@ class ConnectionQueue(object):
         self.queue.put(client)
         self.logger.info('Added `%s` client to %s (%s)', self.conn_name, self.address, self.conn_type)
 
+    def _build_queue(self):
+
+        start = datetime.utcnow()
+        build_until = start + timedelta(seconds=self.queue_build_cap)
+
+        try:
+            while self.keep_connecting:
+                while not self.queue.full():
+
+                    gevent.sleep(0.5)
+
+                    now = datetime.utcnow()
+
+                    self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
+                        self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.conn_name, now - start,
+                        self.queue_build_cap)
+
+                    if  now >= build_until:
+
+                        self.logger.warn('Built %s/%s %s clients to `%s` within %s seconds, sleeping until %s',
+                            self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.queue_build_cap, build_until)
+                        gevent.sleep(self.queue_build_cap)
+
+                        start = datetime.utcnow()
+                        build_until = start + timedelta(seconds=self.queue_build_cap)
+
+                self.logger.info(
+                    'Obtained %d %s clients to `%s` for `%s`', self.queue.maxsize, self.conn_type, self.address, self.conn_name)
+
+                # Ok, got all the connections
+                return
+        except KeyboardInterrupt:
+            self.keep_connecting = False
+
     def build_queue(self):
         """ Spawns greenlets to populate the queue and waits up to self.queue_build_cap seconds until the queue is full.
         If it never is, raises an exception stating so.
@@ -78,24 +113,8 @@ class ConnectionQueue(object):
         for x in range(self.queue.maxsize):
             gevent.spawn(self.add_client_func)
 
-        start = datetime.utcnow()
-        build_until = start + timedelta(seconds=self.queue_build_cap)
-
-        while not self.queue.full():
-            gevent.sleep(0.5)
-
-            now = datetime.utcnow()
-            if  now >= build_until:
-
-                self.logger.error('Built %s/%s %s clients to `%s` within %s seconds, giving up',
-                    self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.queue_build_cap)
-                return
-
-            self.logger.info('%d/%d %s clients obtained to `%s` (%s) after %s (cap: %ss)',
-                self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.conn_name, now - start,
-                self.queue_build_cap)
-
-        self.logger.info('Obtained %d %s clients to `%s` for `%s`', self.queue.maxsize, self.conn_type, self.address, self.conn_name)
+        # Build the queue in background
+        gevent.spawn(self._build_queue)
 
 # ################################################################################################################################
 
