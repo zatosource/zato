@@ -18,6 +18,7 @@ from gevent import sleep, spawn
 
 # Zato
 from zato.common import PUB_SUB
+from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
@@ -102,5 +103,22 @@ class MoveToTargetQueues(AdminService):
             self.logger.debug('Moving messages to target queues, interval %rs', interval)
             spawn(self._move_to_target_queues)
             sleep(interval)
+
+# ################################################################################################################################
+
+class RESTHandler(Service):
+    """ Handles calls to pub/sub from REST clients.
+    """
+    def handle_POST(self):
+        self.logger.warn('POST')
+
+    def handle_GET(self):
+        self.logger.warn('GET')
+
+    def handle_DELETE(self):
+        self.logger.warn('DELETE')
+
+    def handle_PATCH(self):
+        self.logger.warn('PATCH')
 
 # ################################################################################################################################
