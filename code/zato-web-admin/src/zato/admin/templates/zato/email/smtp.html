@@ -111,64 +111,7 @@
                     <tr class='ignore'>
                         <td colspan='8'>No results</td>
                     </tr>
-                {% endif %}        <div id="create-div" class='data-popup ignore'>
-            <div class="bd">
-                <form action="{% url email-smtp-create %}" method="post" id="create-form">
-                    <table class="form-data">
-                        <tr>
-                            <td style="vertical-align:middle">Name</td>
-                            <td>{{ create_form.name }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Active</td>
-                            <td>{{ create_form.is_active }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Host</td>
-                            <td>{{ create_form.host }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Port</td>
-                            <td>{{ create_form.port }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Timeout
-                            <br/>
-                            <span class="form_hint">(In seconds)</span>
-                            </td>
-                            <td>{{ create_form.timeout }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Username</td>
-                            <td>{{ create_form.username }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Mode</td>
-                            <td>{{ create_form.mode }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Debug mode</td>
-                            <td>{{ create_form.is_debug }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Ping address
-                            <br/>
-                            <span class="form_hint">(Default: {{ default_ping_address }})</span>
-                            </td>
-                            <td>{{ create_form.ping_address }} </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                            </td>
-                        </tr>
-                    </table>
-                    <input type="hidden" name="is_active" value="on" />
-                    <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                </form>
-            </div>
-        </div>
+                {% endif %}
 
                 </tbody>
             </table>
