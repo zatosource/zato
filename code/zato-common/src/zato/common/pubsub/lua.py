@@ -39,18 +39,18 @@ lua_move_to_target_queues = """
     -- A function to copy Redis keys we operate over to a table which skips the first one, the source queue.
     local function get_target_queues(keys, argv)
         local target_queues = {}
-        local max_backlogs = {}
+        local max_depths = {}
         if #keys == 4 then
           target_queues = {keys[4]}
-          max_backlogs = {argv[4]}
+          max_depths = {argv[4]}
         else
             for idx = 1, #keys do
                 -- Note - the whole point is that we're skipping the first few items which are not target queues
                 target_queues[idx] = keys[idx+3]
-                max_backlogs[idx] = argv[idx+3]
+                max_depths[idx] = argv[idx+3]
             end
         end
-        return {target_queues, max_backlogs}
+        return {target_queues, max_depths}
     end
 
     local source_queue = KEYS[1]
@@ -62,7 +62,7 @@ lua_move_to_target_queues = """
     local max_int = tonumber(ARGV[3])
     local zset_command
     local out = {}
-    local max_backlog = 0
+    local max_depth = 0
     local target_queue_depth = 0
     local can_push_to_target = true;
 
@@ -74,9 +74,9 @@ lua_move_to_target_queues = """
 
     local ids = redis.pcall(zset_command, source_queue, 0, max_depth)
 
-    local target_queues_max_backlogs = get_target_queues(KEYS, ARGV)
-    local target_queues = target_queues_max_backlogs[1]
-    local max_backlogs = target_queues_max_backlogs[2]
+    local target_queues_max_depths = get_target_queues(KEYS, ARGV)
+    local target_queues = target_queues_max_depths[1]
+    local max_depths = target_queues_max_depths[2]
 
     for queue_idx, target_queue in ipairs(target_queues) do
 
@@ -84,8 +84,8 @@ lua_move_to_target_queues = """
 
             target_queue_depth = redis.call('llen', target_queue);
 
-            max_backlog = tonumber(max_backlogs[queue_idx])
-            if target_queue_depth >= max_backlog then
+            max_depth = tonumber(max_depths[queue_idx])
+            if target_queue_depth >= max_depth then
                 can_push_to_target = false
             else
                 can_push_to_target = true
@@ -98,11 +98,10 @@ lua_move_to_target_queues = """
             else
                 table.insert(out, {'overflow', target_queue, id})
             end
-        end
-    end
 
-    for id_idx, id in ipairs(ids) do
-        redis.pcall('zrem', source_queue, id)
+            redis.pcall('zrem', source_queue, id)
+
+        end
     end
 
     return out
@@ -126,9 +125,8 @@ lua_get_from_cons_queue = """
 
    redis.pcall('hset', last_seen_consumer_key, client_id, utc_now)
 
-   -- It may well be the case that there are no messages for this client
-   if #ids > 0 then
-       --local values = redis.pcall('hmget', msg_key, unpack(ids))
+    -- It may well be the case that there are no messages for this client
+    if #ids > 0 then
 
        for id_idx, id in ipairs(ids) do
 

@@ -23,7 +23,7 @@ class CreateForm(forms.Form):
     client_id = forms.ChoiceField(widget=forms.Select())
     delivery_mode = forms.ChoiceField(widget=forms.Select())
     callback_id = forms.ChoiceField(widget=forms.Select())
-    max_backlog = forms.CharField(
+    max_depth = forms.CharField(
         initial=PUB_SUB.DEFAULT_MAX_BACKLOG, widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
 
     def __init__(self, prefix=None, post_data=None, client_ids=None, callback_ids=None):

@@ -92,7 +92,7 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_topics_create_request'
         response_elem = 'zato_pubsub_topics_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'max_depth')
+        input_required = ('cluster_id', 'name', 'is_active', Int('max_depth'))
         output_required = ('id', 'name')
 
     def handle(self):
@@ -146,7 +146,7 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_topics_edit_request'
         response_elem = 'zato_pubsub_topics_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'max_depth')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', Int('max_depth'))
         output_required = ('id', 'name')
 
     def handle(self):

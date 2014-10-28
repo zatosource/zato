@@ -179,11 +179,11 @@ class Client(HasAutoRepr):
 class Consumer(Client):
     """ Pub/sub consumer.
     """
-    def __init__(self, id, name, is_active=True, sub_key=None, max_backlog=PUB_SUB.DEFAULT_MAX_BACKLOG,
+    def __init__(self, id, name, is_active=True, sub_key=None, max_depth=PUB_SUB.DEFAULT_MAX_BACKLOG,
             delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id, callback_id='', callback_name=None, callback_type=ZATO_NOT_GIVEN):
         super(Consumer, self).__init__(id, name, is_active)
         self.sub_key = sub_key
-        self.max_backlog = max_backlog
+        self.max_depth = max_depth
         self.delivery_mode = delivery_mode
         self.callback_id = callback_id
         self.callback_name = callback_name
@@ -366,7 +366,7 @@ class PubSub(object):
         """
         with self.update_lock:
             self.consumers[client.id].is_active = client.is_active
-            self.consumers[client.id].max_backlog = client.max_backlog
+            self.consumers[client.id].max_depth = client.max_depth
             self.consumers[client.id].delivery_mode = client.delivery_mode
             self.consumers[client.id].callback_id = client.callback_id
 
@@ -521,7 +521,7 @@ class RedisPubSub(PubSub, LuaContainer):
                 self.logger.warn('Producer `%s` is not active. Producer `%s`.', ctx.client_id, ctx.topic)
                 self._raise_cant_publish_error(ctx)
 
-        if self.get_topic_depth(ctx.topic) > self.topics[ctx.topic].max_depth:
+        if self.get_topic_depth(ctx.topic) >= self.topics[ctx.topic].max_depth:
             self.logger.warn('Topic full, `%s`, max depth `%s`', ctx.topic, self.topics[ctx.topic].max_depth)
             raise TopicFull(ctx.topic, self.topics[ctx.topic].max_depth)
 
@@ -578,6 +578,9 @@ class RedisPubSub(PubSub, LuaContainer):
 
                 # Ignoring the result, we just check if this sub_key is valid
                 self.validate_sub_key(ctx.sub_key)
+
+                # Don't let the client get new messages if the depth of the in-flight queue reached its maximum.
+                self.logger.warn('3333 %r', self.get_consumer_queue_in_flight_depth(ctx.sub_key))
 
                 # Now that the client is known to be a valid one we can get all their messages
                 cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
@@ -679,6 +682,9 @@ class RedisPubSub(PubSub, LuaContainer):
         # the delivery to only one consumer chosen randomly from each of the subscribed ones.
 
         with self.update_lock:
+
+            out = []
+
             for topic in self.topic_to_prod:
 
                 source_queue = self.MSG_IDS_PREFIX.format(topic)
@@ -705,18 +711,17 @@ class RedisPubSub(PubSub, LuaContainer):
                         self.logger.debug('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
 
                         keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
-                        args.append(self.consumers[consumer].max_backlog)
+                        args.append(self.consumers[consumer].max_depth)
 
                     move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
                     if move_result:
                         self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
-
-                        for result, target_queue, id in move_result:
-                            if result == PUB_SUB.MOVE_RESULT.OVERFLOW:
-                                self.logger.warn('Message overflow, queue `%s`, ID `%s`', target_queue, id)
+                        out.append(move_result)
 
                 else:
                     self.logger.info('Move: no consumers for topic `%s`', topic)
+
+            return out
 
 # ################################################################################################################################
 
@@ -915,7 +920,8 @@ class PubSubAPI(object):
     def update_consumer(self, consumer, topic):
         return self.impl.update_consumer(consumer, topic)
 
-    # ############################################################################################################################
+# ############################################################################################################################
+
 
     def get_topic_depth(self, topic):
         return self.impl.get_topic_depth(topic)
@@ -925,6 +931,9 @@ class PubSubAPI(object):
 
     def get_consumer_queue_in_flight_depth(self, sub_key):
         return self.impl.get_consumer_queue_in_flight_depth(sub_key)
+
+    def get_consumer_by_sub_key(self, sub_key):
+        return self.impl.consumers[self.impl.sub_to_cons[sub_key]]
 
     def get_consumers_count(self, topic):
         return self.impl.get_consumers_count(topic)

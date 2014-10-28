@@ -65,7 +65,7 @@ class Get(_SourceTypeAware):
 
     def handle(self):
         self.response.payload = self.pubsub.get_message(self.request.input.msg_id)
-        
+
 # ################################################################################################################################
 
 class Delete(_SourceTypeAware):
