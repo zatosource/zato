@@ -516,5 +516,5 @@ class Create(ZatoCommand):
 
     def add_pubsub_rest_handler(self, session, cluster, service):
         channel = HTTPSOAP(None, 'zato.pubsub.rest', True, True, 'channel', 'plain_http',
-            None, '/zato/pubsub/{}/', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
+            None, '/zato/pubsub/{item}/', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
         session.add(channel)

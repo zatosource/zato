@@ -18,8 +18,10 @@ from traceback import format_exc
 from gevent import sleep, spawn
 
 # Zato
-from zato.common import PUB_SUB
-from zato.server.service import Service
+from zato.common import PUB_SUB, ZATO_NONE, ZATO_OK, ZATO_ERROR
+from zato.common.pubsub import ItemFull
+from zato.server.connection.http_soap import Forbidden, TooManyRequests, Unauthorized
+from zato.server.service import Int, Service
 from zato.server.service.internal import AdminService
 
 logger_overflown = getLogger('zato_pubsub_overflown')
@@ -142,11 +144,46 @@ class StoreOverflownMessages(AdminService):
 class RESTHandler(Service):
     """ Handles calls to pub/sub from REST clients.
     """
+    class SimpleIO(object):
+        input_required = ('item',)
+        input_optional = ('max', 'dir', 'format')
+        default = ZATO_NONE
+
+    def validate_input(self):
+        sub_key = self.wsgi_environ.get('HTTP_X_ZATO_PUBSUB_KEY', ZATO_NONE)
+
+        if not self.pubsub.get_consumer_by_sub_key(sub_key):
+            raise Unauthorized(self.cid, 'You are not authorized to access this resource', 'Zato pub/sub')
+
+        self.environ.sub_key = sub_key
+
     def handle_POST(self):
         self.logger.warn('POST')
 
     def handle_GET(self):
-        self.logger.warn('GET')
+
+        out = {
+            'status': ZATO_OK,
+            'results_count': 0,
+            'results': []
+        }
+
+
+
+        max_batch_size = int(self.request.input.max) if self.request.input.max else PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE
+        is_fifo = True if (self.request.input.dir == PUB_SUB.GET_DIR.FIFO or not self.request.input.dir) else False
+        get_format = self.request.input.format if self.request.input.format else PUB_SUB.GET_FORMAT.DEFAULT.id
+
+        self.response.headers['Content-Type'] = 'application/json'
+
+        try:
+            for item in self.pubsub.get(self.environ.sub_key, max_batch_size, is_fifo, get_format):
+                out['results'].append(item)
+                out['results_count'] += 1
+        except ItemFull, e:
+            raise TooManyRequests(self.cid, e.msg)
+        else:
+            self.response.payload = dumps(out)
 
     def handle_DELETE(self):
         self.logger.warn('DELETE')

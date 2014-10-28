@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from httplib import FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses, UNAUTHORIZED
+from httplib import FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, UNAUTHORIZED
 from traceback import format_exc
 
 # anyjson
@@ -20,18 +20,19 @@ from anyjson import dumps
 from django.http import QueryDict
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, SEC_DEF_TYPE, SIMPLE_IO, TRACE1, URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, \
-     ZATO_ERROR, ZATO_NONE, ZATO_OK
+from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
+     URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.util import payload_from_request
-from zato.server.connection.http_soap import ClientHTTPError, Forbidden, NotFound, Unauthorized
+from zato.server.connection.http_soap import ClientHTTPError, Forbidden, NotFound, TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
 
-_status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
-_status_not_found = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
-_status_unauthorized = b'{} {}'.format(UNAUTHORIZED, responses[UNAUTHORIZED])
-_status_forbidden = b'{} {}'.format(FORBIDDEN, responses[FORBIDDEN])
+_status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
+_status_not_found = b'{} {}'.format(NOT_FOUND, HTTP_RESPONSES[NOT_FOUND])
+_status_unauthorized = b'{} {}'.format(UNAUTHORIZED, HTTP_RESPONSES[UNAUTHORIZED])
+_status_forbidden = b'{} {}'.format(FORBIDDEN, HTTP_RESPONSES[FORBIDDEN])
+_status_too_many_requests = b'{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO_MANY_REQUESTS])
 
 soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>""" # noqa
 
@@ -197,6 +198,8 @@ class RequestDispatcher(object):
                     response = e.msg
                     status_code = e.status
 
+                    # TODO: Refactor this series of if/else's into a lookup dict.
+
                     if isinstance(e, Unauthorized):
                         status = _status_unauthorized
                         wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
@@ -206,6 +209,10 @@ class RequestDispatcher(object):
 
                     elif isinstance(e, Forbidden):
                         status = _status_forbidden
+
+                    elif isinstance(e, TooManyRequests):
+                        status = _status_too_many_requests
+
                 else:
                     status_code = INTERNAL_SERVER_ERROR
                     response = _format_exc

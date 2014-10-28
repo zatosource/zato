@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from httplib import BAD_REQUEST, CONFLICT, FORBIDDEN, NOT_FOUND, UNAUTHORIZED
 
 # Zato
-from zato.common import HTTPException
+from zato.common import TOO_MANY_REQUESTS, HTTPException
 
 class ClientHTTPError(HTTPException):
     def __init__(self, cid, msg, status):
@@ -38,3 +38,7 @@ class Unauthorized(ClientHTTPError):
     def __init__(self, cid, msg, challenge):
         super(Unauthorized, self).__init__(cid, msg, UNAUTHORIZED)
         self.challenge = challenge
+
+class TooManyRequests(ClientHTTPError):
+    def __init__(self, cid, msg):
+        super(TooManyRequests, self).__init__(cid, msg, TOO_MANY_REQUESTS)
