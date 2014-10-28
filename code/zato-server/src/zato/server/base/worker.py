@@ -462,7 +462,7 @@ class WorkerStore(BrokerMessageReceiver):
 
                 self.pubsub.add_consumer(
                     Consumer(
-                        config.client_id, config.name, config.is_active, config.sub_key, config.max_backlog,
+                        config.client_id, config.name, config.is_active, config.sub_key, config.max_depth,
                         config.delivery_mode, config.callback_id, config.callback_name, callback_type),
                     Topic(config.topic_name))
 
@@ -1267,7 +1267,7 @@ class WorkerStore(BrokerMessageReceiver):
     def _on_broker_msg_pub_sub_consumer_create_edit(self, msg):
         self.pubsub.add_consumer(
             Consumer(
-                msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog,
+                msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_depth,
                 msg.delivery_mode, msg.callback_id, msg.callback_name, msg.callback_type),
             Topic(msg.topic_name))
 
@@ -1279,7 +1279,7 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_PUB_SUB_CONSUMER_DELETE(self, msg):
         self.pubsub.delete_consumer(
-            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_backlog), Topic(msg.topic_name))
+            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_depth), Topic(msg.topic_name))
 
 # ################################################################################################################################
 

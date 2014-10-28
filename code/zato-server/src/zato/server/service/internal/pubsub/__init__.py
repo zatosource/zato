@@ -10,7 +10,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from httplib import OK
-from json import dumps
+from json import dumps, loads
+from logging import getLogger
 from traceback import format_exc
 
 # gevent
@@ -20,6 +21,8 @@ from gevent import sleep, spawn
 from zato.common import PUB_SUB
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
+
+logger_overflown = getLogger('zato_pubsub_overflown')
 
 # ################################################################################################################################
 
@@ -93,7 +96,18 @@ class MoveToTargetQueues(AdminService):
     """ Invoked when a server is starting - periodically spawns a greenlet moving published messages to recipient queues.
     """
     def _move_to_target_queues(self):
-        self.pubsub.impl.move_to_target_queues()
+
+        overflown = []
+
+        for item in self.pubsub.impl.move_to_target_queues():
+            for result, target_queue, msg_id in item:
+                if result == PUB_SUB.MOVE_RESULT.OVERFLOW:
+                    self.logger.warn('Message overflow, queue:`%s`, msg_id:`%s`', target_queue, msg_id)
+                    overflown.append((target_queue[target_queue.rfind(':')+1:], msg_id))
+
+        if overflown:
+            self.invoke_async(StoreOverflownMessages.get_name(), overflown, to_json_string=True)
+
         self.logger.debug('Messages moved to target queues')
 
     def handle(self):
@@ -103,6 +117,25 @@ class MoveToTargetQueues(AdminService):
             self.logger.debug('Moving messages to target queues, interval %rs', interval)
             spawn(self._move_to_target_queues)
             sleep(interval)
+
+# ################################################################################################################################
+
+class StoreOverflownMessages(AdminService):
+    """ Stores on filesystem messages that were above a consumer's max backlog and marks them as rejected by the consumer.
+    """
+    def handle(self):
+
+        acks = {}
+
+        for sub_key, msg_id in loads(self.request.payload):
+            logger_overflown.warn('%s - %s - %s', msg_id, self.pubsub.get_consumer_by_sub_key(sub_key).name,
+                self.pubsub.get_message(msg_id))
+
+            msg_ids = acks.setdefault(sub_key, [])
+            msg_ids.append(msg_id)
+
+        for consumer_sub_key, msg_ids in acks.iteritems():
+            self.pubsub.acknowledge(sub_key, msg_id)
 
 # ################################################################################################################################
 

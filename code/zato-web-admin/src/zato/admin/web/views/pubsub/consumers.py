@@ -31,7 +31,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'topic_name')
-        output_required = ('id', 'name', 'is_active', 'last_seen', 'max_backlog', 'current_depth', 'in_flight_depth',
+        output_required = ('id', 'name', 'is_active', 'last_seen', 'max_depth', 'current_depth', 'in_flight_depth',
             'sub_key', 'delivery_mode')
         output_optional = ('callback_id',)
         output_repeated = True
@@ -70,7 +70,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('id', 'cluster_id', 'client_id', 'is_active', 'topic_name', 'max_backlog', 'delivery_mode')
+        input_required = ('id', 'cluster_id', 'client_id', 'is_active', 'topic_name', 'max_depth', 'delivery_mode')
         input_optional = ('callback_id',)
         output_required = ('id', 'name', 'last_seen', 'current_depth', 'in_flight_depth', 'sub_key')
 
