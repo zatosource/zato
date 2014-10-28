@@ -39,6 +39,13 @@ class PubSubException(Exception):
     """ Raised when an attempt is made to make use of pub/sub from an invalid client.
     """
 
+class TopicFull(Exception):
+    """ Raised when an attempt is made to make use of pub/sub from an invalid client.
+    """
+    def __init__(self, topic, max_depth):
+        self.topic = topic
+        self.max_depth = max_depth
+
 # ################################################################################################################################
 
 class Topic(HasAutoRepr):
@@ -431,7 +438,7 @@ class RedisPubSub(PubSub, LuaContainer):
         self.lua_programs = {}
 
         self.MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'zset:msg-ids:{}')
-        self.BACKLOG_FULL_KEY = '{}{}'.format(key_prefix, 'backlog-full')
+        self.BACKLOG_FULL_KEY = '{}{}'.format(key_prefix, 'hash:backlog-full')
         self.CONSUMER_MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'list:consumer:msg-ids:{}')
         self.CONSUMER_IN_FLIGHT_IDS_PREFIX = '{}{}'.format(key_prefix, 'set:consumer:in-flight:ids:{}')
         self.CONSUMER_IN_FLIGHT_DATA_PREFIX = '{}{}'.format(key_prefix, 'hash:consumer:in-flight:data:{}')
@@ -514,6 +521,10 @@ class RedisPubSub(PubSub, LuaContainer):
                 self.logger.warn('Producer `%s` is not active. Producer `%s`.', ctx.client_id, ctx.topic)
                 self._raise_cant_publish_error(ctx)
 
+        if self.get_topic_depth(ctx.topic) > self.topics[ctx.topic].max_depth:
+            self.logger.warn('Topic full, `%s`, max depth `%s`', ctx.topic, self.topics[ctx.topic].max_depth)
+            raise TopicFull(ctx.topic, self.topics[ctx.topic].max_depth)
+
         id_key = self.MSG_IDS_PREFIX.format(ctx.topic)
 
         # Each message will carry information what topic it's intended for
@@ -539,7 +550,7 @@ class RedisPubSub(PubSub, LuaContainer):
             self.logger.error('Pub error `%s`', format_exc(e))
             raise
         else:
-            self.logger.info('Published: `%s` to `%s`, exp:`%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
+            self.logger.info('Published `%s` to `%s`, exp `%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
             return ctx
 
     # ############################################################################################################################
@@ -673,6 +684,8 @@ class RedisPubSub(PubSub, LuaContainer):
                 source_queue = self.MSG_IDS_PREFIX.format(topic)
                 topic_info = self.topics[topic]
 
+                # There are as many keys as there are arguments - items on idx 3 and above are related and come in pairs.
+
                 # Keys the Lua program will operate on
                 keys = []
                 keys.append(source_queue)
@@ -692,10 +705,16 @@ class RedisPubSub(PubSub, LuaContainer):
                         self.logger.debug('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
 
                         keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
+                        args.append(self.consumers[consumer].max_backlog)
 
                     move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
                     if move_result:
                         self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
+
+                        for result, target_queue, id in move_result:
+                            if result == PUB_SUB.MOVE_RESULT.OVERFLOW:
+                                self.logger.warn('Message overflow, queue `%s`, ID `%s`', target_queue, id)
+
                 else:
                     self.logger.info('Move: no consumers for topic `%s`', topic)
 
@@ -712,6 +731,12 @@ class RedisPubSub(PubSub, LuaContainer):
         is returned to the caller the depth may have already changed.
         """
         return self.kvdb.llen(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
+
+    def get_consumer_queue_in_flight_depth(self, sub_key):
+        """ Returns current depth of an in-flight consumer's queue. Doesn't held onto any locks so by the time the data
+        is returned to the caller the depth may have already changed.
+        """
+        return self.kvdb.scard(self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key))
 
     def get_consumers_count(self, topic):
         """ Returns the number of consumers allowed to get messages from a given topic.
@@ -897,6 +922,9 @@ class PubSubAPI(object):
 
     def get_consumer_queue_current_depth(self, sub_key):
         return self.impl.get_consumer_queue_current_depth(sub_key)
+
+    def get_consumer_queue_in_flight_depth(self, sub_key):
+        return self.impl.get_consumer_queue_in_flight_depth(sub_key)
 
     def get_consumers_count(self, topic):
         return self.impl.get_consumers_count(topic)

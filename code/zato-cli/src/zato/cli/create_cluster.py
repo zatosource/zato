@@ -145,24 +145,37 @@ zato_services = {
     'zato.pattern.delivery.definition.get-list':'zato.server.service.internal.pattern.delivery.definition.GetList',
 
     # Publish/subscribe - init
-    'zato.pubsub.delete-expired': 'zato.server.service.internal.pubsub.DeleteExpired',
-    'zato.pubsub.invoke-callbacks': 'zato.server.service.internal.pubsub.InvokeCallbacks',
-    'zato.pubsub.move-to-target-queues': 'zato.server.service.internal.pubsub.MoveToTargetQueues',
-
-    ';sjdi
-    sdvsdivju4g]sdfv
+    'zato.pubsub.delete-expired':'zato.server.service.internal.pubsub.DeleteExpired',
+    'zato.pubsub.invoke-callbacks':'zato.server.service.internal.pubsub.InvokeCallbacks',
+    'zato.pubsub.move-to-target-queues':'zato.server.service.internal.pubsub.MoveToTargetQueues',
+    'zato.pubsub.rest-handler':'zato.server.service.internal.pubsub.RESTHandler',
 
     # Publish/subscribe - consumer
-    'zato.pubsub.consumers',
+    'zato.pubsub.consumers.create':'zato.server.service.internal.pubsub.consumers.Create',
+    'zato.pubsub.consumers.delete':'zato.server.service.internal.pubsub.consumers.Delete',
+    'zato.pubsub.consumers.edit':'zato.server.service.internal.pubsub.consumers.Edit',
+    'zato.pubsub.consumers.get-info':'zato.server.service.internal.pubsub.consumers.GetInfo',
+    'zato.pubsub.consumers.get-list':'zato.server.service.internal.pubsub.consumers.GetList',
 
     # Publish/subscribe - messages
-    'zato.pubsub.message',
+    'zato.pubsub.message.create.delete':'zato.server.service.internal.pubsub.message.Delete',
+    'zato.pubsub.message.create.get':'zato.server.service.internal.pubsub.message.Get',
+    'zato.pubsub.message.create.get-list':'zato.server.service.internal.pubsub.message.GetList',
 
     # Publish/subscribe - producers
-    'zato.pubsub.producers',
+    'zato.pubsub.producers.create':'zato.server.service.internal.pubsub.producers.Create',
+    'zato.pubsub.producers.delete':'zato.server.service.internal.pubsub.producers.Delete',
+    'zato.pubsub.producers.edit':'zato.server.service.internal.pubsub.producers.Edit',
+    'zato.pubsub.producers.get-info':'zato.server.service.internal.pubsub.producers.GetInfo',
+    'zato.pubsub.producers.get-list':'zato.server.service.internal.pubsub.producers.GetList',
 
     # Publish/subscribe - topics
-    'zato.pubsub.topics',
+    'zato.pubsub.topics.create':'zato.server.service.internal.pubsub.topics.Create',
+    'zato.pubsub.topics.delete':'zato.server.service.internal.pubsub.topics.Delete',
+    'zato.pubsub.topics.edit':'zato.server.service.internal.pubsub.topics.Edit',
+    'zato.pubsub.topics.get-info':'zato.server.service.internal.pubsub.topics.GetInfo',
+    'zato.pubsub.topics.get-list':'zato.server.service.internal.pubsub.topics.GetList',
+    'zato.pubsub.topics.publish':'zato.server.service.internal.pubsub.topics.Publish',
 
     # Ping services are added in Create.add_ping_services
 

@@ -28,6 +28,7 @@
             '_is_active',
             'delivery_mode',
             '_current_depth',
+            'in_flight_depth',
             'max_backlog',
             'last_seen',
             '_edit',
@@ -68,6 +69,7 @@
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Delivery mode</a></th>
                         <th><a href="#">Current depth</a></th>
+                        <th><a href="#">In-flight</a></th>
                         <th><a href="#">Max backlog</a></th>
                         <th><a href="#">Last seen</a></th>
                         <th>&nbsp;</th>
@@ -89,6 +91,7 @@
                         <td>{{ item.is_active|yesno:"Yes,No" }}</td>
                         <td>{{ item.delivery_mode }}</td>
                         <td><a href="{% url pubsub-message-consumer-queue cluster_id item.sub_key input.topic_name %}">{{ item.current_depth }}</a></td>
+                        <td>{{ item.in_flight_depth }}</td>
                         <td>{{ item.max_backlog }}</td>
                         <td>{{ item.last_seen|default:"<span class='form_hint'>(Never)</span>" }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.consumers.edit('{{ item.id }}')">Edit</a></td>

@@ -540,6 +540,10 @@ class PUB_SUB:
     DEFAULT_MAX_DEPTH = 500
     DEFAULT_MAX_BACKLOG = 1000
 
+    class MOVE_RESULT:
+        MOVED = 'moved'
+        OVERFLOW = 'overflow'
+
     class CALLBACK_TYPE:
         OUTCONN_PLAIN_HTTP = 'outconn-plain-http'
         OUTCONN_SOAP = 'outconn-soap'
