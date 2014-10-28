@@ -22,7 +22,7 @@ import logging
 from gevent.lock import RLock
 
 # Zato
-from zato.common import PUB_SUB, ZATO_NOT_GIVEN
+from zato.common import PUB_SUB, ZATO_NONE, ZATO_NOT_GIVEN
 from zato.common.kvdb import LuaContainer
 from zato.common.pubsub import lua
 from zato.common.util import datetime_to_seconds, make_repr, new_cid
@@ -39,11 +39,12 @@ class PubSubException(Exception):
     """ Raised when an attempt is made to make use of pub/sub from an invalid client.
     """
 
-class TopicFull(Exception):
-    """ Raised when an attempt is made to make use of pub/sub from an invalid client.
+class ItemFull(Exception):
+    """ Raised when either a topic or a consumer's queue is full.
     """
-    def __init__(self, topic, max_depth):
-        self.topic = topic
+    def __init__(self, msg, item, max_depth):
+        self.msg = msg
+        self.item = item
         self.max_depth = max_depth
 
 # ################################################################################################################################
@@ -523,7 +524,7 @@ class RedisPubSub(PubSub, LuaContainer):
 
         if self.get_topic_depth(ctx.topic) >= self.topics[ctx.topic].max_depth:
             self.logger.warn('Topic full, `%s`, max depth `%s`', ctx.topic, self.topics[ctx.topic].max_depth)
-            raise TopicFull(ctx.topic, self.topics[ctx.topic].max_depth)
+            raise ItemFull('Topic full', ctx.topic, self.topics[ctx.topic].max_depth)
 
         id_key = self.MSG_IDS_PREFIX.format(ctx.topic)
 
@@ -580,7 +581,11 @@ class RedisPubSub(PubSub, LuaContainer):
                 self.validate_sub_key(ctx.sub_key)
 
                 # Don't let the client get new messages if the depth of the in-flight queue reached its maximum.
-                self.logger.warn('3333 %r', self.get_consumer_queue_in_flight_depth(ctx.sub_key))
+                consumer = self.get_consumer_by_sub_key(ctx.sub_key)
+                if self.get_consumer_queue_in_flight_depth(ctx.sub_key) >= consumer.max_depth:
+                    self.logger.warn('In-flight queue full, `%s`, max depth `%s`', consumer.name, consumer.max_depth)
+                    raise ItemFull('In-flight queue full ({max_depth}/{max_depth})'.format(max_depth=consumer.max_depth),
+                        consumer.name, consumer.max_depth)
 
                 # Now that the client is known to be a valid one we can get all their messages
                 cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
@@ -742,6 +747,9 @@ class RedisPubSub(PubSub, LuaContainer):
         is returned to the caller the depth may have already changed.
         """
         return self.kvdb.scard(self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key))
+
+    def get_consumer_by_sub_key(self, sub_key):
+        return self.consumers.get(self.sub_to_cons.get(sub_key, ZATO_NONE))
 
     def get_consumers_count(self, topic):
         """ Returns the number of consumers allowed to get messages from a given topic.
@@ -933,7 +941,7 @@ class PubSubAPI(object):
         return self.impl.get_consumer_queue_in_flight_depth(sub_key)
 
     def get_consumer_by_sub_key(self, sub_key):
-        return self.impl.consumers[self.impl.sub_to_cons[sub_key]]
+        return self.impl.get_consumer_by_sub_key(sub_key)
 
     def get_consumers_count(self, topic):
         return self.impl.get_consumers_count(topic)
