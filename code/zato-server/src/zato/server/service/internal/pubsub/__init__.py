@@ -25,7 +25,7 @@ from zato.common import PUB_SUB, ZATO_NONE, ZATO_OK, ZATO_ERROR
 from zato.common.pubsub import ItemFull
 from zato.common.util import get_basic_auth_credentials
 from zato.server.connection.http_soap import BadRequest, Forbidden, TooManyRequests, Unauthorized
-from zato.server.service import AsIs, Int, Service
+from zato.server.service import AsIs, Bool, Int, Service
 from zato.server.service.internal import AdminService
 
 logger_overflown = getLogger('zato_pubsub_overflown')
@@ -150,7 +150,8 @@ class RESTHandler(Service):
     """
     class SimpleIO(object):
         input_required = ('item_type', 'item',)
-        input_optional = ('max', 'dir', 'format', 'mime_type', Int('priority'), Int('expiration'), AsIs('msg_id'))
+        input_optional = ('max', 'dir', 'format', 'mime_type', Int('priority'), Int('expiration'), AsIs('msg_id'),
+            Bool('ack'), Bool('reject'))
         default = ZATO_NONE
         use_channel_params_only = True
 
@@ -173,14 +174,16 @@ class RESTHandler(Service):
             self._raise_unauthorized()
 
         if self.request.input.item_type not in PUB_SUB.URL_ITEM_TYPE:
-            raise BadRequest(self.cid, 'None of the supported resources ({}) found in URL path'.format(
+            raise BadRequest(self.cid, 'None of the supported resources `{}` found in URL path'.format(
                 ', '.join(PUB_SUB.URL_ITEM_TYPE)))
 
         sub_key = self.wsgi_environ.get('HTTP_X_ZATO_PUBSUB_KEY', ZATO_NONE)
-        is_consumer = self.request.input.item_type == PUB_SUB.URL_ITEM_TYPE.MESSAGES
+        is_consumer = self.request.input.item_type == PUB_SUB.URL_ITEM_TYPE.MESSAGES.id
 
-        if not self.pubsub.is_allowed_to_access(client.config.id, self.request.input.item, is_consumer):
-            raise Forbidden(self.cid, 'You are not authorized to access this resource')
+        # Deletes don't access topics, they operate on messages.
+        if self.wsgi_environ['REQUEST_METHOD'] != 'DELETE':
+            if not self.pubsub.can_access_topic(client.config.id, self.request.input.item, is_consumer):
+                raise Forbidden(self.cid, 'You are not authorized to access this resource')
 
         self.environ['sub_key'] = sub_key
         self.environ['client_id'] = client.config.id
@@ -257,9 +260,26 @@ class RESTHandler(Service):
         getattr(self, '_handle_POST_{}'.format(self.request.input.item_type))()
 
     def handle_DELETE(self):
-        self.logger.warn('DELETE')
 
-    def handle_PATCH(self):
-        self.logger.warn('PATCH')
+        actions = ('ack', 'reject')
+        try:
+            self.request.input.require_any(*actions)
+        except ValueError, e:
+            raise BadRequest(self.cid, 'Missing state to set, should be one of `{}`'.format(', '.join(actions)))
+
+        if self.request.input.ack and self.request.input.reject:
+            raise BadRequest(self.cid, 'Cannot both acknowledge and reject a message')
+
+        func = self.pubsub.acknowledge if self.request.input.ack else self.pubsub.reject
+        result = func(self.environ['sub_key'], self.request.input.item)
+
+        if self.request.input.item in result:
+            status = ZATO_OK
+            details = ''
+        else:
+            status = ZATO_ERROR
+            details = 'Message not found `{}`'.format(self.request.input.item)
+
+        self._set_payload_data({'status': status, 'details':details})
 
 # ################################################################################################################################
