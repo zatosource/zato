@@ -17,10 +17,13 @@ from traceback import format_exc
 # gevent
 from gevent import sleep, spawn
 
+# huTools
+from huTools.structured import dict2xml
+
 # Zato
 from zato.common import PUB_SUB, ZATO_NONE, ZATO_OK, ZATO_ERROR
 from zato.common.pubsub import ItemFull
-from zato.server.connection.http_soap import Forbidden, TooManyRequests, Unauthorized
+from zato.server.connection.http_soap import BadRequest, Forbidden, TooManyRequests, Unauthorized
 from zato.server.service import Int, Service
 from zato.server.service.internal import AdminService
 
@@ -145,9 +148,11 @@ class RESTHandler(Service):
     """ Handles calls to pub/sub from REST clients.
     """
     class SimpleIO(object):
-        input_required = ('item',)
+        input_required = ('item_type', 'item',)
         input_optional = ('max', 'dir', 'format')
         default = ZATO_NONE
+
+# ################################################################################################################################
 
     def validate_input(self):
         sub_key = self.wsgi_environ.get('HTTP_X_ZATO_PUBSUB_KEY', ZATO_NONE)
@@ -155,12 +160,15 @@ class RESTHandler(Service):
         if not self.pubsub.get_consumer_by_sub_key(sub_key):
             raise Unauthorized(self.cid, 'You are not authorized to access this resource', 'Zato pub/sub')
 
+        if self.request.input.item_type not in PUB_SUB.URL_ITEM_TYPE:
+            raise BadRequest(self.cid, 'None of the supported resources ({}) found in URL path'.format(
+                ', '.join(PUB_SUB.URL_ITEM_TYPE)))
+
         self.environ.sub_key = sub_key
 
-    def handle_POST(self):
-        self.logger.warn('POST')
+# ################################################################################################################################
 
-    def handle_GET(self):
+    def _handle_POST_msg(self):
 
         out = {
             'status': ZATO_OK,
@@ -168,22 +176,41 @@ class RESTHandler(Service):
             'results': []
         }
 
-
-
         max_batch_size = int(self.request.input.max) if self.request.input.max else PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE
         is_fifo = True if (self.request.input.dir == PUB_SUB.GET_DIR.FIFO or not self.request.input.dir) else False
         get_format = self.request.input.format if self.request.input.format else PUB_SUB.GET_FORMAT.DEFAULT.id
-
-        self.response.headers['Content-Type'] = 'application/json'
+        is_json = get_format == PUB_SUB.GET_FORMAT.JSON.id
 
         try:
             for item in self.pubsub.get(self.environ.sub_key, max_batch_size, is_fifo, get_format):
-                out['results'].append(item)
+
+                if is_json:
+                    out_item = item
+                else:
+                    out_item = {'metadata': item.to_dict()}
+                    out_item['payload'] = item.payload
+
+                out['results'].append(out_item)
                 out['results_count'] += 1
+
         except ItemFull, e:
             raise TooManyRequests(self.cid, e.msg)
         else:
-            self.response.payload = dumps(out)
+            if is_json:
+                content_type = 'application/json'
+                out = dumps(out)
+            else:
+                content_type = 'application/xml'
+                out = dict2xml(out)
+
+            self.response.headers['Content-Type'] = content_type
+            self.response.payload = out
+
+# ################################################################################################################################
+
+    def handle_POST(self):
+
+        getattr(self, '_handle_POST_{}'.format(self.request.input.item_type))()
 
     def handle_DELETE(self):
         self.logger.warn('DELETE')

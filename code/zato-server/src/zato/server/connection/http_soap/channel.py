@@ -250,7 +250,7 @@ class RequestDispatcher(object):
         """
         wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
         wsgi_environ['zato.http.response.headers'].update(response.headers)
-        wsgi_environ['zato.http.response.status'] = b'{} {}'.format(response.status_code, responses[response.status_code])
+        wsgi_environ['zato.http.response.status'] = b'{} {}'.format(response.status_code, HTTP_RESPONSES[response.status_code])
 
 # ##############################################################################
 
