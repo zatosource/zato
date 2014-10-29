@@ -382,6 +382,7 @@ convert_impl = {
     DATA_FORMAT.JSON: convert_from_json,
     DATA_FORMAT.XML: convert_from_xml,
     DATA_FORMAT.DICT: convert_from_dict,
+    None: convert_from_dict,
 }
 
 def convert_param(cid, payload, param, data_format, is_required, default_value, path_prefix, use_text, 

@@ -23,8 +23,9 @@ from huTools.structured import dict2xml
 # Zato
 from zato.common import PUB_SUB, ZATO_NONE, ZATO_OK, ZATO_ERROR
 from zato.common.pubsub import ItemFull
+from zato.common.util import get_basic_auth_credentials
 from zato.server.connection.http_soap import BadRequest, Forbidden, TooManyRequests, Unauthorized
-from zato.server.service import Int, Service
+from zato.server.service import AsIs, Int, Service
 from zato.server.service.internal import AdminService
 
 logger_overflown = getLogger('zato_pubsub_overflown')
@@ -149,27 +150,81 @@ class RESTHandler(Service):
     """
     class SimpleIO(object):
         input_required = ('item_type', 'item',)
-        input_optional = ('max', 'dir', 'format')
+        input_optional = ('max', 'dir', 'format', 'mime_type', Int('priority'), Int('expiration'), AsIs('msg_id'))
         default = ZATO_NONE
+        use_channel_params_only = True
 
 # ################################################################################################################################
 
-    def validate_input(self):
-        sub_key = self.wsgi_environ.get('HTTP_X_ZATO_PUBSUB_KEY', ZATO_NONE)
+    def _raise_unauthorized(self):
+        raise Unauthorized(self.cid, 'You are not authorized to access this resource', 'Zato pub/sub')
 
-        if not self.pubsub.get_consumer_by_sub_key(sub_key):
-            raise Unauthorized(self.cid, 'You are not authorized to access this resource', 'Zato pub/sub')
+    def validate_input(self):
+
+        username, password = get_basic_auth_credentials(self.wsgi_environ.get('HTTP_AUTHORIZATION'))
+        if not username:
+            self._raise_unauthorized()
+
+        for item in self.server.worker_store.request_dispatcher.url_data.basic_auth_config.values():
+            if item.config.username == username and item.config.password == password:
+                client = item
+                break
+        else:
+            self._raise_unauthorized()
 
         if self.request.input.item_type not in PUB_SUB.URL_ITEM_TYPE:
             raise BadRequest(self.cid, 'None of the supported resources ({}) found in URL path'.format(
                 ', '.join(PUB_SUB.URL_ITEM_TYPE)))
 
+        sub_key = self.wsgi_environ.get('HTTP_X_ZATO_PUBSUB_KEY', ZATO_NONE)
+        is_consumer = self.request.input.item_type == PUB_SUB.URL_ITEM_TYPE.MESSAGES
+
+        if not self.pubsub.is_allowed_to_access(client.config.id, self.request.input.item, is_consumer):
+            raise Forbidden(self.cid, 'You are not authorized to access this resource')
+
         self.environ['sub_key'] = sub_key
+        self.environ['client_id'] = client.config.id
+        self.environ['format'] = self.request.input.format if self.request.input.format else PUB_SUB.GET_FORMAT.DEFAULT.id
+        self.environ['is_json'] = self.environ['format'] == PUB_SUB.GET_FORMAT.JSON.id
+
+# ################################################################################################################################
+
+    def _set_payload_data(self, out):
+        if self.environ['is_json']:
+            content_type = 'application/json'
+            out = dumps(out)
+        else:
+            content_type = 'application/xml'
+            out = dict2xml(out)
+
+        self.response.headers['Content-Type'] = content_type
+        self.response.payload = out
+
+# ################################################################################################################################
+
+    def _handle_POST_topic(self):
+        """ Publishes a message on a topic.
+        """
+        pub_data = {
+            'payload': self.request.raw_request,
+            'topic': self.request.input.item,
+            'mime_type': self.request.input.mime_type or self.wsgi_environ['CONTENT_TYPE'],
+            'priority': self.request.input.priority,
+            'expiration': self.request.input.expiration,
+            'msg_id': self.request.input.msg_id,
+            'client_id': self.environ['client_id'],
+        }
+
+        self._set_payload_data({
+            'status': ZATO_OK,
+            'msg_id':self.pubsub.publish(**pub_data).msg.msg_id
+        })
 
 # ################################################################################################################################
 
     def _handle_POST_msg(self):
-
+        """ Returns messages from topics, either in JSON or XML.
+        """
         out = {
             'status': ZATO_OK,
             'results_count': 0,
@@ -178,13 +233,11 @@ class RESTHandler(Service):
 
         max_batch_size = int(self.request.input.max) if self.request.input.max else PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE
         is_fifo = True if (self.request.input.dir == PUB_SUB.GET_DIR.FIFO or not self.request.input.dir) else False
-        get_format = self.request.input.format if self.request.input.format else PUB_SUB.GET_FORMAT.DEFAULT.id
-        is_json = get_format == PUB_SUB.GET_FORMAT.JSON.id
 
         try:
-            for item in self.pubsub.get(self.environ['sub_key'], max_batch_size, is_fifo, get_format):
+            for item in self.pubsub.get(self.environ['sub_key'], max_batch_size, is_fifo, self.environ['format']):
 
-                if is_json:
+                if self.environ['is_json']:
                     out_item = item
                 else:
                     out_item = {'metadata': item.to_dict()}
@@ -196,20 +249,11 @@ class RESTHandler(Service):
         except ItemFull, e:
             raise TooManyRequests(self.cid, e.msg)
         else:
-            if is_json:
-                content_type = 'application/json'
-                out = dumps(out)
-            else:
-                content_type = 'application/xml'
-                out = dict2xml(out)
-
-            self.response.headers['Content-Type'] = content_type
-            self.response.payload = out
+            self._set_payload_data(out)
 
 # ################################################################################################################################
 
     def handle_POST(self):
-
         getattr(self, '_handle_POST_{}'.format(self.request.input.item_type))()
 
     def handle_DELETE(self):
