@@ -164,7 +164,7 @@ class RESTHandler(Service):
             raise BadRequest(self.cid, 'None of the supported resources ({}) found in URL path'.format(
                 ', '.join(PUB_SUB.URL_ITEM_TYPE)))
 
-        self.environ.sub_key = sub_key
+        self.environ['sub_key'] = sub_key
 
 # ################################################################################################################################
 
@@ -182,7 +182,7 @@ class RESTHandler(Service):
         is_json = get_format == PUB_SUB.GET_FORMAT.JSON.id
 
         try:
-            for item in self.pubsub.get(self.environ.sub_key, max_batch_size, is_fifo, get_format):
+            for item in self.pubsub.get(self.environ['sub_key'], max_batch_size, is_fifo, get_format):
 
                 if is_json:
                     out_item = item
