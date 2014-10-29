@@ -29,6 +29,10 @@ from zato.common.util import datetime_to_seconds, make_repr, new_cid
 
 # ################################################################################################################################
 
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+
 class HasAutoRepr(object):
     def __repr__(self):
         return make_repr(self)
@@ -36,7 +40,11 @@ class HasAutoRepr(object):
 # ################################################################################################################################
 
 class PubSubException(Exception):
-    """ Raised when an attempt is made to make use of pub/sub from an invalid client.
+    """ A base class for pub/sub exception.
+    """
+
+class PermissionDenied(PubSubException):
+    """ Raised when an attempt is made to make use of a topic a client is not allowed to access.
     """
 
 class ItemFull(Exception):
@@ -499,7 +507,7 @@ class RedisPubSub(PubSub, LuaContainer):
     # ############################################################################################################################
 
     def _raise_cant_publish_error(self, ctx):
-        raise PubSubException("Permision denied. Can't publish to `{}`".format(ctx.topic))
+        raise PermissionDenied("Permision denied. Can't publish to `{}`".format(ctx.topic))
 
     def publish(self, ctx):
         """ Publishes a message on a selected topic.
@@ -756,11 +764,6 @@ class RedisPubSub(PubSub, LuaContainer):
         """
         return len(self.topic_to_cons.get(topic, []))
 
-    def get_producers_count(self, topic):
-        """ Returns the number of producers allowed to publish messages to a topic.
-        """
-        return len(self.topic_to_prod.get(topic, []))
-
     def get_last_pub_time(self, topic):
         """ Returns timestamp of the last publication to a topic, if any.
         """
@@ -775,6 +778,14 @@ class RedisPubSub(PubSub, LuaContainer):
         """ Returns timestamp of the last time a consumer got a message, regardless of its topic.
         """
         return self.kvdb.hget(self.LAST_SEEN_CONSUMER_KEY, client_id)
+
+    def get_producers_count(self, topic):
+        """ Returns the number of producers allowed to publish messages to a topic.
+        """
+        return len(self.topic_to_prod.get(topic, []))
+
+    def get_producer_by_sub_key(self, sub_key):
+        return self.producers.get(self.sub_to_cons.get(sub_key, ZATO_NONE))
 
     # ############################################################################################################################
 
@@ -844,8 +855,7 @@ class PubSubAPI(object):
         self.impl = impl
         """:type: zato.common.pubsub.RedisPubSub"""
 
-    def publish(self, payload, topic, mime_type=PUB_SUB.DEFAULT_MIME_TYPE, priority=PUB_SUB.DEFAULT_PRIORITY,
-            expiration=PUB_SUB.DEFAULT_EXPIRATION, msg_id=None, expire_at=None, client_id=None):
+    def publish(self, payload, topic, mime_type=None, priority=None, expiration=None, msg_id=None, expire_at=None, client_id=None):
         """ Publishes a message by a given to a given topic using a set of parameters provided.
         """
         client_id = client_id or self.get_default_producer().id
@@ -853,7 +863,8 @@ class PubSubAPI(object):
         ctx.client_id = client_id
         ctx.topic = topic
         ctx.msg = Message(
-            payload, topic, mime_type, priority, expiration, msg_id, self.impl.producers[client_id].name)
+            payload, topic, mime_type or PUB_SUB.DEFAULT_MIME_TYPE, priority or PUB_SUB.DEFAULT_PRIORITY,
+            expiration or PUB_SUB.DEFAULT_EXPIRATION, msg_id, self.impl.producers[client_id].name)
 
         return self.impl.publish(ctx)
 
@@ -958,6 +969,9 @@ class PubSubAPI(object):
     def get_consumer_last_seen(self, client_id):
         return self.impl.get_consumer_last_seen(client_id)
 
+    def get_producer_by_sub_key(self, sub_key):
+        return self.producers.get(self.sub_to_cons.get(sub_key, ZATO_NONE))
+
     # ############################################################################################################################
 
     def get_default_consumer(self):
@@ -988,5 +1002,10 @@ class PubSubAPI(object):
 
     def get_message(self, msg_id):
         return self.impl.get_message(msg_id)
+
+# ################################################################################################################################
+
+    def is_allowed_to_access(self, client_id, topic, is_consumer):
+        return topic in self.impl.cons_to_topic.get(client_id, []) if is_consumer else self.impl.prod_to_topic.get(client_id, [])
 
 # ################################################################################################################################
