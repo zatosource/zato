@@ -21,7 +21,7 @@ from gevent import sleep, spawn
 from huTools.structured import dict2xml
 
 # Zato
-from zato.common import PUB_SUB, ZATO_NONE, ZATO_OK, ZATO_ERROR
+from zato.common import DATA_FORMAT, PUB_SUB, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.pubsub import ItemFull
 from zato.common.util import get_basic_auth_credentials
 from zato.server.connection.http_soap import BadRequest, Forbidden, TooManyRequests, Unauthorized
@@ -62,20 +62,33 @@ class InvokeCallbacks(AdminService):
         for consumer in callback_consumers:
             with self.lock(consumer.sub_key):
                 msg_ids = []
-                request = []
+
+                out = {
+                    'status': ZATO_OK,
+                    'results_count': 0,
+                    'results': []
+                }
 
                 messages = self.pubsub.get(consumer.sub_key, get_format=PUB_SUB.GET_FORMAT.JSON.id)
 
                 for msg in messages:
                     msg_ids.append(msg['metadata']['msg_id'])
-                    request.append(msg)
+                    out['results_count'] += 1
+                    out['results'].append(msg)
 
                 # messages is a generator so we still don't know if we had anything.
                 if msg_ids:
-                    conn = (self.outgoing.plain_http if consumer.callback_type == PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTTP else \
-                        self.outgoing.soap)[consumer.callback_name].conn
+                    outconn = self.outgoing.plain_http[consumer.callback_name]
+
+                    if outconn.config['data_format'] == DATA_FORMAT.XML:
+                        out = dict2xml(out)
+                        content_type = 'application/xml'
+                    else:
+                        out = dumps(out)
+                        content_type = 'application/json'
+
                     try:
-                        response = conn.post(self.cid, data=dumps(request), headers={'content-type': 'application/json'})
+                        response = outconn.conn.post(self.cid, data=out, headers={'content-type': content_type})
                     except Exception, e:
                         self._reject(msg_ids, consumer.sub_key, consumer, format_exc(e))
                     else:

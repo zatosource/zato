@@ -62,7 +62,6 @@ lua_move_to_target_queues = """
     local max_int = tonumber(ARGV[3])
     local zset_command
     local out = {}
-    local max_depth = 0
     local target_queue_depth = 0
     local can_push_to_target = true;
 
