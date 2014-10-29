@@ -310,7 +310,7 @@ class ServiceInput(Bunch):
             if self.get(name):
                 break
         else:
-            raise ValueError('At least one of `{}` is required'.format(elems))
+            raise ValueError('At least one of `{}` is required'.format(', '.join(elems)))
 
 # ################################################################################################################################
 

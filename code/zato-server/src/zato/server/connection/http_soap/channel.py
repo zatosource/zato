@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from httplib import FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, UNAUTHORIZED
+from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, UNAUTHORIZED
 from traceback import format_exc
 
 # anyjson
@@ -23,11 +23,12 @@ from django.http import QueryDict
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.util import payload_from_request
-from zato.server.connection.http_soap import ClientHTTPError, Forbidden, NotFound, TooManyRequests, Unauthorized
+from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, NotFound, TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
 
+_status_bad_request = b'{} {}'.format(BAD_REQUEST, HTTP_RESPONSES[BAD_REQUEST])
 _status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
 _status_not_found = b'{} {}'.format(NOT_FOUND, HTTP_RESPONSES[NOT_FOUND])
 _status_unauthorized = b'{} {}'.format(UNAUTHORIZED, HTTP_RESPONSES[UNAUTHORIZED])
@@ -203,6 +204,9 @@ class RequestDispatcher(object):
                     if isinstance(e, Unauthorized):
                         status = _status_unauthorized
                         wsgi_environ['zato.http.response.headers']['WWW-Authenticate'] = e.challenge
+
+                    elif isinstance(e, BadRequest):
+                        status = _status_bad_request
 
                     elif isinstance(e, NotFound):
                         status = _status_not_found

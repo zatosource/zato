@@ -646,6 +646,8 @@ class RedisPubSub(PubSub, LuaContainer):
             '%s: result `%s` for sub_key `%s` with msgs `%s`',
               'Del from queue' if is_delete else 'Ack', result, ctx.sub_key, ', '.join(ctx.msg_ids))
 
+        return result
+
     def reject(self, ctx):
         """ Rejects a set of messages for a given consumer. The messages will be placed back onto consumer's queue
         and delivered again at a later time.
@@ -665,6 +667,8 @@ class RedisPubSub(PubSub, LuaContainer):
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.info(
                 'Reject result `%s` for `%s` with `%s`', result, ctx.sub_key, ', '.join(ctx.msg_ids))
+
+        return result
 
     # ############################################################################################################################
 
@@ -1005,7 +1009,7 @@ class PubSubAPI(object):
 
 # ################################################################################################################################
 
-    def is_allowed_to_access(self, client_id, topic, is_consumer):
+    def can_access_topic(self, client_id, topic, is_consumer):
         return topic in self.impl.cons_to_topic.get(client_id, []) if is_consumer else self.impl.prod_to_topic.get(client_id, [])
 
 # ################################################################################################################################
