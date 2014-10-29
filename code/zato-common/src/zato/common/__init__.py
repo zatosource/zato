@@ -555,6 +555,7 @@ class PUB_SUB:
         MOVED = 'moved'
         OVERFLOW = 'overflow'
 
+
     class CALLBACK_TYPE:
         OUTCONN_PLAIN_HTTP = 'outconn-plain-http'
         OUTCONN_SOAP = 'outconn-soap'
@@ -584,6 +585,14 @@ class PUB_SUB:
         class __metaclass__(type):
             def __iter__(self):
                 return iter((self.OBJECT, self.JSON, self.XML))
+
+    class URL_ITEM_TYPE:
+        TOPIC = NameId('Topic', 'topic')
+        MESSAGES = NameId('Messages', 'msg')
+    
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.TOPIC.id, self.MESSAGES.id))
 
 class EMAIL:
     class DEFAULT:
