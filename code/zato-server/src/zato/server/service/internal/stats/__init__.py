@@ -133,7 +133,9 @@ class BaseAggregatingService(AdminService):
                         stats[name] = min(stats[name], value)
                     
         for service_name, values in service_stats.items():
-            values['mean'] = sp_stats.tmean(values['mean'])
+            mean = values.get('mean')
+            if mean:
+                values['mean'] = sp_stats.tmean(mean)
             
             if needs_rate:
                 values['rate'] = values['usage'] / total_seconds
