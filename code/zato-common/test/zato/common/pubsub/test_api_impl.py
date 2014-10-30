@@ -320,12 +320,8 @@ class RedisPubSubTestCase(RedisPubSubCommonTestCase):
         # Consumer acknowledges a message.
         self.api.acknowledge(sub_key, ctx.msg.msg_id)
 
-        # This was the only one subscription so now that the message has been delivered
-        # there should be no trace of it in backend.
-        # The only keys left are LAST_PUB_TIME_KEY, LAST_SEEN_CONSUMER_KEY and LAST_SEEN_PRODUCER_KEY - nothing else.
-
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        self.assertEquals(len(keys), 3)
+        self.assertEquals(len(keys), 9)
 
         now = datetime.utcnow()
 
