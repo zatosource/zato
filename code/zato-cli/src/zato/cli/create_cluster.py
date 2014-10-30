@@ -24,10 +24,6 @@ from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, RBACPermissi
 
 zato_services = {
 
-    # Clusters - Connections map
-    'zato.info.get-info':'zato.server.service.internal.info.GetInfo',
-    'zato.info.get-server-info':'zato.server.service.internal.info.GetServerInfo',
-
     # Channels - AMQP
     'zato.channel.amqp.create':'zato.server.service.internal.channel.amqp.Create',
     'zato.channel.amqp.delete':'zato.server.service.internal.channel.amqp.Delete',
@@ -80,12 +76,40 @@ zato_services = {
     'zato.definition.jms-wmq.get-by-id':'zato.server.service.internal.definition.jms_wmq.GetByID',
     'zato.definition.jms-wmq.get-list':'zato.server.service.internal.definition.jms_wmq.GetList',
 
+    # E-mail - IMAP
+    'zato.email.imap.change-password': 'zato.server.service.internal.email.imap.ChangePassword',
+    'zato.email.imap.create': 'zato.server.service.internal.email.imap.Create',
+    'zato.email.imap.delete': 'zato.server.service.internal.email.imap.Delete',
+    'zato.email.imap.edit': 'zato.server.service.internal.email.imap.Edit',
+    'zato.email.imap.get-list': 'zato.server.service.internal.email.imap.GetList',
+    'zato.email.imap.ping': 'zato.server.service.internal.email.imap.Ping',
+
+    # E-mail - SMTP
+    'zato.email.smtp.change-password': 'zato.server.service.internal.email.smtp.ChangePassword',
+    'zato.email.smtp.create': 'zato.server.service.internal.email.smtp.Create',
+    'zato.email.smtp.delete': 'zato.server.service.internal.email.smtp.Delete',
+    'zato.email.smtp.edit': 'zato.server.service.internal.email.smtp.Edit',
+    'zato.email.smtp.get-list': 'zato.server.service.internal.email.smtp.GetList',
+    'zato.email.smtp.ping': 'zato.server.service.internal.email.smtp.Ping',
+
+    # Helpers
+    'zato.helpers.echo': 'zato.server.service.internal.helpers.Echo',
+    'zato.helpers.input-logger': 'zato.server.service.internal.helpers.InputLogger',
+    'zato.helpers.sio-input-logger': 'zato.server.service.internal.helpers.SIOInputLogger',
+
+    # Hot-deploy
+    'zato.hot_deploy.create': 'zato.server.service.internal.hot_deploy.Create',
+
     # HTTP/SOAP
     'zato.http-soap.create':'zato.server.service.internal.http_soap.Create',
     'zato.http-soap.delete':'zato.server.service.internal.http_soap.Delete',
     'zato.http-soap.edit':'zato.server.service.internal.http_soap.Edit',
     'zato.http-soap.get-list':'zato.server.service.internal.http_soap.GetList',
     'zato.http-soap.ping':'zato.server.service.internal.http_soap.Ping',
+
+    # Clusters - Connections map
+    'zato.info.get-info':'zato.server.service.internal.info.GetInfo',
+    'zato.info.get-server-info':'zato.server.service.internal.info.GetServerInfo',
 
     # Key/value DB
     'zato.kvdb.data-dict.dictionary.create':'zato.server.service.internal.kvdb.data_dict.dictionary.Create',
@@ -104,7 +128,37 @@ zato_services = {
     'zato.kvdb.data-dict.translation.get-list':'zato.server.service.internal.kvdb.data_dict.translation.GetList',
     'zato.kvdb.data-dict.translation.translate':'zato.server.service.internal.kvdb.data_dict.translation.Translate',
     'zato.kvdb.remote-command.execute':'zato.server.service.internal.kvdb.ExecuteCommand',
-    
+
+    # Messages - Namespaces
+    'zato.server.message.namespace.create': 'zato.server.service.internal.message.namespace.Create',
+    'zato.server.message.namespace.edit': 'zato.server.service.internal.message.namespace.Edit',
+    'zato.server.message.namespace.delete': 'zato.server.service.internal.message.namespace.Delete',
+    'zato.server.message.namespace.get-list': 'zato.server.service.internal.message.namespace.GetList',
+
+    # Messages - JSON Pointers
+    'zato.server.message.json_pointer.create': 'zato.server.service.internal.message.json_pointer.Create',
+    'zato.server.message.json_pointer.edit': 'zato.server.service.internal.message.json_pointer.Edit',
+    'zato.server.message.json_pointer.delete': 'zato.server.service.internal.message.json_pointer.Delete',
+    'zato.server.message.json_pointer.get-list': 'zato.server.service.internal.message.json_pointer.GetList',
+
+    # Messages - XPath
+    'zato.server.message.xpath.create': 'zato.server.service.internal.message.xpath.Create',
+    'zato.server.message.xpath.edit': 'zato.server.service.internal.message.xpath.Edit',
+    'zato.server.message.xpath.delete': 'zato.server.service.internal.message.xpath.Delete',
+    'zato.server.message.xpath.get-list': 'zato.server.service.internal.message.xpath.GetList',
+
+    # Notifications - Cloud - OpenStack - Swift
+    'zato.notif.cloud.openstack.swift.create': 'zato.server.service.internal.notif.cloud.openstack.swift.Create',
+    'zato.notif.cloud.openstack.swift.edit': 'zato.server.service.internal.notif.cloud.openstack.swift.Edit',
+    'zato.notif.cloud.openstack.swift.delete': 'zato.server.service.internal.notif.cloud.openstack.swift.Delete',
+    'zato.notif.cloud.openstack.swift.get-list': 'zato.server.service.internal.notif.cloud.openstack.swift.GetList',
+
+    # Notifications - SQL
+    'zato.notif.cloud.sql.create': 'zato.server.service.internal.notif.cloud.sql.Create',
+    'zato.notif.cloud.sql.edit': 'zato.server.service.internal.notif.cloud.sql.Edit',
+    'zato.notif.cloud.sql.delete': 'zato.server.service.internal.notif.cloud.sql.Delete',
+    'zato.notif.cloud.sql.get-list': 'zato.server.service.internal.notif.cloud.sql.GetList',
+
     # Outgoing connections - AMQP
     'zato.outgoing.amqp.create':'zato.server.service.internal.outgoing.amqp.Create',
     'zato.outgoing.amqp.delete':'zato.server.service.internal.outgoing.amqp.Delete',
@@ -123,7 +177,15 @@ zato_services = {
     'zato.outgoing.jms-wmq.delete':'zato.server.service.internal.outgoing.jms_wmq.Delete',
     'zato.outgoing.jms-wmq.edit':'zato.server.service.internal.outgoing.jms_wmq.Edit',
     'zato.outgoing.jms-wmq.get-list':'zato.server.service.internal.outgoing.jms_wmq.GetList',
-    
+
+    # Outgoing connections - Odoo
+    'zato.outgoing.odoo.change-password':'zato.server.service.internal.outgoing.odoo.ChangePassword',
+    'zato.outgoing.odoo.create':'zato.server.service.internal.outgoing.odoo.Create',
+    'zato.outgoing.odoo.delete':'zato.server.service.internal.outgoing.odoo.Delete',
+    'zato.outgoing.odoo.edit':'zato.server.service.internal.outgoing.odoo.Edit',
+    'zato.outgoing.odoo.get-list':'zato.server.service.internal.outgoing.odoo.GetList',
+    'zato.outgoing.odoo.ping':'zato.server.service.internal.outgoing.odoo.Ping',
+
     # Outgoing connections - SQL
     'zato.outgoing.sql.change-password':'zato.server.service.internal.outgoing.sql.ChangePassword',
     'zato.outgoing.sql.create':'zato.server.service.internal.outgoing.sql.Create',
@@ -137,12 +199,6 @@ zato_services = {
     'zato.outgoing.zmq.delete':'zato.server.service.internal.outgoing.zmq.Delete',
     'zato.outgoing.zmq.edit':'zato.server.service.internal.outgoing.zmq.Edit',
     'zato.outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
-
-    # Patterns - delivery
-    'zato.pattern.delivery.definition.create':'zato.server.service.internal.pattern.delivery.definition.Create',
-    'zato.pattern.delivery.definition.delete':'zato.server.service.internal.pattern.delivery.definition.Delete',
-    'zato.pattern.delivery.definition.edit':'zato.server.service.internal.pattern.delivery.definition.Edit',
-    'zato.pattern.delivery.definition.get-list':'zato.server.service.internal.pattern.delivery.definition.GetList',
 
     # Publish/subscribe - init
     'zato.pubsub.delete-expired':'zato.server.service.internal.pubsub.DeleteExpired',
@@ -169,6 +225,12 @@ zato_services = {
     'zato.pubsub.producers.get-info':'zato.server.service.internal.pubsub.producers.GetInfo',
     'zato.pubsub.producers.get-list':'zato.server.service.internal.pubsub.producers.GetList',
 
+    # Query - Cassandra
+    'zato.query.cassandra.create':'zato.server.service.internal.query.cassandra.Create',
+    'zato.query.cassandra.delete':'zato.server.service.internal.query.cassandra.Delete',
+    'zato.query.cassandra.edit':'zato.server.service.internal.query.cassandra.Edit',
+    'zato.query.cassandra.get-list':'zato.server.service.internal.query.cassandra.GetList',
+
     # Publish/subscribe - topics
     'zato.pubsub.topics.create':'zato.server.service.internal.pubsub.topics.Create',
     'zato.pubsub.topics.delete':'zato.server.service.internal.pubsub.topics.Delete',
@@ -176,6 +238,18 @@ zato_services = {
     'zato.pubsub.topics.get-info':'zato.server.service.internal.pubsub.topics.GetInfo',
     'zato.pubsub.topics.get-list':'zato.server.service.internal.pubsub.topics.GetList',
     'zato.pubsub.topics.publish':'zato.server.service.internal.pubsub.topics.Publish',
+
+    # Search - ElasticSearch
+    'zato.search.es.create':'zato.server.service.internal.search.es.Create',
+    'zato.search.es.delete':'zato.server.service.internal.search.es.Delete',
+    'zato.search.es.edit':'zato.server.service.internal.search.es.Edit',
+    'zato.search.es.get-list':'zato.server.service.internal.search.es.GetList',
+
+    # Search - Solr
+    'zato.search.solr.create':'zato.server.service.internal.search.solr.Create',
+    'zato.search.solr.delete':'zato.server.service.internal.search.solr.Delete',
+    'zato.search.solr.edit':'zato.server.service.internal.search.solr.Edit',
+    'zato.search.solr.get-list':'zato.server.service.internal.search.solr.GetList',
 
     # Ping services are added in Create.add_ping_services
 
@@ -212,11 +286,18 @@ zato_services = {
     'zato.security.basic-auth.get-list':'zato.server.service.internal.security.basic_auth.GetList',
 
     # Security - NTLM
-    'zato.security.ntlm.change-password':'zato.server.service.internal.security.ntlm.ChangePassword',
-    'zato.security.ntlm.create':'zato.server.service.internal.security.ntlm.Create',
-    'zato.security.ntlm.delete':'zato.server.service.internal.security.ntlm.Delete',
-    'zato.security.ntlm.edit':'zato.server.service.internal.security.ntlm.Edit',
-    'zato.security.ntlm.get-list':'zato.server.service.internal.security.ntlm.GetList',
+    'zato.security.tls.ca_cert.change-password':'zato.server.service.internal.security.tls.ca_cert.ChangePassword',
+    'zato.security.tls.ca_cert.create':'zato.server.service.internal.security.tls.ca_cert.Create',
+    'zato.security.tls.ca_cert.delete':'zato.server.service.internal.security.tls.ca_cert.Delete',
+    'zato.security.tls.ca_cert.edit':'zato.server.service.internal.security.tls.ca_cert.Edit',
+    'zato.security.tls.ca_cert.get-list':'zato.server.service.internal.security.tls.ca_cert.GetList',
+
+    # Security - OAuth
+    'zato.security.oauth.change-password':'zato.server.service.internal.security.oauth.ChangePassword',
+    'zato.security.oauth.create':'zato.server.service.internal.security.oauth.Create',
+    'zato.security.oauth.delete':'zato.server.service.internal.security.oauth.Delete',
+    'zato.security.oauth.edit':'zato.server.service.internal.security.oauth.Edit',
+    'zato.security.oauth.get-list':'zato.server.service.internal.security.oauth.GetList',
 
     # Security - OpenStack
     'zato.security.openstack.change-password':'zato.server.service.internal.security.openstack.ChangePassword',
@@ -231,7 +312,7 @@ zato_services = {
     'zato.security.rbac.role.edit':'zato.server.service.internal.security.rbac.role.Edit',
     'zato.security.rbac.role.get-list':'zato.server.service.internal.security.rbac.role.get-list',
 
-    # Security - RBAC - Roles
+    # Security - RBAC - Client roles
     'zato.security.rbac.client_role.create':'zato.server.service.internal.security.rbac.client_role.Create',
     'zato.security.rbac.client_role.delete':'zato.server.service.internal.security.rbac.client_role.Delete',
     'zato.security.rbac.client_role.get-list':'zato.server.service.internal.security.rbac.client_role.get-list',
@@ -254,6 +335,18 @@ zato_services = {
     'zato.security.tech-account.edit':'zato.server.service.internal.security.tech_account.Edit',
     'zato.security.tech-account.get-by-id':'zato.server.service.internal.security.tech_account.GetByID',
     'zato.security.tech-account.get-list':'zato.server.service.internal.security.tech_account.GetList',
+
+    # Security - TLS - CA certs
+    'zato.security.tls.ca_cert.create':'zato.server.service.internal.security.tls.ca_cert.Create',
+    'zato.security.tls.ca_cert.delete':'zato.server.service.internal.security.tls.ca_cert.Delete',
+    'zato.security.tls.ca_cert.edit':'zato.server.service.internal.security.tls.ca_cert.Edit',
+    'zato.security.tls.ca_cert.get-list':'zato.server.service.internal.security.tls.ca_cert.GetList',
+
+    # Security - TLS - Key/cert pairs
+    'zato.security.tls.key_cert.create':'zato.server.service.internal.security.tls.key_cert.Create',
+    'zato.security.tls.key_cert.delete':'zato.server.service.internal.security.tls.key_cert.Delete',
+    'zato.security.tls.key_cert.edit':'zato.server.service.internal.security.tls.key_cert.Edit',
+    'zato.security.tls.key_cert.get-list':'zato.server.service.internal.security.tls.key_cert.GetList',
 
     # Security - WS-Security
     'zato.security.wss.change-password':'zato.server.service.internal.security.wss.ChangePassword',
@@ -279,7 +372,7 @@ zato_services = {
     'zato.service.delete':'zato.server.service.internal.service.Delete',
     'zato.service.edit':'zato.server.service.internal.service.Edit',
     'zato.service.get-by-name':'zato.server.service.internal.service.GetByName',
-    'zato.service.get-channel-list':'zato.server.service.internal.service.GetChannelList',
+    'zato.service.get-channel-list':'zato.server.service.interna.sol.service.GetChannelList',
     'zato.service.get-deployment-info-list':'zato.server.service.internal.service.GetDeploymentInfoList',
     'zato.service.get-list':'zato.server.service.internal.service.GetList',
     'zato.service.get-request-response':'zato.server.service.internal.service.GetRequestResponse',
@@ -389,7 +482,7 @@ class Create(ZatoCommand):
                 self.add_admin_invoke(session, cluster, service, admin_invoke_sec)
 
             elif name == 'zato.pubsub.rest-handler':
-                self.add_pubsub_rest_handlers(session, cluster, service)
+                self.add_pubsub_rest_handler(session, cluster, service)
 
             zato_soap = HTTPSOAP(
                 None, name, True, True, 'channel',
@@ -514,7 +607,7 @@ class Create(ZatoCommand):
         item.cluster = cluster
         session.add(item)
 
-    def add_pubsub_rest_handlers(self, session, cluster, service):
-        channel = HTTPSOAP(None, 'zato.pubsub.rest', True, True, 'channel', 'plain_http', None,
-            '/zato/pubsub/{item_type}/{item}/', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
+    def add_pubsub_rest_handler(self, session, cluster, service):
+        channel = HTTPSOAP(None, 'zato.pubsub.rest', True, True, 'channel', 'plain_http',
+            None, '/zato/pubsub/{item}/', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
         session.add(channel)
