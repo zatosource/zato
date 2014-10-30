@@ -748,7 +748,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
 
         # Ok, now delete the message and confirm it's not in the consumer's queue anymore.
 
-        ps.delete_from_consumer_queue(consumer.sub_key, msg_id)
+        ps.delete_from_consumer_queue(consumer.sub_key, [msg_id])
 
         result = self.kvdb.lrange(ps.CONSUMER_MSG_IDS_PREFIX.format(consumer.sub_key), 0, -1)
         eq_(result, [])
