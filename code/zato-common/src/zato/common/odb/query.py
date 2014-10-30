@@ -890,7 +890,7 @@ def _pubsub_consumer(session, cluster_id, needs_columns=False):
     return session.query(
         PubSubConsumer.id,
         PubSubConsumer.is_active,
-        PubSubConsumer.max_backlog,
+        PubSubConsumer.max_depth,
         PubSubConsumer.sub_key,
         PubSubConsumer.delivery_mode,
         PubSubConsumer.callback_id,

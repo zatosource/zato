@@ -22,7 +22,7 @@ import logging
 from gevent.lock import RLock
 
 # Zato
-from zato.common import PUB_SUB, ZATO_NOT_GIVEN
+from zato.common import PUB_SUB, ZATO_NONE, ZATO_NOT_GIVEN
 from zato.common.kvdb import LuaContainer
 from zato.common.pubsub import lua
 from zato.common.util import datetime_to_seconds, make_repr, new_cid
@@ -38,6 +38,14 @@ class HasAutoRepr(object):
 class PubSubException(Exception):
     """ Raised when an attempt is made to make use of pub/sub from an invalid client.
     """
+
+class ItemFull(Exception):
+    """ Raised when either a topic or a consumer's queue is full.
+    """
+    def __init__(self, msg, item, max_depth):
+        self.msg = msg
+        self.item = item
+        self.max_depth = max_depth
 
 # ################################################################################################################################
 
@@ -172,11 +180,11 @@ class Client(HasAutoRepr):
 class Consumer(Client):
     """ Pub/sub consumer.
     """
-    def __init__(self, id, name, is_active=True, sub_key=None, max_backlog=PUB_SUB.DEFAULT_MAX_BACKLOG,
+    def __init__(self, id, name, is_active=True, sub_key=None, max_depth=PUB_SUB.DEFAULT_MAX_BACKLOG,
             delivery_mode=PUB_SUB.DELIVERY_MODE.PULL.id, callback_id='', callback_name=None, callback_type=ZATO_NOT_GIVEN):
         super(Consumer, self).__init__(id, name, is_active)
         self.sub_key = sub_key
-        self.max_backlog = max_backlog
+        self.max_depth = max_depth
         self.delivery_mode = delivery_mode
         self.callback_id = callback_id
         self.callback_name = callback_name
@@ -359,7 +367,7 @@ class PubSub(object):
         """
         with self.update_lock:
             self.consumers[client.id].is_active = client.is_active
-            self.consumers[client.id].max_backlog = client.max_backlog
+            self.consumers[client.id].max_depth = client.max_depth
             self.consumers[client.id].delivery_mode = client.delivery_mode
             self.consumers[client.id].callback_id = client.callback_id
 
@@ -431,7 +439,7 @@ class RedisPubSub(PubSub, LuaContainer):
         self.lua_programs = {}
 
         self.MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'zset:msg-ids:{}')
-        self.BACKLOG_FULL_KEY = '{}{}'.format(key_prefix, 'backlog-full')
+        self.BACKLOG_FULL_KEY = '{}{}'.format(key_prefix, 'hash:backlog-full')
         self.CONSUMER_MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'list:consumer:msg-ids:{}')
         self.CONSUMER_IN_FLIGHT_IDS_PREFIX = '{}{}'.format(key_prefix, 'set:consumer:in-flight:ids:{}')
         self.CONSUMER_IN_FLIGHT_DATA_PREFIX = '{}{}'.format(key_prefix, 'hash:consumer:in-flight:data:{}')
@@ -514,6 +522,10 @@ class RedisPubSub(PubSub, LuaContainer):
                 self.logger.warn('Producer `%s` is not active. Producer `%s`.', ctx.client_id, ctx.topic)
                 self._raise_cant_publish_error(ctx)
 
+        if self.get_topic_depth(ctx.topic) >= self.topics[ctx.topic].max_depth:
+            self.logger.warn('Topic full, `%s`, max depth `%s`', ctx.topic, self.topics[ctx.topic].max_depth)
+            raise ItemFull('Topic full', ctx.topic, self.topics[ctx.topic].max_depth)
+
         id_key = self.MSG_IDS_PREFIX.format(ctx.topic)
 
         # Each message will carry information what topic it's intended for
@@ -539,7 +551,7 @@ class RedisPubSub(PubSub, LuaContainer):
             self.logger.error('Pub error `%s`', format_exc(e))
             raise
         else:
-            self.logger.info('Published: `%s` to `%s`, exp:`%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
+            self.logger.info('Published `%s` to `%s`, exp `%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
             return ctx
 
     # ############################################################################################################################
@@ -567,6 +579,13 @@ class RedisPubSub(PubSub, LuaContainer):
 
                 # Ignoring the result, we just check if this sub_key is valid
                 self.validate_sub_key(ctx.sub_key)
+
+                # Don't let the client get new messages if the depth of the in-flight queue reached its maximum.
+                consumer = self.get_consumer_by_sub_key(ctx.sub_key)
+                if self.get_consumer_queue_in_flight_depth(ctx.sub_key) >= consumer.max_depth:
+                    self.logger.warn('In-flight queue full, `%s`, max depth `%s`', consumer.name, consumer.max_depth)
+                    raise ItemFull('In-flight queue full ({max_depth}/{max_depth})'.format(max_depth=consumer.max_depth),
+                        consumer.name, consumer.max_depth)
 
                 # Now that the client is known to be a valid one we can get all their messages
                 cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
@@ -668,10 +687,15 @@ class RedisPubSub(PubSub, LuaContainer):
         # the delivery to only one consumer chosen randomly from each of the subscribed ones.
 
         with self.update_lock:
+
+            out = []
+
             for topic in self.topic_to_prod:
 
                 source_queue = self.MSG_IDS_PREFIX.format(topic)
                 topic_info = self.topics[topic]
+
+                # There are as many keys as there are arguments - items on idx 3 and above are related and come in pairs.
 
                 # Keys the Lua program will operate on
                 keys = []
@@ -692,12 +716,17 @@ class RedisPubSub(PubSub, LuaContainer):
                         self.logger.debug('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
 
                         keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
+                        args.append(self.consumers[consumer].max_depth)
 
                     move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
                     if move_result:
                         self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
+                        out.append(move_result)
+
                 else:
                     self.logger.info('Move: no consumers for topic `%s`', topic)
+
+            return out
 
 # ################################################################################################################################
 
@@ -712,6 +741,15 @@ class RedisPubSub(PubSub, LuaContainer):
         is returned to the caller the depth may have already changed.
         """
         return self.kvdb.llen(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
+
+    def get_consumer_queue_in_flight_depth(self, sub_key):
+        """ Returns current depth of an in-flight consumer's queue. Doesn't held onto any locks so by the time the data
+        is returned to the caller the depth may have already changed.
+        """
+        return self.kvdb.scard(self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key))
+
+    def get_consumer_by_sub_key(self, sub_key):
+        return self.consumers.get(self.sub_to_cons.get(sub_key, ZATO_NONE))
 
     def get_consumers_count(self, topic):
         """ Returns the number of consumers allowed to get messages from a given topic.
@@ -890,13 +928,20 @@ class PubSubAPI(object):
     def update_consumer(self, consumer, topic):
         return self.impl.update_consumer(consumer, topic)
 
-    # ############################################################################################################################
+# ############################################################################################################################
+
 
     def get_topic_depth(self, topic):
         return self.impl.get_topic_depth(topic)
 
     def get_consumer_queue_current_depth(self, sub_key):
         return self.impl.get_consumer_queue_current_depth(sub_key)
+
+    def get_consumer_queue_in_flight_depth(self, sub_key):
+        return self.impl.get_consumer_queue_in_flight_depth(sub_key)
+
+    def get_consumer_by_sub_key(self, sub_key):
+        return self.impl.get_consumer_by_sub_key(sub_key)
 
     def get_consumers_count(self, topic):
         return self.impl.get_consumers_count(topic)

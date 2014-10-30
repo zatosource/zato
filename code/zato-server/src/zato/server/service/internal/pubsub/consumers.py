@@ -33,8 +33,8 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_consumers_get_list_request'
         response_elem = 'zato_pubsub_consumers_get_list_response'
         input_required = ('cluster_id', 'topic_name')
-        output_required = ('id', 'name', 'is_active', 'sec_type', Int('max_backlog'), Int('current_depth'), 
-            'sub_key', 'delivery_mode')
+        output_required = ('id', 'name', 'is_active', 'sec_type', Int('max_depth'), Int('current_depth'),
+            Int('in_flight_depth'), 'sub_key', 'delivery_mode')
         output_optional = (UTC('last_seen'), 'callback')
         output_repeated = True
 
@@ -42,6 +42,7 @@ class GetList(AdminService):
         for item in pubsub_consumer_list(session, self.request.input.cluster_id, self.request.input.topic_name)[0]:
             item.last_seen = self.pubsub.get_consumer_last_seen(item.client_id)
             item.current_depth = self.pubsub.get_consumer_queue_current_depth(item.sub_key)
+            item.in_flight_depth = self.pubsub.get_consumer_queue_in_flight_depth(item.sub_key)
             yield item
 
     def handle(self):
@@ -58,7 +59,7 @@ class GetInfo(AdminService):
         request_elem = 'zato_pubsub_consumers_get_info_request'
         response_elem = 'zato_pubsub_consumers_get_info_response'
         input_required = ('id',)
-        output_required = ('cluster_id', 'name', UTC('last_seen'), Int('current_depth'), 'sub_key')
+        output_required = ('cluster_id', 'name', UTC('last_seen'), Int('current_depth'), Int('in_flight_depth'), 'sub_key')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -71,6 +72,7 @@ class GetInfo(AdminService):
             self.response.payload.name = consumer.sec_def.name
             self.response.payload.last_seen = self.pubsub.get_consumer_last_seen(consumer.sec_def.id)
             self.response.payload.current_depth = self.pubsub.get_consumer_queue_current_depth(consumer.sub_key)
+            self.response.payload.in_flight_depth = self.pubsub.get_consumer_queue_in_flight_depth(consumer.sub_key)
             self.response.payload.sub_key = consumer.sub_key
     
 # ################################################################################################################################
@@ -110,7 +112,7 @@ class Create(_CreateEdit):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_consumers_create_request'
         response_elem = 'zato_pubsub_consumers_create_response'
-        input_required = ('cluster_id', 'client_id', 'topic_name', 'is_active', 'max_backlog', 'delivery_mode')
+        input_required = ('cluster_id', 'client_id', 'topic_name', 'is_active', 'max_depth', 'delivery_mode')
         input_optional = ('callback_id',)
         output_required = ('id', 'name', 'sub_key')
 
@@ -130,7 +132,7 @@ class Create(_CreateEdit):
 
                 sub_key = new_cid()
                 consumer = PubSubConsumer(
-                    None, input.is_active, sub_key, input.max_backlog, input.delivery_mode, callback[0],
+                    None, input.is_active, sub_key, input.max_depth, input.delivery_mode, callback[0],
                     callback[2], topic.id, input.client_id, input.cluster_id)
 
                 session.add(consumer)
@@ -162,7 +164,7 @@ class Edit(_CreateEdit):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_pubsub_consumers_edit_request'
         response_elem = 'zato_pubsub_consumers_edit_response'
-        input_required = ('id', 'is_active', 'max_backlog', 'delivery_mode')
+        input_required = ('id', 'is_active', 'max_depth', 'delivery_mode')
         input_optional = ('callback_id',)
         output_required = ('id', 'name')
 
@@ -181,7 +183,7 @@ class Edit(_CreateEdit):
                     one()
 
                 consumer.is_active = input.is_active
-                consumer.max_backlog = input.max_backlog
+                consumer.max_depth = input.max_depth
                 consumer.delivery_mode = input.delivery_mode
                 consumer.callback_id = callback[0]
 
@@ -205,7 +207,7 @@ class Edit(_CreateEdit):
                 msg.action = PUB_SUB_CONSUMER.EDIT.value
 
                 msg.is_active = consumer.is_active
-                msg.max_backlog = consumer.max_backlog
+                msg.max_depth = consumer.max_depth
                 msg.sub_key = consumer.sub_key
                 msg.delivery_mode = consumer.delivery_mode
                 msg.callback_id = consumer.callback_id
@@ -260,7 +262,7 @@ class Delete(AdminService):
                 msg.action = PUB_SUB_CONSUMER.DELETE.value
 
                 msg.is_active = consumer.is_active
-                msg.max_backlog = consumer.max_backlog
+                msg.max_depth = consumer.max_depth
                 msg.sub_key = consumer.sub_key
 
                 msg.client_id = client_id

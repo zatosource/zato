@@ -86,8 +86,9 @@ class _CreateEdit(CreateEdit):
 
             if response.ok:
                 initial_return_data.update(response.data)
-                initial_return_data['last_pub_time'] = from_utc_to_user(
-                    initial_return_data['last_pub_time'] + '+00:00', req.zato.user_profile)
+                if initial_return_data['last_pub_time']:
+                    initial_return_data['last_pub_time'] = from_utc_to_user(
+                        initial_return_data['last_pub_time'] + '+00:00', req.zato.user_profile)
 
         return super(_CreateEdit, self).__call__(
             req, initial_input_dict={}, initial_return_data=initial_return_data, *args, **kwargs)

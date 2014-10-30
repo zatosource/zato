@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os
 from collections import OrderedDict
+from copy import deepcopy
 from cStringIO import StringIO
 from httplib import responses
 from string import Template
@@ -147,6 +148,12 @@ DEFAULT_HTTP_POOL_SIZE = 20
 # Used when there's a need for encrypting/decrypting a well-known data.
 # TODO: Move it to MISC
 ZATO_CRYPTO_WELL_KNOWN_DATA = 'ZATO'
+
+# https://tools.ietf.org/html/rfc6585
+TOO_MANY_REQUESTS = 429
+
+HTTP_RESPONSES = deepcopy(responses)
+HTTP_RESPONSES[TOO_MANY_REQUESTS] = 'Too Many Requests'
 
 # Queries to use in pinging the databases.
 ping_queries = {
@@ -540,6 +547,14 @@ class PUB_SUB:
     DEFAULT_MAX_DEPTH = 500
     DEFAULT_MAX_BACKLOG = 1000
 
+    class GET_DIR:
+        FIFO = 'fifo'
+        LIFO = 'lifo'
+
+    class MOVE_RESULT:
+        MOVED = 'moved'
+        OVERFLOW = 'overflow'
+
     class CALLBACK_TYPE:
         OUTCONN_PLAIN_HTTP = 'outconn-plain-http'
         OUTCONN_SOAP = 'outconn-soap'
@@ -564,7 +579,7 @@ class PUB_SUB:
         OBJECT = NameId('Object', 'object')
         JSON = NameId('JSON', 'json')
         XML = NameId('XML', 'xml')
-        DEFAULT = OBJECT
+        DEFAULT = JSON
     
         class __metaclass__(type):
             def __iter__(self):
@@ -697,7 +712,7 @@ class HTTPException(ZatoException):
     def __init__(self, cid, msg, status):
         super(HTTPException, self).__init__(cid, msg)
         self.status = status
-        self.reason = responses[status]
+        self.reason = HTTP_RESPONSES[status]
 
     def __repr__(self):
         return '<{} at {} cid:`{}`, status:`{}`, msg:`{}`>'.format(
