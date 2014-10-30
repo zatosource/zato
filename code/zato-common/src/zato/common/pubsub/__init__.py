@@ -236,7 +236,7 @@ class PubSub(object):
         self.default_consumer = Client(None, None)
         self.default_producer = Client(None, None)
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def add_topic(self, topic):
         """ Adds a topic, with no clients attached.
@@ -247,7 +247,7 @@ class PubSub(object):
 
     update_topic = add_topic
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def delete_topic(self, topic):
         """ Deletes a topic and any consumers or producers assigned to it.
@@ -269,14 +269,14 @@ class PubSub(object):
 
             self.logger.info('Deleted topic `%s`', deleted)
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def delete_topic_metadata(self, topic):
         """ Deletes topic's metadata. Needs to be subclasses by concrete implementations.
         """
         raise NotImplementedError('Must be implemented by subclasses')
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def add_subscription(self, sub_key, client_id, topic):
         """ Adds subscription for a given sub_id, client and topic. Must be called with self.update_lock held.
@@ -295,7 +295,7 @@ class PubSub(object):
 
         self.logger.info('Added subscription: `%s`, `%s`, `%s`', sub_key, client_id, topic)
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def add_producer(self, client, topic):
         """ Adds information that this client can publish to the topic. 
@@ -351,7 +351,7 @@ class PubSub(object):
         """
         raise NotImplementedError('Must be implemented by subclasses')
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def add_consumer(self, client, topic):
         """ Adds information that this client can publish to the topic. 
@@ -410,7 +410,7 @@ class PubSub(object):
         """
         raise NotImplementedError('Must be implemented by subclasses')
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def _not_implemented(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Must be overridden in subclasses')
@@ -439,7 +439,7 @@ class RedisPubSub(PubSub, LuaContainer):
     LUA_DELETE_FROM_TOPIC = 'lua-delete-from-topic'
     LUA_DELETE_FROM_CONSUMER_QUEUE = 'lua-delete-from-consumer-queue'
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def __init__(self, kvdb, key_prefix='zato:pubsub:'):
         super(RedisPubSub, self).__init__()
@@ -469,14 +469,14 @@ class RedisPubSub(PubSub, LuaContainer):
         self.add_lua_program(self.LUA_DELETE_FROM_TOPIC, lua.lua_delete_from_topic)
         self.add_lua_program(self.LUA_DELETE_FROM_CONSUMER_QUEUE, lua.lua_delete_from_consumer_queue)
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def ping(self):
         """ Pings the pub/sub backend.
         """
         return self.kvdb.ping()
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def validate_sub_key(self, sub_key):
         """ Returns a client_id by its matching subscription key or raises PubSubException if sub_key could not be found.
@@ -491,7 +491,7 @@ class RedisPubSub(PubSub, LuaContainer):
 
             return True
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     # Overridden from the base class
 
@@ -504,7 +504,7 @@ class RedisPubSub(PubSub, LuaContainer):
     def delete_producer_metadata(self, client):
         self.kvdb.hdel(self.LAST_SEEN_PRODUCER_KEY, client.id)
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def _raise_cant_publish_error(self, ctx):
         raise PermissionDenied("Permision denied. Can't publish to `{}`".format(ctx.topic))
@@ -562,7 +562,7 @@ class RedisPubSub(PubSub, LuaContainer):
             self.logger.info('Published `%s` to `%s`, exp `%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
             return ctx
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def subscribe(self, ctx, sub_key=None):
         """ Subscribes the client to one or more topics, or topic patterns. Returns subscription key
@@ -577,7 +577,7 @@ class RedisPubSub(PubSub, LuaContainer):
         self.logger.info('Client `%s` sub to topics `%s`', ctx.client_id, ', '.join(ctx.topics))
         return sub_key
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def get(self, ctx):
         self.logger.debug('Get by sub_key `%s`', ctx.sub_key)
@@ -623,7 +623,7 @@ class RedisPubSub(PubSub, LuaContainer):
                     else:
                         yield Message(payload=payload, **metadata)
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def acknowledge_delete(self, ctx, is_delete=False):
         """ Consumer confirms and accepts one or more message.
@@ -670,7 +670,7 @@ class RedisPubSub(PubSub, LuaContainer):
 
         return result
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def delete_expired(self):
         """ Deletes expired messages. For each topic and its subscribers a Lua program is called to find expired
@@ -763,6 +763,9 @@ class RedisPubSub(PubSub, LuaContainer):
     def get_consumer_by_sub_key(self, sub_key):
         return self.consumers.get(self.sub_to_cons.get(sub_key, ZATO_NONE))
 
+    def get_consumer_by_client_id(self, client_id):
+        return self.consumers.get(client_id, ZATO_NONE)
+
     def get_consumers_count(self, topic):
         """ Returns the number of consumers allowed to get messages from a given topic.
         """
@@ -791,7 +794,7 @@ class RedisPubSub(PubSub, LuaContainer):
     def get_producer_by_sub_key(self, sub_key):
         return self.producers.get(self.sub_to_cons.get(sub_key, ZATO_NONE))
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def get_consumer_queue_message_list(self, sub_key):
         """ Returns all messages from a given consumer queue by its subscriber's key.
@@ -800,6 +803,11 @@ class RedisPubSub(PubSub, LuaContainer):
             self.LUA_GET_MESSAGE_LIST, [
                 self.CONSUMER_MSG_IDS_PREFIX.format(sub_key), self.MSG_METADATA_KEY], [PUB_SUB.MESSAGE_SOURCE.CONSUMER_QUEUE.id]):
             yield Message(**loads(item))
+
+    def get_consumer_in_flight_message_list(self, sub_key):
+        """ Returns all in-flight message IDs from a given consumer queue by its subscriber's key.
+        """
+        return self.kvdb.smembers(self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key))
 
     def get_topic_message_list(self, source_name):
         """ Returns all messages from a given topic.
@@ -826,10 +834,10 @@ class RedisPubSub(PubSub, LuaContainer):
                 'Del from topic: result `%s`, source_name `%s`, msg_id `%s`, has_consumers `%s`',
                   result, source_name, msg_id, has_consumers)
 
-    def delete_from_consumer_queue(self, sub_key, msg_id):
+    def delete_from_consumer_queue(self, sub_key, msg_ids):
         """ Deleting a message from a consumer's queue works exactly like acknowledging it.
         """
-        return self.acknowledge_delete(AckCtx(sub_key, [msg_id]), True)
+        return self.acknowledge_delete(AckCtx(sub_key, msg_ids), True)
 
     def get_message(self, msg_id):
         """ Returns payload of a message along with its metadata.
@@ -899,7 +907,7 @@ class PubSubAPI(object):
         """
         ctx = AckCtx()
         ctx.sub_key = sub_key
-        ctx.msg_ids = [msg_ids] if not isinstance(msg_ids, (list, tuple, dict)) else msg_ids
+        ctx.msg_ids = msg_ids if isinstance(msg_ids, list) else list(msg_ids)
 
         return self.impl.acknowledge_delete(ctx)
 
@@ -908,7 +916,7 @@ class PubSubAPI(object):
         """
         ctx = RejectCtx()
         ctx.sub_key = sub_key
-        ctx.msg_ids = [msg_ids] if not isinstance(msg_ids, (list, tuple, dict)) else msg_ids
+        ctx.msg_ids = [msg_ids] if not isinstance(msg_ids, (list, tuple, set, dict)) else msg_ids
 
         return self.impl.reject(ctx)
 
@@ -958,6 +966,9 @@ class PubSubAPI(object):
     def get_consumer_by_sub_key(self, sub_key):
         return self.impl.get_consumer_by_sub_key(sub_key)
 
+    def get_consumer_by_client_id(self, client_id):
+        return self.impl.get_consumer_by_client_id(client_id)
+
     def get_consumers_count(self, topic):
         return self.impl.get_consumers_count(topic)
 
@@ -976,7 +987,7 @@ class PubSubAPI(object):
     def get_producer_by_sub_key(self, sub_key):
         return self.producers.get(self.sub_to_cons.get(sub_key, ZATO_NONE))
 
-    # ############################################################################################################################
+# ################################################################################################################################
 
     def get_default_consumer(self):
         return self.impl.default_consumer
@@ -992,17 +1003,26 @@ class PubSubAPI(object):
 
 # ################################################################################################################################
 
-    def get_consumer_queue_message_list(self, source_name):
-        return self.impl.get_consumer_queue_message_list(source_name)
+    def get_consumer_queue_message_list(self, sub_key):
+        return self.impl.get_consumer_queue_message_list(sub_key)
+
+    def get_consumer_in_flight_message_list(self, sub_key):
+        return self.impl.get_consumer_in_flight_message_list(sub_key)
 
     def get_topic_message_list(self, source_name):
         return self.impl.get_topic_message_list(source_name)
 
+# ################################################################################################################################
+
     def delete_from_topic(self, topic_name, msg_id, *ignored):
         return self.impl.delete_from_topic(topic_name, msg_id)
 
-    def delete_from_consumer_queue(self, sub_key, msg_id):
-        return self.impl.delete_from_consumer_queue(sub_key, msg_id)
+    def delete_from_consumer_queue(self, sub_key, msg_ids):
+        if isinstance(msg_ids, basestring):
+            msg_ids = [msg_ids]
+        return self.impl.delete_from_consumer_queue(sub_key, msg_ids if isinstance(msg_ids, list) else list(msg_ids))
+
+# ################################################################################################################################
 
     def get_message(self, msg_id):
         return self.impl.get_message(msg_id)

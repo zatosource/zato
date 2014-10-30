@@ -30,7 +30,6 @@ class Echo(Service):
     """ Copies request over to response.
     """
     def handle(self):
-        self.logger.warn(self.request.raw_request)
         self.response.payload = self.request.raw_request
 
 # ################################################################################################################################
