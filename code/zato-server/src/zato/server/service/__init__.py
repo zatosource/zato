@@ -22,7 +22,7 @@ from anyjson import dumps
 import arrow
 
 # Bunch
-from bunch import bunchify
+from bunch import Bunch, bunchify
 
 # lxml
 from lxml.etree import _Element as EtreeElement
@@ -182,7 +182,7 @@ class Service(object):
         self.wsgi_environ = None
         self.job_type = None
         self.delivery_store = None
-        self.environ = {}
+        self.environ = Bunch()
         self.request = Request(self.logger)
         self.response = Response(self.logger)
         self.invocation_time = None # When was the service invoked

@@ -143,7 +143,40 @@ zato_services = {
     'zato.pattern.delivery.definition.delete':'zato.server.service.internal.pattern.delivery.definition.Delete',
     'zato.pattern.delivery.definition.edit':'zato.server.service.internal.pattern.delivery.definition.Edit',
     'zato.pattern.delivery.definition.get-list':'zato.server.service.internal.pattern.delivery.definition.GetList',
-    
+
+    # Publish/subscribe - init
+    'zato.pubsub.delete-expired':'zato.server.service.internal.pubsub.DeleteExpired',
+    'zato.pubsub.invoke-callbacks':'zato.server.service.internal.pubsub.InvokeCallbacks',
+    'zato.pubsub.move-to-target-queues':'zato.server.service.internal.pubsub.MoveToTargetQueues',
+    'zato.pubsub.rest-handler':'zato.server.service.internal.pubsub.RESTHandler',
+
+    # Publish/subscribe - consumer
+    'zato.pubsub.consumers.create':'zato.server.service.internal.pubsub.consumers.Create',
+    'zato.pubsub.consumers.delete':'zato.server.service.internal.pubsub.consumers.Delete',
+    'zato.pubsub.consumers.edit':'zato.server.service.internal.pubsub.consumers.Edit',
+    'zato.pubsub.consumers.get-info':'zato.server.service.internal.pubsub.consumers.GetInfo',
+    'zato.pubsub.consumers.get-list':'zato.server.service.internal.pubsub.consumers.GetList',
+
+    # Publish/subscribe - messages
+    'zato.pubsub.message.create.delete':'zato.server.service.internal.pubsub.message.Delete',
+    'zato.pubsub.message.create.get':'zato.server.service.internal.pubsub.message.Get',
+    'zato.pubsub.message.create.get-list':'zato.server.service.internal.pubsub.message.GetList',
+
+    # Publish/subscribe - producers
+    'zato.pubsub.producers.create':'zato.server.service.internal.pubsub.producers.Create',
+    'zato.pubsub.producers.delete':'zato.server.service.internal.pubsub.producers.Delete',
+    'zato.pubsub.producers.edit':'zato.server.service.internal.pubsub.producers.Edit',
+    'zato.pubsub.producers.get-info':'zato.server.service.internal.pubsub.producers.GetInfo',
+    'zato.pubsub.producers.get-list':'zato.server.service.internal.pubsub.producers.GetList',
+
+    # Publish/subscribe - topics
+    'zato.pubsub.topics.create':'zato.server.service.internal.pubsub.topics.Create',
+    'zato.pubsub.topics.delete':'zato.server.service.internal.pubsub.topics.Delete',
+    'zato.pubsub.topics.edit':'zato.server.service.internal.pubsub.topics.Edit',
+    'zato.pubsub.topics.get-info':'zato.server.service.internal.pubsub.topics.GetInfo',
+    'zato.pubsub.topics.get-list':'zato.server.service.internal.pubsub.topics.GetList',
+    'zato.pubsub.topics.publish':'zato.server.service.internal.pubsub.topics.Publish',
+
     # Ping services are added in Create.add_ping_services
 
     # Scheduler
@@ -189,7 +222,7 @@ zato_services = {
     'zato.security.openstack.change-password':'zato.server.service.internal.security.openstack.ChangePassword',
     'zato.security.openstack.create':'zato.server.service.internal.security.openstack.Create',
     'zato.security.openstack.delete':'zato.server.service.internal.security.openstack.Delete',
-    'zato.security.openstack.edit':'zato.server.service.internal.security.openstack.Edit',
+    'zato.security.openstack.edit':'zato.server.service.zato_servicesinternal.security.openstack.Edit',
     'zato.security.openstack.get-list':'zato.server.service.internal.security.openstack.GetList',
 
     # Security - RBAC - Roles
@@ -355,6 +388,9 @@ class Create(ZatoCommand):
             elif name == 'zato.service.invoke':
                 self.add_admin_invoke(session, cluster, service, admin_invoke_sec)
 
+            elif name == 'zato.pubsub.rest-handler':
+                self.add_pubsub_rest_handler(session, cluster, service)
+
             zato_soap = HTTPSOAP(
                 None, name, True, True, 'channel',
                 'soap', None, '/zato/soap', None, name, '1.1',
@@ -477,3 +513,8 @@ class Create(ZatoCommand):
         item.parent_id = None
         item.cluster = cluster
         session.add(item)
+
+    def add_pubsub_rest_handler(self, session, cluster, service):
+        channel = HTTPSOAP(None, 'zato.pubsub.rest', True, True, 'channel', 'plain_http',
+            None, '/zato/pubsub/{item}/', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
+        session.add(channel)

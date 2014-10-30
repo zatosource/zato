@@ -83,6 +83,10 @@ class ConfigDict(object):
         with self.lock:
             return self._impl.values()
 
+    def itervalues(self):
+        with self.lock:
+            return self._impl.itervalues()
+
     def items(self):
         with self.lock:
             return self._impl.items()

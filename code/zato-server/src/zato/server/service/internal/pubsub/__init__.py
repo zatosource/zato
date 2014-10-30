@@ -10,15 +10,21 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from httplib import OK
-from json import dumps
+from json import dumps, loads
+from logging import getLogger
 from traceback import format_exc
 
 # gevent
 from gevent import sleep, spawn
 
 # Zato
-from zato.common import PUB_SUB
+from zato.common import PUB_SUB, ZATO_NONE, ZATO_OK, ZATO_ERROR
+from zato.common.pubsub import ItemFull
+from zato.server.connection.http_soap import Forbidden, TooManyRequests, Unauthorized
+from zato.server.service import Int, Service
 from zato.server.service.internal import AdminService
+
+logger_overflown = getLogger('zato_pubsub_overflown')
 
 # ################################################################################################################################
 
@@ -92,7 +98,18 @@ class MoveToTargetQueues(AdminService):
     """ Invoked when a server is starting - periodically spawns a greenlet moving published messages to recipient queues.
     """
     def _move_to_target_queues(self):
-        self.pubsub.impl.move_to_target_queues()
+
+        overflown = []
+
+        for item in self.pubsub.impl.move_to_target_queues():
+            for result, target_queue, msg_id in item:
+                if result == PUB_SUB.MOVE_RESULT.OVERFLOW:
+                    self.logger.warn('Message overflow, queue:`%s`, msg_id:`%s`', target_queue, msg_id)
+                    overflown.append((target_queue[target_queue.rfind(':')+1:], msg_id))
+
+        if overflown:
+            self.invoke_async(StoreOverflownMessages.get_name(), overflown, to_json_string=True)
+
         self.logger.debug('Messages moved to target queues')
 
     def handle(self):
@@ -102,5 +119,76 @@ class MoveToTargetQueues(AdminService):
             self.logger.debug('Moving messages to target queues, interval %rs', interval)
             spawn(self._move_to_target_queues)
             sleep(interval)
+
+# ################################################################################################################################
+
+class StoreOverflownMessages(AdminService):
+    """ Stores on filesystem messages that were above a consumer's max backlog and marks them as rejected by the consumer.
+    """
+    def handle(self):
+
+        acks = {}
+
+        for sub_key, msg_id in loads(self.request.payload):
+            logger_overflown.warn('%s - %s - %s', msg_id, self.pubsub.get_consumer_by_sub_key(sub_key).name,
+                self.pubsub.get_message(msg_id))
+
+            msg_ids = acks.setdefault(sub_key, [])
+            msg_ids.append(msg_id)
+
+        for consumer_sub_key, msg_ids in acks.iteritems():
+            self.pubsub.acknowledge(sub_key, msg_id)
+
+# ################################################################################################################################
+
+class RESTHandler(Service):
+    """ Handles calls to pub/sub from REST clients.
+    """
+    class SimpleIO(object):
+        input_required = ('item',)
+        input_optional = ('max', 'dir', 'format')
+        default = ZATO_NONE
+
+    def validate_input(self):
+        sub_key = self.wsgi_environ.get('HTTP_X_ZATO_PUBSUB_KEY', ZATO_NONE)
+
+        if not self.pubsub.get_consumer_by_sub_key(sub_key):
+            raise Unauthorized(self.cid, 'You are not authorized to access this resource', 'Zato pub/sub')
+
+        self.environ.sub_key = sub_key
+
+    def handle_POST(self):
+        self.logger.warn('POST')
+
+    def handle_GET(self):
+
+        out = {
+            'status': ZATO_OK,
+            'results_count': 0,
+            'results': []
+        }
+
+
+
+        max_batch_size = int(self.request.input.max) if self.request.input.max else PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE
+        is_fifo = True if (self.request.input.dir == PUB_SUB.GET_DIR.FIFO or not self.request.input.dir) else False
+        get_format = self.request.input.format if self.request.input.format else PUB_SUB.GET_FORMAT.DEFAULT.id
+
+        self.response.headers['Content-Type'] = 'application/json'
+
+        try:
+            for item in self.pubsub.get(self.environ.sub_key, max_batch_size, is_fifo, get_format):
+                out['results'].append(item)
+                out['results_count'] += 1
+        except ItemFull, e:
+            raise TooManyRequests(self.cid, e.msg)
+        else:
+            self.response.payload = dumps(out)
+
+    def handle_DELETE(self):
+        self.logger.warn('DELETE')
+
+    def handle_PATCH(self):
+        self.logger.warn('PATCH')
 
 # ################################################################################################################################

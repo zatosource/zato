@@ -31,7 +31,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'topic_name')
-        output_required = ('id', 'name', 'is_active', 'last_seen', 'max_backlog', 'current_depth', 'sub_key', 'delivery_mode')
+        output_required = ('id', 'name', 'is_active', 'last_seen', 'max_depth', 'current_depth', 'in_flight_depth',
+            'sub_key', 'delivery_mode')
         output_optional = ('callback_id',)
         output_repeated = True
 
@@ -69,9 +70,9 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('id', 'cluster_id', 'client_id', 'is_active', 'topic_name', 'max_backlog', 'delivery_mode')
+        input_required = ('id', 'cluster_id', 'client_id', 'is_active', 'topic_name', 'max_depth', 'delivery_mode')
         input_optional = ('callback_id',)
-        output_required = ('id', 'name', 'last_seen', 'current_depth', 'sub_key')
+        output_required = ('id', 'name', 'last_seen', 'current_depth', 'in_flight_depth', 'sub_key')
 
     def success_message(self, item):
         # 'message' is implemented in post_process_return_data so that we know the name of the consumer
@@ -97,6 +98,7 @@ class _CreateEdit(CreateEdit):
 
             if response.ok:
                 return_data['current_depth'] = response.data.current_depth
+                return_data['in_flight_depth'] = response.data.in_flight_depth
                 return_data['sub_key'] = response.data.sub_key
                 if response.data.last_seen:
                     return_data['last_seen'] = from_utc_to_user(response.data.last_seen + '+00:00', self.req.zato.user_profile)

@@ -1046,3 +1046,21 @@ def add_scheduler_jobs(server):
                 'seconds':seconds, 'repeats':repeats,
                 'cron_definition':cron_definition})
             server.singleton_server.scheduler.create_edit('create', job_data)
+
+# ################################################################################################################################
+
+def get_basic_auth_credentials(auth):
+
+    if not auth:
+        return None, None
+
+    prefix = 'Basic '
+    if not auth.startswith(prefix):
+        return None, None
+
+    _, auth = auth.split(prefix)
+    auth = auth.strip().decode('base64')
+
+    return auth.split(':', 1)
+
+# ################################################################################################################################

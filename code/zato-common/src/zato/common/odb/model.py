@@ -1419,7 +1419,7 @@ class PubSubConsumer(Base):
     id = Column(Integer, Sequence('pub_sub_cons_seq'), primary_key=True)
     is_active = Column(Boolean(), nullable=False)
     sub_key = Column(String(200), nullable=False)
-    max_backlog = Column(Integer, nullable=False)
+    max_depth = Column(Integer, nullable=False)
     delivery_mode = Column(String(200), nullable=False)
 
     # Our only callback type right now is an HTTP outconn but more will come with time.
@@ -1427,22 +1427,22 @@ class PubSubConsumer(Base):
     callback_type = Column(String(20), nullable=True, default=PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTTP)
 
     topic_id = Column(Integer, ForeignKey('pub_sub_topic.id', ondelete='CASCADE'), nullable=False)
-    topic = relationship(PubSubTopic, backref=backref('consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
+    topic = relationship(PubSubTopic, backref=backref('consumers', order_by=max_depth, cascade='all, delete, delete-orphan'))
 
     sec_def_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
-    sec_def = relationship(SecurityBase, backref=backref('pub_sub_consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
+    sec_def = relationship(SecurityBase, backref=backref('pub_sub_consumers', order_by=max_depth, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('pub_sub_consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
+    cluster = relationship(Cluster, backref=backref('pub_sub_consumers', order_by=max_depth, cascade='all, delete, delete-orphan'))
 
-    http_soap = relationship(SecurityBase, backref=backref('pubsub_consumers', order_by=max_backlog, cascade='all, delete, delete-orphan'))
+    http_soap = relationship(SecurityBase, backref=backref('pubsub_consumers', order_by=max_depth, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, is_active=None, sub_key=None, max_backlog=None, delivery_mode=None, callback_id=None,
+    def __init__(self, id=None, is_active=None, sub_key=None, max_depth=None, delivery_mode=None, callback_id=None,
                 callback_type=None, topic_id=None, sec_def_id=None, cluster_id=None):
         self.id = id
         self.is_active = is_active
         self.sub_key = sub_key
-        self.max_backlog = max_backlog
+        self.max_depth = max_depth
         self.delivery_mode = delivery_mode
         self.callback_id = callback_id
         self.callback_type = callback_type
