@@ -547,6 +547,10 @@ class PUB_SUB:
     DEFAULT_MAX_DEPTH = 500
     DEFAULT_MAX_BACKLOG = 1000
 
+    class QUEUE_TYPE:
+        MESSAGE = 'message'
+        IN_FLIGHT = 'in-flight'
+
     class GET_DIR:
         FIFO = 'fifo'
         LIFO = 'lifo'

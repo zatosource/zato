@@ -10,11 +10,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from json import dumps
+from traceback import format_exc
+
+# Django
+from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.consumers import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common import PUB_SUB
 from zato.common.odb.model import PubSubConsumer
 
@@ -31,8 +36,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'topic_name')
-        output_required = ('id', 'name', 'is_active', 'last_seen', 'max_depth', 'current_depth', 'in_flight_depth',
-            'sub_key', 'delivery_mode')
+        output_required = ('id', 'name', 'is_active', 'sec_type', 'client_id', 'last_seen', 'max_depth', 'current_depth',
+            'in_flight_depth', 'sub_key', 'delivery_mode')
         output_optional = ('callback_id',)
         output_repeated = True
 
@@ -128,5 +133,19 @@ class Delete(_Delete):
     url_name = 'pubsub-consumers-delete'
     error_message = 'Could not delete the consumer'
     service_name = 'zato.pubsub.consumers.delete'
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def clear_queue(req, queue_type, client_id, cluster_id):
+    try:
+        response = req.zato.client.invoke(
+            'zato.pubsub.consumers.clear-queue', {'queue_type': queue_type, 'client_id': client_id})
+        if response.ok:
+            return HttpResponse('OK', mimetype='application/javascript')
+        else:
+            raise Exception(response.details)
+    except Exception, e:
+        return HttpResponseServerError(format_exc(e))
 
 # ################################################################################################################################
