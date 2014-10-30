@@ -17,11 +17,15 @@ from traceback import format_exc
 # gevent
 from gevent import sleep, spawn
 
+# huTools
+from huTools.structured import dict2xml
+
 # Zato
-from zato.common import PUB_SUB, ZATO_NONE, ZATO_OK, ZATO_ERROR
+from zato.common import DATA_FORMAT, PUB_SUB, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.pubsub import ItemFull
-from zato.server.connection.http_soap import Forbidden, TooManyRequests, Unauthorized
-from zato.server.service import Int, Service
+from zato.common.util import get_basic_auth_credentials
+from zato.server.connection.http_soap import BadRequest, Forbidden, TooManyRequests, Unauthorized
+from zato.server.service import AsIs, Bool, Int, Service
 from zato.server.service.internal import AdminService
 
 logger_overflown = getLogger('zato_pubsub_overflown')
@@ -58,20 +62,33 @@ class InvokeCallbacks(AdminService):
         for consumer in callback_consumers:
             with self.lock(consumer.sub_key):
                 msg_ids = []
-                request = []
+
+                out = {
+                    'status': ZATO_OK,
+                    'results_count': 0,
+                    'results': []
+                }
 
                 messages = self.pubsub.get(consumer.sub_key, get_format=PUB_SUB.GET_FORMAT.JSON.id)
 
                 for msg in messages:
                     msg_ids.append(msg['metadata']['msg_id'])
-                    request.append(msg)
+                    out['results_count'] += 1
+                    out['results'].append(msg)
 
                 # messages is a generator so we still don't know if we had anything.
                 if msg_ids:
-                    conn = (self.outgoing.plain_http if consumer.callback_type == PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTTP else \
-                        self.outgoing.soap)[consumer.callback_name].conn
+                    outconn = self.outgoing.plain_http[consumer.callback_name]
+
+                    if outconn.config['data_format'] == DATA_FORMAT.XML:
+                        out = dict2xml(out)
+                        content_type = 'application/xml'
+                    else:
+                        out = dumps(out)
+                        content_type = 'application/json'
+
                     try:
-                        response = conn.post(self.cid, data=dumps(request), headers={'content-type': 'application/json'})
+                        response = outconn.conn.post(self.cid, data=out, headers={'content-type': content_type})
                     except Exception, e:
                         self._reject(msg_ids, consumer.sub_key, consumer, format_exc(e))
                     else:
@@ -145,50 +162,137 @@ class RESTHandler(Service):
     """ Handles calls to pub/sub from REST clients.
     """
     class SimpleIO(object):
-        input_required = ('item',)
-        input_optional = ('max', 'dir', 'format')
+        input_required = ('item_type', 'item',)
+        input_optional = ('max', 'dir', 'format', 'mime_type', Int('priority'), Int('expiration'), AsIs('msg_id'),
+            Bool('ack'), Bool('reject'))
         default = ZATO_NONE
+        use_channel_params_only = True
+
+# ################################################################################################################################
+
+    def _raise_unauthorized(self):
+        raise Unauthorized(self.cid, 'You are not authorized to access this resource', 'Zato pub/sub')
 
     def validate_input(self):
+
+        username, password = get_basic_auth_credentials(self.wsgi_environ.get('HTTP_AUTHORIZATION'))
+        if not username:
+            self._raise_unauthorized()
+
+        for item in self.server.worker_store.request_dispatcher.url_data.basic_auth_config.values():
+            if item.config.username == username and item.config.password == password:
+                client = item
+                break
+        else:
+            self._raise_unauthorized()
+
+        if self.request.input.item_type not in PUB_SUB.URL_ITEM_TYPE:
+            raise BadRequest(self.cid, 'None of the supported resources `{}` found in URL path'.format(
+                ', '.join(PUB_SUB.URL_ITEM_TYPE)))
+
         sub_key = self.wsgi_environ.get('HTTP_X_ZATO_PUBSUB_KEY', ZATO_NONE)
+        is_consumer = self.request.input.item_type == PUB_SUB.URL_ITEM_TYPE.MESSAGES.id
 
-        if not self.pubsub.get_consumer_by_sub_key(sub_key):
-            raise Unauthorized(self.cid, 'You are not authorized to access this resource', 'Zato pub/sub')
+        # Deletes don't access topics, they operate on messages.
+        if self.wsgi_environ['REQUEST_METHOD'] != 'DELETE':
+            if not self.pubsub.can_access_topic(client.config.id, self.request.input.item, is_consumer):
+                raise Forbidden(self.cid, 'You are not authorized to access this resource')
 
-        self.environ.sub_key = sub_key
+        self.environ['sub_key'] = sub_key
+        self.environ['client_id'] = client.config.id
+        self.environ['format'] = self.request.input.format if self.request.input.format else PUB_SUB.GET_FORMAT.DEFAULT.id
+        self.environ['is_json'] = self.environ['format'] == PUB_SUB.GET_FORMAT.JSON.id
 
-    def handle_POST(self):
-        self.logger.warn('POST')
+# ################################################################################################################################
 
-    def handle_GET(self):
+    def _set_payload_data(self, out):
+        if self.environ['is_json']:
+            content_type = 'application/json'
+            out = dumps(out)
+        else:
+            content_type = 'application/xml'
+            out = dict2xml(out)
 
+        self.response.headers['Content-Type'] = content_type
+        self.response.payload = out
+
+# ################################################################################################################################
+
+    def _handle_POST_topic(self):
+        """ Publishes a message on a topic.
+        """
+        pub_data = {
+            'payload': self.request.raw_request,
+            'topic': self.request.input.item,
+            'mime_type': self.request.input.mime_type or self.wsgi_environ['CONTENT_TYPE'],
+            'priority': self.request.input.priority,
+            'expiration': self.request.input.expiration,
+            'msg_id': self.request.input.msg_id,
+            'client_id': self.environ['client_id'],
+        }
+
+        self._set_payload_data({
+            'status': ZATO_OK,
+            'msg_id':self.pubsub.publish(**pub_data).msg.msg_id
+        })
+
+# ################################################################################################################################
+
+    def _handle_POST_msg(self):
+        """ Returns messages from topics, either in JSON or XML.
+        """
         out = {
             'status': ZATO_OK,
             'results_count': 0,
             'results': []
         }
 
-
-
         max_batch_size = int(self.request.input.max) if self.request.input.max else PUB_SUB.DEFAULT_GET_MAX_BATCH_SIZE
         is_fifo = True if (self.request.input.dir == PUB_SUB.GET_DIR.FIFO or not self.request.input.dir) else False
-        get_format = self.request.input.format if self.request.input.format else PUB_SUB.GET_FORMAT.DEFAULT.id
-
-        self.response.headers['Content-Type'] = 'application/json'
 
         try:
-            for item in self.pubsub.get(self.environ.sub_key, max_batch_size, is_fifo, get_format):
-                out['results'].append(item)
+            for item in self.pubsub.get(self.environ['sub_key'], max_batch_size, is_fifo, self.environ['format']):
+
+                if self.environ['is_json']:
+                    out_item = item
+                else:
+                    out_item = {'metadata': item.to_dict()}
+                    out_item['payload'] = item.payload
+
+                out['results'].append(out_item)
                 out['results_count'] += 1
+
         except ItemFull, e:
             raise TooManyRequests(self.cid, e.msg)
         else:
-            self.response.payload = dumps(out)
+            self._set_payload_data(out)
+
+# ################################################################################################################################
+
+    def handle_POST(self):
+        getattr(self, '_handle_POST_{}'.format(self.request.input.item_type))()
 
     def handle_DELETE(self):
-        self.logger.warn('DELETE')
 
-    def handle_PATCH(self):
-        self.logger.warn('PATCH')
+        actions = ('ack', 'reject')
+        try:
+            self.request.input.require_any(*actions)
+        except ValueError, e:
+            raise BadRequest(self.cid, 'Missing state to set, should be one of `{}`'.format(', '.join(actions)))
+
+        if self.request.input.ack and self.request.input.reject:
+            raise BadRequest(self.cid, 'Cannot both acknowledge and reject a message')
+
+        func = self.pubsub.acknowledge if self.request.input.ack else self.pubsub.reject
+        result = func(self.environ['sub_key'], self.request.input.item)
+
+        if self.request.input.item in result:
+            status = ZATO_OK
+            details = ''
+        else:
+            status = ZATO_ERROR
+            details = 'Message not found `{}`'.format(self.request.input.item)
+
+        self._set_payload_data({'status': status, 'details':details})
 
 # ################################################################################################################################

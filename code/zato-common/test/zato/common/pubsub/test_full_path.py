@@ -309,15 +309,24 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         for topic in(topic_cust_new, topic_cust_update, topic_adsl_new, topic_adsl_update):
             eq_(ps.topics[topic.name], topic)
 
-        client_id_crm = Client('CRM', 'CRM')
-        client_id_billing = Client('Billing', 'Billing')
-        client_id_erp = Client('ERP', 'ERP')
+        client_id_crm = Consumer('CRM', 'CRM', sub_key='sub_key_crm')
+        client_id_billing = Consumer('Billing', 'Billing', sub_key='sub_key_billing')
+        client_id_erp = Consumer('ERP', 'ERP', sub_key='sub_key_crm')
 
         ps.add_producer(client_id_crm, topic_cust_new)
         ps.add_producer(client_id_crm, topic_cust_update)
 
         ps.add_producer(client_id_billing, topic_adsl_new)
         ps.add_producer(client_id_billing, topic_adsl_update)
+
+        ps.add_consumer(client_id_crm, topic_adsl_new)
+        ps.add_consumer(client_id_crm, topic_adsl_update)
+
+        ps.add_consumer(client_id_billing, topic_cust_new)
+        ps.add_consumer(client_id_billing, topic_cust_update)
+
+        ps.add_consumer(client_id_erp, topic_adsl_new)
+        ps.add_consumer(client_id_erp, topic_adsl_update)
 
         # Check producers have been registered for topics
 
@@ -739,7 +748,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
 
         # Ok, now delete the message and confirm it's not in the consumer's queue anymore.
 
-        ps.delete_from_consumer_queue(consumer.sub_key, msg_id)
+        ps.delete_from_consumer_queue(consumer.sub_key, [msg_id])
 
         result = self.kvdb.lrange(ps.CONSUMER_MSG_IDS_PREFIX.format(consumer.sub_key), 0, -1)
         eq_(result, [])

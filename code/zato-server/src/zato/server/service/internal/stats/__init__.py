@@ -108,31 +108,34 @@ class BaseAggregatingService(AdminService):
             
             for name in STATS_KEYS:
             
-                value = values[name]
-                if name in('rate', 'mean'):
-                    value = float(value)
-                else:
-                    value = int(value)
-                    
-                if not name in stats:
-                    if name == 'mean':
-                        stats[name] = []
-                    elif name == 'min':
-                        stats[name] = maxint
+                value = values.get(name)
+                if value:
+                    if name in('rate', 'mean'):
+                        value = float(value)
                     else:
-                        stats[name] = 0
-                    
-                if name == 'usage':
-                    stats[name] += value
-                elif name == 'max':
-                    stats[name] = max(stats[name], value)
-                elif name == 'mean':
-                    stats[name].append(value)
-                elif name == 'min':
-                    stats[name] = min(stats[name], value)
+                        value = int(value)
+
+                    if not name in stats:
+                        if name == 'mean':
+                            stats[name] = []
+                        elif name == 'min':
+                            stats[name] = maxint
+                        else:
+                            stats[name] = 0
+
+                    if name == 'usage':
+                        stats[name] += value
+                    elif name == 'max':
+                        stats[name] = max(stats[name], value)
+                    elif name == 'mean':
+                        stats[name].append(value)
+                    elif name == 'min':
+                        stats[name] = min(stats[name], value)
                     
         for service_name, values in service_stats.items():
-            values['mean'] = sp_stats.tmean(values['mean'])
+            mean = values.get('mean')
+            if mean:
+                values['mean'] = sp_stats.tmean(mean)
             
             if needs_rate:
                 values['rate'] = values['usage'] / total_seconds

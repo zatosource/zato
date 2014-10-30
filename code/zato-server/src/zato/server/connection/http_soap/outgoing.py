@@ -63,12 +63,12 @@ class BaseHTTPSOAPWrapper(object):
         self.set_address_data()
         self.set_auth()
 
-    def invoke_http(self, method, address, headers, hooks, *args, **kwargs):
+    def invoke_http(self, method, address, data, headers, hooks, *args, **kwargs):
 
         cert = self.config['tls_key_cert_full_path'] if self.config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT else None
         verify = False if self.config.get('tls_verify', ZATO_NONE) == ZATO_NONE else self.config['tls_verify']
 
-        return self.session.request(method, address, auth=self.requests_auth, headers=headers, hooks=hooks,
+        return self.session.request(method, address, data=data, auth=self.requests_auth, headers=headers, hooks=hooks,
             cert=cert, verify=verify, timeout=self.config['timeout'], *args, **kwargs)
 
     def ping(self, cid):
@@ -89,7 +89,7 @@ class BaseHTTPSOAPWrapper(object):
             verbose.write(entry)
 
         # .. invoke the other end ..
-        response = self.invoke_http(self.config['ping_method'], self.address, self._create_headers(cid, {}),
+        response = self.invoke_http(self.config['ping_method'], self.address, '', self._create_headers(cid, {}),
             {'zato_pre_request':zato_pre_request_hook})
 
         # .. store additional info, get and close the stream.
@@ -290,7 +290,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         logger.info('CID:[%s], address:[%s], qs_params:[%s], auth:[%s], kwargs:[%s]', cid, address, qs_params, self.requests_auth, kwargs) 
 
-        response = self.invoke_http(method, address, headers, {}, params=qs_params, *args, **kwargs)
+        response = self.invoke_http(method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
         logger.debug('CID:[%s], response:[%s]', cid, response.text)
 

@@ -182,7 +182,7 @@ class Service(object):
         self.wsgi_environ = None
         self.job_type = None
         self.delivery_store = None
-        self.environ = Bunch()
+        self.environ = {}
         self.request = Request(self.logger)
         self.response = Response(self.logger)
         self.invocation_time = None # When was the service invoked
