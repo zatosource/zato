@@ -62,7 +62,6 @@ lua_move_to_target_queues = """
     local max_int = tonumber(ARGV[3])
     local zset_command
     local out = {}
-    local max_depth = 0
     local target_queue_depth = 0
     local can_push_to_target = true;
 
@@ -150,13 +149,18 @@ lua_reject = """
    local cons_in_flight_ids = KEYS[2]
    local cons_in_flight_data = KEYS[3]
    local ids = ARGV
+   local out = {}
 
    redis.pcall('hdel', cons_in_flight_data, unpack(ids))
 
     for id_idx, id in ipairs(ids) do
-        redis.pcall('srem', cons_in_flight_ids, id)
+        if redis.pcall('srem', cons_in_flight_ids, id) == 1 then
+            table.insert(out, id)
+        end
         redis.pcall('lpush', cons_queue, id)
     end
+
+    return out
 """
 
 lua_ack_delete = """
@@ -181,6 +185,7 @@ lua_ack_delete = """
     local is_delete = ARGV[1]
     local ids = get_ids(ARGV)
     local unack_id_count = 0
+    local out = {}
 
     for id_idx, id in ipairs(ids) do
 
@@ -189,7 +194,9 @@ lua_ack_delete = """
             redis.pcall('lrem', cons_queue, 0, id)
         end
 
-        redis.pcall('srem', cons_in_flight_ids, id)
+        if redis.pcall('srem', cons_in_flight_ids, id) == 1 then
+            table.insert(out, id)
+        end
         redis.pcall('hdel', cons_in_flight_data, id)
         unack_id_count = redis.pcall('hincrby', unack_counter, id, -1)
 
@@ -203,6 +210,9 @@ lua_ack_delete = """
         end
 
     end
+
+    return out
+
 """
 
 lua_delete_expired = """

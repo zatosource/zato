@@ -33,9 +33,12 @@
             'last_seen',
             '_edit',
             '_delete',
+            '_clear_msg',
+            '_clear_in_flight',
             'id',
             'is_active',
             'callback',
+            'client_id',
         ]
     }
     </script>
@@ -74,6 +77,8 @@
                         <th><a href="#">Last seen</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -90,10 +95,20 @@
                         <td>{{ item.sub_key }}</td>
                         <td>{{ item.is_active|yesno:"Yes,No" }}</td>
                         <td>{{ item.delivery_mode }}</td>
-                        <td><a href="{% url pubsub-message-consumer-queue cluster_id item.sub_key input.topic_name %}">{{ item.current_depth }}</a></td>
-                        <td>{{ item.in_flight_depth }}</td>
+                        <td id="current_depth_{{ item.sub_key }}"><a href="{% url pubsub-message-consumer-queue cluster_id item.sub_key input.topic_name %}">{{ item.current_depth }}</a></td>
+                        <td id="in_flight_depth_{{ item.sub_key }}">{{ item.in_flight_depth }}</td>
                         <td>{{ item.max_depth }}</td>
                         <td>{{ item.last_seen|default:"<span class='form_hint'>(Never)</span>" }}</td>
+                        <td>
+                            <a href="javascript:$.fn.zato.pubsub.consumers.clear('{{ item.client_id }}', 'message', '{{ item.sub_key }}', '{{ item.topic_name }}')">
+                            Clear msg queue
+                            </a>
+                        </td>
+                        <td>
+                            <a href="javascript:$.fn.zato.pubsub.consumers.clear('{{ item.client_id }}', 'in-flight', '{{ item.sub_key }}', '{{ item.topic_name }}')">
+                            Clear in-flight
+                            </a>
+                        </td>
                         <td><a href="javascript:$.fn.zato.pubsub.consumers.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.consumers.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

@@ -389,7 +389,7 @@ class Create(ZatoCommand):
                 self.add_admin_invoke(session, cluster, service, admin_invoke_sec)
 
             elif name == 'zato.pubsub.rest-handler':
-                self.add_pubsub_rest_handler(session, cluster, service)
+                self.add_pubsub_rest_handlers(session, cluster, service)
 
             zato_soap = HTTPSOAP(
                 None, name, True, True, 'channel',
@@ -514,7 +514,7 @@ class Create(ZatoCommand):
         item.cluster = cluster
         session.add(item)
 
-    def add_pubsub_rest_handler(self, session, cluster, service):
-        channel = HTTPSOAP(None, 'zato.pubsub.rest', True, True, 'channel', 'plain_http',
-            None, '/zato/pubsub/{item}/', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
+    def add_pubsub_rest_handlers(self, session, cluster, service):
+        channel = HTTPSOAP(None, 'zato.pubsub.rest', True, True, 'channel', 'plain_http', None,
+            '/zato/pubsub/{item_type}/{item}/', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
         session.add(channel)

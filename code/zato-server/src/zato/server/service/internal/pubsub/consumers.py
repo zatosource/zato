@@ -33,7 +33,7 @@ class GetList(AdminService):
         request_elem = 'zato_pubsub_consumers_get_list_request'
         response_elem = 'zato_pubsub_consumers_get_list_response'
         input_required = ('cluster_id', 'topic_name')
-        output_required = ('id', 'name', 'is_active', 'sec_type', Int('max_depth'), Int('current_depth'),
+        output_required = ('id', 'name', 'is_active', 'sec_type', 'client_id', Int('max_depth'), Int('current_depth'),
             Int('in_flight_depth'), 'sub_key', 'delivery_mode')
         output_optional = (UTC('last_seen'), 'callback')
         output_repeated = True
@@ -272,5 +272,29 @@ class Delete(AdminService):
                 msg.topic_name = topic_name
 
                 self.broker_client.publish(msg)
+
+# ################################################################################################################################
+
+class ClearQueue(AdminService):
+    """ Clears out a given consumer's message or in-flight queue by deleting or accepting all the messages it contains,
+    respectively. Note that the operation isn't atomic - for in-flight queues, first a list of messages to be cleared is obtained
+    and next a call to clear them is issued. For message queues, each message is deleted individually.
+    In either case, it's possible the list of messages will change in between the calls and the changes will not be visible
+    to the call which deletes them.
+    """
+
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_pubsub_consumers_clear_queue_request'
+        response_elem = 'zato_pubsub_consumers_clear_queue_response'
+        input_required = ('queue_type', 'client_id',)
+
+    def handle(self):
+        sub_key = self.pubsub.get_consumer_by_client_id(self.request.input.client_id).sub_key
+
+        if self.request.input.queue_type == PUB_SUB.QUEUE_TYPE.IN_FLIGHT:
+            self.pubsub.acknowledge(sub_key, self.pubsub.get_consumer_in_flight_message_list(sub_key))
+        else:
+            self.pubsub.delete_from_consumer_queue(
+                sub_key, [item.msg_id for item in self.pubsub.get_consumer_queue_message_list(sub_key)])
 
 # ################################################################################################################################

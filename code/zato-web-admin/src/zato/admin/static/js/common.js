@@ -186,6 +186,20 @@ $.fn.zato.user_message = function(is_success, msg, loading) {
     });
 }
 
+$.fn.zato.post_with_user_message = function(url, on_callback_done) {
+
+    var callback = function(data, status) {
+        var success = status == 'success';
+        $.fn.zato.user_message(success, data.responseText);
+
+        if(on_callback_done) {
+            on_callback_done(success);
+        }
+    }
+
+    $.fn.zato.post(url, callback, '', 'text');
+}
+
 //
 // Forms
 //

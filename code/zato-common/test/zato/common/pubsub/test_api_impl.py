@@ -41,7 +41,14 @@ class RedisPubSubTestCase(RedisPubSubCommonTestCase):
         topic = Topic(rand_string())
         self.api.add_topic(topic)
 
-        producer = Client(rand_int(), rand_string())
+        client_id = kwargs.pop('client_id', rand_int())
+        client_name = kwargs.pop('client_name', rand_string())
+
+        if kwargs.pop('add_consumer', False):
+            consumer = Consumer(client_id, client_name)
+            self.api.add_consumer(consumer, topic)
+
+        producer = Client(client_id, client_name)
         self.api.add_producer(producer, topic)
 
         ctx = self.api.publish(payload, topic.name, client_id=producer.id, **kwargs)
@@ -152,7 +159,7 @@ class RedisPubSubTestCase(RedisPubSubCommonTestCase):
 # ################################################################################################################################
 
     def test_delete_metadata(self):
-        payload, topic, producer, ctx = self._publish_move(move=False)
+        payload, topic, producer, ctx = self._publish_move(move=False, add_consumer=False)
         consumer = Consumer(rand_int(), rand_string())
 
         self.api.add_consumer(consumer, topic)
@@ -226,7 +233,7 @@ class RedisPubSubTestCase(RedisPubSubCommonTestCase):
 
     def _check_get(self, ctx, sub_key, topic, producer, client):
 
-        msg = list(self.api.get(sub_key))[0].to_dict()
+        msg = list(self.api.get(sub_key, get_format=PUB_SUB.GET_FORMAT.OBJECT.id))[0].to_dict()
         self.assertEquals(msg['topic'], topic.name)
         self.assertEquals(msg['priority'], PUB_SUB.DEFAULT_PRIORITY)
         self.assertEquals(msg['expiration'], PUB_SUB.DEFAULT_EXPIRATION)
@@ -283,8 +290,9 @@ class RedisPubSubTestCase(RedisPubSubCommonTestCase):
         self.assertEqual(unack_counter[ctx.msg.msg_id], '1') # One subscriber hence one undelivered message
 
     def test_get_reject_acknowledge(self):
-        payload, topic, producer, ctx = self._publish_move(move=False)
         client_id, client_name = rand_int(), rand_string()
+        payload, topic, producer, ctx = self._publish_move(
+            move=False, add_consumer=True, client_id=client_id, client_name=client_name)
 
         client = Client(client_id, client_name)
         sub_key = self.api.subscribe(client.id, topic.name)
@@ -312,12 +320,8 @@ class RedisPubSubTestCase(RedisPubSubCommonTestCase):
         # Consumer acknowledges a message.
         self.api.acknowledge(sub_key, ctx.msg.msg_id)
 
-        # This was the only one subscription so now that the message has been delivered
-        # there should be no trace of it in backend.
-        # The only keys left are LAST_PUB_TIME_KEY, LAST_SEEN_CONSUMER_KEY and LAST_SEEN_PRODUCER_KEY - nothing else.
-
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        self.assertEquals(len(keys), 3)
+        self.assertEquals(len(keys), 9)
 
         now = datetime.utcnow()
 
@@ -634,7 +638,7 @@ class CtxObjectsTestCase(TestCase):
         self.assertEquals(consumer.name, name)
         self.assertEquals(consumer.is_active, True)
         self.assertEquals(consumer.sub_key, None)
-        self.assertEquals(consumer.max_backlog, PUB_SUB.DEFAULT_MAX_BACKLOG)
+        self.assertEquals(consumer.max_depth, PUB_SUB.DEFAULT_MAX_BACKLOG)
         self.assertEquals(consumer.delivery_mode, PUB_SUB.DELIVERY_MODE.PULL.id)
         self.assertEquals(consumer.callback_id, '')
 
@@ -643,16 +647,16 @@ class CtxObjectsTestCase(TestCase):
         name = rand_string()
         is_active = rand_bool()
         sub_key = rand_string()
-        max_backlog = rand_int()
+        max_depth = rand_int()
         delivery_mode = rand_string()
         callback_id = rand_int()
-        consumer = Consumer(id, name, is_active, sub_key, max_backlog, delivery_mode, callback_id)
+        consumer = Consumer(id, name, is_active, sub_key, max_depth, delivery_mode, callback_id)
 
         self.assertEquals(consumer.id, id)
         self.assertEquals(consumer.name, name)
         self.assertEquals(consumer.is_active, is_active)
         self.assertEquals(consumer.sub_key, sub_key)
-        self.assertEquals(consumer.max_backlog, max_backlog)
+        self.assertEquals(consumer.max_depth, max_depth)
         self.assertEquals(consumer.delivery_mode, delivery_mode)
         self.assertEquals(consumer.callback_id, callback_id)
 

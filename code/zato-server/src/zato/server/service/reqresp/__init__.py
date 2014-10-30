@@ -88,7 +88,7 @@ class Request(SIOConverter):
         self.merge_channel_params = True
         self.params_priority = PARAMS_PRIORITY.DEFAULT
 
-    def init(self, is_sio, cid, io, data_format, transport, wsgi_environ):
+    def init(self, is_sio, cid, sio, data_format, transport, wsgi_environ):
         """ Initializes the object with an invocation-specific data.
         """
 
@@ -98,11 +98,12 @@ class Request(SIOConverter):
             self.transport = transport
             self._wsgi_environ = wsgi_environ
 
-            path_prefix = getattr(io, 'request_elem', 'request')
-            required_list = getattr(io, 'input_required', [])
-            optional_list = getattr(io, 'input_optional', [])
-            default_value = getattr(io, 'default_value', NO_DEFAULT_VALUE)
-            use_text = getattr(io, 'use_text', True)
+            path_prefix = getattr(sio, 'request_elem', 'request')
+            required_list = getattr(sio, 'input_required', [])
+            optional_list = getattr(sio, 'input_optional', [])
+            default_value = getattr(sio, 'default_value', NO_DEFAULT_VALUE)
+            use_text = getattr(sio, 'use_text', True)
+            use_channel_params_only = getattr(sio, 'use_channel_params_only', False)
 
             if self.simple_io_config:
                 self.has_simple_io_config = True
@@ -119,10 +120,12 @@ class Request(SIOConverter):
                     raise ZatoException(cid, 'Missing input')
 
                 if self.payload != '':
-                    required_params.update(self.get_params(required_list, path_prefix, default_value, use_text))
+                    required_params.update(self.get_params(
+                        required_list, use_channel_params_only, path_prefix, default_value, use_text))
 
             if optional_list:
-                optional_params = self.get_params(optional_list, path_prefix, default_value, use_text, False)
+                optional_params = self.get_params(
+                    optional_list, use_channel_params_only, path_prefix, default_value, use_text, False)
             else:
                 optional_params = {}
 
@@ -140,16 +143,18 @@ class Request(SIOConverter):
             if self.merge_channel_params:
                 self.input.update(self.channel_params)
 
-    def get_params(self, params_to_visit, path_prefix='', default_value=NO_DEFAULT_VALUE, use_text=True, is_required=True):
+    def get_params(self, params_to_visit, use_channel_params_only, path_prefix='', default_value=NO_DEFAULT_VALUE,
+            use_text=True, is_required=True):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
         params = {}
 
         for param in params_to_visit:
             try:
-                param_name, value = convert_param(self.cid, self.payload, param, self.data_format, is_required, default_value,
-                        path_prefix, use_text, self.channel_params, self.has_simple_io_config,
-                        self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes)
+                param_name, value = convert_param(
+                    self.cid, '' if use_channel_params_only else self.payload, param, self.data_format, is_required,
+                    default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
+                    self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes)
                 params[param_name] = value
 
             except Exception, e:

@@ -993,6 +993,8 @@ urlpatterns += patterns('',
         login_required(pubsub_consumers.Edit()), name=pubsub_consumers.Edit.url_name),
     url(r'^zato/pubsub/consumers/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(pubsub_consumers.Delete()), name=pubsub_consumers.Delete.url_name),
+    url(r'^zato/pubsub/consumers/clear/(?P<queue_type>.*)/(?P<client_id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(pubsub_consumers.clear_queue), name='pubsub-consumers-clear-queue'),
 
     url(r'^zato/pubsub/message/cluster/(?P<cluster_id>.*)/consumer-queue/(?P<sub_key>\w+)/(?P<topic_name>.*)$',
         login_required(pubsub_message.index_consumer_queue), name='pubsub-message-consumer-queue'),

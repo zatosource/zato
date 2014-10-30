@@ -547,6 +547,10 @@ class PUB_SUB:
     DEFAULT_MAX_DEPTH = 500
     DEFAULT_MAX_BACKLOG = 1000
 
+    class QUEUE_TYPE:
+        MESSAGE = 'message'
+        IN_FLIGHT = 'in-flight'
+
     class GET_DIR:
         FIFO = 'fifo'
         LIFO = 'lifo'
@@ -554,6 +558,7 @@ class PUB_SUB:
     class MOVE_RESULT:
         MOVED = 'moved'
         OVERFLOW = 'overflow'
+
 
     class CALLBACK_TYPE:
         OUTCONN_PLAIN_HTTP = 'outconn-plain-http'
@@ -584,6 +589,14 @@ class PUB_SUB:
         class __metaclass__(type):
             def __iter__(self):
                 return iter((self.OBJECT, self.JSON, self.XML))
+
+    class URL_ITEM_TYPE:
+        TOPIC = NameId('Topic', 'topic')
+        MESSAGES = NameId('Messages', 'msg')
+    
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.TOPIC.id, self.MESSAGES.id))
 
 class EMAIL:
     class DEFAULT:
