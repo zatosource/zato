@@ -22,7 +22,7 @@ from anyjson import dumps
 import arrow
 
 # Bunch
-from bunch import Bunch, bunchify
+from bunch import bunchify
 
 # lxml
 from lxml.etree import _Element as EtreeElement
@@ -433,7 +433,7 @@ class Service(object):
             else:
                 return self.update_handle(*invoke_args, **kwargs)
         except Exception, e:
-            #logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc(e))
+            logger.warn('Could not invoke `%s`, e:`%s`', service.name, format_exc(e))
             raise
 
     def invoke(self, name, *args, **kwargs):

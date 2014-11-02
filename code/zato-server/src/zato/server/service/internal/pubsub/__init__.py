@@ -277,7 +277,7 @@ class RESTHandler(Service):
         actions = ('ack', 'reject')
         try:
             self.request.input.require_any(*actions)
-        except ValueError, e:
+        except ValueError:
             raise BadRequest(self.cid, 'Missing state to set, should be one of `{}`'.format(', '.join(actions)))
 
         if self.request.input.ack and self.request.input.reject:

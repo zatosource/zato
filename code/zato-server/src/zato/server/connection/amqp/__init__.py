@@ -33,7 +33,7 @@ from zato.common.broker_message import AMQP_CONNECTOR, DEFINITION
 from zato.common import TRACE1
 from zato.server.connection import BaseConnection, BaseConnector
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('zato_connector')
 
 def _conn_info(host, port, vhost, item_name):
     return '{0}:{1}{2} ({3})'.format(host, port, vhost, item_name)
@@ -164,9 +164,9 @@ class BaseAMQPConnector(BaseConnector):
             with self.channel_amqp_lock:
                 recreate_func = '_recreate_sender' if hasattr(self, '_recreate_sender') else '_recreate_consumer'
                 getattr(self, recreate_func)()
-                if self.logger.isEnabledFor(TRACE1):
+                if logger.isEnabledFor(TRACE1):
                     log_msg = 'self.def_amqp [{0}]'.format(self.def_amqp)
-                    self.logger.log(TRACE1, log_msg)
+                    logger.log(TRACE1, log_msg)
                 
     def _amqp_conn_params(self):
         

@@ -17,7 +17,7 @@ logging.captureWarnings(True)
 
 # stdlib
 import os, ssl, sys
-import logging.config
+from logging.config import dictConfig
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 import cloghandler
@@ -38,6 +38,9 @@ from psycogreen.gevent import patch_psycopg as make_psycopg_green
 
 # Repoze
 from repoze.profile import ProfileMiddleware
+
+# YAML
+import yaml
 
 # Zato
 from zato.common import TRACE1
@@ -123,7 +126,9 @@ def run(base_dir, start_gunicorn_app=True):
 
     # Configure the logging first, before configuring the actual server.
     logging.addLevelName('TRACE1', TRACE1)
-    logging.config.fileConfig(os.path.join(repo_location, 'logging.conf'))
+
+    with open(os.path.join(repo_location, 'logging.conf')) as f:
+        dictConfig(yaml.load(f))
 
     logger = logging.getLogger(__name__)
     kvdb_logger = logging.getLogger('zato_kvdb')
