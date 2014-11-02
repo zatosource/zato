@@ -13,6 +13,9 @@ import logging, logging.config, os
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy import create_engine
 
+# YAML
+import yaml
+
 # Zato
 from zato.common import TRACE1
 from zato.common.odb.util import get_engine_url
@@ -29,7 +32,8 @@ if DEBUG:
 
 logging.addLevelName('TRACE1', TRACE1)
 if 'log_config' in globals():
-    logging.config.fileConfig(log_config)
+    with open(log_config) as f:
+        logging.config.dictConfig(yaml.load(f))
 else:
     logging.basicConfig(level=logging.DEBUG)
 
