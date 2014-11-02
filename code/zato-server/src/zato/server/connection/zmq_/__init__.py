@@ -8,9 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-import logging
-
 # ZeroMQ
 import zmq
 
@@ -19,8 +16,6 @@ from zato.common import ZatoException
 from zato.common.broker_message import DEFINITION, ZMQ_CONNECTOR
 from zato.common.zmq_ import ZMQClient
 from zato.server.connection import BaseConnection, BaseConnector
-
-logger = logging.getLogger(__name__)
 
 class BaseZMQConnection(BaseConnection):
     def __init__(self, factory, name):

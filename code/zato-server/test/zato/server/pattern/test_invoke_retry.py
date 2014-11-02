@@ -366,8 +366,6 @@ class InvokeRetryTestCase(TestCase):
             'minutes': 0,
         }
 
-        kwargs_copy = deepcopy(kwargs)
-
         result = ir.invoke_retry(target, 1, 2, 3, **kwargs)
         self.assertEquals(expected_result, result)
 
@@ -447,8 +445,6 @@ class InvokeRetryTestCase(TestCase):
             'seconds': 0.01,
             'minutes': 0,
         }
-
-        kwargs_copy = deepcopy(kwargs)
 
         try:
             ir.invoke_retry(target, 1, 2, 3, **kwargs)

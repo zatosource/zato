@@ -21,12 +21,13 @@ from zato.common.util import new_cid
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.zmq_ import BaseZMQConnection, BaseZMQConnector
 
+logger = logging.getLogger('zato_connector')
+
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_ZMQ_CHANNEL_ID'
 
 class ConsumingConnection(BaseZMQConnection):
     def __init__(self, factory, name):
         super(ConsumingConnection, self).__init__(factory, name)
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.keep_listening = False
         
     def _close(self):
@@ -37,7 +38,7 @@ class ConsumingConnection(BaseZMQConnection):
         super(ConsumingConnection, self)._on_connected()
         
         self.keep_listening = True
-        self.logger.debug('Starting listener for [{0}]'.format(self._conn_info()))
+        logger.debug('Starting listener for [{0}]'.format(self._conn_info()))
 
 class ConsumingConnector(BaseZMQConnector):
     """ An AMQP consuming connector started as a subprocess. Each connection to an AMQP
@@ -45,7 +46,6 @@ class ConsumingConnector(BaseZMQConnector):
     """
     def __init__(self, repo_location=None, channel_id=None, init=True):
         super(ConsumingConnector, self).__init__(repo_location, None)
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.channel_id = channel_id
         self.name = None
         
@@ -164,7 +164,6 @@ def run_connector():
     
     ConsumingConnector(repo_location, item_id)
     
-    logger = logging.getLogger(__name__)
     logger.debug('Starting ZMQ outgoing, repo_location [{0}], item_id [{1}]'.format(
         repo_location, item_id))
     

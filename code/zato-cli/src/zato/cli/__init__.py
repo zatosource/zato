@@ -84,155 +84,146 @@ def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
     ]
 
 common_logging_conf_contents = """
-[loggers]
-keys=root, zato, zato_admin, zato_access_log, zato_kvdb, zato_pubsub, zato_rbac, zato_scheduler, zato_singleton
+loggers:
+    root:
+        level: INFO
+        handlers: [stdout, default]
+    zato:
+        level: INFO
+        handlers: [stdout, default]
+        qualname: zato
+        propagate: false
+    zato_access_log:
+        level: INFO
+        handlers: [http_access_log]
+        qualname: zato_access_log
+        propagate: false
+    zato_admin:
+        level: INFO
+        handlers: [admin]
+        qualname: zato_admin
+        propagate: false
+    zato_connector:
+        level: INFO
+        handlers: [connector]
+        qualname: zato_connector
+        propagate: false
+    zato_kvdb:
+        level: INFO
+        handlers: [kvdb]
+        qualname: zato_kvdb
+        propagate: false
+    zato_pubsub:
+        level: INFO
+        handlers: [pubsub]
+        qualname: zato_pubsub
+        propagate: false
+    zato_pubsub_overflown:
+        level: INFO
+        handlers: [pubsub_overflown]
+        qualname: zato_pubsub_overflown
+        propagate: false
+    zato_rbac:
+        level: INFO
+        handlers: [rbac]
+        qualname: zato_rbac
+        propagate: false
+    zato_scheduler:
+        level: INFO
+        handlers: [scheduler]
+        qualname: zato_scheduler
+        propagate: false
+    zato_singleton:
+        level: INFO
+        handlers: [singleton]
+        qualname: zato_singleton
+        propagate: false
 
-[handlers]
-keys=rotating_file_handler, rotating_file_handler_admin, rotating_file_handler_access_log, rotating_file_handler_kvdb, rotating_file_handler_pubsub, rotating_file_handler_rbac, rotating_file_handler_scheduler, rotating_file_handler_singleton, stdout_handler
+handlers:
+    default:
+        formatter: default
+        class: logging.handlers.ConcurrentRotatingFileHandler
+        filename: '{log_path}'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    stdout:
+        formatter: colour
+        class: logging.StreamHandler
+    http_access_log:
+        formatter: http_access_log
+        class: logging.handlers.ConcurrentRotatingFileHandler
+        filename: './logs/http_access.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    admin:
+        formatter: default
+        class: logging.handlers.ConcurrentRotatingFileHandler
+        filename: './logs/admin.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    connector:
+        formatter: default
+        class: logging.handlers.ConcurrentRotatingFileHandler
+        filename: './logs/connector.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    kvdb:
+        formatter: default
+        class: logging.handlers.ConcurrentRotatingFileHandler
+        filename: './logs/kvdb.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    pubsub:
+        formatter: default
+        class: logging.handlers.ConcurrentRotatingFileHandler
+        filename: './logs/pubsub.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    pubsub_overflown:
+        formatter: default
+        class: logging.handlers.ConcurrentRotatingFileHandler
+        filename: './logs/pubsub-overflown.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    rbac:
+        formatter: default
+        class: logging.handlers.ConcurrentRotatingFileHandler
+        filename: './logs/rbac.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    scheduler:
+        formatter: default
+        class: logging.handlers.ConcurrentRotatingFileHandler
+        filename: './logs/scheduler.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
+    singleton:
+        formatter: default
+        class: logging.handlers.ConcurrentRotatingFileHandler
+        filename: './logs/singleton.log'
+        mode: 'a'
+        maxBytes: 20000000
+        backupCount: 10
 
-[formatters]
-keys=colour_formatter, default_formatter, formatter_admin, formatter_access_log, formatter_kvdb, formatter_pubsub, formatter_rbac, formatter_scheduler, formatter_singleton
+formatters:
+    default:
+        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+    http_access_log:
+        format: '%(remote_ip)s %(cid)s "%(channel_name)s" [%(req_timestamp)s] "%(method)s %(path)s %(http_version)s" %(status_code)s %(response_size)s "-" "%(user_agent)s"'
+    colour:
+        format: '%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s'
+        (): zato.common.util.ColorFormatter
 
-[logger_root]
-level=INFO
-handlers=rotating_file_handler, stdout_handler
-
-[logger_zato]
-level=INFO
-handlers=rotating_file_handler, stdout_handler
-qualname=zato
-propagate=0
-
-[handler_rotating_file_handler]
-class=handlers.ConcurrentRotatingFileHandler
-formatter=default_formatter
-args=('{log_path}', 'a', 20000000, 10)
-
-[handler_stdout_handler]
-class=StreamHandler
-formatter=colour_formatter
-args=(sys.stdout,)
-
-[formatter_default_formatter]
-format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
-
-[formatter_colour_formatter]
-format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
-class=zato.common.util.ColorFormatter
-
-# ######################################################################################################################
-
-[logger_zato_admin]
-level=INFO
-handlers=rotating_file_handler_admin
-qualname=zato_admin
-propagate=0
-
-[handler_rotating_file_handler_admin]
-class=handlers.ConcurrentRotatingFileHandler
-formatter=formatter_kvdb
-args=('./logs/admin.log', 'a', 20000000, 10)
-
-[formatter_formatter_admin]
-format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
-
-# ######################################################################################################################
-
-[logger_zato_access_log]
-level=INFO
-handlers=rotating_file_handler_access_log
-qualname=zato_access_log
-propagate=0
-
-[handler_rotating_file_handler_access_log]
-class=handlers.ConcurrentRotatingFileHandler
-formatter=formatter_access_log
-args=('./logs/http_access.log', 'a', 20000000, 10)
-
-[formatter_formatter_access_log]
-format=%(remote_ip)s %(cid)s "%(channel_name)s" [%(req_timestamp)s] "%(method)s %(path)s %(http_version)s" %(status_code)s %(response_size)s "-" "%(user_agent)s"
-
-# ######################################################################################################################
-
-[logger_zato_pubsub]
-level=INFO
-handlers=rotating_file_handler_pubsub
-qualname=zato_pubsub
-propagate=0
-
-[handler_rotating_file_handler_pubsub]
-class=handlers.ConcurrentRotatingFileHandler
-formatter=formatter_pubsub
-args=('./logs/pubsub.log', 'a', 20000000, 10)
-
-[formatter_formatter_pubsub]
-format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
-
-# ######################################################################################################################
-
-[logger_zato_kvdb]
-level=INFO
-handlers=rotating_file_handler_kvdb
-qualname=zato_kvdb
-propagate=0
-
-[handler_rotating_file_handler_kvdb]
-class=handlers.ConcurrentRotatingFileHandler
-formatter=formatter_kvdb
-args=('./logs/kvdb.log', 'a', 20000000, 10)
-
-[formatter_formatter_kvdb]
-format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
-
-# ######################################################################################################################
-
-[logger_zato_rbac]
-level=INFO
-handlers=rotating_file_handler_rbac
-qualname=zato_rbac
-propagate=0
-
-[handler_rotating_file_handler_rbac]
-class=handlers.ConcurrentRotatingFileHandler
-formatter=formatter_rbac
-args=('./logs/rbac.log', 'a', 20000000, 10)
-
-[formatter_formatter_rbac]
-format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
-
-# ######################################################################################################################
-
-[logger_zato_scheduler]
-level=INFO
-handlers=rotating_file_handler_scheduler
-qualname=zato_scheduler
-propagate=0
-
-[handler_rotating_file_handler_scheduler]
-class=handlers.ConcurrentRotatingFileHandler
-formatter=formatter_scheduler
-args=('./logs/scheduler.log', 'a', 20000000, 10)
-
-[formatter_formatter_scheduler]
-format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
-
-# ######################################################################################################################
-
-[logger_zato_singleton]
-level=INFO
-handlers=rotating_file_handler_singleton
-qualname=zato_singleton
-propagate=0
-
-[handler_rotating_file_handler_singleton]
-class=handlers.ConcurrentRotatingFileHandler
-formatter=formatter_singleton
-args=('./logs/singleton.log', 'a', 20000000, 10)
-
-[formatter_formatter_singleton]
-format=%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s
-
-# ######################################################################################################################
+version: 1
 """
 
 # ######################################################################################################################

@@ -23,6 +23,9 @@ from pytz import UTC
 # Spring Python
 from springpython.remoting.xmlrpc import SSLServer
 
+# YAML
+import yaml
+
 # Zato
 from zato.agent.load_balancer.config import backend_template, config_from_string, string_from_config, zato_item_token
 from zato.agent.load_balancer.haproxy_stats import HAProxyStats
@@ -61,7 +64,8 @@ class LoadBalancerAgent(SSLServer):
         self.pid_path = os.path.abspath(os.path.join(self.repo_dir, '../', '../', self.json_config['pid_file']))
 
         log_config = os.path.abspath(os.path.join(self.repo_dir, self.json_config['log_config']))
-        logging.config.fileConfig(log_config)
+        with open(log_config) as f:
+            logging.config.dictConfig(yaml.load(f))
 
         self.config_path = os.path.join(self.repo_dir, config_file)
         self.config = self._read_config()
