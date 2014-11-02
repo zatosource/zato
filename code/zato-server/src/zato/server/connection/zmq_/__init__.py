@@ -20,8 +20,6 @@ from zato.common.broker_message import DEFINITION, ZMQ_CONNECTOR
 from zato.common.zmq_ import ZMQClient
 from zato.server.connection import BaseConnection, BaseConnector
 
-logger = logging.getLogger(__name__)
-
 class BaseZMQConnection(BaseConnection):
     def __init__(self, factory, name):
         super(BaseZMQConnection, self).__init__()

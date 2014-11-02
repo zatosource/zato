@@ -30,7 +30,7 @@ from zato.server.connection import setup_logging, start_connector as _start_conn
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_AMQP_OUT_ID'
 CONN_TEMPLATE = 'amqp://{username}:{password}@{host}:{port}/{vhost}'
 COMPONENT_PREFIX = 'out-amqp'
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('zato_connector')
 
 class _Transport(Transport):
     """ Allows to pass client properties to the broker.
@@ -101,7 +101,6 @@ class OutgoingConnector(BaseAMQPConnector):
     """
     def __init__(self, repo_location=None, def_id=None, out_id=None, init=True):
         super(OutgoingConnector, self).__init__(repo_location, def_id)
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.out_id = out_id
         
         self.broker_client_id = 'amqp-publishing-connector'
@@ -115,7 +114,7 @@ class OutgoingConnector(BaseAMQPConnector):
         if init:
             self._init()
         
-        self.logger.info('Started an AMQP publisher for [{}]'.format(self._conn_info()))
+        logger.info('Started an AMQP publisher for [{}]'.format(self._conn_info()))
             
     def _setup_odb(self):
         super(OutgoingConnector, self)._setup_odb()
@@ -150,8 +149,8 @@ class OutgoingConnector(BaseAMQPConnector):
             if self.out_amqp.id == msg.id:
                 return True
         else:
-            if self.logger.isEnabledFor(TRACE1):
-                self.logger.log(TRACE1, 'Returning False for msg [{0}]'.format(msg))
+            if logger.isEnabledFor(TRACE1):
+                logger.log(TRACE1, 'Returning False for msg [{0}]'.format(msg))
             return False
     
     def def_amqp_get(self, id):
@@ -239,7 +238,6 @@ def run_connector():
     
     OutgoingConnector(repo_location, def_id, item_id)
     
-    logger = logging.getLogger(__name__)
     logger.info('Starting AMQP connector, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(
         repo_location, item_id, def_id))
     
