@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from json import dumps
-from pprint import pprint
 
 # Bunch
 from bunch import Bunch

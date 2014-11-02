@@ -74,7 +74,7 @@ class InvokeRetry(Service):
             else:
                 msg = retry_limit_reached_msg(self.req_bunch.retry_repeats,
                     self.req_bunch.target, self.req_bunch.retry_seconds, self.req_bunch.orig_cid)
-                #self.logger.warn(msg)
+                self.logger.warn(msg)
                 self._notify_callback(False)
 
         # Let the callback know it's all good
