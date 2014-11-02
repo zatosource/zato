@@ -220,11 +220,10 @@ class ColorFormatter(logging.Formatter):
       'TRACE1': YELLOW
     }
 
-    def __init__(self, log_format, date_format, use_color=True):
-        # Note that date_format is ignored.
-        msg = self.formatter_msg(log_format, use_color)
+    def __init__(self, fmt):
+        self.use_color = True
+        msg = self.formatter_msg(fmt, self.use_color)
         logging.Formatter.__init__(self, msg)
-        self.use_color = use_color
 
     def formatter_msg(self, msg, use_color=True):
         if use_color:
