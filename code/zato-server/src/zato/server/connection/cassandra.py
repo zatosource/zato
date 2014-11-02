@@ -14,7 +14,6 @@ from logging import getLogger
 # Cassandra
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
-from cassandra.policies import ConstantReconnectionPolicy
 from cassandra.query import dict_factory
 
 # Zato
