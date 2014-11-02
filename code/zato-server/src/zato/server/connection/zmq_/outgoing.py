@@ -21,6 +21,8 @@ from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.zmq_ import BaseZMQConnection, BaseZMQConnector
 
+logger = logging.getLogger('zato_connector')
+
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_ZMQ_OUT_ID'
 
 class ZMQFacade(object):
@@ -54,14 +56,13 @@ class OutgoingConnection(BaseZMQConnection):
     """
     def __init__(self, factory, out_name):
         super(OutgoingConnection, self).__init__(factory, out_name)
-        self.logger = logging.getLogger(self.__class__.__name__)
         
     def send(self, msg):
         """ Sends a message to a ZMQ socket.
         """
         self.factory.send(msg)
-        if self.logger.isEnabledFor(TRACE1):
-            self.logger.log(TRACE1, 'Sent {0} name {1} factory {2}'.format(msg, self.name, self.factory))
+        if logger.isEnabledFor(TRACE1):
+            logger.log(TRACE1, 'Sent {0} name {1} factory {2}'.format(msg, self.name, self.factory))
 
 class OutgoingConnector(BaseZMQConnector):
     """ An outgoing connector started as a subprocess. Each connection to a queue manager
@@ -69,7 +70,6 @@ class OutgoingConnector(BaseZMQConnector):
     """
     def __init__(self, repo_location=None, out_id=None, init=True):
         super(OutgoingConnector, self).__init__(repo_location, None)
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.out_id = out_id
         
         self.out_lock = RLock()
@@ -150,15 +150,15 @@ class OutgoingConnector(BaseZMQConnector):
         """
         if not self.out.get('is_active'):
             log_msg = 'Not sending, the connection is not active [{0}]'.format(self.out.toDict())
-            self.logger.info(log_msg)
+            logger.info(log_msg)
             return
             
         if self.out.get('sender'):
             self.out.sender.send(msg.body)
         else:
-            if self.logger.isEnabledFor(logging.DEBUG):
+            if logger.isEnabledFor(logging.DEBUG):
                 log_msg = 'No sender for [{0}]'.format(self.out.toDict())
-                self.logger.debug(log_msg)
+                logger.debug(log_msg)
                 
     def on_broker_msg_OUTGOING_ZMQ_DELETE(self, msg, args=None):
         self._close_delete()
@@ -180,7 +180,6 @@ def run_connector():
     
     OutgoingConnector(repo_location, item_id)
     
-    logger = logging.getLogger(__name__)
     logger.debug('Starting ZeroMQ outgoing, repo_location [{0}], item_id [{1}]'.format(
         repo_location, item_id))
     

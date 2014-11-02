@@ -29,6 +29,8 @@ from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
 
+logger = logging.getLogger('zato_connector')
+
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_JMS_WMQ_OUT_ID'
 
 class WMQFacade(object):
@@ -75,7 +77,6 @@ class WMQFacade(object):
 class OutgoingConnection(BaseJMSWMQConnection):
     def __init__(self, factory, name, kvdb, delivery_store):
         super(OutgoingConnection, self).__init__(factory, name, kvdb, delivery_store)
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.jms_template = JmsTemplate(self.factory)
         
         # So people don't have to install PyMQI if they don't need it
@@ -132,12 +133,12 @@ class OutgoingConnection(BaseJMSWMQConnection):
                 
         except Exception, e:
             if isinstance(e, self.MQMIError) and e.reason in self.dont_reconnect_errors:
-                self.logger.warn(
+                logger.warn(
                     'Caught [{}/{}] while sending the message [{}] (not reconnecting)'.format(e.reason, e.errorAsString(), jms_msg))
                 self.maybe_on_target_delivery(msg, start, datetime.utcnow(), False, queue, format_exc(e), False)
                 
             else:
-                self.logger.warn('Caught [{}] while sending the message [{}] (reconnecting)'.format(format_exc(e), jms_msg))
+                logger.warn('Caught [{}] while sending the message [{}] (reconnecting)'.format(format_exc(e), jms_msg))
                 self.maybe_on_target_delivery(msg, start, datetime.utcnow(), False, queue, format_exc(e), True)
                 
                 if self._keep_connecting(e):
@@ -154,7 +155,6 @@ class OutgoingConnector(BaseJMSWMQConnector):
     """
     def __init__(self, repo_location=None, def_id=None, out_id=None, init=True):
         super(OutgoingConnector, self).__init__(repo_location, def_id)
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.out_id = out_id
         
         self.out_lock = RLock()
@@ -264,7 +264,7 @@ class OutgoingConnector(BaseJMSWMQConnector):
         """
         if not self.out.get('is_active'):
             log_msg = 'Not sending, the connection is not active [{0}]'.format(self.out)
-            self.logger.info(log_msg)
+            logger.info(log_msg)
             return
             
         if self.out.get('sender'):
@@ -272,13 +272,13 @@ class OutgoingConnector(BaseJMSWMQConnector):
                 self.out.sender.send(msg, self.out.delivery_mode, self.out.expiration, 
                     self.out.priority, self.def_.max_chars_printed)
             else:
-                if self.logger.isEnabledFor(logging.DEBUG):
+                if logger.isEnabledFor(logging.DEBUG):
                     log_msg = 'Not sending, the factory for [{0}] is not connected'.format(self.out)
-                    self.logger.debug(log_msg)
+                    logger.debug(log_msg)
         else:
-            if self.logger.isEnabledFor(TRACE1):
+            if logger.isEnabledFor(TRACE1):
                 log_msg = 'No sender for [{0}]'.format(self.out)
-                self.logger.log(TRACE1, log_msg)
+                logger.log(TRACE1, log_msg)
                 
     def on_broker_msg_OUTGOING_JMS_WMQ_DELETE(self, msg, args=None):
         self._close_delete()
@@ -302,7 +302,6 @@ def run_connector():
     
     OutgoingConnector(repo_location, def_id, item_id)
     
-    logger = logging.getLogger(__name__)
     logger.debug('Starting JMS WebSphere MQ outgoing, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(
         repo_location, item_id, def_id))
     

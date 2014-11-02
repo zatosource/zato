@@ -27,12 +27,13 @@ from zato.server.connection import setup_logging, start_connector as _start_conn
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_AMQP_CHANNEL_ID'
 
+logger = logging.getLogger('zato_connector')
+
 class ConsumingConnection(BaseAMQPConnection):
     """ A connection for consuming the AMQP messages.
     """
     def __init__(self, conn_params, channel_name, queue, consumer_tag_prefix, callback):
         super(ConsumingConnection, self).__init__(conn_params, channel_name)
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.queue = queue
         self.consumer_tag_prefix = consumer_tag_prefix
         self.callback = callback
@@ -60,7 +61,7 @@ class ConsumingConnection(BaseAMQPConnection):
             getpid(), getrandbits(64)).ljust(72, '0')
         
         self.channel.basic_consume(self._on_basic_consume, queue=_queue, consumer_tag=consumer_tag)
-        self.logger.info(u'Started an AMQP consumer for [{0}], queue [{1}], tag [{2}]'.format(
+        logger.info(u'Started an AMQP consumer for [{0}], queue [{1}], tag [{2}]'.format(
             self._conn_info(), _queue, consumer_tag))
         
 class ConsumingConnector(BaseAMQPConnector):
@@ -70,7 +71,6 @@ class ConsumingConnector(BaseAMQPConnector):
     def __init__(self, repo_location=None, def_id=None, channel_id=None, init=True):
         super(ConsumingConnector, self).__init__(repo_location, def_id)
         self.broker_client_id = 'amqp-consuming-connector'
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.channel_id = channel_id
         
         self.broker_client_id = 'amqp-consuming-connector'
@@ -116,8 +116,8 @@ class ConsumingConnector(BaseAMQPConnector):
             if self.channel_amqp.id == msg.id:
                 return True
         else:
-            if self.logger.isEnabledFor(TRACE1):
-                self.logger.log(TRACE1, 'Returning False for msg [{0}]'.format(msg))
+            if logger.isEnabledFor(TRACE1):
+                logger.log(TRACE1, 'Returning False for msg [{0}]'.format(msg))
             return False
                             
     def _recreate_consumer(self):
@@ -206,7 +206,6 @@ def run_connector():
     
     ConsumingConnector(repo_location, def_id, item_id)
     
-    logger = logging.getLogger(__name__)
     logger.debug('Starting AMQP consuming connector, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(
         repo_location, item_id, def_id))
     

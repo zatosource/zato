@@ -31,6 +31,8 @@ from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConne
 
 ENV_ITEM_NAME = 'ZATO_CONNECTOR_JMS_WMQ_CHANNEL_ID'
 
+logger = logging.getLogger('zato_connector')
+
 # Spring Python's 'text' is our 'payload' hence we need to do away with the 'text' attribute.
 # In addition to that, we also need to get cid of all the magic methods.
 
@@ -41,7 +43,6 @@ MESSAGE_ATTRS = MESSAGE_ATTRS - set(dir(object) + ['__weakref__', '__dict__', '_
 class ConsumingConnection(BaseJMSWMQConnection):
     def __init__(self, factory, name, queue, callback):
         super(ConsumingConnection, self).__init__(factory, name)
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.queue = queue
         self.callback = callback
         self.keep_listening = False
@@ -54,22 +55,22 @@ class ConsumingConnection(BaseJMSWMQConnection):
         super(ConsumingConnection, self)._on_connected()
         
         self.keep_listening = True
-        self.logger.debug('Starting listener for [{0}]'.format(self._conn_info()))
+        logger.debug('Starting listener for [{0}]'.format(self._conn_info()))
         
         while self.keep_listening:
             try:
                 msg = self.factory.receive(self.queue, 1000)
-                self.logger.log(TRACE1, 'Message received [{0}]'.format(str(msg).decode("utf-8")))
+                logger.log(TRACE1, 'Message received [{0}]'.format(str(msg).decode("utf-8")))
                 
                 if msg:
                     self.callback(msg)
                 
             except NoMessageAvailableException, e:
-                self.logger.log(TRACE1, 'No messages [{0}], queue [{1}]'.format(
+                logger.log(TRACE1, 'No messages [{0}], queue [{1}]'.format(
                     self._conn_info(), self.queue))
                 
             except WebSphereMQJMSException, e:
-                self.logger.error('Caught [{0}], e.completion_code [{1}], '
+                logger.error('Caught [{0}], e.completion_code [{1}], '
                     'e.reason_code [{2}]'.format(format_exc(e), e.completion_code, e.reason_code))
               
                 self.keep_listening = False
@@ -79,7 +80,7 @@ class ConsumingConnection(BaseJMSWMQConnection):
                 self.keep_connecting = True
                 self.start()
             except Exception, e:
-                self.logger.error(
+                logger.error(
                     'Caught an exception, sleeping for 5 seconds, self.queue:[%s], e:[%s]', 
                     self.queue, format_exc(e))
                 sleep(5)
@@ -90,7 +91,6 @@ class ConsumingConnector(BaseJMSWMQConnector):
     """
     def __init__(self, repo_location=None, def_id=None, channel_id=None, init=True):
         super(ConsumingConnector, self).__init__(repo_location, def_id)
-        self.logger = logging.getLogger(self.__class__.__name__)
         self.channel_id = channel_id
         
         self.channel_lock = RLock()
@@ -206,7 +206,7 @@ class ConsumingConnector(BaseJMSWMQConnector):
                     self.broker_client.invoke_async(params)
                 except Exception, e:
                     msg = 'Could not invoke_async broker with params:`%s`, e:`%s'
-                    self.logger.warn(msg, params, format_exc(e))
+                    logger.warn(msg, params, format_exc(e))
                 
     def on_broker_msg_DEFINITION_JMS_WMQ_EDIT(self, msg, args=None):
         with self.def_lock:
@@ -237,7 +237,6 @@ def run_connector():
     
     ConsumingConnector(repo_location, def_id, item_id)
     
-    logger = logging.getLogger(__name__)
     logger.debug('Starting JMS WebSphere MQ outgoing, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(
         repo_location, item_id, def_id))
     
