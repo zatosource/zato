@@ -219,9 +219,10 @@ class SEC_DEF_TYPE:
     OAUTH = 'oauth'
     OPENSTACK = 'openstack'
     TECH_ACCOUNT = 'tech_acc'
+    TLS_CHANNEL_SEC = 'tls_channel_sec'
+    TLS_KEY_CERT = 'tls_key_cert'
     WSS = 'wss'
     XPATH_SEC = 'xpath_sec'
-    TLS_KEY_CERT = 'tls_key_cert'
 
 SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.APIKEY: 'API key',
@@ -232,8 +233,9 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.OPENSTACK: 'OpenStack',
     SEC_DEF_TYPE.TECH_ACCOUNT: 'Tech account',
     SEC_DEF_TYPE.WSS: 'WS-Security',
-    SEC_DEF_TYPE.XPATH_SEC: 'XPath',
+    SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
+    SEC_DEF_TYPE.XPATH_SEC: 'XPath',
 }
 
 # Name of the scheduler's job that will ensure a singleton server is always
@@ -642,10 +644,14 @@ class CASSANDRA:
         ENABLED_SNAPPY = ValueConstant('enabled-snappy')
 
 class TLS:
-    class DEFAULT(Constants):
-        PREFIX_KEYS = 'tls/keys/'
-        PREFIX_CERTS = 'tls/certs/'
-        PREFIX_CA_CERTS = 'tls/ca-certs/'
+    # All the BEGIN/END blocks we don't want to store in logs.
+    # Taken from https://github.com/openssl/openssl/blob/master/crypto/pem/pem.h
+    # Note that the last one really is empty to denote 'BEGIN PRIVATE KEY' alone.
+    BEGIN_END = ('ANY ', 'RSA ', 'DSA ', 'EC ', 'ENCRYPTED ', '')
+
+    # Directories in a server's config/tls directory keeping the material
+    DIR_CA_CERTS = 'ca-certs'
+    DIR_KEYS_CERTS = 'keys-certs'
 
 class ODOO:
     class DEFAULT:

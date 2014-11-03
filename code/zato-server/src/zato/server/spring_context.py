@@ -104,6 +104,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.security.rbac.role_permission',
             'zato.server.service.internal.security.tech_account',
             'zato.server.service.internal.security.tls.ca_cert',
+            'zato.server.service.internal.security.tls.channel',
             'zato.server.service.internal.security.tls.key_cert',
             'zato.server.service.internal.security.wss',
             'zato.server.service.internal.security.xpath',

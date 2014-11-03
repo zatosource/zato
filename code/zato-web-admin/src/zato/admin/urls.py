@@ -45,7 +45,7 @@ from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
 from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, rbac, \
      tech_account, wss, xpath as xpath_sec
-from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, key_cert as tls_key_cert
+from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
 
 urlpatterns = patterns('',
 
@@ -423,7 +423,18 @@ urlpatterns += patterns('',
 
 urlpatterns += patterns('',
 
-    # .. TLS - keys and certificates Zato itself uses
+    # .. TLS - channel security based on client certificates
+
+    url(r'^zato/security/tls/channel/$',
+        login_required(tls_channel.Index()), name=tls_channel.Index.url_name),
+    url(r'^zato/security/tls/channel/create/$',
+        login_required(tls_channel.Create()), name=tls_channel.Create.url_name),
+    url(r'^zato/security/tls/channel/edit/$',
+        login_required(tls_channel.Edit()), name=tls_channel.Edit.url_name),
+    url(r'^zato/security/tls/channel/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(tls_channel.Delete()), name='security-tls-channel-delete'),
+
+    # .. TLS - keys and certificates Zato itself uses in outgoing connections
 
     url(r'^zato/security/tls/key-cert/$',
         login_required(tls_key_cert.Index()), name=tls_key_cert.Index.url_name),
