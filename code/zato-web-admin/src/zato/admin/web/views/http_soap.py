@@ -147,7 +147,7 @@ def index(req):
             if _security_name:
                 security_name = '{0}<br/>{1}'.format(SEC_DEF_TYPE_NAME[item.sec_type], _security_name)
             else:
-                security_name = 'No security'
+                security_name = 'No security definition'
 
             _security_id = item.security_id
             if _security_id:

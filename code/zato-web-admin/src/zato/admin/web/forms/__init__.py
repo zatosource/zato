@@ -24,7 +24,7 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
     form.fields[field_name].choices.append(INITIAL_CHOICES)
 
     if needs_no_security:
-        form.fields[field_name].choices.append([ZATO_NONE, 'No security'])
+        form.fields[field_name].choices.append([ZATO_NONE, 'No security definition'])
 
     for value, label in security_list:
         form.fields[field_name].choices.append([value, label])
