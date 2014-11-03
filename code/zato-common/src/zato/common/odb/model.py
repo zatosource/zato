@@ -404,6 +404,17 @@ class TLSKeyCertSecurity(SecurityBase):
 
 # ################################################################################################################################
 
+class TLSChannelSecurity(SecurityBase):
+    """ New in 2.0: Stores information regarding TLS client certificate-based security definitions.
+    """
+    __tablename__ = 'sec_tls_channel'
+    __mapper_args__ = {'polymorphic_identity':'tls_channel_sec'}
+
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+    value = Column(LargeBinary(200000), nullable=False)
+
+# ################################################################################################################################
+
 class TLSCACert(Base):
     """ New in 2.0: Stores information regarding CA certs.
     """

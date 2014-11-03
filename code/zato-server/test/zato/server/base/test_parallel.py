@@ -108,37 +108,6 @@ class ParallelServerTestCase(TestCase):
             eq_(msg.service, expected_service)
             ok_(msg.cid.startswith('K'))
             self.assertEquals(len(msg.cid), 28)
-            
-    def test__set_tls_info(self):
-
-        expected_cert_dict = rand_string()
-        expected_cert_der = rand_string()
-        expected_cert_sha1 = sha1(expected_cert_der).hexdigest().upper()
-        
-        for wsgi_url_scheme in('https', 'http'):
-            wsgi_environ = {
-                'wsgi.url_scheme': wsgi_url_scheme,
-                'gunicorn.socket': FakeGunicornSocket(expected_cert_der, expected_cert_dict),
-                'zato.http.response.status': rand_string(),
-                'zato.http.channel_item': Bunch(audit_enabled=False),
-                'PATH_INFO': rand_string(),
-                'REQUEST_METHOD': rand_string(),
-                'SERVER_PROTOCOL': rand_string(),
-                'HTTP_USER_AGENT': rand_string(),
-            }
-    
-            ps = ParallelServer()
-            ps.worker_store = FakeWorkerStore()
-            ps.on_wsgi_request(wsgi_environ, StartResponse())
-            
-            if wsgi_url_scheme == 'https':
-                eq_(wsgi_environ['zato.tls.client_cert.dict'], expected_cert_dict)
-                eq_(wsgi_environ['zato.tls.client_cert.der'], expected_cert_der)
-                eq_(wsgi_environ['zato.tls.client_cert.sha1'], expected_cert_sha1)
-            else:
-                self.assertTrue('zato.tls.client_cert.dict' not in wsgi_environ)
-                self.assertTrue('zato.tls.client_cert.der' not in wsgi_environ)
-                self.assertTrue('zato.tls.client_cert.sha1' not in wsgi_environ)
 
 # ################################################################################################################################
 
