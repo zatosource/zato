@@ -17,7 +17,7 @@ from zato.common.util import delete_tls_material_from_fs, get_tls_ca_cert_full_p
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
-elem = 'security_tls_ca_cert'
+elem = 'security_tls_key_cert'
 model = TLSKeyCertSecurity
 label = 'a TLS key/cert pair'
 broker_message = SECURITY

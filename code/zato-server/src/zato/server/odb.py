@@ -23,9 +23,9 @@ from bunch import Bunch
 # Zato
 from zato.common import DEPLOYMENT_STATUS, MISC, SEC_DEF_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, OAuth, Server, Service, TechnicalAccount, XPathSecurity, WSSDefinition
+     HTTPSOAP, HTTSOAPAudit, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition
 from zato.common.odb import query
-from zato.common.util import current_host
+from zato.common.util import current_host, parse_tls_channel_security_definition
 from zato.server.connection.sql import SessionWrapper
 
 logger = logging.getLogger(__name__)
@@ -113,6 +113,7 @@ class ODBManager(SessionWrapper):
                 SEC_DEF_TYPE.OAUTH: OAuth,
                 SEC_DEF_TYPE.TECH_ACCOUNT: TechnicalAccount,
                 SEC_DEF_TYPE.WSS: WSSDefinition,
+                SEC_DEF_TYPE.TLS_CHANNEL_SEC: TLSChannelSecurity,
                 SEC_DEF_TYPE.XPATH_SEC: XPathSecurity,
                 }
 
@@ -169,6 +170,9 @@ class ODBManager(SessionWrapper):
                         result[target].sec_def.reject_stale_tokens = sec_def.reject_stale_tokens
                         result[target].sec_def.reject_expiry_limit = sec_def.reject_expiry_limit
                         result[target].sec_def.nonce_freshness_time = sec_def.nonce_freshness_time
+
+                    elif item.sec_type == SEC_DEF_TYPE.TLS_CHANNEL_SEC:
+                        result[target].sec_def.value = dict(parse_tls_channel_security_definition(sec_def.value))
 
                     elif item.sec_type == SEC_DEF_TYPE.XPATH_SEC:
                         result[target].sec_def.username = sec_def.username
@@ -457,17 +461,23 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.tech_acc_list(session, cluster_id, needs_columns)
 
-    def get_tls_key_cert_list(self, cluster_id, needs_columns=False):
-        """ Returns a list of TLS key/cert pairs on the given cluster.
-        """
-        with closing(self.session()) as session:
-            return query.tls_key_cert_list(session, cluster_id, needs_columns)
-
     def get_tls_ca_cert_list(self, cluster_id, needs_columns=False):
         """ Returns a list of TLS CA certs on the given cluster.
         """
         with closing(self.session()) as session:
             return query.tls_ca_cert_list(session, cluster_id, needs_columns)
+
+    def get_tls_channel_sec_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of definitions for securing TLS channels.
+        """
+        with closing(self.session()) as session:
+            return query.tls_channel_sec_list(session, cluster_id, needs_columns)
+
+    def get_tls_key_cert_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of TLS key/cert pairs on the given cluster.
+        """
+        with closing(self.session()) as session:
+            return query.tls_key_cert_list(session, cluster_id, needs_columns)
 
     def get_wss_list(self, cluster_id, needs_columns=False):
         """ Returns a list of WS-Security definitions on the given cluster.

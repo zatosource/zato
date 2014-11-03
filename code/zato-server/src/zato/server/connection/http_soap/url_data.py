@@ -34,6 +34,7 @@ from secwall.wsse import WSSE
 from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, ZATO_NONE
 from zato.common.broker_message import code_to_name, CHANNEL, SECURITY
 from zato.common.dispatch import dispatcher
+from zato.common.util import parse_tls_channel_security_definition
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 
 logger = logging.getLogger(__name__)
@@ -47,8 +48,8 @@ class URLData(OAuthDataStore):
     """
     def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, oauth_config=None,
                  tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, openstack_config=None,
-                 xpath_sec_config=None, tls_key_cert_config=None, kvdb=None, broker_client=None, odb=None,
-                 json_pointer_store=None, xpath_store=None):
+                 xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, kvdb=None, broker_client=None,
+                 odb=None, json_pointer_store=None, xpath_store=None):
         self.channel_data = channel_data
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -60,6 +61,7 @@ class URLData(OAuthDataStore):
         self.aws_config = aws_config
         self.openstack_config = openstack_config
         self.xpath_sec_config = xpath_sec_config
+        self.tls_channel_sec_config = tls_channel_sec_config
         self.tls_key_cert_config = tls_key_cert_config
         self.kvdb = kvdb
         self.broker_client = broker_client
@@ -281,6 +283,17 @@ class URLData(OAuthDataStore):
                 raise Unauthorized(cid, user_msg, 'zato-xpath')
 
         return True
+
+    def _handle_security_tls_channel_sec(self, cid, sec_def, ignored_path_info, ignored_body, wsgi_environ, ignored_post_data=None):
+        user_msg = 'Failed to satisfy TLS conditions'
+
+        for header, expected_value in sec_def.value.items():
+            given_value = wsgi_environ.get(header)
+
+            if expected_value != given_value:
+                logger.error(
+                    '%s, header:`%s`, expected:`%s`, given:`%s` (%s)', user_msg, header, expected_value, given_value, cid)
+                raise Unauthorized(cid, user_msg, 'zato-tls-channel-sec')
 
 # ################################################################################################################################
 
@@ -721,6 +734,38 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             self.xpath_sec_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.XPATH_SEC)
+
+# ################################################################################################################################
+
+    def _update_tls_channel_sec(self, name, config):
+        self.tls_channel_sec_config[name] = Bunch()
+        self.tls_channel_sec_config[name].config = config
+        self.tls_channel_sec_config[name].config.value = dict(parse_tls_channel_security_definition(config.value))
+
+    def tls_channel_security_get(self, name):
+        with self.url_sec_lock:
+            return self.tls_channel_sec_config.get(name)
+
+    def on_broker_msg_SECURITY_TLS_CHANNEL_SEC_CREATE(self, msg, *args):
+        """ Creates a new security definition based on TLS certificates.
+        """
+        with self.url_sec_lock:
+            self._update_tls_channel_sec(msg.name, msg)
+
+    def on_broker_msg_SECURITY_TLS_CHANNEL_SEC_EDIT(self, msg, *args):
+        """ Updates an existing security definition based on TLS certificates.
+        """
+        with self.url_sec_lock:
+            del self.tls_channel_sec_config[msg.old_name]
+            self._update_tls_channel_sec(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.TLS_CHANNEL_SEC)
+
+    def on_broker_msg_SECURITY_TLS_CHANNEL_SEC_DELETE(self, msg, *args):
+        """ Deletes a security definition based on TLS certificates.
+        """
+        with self.url_sec_lock:
+            del self.tls_channel_sec_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.TLS_CHANNEL_SEC, True)
 
 # ################################################################################################################################
 

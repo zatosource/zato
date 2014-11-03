@@ -39,7 +39,7 @@ from zato.common.broker_message import code_to_name
 from zato.common.dispatch import dispatcher
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
-     parse_extra_into_dict, store_tls
+     parse_extra_into_dict, parse_tls_channel_security_definition, store_tls
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -147,8 +147,8 @@ class WorkerStore(BrokerMessageReceiver):
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.ntlm, self.worker_config.oauth, self.worker_config.tech_acc,
             self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws, self.worker_config.openstack_security,
-            self.worker_config.xpath_sec, self.worker_config.tls_key_cert, self.kvdb, self.broker_client, self.server.odb,
-            self.json_pointer_store, self.xpath_store)
+            self.worker_config.xpath_sec, self.worker_config.tls_channel_sec, self.worker_config.tls_key_cert, self.kvdb,
+            self.broker_client, self.server.odb, self.json_pointer_store, self.xpath_store)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
@@ -763,6 +763,30 @@ class WorkerStore(BrokerMessageReceiver):
 
     def update_tls_key_cert(self, msg):
         msg.full_path = get_tls_key_cert_full_path(self.server.tls_dir, get_tls_from_payload(msg.value, True))
+
+# ################################################################################################################################
+
+    def on_broker_msg_SECURITY_TLS_CHANNEL_SEC_CREATE(self, msg, *args):
+        """ Creates a new security definition basing on TLS client certificates.
+        """
+        # Parse it to be on the safe side
+        list(parse_tls_channel_security_definition(msg.value))
+
+        dispatcher.notify(broker_message.SECURITY.TLS_CHANNEL_SEC_CREATE.value, msg)
+
+    def on_broker_msg_SECURITY_TLS_CHANNEL_SEC_EDIT(self, msg, *args):
+        """ Updates an existing security definition basing on TLS client certificates.
+        """
+        # Parse it to be on the safe side
+        list(parse_tls_channel_security_definition(msg.value))
+
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.TLS_CHANNEL_SEC,
+                self._visit_wrapper_edit, keys=('name', 'value'))
+
+    def on_broker_msg_SECURITY_TLS_CHANNEL_SEC_DELETE(self, msg, *args):
+        """ Deletes a security definition basing on TLS client certificates.
+        """
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.TLS_CHANNEL_SEC, self._visit_wrapper_delete)
 
 # ################################################################################################################################
 

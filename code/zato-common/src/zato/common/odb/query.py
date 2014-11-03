@@ -26,7 +26,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
      OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, \
      PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMTP, Solr, \
-     SQLConnectionPool, TechnicalAccount, TLSCACert, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
+     SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -195,6 +195,28 @@ def tech_acc_list(session, cluster_id, needs_columns=False):
         order_by('sec_base.name')
 
 @needs_columns
+def tls_ca_cert_list(session, cluster_id, needs_columns=False):
+    """ TLS CA certs.
+    """
+    return session.query(TLSCACert).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==TLSCACert.cluster_id).\
+        order_by('sec_tls_ca_cert.name')
+
+@needs_columns
+def tls_channel_sec_list(session, cluster_id, needs_columns=False):
+    """ TLS-based channel security.
+    """
+    return session.query(
+        TLSChannelSecurity.id, TLSChannelSecurity.name,
+        TLSChannelSecurity.is_active, TLSChannelSecurity.value,
+        TLSChannelSecurity.sec_type).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==TLSChannelSecurity.cluster_id).\
+        filter(SecurityBase.id==TLSChannelSecurity.id).\
+        order_by('sec_base.name')
+
+@needs_columns
 def tls_key_cert_list(session, cluster_id, needs_columns=False):
     """ TLS key/cert pairs.
     """
@@ -206,15 +228,6 @@ def tls_key_cert_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==TLSKeyCertSecurity.cluster_id).\
         filter(SecurityBase.id==TLSKeyCertSecurity.id).\
         order_by('sec_base.name')
-
-@needs_columns
-def tls_ca_cert_list(session, cluster_id, needs_columns=False):
-    """ TLS CA certs.
-    """
-    return session.query(TLSCACert).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==TLSCACert.cluster_id).\
-        order_by('sec_tls_ca_cert.name')
 
 @needs_columns
 def wss_list(session, cluster_id, needs_columns=False):

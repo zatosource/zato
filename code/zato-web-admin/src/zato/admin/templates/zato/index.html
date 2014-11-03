@@ -100,9 +100,16 @@
                         <li>
                             <span class="like-a">SSL/TLS &rarr;</span>
                             <ul>
-                                <li><a href="{% url security-tls-key-cert %}?cluster={{ cluster_id|default:'' }}">Keys and certs</a></li>
-                                <li><a href="{% url message-namespace %}?cluster={{ cluster_id|default:'' }}">Partner certs</a></li>
-                                <li><a href="{% url security-tls-ca-cert %}?cluster={{ cluster_id|default:'' }}">CA certs</a></li>
+                                <li>
+                                    <li><a href="{% url security-tls-channel %}?cluster={{ cluster_id|default:'' }}">Channels</a></li>
+                                </li>
+                                <li>
+                                    <span class="like-a">Outgoing &rarr;</span>
+                                    <ul>
+                                        <li><a href="{% url security-tls-ca-cert %}?cluster={{ cluster_id|default:'' }}">CA certs</a></li>
+                                        <li><a href="{% url security-tls-key-cert %}?cluster={{ cluster_id|default:'' }}">Keys and certs</a></li>
+                                    </ul>
+                                </li>
                             </ul>
                         </li>
 
