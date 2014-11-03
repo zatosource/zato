@@ -102,7 +102,7 @@ from validate import is_boolean, is_integer, VdtTypeError
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
 from zato.common import DATA_FORMAT, KVDB, MISC, NoDistributionFound, SECRET_SHADOW, soap_body_path, soap_body_xpath, \
-     TRACE1, ZatoException
+     TLS, TRACE1, ZatoException
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import IntervalBasedJob, Job, Service
 from zato.common.odb.query import _service as _service
@@ -115,16 +115,6 @@ _repr_template = Template('<$class_name at $mem_loc$attrs>')
 _uncamelify_re = re.compile(r'((?<=[a-z])[A-Z]|(?<!\A)[A-Z](?=[a-z]))')
 
 _epoch = datetime.utcfromtimestamp(0) # Start of UNIX epoch
-
-class TLS:
-    # All the BEGIN/END blocks we don't want to store in logs.
-    # Taken from https://github.com/openssl/openssl/blob/master/crypto/pem/pem.h
-    # Note that the last one really is empty to denote 'BEGIN PRIVATE KEY' alone.
-    BEGIN_END = ('ANY ', 'RSA ', 'DSA ', 'EC ', 'ENCRYPTED ', '')
-
-    # Directories in a server's config/tls directory keeping the material
-    DIR_CA_CERTS = 'ca-certs'
-    DIR_KEYS_CERTS = 'keys-certs'
 
 random.seed()
 
@@ -1063,3 +1053,28 @@ def get_basic_auth_credentials(auth):
     return auth.split(':', 1)
 
 # ################################################################################################################################
+
+def parse_tls_channel_security_definition(value):
+    if not value:
+        raise ValueError('No definition given `{}`'.format(repr(value)))
+
+    for line in value.splitlines():
+        line = line.strip()
+
+        if not line:
+            continue
+
+        if not '=' in line:
+            raise ValueError("Line `{}` has no '=' key/value separator".format(line))
+
+        # It's possible we will have multiple '=' symbols.
+        sep_index = line.find('=')
+        key, value = line[:sep_index], line[sep_index+1:]
+
+        if not key:
+            raise ValueError('Key missing in line `{}`'.format(line))
+
+        if not value:
+            raise ValueError('Value missing in line `{}`'.format(line))
+
+        yield 'HTTP_X_ZATO_TLS_{}'.format(key.upper()), value

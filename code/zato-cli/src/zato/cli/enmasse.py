@@ -34,8 +34,8 @@ from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.client import AnyServiceInvoker
 from zato.common.odb.model import APIKeySecurity, AWSSecurity, Base, CassandraConn, ConnDefAMQP, ConnDefWMQ, HTTPBasicAuth, \
-     HTTPSOAP, IMAP, NTLM, OAuth, OutgoingOdoo, SecurityBase, Server, Service, SMTP, TechnicalAccount, TLSKeyCertSecurity, \
-     to_json, WSSDefinition, XPathSecurity
+     HTTPSOAP, IMAP, NTLM, OAuth, OutgoingOdoo, SecurityBase, Server, Service, SMTP, TechnicalAccount, TLSChannelSecurity, \
+     TLSKeyCertSecurity, to_json, WSSDefinition, XPathSecurity
 from zato.common.odb.query import cloud_openstack_swift_list, notif_cloud_openstack_swift_list, notif_sql_list, out_sql_list
 from zato.common.util import get_config
 from zato.server.service import ForceType
@@ -75,6 +75,7 @@ from zato.server.service.internal.security import tech_account as sec_tech_accou
 from zato.server.service.internal.security import wss as sec_wss_mod
 from zato.server.service.internal.security import xpath as sec_xpath_mod
 from zato.server.service.internal.security.tls import ca_cert as sec_tls_ca_cert_mod
+from zato.server.service.internal.security.tls import channel as sec_tls_channel_mod
 from zato.server.service.internal.security.tls import key_cert as sec_tls_key_cert_mod
 
 DEFAULT_COLS_WIDTH = '15,100'
@@ -571,6 +572,9 @@ class EnMasse(ManageCommand):
         tech_acc = self.client.odb_session.query(TechnicalAccount).\
             filter(TechnicalAccount.cluster_id == self.client.cluster_id)
 
+        tls_channel_sec = self.client.odb_session.query(TLSChannelSecurity).\
+            filter(TLSChannelSecurity.cluster_id == self.client.cluster_id)
+
         tls_key_cert = self.client.odb_session.query(TLSKeyCertSecurity).\
             filter(TLSKeyCertSecurity.cluster_id == self.client.cluster_id)
 
@@ -592,7 +596,9 @@ class EnMasse(ManageCommand):
             filter(OutgoingOdoo.cluster_id == self.client.cluster_id)
 
         add_from_simple_query(
-            [apikey, aws, basic_auth, ntlm, oauth, tech_acc, tls_key_cert, wss, xpath_sec], self.odb_objects.def_sec)
+            [apikey, aws, basic_auth, ntlm, oauth, tech_acc, tls_channel_sec, tls_key_cert, wss, xpath_sec],
+            self.odb_objects.def_sec)
+
         add_from_simple_query([email_imap], self.odb_objects.email_imap)
         add_from_simple_query([email_smtp], self.odb_objects.email_smtp)
         add_from_simple_query([outconn_odoo], self.odb_objects.outconn_odoo)
@@ -832,9 +838,10 @@ class EnMasse(ManageCommand):
             'ntlm':sec_ntlm_mod.Create,
             'oauth':sec_oauth_mod.Create,
             'tech_acc':sec_tech_account_mod.Create,
+            'tls_channel_sec':sec_tls_channel_mod.Create,
+            'tls_key_cert':sec_tls_key_cert_mod.Create,
             'wss':sec_wss_mod.Create,
             'xpath_sec':sec_xpath_mod.Create,
-            'tls_key_cert':sec_tls_key_cert_mod.Create,
         }
 
         create_services_keys = sorted(create_services)
@@ -1079,9 +1086,10 @@ class EnMasse(ManageCommand):
             'ntlm':ImportInfo(sec_ntlm_mod, True),
             'oauth':ImportInfo(sec_oauth_mod, True),
             'tech_acc':ImportInfo(sec_tech_account_mod, True),
+            'tls_key_cert':ImportInfo(sec_tls_key_cert_mod),
+            'tls_channel_sec':ImportInfo(sec_tls_channel_mod),
             'wss':ImportInfo(sec_wss_mod, True),
             'xpath_sec':ImportInfo(sec_xpath_mod, True),
-            'tls_key_cert':ImportInfo(sec_tls_key_cert_mod),
         }
 
         def get_odb_item(item_type, name):
