@@ -57,7 +57,7 @@ class CassandraConnStore(BaseConnPoolStore):
         cluster = Cluster(
             config.contact_points.splitlines(), int(config.port), cql_version=config.cql_version,
             protocol_version=int(config.proto_version), executor_threads=int(config.exec_size),
-            auth_provider=auth_provider, ssl_options=tls_options)
+            auth_provider=auth_provider, ssl_options=tls_options, control_connection_timeout=20)
 
         session = cluster.connect()
         session.row_factory = dict_factory
