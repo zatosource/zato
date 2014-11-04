@@ -45,7 +45,7 @@ class BaseAPI(object):
     def __getitem__(self, name):
         return self.get(name, False)
 
-    def create(self, name, msg, **extra):
+    def create(self, name, msg, *args, **extra):
         return self._conn_store.create(name, msg, **extra)
 
     def edit(self, name, msg, **extra):

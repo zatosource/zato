@@ -284,8 +284,8 @@ class BasePoolAPI(object):
 
         return item
 
-    def create_def(self, name, msg):
-        self._conn_store.create(name, msg)
+    def create_def(self, name, msg, on_connection_established_callback=None):
+        self._conn_store.create(name, msg, on_connection_established_callback)
 
     create = create_def
 
@@ -333,7 +333,7 @@ class BaseConnPoolStore(object):
         logger.warn('Could not connect to %s `%s`, config:`%s`, e:`%s`%s', self.conn_name, name, config_no_sensitive,
             format_exc(e), additional)
 
-    def _create(self, name, config):
+    def _create(self, name, config, on_connection_established_callback):
         config_no_sensitive = deepcopy(config)
         config_no_sensitive['password'] = SECRET_SHADOW
 
@@ -362,15 +362,18 @@ class BaseConnPoolStore(object):
             item.conn = session
             item.is_connected = True
 
+            if on_connection_established_callback:
+                on_connection_established_callback(config)
+
         self.sessions[name] = item
 
         return item
 
-    def create(self, name, config):
+    def create(self, name, config, on_connection_established_callback=None):
         """ Adds a new connection definition.
         """
         with self.lock:
-            self._gevent.spawn(self._create, name, config)
+            self._gevent.spawn(self._create, name, config, on_connection_established_callback)
 
     def delete_session(self, name):
         """ Actually deletes a definition. Must be called with self.lock held.
