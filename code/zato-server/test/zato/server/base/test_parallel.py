@@ -159,6 +159,7 @@ class AuditTestCase(TestCase):
                         'data_format': DATA_FORMAT.JSON,
                         'match_target': expected_match_target,
                         'username': expected_username,
+                        'method': '',
                     }
 
                     wsgi_environ = {
@@ -361,7 +362,8 @@ class HTTPAccessLogTestCase(TestCase):
                 'is_active': True,
                 'transport': 'plain_http',
                 'data_format': None,
-                'match_target': url_path
+                'match_target': url_path,
+                'method': '',
             }
 
             wsgi_environ = {
