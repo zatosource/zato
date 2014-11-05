@@ -804,11 +804,9 @@ class URLData(OAuthDataStore):
         """ Creates a channel info bunch out of an incoming CREATE_EDIT message.
         """
         channel_item = Bunch()
-        for name in('connection', 'data_format', 'host', 'id', 'is_active',
-            'is_internal', 'method', 'name', 'ping_method', 'pool_size',
-            'service_id',  'impl_name', 'service_name',
-            'soap_action', 'soap_version', 'transport', 'url_path',
-            'merge_url_params_req', 'url_params_pri', 'params_pri'):
+        for name in('connection', 'data_format', 'host', 'id', 'has_rbac', 'impl_name', 'is_active', 'is_internal',
+            'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',  'service_name',
+            'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path',):
 
             channel_item[name] = msg[name]
 
