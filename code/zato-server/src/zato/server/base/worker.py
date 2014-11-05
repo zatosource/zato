@@ -27,6 +27,9 @@ from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import DAILY, MINUTELY, rrule
 
+# gevent
+import gevent
+
 # gunicorn
 from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
@@ -120,6 +123,11 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_msg_ns_store()
         self.init_json_pointer_store()
         self.init_xpath_store()
+
+        # After connection is establised, a flag is stored here to let queries consult it
+        # before they attempt to prepare statements. In other words, queries wait for connections.
+        # They do it in separate greenlets.
+        self._cassandra_connections_ready = {}
 
         # Cassandra
         self.init_cassandra()
@@ -353,20 +361,35 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def _on_cassandra_connection_established(self, config):
+        self._cassandra_connections_ready[config.id] = True
+
     def init_cassandra(self):
         for k, v in self.worker_config.cassandra_conn.items():
             try:
+                self._cassandra_connections_ready[v.config.id] = False
                 self.update_cassandra_conn(v.config)
-                self.cassandra_api.create_def(k, v.config)
+                self.cassandra_api.create_def(k, v.config, self._on_cassandra_connection_established)
             except Exception, e:
                 logger.warn('Could not create a Cassandra connection `%s`, e:`%s`', k, format_exc(e))
 
 # ################################################################################################################################
 
+    def _init_cassandra_query(self, create_func, k, config):
+        idx = 0
+        while not self._cassandra_connections_ready.get(config.def_id):
+            gevent.sleep(1)
+
+            idx += 1
+            if not idx % 20:
+                logger.warn('Still waiting for `%s` Cassandra connection', config.def_name)
+
+        create_func(k, config, def_=self.cassandra_api[config.def_name])
+
     def init_cassandra_queries(self):
         for k, v in self.worker_config.cassandra_query.items():
             try:
-                self.cassandra_query_api.create(k, v.config, def_=self.cassandra_api[v.config.def_name])
+                gevent.spawn(self._init_cassandra_query, self.cassandra_query_api.create, k, v.config)
             except Exception, e:
                 logger.warn('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc(e))
 
