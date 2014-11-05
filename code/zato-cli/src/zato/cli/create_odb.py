@@ -18,7 +18,7 @@ from zato.cli import ZatoCommand, common_odb_opts
 from zato.common.odb import VERSION
 from zato.common.odb.model import AlembicRevision, Base, ZatoInstallState
 
-LATEST_ALEMBIC_REVISION = '0011_1500abb1cf3'
+LATEST_ALEMBIC_REVISION = '0028_ae3419a9'
 
 class Create(ZatoCommand):
     """ Creates a new Zato ODB (Operational Database)
