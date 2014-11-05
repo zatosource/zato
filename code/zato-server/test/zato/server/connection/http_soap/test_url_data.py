@@ -1300,10 +1300,10 @@ class URLDataTestCase(TestCase):
         def get_msg(needs_security_id):
             msg = Bunch()
 
-            for name in('connection', 'data_format', 'host', 'id', 'is_active', 'is_internal', 'method', 'name', 'ping_method', 
-                'pool_size', 'service_id',  'impl_name', 'service_name', 'soap_action', 'soap_version', 'transport', 'url_path',
-                'merge_url_params_req', 'url_params_pri', 'params_pri', 'audit_max_payload', 'audit_repl_patt_type',
-                'replace_patterns_json_pointer', 'replace_patterns_xpath'):
+            for name in('connection', 'data_format', 'has_rbac', 'host', 'id', 'is_active', 'is_internal', 'method', 'name',
+                'ping_method',  'pool_size', 'service_id',  'impl_name', 'service_name', 'soap_action', 'soap_version',
+                'transport', 'url_path', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'audit_max_payload',
+                'audit_repl_patt_type', 'replace_patterns_json_pointer', 'replace_patterns_xpath'):
                 msg[name] = uuid4().hex
 
             if needs_security_id:
@@ -1320,7 +1320,7 @@ class URLDataTestCase(TestCase):
             eq_(channel_item.match_target, match_target)
             self.assertIsInstance(channel_item.match_target_compiled, Parser)
 
-            for name in('connection', 'data_format', 'host', 'id', 'is_active',
+            for name in('connection', 'data_format', 'has_rbac', 'host', 'id', 'is_active',
                 'is_internal', 'method', 'name', 'ping_method', 'pool_size',
                 'service_id',  'impl_name', 'service_name',
                 'soap_action', 'soap_version', 'transport', 'url_path',
@@ -1328,11 +1328,11 @@ class URLDataTestCase(TestCase):
                 eq_(msg[name], channel_item[name])
 
             if needs_security_id:
-                eq_(len(channel_item.keys()), 31)
+                eq_(len(channel_item.keys()), 32)
                 for name in('sec_type', 'security_id', 'security_name'):
                     eq_(msg[name], channel_item[name])
             else:
-                eq_(len(channel_item.keys()), 28)
+                eq_(len(channel_item.keys()), 29)
 
         for needs_security_id in(True, False):
             msg = get_msg(needs_security_id)
