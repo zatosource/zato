@@ -299,6 +299,7 @@ class TestRequestDispatcher(MessageHandlingBase):
         channel_item_return_value.data_format = uuid4().hex
         channel_item_return_value.match_target = uuid4().hex
         channel_item_return_value.audit_enabled = False
+        channel_item_return_value.method = ''
 
         payload = uuid4().hex
 

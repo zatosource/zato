@@ -276,7 +276,7 @@ class TLSPingTestCase(TestCase, Base):
             server = TLSServer()
             server.start()
 
-            sleep(0.3)
+            sleep(2)
 
             port = server.get_port()
 
