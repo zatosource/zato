@@ -870,13 +870,15 @@ class StatsElem(object):
 # ################################################################################################################################
 
 class SMTPMessage(object):
-    def __init__(self, from_=None, to=None, subject='', body='', attachments=None, is_html=False, headers=None,
+    def __init__(self, from_=None, to=None, subject='', body='', attachments=None, cc=None, bcc=None, is_html=False, headers=None,
             charset='utf8', is_rfc2231=True):
         self.from_ = from_
         self.to = to
         self.subject = subject
         self.body = body
         self.attachments = attachments or []
+        self.cc = cc
+        self.bcc = bcc
         self.is_html = is_html
         self.headers = headers or {}
         self.charset = charset
