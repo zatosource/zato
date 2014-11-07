@@ -1,4 +1,4 @@
-Feature: Zato scheduler job, interval_based type
+Feature: scheduler.job.interval_based.type
 
 Scenario: Log in to Zato Public API and create a job
 
