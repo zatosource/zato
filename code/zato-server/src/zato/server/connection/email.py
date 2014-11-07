@@ -104,13 +104,19 @@ class SMTPConnection(_Connection):
             self.config.is_debug, self.config.timeout]
 
         if config.username or config.password:
+
+            password = self.config.password.encode('utf-8') or None
+            username = self.config.username.encode('utf-8') or None
+
             self.conn_class = Outbox
-            self.conn_args.insert(0, self.config.username)
-            self.conn_args.insert(0, self.config.password)
+
+            self.conn_args.insert(0, password)
+            self.conn_args.insert(0, username)
+
         else:
             self.conn_class = AnonymousOutbox
 
-    def send(self, msg):
+    def send(self, msg, from_=None):
 
         headers = msg.headers or {}
         atts = [Attachment(att['name'], StringIO(att['contents'])) for att in msg.attachments] if msg.attachments else []
@@ -123,7 +129,7 @@ class SMTPConnection(_Connection):
 
         try:
             with self.conn_class(*self.conn_args) as conn:
-                conn.send(email, atts)
+                conn.send(email, atts, from_ or msg.from_)
         except Exception, e:
             logger.warn('Could not send an SMTP message to `%s`, e:`%s`', self.config_no_sensitive, format_exc(e))
         else:
