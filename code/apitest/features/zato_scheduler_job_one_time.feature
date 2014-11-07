@@ -1,4 +1,8 @@
-Feature: Zato scheduler job, one_time type
+Feature: scheduler.job.one_time.type
+
+Scenario: Set up
+
+    Given I store a random string under "url_path"
 
 Scenario: Log in to Zato Public API and upload custom set-key service
 
@@ -157,6 +161,7 @@ Scenario: Create HTTP channel for get-key service to be executed through
     Given JSON Pointer "/service" in request is "get-key.get-key"
     Given JSON Pointer "/data_format" in request is "json"
     Given JSON Pointer "/method" in request is "GET"
+    Given JSON Pointer "/security_id" in request is "ZATO_NONE"
 
     When the URL is invoked
 
