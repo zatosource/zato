@@ -182,22 +182,27 @@ class BaseSummarizingService(BaseAggregatingService):
                 stats = services.setdefault(service_name, deepcopy(DEFAULT_STATS))
                 
                 for name in STATS_KEYS:
-                    value = values[name]
-                    if name == 'usage':
-                        stats[name] += value
-                    elif name == 'max':
-                        stats[name] = max(stats[name], value)
-                    elif name == 'mean':
-                        stats[name].append(value)
-                    elif name == 'min':
-                        stats[name] = min(stats[name], value)
+                    value = values.get(name)
+                    if value:
+                        if name == 'usage':
+                            stats[name] += value
+                        elif name == 'max':
+                            stats[name] = max(stats[name], value)
+                        elif name == 'mean':
+                            stats[name].append(value)
+                        elif name == 'min':
+                            stats[name] = min(stats[name], value)
                         
         for service_name, values in services.items():
-            values['mean'] = round(sp_stats.tmean(values['mean']), 2)
-            values['rate'] = round(values['usage'] / total_seconds, 2)
+
+            if 'mean' in values:
+                values['mean'] = round(sp_stats.tmean(values['mean']), 2)
+
+            if 'rate' in values:
+                values['rate'] = round(values['usage'] / total_seconds, 2)
             
         self.hset_aggr_keys(services, key_prefix, key_suffix)
-        
+
 # ##############################################################################
 
 class CreateSummaryByDay(BaseSummarizingService):
