@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Setting the custom logger must come first
-import locale, logging
+import locale, logging, warnings
 from zato.server.log import ZatoLogger
 logging.setLoggerClass(ZatoLogger)
 
@@ -100,6 +100,10 @@ class ZatoGunicornApplication(Application):
         return self.zato_wsgi_app.on_wsgi_request
 
 def run(base_dir, start_gunicorn_app=True):
+
+    # Filter out warnings we are not interested in
+    warnings.filterwarnings('ignore', 'Mean of empty slice.')
+    warnings.filterwarnings('ignore', 'invalid value encountered in double_scalars')
 
     # Store a pidfile before doing anything else
     store_pidfile(base_dir)

@@ -14,6 +14,7 @@ from hashlib import sha1, sha256
 # Zato
 from zato.common import KVDB, ZatoException
 from zato.common.util import hexlify, multikeysort
+from zato.server.service import Int
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
@@ -179,7 +180,7 @@ class GetLastID(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_data_dict_translation_get_last_id_request'
         response_elem = 'zato_kvdb_data_dict_translation_get_last_id_response'
-        output_optional = ('value',)
+        output_optional = (Int('value'),)
         
     def handle(self):
-        self.response.payload.value = self.server.kvdb.conn.get(KVDB.TRANSLATION_ID) or ''
+        value = self.server.kvdb.conn.get(KVDB.TRANSLATION_ID)

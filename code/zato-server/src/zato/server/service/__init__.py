@@ -367,7 +367,7 @@ class Service(object):
             #
 
             # Ok, this is HTTP
-            if channel == CHANNEL.HTTP_SOAP:
+            if channel in (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE):
 
                 # We have at least one per-HTTP verb handler
                 if service.http_method_handlers:

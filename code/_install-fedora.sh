@@ -28,6 +28,7 @@ symlink_py 'scipy'
 
 sudo pip-python install distribute==0.6.49
 sudo pip-python install virtualenv==1.9.1
+sudo pip-python install zato-apitest
 
 virtualenv .
 
