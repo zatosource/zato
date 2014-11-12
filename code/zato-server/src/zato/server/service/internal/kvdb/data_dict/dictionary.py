@@ -14,6 +14,7 @@ import re
 # Zato
 from zato.common import KVDB, ZatoException
 from zato.common.util import dict_item_name
+from zato.server.service import Int
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
@@ -191,7 +192,7 @@ class GetLastID(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_kvdb_data_dict_dictionary_get_last_id_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_get_last_id_response'
-        output_optional = ('value',)
+        output_optional = (Int('value'),)
         
     def handle(self):
         self.response.payload.value = self.server.kvdb.conn.get(KVDB.DICTIONARY_ITEM_ID) or ''

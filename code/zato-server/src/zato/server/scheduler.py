@@ -148,7 +148,7 @@ class Scheduler(object):
         """ Re-/schedules the execution of a one-time job.
         """
         self.create_edit_job(job_data.id, job_data.name, _start_date(job_data), SCHEDULER.JOB_TYPE.ONE_TIME,
-            job_data.service, is_create)
+            job_data.service, is_create, extra=job_data.extra)
 
     def create_one_time(self, job_data, broker_msg_type):
         """ Schedules the execution of a one-time job.
@@ -175,7 +175,7 @@ class Scheduler(object):
         max_repeats = job_data.repeats if job_data.get('repeats') else None
 
         self.create_edit_job(job_data.id, job_data.name, start_date, SCHEDULER.JOB_TYPE.INTERVAL_BASED, job_data.service,
-            is_create, max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra, )
+            is_create, max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra)
 
     def create_interval_based(self, job_data, broker_msg_type):
         """ Schedules the execution of an interval-based job.
