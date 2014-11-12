@@ -41,25 +41,25 @@ def _nosetests():
 def nosetests():
     _nosetests()
 
-def _apitest():
+def _apitests():
     apitest_cmd = 'apitest'
     tests_dir = os.path.join(curdir, 'apitest')
     run('{} run {}'.format(apitest_cmd, tests_dir))
 
 @click.command()
-def apitest():
-    _apitest()
+def apitests():
+    _apitests()
 
 @click.command()
-def run_all():
+def all():
     _nosetests()
-    _apitest()
+    _apitests()
 
 # ################################################################################################################################
 
 main.add_command(nosetests)
-main.add_command(apitest)
-main.add_command(run_all)
+main.add_command(apitests)
+main.add_command(all)
 
 # ################################################################################################################################
 
