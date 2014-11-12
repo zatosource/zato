@@ -22,7 +22,7 @@ Scenario: Log in to Zato Public API and upload custom set-key service
     When the URL is invoked
 
     Then status is "200"
-    And I sleep for "2"
+    And I sleep for "1"
 
 Scenario: Upload custom get-key service
 
@@ -38,7 +38,7 @@ Scenario: Upload custom get-key service
     When the URL is invoked
 
     Then status is "200"
-    And I sleep for "2"
+    And I sleep for "1"
 
 Scenario: Create a job for newly uploaded custom set-key service
 
@@ -167,6 +167,7 @@ Scenario: Create HTTP channel for get-key service to be executed through
 
     Then status is "200"
     And I store "/zato_http_soap_create_response/name" from response under "channel_name"
+    And I store "/zato_http_soap_create_response/id" from response under "channel_id"
 
     And I sleep for "1"
 
@@ -179,3 +180,15 @@ Scenario: Execute get-key service through HTTP channel
     When the URL is invoked
 
     Then JSON Pointer "/response/value" is "#set_key_value"
+
+Scenario: Delete get-key channel
+
+    Given address "@test_server"
+    Given URL path "/zato/json/zato.http-soap.delete"
+    Given format "JSON"
+    Given JSON Pointer "/id" in request is "#channel_id"
+
+    When the URL is invoked
+
+    Then status is "200"
+    And JSON Pointer "/zato_env/result" is "ZATO_OK"
