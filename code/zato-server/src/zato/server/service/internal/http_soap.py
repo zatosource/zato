@@ -165,7 +165,7 @@ class Create(_CreateEdit):
                 item.is_active = input.is_active
                 item.host = input.host
                 item.url_path = input.url_path
-                item.security_id = input.security_id
+                item.security_id = input.security_id or None # So SQLite doesn't reject ''
                 item.method = input.method
                 item.soap_action = input.soap_action
                 item.soap_version = input.soap_version
@@ -178,7 +178,7 @@ class Create(_CreateEdit):
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
-                item.has_rbac = input.get('has_rbac', False)
+                item.has_rbac = input.get('has_rbac') or False
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
@@ -274,7 +274,7 @@ class Edit(_CreateEdit):
                 item.is_active = input.is_active
                 item.host = input.host
                 item.url_path = input.url_path
-                item.security_id = input.security_id
+                item.security_id = input.security_id or None # So SQLite doesn't reject ''
                 item.connection = input.connection
                 item.transport = input.transport
                 item.cluster_id = input.cluster_id
@@ -290,7 +290,7 @@ class Edit(_CreateEdit):
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
-                item.has_rbac = input.get('has_rbac', False)
+                item.has_rbac = input.get('has_rbac') or False
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
