@@ -85,7 +85,7 @@ def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
 
 common_logging_conf_contents = """
 loggers:
-    root:
+    '':
         level: INFO
         handlers: [stdout, default]
     zato:
