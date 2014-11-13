@@ -1,0 +1,8 @@
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+   <soapenv:Body>
+      <howdy>Friend</howdy>
+      <hello>Howdy</hello>
+      <world>All good?</world>
+      <and-beyond>Sweet</and-beyond>
+   </soapenv:Body>
+</soapenv:Envelope>
