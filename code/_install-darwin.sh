@@ -24,6 +24,7 @@ pip install virtualenv==1.9.1
 
 pip install nose
 pip install zdaemon
+pip install zato-apitest
 
 brew tap samueljohn/python
 brew tap homebrew/science
