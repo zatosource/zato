@@ -213,6 +213,11 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
+    sentry:
+        formatter: default
+        class: raven.handlers.logging.SentryHandler
+        level: WARN
+        dsn: gevent+https://public-key:public-key@sentry.example.com/project-id
 
 formatters:
     default:
