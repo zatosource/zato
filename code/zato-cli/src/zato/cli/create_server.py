@@ -157,6 +157,11 @@ ignore_errors=
 log_file=
 log_level=
 
+[sentry]
+dsn=
+timeout=5
+level=WARN
+
 [rbac]
 custom_auth_list_service=
 """.encode('utf-8')
