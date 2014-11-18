@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import copy, errno, gc, inspect, json, linecache, logging, os, random, re, signal, string, threading, sys
+import copy, errno, gc, inspect, json, linecache, logging, os, random, re, signal, string, threading, traceback, sys
 from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
@@ -813,6 +813,21 @@ def dump_stacks(*ignored):
 
     table.add_rows(rows)
     logger.info('\n' + table.draw())
+
+# Taken from https://stackoverflow.com/a/16589622
+def get_full_stack():
+    exc = sys.exc_info()[0]
+    stack = traceback.extract_stack()[:-1]  # last one would be full_stack()
+    if not exc is None:  # i.e. if an exception is present
+        del stack[-1]       # remove call of full_stack, the printed exception
+                            # will contain the caught exception caller instead
+    trc = 'Traceback (most recent call last):\n'
+    stackstr = trc + ''.join(traceback.format_list(stack))
+
+    if not exc is None:
+        stackstr += '  ' + traceback.format_exc().lstrip(trc)
+
+    return stackstr
 
 def register_diag_handlers():
     """ Registers diagnostic handlers dumping stacks, threads and greenlets on receiving a signal.

@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json, shutil
+import json, shutil, traceback
 from cStringIO import StringIO
 from getpass import getpass, getuser
 from socket import gethostname
@@ -27,6 +27,7 @@ from zato import common
 from zato.cli import util as cli_util
 from zato.common import odb, util, ZATO_INFO_FILE
 from zato.common.odb import util as odb_util
+from zato.common.util import get_full_stack
 
 ################################################################################
 
@@ -296,6 +297,7 @@ class ZatoCommand(object):
         CONFLICTING_OPTIONS = 13
         NO_OPTIONS = 14
         INVALID_INPUT = 15
+        EXCEPTION_CAUGHT = 16
         
     class COMPONENTS(object):
         class _ComponentName(object):
@@ -432,44 +434,48 @@ class ZatoCommand(object):
         """ Parses the command line or the args passed in and figures out
         whether the user wishes to use a config file or command line switches.
         """
-        # Do we need to have a clean directory to work in?
-        if self.needs_empty_dir:
-            work_dir = os.path.abspath(args.path)
-            for elem in os.listdir(work_dir):
-                if elem.startswith('zato') and elem.endswith('config'):
-                    # This is a zato.{}.config file. The had been written there
-                    # before we got to this point and it's OK to skip it.
-                    continue
-                else:
-                    msg = ('Directory {} is not empty, please re-run the command ' + # noqa
-                          'in an empty directory').format(work_dir) # noqa
+        try:
+            # Do we need to have a clean directory to work in?
+            if self.needs_empty_dir:
+                work_dir = os.path.abspath(args.path)
+                for elem in os.listdir(work_dir):
+                    if elem.startswith('zato') and elem.endswith('config'):
+                        # This is a zato.{}.config file. The had been written there
+                        # before we got to this point and it's OK to skip it.
+                        continue
+                    else:
+                        msg = ('Directory {} is not empty, please re-run the command ' + # noqa
+                              'in an empty directory').format(work_dir) # noqa
+                        self.logger.info(msg)
+                        sys.exit(self.SYS_ERROR.DIR_NOT_EMPTY) # noqa
+
+            # Do we need the directory to contain any specific files?
+            if self.file_needed:
+                full_path = os.path.join(args.path, self.file_needed)
+                if not os.path.exists(full_path):
+                    msg = 'Could not find file {}'.format(full_path)
                     self.logger.info(msg)
-                    sys.exit(self.SYS_ERROR.DIR_NOT_EMPTY) # noqa
+                    sys.exit(self.SYS_ERROR.FILE_MISSING) # noqa
 
-        # Do we need the directory to contain any specific files?
-        if self.file_needed:
-            full_path = os.path.join(args.path, self.file_needed)
-            if not os.path.exists(full_path):
-                msg = 'Could not find file {}'.format(full_path)
-                self.logger.info(msg)
-                sys.exit(self.SYS_ERROR.FILE_MISSING) # noqa
-        
-        check_password = []
-        for opt_dict in self.opts:
-            name = opt_dict['name']
-            if 'password' in name or 'secret' in name:
+            check_password = []
+            for opt_dict in self.opts:
+                name = opt_dict['name']
+                if 'password' in name or 'secret' in name:
 
-                # Don't required password on SQLite
-                if 'odb' in name and args.odb_type == 'sqlite':
-                    continue
+                    # Don't required password on SQLite
+                    if 'odb' in name and args.odb_type == 'sqlite':
+                        continue
 
-                check_password.append((name, opt_dict['help']))
-        
-        if check_password:
-            args = self._check_passwords(args, check_password)
+                    check_password.append((name, opt_dict['help']))
 
-        self.before_execute(args)
-        sys.exit(self.execute(args)) # noqa
+            if check_password:
+                args = self._check_passwords(args, check_password)
+
+            self.before_execute(args)
+            sys.exit(self.execute(args)) # noqa
+        except Exception, e:
+            self.logger.error(get_full_stack())
+            sys.exit(self.SYS_ERROR.EXCEPTION_CAUGHT)
 
     def before_execute(self, args):
         """ A hooks that lets commands customize their input before they are actually executed.
