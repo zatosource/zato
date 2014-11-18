@@ -201,6 +201,30 @@ def run(base_dir, start_gunicorn_app=True):
     # New in 2.0 so it's optional.
     profiler_enabled = config.get('profiler', {}).get('enabled', False)
 
+    # New in 2.0 so it's optional.
+    sentry_config = config.get('sentry')
+
+    dsn = sentry_config.pop('dsn', None)
+    if dsn:
+
+        from raven import Client
+        from raven.conf import setup_logging
+        from raven.handlers.logging import SentryHandler
+
+        handler_level = sentry_config.pop('level')
+        client = Client(dsn, **sentry_config)
+
+        handler = SentryHandler(client=client)
+        handler.setLevel(getattr(logging, handler_level))
+
+        logger = logging.getLogger('')
+        logger.addHandler(handler)
+
+        for name in logging.Logger.manager.loggerDict:
+            if name.startswith('zato'):
+                logger = logging.getLogger(name)
+                logger.addHandler(handler)
+
     if asbool(profiler_enabled):
         profiler_dir = os.path.abspath(os.path.join(base_dir, config.profiler.profiler_dir))
         parallel_server.on_wsgi_request = ProfileMiddleware(
