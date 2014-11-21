@@ -200,6 +200,10 @@ class Migrate(ManageCommand):
     def migrate_from_1_1_to_2_0_server(self):
         self._migrate_from_1_1_to_2_0_logging()
         self._migrate_from_1_1_to_2_0_server_conf()
+        #self._migrate_from_1_1_to_2_0_lua()
+        #self._migrate_from_1_1_to_2_0_static()
+        #self._migrate_from_1_1_to_2_0_tls()
+        #self._migrate_from_1_1_to_2_0_user_conf()
 
     def migrate_from_1_1_to_2_0_web_admin(self):
         self._migrate_from_1_1_to_2_0_logging()
