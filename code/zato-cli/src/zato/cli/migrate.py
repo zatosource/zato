@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json, os, sys
 from ast import literal_eval
 from ConfigParser import ConfigParser
+from cStringIO import StringIO
 from datetime import datetime
 
 # Bunch
@@ -19,17 +20,18 @@ from bunch import bunchify
 
 # Zato
 from zato.cli import common_logging_conf_contents, ManageCommand
+from zato.cli.create_server import server_conf_template
 from zato.common import version as zato_version, ZATO_INFO_FILE
 from zato.common.util import get_zato_command
 
 zato_version_number_full = zato_version.replace('Zato ', '')
-zato_version_number = zato_version_number_full[:5]
+zato_version_number = zato_version_number_full[:3]
 
 # ################################################################################################################################
 
 # From -> To
 MIGRATION_PATHS = {
-    '1.1': '2.0.0'
+    '1.1': '2.0'
 }
 
 # ################################################################################################################################
@@ -79,22 +81,20 @@ class Migrate(ManageCommand):
     def _ensure_proper_version(self, component_version):
         """ We can only migrate one version at a time, i.e. from 1.1 to 2.0.
         """
-        _component_version = component_version.replace('Zato ', '')[:5]
+        _component_version = component_version.replace('Zato ', '')[:3]
 
         next_version = MIGRATION_PATHS.get(_component_version)
         if not next_version:
-            print(1)
             self._exit_invalid_version(component_version, zato_version)
 
         if next_version != zato_version_number:
-            print(2, next_version, zato_version_number)
             self._exit_invalid_version(component_version, zato_version)
 
         return _component_version
 
 # ################################################################################################################################
 
-    def _migrate_from_1_1_to_2_0_0_logging(self):
+    def _migrate_from_1_1_to_2_0_logging(self):
         logging_conf_path = os.path.join(self.component_dir, 'config', 'repo', 'logging.conf')
 
         cp = ConfigParser()
@@ -106,14 +106,106 @@ class Migrate(ManageCommand):
         logging_conf = common_logging_conf_contents.format(log_path=log_path)
         open(logging_conf_path, 'w').write(logging_conf)
 
-    def migrate_from_1_1_to_2_0_0_server(self):
-        self._migrate_from_1_1_to_2_0_0_logging()
+    def _migrate_from_1_1_to_2_0_server_conf(self):
 
-    def migrate_from_1_1_to_2_0_0_web_admin(self):
-        self._migrate_from_1_1_to_2_0_0_logging()
+        def update_main(section):
+            gunicorn_workers = int(section['gunicorn_workers'])
+            if gunicorn_workers >= 3:
+                section['gunicorn_workers'] = 2
 
-    def migrate_from_1_1_to_2_0_0_load_balancer(self):
-        self._migrate_from_1_1_to_2_0_0_logging()
+        def update_crypto(section):
+            section['use_tls'] = False
+            section['tls_protocol'] = 'TLSv1'
+            section['tls_ciphers'] = 'AES256'
+            section['tls_client_certs'] = 'optional'
+
+        def update_odb(section):
+            section['use_async_driver'] = True
+            if section['engine'] == 'postgresql':
+                section['engine'] = 'postgresql+pg8000'
+
+        def update_hot_deploy(section):
+            section['delete_after_pick_up'] = True
+
+        def update_singleton(section):
+            if section['initial_sleep_time'] == '500':
+                section['initial_sleep_time'] = 2500
+
+        def update_misc(section):
+            section['return_internal_objects'] = False
+            section['delivery_lock_timeout'] = 2
+            section['queue_build_cap'] = 30
+            section['http_proxy'] = ''
+            section['locale'] = ''
+            section['ensure_sql_connections_exist'] = True
+            section['http_server_header'] = 'Zato'
+
+        def update_kvdb(section):
+            section['use_redis_sentinels'] = False
+            section['redis_sentinels'] = ''
+            section['redis_sentinels_master'] = ''
+            section['shadow_password_in_logs'] = True
+            section['log_connection_info_sleep_time'] = 5
+
+        update_handlers = {
+            'main': update_main,
+            'crypto': update_crypto,
+            'odb': update_odb,
+            'hot_deploy': update_hot_deploy,
+            'singleton': update_singleton,
+            'misc': update_misc,
+            'kvdb': update_kvdb,
+        }
+
+        # Order of sections in 2.0
+        all_sections_2_0 = ('main', 'crypto', 'odb', 'hot_deploy', 'singleton', 'spring', 'misc', 'stats', 'kvdb', \
+            'startup_services_first_worker', 'startup_services_any_worker', 'pubsub', 'patterns',
+            'profiler', 'user_config', 'newrelic', 'sentry', 'rbac')
+
+        buff = StringIO(server_conf_template)
+
+        ref_cp = ConfigParser()
+        ref_cp.readfp(buff)
+        buff.close()
+
+        server_conf_path = os.path.join(self.component_dir, 'config', 'repo', 'server.conf')
+
+        old_config = ConfigParser()
+        old_config.read(server_conf_path)
+
+        new_config = {}
+
+        # Update sections already existing in 1.1
+        for section in old_config.sections():
+            section_dict = dict(old_config.items(section))
+            if section in update_handlers:
+                update_handlers[section](section_dict)
+            new_config[section] = section_dict
+
+        # Sections new to 2.0
+        for name in ('stats', 'startup_services_first_worker', 'startup_services_any_worker', 'pubsub', 'patterns', \
+                    'profiler', 'user_config', 'newrelic', 'sentry', 'rbac'):
+            new_config[name] = dict(ref_cp.items(name))
+
+        new_cp = ConfigParser()
+        for section in all_sections_2_0:
+            new_cp.add_section(section)
+            for key, value in new_config[section].items():
+                new_cp.set(section, key, value)
+
+        server_conf = open(server_conf_path, 'w')
+        new_cp.write(server_conf)
+        server_conf.close()
+
+    def migrate_from_1_1_to_2_0_server(self):
+        self._migrate_from_1_1_to_2_0_logging()
+        self._migrate_from_1_1_to_2_0_server_conf()
+
+    def migrate_from_1_1_to_2_0_web_admin(self):
+        self._migrate_from_1_1_to_2_0_logging()
+
+    def migrate_from_1_1_to_2_0_load_balancer(self):
+        self._migrate_from_1_1_to_2_0_logging()
 
 # ################################################################################################################################
 
