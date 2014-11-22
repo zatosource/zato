@@ -8,9 +8,11 @@ Feature: kvdb.data.dict.dictionary.delete
 
     Scenario: Create data dictionary test entry in a cluster's KVDB
 
-        Given address "@test_server"
+        Given address "$ZATO_API_TEST_SERVER"
+        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
         Given URL path "/zato/json/zato.kvdb.data-dict.dictionary.create"
-        Given Basic Auth "@pubapi_user" "@pubapi_password"
+
         Given format "JSON"
         Given request is "{}"
         Given JSON Pointer "/system" in request is "#test_system"
@@ -24,7 +26,9 @@ Feature: kvdb.data.dict.dictionary.delete
 
     Scenario: Invoke get-last-id to check if test dictionary entry actually exists
 
-        Given address "@test_server"
+        Given address "$ZATO_API_TEST_SERVER"
+        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
         Given URL path "/zato/json/zato.kvdb.data-dict.dictionary.get-last-id"
         Given format "JSON"
 
@@ -35,7 +39,9 @@ Feature: kvdb.data.dict.dictionary.delete
 
     Scenario: Delete test dictionary entry
 
-        Given address "@test_server"
+        Given address "$ZATO_API_TEST_SERVER"
+        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
         Given URL path "/zato/json/zato.kvdb.data-dict.dictionary.delete"
         Given format "JSON"
         Given request is "{}"
