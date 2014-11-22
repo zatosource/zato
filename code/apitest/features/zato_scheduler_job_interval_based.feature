@@ -2,10 +2,10 @@ Feature: scheduler.job.interval_based.type
 
 Scenario: Log in to Zato Public API and create a job
 
-    Given address "@test_server"
-    Given URL path "/zato/json/zato.scheduler.job.create"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-    Given Basic Auth "@pubapi_user" "@pubapi_password"
+    Given URL path "/zato/json/zato.scheduler.job.create"
 
     Given format "JSON"
     Given request is "{}"
@@ -32,7 +32,9 @@ Scenario: Log in to Zato Public API and create a job
 
 Scenario: Get the job by name
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.get-by-name"
 
     Given format "JSON"
@@ -51,7 +53,9 @@ Scenario: Get the job by name
 
 Scenario: Get list of jobs and check if the created job is part of it
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.get-list"
 
     Given format "JSON"
@@ -68,7 +72,9 @@ Scenario: Get list of jobs and check if the created job is part of it
 
 Scenario: Edit the job
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.edit"
 
     Given format "JSON"
@@ -93,7 +99,9 @@ Scenario: Edit the job
 
 Scenario: Execute the edited job
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.execute"
 
     Given format "JSON"
@@ -107,7 +115,9 @@ Scenario: Execute the edited job
 
 Scenario: Delete the edited job
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.delete"
 
     Given format "JSON"
