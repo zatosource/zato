@@ -20,7 +20,7 @@ from bunch import bunchify
 
 # Zato
 from zato.cli import common_logging_conf_contents, ManageCommand
-from zato.cli.create_server import server_conf_template
+from zato.cli.create_server import lua_zato_rename_if_exists, server_conf_template, user_conf_contents
 from zato.common import version as zato_version, ZATO_INFO_FILE
 from zato.common.util import get_zato_command
 
@@ -197,13 +197,40 @@ class Migrate(ManageCommand):
         new_cp.write(server_conf)
         server_conf.close()
 
+    def _migrate_from_1_1_to_2_0_lua(self):
+        lua_internal_path = os.path.join(self.component_dir, 'config', 'repo', 'lua', 'internal')
+        lua_user_path = os.path.join(self.component_dir, 'config', 'repo', 'lua', 'user')
+
+        os.makedirs(lua_internal_path)
+        os.makedirs(lua_user_path)
+
+        rename_if_exists_path = os.path.join(lua_internal_path, 'zato.rename_if_exists.lua')
+        f = open(rename_if_exists_path, 'w')
+        f.write(lua_zato_rename_if_exists)
+        f.close()
+
+    def _migrate_from_1_1_to_2_0_static(self):
+        os.mkdir(os.path.join(self.component_dir, 'config', 'repo', 'static'))
+
+    def _migrate_from_1_1_to_2_0_tls(self):
+        tls_dir_path = os.path.join(self.component_dir, 'config', 'repo', 'tls')
+
+        os.mkdir(tls_dir_path)
+        os.mkdir(os.path.join(tls_dir_path, 'ca-certs'))
+        os.mkdir(os.path.join(tls_dir_path, 'keys-certs'))
+
+    def _migrate_from_1_1_to_2_0_user_conf(self):
+        f = open(os.path.join(self.component_dir, 'config', 'repo', 'user.conf'), 'w')
+        f.write(user_conf_contents)
+        f.close()
+
     def migrate_from_1_1_to_2_0_server(self):
         self._migrate_from_1_1_to_2_0_logging()
         self._migrate_from_1_1_to_2_0_server_conf()
-        #self._migrate_from_1_1_to_2_0_lua()
-        #self._migrate_from_1_1_to_2_0_static()
-        #self._migrate_from_1_1_to_2_0_tls()
-        #self._migrate_from_1_1_to_2_0_user_conf()
+        self._migrate_from_1_1_to_2_0_lua()
+        self._migrate_from_1_1_to_2_0_static()
+        self._migrate_from_1_1_to_2_0_tls()
+        self._migrate_from_1_1_to_2_0_user_conf()
 
     def migrate_from_1_1_to_2_0_web_admin(self):
         self._migrate_from_1_1_to_2_0_logging()
