@@ -20,7 +20,7 @@ from zato.common.odb import model
 sa_url = context.config.get_section('alembic').get('sqlalchemy.url')
 engine = sa.create_engine(sa_url)
 
-pubapi_sec_id = list(engine.execute('SELECT id FROM sec_base WHERE name="pubapi"'))[0][0]
+pubapi_sec_id = list(engine.execute("SELECT id FROM sec_base WHERE name='pubapi'"))[0][0]
 cluster_id = list(engine.execute('SELECT id FROM cluster'))[0][0]
 
 diff = (
@@ -166,11 +166,11 @@ def get_soap_insert(name, service_id):
 
 def upgrade():
     for name, impl_name in diff:
-        service_id = list(engine.execute('SELECT id FROM service WHERE impl_name="{}"'.format(impl_name)))[0][0]
+        service_id = list(engine.execute("SELECT id FROM service WHERE impl_name='{}'".format(impl_name)))[0][0]
 
         insert = (get_json_insert if 'json' in name else get_soap_insert)(name, service_id)
         engine.execute(insert)
 
 def downgrade():
     for name, _ in diff:
-        engine.execute('DELETE FROM http_soap WHERE name="{}"'.format(name))
+        engine.execute("DELETE FROM http_soap WHERE name='{}'".format(name))
