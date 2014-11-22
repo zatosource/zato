@@ -10,7 +10,7 @@ Scenario: Log in to Zato Public API and create a job
     Given format "JSON"
     Given request is "{}"
 
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is a random string
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/job_type" in request is "interval_based"
@@ -39,7 +39,7 @@ Scenario: Get the job by name
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is "#job_name"
     Given I store "request" under "request"
 
@@ -60,7 +60,7 @@ Scenario: Get list of jobs and check if the created job is part of it
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
 
     When the URL is invoked
 
@@ -80,7 +80,7 @@ Scenario: Edit the job
     Given format "JSON"
     Given request is "{}"
     Given JSON Pointer "/id" in request is "#job_id"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is a random string
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/job_type" in request is "interval_based"
