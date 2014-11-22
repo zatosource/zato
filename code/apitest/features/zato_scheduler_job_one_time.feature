@@ -13,7 +13,7 @@ Scenario: Log in to Zato Public API and upload custom set-key service
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/payload" in request is "@set_key_service_payload"
     Given JSON Pointer "/payload_name" in request is "set_key.py"
 
@@ -33,7 +33,7 @@ Scenario: Upload custom get-key service
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/payload" in request is "@get_key_service_payload"
     Given JSON Pointer "/payload_name" in request is "get_key.py"
 
@@ -52,7 +52,7 @@ Scenario: Create a job for newly uploaded custom set-key service
     Given format "JSON"
     Given request is "{}"
 
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is a random string
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/job_type" in request is "one_time"
@@ -82,7 +82,7 @@ Scenario: Get the set-key job by name
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is "#set_key_job_name"
 
     When the URL is invoked
@@ -103,7 +103,7 @@ Scenario: Edit the set-key job
     Given format "JSON"
     Given request is "{}"
     Given JSON Pointer "/id" in request is "#set_key_job_id"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is a random string
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/job_type" in request is "one_time"
@@ -165,7 +165,7 @@ Scenario: Create HTTP channel for get-key service to be executed through
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is a random string
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/connection" in request is "channel"
