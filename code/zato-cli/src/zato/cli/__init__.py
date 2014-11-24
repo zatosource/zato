@@ -250,6 +250,7 @@ def run_command(args):
         ('enmasse', 'zato.cli.enmasse.EnMasse'),
         ('from_config', 'zato.cli.FromConfig'),
         ('info', 'zato.cli.info.Info'),
+        ('migrate', 'zato.cli.migrate.Migrate'),
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('service_invoke', 'zato.cli.service.Invoke'),
         ('start', 'zato.cli.start.Start'),
@@ -298,6 +299,7 @@ class ZatoCommand(object):
         NO_OPTIONS = 14
         INVALID_INPUT = 15
         EXCEPTION_CAUGHT = 16
+        CANNOT_MIGRATE = 17
         
     class COMPONENTS(object):
         class _ComponentName(object):
