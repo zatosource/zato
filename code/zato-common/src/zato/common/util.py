@@ -101,10 +101,10 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
 from zato.agent.load_balancer.client import LoadBalancerAgentClient
-from zato.common import DATA_FORMAT, KVDB, MISC, NoDistributionFound, SECRET_SHADOW, soap_body_path, soap_body_xpath, \
+from zato.common import DATA_FORMAT, KVDB, MISC, NoDistributionFound, SECRET_SHADOW, SIMPLE_IO, soap_body_path, soap_body_xpath, \
      TLS, TRACE1, ZatoException
 from zato.common.crypto import CryptoManager
-from zato.common.odb.model import IntervalBasedJob, Job, Service
+from zato.common.odb.model import HTTPSOAP, IntervalBasedJob, Job, Service
 from zato.common.odb.query import _service as _service
 
 logger = logging.getLogger(__name__)
@@ -1093,3 +1093,13 @@ def parse_tls_channel_security_definition(value):
             raise ValueError('Value missing in line `{}`'.format(line))
 
         yield 'HTTP_X_ZATO_TLS_{}'.format(key.upper()), value
+
+# ################################################################################################################################
+
+def get_http_json_channel(name, service, cluster, security):
+    return HTTPSOAP(None, '{}.json'.format(name), True, True, 'channel', 'plain_http', None, '/zato/json/{}'.format(name),
+        None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=security)
+
+def get_http_soap_channel(name, service, cluster, security):
+    return HTTPSOAP(None, name, True, True, 'channel', 'soap', None, '/zato/soap', None, name, '1.1',
+        SIMPLE_IO.FORMAT.XML, service=service, cluster=cluster, security=security)
