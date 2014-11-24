@@ -21,6 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
 from zato.common import SIMPLE_IO
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, RBACPermission, RBACRole, Service, WSSDefinition
+from zato.common.util import get_http_json_channel, get_http_soap_channel
 
 zato_services = {
 
@@ -313,9 +314,9 @@ zato_services = {
     'zato.security.rbac.role.get-list':'zato.server.service.internal.security.rbac.role.get-list',
 
     # Security - RBAC - Client roles
-    'zato.security.rbac.client_role.create':'zato.server.service.internal.security.rbac.client_role.Create',
-    'zato.security.rbac.client_role.delete':'zato.server.service.internal.security.rbac.client_role.Delete',
-    'zato.security.rbac.client_role.get-list':'zato.server.service.internal.security.rbac.client_role.get-list',
+    'zato.security.rbac.client-role.create':'zato.server.service.internal.security.rbac.client_role.Create',
+    'zato.security.rbac.client-role.delete':'zato.server.service.internal.security.rbac.client_role.Delete',
+    'zato.security.rbac.client-role.get-list':'zato.server.service.internal.security.rbac.client_role.get-list',
 
     # Security - RBAC - Permissions
     'zato.security.rbac.permission.create':'zato.server.service.internal.security.rbac.permission.Create',
@@ -324,9 +325,9 @@ zato_services = {
     'zato.security.rbac.permission.get-list':'zato.server.service.internal.security.rbac.permission.get-list',
 
     # Security - RBAC - Permissions for roles
-    'zato.security.rbac.role_permission.create':'zato.server.service.internal.security.rbac.role_permission.Create',
-    'zato.security.rbac.role_permission.delete':'zato.server.service.internal.security.rbac.role_permission.Delete',
-    'zato.security.rbac.role_permission.get-list':'zato.server.service.internal.security.rbac.role_permission.get-list',
+    'zato.security.rbac.role-permission.create':'zato.server.service.internal.security.rbac.role_permission.Create',
+    'zato.security.rbac.role-permission.delete':'zato.server.service.internal.security.rbac.role_permission.Delete',
+    'zato.security.rbac.role-permission.get-list':'zato.server.service.internal.security.rbac.role_permission.get-list',
 
     # Security - Technical accounts
     'zato.security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',
@@ -484,17 +485,8 @@ class Create(ZatoCommand):
             elif name == 'zato.pubsub.rest-handler':
                 self.add_pubsub_rest_handler(session, cluster, service)
 
-            zato_soap = HTTPSOAP(
-                None, name, True, True, 'channel',
-                'soap', None, '/zato/soap', None, name, '1.1',
-                SIMPLE_IO.FORMAT.XML, service=service, cluster=cluster, security=pubapi_sec)
-            session.add(zato_soap)
-
-            json_url_path = '/zato/json/{}'.format(name)
-            json_http = HTTPSOAP(
-                None, '{}.json'.format(name), True, True, 'channel', 'plain_http',
-                None, json_url_path, None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=pubapi_sec)
-            session.add(json_http)
+            session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))
+            session.add(get_http_json_channel(name, service, cluster, pubapi_sec))
 
     def add_ping_services(self, session, cluster):
         """ Adds a ping service and channels, with and without security checks.

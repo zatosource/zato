@@ -205,6 +205,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         The first worker to be started will also start a singleton thread later on,
         outside this method but basing on whether the method returns True or not.
         """
+
         def import_initial_services_jobs():
             # (re-)deploy the services from a clear state
             self.service_store.import_services_from_anywhere(
@@ -213,6 +214,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
             # Add the statistics-related scheduler jobs to the ODB
             add_startup_jobs(self.cluster_id, self.odb, self.startup_jobs)
+
+            # Migrations
+            self.odb.add_channels_2_0()
 
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
