@@ -451,8 +451,8 @@ class MISC:
     SEPARATOR = ':::'
 
 class ADAPTER_PARAMS:
-    APPLY_BEFORE_REQUST = 'apply-before-request'
     APPLY_AFTER_REQUEST = 'apply-after-request'
+    APPLY_BEFORE_REQUEST = 'apply-before-request'
 
 class AUDIT_LOG:
     REPLACE_WITH = SECRET_SHADOW
