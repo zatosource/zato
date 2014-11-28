@@ -25,7 +25,7 @@ from zato.common import DEPLOYMENT_STATUS, MISC, SEC_DEF_TYPE, TRACE1, ZATO_NONE
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition
 from zato.common.odb import query
-from zato.common.util import current_host, parse_tls_channel_security_definition
+from zato.common.util import current_host, get_http_json_channel, get_http_soap_channel, parse_tls_channel_security_definition
 from zato.server.connection.sql import SessionWrapper
 
 logger = logging.getLogger(__name__)
@@ -375,6 +375,149 @@ class ODBManager(SessionWrapper):
         #    dp = DeliveryPayload
         #    session.add(dp)
         #    session.commit()
+
+    def add_channels_2_0(self):
+        """ Adds channels new in 2.0 - cannot be added to Alembic migrations because they need access
+        to already deployed services.
+        """
+        # Difference between 1.1 and 2.0.
+        diff = (
+            ('zato.cloud.aws.s3.create', 'zato.server.service.internal.cloud.aws.s3.Create'),
+            ('zato.cloud.aws.s3.create.json', 'zato.server.service.internal.cloud.aws.s3.Create'),
+            ('zato.cloud.aws.s3.delete', 'zato.server.service.internal.cloud.aws.s3.Delete'),
+            ('zato.cloud.aws.s3.delete.json', 'zato.server.service.internal.cloud.aws.s3.Delete'),
+            ('zato.cloud.aws.s3.edit', 'zato.server.service.internal.cloud.aws.s3.Edit'),
+            ('zato.cloud.aws.s3.edit.json', 'zato.server.service.internal.cloud.aws.s3.Edit'),
+            ('zato.cloud.aws.s3.get-list', 'zato.server.service.internal.cloud.aws.s3.GetList'),
+            ('zato.cloud.aws.s3.get-list.json', 'zato.server.service.internal.cloud.aws.s3.GetList'),
+            ('zato.cloud.openstack.swift.create', 'zato.server.service.internal.cloud.openstack.swift.Create'),
+            ('zato.cloud.openstack.swift.create.json', 'zato.server.service.internal.cloud.openstack.swift.Create'),
+            ('zato.cloud.openstack.swift.delete', 'zato.server.service.internal.cloud.openstack.swift.Delete'),
+            ('zato.cloud.openstack.swift.delete.json', 'zato.server.service.internal.cloud.openstack.swift.Delete'),
+            ('zato.cloud.openstack.swift.edit', 'zato.server.service.internal.cloud.openstack.swift.Edit'),
+            ('zato.cloud.openstack.swift.edit.json', 'zato.server.service.internal.cloud.openstack.swift.Edit'),
+            ('zato.cloud.openstack.swift.get-list', 'zato.server.service.internal.cloud.openstack.swift.GetList'),
+            ('zato.cloud.openstack.swift.get-list.json', 'zato.server.service.internal.cloud.openstack.swift.GetList'),
+            ('zato.definition.cassandra.create', 'zato.server.service.internal.definition.cassandra.Create'),
+            ('zato.definition.cassandra.create.json', 'zato.server.service.internal.definition.cassandra.Create'),
+            ('zato.definition.cassandra.delete', 'zato.server.service.internal.definition.cassandra.Delete'),
+            ('zato.definition.cassandra.delete.json', 'zato.server.service.internal.definition.cassandra.Delete'),
+            ('zato.definition.cassandra.edit', 'zato.server.service.internal.definition.cassandra.Edit'),
+            ('zato.definition.cassandra.edit.json', 'zato.server.service.internal.definition.cassandra.Edit'),
+            ('zato.definition.cassandra.get-by-id', 'zato.server.service.internal.definition.cassandra.GetByID'),
+            ('zato.definition.cassandra.get-by-id.json', 'zato.server.service.internal.definition.cassandra.GetByID'),
+            ('zato.definition.cassandra.get-list', 'zato.server.service.internal.definition.cassandra.GetList'),
+            ('zato.definition.cassandra.get-list.json', 'zato.server.service.internal.definition.cassandra.GetList'),
+            ('zato.info.get-info', 'zato.server.service.internal.info.GetInfo'),
+            ('zato.info.get-info.json', 'zato.server.service.internal.info.GetInfo'),
+            ('zato.info.get-server-info', 'zato.server.service.internal.info.GetServerInfo'),
+            ('zato.info.get-server-info.json', 'zato.server.service.internal.info.GetServerInfo'),
+            ('zato.security.apikey.change-password', 'zato.server.service.internal.security.apikey.ChangePassword'),
+            ('zato.security.apikey.change-password.json', 'zato.server.service.internal.security.apikey.ChangePassword'),
+            ('zato.security.apikey.create', 'zato.server.service.internal.security.apikey.Create'),
+            ('zato.security.apikey.create.json', 'zato.server.service.internal.security.apikey.Create'),
+            ('zato.security.apikey.delete', 'zato.server.service.internal.security.apikey.Delete'),
+            ('zato.security.apikey.delete.json', 'zato.server.service.internal.security.apikey.Delete'),
+            ('zato.security.apikey.edit', 'zato.server.service.internal.security.apikey.Edit'),
+            ('zato.security.apikey.edit.json', 'zato.server.service.internal.security.apikey.Edit'),
+            ('zato.security.apikey.get-list', 'zato.server.service.internal.security.apikey.GetList'),
+            ('zato.security.apikey.get-list.json', 'zato.server.service.internal.security.apikey.GetList'),
+            ('zato.security.aws.change-password', 'zato.server.service.internal.security.aws.ChangePassword'),
+            ('zato.security.aws.change-password.json', 'zato.server.service.internal.security.aws.ChangePassword'),
+            ('zato.security.aws.create', 'zato.server.service.internal.security.aws.Create'),
+            ('zato.security.aws.create.json', 'zato.server.service.internal.security.aws.Create'),
+            ('zato.security.aws.delete', 'zato.server.service.internal.security.aws.Delete'),
+            ('zato.security.aws.delete.json', 'zato.server.service.internal.security.aws.Delete'),
+            ('zato.security.aws.edit', 'zato.server.service.internal.security.aws.Edit'),
+            ('zato.security.aws.edit.json', 'zato.server.service.internal.security.aws.Edit'),
+            ('zato.security.aws.get-list', 'zato.server.service.internal.security.aws.GetList'),
+            ('zato.security.aws.get-list.json', 'zato.server.service.internal.security.aws.GetList'),
+            ('zato.security.ntlm.change-password', 'zato.server.service.internal.security.ntlm.ChangePassword'),
+            ('zato.security.ntlm.change-password.json', 'zato.server.service.internal.security.ntlm.ChangePassword'),
+            ('zato.security.ntlm.create', 'zato.server.service.internal.security.ntlm.Create'),
+            ('zato.security.ntlm.create.json', 'zato.server.service.internal.security.ntlm.Create'),
+            ('zato.security.ntlm.delete', 'zato.server.service.internal.security.ntlm.Delete'),
+            ('zato.security.ntlm.delete.json', 'zato.server.service.internal.security.ntlm.Delete'),
+            ('zato.security.ntlm.edit', 'zato.server.service.internal.security.ntlm.Edit'),
+            ('zato.security.ntlm.edit.json', 'zato.server.service.internal.security.ntlm.Edit'),
+            ('zato.security.ntlm.get-list', 'zato.server.service.internal.security.ntlm.GetList'),
+            ('zato.security.ntlm.get-list.json', 'zato.server.service.internal.security.ntlm.GetList'),
+            ('zato.security.openstack.change-password', 'zato.server.service.internal.security.openstack.ChangePassword'),
+            ('zato.security.openstack.change-password.json', 'zato.server.service.internal.security.openstack.ChangePassword'),
+            ('zato.security.openstack.create', 'zato.server.service.internal.security.openstack.Create'),
+            ('zato.security.openstack.create.json', 'zato.server.service.internal.security.openstack.Create'),
+            ('zato.security.openstack.delete', 'zato.server.service.internal.security.openstack.Delete'),
+            ('zato.security.openstack.delete.json', 'zato.server.service.internal.security.openstack.Delete'),
+            ('zato.security.openstack.get-list', 'zato.server.service.internal.security.openstack.GetList'),
+            ('zato.security.openstack.get-list.json', 'zato.server.service.internal.security.openstack.GetList'),
+            ('zato.security.rbac.client-role.create', 'zato.server.service.internal.security.rbac.client_role.Create'),
+            ('zato.security.rbac.client-role.create.json', 'zato.server.service.internal.security.rbac.client_role.Create'),
+            ('zato.security.rbac.client-role.delete', 'zato.server.service.internal.security.rbac.client_role.Delete'),
+            ('zato.security.rbac.client-role.delete.json', 'zato.server.service.internal.security.rbac.client_role.Delete'),
+            ('zato.security.rbac.client-role.get-list', 'zato.server.service.internal.security.rbac.client_role.get-list'),
+            ('zato.security.rbac.client-role.get-list.json', 'zato.server.service.internal.security.rbac.client_role.get-list'),
+            ('zato.security.rbac.permission.create', 'zato.server.service.internal.security.rbac.permission.Create'),
+            ('zato.security.rbac.permission.create.json', 'zato.server.service.internal.security.rbac.permission.Create'),
+            ('zato.security.rbac.permission.delete', 'zato.server.service.internal.security.rbac.permission.Delete'),
+            ('zato.security.rbac.permission.delete.json', 'zato.server.service.internal.security.rbac.permission.Delete'),
+            ('zato.security.rbac.permission.edit', 'zato.server.service.internal.security.rbac.permission.Edit'),
+            ('zato.security.rbac.permission.edit.json', 'zato.server.service.internal.security.rbac.permission.Edit'),
+            ('zato.security.rbac.permission.get-list', 'zato.server.service.internal.security.rbac.permission.get-list'),
+            ('zato.security.rbac.permission.get-list.json', 'zato.server.service.internal.security.rbac.permission.get-list'),
+            ('zato.security.rbac.role.create', 'zato.server.service.internal.security.rbac.role.Create'),
+            ('zato.security.rbac.role.create.json', 'zato.server.service.internal.security.rbac.role.Create'),
+            ('zato.security.rbac.role.delete', 'zato.server.service.internal.security.rbac.role.Delete'),
+            ('zato.security.rbac.role.delete.json', 'zato.server.service.internal.security.rbac.role.Delete'),
+            ('zato.security.rbac.role.edit', 'zato.server.service.internal.security.rbac.role.Edit'),
+            ('zato.security.rbac.role.edit.json', 'zato.server.service.internal.security.rbac.role.Edit'),
+            ('zato.security.rbac.role.get-list', 'zato.server.service.internal.security.rbac.role.get-list'),
+            ('zato.security.rbac.role.get-list.json', 'zato.server.service.internal.security.rbac.role.get-list'),
+            ('zato.security.rbac.role-permission.create', 'zato.server.service.internal.security.rbac.role_permission.Create'),
+            ('zato.security.rbac.role-permission.create.json', 'zato.server.service.internal.security.rbac.role_permission.Create'),
+            ('zato.security.rbac.role-permission.delete', 'zato.server.service.internal.security.rbac.role_permission.Delete'),
+            ('zato.security.rbac.role-permission.delete.json', 'zato.server.service.internal.security.rbac.role_permission.Delete'),
+            ('zato.security.rbac.role-permission.get-list', 'zato.server.service.internal.security.rbac.role_permission.get-list'),
+            ('zato.security.rbac.role-permission.get-list.json', 'zato.server.service.internal.security.rbac.role_permission.get-list'),
+            ('zato.security.xpath.change-password', 'zato.server.service.internal.security.xpath.ChangePassword'),
+            ('zato.security.xpath.change-password.json', 'zato.server.service.internal.security.xpath.ChangePassword'),
+            ('zato.security.xpath.create', 'zato.server.service.internal.security.xpath.Create'),
+            ('zato.security.xpath.create.json', 'zato.server.service.internal.security.xpath.Create'),
+            ('zato.security.xpath.delete', 'zato.server.service.internal.security.xpath.Delete'),
+            ('zato.security.xpath.delete.json', 'zato.server.service.internal.security.xpath.Delete'),
+            ('zato.security.xpath.edit', 'zato.server.service.internal.security.xpath.Edit'),
+            ('zato.security.xpath.edit.json', 'zato.server.service.internal.security.xpath.Edit'),
+            ('zato.security.xpath.get-list', 'zato.server.service.internal.security.xpath.GetList'),
+            ('zato.security.xpath.get-list.json', 'zato.server.service.internal.security.xpath.GetList'),
+        )
+
+        with closing(self.session()) as session:
+
+            cluster = session.query(Cluster).\
+                filter(Cluster.id==self.cluster.id).\
+                one()
+
+            pubapi_sec = session.query(HTTPBasicAuth).\
+                filter(HTTPBasicAuth.name=='pubapi').\
+                filter(HTTPBasicAuth.cluster_id==self.cluster.id).\
+                one()
+
+            for channel_name, impl_name in diff:
+
+                service = session.query(Service).\
+                    filter(Service.impl_name==impl_name).\
+                    filter(Service.cluster_id==self.cluster.id).\
+                    one()
+
+                channel = session.query(HTTPSOAP).\
+                    filter(HTTPSOAP.name==channel_name).\
+                    filter(HTTPSOAP.cluster_id==self.cluster.id).\
+                    first()
+
+                if not channel:
+                    func = get_http_json_channel if 'json' in channel_name else get_http_soap_channel
+                    session.add(func(channel_name.replace('.json', ''), service, cluster, pubapi_sec))
+
+            session.commit()
 
 # ################################################################################################################################
 
