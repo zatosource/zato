@@ -2,15 +2,15 @@ Feature: scheduler.job.interval_based.type
 
 Scenario: Log in to Zato Public API and create a job
 
-    Given address "@test_server"
-    Given URL path "/zato/json/zato.scheduler.job.create"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-    Given Basic Auth "@pubapi_user" "@pubapi_password"
+    Given URL path "/zato/json/zato.scheduler.job.create"
 
     Given format "JSON"
     Given request is "{}"
 
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is a random string
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/job_type" in request is "interval_based"
@@ -32,12 +32,14 @@ Scenario: Log in to Zato Public API and create a job
 
 Scenario: Get the job by name
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.get-by-name"
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is "#job_name"
     Given I store "request" under "request"
 
@@ -51,12 +53,14 @@ Scenario: Get the job by name
 
 Scenario: Get list of jobs and check if the created job is part of it
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.get-list"
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
 
     When the URL is invoked
 
@@ -68,13 +72,15 @@ Scenario: Get list of jobs and check if the created job is part of it
 
 Scenario: Edit the job
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.edit"
 
     Given format "JSON"
     Given request is "{}"
     Given JSON Pointer "/id" in request is "#job_id"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is a random string
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/job_type" in request is "interval_based"
@@ -93,7 +99,9 @@ Scenario: Edit the job
 
 Scenario: Execute the edited job
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.execute"
 
     Given format "JSON"
@@ -107,7 +115,9 @@ Scenario: Execute the edited job
 
 Scenario: Delete the edited job
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.delete"
 
     Given format "JSON"

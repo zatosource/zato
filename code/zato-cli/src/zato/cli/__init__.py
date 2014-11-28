@@ -250,6 +250,7 @@ def run_command(args):
         ('enmasse', 'zato.cli.enmasse.EnMasse'),
         ('from_config', 'zato.cli.FromConfig'),
         ('info', 'zato.cli.info.Info'),
+        ('migrate', 'zato.cli.migrate.Migrate'),
         ('quickstart_create', 'zato.cli.quickstart.Create'),
         ('service_invoke', 'zato.cli.service.Invoke'),
         ('start', 'zato.cli.start.Start'),
@@ -298,6 +299,7 @@ class ZatoCommand(object):
         NO_OPTIONS = 14
         INVALID_INPUT = 15
         EXCEPTION_CAUGHT = 16
+        CANNOT_MIGRATE = 17
         
     class COMPONENTS(object):
         class _ComponentName(object):
@@ -468,10 +470,10 @@ class ZatoCommand(object):
 
                     check_password.append((name, opt_dict['help']))
 
-            if check_password:
-                args = self._check_passwords(args, check_password)
-
             self.before_execute(args)
+
+            if check_password and self.is_password_required():
+                args = self._check_passwords(args, check_password)
 
             # GH #328 - zato create web_admin treats boolean admin_created as an exit code
             # https://github.com/zatosource/zato/issues/328
@@ -483,8 +485,12 @@ class ZatoCommand(object):
                 sys.exit(0)
 
         except Exception, e:
+            self.reset_logger(self.args)
             self.logger.error(get_full_stack())
             sys.exit(self.SYS_ERROR.EXCEPTION_CAUGHT)
+
+    def is_password_required(self):
+        return True
 
     def before_execute(self, args):
         """ A hooks that lets commands customize their input before they are actually executed.

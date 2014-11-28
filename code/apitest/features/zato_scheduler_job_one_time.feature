@@ -6,14 +6,14 @@ Scenario: Set up
 
 Scenario: Log in to Zato Public API and upload custom set-key service
 
-    Given address "@test_server"
-    Given URL path "/zato/json/zato.service.upload-package"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-    Given Basic Auth "@pubapi_user" "@pubapi_password"
+    Given URL path "/zato/json/zato.service.upload-package"
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/payload" in request is "@set_key_service_payload"
     Given JSON Pointer "/payload_name" in request is "set_key.py"
 
@@ -26,12 +26,14 @@ Scenario: Log in to Zato Public API and upload custom set-key service
 
 Scenario: Upload custom get-key service
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.service.upload-package"
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/payload" in request is "@get_key_service_payload"
     Given JSON Pointer "/payload_name" in request is "get_key.py"
 
@@ -42,13 +44,15 @@ Scenario: Upload custom get-key service
 
 Scenario: Create a job for newly uploaded custom set-key service
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.create"
 
     Given format "JSON"
     Given request is "{}"
 
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is a random string
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/job_type" in request is "one_time"
@@ -71,12 +75,14 @@ Scenario: Create a job for newly uploaded custom set-key service
 
 Scenario: Get the set-key job by name
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.get-by-name"
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is "#set_key_job_name"
 
     When the URL is invoked
@@ -89,13 +95,15 @@ Scenario: Get the set-key job by name
 
 Scenario: Edit the set-key job
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.edit"
 
     Given format "JSON"
     Given request is "{}"
     Given JSON Pointer "/id" in request is "#set_key_job_id"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is a random string
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/job_type" in request is "one_time"
@@ -116,7 +124,9 @@ Scenario: Edit the set-key job
 
 Scenario: Execute the edited set-key job
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.execute"
 
     Given format "JSON"
@@ -132,7 +142,9 @@ Scenario: Execute the edited set-key job
 
 Scenario: Delete the edited set-key job
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.scheduler.job.delete"
 
     Given format "JSON"
@@ -146,12 +158,14 @@ Scenario: Delete the edited set-key job
 
 Scenario: Create HTTP channel for get-key service to be executed through
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.http-soap.create"
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "@cluster_id"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
     Given JSON Pointer "/name" in request is a random string
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/connection" in request is "channel"
@@ -173,7 +187,9 @@ Scenario: Create HTTP channel for get-key service to be executed through
 
 Scenario: Execute get-key service through HTTP channel
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/my-service/get-key.get-key"
     Given format "JSON"
 
@@ -183,7 +199,9 @@ Scenario: Execute get-key service through HTTP channel
 
 Scenario: Delete get-key channel
 
-    Given address "@test_server"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
     Given URL path "/zato/json/zato.http-soap.delete"
     Given format "JSON"
     Given JSON Pointer "/id" in request is "#channel_id"
