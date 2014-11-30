@@ -5,7 +5,7 @@ Feature: zato.ping
         Given address "$ZATO_API_TEST_SERVER"
 
         Given URL path "/zato/ping"
-        
+
         Given format "JSON"
         Given request is "{}"
 

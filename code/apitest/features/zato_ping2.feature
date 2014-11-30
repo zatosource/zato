@@ -8,8 +8,7 @@ Feature: zato.ping2
 
         Given format "JSON"
         Given request is "{}"
-        
+
         When the URL is invoked
 
         Then JSON Pointer "/zato_ping2_response/pong" is "zato"
-        
