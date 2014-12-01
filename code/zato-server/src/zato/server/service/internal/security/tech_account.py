@@ -70,6 +70,7 @@ class Create(AdminService):
         salt = uuid4().hex
         input = self.request.input
         input.password = tech_account_password(uuid4().hex, salt)
+        input.salt = salt
         
         with closing(self.odb.session()) as session:
             cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
