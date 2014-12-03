@@ -30,6 +30,9 @@ cloghandler = cloghandler # For pyflakes
 # psutil
 import psutil
 
+# YAML
+import yaml
+
 # Zato
 from zato.broker.thread_client import BrokerClient
 from zato.common import Inactive, SECRET_SHADOW, TRACE1, ZATO_ODB_POOL_NAME
@@ -205,11 +208,13 @@ class BaseConnector(BrokerMessageReceiver):
         self.odb_config.is_active = True
         self.odb_config.engine = engine
         self.odb_config.extra = config_odb.extra
-        self.odb_config.host = config_odb.host
-        self.odb_config.port = port
-        self.odb_config.password = self.odb.crypto_manager.decrypt(config_odb.password)
-        self.odb_config.pool_size = config_odb.pool_size
-        self.odb_config.username = config_odb.username
+
+        if self.odb_config.engine != 'sqlite':
+            self.odb_config.password = self.odb.crypto_manager.decrypt(config_odb.password)
+            self.odb_config.host = config_odb.host
+            self.odb_config.port = port
+            self.odb_config.pool_size = config_odb.pool_size
+            self.odb_config.username = config_odb.username
         
         self.odb_config.is_odb = True
         
@@ -226,8 +231,10 @@ class BaseConnector(BrokerMessageReceiver):
 # ################################################################################################################################
 def setup_logging():
     logging.addLevelName('TRACE1', TRACE1)
-    from logging import config
-    config.fileConfig(os.path.join(os.environ['ZATO_REPO_LOCATION'], 'logging.conf'))
+    from logging.config import dictConfig
+
+    with open(os.path.join(os.environ['ZATO_REPO_LOCATION'], 'logging.conf')) as f:
+        dictConfig(yaml.load(f))
 
 # ################################################################################################################################
 
