@@ -3,9 +3,9 @@ Feature: zato.security.tech-account.*
     Scenario: Set up
 
         Given I store a random string under "url_path"
-        Given I store a random string under "tech_name"
         Given I store a random string under "tech_username"
         Given I store a random string under "tech_password"
+        Given I store a random string under "invalid_password"
 
     Scenario: Invoke zato.security.tech-account.create
 
@@ -78,7 +78,7 @@ Feature: zato.security.tech-account.*
 
         And I sleep for "1"
 
-    Scenario: Invoke zato.ping over the previusly created http channel with valid credentials
+    Scenario: Invoke zato.ping over the previously created http channel with valid credentials
 
         Given address "$ZATO_API_TEST_SERVER"
         Given header "X_ZATO_USER" "#tech_username"
@@ -97,11 +97,11 @@ Feature: zato.security.tech-account.*
 
         And I sleep for "1"
 
-    Scenario: Invoke to fail zato.ping over the previusly created http channel with invalid credentials
+    Scenario: Invoke to fail zato.ping over the previously created http channel with invalid credentials
 
         Given address "$ZATO_API_TEST_SERVER"
         Given header "X_ZATO_USER" "#tech_username"
-        Given header "X_ZATO_PASSWORD" "failed password"
+        Given header "X_ZATO_PASSWORD" "#invalid_password"
 
         Given URL path "/apitest/security/tech-account/ping"
 
