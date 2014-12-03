@@ -38,16 +38,16 @@ class BrokerMessageReceiver(object):
         of all actions).
         """
         try:
-            if self.logger.isEnabledFor(logging.DEBUG):
-                self.logger.debug('Got message [{!r}]'.format(msg))
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug('Got message [{!r}]'.format(msg))
     
             if self.filter(msg):
                 action = code_to_name[msg['action']]
                 handler = 'on_broker_msg_{0}'.format(action)
                 getattr(self, handler)(msg)
             else:
-                if self.logger.isEnabledFor(logging.DEBUG):
-                    self.logger.debug('Rejecting broker message [{!r}]'.format(msg))
+                if logger.isEnabledFor(logging.DEBUG):
+                    logger.debug('Rejecting broker message [{!r}]'.format(msg))
         except Exception, e:
             msg = 'Could not handle broker msg:[{!r}], e:[{}]'.format(msg, format_exc(e))
             logger.error(msg)
