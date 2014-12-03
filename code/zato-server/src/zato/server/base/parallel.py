@@ -705,7 +705,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         if out_zmq_list:
             for item in out_zmq_list:
                 if item.is_active:
-                    logger.error(item)
                     zmq_outgoing_start_connector(self.repo_location, item.id)
                 else:
                     logger.info('Not starting an inactive outgoing connection (ZeroMQ {})'.format(item.name))
