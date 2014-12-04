@@ -132,15 +132,16 @@ class URLData(OAuthDataStore):
     def _handle_security_apikey(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
         """ Performs the authentication against an API key in a specified HTTP header.
         """
-        expected_key = sec_def['password']
-        actual_key = wsgi_environ.get(sec_def['username'])
-
-        if not actual_key:
+        # Find out if the header was provided at all
+        if sec_def['username'] not in wsgi_environ:
             msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
             logger.error(msg + ' (No header)')
             raise Unauthorized(cid, msg, 'zato-apikey')
 
-        if actual_key != expected_key:
+        expected_key = sec_def.get('password', '')
+
+        # Passwords are not required
+        if expected_key and wsgi_environ[sec_def['username']] != expected_key:
             msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
             logger.error(msg + ' (Invalid key)')
             raise Unauthorized(cid, msg, 'zato-apikey')
@@ -366,6 +367,7 @@ class URLData(OAuthDataStore):
 # ################################################################################################################################
 
     def _update_apikey(self, name, config):
+        config.username = 'HTTP_{}'.format(config.get('username', '').replace('-', '_'))
         self.apikey_config[name] = Bunch()
         self.apikey_config[name].config = config
 
