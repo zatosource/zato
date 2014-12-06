@@ -1,11 +1,13 @@
 Feature: zato.security.basic-auth.*
 
+    @enabled
     Scenario: Set up
 
         Given I store a random string under "url_path"
         Given I store a random string under "basic_username"
         Given I store a random string under "basic_password"
 
+    @enabled
     Scenario: Invoke zato.security.basic-auth.create
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -30,6 +32,7 @@ Feature: zato.security.basic-auth.*
 
         And I sleep for "1"
 
+    @enabled
     Scenario: Invoke zato.security.basic-auth.change-password
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -50,6 +53,7 @@ Feature: zato.security.basic-auth.*
 
         And I sleep for "1"
 
+    @enabled
     Scenario: Create HTTP channel for zato.ping service to be executed with the security definition created
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -79,6 +83,7 @@ Feature: zato.security.basic-auth.*
 
         And I sleep for "1"
 
+    @enabled
     Scenario: Invoke zato.ping over the previusly created http channel with valid credentials
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -97,6 +102,7 @@ Feature: zato.security.basic-auth.*
 
         And I sleep for "1"
 
+    @enabled
     Scenario: Invoke to fail zato.ping over the previusly created http channel with invalid credentials
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -113,7 +119,8 @@ Feature: zato.security.basic-auth.*
         And JSON Pointer "/zato_env/result" is "ZATO_ERROR"
 
         And I sleep for "1"
-        
+
+    @enabled
     Scenario: Invoke zato.security.basic-auth.edit with random data and is_active false to test that it cannot be used
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -136,7 +143,8 @@ Feature: zato.security.basic-auth.*
         And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
         And I sleep for "1"
-        
+
+    @enabled
     Scenario: Delete created HTTP channel for zato.ping
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -153,7 +161,8 @@ Feature: zato.security.basic-auth.*
         And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
         And I sleep for "1"
-        
+
+    @enabled
     Scenario: Invoke zato.security.basic-auth.delete
 
         Given address "$ZATO_API_TEST_SERVER"

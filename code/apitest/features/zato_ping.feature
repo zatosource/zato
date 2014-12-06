@@ -1,5 +1,6 @@
 Feature: zato.ping
 
+    @enabled
     Scenario: Invoke ping to check if zato is up
 
         Given address "$ZATO_API_TEST_SERVER"
