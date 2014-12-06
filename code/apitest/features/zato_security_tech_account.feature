@@ -1,5 +1,6 @@
 Feature: zato.security.tech-account.*
 
+    @enabled
     Scenario: Set up
 
         Given I store a random string under "url_path"
@@ -7,6 +8,7 @@ Feature: zato.security.tech-account.*
         Given I store a random string under "tech_password"
         Given I store a random string under "invalid_password"
 
+    @enabled
     Scenario: Invoke zato.security.tech-account.create
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -29,6 +31,7 @@ Feature: zato.security.tech-account.*
 
         And I sleep for "1"
 
+    @enabled
     Scenario: Invoke zato.security.tech-account.change-password
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -49,6 +52,7 @@ Feature: zato.security.tech-account.*
 
         And I sleep for "1"
 
+    @enabled
     Scenario: Create HTTP channel for zato.ping service to be executed with the security definition created
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -78,6 +82,7 @@ Feature: zato.security.tech-account.*
 
         And I sleep for "1"
 
+    @enabled
     Scenario: Invoke zato.ping over the previously created http channel with valid credentials
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -97,6 +102,7 @@ Feature: zato.security.tech-account.*
 
         And I sleep for "1"
 
+    @enabled
     Scenario: Invoke to fail zato.ping over the previously created http channel with invalid credentials
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -115,6 +121,7 @@ Feature: zato.security.tech-account.*
 
         And I sleep for "1"
 
+    @enabled
     Scenario: Invoke zato.security.tech-account.edit with random data and is_active false to test that it cannot be used
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -137,6 +144,7 @@ Feature: zato.security.tech-account.*
 
         And I sleep for "1"
 
+    @enabled
     Scenario: Invoke zato.security.tech-account.get-by-id
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -158,6 +166,7 @@ Feature: zato.security.tech-account.*
 
         And I sleep for "1"
 
+    @enabled
     Scenario: Delete created HTTP channel for zato.ping
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -175,6 +184,7 @@ Feature: zato.security.tech-account.*
 
         And I sleep for "1"
 
+    @enabled
     Scenario: Invoke zato.security.tech-account.delete
 
         Given address "$ZATO_API_TEST_SERVER"
