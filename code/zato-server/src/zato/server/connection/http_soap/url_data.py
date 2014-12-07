@@ -645,6 +645,7 @@ class URLData(OAuthDataStore):
             # The message's 'password' attribute already takes the salt
             # into account (pun intended ;-))
             self.tech_acc_config[msg.name]['config']['password'] = msg.password
+            self.tech_acc_config[msg.name]['config']['salt'] = msg.salt
             self._update_url_sec(msg, SEC_DEF_TYPE.TECH_ACCOUNT)
 
 # ################################################################################################################################
