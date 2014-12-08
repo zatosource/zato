@@ -134,4 +134,7 @@ class Wrapper(object):
 
     def build_queue(self):
         with self.update_lock:
-            self.client.build_queue()
+            if self.config.is_active:
+                self.client.build_queue()
+            else:
+                logger.info('Skip building inactive connection queue for `%s` (%s)', self.client.conn_name, self.client.conn_type)
