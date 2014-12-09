@@ -63,9 +63,6 @@ class Ping(AdminService):
         response_elem = 'zato_ping_response'
 
     def handle(self):
-        for k, v in sorted(self.wsgi_environ.items()):
-            if k.startswith('HTTP_X_ZATO_TLS_'):
-                self.logger.warn('%r: %r', k, v)
         self.response.payload.pong = 'zato'
 
 class Ping2(Ping):
