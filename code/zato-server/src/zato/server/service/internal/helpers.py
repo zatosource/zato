@@ -74,3 +74,16 @@ class HTMLService(Service):
         self.response.content_type = 'text/html; charset=utf-8'
 
 # ################################################################################################################################
+
+class TLSLogger(Service):
+    def handle(self):
+        has_tls = False
+        for k, v in sorted(self.wsgi_environ.items()):
+            if k.startswith('HTTP_X_ZATO_TLS_'):
+                has_tls = True
+                self.logger.info('%r: %r', k, v)
+
+        if not has_tls:
+            self.logger.warn('No HTTP_X_ZATO_TLS_* headers found')
+
+# ################################################################################################################################
