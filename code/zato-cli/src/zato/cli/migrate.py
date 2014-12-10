@@ -116,7 +116,7 @@ class Migrate(ManageCommand):
         def update_crypto(section):
             section['use_tls'] = False
             section['tls_protocol'] = 'TLSv1'
-            section['tls_ciphers'] = 'AES256'
+            section['tls_ciphers'] = 'EECDH+AES:EDH+AES:-SHA1:EECDH+RC4:EDH+RC4:RC4-SHA:EECDH+AES256:EDH+AES256:AES256-SHA:!aNULL:!eNULL:!EXP:!LOW:!MD5'
             section['tls_client_certs'] = 'optional'
 
         def update_odb(section):
