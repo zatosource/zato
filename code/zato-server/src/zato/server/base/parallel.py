@@ -179,7 +179,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
             self.access_logger.info('', extra = {
                 'remote_ip': wsgi_environ['zato.http.remote_addr'],
-                'cid': cid,
+                'cid_resp_time': '{}/{}'.format(cid, (utcnow() - wsgi_environ['zato.request_timestamp_utc']).total_seconds()),
                 'channel_name': channel_name,
                 'req_timestamp_utc': wsgi_environ['zato.request_timestamp_utc'].strftime(ACCESS_LOG_DT_FORMAT),
                 'req_timestamp': wsgi_environ['zato.request_timestamp'].strftime(ACCESS_LOG_DT_FORMAT),
