@@ -131,7 +131,7 @@ Scenario: Execute the edited set-key job
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/id" in request is an integer "#edited_job_id"
+    Given JSON Pointer "/id" in request is "#set_key_job_id"
 
     When the URL is invoked
 
@@ -139,22 +139,6 @@ Scenario: Execute the edited set-key job
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
     And I sleep for "1"
-
-Scenario: Delete the edited set-key job
-
-    Given address "$ZATO_API_TEST_SERVER"
-    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
-
-    Given URL path "/zato/json/zato.scheduler.job.delete"
-
-    Given format "JSON"
-    Given request is "{}"
-    Given JSON Pointer "/id" in request is an integer "#edited_job_id"
-
-    When the URL is invoked
-
-    Then status is "200"
-    And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
 Scenario: Create HTTP channel for get-key service to be executed through
 
@@ -210,3 +194,20 @@ Scenario: Delete get-key channel
 
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
+
+Scenario: Delete the edited set-key job
+
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+    Given URL path "/zato/json/zato.scheduler.job.delete"
+
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/id" in request is an integer "#edited_job_id"
+
+    When the URL is invoked
+
+    Then status is "200"
+    And JSON Pointer "/zato_env/result" is "ZATO_OK"
+

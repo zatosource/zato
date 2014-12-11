@@ -396,7 +396,10 @@ class RequestHandler(object):
                     response.payload = self._get_xml_admin_payload(service_instance, zato_message_template, None)
         else:
             if not isinstance(response.payload, basestring):
-                response.payload = response.payload.getvalue() if response.payload else ''
+                if isinstance(response.payload, dict) and data_format in (DATA_FORMAT.JSON, DATA_FORMAT.DICT):
+                    response.payload = dumps(response.payload)
+                else:
+                    response.payload = response.payload.getvalue() if response.payload else ''
 
         if transport == URL_TYPE.SOAP:
             if not isinstance(service_instance, AdminService):

@@ -179,7 +179,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
             self.access_logger.info('', extra = {
                 'remote_ip': wsgi_environ['zato.http.remote_addr'],
-                'cid': cid,
+                'cid_resp_time': '{}/{}'.format(cid, (utcnow() - wsgi_environ['zato.request_timestamp_utc']).total_seconds()),
                 'channel_name': channel_name,
                 'req_timestamp_utc': wsgi_environ['zato.request_timestamp_utc'].strftime(ACCESS_LOG_DT_FORMAT),
                 'req_timestamp': wsgi_environ['zato.request_timestamp'].strftime(ACCESS_LOG_DT_FORMAT),
@@ -705,7 +705,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         if out_zmq_list:
             for item in out_zmq_list:
                 if item.is_active:
-                    logger.error(item)
                     zmq_outgoing_start_connector(self.repo_location, item.id)
                 else:
                     logger.info('Not starting an inactive outgoing connection (ZeroMQ {})'.format(item.name))

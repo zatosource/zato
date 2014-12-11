@@ -159,7 +159,7 @@ class ODBManager(SessionWrapper):
                         result[target].sec_def.realm = sec_def.realm
 
                     elif item.sec_type == SEC_DEF_TYPE.APIKEY:
-                        result[target].sec_def.username = 'HTTP_{}'.format(sec_def.username.upper())
+                        result[target].sec_def.username = 'HTTP_{}'.format(sec_def.username.upper().replace('-', '_'))
                         result[target].sec_def.password = sec_def.password
 
                     elif item.sec_type == SEC_DEF_TYPE.WSS:
