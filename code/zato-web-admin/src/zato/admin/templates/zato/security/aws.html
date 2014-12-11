@@ -75,7 +75,7 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.username }}</td>
-                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change access key</a></td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}', 'Change access key')">Change access key</a></td>
                         <td><a href="javascript:$.fn.zato.security.aws.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.security.aws.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
