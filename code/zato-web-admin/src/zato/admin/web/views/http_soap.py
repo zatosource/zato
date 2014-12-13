@@ -122,7 +122,7 @@ def index(req):
         for def_item in req.zato.client.invoke('zato.security.get-list', {'cluster_id': req.zato.cluster.id}):
             if connection == 'outgoing':
                 if transport == URL_TYPE.PLAIN_HTTP and def_item.sec_type not in (
-                    SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TECH_ACCOUNT, SEC_DEF_TYPE.APIKEY, SEC_DEF_TYPE.TLS_KEY_CERT):
+                    SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT):
                     continue
                 elif transport == URL_TYPE.SOAP and def_item.sec_type not in (
                     SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.WSS):
