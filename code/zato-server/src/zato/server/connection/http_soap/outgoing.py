@@ -24,9 +24,10 @@ from parse import PARSE_RE
 
 # Requests
 import requests
+from requests.exceptions import Timeout as RequestsTimeout
 
 # Zato
-from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, TimeoutException, URL_TYPE, ZATO_NONE
 from zato.common.util import get_component_name
 from zato.server.connection.queue import ConnectionQueue
 
@@ -63,13 +64,17 @@ class BaseHTTPSOAPWrapper(object):
         self.set_address_data()
         self.set_auth()
 
-    def invoke_http(self, method, address, data, headers, hooks, *args, **kwargs):
+    def invoke_http(self, cid, method, address, data, headers, hooks, *args, **kwargs):
 
         cert = self.config['tls_key_cert_full_path'] if self.config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT else None
         verify = False if self.config.get('tls_verify', ZATO_NONE) == ZATO_NONE else self.config['tls_verify']
 
-        return self.session.request(method, address, data=data, auth=self.requests_auth, headers=headers, hooks=hooks,
-            cert=cert, verify=verify, timeout=self.config['timeout'], *args, **kwargs)
+        try:
+            return self.session.request(
+                method, address, data=data, auth=self.requests_auth, headers=headers, hooks=hooks,
+                cert=cert, verify=verify, timeout=self.config['timeout'], *args, **kwargs)
+        except RequestsTimeout, e:
+            raise TimeoutException(cid, format_exc(e))
 
     def ping(self, cid):
         """ Pings a given HTTP/SOAP resource
@@ -89,7 +94,7 @@ class BaseHTTPSOAPWrapper(object):
             verbose.write(entry)
 
         # .. invoke the other end ..
-        response = self.invoke_http(self.config['ping_method'], self.address, '', self._create_headers(cid, {}),
+        response = self.invoke_http(cid, self.config['ping_method'], self.address, '', self._create_headers(cid, {}),
             {'zato_pre_request':zato_pre_request_hook})
 
         # .. store additional info, get and close the stream.
@@ -290,7 +295,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         logger.info('CID:[%s], address:[%s], qs_params:[%s], auth:[%s], kwargs:[%s]', cid, address, qs_params, self.requests_auth, kwargs) 
 
-        response = self.invoke_http(method, address, data, headers, {}, params=qs_params, *args, **kwargs)
+        response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
         logger.debug('CID:[%s], response:[%s]', cid, response.text)
 
