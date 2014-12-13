@@ -724,6 +724,9 @@ class ConnectionException(ZatoException):
     """ Encountered a problem with an external connections, such as to AMQP brokers.
     """
 
+class TimeoutException(ConnectionException):
+    pass
+
 class HTTPException(ZatoException):
     """ Raised when the underlying error condition can be easily expressed
     as one of the HTTP status codes.
