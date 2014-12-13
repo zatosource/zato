@@ -45,9 +45,12 @@
 
     {% if cluster_id %}
 
+        {% comment %}
+            <!-- No custom permissions in 2.0 -->
         <div class='page_prompt'>
             <a href="javascript:$.fn.zato.security.rbac.permission.create()">Create a new permission</a>
         </div>
+        {% endcomment %}
 
         <div id="markup">
             <table id="data-table">
