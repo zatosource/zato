@@ -1,0 +1,89 @@
+Feature: zato.service configure_get_request-response
+    @enabled
+    Scenario: Set up
+
+        Given I store a random integer under "frequency"
+
+    @enabled
+    Scenario: Invoke zato.service.get-request-response to get original sample_req_resp_freq
+
+        Given address "$ZATO_API_TEST_SERVER"
+        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+        Given URL path "/zato/json/zato.service.get-request-response"
+
+        Given format "JSON"
+        Given request is "{}"
+        Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
+        Given JSON Pointer "/name" in request is "zato.ping"
+
+        When the URL is invoked
+
+        Then status is "200"
+        And JSON Pointer "/zato_env/result" is "ZATO_OK"
+        And I store "/zato_service_request_response_response/sample_req_resp_freq" from response under "frequency_orig"
+
+        And I sleep for "1"
+
+    @enabled
+    Scenario: Invoke zato.service.configure-request-response to change sample_req_resp_freq
+
+        Given address "$ZATO_API_TEST_SERVER"
+        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+        Given URL path "/zato/json/zato.service.configure-request-response"
+
+        Given format "JSON"
+        Given request is "{}"
+        Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
+        Given JSON Pointer "/name" in request is "zato.ping"
+        Given JSON Pointer "/sample_req_resp_freq" in request is "#frequency"
+
+        When the URL is invoked
+
+        Then status is "200"
+        And JSON Pointer "/zato_env/result" is "ZATO_OK"
+
+        And I sleep for "1"
+
+    @enabled
+    Scenario: Invoke zato.service.get-request-response to check that sample_req_resp_freq change
+
+        Given address "$ZATO_API_TEST_SERVER"
+        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+        Given URL path "/zato/json/zato.service.get-request-response"
+
+        Given format "JSON"
+        Given request is "{}"
+        Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
+        Given JSON Pointer "/name" in request is "zato.ping"
+
+        When the URL is invoked
+
+        Then status is "200"
+        And JSON Pointer "/zato_env/result" is "ZATO_OK"
+        And JSON Pointer "/zato_service_request_response_response/sample_req_resp_freq" is "#frequency"
+
+        And I sleep for "1"
+
+    @enabled
+    Scenario: Invoke zato.service.configure-request-response to restore sample_req_resp_freq
+
+        Given address "$ZATO_API_TEST_SERVER"
+        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+        Given URL path "/zato/json/zato.service.configure-request-response"
+
+        Given format "JSON"
+        Given request is "{}"
+        Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
+        Given JSON Pointer "/name" in request is "zato.ping"
+        Given JSON Pointer "/sample_req_resp_freq" in request is "#frequency_orig"
+
+        When the URL is invoked
+
+        Then status is "200"
+        And JSON Pointer "/zato_env/result" is "ZATO_OK"
+
+        And I sleep for "1"
