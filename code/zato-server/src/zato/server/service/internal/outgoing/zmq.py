@@ -16,7 +16,6 @@ from traceback import format_exc
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
 from zato.common.odb.model import OutgoingZMQ
 from zato.common.odb.query import out_zmq_list
-from zato.server.connection.zmq_.outgoing import start_connector
 from zato.server.service.internal import AdminService, AdminSIO
 
 class GetList(AdminService):
@@ -34,7 +33,7 @@ class GetList(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
-        
+
 class Create(AdminService):
     """ Creates a new outgoing ZeroMQ connection.
     """
@@ -51,10 +50,10 @@ class Create(AdminService):
                 filter(OutgoingZMQ.cluster_id==input.cluster_id).\
                 filter(OutgoingZMQ.name==input.name).\
                 first()
-            
+
             if existing_one:
                 raise Exception('An outgoing ZeroMQ connection [{0}] already exists on this cluster'.format(input.name))
-            
+
             try:
                 item = OutgoingZMQ()
                 item.name = input.name
@@ -62,21 +61,21 @@ class Create(AdminService):
                 item.address = input.address
                 item.socket_type = input.socket_type
                 item.cluster_id = input.cluster_id
-                
+
                 session.add(item)
                 session.commit()
-                
+
                 if item.is_active:
-                    start_connector(self.server.repo_location, item.id)
-                
+                    raise NotImplemented()
+
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
-                
+
             except Exception, e:
                 msg = 'Could not create an outgoing ZeroMQ connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
+
                 raise 
 
 class Edit(AdminService):
@@ -96,10 +95,10 @@ class Edit(AdminService):
                 filter(OutgoingZMQ.name==input.name).\
                 filter(OutgoingZMQ.id!=input.id).\
                 first()
-            
+
             if existing_one:
                 raise Exception('An outgoing ZeroMQ connection [{0}] already exists on this cluster'.format(input.name))
-            
+
             try:
                 item = session.query(OutgoingZMQ).filter_by(id=input.id).one()
                 old_name = item.name
@@ -107,24 +106,24 @@ class Edit(AdminService):
                 item.is_active = input.is_active
                 item.address = input.address
                 item.socket_type = input.socket_type
-                
+
                 session.add(item)
                 session.commit()
-                
+
                 input.action = OUTGOING.ZMQ_EDIT.value
                 input.old_name = old_name
                 self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL)
                 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
-                
+
             except Exception, e:
                 msg = 'Could not update the outgoing ZeroMQ connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
+
                 raise  
-        
+
 class Delete(AdminService):
     """ Deletes an outgoing ZeroMQ connection.
     """
@@ -139,16 +138,16 @@ class Delete(AdminService):
                 item = session.query(OutgoingZMQ).\
                     filter(OutgoingZMQ.id==self.request.input.id).\
                     one()
-                
+
                 session.delete(item)
                 session.commit()
 
                 msg = {'action': OUTGOING.ZMQ_DELETE.value, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL)
-                
+
             except Exception, e:
                 session.rollback()
                 msg = 'Could not delete the outgoing ZeroMQ connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
-                
+
                 raise

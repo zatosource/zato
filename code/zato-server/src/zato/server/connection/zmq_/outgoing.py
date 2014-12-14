@@ -10,181 +10,85 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, os
-from threading import RLock, Thread
 
 # Bunch
 from bunch import Bunch
 
+# gevent
+from gevent import sleep
+
+# ZeroMQ
+import zmq.green as zmq
+
 # Zato
 from zato.common import TRACE1
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
-from zato.server.connection import setup_logging, start_connector as _start_connector
-from zato.server.connection.zmq_ import BaseZMQConnection, BaseZMQConnector
+from zato.server.store import BaseAPI, BaseStore
 
-logger = logging.getLogger('zato_connector')
+logger = logging.getLogger(__name__)
 
-ENV_ITEM_NAME = 'ZATO_CONNECTOR_ZMQ_OUT_ID'
+# ################################################################################################################################
 
 class ZMQFacade(object):
     """ A ZeroMQ facade for services so they aren't aware that sending ZMQ
     messages actually requires us to use the Zato broker underneath.
     """
-    def __init__(self, broker_client, delivery_store):
-        self.broker_client = broker_client # A Zato broker client
-        self.delivery_store = delivery_store
-    
-    def send(self, msg, out_name, *args, **kwargs):
-        """ Puts a message on a ZeroMQ socket.
+    def __init__(self, server):
+        self.server = server
+        self.connect_sleep = float(self.server.fs_server_config.misc.zeromq_connect_sleep)
+
+    def _push_pub(self, socket_type, msg, out_name, *args, **kwargs):
+
+        # Connection info and a new context so everything is bound to that greenlet only
+        conn_info = self.server.worker_store.zmq_out_api.get(out_name, False)
+        ctx = zmq.Context()
+
+        # Create a socket and connect
+        socket = ctx.socket(socket_type)
+        socket.setsockopt(zmq.LINGER, 0)
+        socket.connect(conn_info.config.address)
+
+        # Don't send yet - we may still not be connected
+        sleep(kwargs.get('connect_sleep', self.connect_sleep))
+
+        # Send now
+        socket.send(msg if isinstance(msg, bytes) else msg.encode('utf-8'))
+
+        # And clean up
+        socket.close()
+        ctx.destroy()
+
+    def publish(self, msg, out_name, *args, **kwargs):
+        """ Publishes a message onto a ZeroMQ socket.
         """
-        params = {}
-        params['action'] = OUTGOING.ZMQ_SEND.value
-        params['name'] = out_name
-        params['body'] = msg
-        params['args'] = args
-        params['kwargs'] = kwargs
-        
-        self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL)
-        
+        return self._push_pub(zmq.PUB, msg, out_name, *args, **kwargs)
+
+    def push(self, msg, out_name, *args, **kwargs):
+        """ Pushes a message onto a ZeroMQ socket.
+        """
+        return self._push_pub(zmq.PUSH, msg, out_name, *args, **kwargs)
+
+    send = push
+
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing
         connection wrappers.
         """
         return self
 
-class OutgoingConnection(BaseZMQConnection):
-    """ An outgoing (PUSH) connection to a ZMQ socket.
+# ################################################################################################################################
+
+class ZMQAPI(BaseAPI):
+    """ API to obtain ZeroMQ connections through.
     """
-    def __init__(self, factory, out_name):
-        super(OutgoingConnection, self).__init__(factory, out_name)
-        
-    def send(self, msg):
-        """ Sends a message to a ZMQ socket.
-        """
-        self.factory.send(msg)
-        if logger.isEnabledFor(TRACE1):
-            logger.log(TRACE1, 'Sent {0} name {1} factory {2}'.format(msg, self.name, self.factory))
 
-class OutgoingConnector(BaseZMQConnector):
-    """ An outgoing connector started as a subprocess. Each connection to a queue manager
-    gets its own connector.
+class ZMQConnStore(BaseStore):
+    """ Stores outgoing connections to ZeroMQ.
     """
-    def __init__(self, repo_location=None, out_id=None, init=True):
-        super(OutgoingConnector, self).__init__(repo_location, None)
-        self.out_id = out_id
-        
-        self.out_lock = RLock()
-        
-        self.broker_client_id = 'zmq-outgoing-connector'
-        self.broker_callbacks = {
-            TOPICS[MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL]: self.on_broker_msg,
-            TOPICS[MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL]: self.on_broker_msg
-        }
-        self.broker_messages = self.broker_callbacks.keys()
-        
-        if init:
-            self._init()
-            self._setup_connector()
-            
-    def _setup_odb(self):
-        super(OutgoingConnector, self)._setup_odb()
-        
-        item = self.odb.get_out_zmq(self.server.cluster.id, self.out_id)
-        self.out = Bunch()
-        self.out.id = item.id
-        self.out.name = item.name
-        self.out.is_active = item.is_active
-        self.out.address = item.address
-        self.out.socket_type = self.socket_type = item.socket_type
-        self.out.sender = None
-        
-    def filter(self, msg):
-        """ Can we handle the incoming message?
-        """
-        if super(OutgoingConnector, self).filter(msg):
-            return True
+    def create_impl(self, config, config_no_sensitive):
+        self.context = zmq.Context()
+        return self.context
 
-        elif msg.action in(OUTGOING.ZMQ_SEND.value, OUTGOING.ZMQ_DELETE.value, OUTGOING.ZMQ_EDIT.value):
-            return self.out.name == msg['name']
-        
-    def _stop_connection(self):
-        """ Stops the given outgoing connection's sender. The method must 
-        be called from a method that holds onto all related RLocks.
-        """
-        if self.out.get('sender'):
-            sender = self.out.sender
-            sender.close()
-        
-    def _recreate_sender(self):
-        self._stop_connection()
-        self.name = self.out.name
-        
-        if self.out.get('is_active'):
-            factory = self._get_factory(None, self.out.address, None)
-            sender = self._sender(factory)
-            self.out.sender = sender
-
-    def _sender(self, factory):
-        """ Starts the outgoing connection in a new thread and returns it.
-        """
-        sender = OutgoingConnection(factory, self.out.name)
-        t = Thread(target=sender._run)
-        t.start()
-        
-        return sender
-        
-    def _setup_connector(self):
-        """ Sets up the connector on startup.
-        """
-        with self.out_lock:
-            self._recreate_sender()
-                
-    def _close_delete(self):
-        """ Stops the connections, exits the process.
-        """
-        with self.out_lock:
-            self._stop_connection()
-            self._close()
-
-    def on_broker_msg_OUTGOING_ZMQ_SEND(self, msg, args=None):
-        """ Puts a message on a socket.
-        """
-        if not self.out.get('is_active'):
-            log_msg = 'Not sending, the connection is not active [{0}]'.format(self.out.toDict())
-            logger.info(log_msg)
-            return
-            
-        if self.out.get('sender'):
-            self.out.sender.send(msg.body)
-        else:
-            if logger.isEnabledFor(logging.DEBUG):
-                log_msg = 'No sender for [{0}]'.format(self.out.toDict())
-                logger.debug(log_msg)
-                
-    def on_broker_msg_OUTGOING_ZMQ_DELETE(self, msg, args=None):
-        self._close_delete()
-        
-    def on_broker_msg_OUTGOING_ZMQ_EDIT(self, msg, args=None):
-        with self.out_lock:
-            sender = self.out.get('sender')
-            self.out = msg
-            self.out.sender = sender
-            self._recreate_sender()
-
-def run_connector():
-    """ Invoked on the process startup.
-    """
-    setup_logging()
-    
-    repo_location = os.environ['ZATO_REPO_LOCATION']
-    item_id = os.environ[ENV_ITEM_NAME]
-    
-    OutgoingConnector(repo_location, item_id)
-    
-    logger.debug('Starting ZeroMQ outgoing, repo_location [{0}], item_id [{1}]'.format(
-        repo_location, item_id))
-    
-def start_connector(repo_location, item_id):
-    _start_connector(repo_location, __file__, ENV_ITEM_NAME, None, item_id)
-    
-if __name__ == '__main__':
-    run_connector()
+    def delete(self):
+        self.context.destroy()
+        super(ZMQPushConnStore, self).delete()
