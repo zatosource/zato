@@ -32,9 +32,6 @@ def instance_hook(self, input, instance, attrs):
     # An exception is raised on any parsing error.
     list(parse_tls_channel_security_definition(self.request.input.value))
 
-    # So that username, an artificial and inherited field, is not an empty string.
-    instance.username = input.username = input.name
-
 def broker_message_hook(self, input, instance, attrs, service_type):
     input.sec_type = SEC_DEF_TYPE.TLS_CHANNEL_SEC
 
