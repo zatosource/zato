@@ -36,9 +36,9 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, SEC_DEF_TYPE, \
-     SIMPLE_IO, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
+     SIMPLE_IO, TRACE1, ZATO_NONE, ZATO_NOT_GIVEN, ZATO_ODB_POOL_NAME
 from zato.common import broker_message
-from zato.common.broker_message import code_to_name
+from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
@@ -924,13 +924,31 @@ class WorkerStore(BrokerMessageReceiver):
         creates a new service instance and invokes it.
         """
         # WSGI environment is the best place we have to store raw msg in
-        wsgi_environ = {'zato.request_ctx.async_msg':msg}
+        wsgi_environ = {'zato.request_ctx.async_msg':msg, 'zato.request_ctx.in_reply_to':msg.get('in_reply_to')}
+
+        data_format = msg.get('data_format')
+        transport = msg.get('transport')
 
         service = self.server.service_store.new_instance_by_name(msg['service'])
         service.update_handle(self._set_service_response_data, service, msg['payload'],
-            channel, msg.get('data_format'), msg.get('transport'), self.server,
-            self.broker_client, self, msg['cid'], self.worker_config.simple_io,
-            job_type=msg.get('job_type'), wsgi_environ=wsgi_environ)
+            channel, data_format, transport, self.server, self.broker_client, self, msg['cid'],
+            self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ)
+
+        # Invoke the callback, if any.
+        if msg.get('is_async') and msg.get('reply_to'):
+
+            cb_msg = {}
+            cb_msg['action'] = SERVICE.PUBLISH.value
+            cb_msg['service'] = msg['reply_to']
+            cb_msg['payload'] = service.response.payload
+            cb_msg['cid'] = new_cid()
+            cb_msg['channel'] = CHANNEL.INVOKE_ASYNC_CALLBACK
+            cb_msg['data_format'] = data_format
+            cb_msg['transport'] = transport
+            cb_msg['is_async'] = True
+            cb_msg['in_reply_to'] = msg['cid']
+
+            self.broker_client.invoke_async(cb_msg)
 
 # ################################################################################################################################
 

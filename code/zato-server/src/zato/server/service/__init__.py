@@ -35,7 +35,7 @@ from retools.lock import Lock
 from gevent import Timeout, spawn
 
 # Zato
-from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException
+from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException, ZATO_NOT_GIVEN
 from zato.common.broker_message import SERVICE
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl
@@ -173,6 +173,7 @@ class Service(object):
         self.pubsub = None
         self.channel = None
         self.cid = None
+        self.in_reply_to = None
         self.outgoing = None
         self.cloud = None
         self.worker_store = None
@@ -338,7 +339,7 @@ class Service(object):
             job_type=job_type,
             channel_params=channel_params,
             merge_channel_params=merge_channel_params,
-            params_priority=params_priority)
+            params_priority=params_priority, in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None))
 
         # Depending on whether this is a pass-through service or not we invoke
         # the target services or the one we have in hand right now. Note that
@@ -418,7 +419,8 @@ class Service(object):
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
                         self.broker_client, self.worker_store, self.cid, self.request.simple_io_config)
-        kwargs.update({"serialize":serialize, "as_bunch":as_bunch})
+
+        kwargs.update({'serialize':serialize, 'as_bunch':as_bunch})
 
         try:
             if timeout:
@@ -452,13 +454,27 @@ class Service(object):
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
 
     def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=DATA_FORMAT.DICT,
-            transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None):
+            transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, reply_to=None):
         """ Invokes a service asynchronously by its name.
         """
         if to_json_string:
             payload = dumps(payload)
 
         cid = cid or new_cid()
+
+        # If there is any callback at all, we need to figure out its name because that's how it will be invoked by.
+        if reply_to:
+
+            # The same service
+            if reply_to is self:
+                reply_to = self.name
+
+        else:
+            sink = '{}-reply-sink'.format(self.name)
+            if sink in self.server.service_store.name_to_impl_name:
+                reply_to = sink
+
+            # Otherwise the callback must be a string pointing to the actual service to reply to so we don't need to do anything.
 
         msg = {}
         msg['action'] = SERVICE.PUBLISH.value
@@ -468,6 +484,8 @@ class Service(object):
         msg['channel'] = channel
         msg['data_format'] = data_format
         msg['transport'] = transport
+        msg['is_async'] = True
+        msg['reply_to'] = reply_to
 
         self.broker_client.invoke_async(msg, expiration=expiration)
 
@@ -716,7 +734,7 @@ class Service(object):
     def update(service, channel, server, broker_client, worker_store, cid, payload,
                raw_request, transport=None, simple_io_config=None, data_format=None,
                wsgi_environ={}, job_type=None, channel_params=None,
-               merge_channel_params=True, params_priority=None, init=True):
+               merge_channel_params=True, params_priority=None, in_reply_to=None, init=True):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
@@ -742,6 +760,7 @@ class Service(object):
 
         service.request.merge_channel_params = merge_channel_params
         service.request.params_priority = params_priority
+        service.in_reply_to = in_reply_to
 
         if init:
             service._init()
