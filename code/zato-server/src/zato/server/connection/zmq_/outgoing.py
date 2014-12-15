@@ -44,10 +44,21 @@ class ZMQFacade(object):
         socket.connect(conn_info.config.address)
 
         # Don't send yet - we may still not be connected
-        sleep(kwargs.get('connect_sleep', self.connect_sleep))
+        sleep(kwargs.pop('connect_sleep', self.connect_sleep))
 
-        # Send now
-        socket.send(msg if isinstance(msg, bytes) else msg.encode('utf-8'))
+        # What to invoke depends on whether it's a multipart message or not.
+        func = socket.send_multipart if kwargs.pop('multipart', False) else socket.send
+
+        # Must be multipart
+        if isinstance(msg, (list, tuple, dict)):
+            func = socket.send_multipart
+        else:
+            func = socket.send
+            if not isinstance(msg, bytes):
+                msg = msg.encode(kwargs.pop('encoding', 'utf-8'))
+
+        # Call now having built all the parameters
+        func(msg, **kwargs)
 
         # And clean up
         socket.close()
