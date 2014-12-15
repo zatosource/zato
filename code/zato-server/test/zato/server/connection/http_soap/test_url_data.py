@@ -1095,6 +1095,7 @@ class URLDataTestCase(TestCase):
         msg.key1 = uuid4().hex
         msg.key2 = uuid4().hex
         msg.key3 = uuid4().hex
+        msg.salt = uuid4().hex
 
         ud.on_broker_msg_SECURITY_TECH_ACC_CHANGE_PASSWORD(msg)
 

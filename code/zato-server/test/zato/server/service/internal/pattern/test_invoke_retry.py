@@ -82,7 +82,7 @@ class InvokeRetryTestCase(ServiceTestCase):
             self.assertEquals(len(instance.broker_client.invoke_async_args[0]), 1)
 
             async_msg = Bunch(instance.broker_client.invoke_async_args[0][0])
-            self.assertEquals(len(async_msg), 7)
+            self.assertEquals(len(async_msg), 9)
 
             self.assertEquals(async_msg.action, SERVICE.PUBLISH.value)
             self.assertEquals(async_msg.channel, CHANNEL.INVOKE_ASYNC)
