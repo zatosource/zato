@@ -65,8 +65,8 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
 
-                if item.is_active:
-                    raise NotImplemented()
+                input.action = OUTGOING.ZMQ_CREATE.value
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -112,7 +112,7 @@ class Edit(AdminService):
 
                 input.action = OUTGOING.ZMQ_EDIT.value
                 input.old_name = old_name
-                self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL)
+                self.broker_client.publish(input)
                 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -143,7 +143,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': OUTGOING.ZMQ_DELETE.value, 'name': item.name, 'id':item.id}
-                self.broker_client.publish(msg, MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL)
+                self.broker_client.publish(msg)
 
             except Exception, e:
                 session.rollback()

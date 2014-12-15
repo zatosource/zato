@@ -1527,3 +1527,17 @@ class WorkerStore(BrokerMessageReceiver):
         self.rbac.delete_role_permission_allow(msg.role_id, msg.perm_id, msg.service_id)
 
 # ################################################################################################################################
+
+    def on_broker_msg_OUTGOING_ZMQ_CREATE(self, msg):
+        self.zmq_out_api.create(msg.name, msg)
+
+    def on_broker_msg_OUTGOING_ZMQ_EDIT(self, msg):
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        self.zmq_out_api.edit(del_name, msg)
+
+    def on_broker_msg_OUTGOING_ZMQ_DELETE(self, msg):
+        self.zmq_out_api.delete(msg.name)
+
+# ################################################################################################################################
