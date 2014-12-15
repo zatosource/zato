@@ -384,6 +384,7 @@ class CHANNEL(Attrs):
     INTERNAL_CHECK = 'internal-check' # New in 2.0
     INVOKE = 'invoke'
     INVOKE_ASYNC = 'invoke-async'
+    INVOKE_ASYNC_CALLBACK = 'invoke-async-callback' # New in 2.0
     JMS_WMQ = 'jms-wmq'
     NOTIFIER_RUN = 'notifier-run' # New in 2.0
     NOTIFIER_TARGET = 'notifier-target' # New in 2.0
