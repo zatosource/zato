@@ -435,8 +435,8 @@ class HTTPAccessLogTestCase(TestCase):
             eq_(extra.status_code, '200')
             eq_(extra.http_version, http_version)
             eq_(extra.response_size, len(response))
-            eq_(extra.cid, cid)
             eq_(extra.path, url_path)
+            eq_(extra.cid_resp_time, '{}/0.0'.format(cid)) # It's 0.0 because we mock utcnow to be a constant value
             eq_(extra.method, request_method)
             eq_(extra.remote_ip, remote_ip)
             eq_(extra.req_timestamp_utc, '12/Jan/2014:16:22:12 +0000')
