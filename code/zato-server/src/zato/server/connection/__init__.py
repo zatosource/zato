@@ -94,15 +94,15 @@ class BaseConnection(object):
     def close(self):
         """ Attempt to close the connection to an external resource.
         """
-        if(self.logger.isEnabledFor(TRACE1)):
+        if(logger.isEnabledFor(TRACE1)):
             msg = 'About to close the connection for {0}'.format(self._conn_info())
-            self.logger.log(TRACE1, msg)
+            logger.log(TRACE1, msg)
             
         self.keep_connecting = False
         self._close()
             
         msg = 'Closed the connection for {0}'.format(self._conn_info())
-        self.logger.info(msg)
+        logger.info(msg)
     
     def _on_connected(self, *ignored_args, **ignored_kwargs):
         """ Invoked after establishing a successful connection to the resource.
@@ -113,7 +113,7 @@ class BaseConnection(object):
             delta = datetime.utcnow() - self.first_connection_attempt_time
             msg = '(Re-)connected to {0} after {1} attempt(s), time spent {2}'.format(
                 self._conn_info(), self.connection_attempts, delta)
-            self.logger.warn(msg)
+            logger.warn(msg)
             
         if self.has_valid_connection:
             self.connection_attempts = 1
@@ -136,12 +136,12 @@ class BaseConnection(object):
                         err_info = format_exc(e)
                     msg = u'Caught [{0}] error, will try to (re-)connect to {1} in {2} seconds, {3} attempt(s) so far, time spent {4}'
                     delta = datetime.utcnow() - self.first_connection_attempt_time
-                    self.logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
+                    logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
                     self.connection_attempts += 1
                     time.sleep(self.reconnect_sleep_time)
                 else:
                     msg = u'No connection for {0}, e:[{1}]'.format(self._conn_info(), format_exc(e))
-                    self.logger.error(msg)
+                    logger.error(msg)
                     raise
 
 # ################################################################################################################################
