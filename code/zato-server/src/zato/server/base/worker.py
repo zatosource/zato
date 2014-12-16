@@ -56,6 +56,7 @@ from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.sql import PoolStore, SessionWrapper
+from zato.server.connection.zmq_.outgoing import ZMQAPI as ZMQAPIOut, ZMQConnStore as ZMQConnStoreOut
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
@@ -118,6 +119,9 @@ class WorkerStore(BrokerMessageReceiver):
         self.email_smtp_api = SMTPAPI(SMTPConnStore())
         self.email_imap_api = IMAPAPI(IMAPConnStore())
 
+        # ZeroMQ
+        self.zmq_out_api = ZMQAPIOut(ZMQConnStoreOut())
+
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
         self.init_msg_ns_store()
@@ -140,6 +144,9 @@ class WorkerStore(BrokerMessageReceiver):
         # E-mail
         self.init_email_smtp()
         self.init_email_imap()
+
+        # ZeroMQ
+        self.init_zmq()
 
         # Odoo
         self.init_odoo()
@@ -422,6 +429,11 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init_email_imap(self):
         self.init_simple(self.worker_config.email_imap, self.email_imap_api, 'an IMAP')
+
+# ################################################################################################################################
+
+    def init_zmq(self):
+        self.init_simple(self.worker_config.out_zmq, self.zmq_out_api, 'a ZeroMQ')
 
 # ################################################################################################################################
 
@@ -1531,5 +1543,19 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_RBAC_ROLE_PERMISSION_DELETE(self, msg):
         self.rbac.delete_role_permission_allow(msg.role_id, msg.perm_id, msg.service_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_OUTGOING_ZMQ_CREATE(self, msg):
+        self.zmq_out_api.create(msg.name, msg)
+
+    def on_broker_msg_OUTGOING_ZMQ_EDIT(self, msg):
+        # It might be a rename
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        self.zmq_out_api.edit(del_name, msg)
+
+    def on_broker_msg_OUTGOING_ZMQ_DELETE(self, msg):
+        self.zmq_out_api.delete(msg.name)
 
 # ################################################################################################################################

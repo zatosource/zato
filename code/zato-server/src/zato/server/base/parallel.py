@@ -65,7 +65,6 @@ from zato.server.connection.amqp.outgoing import start_connector as amqp_out_sta
 from zato.server.connection.jms_wmq.channel import start_connector as jms_wmq_channel_start_connector
 from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_out_start_connector
 from zato.server.connection.zmq_.channel import start_connector as zmq_channel_start_connector
-from zato.server.connection.zmq_.outgoing import start_connector as zmq_outgoing_start_connector
 from zato.server.pickup import get_pickup
 
 logger = logging.getLogger(__name__)
@@ -699,17 +698,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                     logger.info('Not starting an inactive channel (ZeroMQ {})'.format(item.name))
         else:
             logger.info('No Zero MQ channels to start')
-
-        # ZMQ - outgoing
-        out_zmq_list = self.odb.get_out_zmq_list(self.cluster_id)
-        if out_zmq_list:
-            for item in out_zmq_list:
-                if item.is_active:
-                    zmq_outgoing_start_connector(self.repo_location, item.id)
-                else:
-                    logger.info('Not starting an inactive outgoing connection (ZeroMQ {})'.format(item.name))
-        else:
-            logger.info('No Zero MQ outgoing connections to start')
 
     def _after_init_non_accepted(self, server):
         raise NotImplementedError("This Zato version doesn't support join states other than ACCEPTED")
