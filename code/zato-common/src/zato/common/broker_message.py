@@ -12,10 +12,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from inspect import isclass
 
 # candv
-from candv import Constants as _Constants, ValueConstant
+from candv import Constants as _Constants, ValueConstant as _ValueConstant
 
 class Constants(_Constants):
     values = _Constants.constants
+
+class ValueConstant(_ValueConstant):
+
+    def __cmp__(self, other):
+        return cmp(self.value, (other.value if isinstance(other, ValueConstant) else other))
 
 class MESSAGE:
     MESSAGE_TYPE_LENGTH = 4
