@@ -80,8 +80,10 @@ class BaseStore(object):
         """ Actually adds a new definition, must be called with self.lock held.
         """
         config_no_sensitive = deepcopy(config)
+
         if 'password' in config:
             config_no_sensitive['password'] = SECRET_SHADOW
+
         item = Bunch(config=config, config_no_sensitive=config_no_sensitive, is_created=False, impl=None)
 
         # It's optional

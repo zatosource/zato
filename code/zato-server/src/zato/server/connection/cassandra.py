@@ -17,6 +17,7 @@ from cassandra.cluster import Cluster
 from cassandra.query import dict_factory
 
 # Zato
+from zato.common.broker_message import DEFINITION
 from zato.server.connection import BaseConnPoolStore, BasePoolAPI
 
 # ################################################################################################################################
@@ -43,11 +44,12 @@ class CassandraConnStore(BaseConnPoolStore):
     """ Stores connections to Cassandra.
     """
     conn_name = 'Cassandra'
+    dispatcher_events = [DEFINITION.CASSANDRA_DELETE, DEFINITION.CASSANDRA_EDIT]
 
 # ################################################################################################################################
 
     def create_session(self, name, config, config_no_sensitive):
-        auth_provider = PlainTextAuthProvider(config.username, config.password) if config.username else None
+        auth_provider = PlainTextAuthProvider(config.username, config.password) if config.get('username') else None
 
         tls_options = {}
         for msg_name, stdlib_name in msg_to_stdlib.items():
@@ -57,7 +59,7 @@ class CassandraConnStore(BaseConnPoolStore):
         cluster = Cluster(
             config.contact_points.splitlines(), int(config.port), cql_version=config.cql_version,
             protocol_version=int(config.proto_version), executor_threads=int(config.exec_size),
-            auth_provider=auth_provider, ssl_options=tls_options, control_connection_timeout=20)
+            auth_provider=auth_provider, ssl_options=tls_options, control_connection_timeout=3)
 
         session = cluster.connect()
         session.row_factory = dict_factory
@@ -70,6 +72,34 @@ class CassandraConnStore(BaseConnPoolStore):
     def delete_session(self, name):
         """ Deletes a connection session. Must be called with self.lock held.
         """
-        self.sessions[name].conn.shutdown()
+        session = self.sessions.get(name)
+        if session:
+            self.keep_connecting.remove(session.config.id)
+            session.conn.shutdown()
+        else:
+            logger.warn('Could not delete session `%s` - not among `%s`', name, self.sessions)
+
+# ################################################################################################################################
+
+    def on_dispatcher_events(self, events):
+        """ Handles in-process dispatcher events. If it's a DELETE, the connection is removed
+        from a list of connections to be established. If an EDIT, the connection's config is updated.
+        In either case all subsequent dispatcher events are discarded.
+        """
+        # Only check the latest event
+        event = events[-1]
+        is_delete = event.event_info.event == DEFINITION.CASSANDRA_DELETE
+
+        if is_delete:
+            self.keep_connecting.remove(event.item.config.id)
+        else:
+            new_config = event.event_info.ctx
+
+        # We always delete all the events because we processed the last one anyway
+        for event in events:
+            self.dispatcher_backlog.remove(event.event_info)
+
+        # Stop connecting if we have just been deleted
+        return (False, None) if is_delete else (True, new_config)
 
 # ################################################################################################################################

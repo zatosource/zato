@@ -21,7 +21,7 @@ from subprocess import Popen
 from traceback import format_exc
 
 # Bunch
-from bunch import Bunch
+from bunch import Bunch, bunchify
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 import cloghandler
@@ -36,9 +36,11 @@ import yaml
 # Zato
 from zato.broker.thread_client import BrokerClient
 from zato.common import Inactive, SECRET_SHADOW, TRACE1, ZATO_ODB_POOL_NAME
+from zato.common.broker_message import code_to_name, DEFINITION
 from zato.common.delivery import DeliveryStore
+from zato.common.dispatch import dispatcher
 from zato.common.kvdb import KVDB
-from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable
+from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable, new_cid
 from zato.server.base import BrokerMessageReceiver
 
 logger = logging.getLogger(__name__)
@@ -94,15 +96,15 @@ class BaseConnection(object):
     def close(self):
         """ Attempt to close the connection to an external resource.
         """
-        if(self.logger.isEnabledFor(TRACE1)):
+        if(logger.isEnabledFor(TRACE1)):
             msg = 'About to close the connection for {0}'.format(self._conn_info())
-            self.logger.log(TRACE1, msg)
+            logger.log(TRACE1, msg)
             
         self.keep_connecting = False
         self._close()
             
         msg = 'Closed the connection for {0}'.format(self._conn_info())
-        self.logger.info(msg)
+        logger.info(msg)
     
     def _on_connected(self, *ignored_args, **ignored_kwargs):
         """ Invoked after establishing a successful connection to the resource.
@@ -113,7 +115,7 @@ class BaseConnection(object):
             delta = datetime.utcnow() - self.first_connection_attempt_time
             msg = '(Re-)connected to {0} after {1} attempt(s), time spent {2}'.format(
                 self._conn_info(), self.connection_attempts, delta)
-            self.logger.warn(msg)
+            logger.warn(msg)
             
         if self.has_valid_connection:
             self.connection_attempts = 1
@@ -136,12 +138,12 @@ class BaseConnection(object):
                         err_info = format_exc(e)
                     msg = u'Caught [{0}] error, will try to (re-)connect to {1} in {2} seconds, {3} attempt(s) so far, time spent {4}'
                     delta = datetime.utcnow() - self.first_connection_attempt_time
-                    self.logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
+                    logger.warn(msg.format(err_info, self._conn_info(), self.reconnect_sleep_time, self.connection_attempts, delta))
                     self.connection_attempts += 1
                     time.sleep(self.reconnect_sleep_time)
                 else:
                     msg = u'No connection for {0}, e:[{1}]'.format(self._conn_info(), format_exc(e))
-                    self.logger.error(msg)
+                    logger.error(msg)
                     raise
 
 # ################################################################################################################################
@@ -229,6 +231,7 @@ class BaseConnector(BrokerMessageReceiver):
             self.kvdb, self.broker_client, self.odb, float(fs_server_config.misc.delivery_lock_timeout))
 
 # ################################################################################################################################
+
 def setup_logging():
     logging.addLevelName('TRACE1', TRACE1)
     from logging.config import dictConfig
@@ -300,7 +303,8 @@ class BasePoolAPI(object):
         return self._conn_store.edit(name, msg)
 
     def delete_def(self, name):
-        return self._conn_store.delete(name)
+        #return self._conn_store.delete(name)
+        pass
 
     def change_password_def(self, config):
         return self._conn_store.change_password(config)
@@ -311,6 +315,7 @@ class BaseConnPoolStore(object):
     """ Base connection store for pool-based outgoing connections.
     """
     conn_name = None
+    dispatcher_events = []
 
     def __init__(self):
 
@@ -323,7 +328,13 @@ class BaseConnPoolStore(object):
 
         self.sessions = {}
         self.lock = self._RLock()
-        self.keep_connecting = True
+        self.keep_connecting = set() # IDs of connections to keep connecting for
+
+        # Connects us to interesting events the to-be-established connections need to consult
+        dispatcher.listen_for_updates(DEFINITION, self.dispatcher_callback)
+
+        # Maps broker message IDs to their accompanying config
+        self.dispatcher_backlog = []
 
     def __getitem__(self, name):
         return self.sessions[name]
@@ -336,41 +347,90 @@ class BaseConnPoolStore(object):
         """
         raise NotImplementedError('Must be overridden in subclasses')
 
+    def on_dispatcher_events(self, events):
+        """ Handles dispatcher events, by default returns True to indicate that connections should still continue.
+        """
+        return True
+
+    def check_dispatcher_backlog(self, item):
+        events = []
+
+        for event_info in self.dispatcher_backlog:
+            if event_info.ctx.id == item.config.id and event_info.event in self.dispatcher_events:
+                events.append(bunchify({
+                    'item': item,
+                    'event_info': event_info
+                }))
+
+        if events:
+            return self.on_dispatcher_events(events)
+        else:
+            return True, None
+
     def _log_connection_error(self, name, config_no_sensitive, e, additional=''):
         logger.warn('Could not connect to %s `%s`, config:`%s`, e:`%s`%s', self.conn_name, name, config_no_sensitive,
             format_exc(e), additional)
 
-    def _create(self, name, config, on_connection_established_callback):
+    def get_config_no_sensitive(self, config):
         config_no_sensitive = deepcopy(config)
         config_no_sensitive['password'] = SECRET_SHADOW
 
+        return config_no_sensitive
+
+    def _create(self, name, config, on_connection_established_callback=None):
+        """ Actually establishes a new connection - the method is called in a new greenlet.
+        """
+        self.keep_connecting.add(config.id)
+        session = None
+        config_no_sensitive = self.get_config_no_sensitive(config)
         item = Bunch(config=config, config_no_sensitive=config_no_sensitive, is_connected=False, conn=None)
 
         try:
-            logger.debug('Connecting to `%s`', config_no_sensitive)
+            logger.debug('Connecting to `%s`', item.config_no_sensitive)
 
-            while self.keep_connecting:
-                try:
-                    # Will be overridden in a subclass
-                    session = self.create_session(name, config, config_no_sensitive)
-                    self.keep_connecting = False
+            while item.config.id in self.keep_connecting:
 
-                except KeyboardInterrupt:
-                    self.keep_connecting = False
+                # It's possible our configuration has been already updated by users
+                # even before we first time established any connection. For instance,
+                # connection parameters were invalid and the user updated them.
+                # We need to learn of the new config or possibly stop connecting
+                # at all if we have been deleted.
+                with self.lock:
+                    keep_connecting, new_config = self.check_dispatcher_backlog(item)
 
-                except Exception, e:
-                    self._log_connection_error(name, config_no_sensitive, e, ', sleeping for 30 s')
-                    self._gevent.sleep(30) # TODO: Should be configurable
+                if keep_connecting:
+
+                    if new_config:
+                        item.config = new_config
+                        item.config_no_sensitive = self.get_config_no_sensitive(item.config)
+
+                    try:
+                        # Will be overridden in a subclass
+                        session = self.create_session(name, item.config, item.config_no_sensitive)
+                        self.keep_connecting.remove(item.config.id)
+                        logger.info('Connected to `%r`', item.config_no_sensitive)
+
+                    except KeyboardInterrupt:
+                        return
+
+                    except Exception, e:
+                        self._log_connection_error(name, item.config_no_sensitive, e, ', sleeping for 0.5 s')
+                        self._gevent.sleep(0.5) # TODO: Should be configurable
 
         except Exception, e:
-            self._log_connection_error(name, config_no_sensitive, e)
+            self._log_connection_error(name, item.config_no_sensitive, e)
         else:
-            logger.debug('Connected to `%s`', config_no_sensitive)
+
+            # No session, we give up and quit. This may happen if we have been deleted
+            # through a dispatcher event before the session could have been established at all.
+            if not session:
+                return
+
             item.conn = session
             item.is_connected = True
 
             if on_connection_established_callback:
-                on_connection_established_callback(config)
+                on_connection_established_callback(item.config)
 
         self.sessions[name] = item
 
@@ -392,28 +452,36 @@ class BaseConnPoolStore(object):
         """
         with self.lock:
             try:
-                if not name in self.sessions:
-                    raise Exception('No such name `{}` among `{}`'.format(name, self.sessions.keys()))
-
-                if self.sessions[name].is_connected:
-
-                    # Will be overridden in a subclass
+                session = self.sessions(name)
+                if session and session.is_connected:
                     self.delete_session(name)
 
             except Exception, e:
                 logger.warn('Error while shutting down session `%s`, e:`%s`', name, format_exc(e))
             finally:
-                del self.sessions[name]
+                self.sessions.pop(name, None)
 
     def edit(self, name, config):
         with self.lock:
-            self.delete_session(name)
-            return self._create(config.name, config)
+            try:
+                self.delete_session(name)
+            except Exception, e:
+                logger.warn('Could not delete session `%s`, config:`%s`, e:`%s`', name, config, format_exc(e))
+            else:
+                return self._create(config.name, config)
 
     def change_password(self, password_data):
         with self.lock:
             new_config = deepcopy(self.sessions[password_data.name].config_no_sensitive)
             new_config.password = password_data.password
             return self.edit(password_data.name, new_config)
+
+    def dispatcher_callback(self, event, ctx, **opaque):
+        self.dispatcher_backlog.append(bunchify({
+            'event_id': new_cid(),
+            'event': event,
+            'ctx': ctx,
+            'opaque': opaque
+        }))
 
 # ################################################################################################################################
