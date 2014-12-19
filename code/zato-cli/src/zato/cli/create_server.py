@@ -97,6 +97,7 @@ http_proxy=
 locale=
 ensure_sql_connections_exist=True
 http_server_header=Zato
+zeromq_connect_sleep=0.1
 
 [stats]
 expire_after=168 # In hours, 168 = 7 days = 1 week

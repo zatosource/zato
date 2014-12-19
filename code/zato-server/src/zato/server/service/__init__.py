@@ -267,7 +267,7 @@ class Service(object):
         # Queues
         out_amqp = PublisherFacade(self.broker_client, self.server.delivery_store)
         out_jms_wmq = WMQFacade(self.broker_client, self.server.delivery_store)
-        out_zmq = ZMQFacade(self.broker_client, self.server.delivery_store)
+        out_zmq = ZMQFacade(self.server)
 
         # SQL
         out_sql = self.worker_store.sql_pool_store
