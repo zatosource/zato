@@ -289,6 +289,7 @@ class CreateEditMeta(AdminServiceMeta):
                         input.def_name = def_.name
 
                     action = getattr(attrs.broker_message, attrs.broker_message_prefix + verb.upper()).value
+                    input.id = instance.id
                     input.action = action
                     input.old_name = old_name
 

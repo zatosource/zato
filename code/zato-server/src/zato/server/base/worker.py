@@ -1409,11 +1409,12 @@ class WorkerStore(BrokerMessageReceiver):
                 msg[name] = value
 
     def on_broker_msg_DEFINITION_CASSANDRA_CREATE(self, msg):
-        self.update_cassandra_conn(msg)
         self.cassandra_api.create_def(msg.name, msg)
+        self.update_cassandra_conn(msg)
 
     def on_broker_msg_DEFINITION_CASSANDRA_EDIT(self, msg):
         # It might be a rename
+        dispatcher.notify(broker_message.DEFINITION.CASSANDRA_EDIT.value, msg)
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
         self.update_cassandra_conn(msg)
@@ -1421,9 +1422,11 @@ class WorkerStore(BrokerMessageReceiver):
         self.cassandra_query_store.update_by_def(del_name, new_def)
 
     def on_broker_msg_DEFINITION_CASSANDRA_DELETE(self, msg):
+        dispatcher.notify(broker_message.DEFINITION.CASSANDRA_DELETE.value, msg)
         self.cassandra_api.delete_def(msg.name)
 
     def on_broker_msg_DEFINITION_CASSANDRA_CHANGE_PASSWORD(self, msg):
+        dispatcher.notify(broker_message.DEFINITION.CASSANDRA_CHANGE_PASSWORD.value, msg)
         self.cassandra_api.change_password_def(msg)
 
 # ################################################################################################################################
