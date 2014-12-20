@@ -74,10 +74,14 @@ class CassandraConnStore(BaseConnPoolStore):
         """
         session = self.sessions.get(name)
         if session:
-            self.keep_connecting.remove(session.config.id)
+            try:
+                self.keep_connecting.remove(session.config.id)
+            except KeyError:
+                pass # It's OK, no ongoing connection attempt at the moment
+
             session.conn.shutdown()
-        else:
-            logger.warn('Could not delete session `%s` - not among `%s`', name, self.sessions)
+
+        logger.debug('Could not delete session `%s` - not among `%s`', name, self.sessions)
 
 # ################################################################################################################################
 
