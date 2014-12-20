@@ -408,14 +408,14 @@ class BaseConnPoolStore(object):
                         # Will be overridden in a subclass
                         session = self.create_session(name, item.config, item.config_no_sensitive)
                         self.keep_connecting.remove(item.config.id)
-                        logger.info('Connected to `%r`', item.config_no_sensitive)
+                        logger.info('Connected to %s `%r`', self.conn_name, item.config_no_sensitive)
 
                     except KeyboardInterrupt:
                         return
 
                     except Exception, e:
-                        self._log_connection_error(name, item.config_no_sensitive, e, ', sleeping for 0.5 s')
-                        self._gevent.sleep(0.5) # TODO: Should be configurable
+                        self._log_connection_error(name, item.config_no_sensitive, e, ', sleeping for 20 s')
+                        self._gevent.sleep(20) # TODO: Should be configurable
 
         except Exception, e:
             self._log_connection_error(name, item.config_no_sensitive, e)
