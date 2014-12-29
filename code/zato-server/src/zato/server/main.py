@@ -83,7 +83,7 @@ class ZatoGunicornApplication(Application):
         for name in('deployment_lock_expires', 'deployment_lock_timeout'):
             setattr(self.zato_wsgi_app, name, self.zato_config[name])
 
-        # TLS is new in 2.0 and we need to assume it's not enabled. In Zato 1.3
+        # TLS is new in 2.0 and we need to assume it's not enabled. In Zato 2.1 or later
         # this will be changed to assume that we are always over TLS by default.
         if asbool(self.crypto_config.get('use_tls', False)):
             self.cfg.set('ssl_version', getattr(ssl, 'PROTOCOL_{}'.format(self.crypto_config.tls_protocol)))
