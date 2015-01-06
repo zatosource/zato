@@ -173,13 +173,11 @@ class IMAPConnection(_Connection):
         conn.close()
 
     def get(self, folder='INBOX'):
-        conn = self.get_connection()
-        conn.connection.select(folder)
+        with self.get_connection() as conn:
+            conn.connection.select(folder)
 
-        for uid, msg in conn.fetch_list(' '.join(self.config.get_criteria.splitlines())):
-            yield (uid, IMAPMessage(uid, conn, msg))
-
-        conn.connection.close()
+            for uid, msg in conn.fetch_list(' '.join(self.config.get_criteria.splitlines())):
+                yield (uid, IMAPMessage(uid, conn, msg))
 
     def ping(self):
         with self.get_connection() as conn:
