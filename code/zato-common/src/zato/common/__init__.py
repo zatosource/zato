@@ -202,7 +202,7 @@ class SEARCH:
     class ES:
         class DEFAULTS(Constants):
             BODY_AS = ValueConstant('POST')
-            HOSTS = ValueConstant('http://127.0.0.1:9200\n')
+            HOSTS = ValueConstant('127.0.0.1:9200\n')
 
     class SOLR:
         class DEFAULTS(Constants):
