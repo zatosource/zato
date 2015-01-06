@@ -28,7 +28,7 @@ class BaseAPI(object):
     def __init__(self, conn_store):
         self._conn_store = conn_store
 
-    def get(self, name, skip_inactive):
+    def get(self, name, skip_inactive=False):
         item = self._conn_store.get(name)
         if not item:
             msg = 'No such item `{}` in `{}`'.format(name, sorted(self._conn_store.items))
