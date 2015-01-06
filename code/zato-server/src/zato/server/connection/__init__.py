@@ -294,6 +294,8 @@ class BasePoolAPI(object):
 
         return item
 
+    get = __getitem__
+
     def create_def(self, name, msg, on_connection_established_callback=None):
         self._conn_store.create(name, msg, on_connection_established_callback)
 
