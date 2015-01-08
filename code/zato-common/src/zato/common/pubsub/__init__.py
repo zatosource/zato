@@ -429,7 +429,8 @@ class RedisPubSub(PubSub, LuaContainer):
     LUA_ACK_DELETE = 'lua-ack-delete'
 
     # Background tasks
-    LUA_DELETE_EXPIRED = 'lua-delete-expired'
+    LUA_DELETE_EXPIRED_TOPIC = 'lua-delete-expired-topic'
+    LUA_DELETE_EXPIRED_CONSUMER = 'lua-delete-expired-consumer'
     LUA_MOVE_TO_TARGET_QUEUES = 'lua-move-to-target-queues'
 
     # Message browsing
@@ -464,7 +465,8 @@ class RedisPubSub(PubSub, LuaContainer):
         self.add_lua_program(self.LUA_GET_FROM_CONSUMER_QUEUE, lua.lua_get_from_cons_queue)
         self.add_lua_program(self.LUA_REJECT, lua.lua_reject)
         self.add_lua_program(self.LUA_ACK_DELETE, lua.lua_ack_delete)
-        self.add_lua_program(self.LUA_DELETE_EXPIRED, lua.lua_delete_expired)
+        self.add_lua_program(self.LUA_DELETE_EXPIRED_TOPIC, lua.lua_delete_expired_topic)
+        self.add_lua_program(self.LUA_DELETE_EXPIRED_CONSUMER, lua.lua_delete_expired_consumer)
         self.add_lua_program(self.LUA_GET_MESSAGE_LIST, lua.lua_get_message_list)
         self.add_lua_program(self.LUA_DELETE_FROM_TOPIC, lua.lua_delete_from_topic)
         self.add_lua_program(self.LUA_DELETE_FROM_CONSUMER_QUEUE, lua.lua_delete_from_consumer_queue)
@@ -677,6 +679,17 @@ class RedisPubSub(PubSub, LuaContainer):
         messages and delete all traces of them.
         """
         with self.update_lock:
+
+            now = datetime.utcnow().isoformat()
+
+            # Delete from topic queues - needed if there are no subscribers
+            for topic in self.topics:
+                keys = [self.MSG_IDS_PREFIX.format(topic), self.MSG_VALUES_KEY, self.MSG_METADATA_KEY, self.MSG_EXPIRE_AT_KEY]
+
+                self.logger.info('Delete expired (topic) `%r` for keys `%s`',
+                    self.run_lua(self.LUA_DELETE_EXPIRED_TOPIC, keys=keys, args=[now]), keys)
+
+            # Delete from consumer queues
             for consumer in self.cons_to_topic:
                 sub_key = self.cons_to_sub[consumer]
                 consumer_msg_ids = self.CONSUMER_MSG_IDS_PREFIX.format(sub_key)
@@ -684,11 +697,9 @@ class RedisPubSub(PubSub, LuaContainer):
 
                 keys = [consumer_msg_ids, consumer_in_flight_ids, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY, 
                         self.UNACK_COUNTER_KEY]
-                expired = self.run_lua(self.LUA_DELETE_EXPIRED, keys=keys, args=[datetime.utcnow().isoformat()]) 
 
-                self.logger.info('Delete expired `%r` for keys `%s`', expired, keys)
-
-                return expired
+                self.logger.info('Delete expired (consumer) `%r` for keys `%s`',
+                    self.run_lua(self.LUA_DELETE_EXPIRED_CONSUMER, keys=keys, args=[now]), keys)
 
 # ############################################################################################################################
 
