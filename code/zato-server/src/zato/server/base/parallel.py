@@ -817,7 +817,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.delivery_store = parallel_server.app_context.get_object('delivery_store')
         parallel_server.delivery_store.broker_client = parallel_server.broker_client
         parallel_server.delivery_store.odb = parallel_server.odb
-        parallel_server.delivery_store.delivery_lock_timeout = float(parallel_server.fs_server_config.misc.delivery_lock_timeout)
 
         parallel_server.invoke_startup_services('startup_services_first_worker' if is_first else 'startup_services_any_worker')
 
