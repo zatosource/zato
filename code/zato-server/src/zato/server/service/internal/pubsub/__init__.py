@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from httplib import OK
+from httplib import FORBIDDEN, INTERNAL_SERVER_ERROR, OK
 from json import dumps, loads
 from logging import getLogger
 from traceback import format_exc
@@ -22,7 +22,7 @@ from huTools.structured import dict2xml
 
 # Zato
 from zato.common import DATA_FORMAT, PUB_SUB, ZATO_ERROR, ZATO_NONE, ZATO_OK
-from zato.common.pubsub import ItemFull
+from zato.common.pubsub import ItemFull, PermissionDenied
 from zato.common.util import get_basic_auth_credentials
 from zato.server.connection.http_soap import BadRequest, Forbidden, TooManyRequests, Unauthorized
 from zato.server.service import AsIs, Bool, Int, Service
@@ -205,7 +205,7 @@ class RESTHandler(Service):
 
 # ################################################################################################################################
 
-    def _set_payload_data(self, out):
+    def _set_payload_data(self, out, status_code=OK):
         if self.environ['is_json']:
             content_type = 'application/json'
             out = dumps(out)
@@ -215,6 +215,7 @@ class RESTHandler(Service):
 
         self.response.headers['Content-Type'] = content_type
         self.response.payload = out
+        self.response.status_code = status_code
 
 # ################################################################################################################################
 
@@ -270,7 +271,11 @@ class RESTHandler(Service):
 # ################################################################################################################################
 
     def handle_POST(self):
-        getattr(self, '_handle_POST_{}'.format(self.request.input.item_type))()
+        try:
+            getattr(self, '_handle_POST_{}'.format(self.request.input.item_type))()
+        except Exception, e:
+            details, status_code = ('Permission denied', FORBIDDEN) if isinstance(e, PermissionDenied) else (e.message, INTERNAL_SERVER_ERROR)
+            self._set_payload_data({'status': ZATO_ERROR, 'details':details}, status_code)
 
     def handle_DELETE(self):
 
