@@ -171,6 +171,7 @@ class FakeServer(object):
         self.service_store = FakeServiceStore(service_store_name_to_impl_name, service_store_impl_name_to_service)
         self.fs_server_config = Bunch()
         self.fs_server_config.misc = Bunch()
+        self.fs_server_config.misc.zeromq_connect_sleep = 0.1
         self.fs_server_config.misc.internal_services_may_be_deleted = False
         self.repo_location = rand_string()
         self.delivery_store = None
