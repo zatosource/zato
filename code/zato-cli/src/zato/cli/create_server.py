@@ -91,7 +91,6 @@ return_internal_objects=False
 internal_services_may_be_deleted=False
 initial_cluster_name={initial_cluster_name}
 initial_server_name={initial_server_name}
-delivery_lock_timeout=2
 queue_build_cap=30 # All queue-based connections need to initialize in that many seconds
 http_proxy=
 locale=
@@ -132,10 +131,6 @@ zato.helpers.input-logger=Sample payload for a startup service (any worker)
 move_to_target_queues_interval=3 # In seconds
 delete_expired_interval=180 # In seconds
 invoke_callbacks_interval=2 # In seconds
-
-[patterns]
-delivery_auto_lock_timeout=90
-delivery_retry_threshold_multiplier=4
 
 [profiler]
 enabled=False
