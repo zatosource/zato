@@ -215,44 +215,74 @@ lua_ack_delete = """
 
 """
 
-lua_delete_expired = """
-   local consumer_msg_ids = KEYS[1]
-   local cons_in_flight_ids = KEYS[2]
-   local msg_values = KEYS[3]
-   local msg_expire_at = KEYS[4]
-   local unack_counter = KEYS[5]
+lua_delete_expired_topic = """
 
-   local now_utc = tostring(ARGV[1])
-   local expired = {}
+    local id_key = KEYS[1]
+    local msg_values = KEYS[2]
+    local msg_metadata_key = KEYS[3]
+    local msg_expire_at = KEYS[4]
 
-   -- Grab a batch of IDs to check their expiration
-   local ids = redis.pcall('lrange', consumer_msg_ids, 0, 500)
+    local now_utc = tostring(ARGV[1])
+    local expired = {}
 
-   for id_idx, id in ipairs(ids) do
+    local ids = redis.pcall('zrange', id_key, 0, 500)
 
-       -- The message may be expired but the result other than 0 means it's still in flight - we don't do anything with these.
-       -- It's possible they can block the whole consumer queue but in that case a user intervention will be needed.
+    for id_idx, id in ipairs(ids) do
 
-       if redis.pcall('sismember', id, cons_in_flight_ids) == 0 then
+        -- Expiration times can be compared lexicographically because we use ISO-8601, i.e. 2014-02-16T02:51:24.013459
+        local expire_at = tostring(redis.pcall('hget', msg_expire_at, id))
 
-           -- Ok, we know the message is not in-flight so grab the time it expires at and compare it with now.
-           -- Note that we're using ISO-8601 dates in the format of 2014-02-16T02:51:24.013459 so we can always
-           -- compare expiration times lexicographically.
+        if now_utc > expire_at then
+            redis.pcall('zrem', id_key, id)
+            redis.pcall('hdel', msg_values, id)
+            redis.pcall('hdel', msg_metadata_key, id)
+            redis.pcall('hdel', msg_expire_at, id)
+            table.insert(expired, id)
+        end
+    end
 
-           local expire_at = tostring(redis.pcall('hget', msg_expire_at, id))
+    return expired
 
-           -- The message has indeed expired so we can safely delete every piece of information on it.
-           if now_utc > expire_at then
-               redis.pcall('lrem', consumer_msg_ids, 0, id)
-               redis.pcall('hdel', msg_values, id)
-               redis.pcall('hdel', msg_expire_at, id)
-               redis.pcall('hdel', unack_counter, id)
-               table.insert(expired, id)
-           end
-       end
-   end
+"""
 
-   return expired
+lua_delete_expired_consumer = """
+    local consumer_msg_ids = KEYS[1]
+    local cons_in_flight_ids = KEYS[2]
+    local msg_values = KEYS[3]
+    local msg_expire_at = KEYS[4]
+    local unack_counter = KEYS[5]
+
+    local now_utc = tostring(ARGV[1])
+    local expired = {}
+
+    -- Grab a batch of IDs to check their expiration
+    local ids = redis.pcall('lrange', consumer_msg_ids, 0, 500)
+
+    for id_idx, id in ipairs(ids) do
+
+        -- The message may be expired but the result other than 0 means it's still in flight - we don't do anything with these.
+        -- It's possible they can block the whole consumer queue but in that case a user intervention will be needed.
+
+        if redis.pcall('sismember', id, cons_in_flight_ids) == 0 then
+
+            -- Ok, we know the message is not in-flight so grab the time it expires at and compare it with now.
+            -- Note that we're using ISO-8601 dates in the format of 2014-02-16T02:51:24.013459 so we can always
+            -- compare expiration times lexicographically.
+
+            local expire_at = tostring(redis.pcall('hget', msg_expire_at, id))
+
+            -- The message has indeed expired so we can safely delete every piece of information on it.
+            if now_utc > expire_at then
+                redis.pcall('lrem', consumer_msg_ids, 0, id)
+                redis.pcall('hdel', msg_values, id)
+                redis.pcall('hdel', msg_expire_at, id)
+                redis.pcall('hdel', unack_counter, id)
+                table.insert(expired, id)
+            end
+        end
+    end
+
+    return expired
 
 """
 
