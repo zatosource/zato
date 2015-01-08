@@ -25,8 +25,8 @@
             'name',
             'current_depth',
             'max_depth',
-            '_consumers_count',
             '_producers_count',
+            '_consumers_count',
             '_last_used',
             '_publish',
             '_edit',
@@ -86,8 +86,8 @@
                         <td><a href="{% url pubsub-message-topic cluster_id item.name %}">{{ item.current_depth }}</a></td>
                         <td>{{ item.max_depth }}</td>
                         <td>{% if item.last_pub_time %}{{ item.last_pub_time }}{% else %}<span class="form_hint">(Never)</span>{% endif %}</td>
-                        <td><a href="{% url pubsub-consumers cluster_id item.name %}">{{ item.consumers_count }} consumer{% if item.consumers_count == 0 or item.consumers_count >= 2 %}s{% endif %}</a></td>
                         <td><a href="{% url pubsub-producers cluster_id item.name %}">{{ item.producers_count }} producer{% if item.producers_count == 0 or item.producers_count >= 2 %}s{% endif %}</a></td>
+                        <td><a href="{% url pubsub-consumers cluster_id item.name %}">{{ item.consumers_count }} consumer{% if item.consumers_count == 0 or item.consumers_count >= 2 %}s{% endif %}</a></td>
                         <td><a href="{% url pubsub-topics-publish cluster_id item.name %}">Publish a message</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topics.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topics.delete_('{{ item.id }}')">Delete</a></td>
