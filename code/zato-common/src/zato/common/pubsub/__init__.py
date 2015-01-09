@@ -916,7 +916,7 @@ class PubSubAPI(object):
         """
         ctx = AckCtx()
         ctx.sub_key = sub_key
-        ctx.msg_ids = msg_ids if isinstance(msg_ids, list) else [msg_ids]
+        ctx.msg_ids = [msg_ids] if not isinstance(msg_ids, (list, tuple, set, dict)) else msg_ids
 
         return self.impl.acknowledge_delete(ctx)
 
