@@ -334,6 +334,3 @@ lua_delete_from_topic = """
    return result
 
 """
-
-lua_delete_from_consumer_queue = """
-"""
