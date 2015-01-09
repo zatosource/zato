@@ -438,7 +438,6 @@ class RedisPubSub(PubSub, LuaContainer):
 
     # Message deleting
     LUA_DELETE_FROM_TOPIC = 'lua-delete-from-topic'
-    LUA_DELETE_FROM_CONSUMER_QUEUE = 'lua-delete-from-consumer-queue'
 
 # ################################################################################################################################
 
@@ -469,7 +468,6 @@ class RedisPubSub(PubSub, LuaContainer):
         self.add_lua_program(self.LUA_DELETE_EXPIRED_CONSUMER, lua.lua_delete_expired_consumer)
         self.add_lua_program(self.LUA_GET_MESSAGE_LIST, lua.lua_get_message_list)
         self.add_lua_program(self.LUA_DELETE_FROM_TOPIC, lua.lua_delete_from_topic)
-        self.add_lua_program(self.LUA_DELETE_FROM_CONSUMER_QUEUE, lua.lua_delete_from_consumer_queue)
 
 # ################################################################################################################################
 
@@ -918,7 +916,7 @@ class PubSubAPI(object):
         """
         ctx = AckCtx()
         ctx.sub_key = sub_key
-        ctx.msg_ids = msg_ids if isinstance(msg_ids, list) else list(msg_ids)
+        ctx.msg_ids = msg_ids if isinstance(msg_ids, list) else [msg_ids]
 
         return self.impl.acknowledge_delete(ctx)
 
