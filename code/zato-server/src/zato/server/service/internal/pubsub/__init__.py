@@ -162,7 +162,7 @@ class RESTHandler(Service):
     """ Handles calls to pub/sub from REST clients.
     """
     class SimpleIO(object):
-        input_required = ('item_type', 'item',)
+        input_required = ('item_type', 'item')
         input_optional = ('max', 'dir', 'format', 'mime_type', Int('priority'), Int('expiration'), AsIs('msg_id'),
             Bool('ack'), Bool('reject'))
         default = ZATO_NONE
@@ -226,8 +226,8 @@ class RESTHandler(Service):
             'payload': self.request.raw_request,
             'topic': self.request.input.item,
             'mime_type': self.request.input.mime_type or self.wsgi_environ['CONTENT_TYPE'],
-            'priority': self.request.input.priority,
-            'expiration': self.request.input.expiration,
+            'priority': int(self.request.input.priority),
+            'expiration': int(self.request.input.expiration),
             'msg_id': self.request.input.msg_id,
             'client_id': self.environ['client_id'],
         }
@@ -275,6 +275,7 @@ class RESTHandler(Service):
             getattr(self, '_handle_POST_{}'.format(self.request.input.item_type))()
         except Exception, e:
             details, status_code = ('Permission denied', FORBIDDEN) if isinstance(e, PermissionDenied) else (e.message, INTERNAL_SERVER_ERROR)
+            self.logger.warn('Could not handle POST pub/sub (%s %s), e:`%s`', self.cid, details, format_exc(e))
             self._set_payload_data({'status': ZATO_ERROR, 'details':details}, status_code)
 
     def handle_DELETE(self):
