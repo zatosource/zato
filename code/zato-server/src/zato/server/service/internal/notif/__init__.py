@@ -89,10 +89,12 @@ class NotifierService(AdminService):
         # Ok, overwrite old config with current one.
         config.update(current_config.config)
 
+        self.environ['notif_sleep_interval'] = config.interval
+
         try:
 
             # Grab a distributed lock so we are sure it is only us who connect to pull newest data.
-            with self.lock(config.name):
+            with self.lock('zato:lock:{}:{}'.format(self.notif_type, config.name)):
                 self.run_notifier_impl(config)
 
         except LockTimeout:
@@ -102,9 +104,10 @@ class NotifierService(AdminService):
     def handle(self):
         self.keep_running = True
         config = bunchify(self.request.payload)
+        self.environ['notif_sleep_interval'] = config.interval
 
         while self.keep_running:
             spawn(self.run_notifier, config)
-            sleep(config.interval)
+            sleep(self.environ['notif_sleep_interval'])
 
         self.logger.info('Stopped `%s` notifier `%s`', self.notif_type, config.name)
