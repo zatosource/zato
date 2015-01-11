@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from datetime import datetime
 
 # SQLAlchemy
 from sqlalchemy.orm.exc import NoResultFound
@@ -29,6 +30,7 @@ label = 'an SQL notification'
 broker_message = NOTIF
 broker_message_prefix = 'SQL_'
 list_func = notif_sql_list
+output_required_extra = ['service_name']
 create_edit_input_required_extra = ['service_name']
 create_edit_rewrite = ['service_name']
 skip_input_params = ('notif_type', 'service_id', 'get_data_patt', 'get_data', 'get_data_patt_neg', 'name_pattern_neg', 'name_pattern')
@@ -63,6 +65,9 @@ class RunNotifier(NotifierService):
     notif_type = COMMON_NOTIF.TYPE.SQL
 
     def run_notifier_impl(self, config):
+
+        out = []
+
         try:
             with closing(self.odb.session()) as session:
                 def_name = session.query(SQLConnectionPool).\
@@ -75,4 +80,11 @@ class RunNotifier(NotifierService):
             return
 
         with closing(self.outgoing.sql[def_name].session()) as session:
-            self.invoke_async(config.service_name, {'data':session.execute(config.query)})
+            for row in session.execute(config.query).fetchall():
+                dict_row = dict(row.items())
+                for k, v in dict_row.items():
+                    if isinstance(v, datetime):
+                        dict_row[k] = v.isoformat()
+                out.append(dict_row)
+
+                self.invoke_async(config.service_name, {'data':out})
