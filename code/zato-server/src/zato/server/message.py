@@ -274,11 +274,11 @@ class JSONPointerStore(BaseStore):
             dpath_util.new(doc, '/' + '/'.join(pointer.parts), value)
             return doc
 
-    def add(self, name, config, *ignored_args, **ignored_kwargs):
+    def add(self, name, value, *ignored_args, **ignored_kwargs):
         """ Adds a new JSON Pointer expression to the store.
         """
         # Make sure it's valid, no exception in 'resolve' means the expression was valid.
-        pointer = JsonPointer(config.value)
+        pointer = JsonPointer(value)
         pointer.resolve({}, None)
 
         with self.update_lock:
