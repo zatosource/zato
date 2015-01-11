@@ -47,7 +47,7 @@ class InvokeRunNotifier(Service):
         }
 
         msg = {'action': NOTIF.RUN_NOTIFIER.value, 'request': dumps(request)}
-        self.broker_client.publish(msg)
+        self.broker_client.invoke_async(msg)
 
 # ################################################################################################################################
 
