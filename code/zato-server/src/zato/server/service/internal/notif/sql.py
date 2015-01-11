@@ -87,4 +87,4 @@ class RunNotifier(NotifierService):
                         dict_row[k] = v.isoformat()
                 out.append(dict_row)
 
-                self.invoke_async(config.service_name, {'data':out})
+            self.invoke_async(config.service_name, {'data':out})
