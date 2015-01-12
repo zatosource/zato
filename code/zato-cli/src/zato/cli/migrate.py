@@ -159,7 +159,7 @@ class Migrate(ManageCommand):
             'singleton': update_singleton,
             'misc': update_misc,
             'kvdb': update_kvdb,
-            'component_enabled': 
+            'component_enabled': update_component_enabled,
         }
 
         # Order of sections in 2.0
