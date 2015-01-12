@@ -139,6 +139,8 @@ class Migrate(ManageCommand):
             section['locale'] = ''
             section['ensure_sql_connections_exist'] = True
             section['http_server_header'] = 'Zato'
+            section['zeromq_connect_sleep'] = '0.1'
+            section['aws_host'] = ''
 
         def update_kvdb(section):
             section['use_redis_sentinels'] = False
@@ -151,6 +153,9 @@ class Migrate(ManageCommand):
             section['stats'] = True
             section['slow_response'] = True
 
+        def update_os_environ(section):
+            section['sample_key'] = 'sample_value'
+
         update_handlers = {
             'main': update_main,
             'crypto': update_crypto,
@@ -160,12 +165,13 @@ class Migrate(ManageCommand):
             'misc': update_misc,
             'kvdb': update_kvdb,
             'component_enabled': update_component_enabled,
+            'os_environ': update_os_environ,
         }
 
         # Order of sections in 2.0
         all_sections_2_0 = ('main', 'crypto', 'odb', 'hot_deploy', 'singleton', 'spring', 'misc', 'stats', 'kvdb', \
             'startup_services_first_worker', 'startup_services_any_worker', 'pubsub', 'patterns',
-            'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled')
+            'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled', 'os_environ')
 
         buff = StringIO(server_conf_template)
 
