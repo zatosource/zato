@@ -160,6 +160,10 @@ level=WARN
 
 [rbac]
 custom_auth_list_service=
+
+[component_enabled]
+stats=True
+slow_response=True
 """.encode('utf-8')
 
 service_sources_contents = """# Visit https://zato.io/docs for more information.
