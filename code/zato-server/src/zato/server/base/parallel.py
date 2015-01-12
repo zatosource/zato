@@ -109,6 +109,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.has_gevent = None
         self.delivery_store = None
         self.static_config = None
+        self.component_enabled = Bunch()
         self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
 
         # Allows users store arbitrary data across service invocations
@@ -356,6 +357,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         return is_first
 
     def _after_init_accepted(self, server, deployment_key):
+
+        # Which components are enabled
+        self.component_enabled.stats = asbool(self.fs_server_config.component_enabled.stats)
+        self.component_enabled.slow_response = asbool(self.fs_server_config.component_enabled.slow_response)
 
         # Pub/sub
         self.pubsub = PubSubAPI(RedisPubSub(self.kvdb.conn))
