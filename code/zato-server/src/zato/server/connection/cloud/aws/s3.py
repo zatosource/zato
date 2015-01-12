@@ -18,6 +18,7 @@ from boto.s3.key import Key
 
 # Zato
 from zato.common import ZATO_NONE
+from zato.common.util import parse_extra_into_dict
 from zato.server.connection.queue import Wrapper
 
 logger = getLogger(__name__)
@@ -43,7 +44,7 @@ class _S3Connection(object):
         _key = Key(_bucket)
 
         _key.content_type = content_type if content_type != ZATO_NONE else self.zato_content_type
-        _key.metadata.update(metadata if metadata != ZATO_NONE else self.zato_metadata)
+        _key.metadata.update(metadata if metadata != ZATO_NONE else parse_extra_into_dict(self.zato_metadata, False))
         _key.name = key
         _key.storage_class = storage_class if storage_class != ZATO_NONE else self.zato_storage_class
         _key.set_contents_from_string(
