@@ -836,7 +836,7 @@ def register_diag_handlers():
 
 # ################################################################################################################################
 
-def parse_extra_into_dict(lines):
+def parse_extra_into_dict(lines, convert_bool=True):
     """ Creates a dictionary out of key=value lines.
     """
     _extra = {}
@@ -854,11 +854,12 @@ def parse_extra_into_dict(lines):
                 key, value = line
                 value = value.strip()
 
-                try:
-                    value = is_boolean(value)
-                except VdtTypeError:
-                    # It's cool, not a boolean
-                    pass
+                if convert_bool:
+                    try:
+                        value = is_boolean(value)
+                    except VdtTypeError:
+                        # It's cool, not a boolean
+                        pass
 
                 try:
                     value = is_integer(value)
