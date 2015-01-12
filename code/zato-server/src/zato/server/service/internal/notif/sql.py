@@ -16,8 +16,8 @@ from datetime import datetime
 from sqlalchemy.orm.exc import NoResultFound
 
 # Zato
+from zato.common import NOTIF as COMMON_NOTIF, SECRET_SHADOW
 from zato.common.broker_message import NOTIF
-from zato.common import NOTIF as COMMON_NOTIF
 from zato.common.odb.model import NotificationSQL, SQLConnectionPool, Service
 from zato.common.odb.query import notif_sql_list
 from zato.server.service.internal import AdminService
@@ -75,6 +75,7 @@ class RunNotifier(NotifierService):
                     filter(SQLConnectionPool.cluster_id==self.server.cluster_id).\
                     one().name
         except NoResultFound:
+            config['password'] = SECRET_SHADOW
             self.logger.info('Stopping notifier, could not find an SQL pool for config `%s`', config)
             self.keep_running = False
             return
