@@ -25,8 +25,9 @@ from zato.server.connection.queue import ConnectionQueue
 class SwiftWrapper(object):
     """ Wraps a queue of connections to OpenStack Swift.
     """
-    def __init__(self, config):
+    def __init__(self, config, server):
         self.config = config
+        self.server = server
 
         self.client = ConnectionQueue(
             self.config.pool_size, self.config.queue_build_cap, self.config.name, 'OpenStack Swift', self.config.auth_url,
