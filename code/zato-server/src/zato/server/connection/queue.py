@@ -121,9 +121,10 @@ class ConnectionQueue(object):
 class Wrapper(object):
     """ Base class for connections wrappers.
     """
-    def __init__(self, config, conn_type):
+    def __init__(self, config, conn_type, server=None):
         self.conn_type = conn_type
         self.config = config
+        self.server = server
 
         self.client = ConnectionQueue(
             self.config.pool_size, self.config.queue_build_cap, self.config.name, self.conn_type, self.config.auth_url,

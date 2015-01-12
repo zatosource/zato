@@ -13,7 +13,7 @@ from logging import getLogger
 
 # Boto
 from boto.s3.bucket import Bucket
-from boto.s3.connection import S3Connection
+from boto.s3.connection import NoHostProvided, S3Connection
 from boto.s3.key import Key
 
 # Zato
@@ -32,14 +32,14 @@ class _S3Connection(object):
         self.zato_encrypt_at_rest = 'AES256' if encrypt_at_rest else None
 
         self.zato_storage_class = kwargs.pop('storage_class')
-        self._conn = S3Connection(**kwargs)
+        self.impl = S3Connection(**kwargs)
 
     def sanity_check(self):
-        self._conn.get_canonical_user_id()
+        self.impl.get_canonical_user_id()
 
     def set(self, key, value, bucket=ZATO_NONE, content_type=ZATO_NONE, metadata=ZATO_NONE,
             storage_class=ZATO_NONE, encrypt_at_rest=ZATO_NONE):
-        _bucket = Bucket(self._conn, bucket if bucket != ZATO_NONE else self.zato_default_bucket)
+        _bucket = Bucket(self.impl, bucket if bucket != ZATO_NONE else self.zato_default_bucket)
         _key = Key(_bucket)
 
         _key.content_type = content_type if content_type != ZATO_NONE else self.zato_content_type
@@ -52,16 +52,16 @@ class _S3Connection(object):
 class S3Wrapper(Wrapper):
     """ Wraps a queue of connections to AWS S3.
     """
-    def __init__(self, config):
+    def __init__(self, config, server):
         config.auth_url = config.address
-        super(S3Wrapper, self).__init__(config, 'AWS S3')
+        super(S3Wrapper, self).__init__(config, 'AWS S3', server)
 
     def add_client(self):
         conn = _S3Connection(aws_access_key_id=self.config.username, aws_secret_access_key=self.config.password,
-            is_secure=self.config.is_secure, port=self.config.port, host=self.config.host, debug=self.config.debug_level,
+            debug=self.config.debug_level,
             suppress_consec_slashes=self.config.suppr_cons_slashes, content_type=self.config.content_type,
-            metadata=self.config.metadata or {}, bucket=self.config.bucket, encrypt_at_rest=self.config.encrypt_at_rest,
-            storage_class=self.config.storage_class)
+            metadata=self.config.metadata_ or {}, bucket=self.config.bucket, encrypt_at_rest=self.config.encrypt_at_rest,
+            storage_class=self.config.storage_class, host=self.server.fs_server_config.misc.aws_host or NoHostProvided)
 
         # Sanity check - no exception here means the config is correct.
         conn.sanity_check()
