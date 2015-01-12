@@ -31,8 +31,9 @@ logger = getLogger(__name__)
 class OdooWrapper(object):
     """ Wraps a queue of connections to Odoo.
     """
-    def __init__(self, config):
+    def __init__(self, config, server):
         self.config = config
+        self.server = server
         self.url = '{protocol}://{user}:******@{host}:{port}/{database}'.format(**self.config)
         self.client = ConnectionQueue(
             self.config.pool_size, self.config.queue_build_cap, self.config.name, 'Odoo', self.url, self.add_client)

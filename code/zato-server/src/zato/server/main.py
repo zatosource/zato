@@ -236,7 +236,12 @@ def run(base_dir, start_gunicorn_app=True):
             path = config.profiler.url_path,
             unwind = config.profiler.unwind)
 
-    # Run the app at last we execute from command line
+    # New in 2.0 - set environmet variables for servers to inherit
+    os_environ = config.get('os_environ')
+    for key, value in os_environ.items():
+        os.environ[key] = value
+
+    # Run the app at last
     if start_gunicorn_app:
         zato_gunicorn_app.run()
     else:

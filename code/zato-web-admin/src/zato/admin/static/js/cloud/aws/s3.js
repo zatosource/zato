@@ -3,7 +3,7 @@
 
 $.fn.zato.data_table.AWSS3 = new Class({
     toString: function() {
-        var s = '<AWSS3 id:{0} name:{1} is_active:{2} is_snet:{3}>';
+        var s = '<AWSS3 id:{0} name:{1} is_active:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)'

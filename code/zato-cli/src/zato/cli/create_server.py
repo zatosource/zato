@@ -97,6 +97,7 @@ locale=
 ensure_sql_connections_exist=True
 http_server_header=Zato
 zeromq_connect_sleep=0.1
+aws_host=
 
 [stats]
 expire_after=168 # In hours, 168 = 7 days = 1 week
@@ -164,6 +165,9 @@ custom_auth_list_service=
 [component_enabled]
 stats=True
 slow_response=True
+
+[os_environ]
+sample_key=sample_value
 """.encode('utf-8')
 
 service_sources_contents = """# Visit https://zato.io/docs for more information.
