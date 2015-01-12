@@ -318,7 +318,7 @@ class WorkerStore(BrokerMessageReceiver):
                 if isinstance(wrapper, S3Wrapper):
                     self._update_aws_config(config)
                 config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
-                config_attr[name].conn = wrapper(config)
+                config_attr[name].conn = wrapper(config, self.server)
                 config_attr[name].conn.build_queue()
 
     def _update_cloud_openstack_swift_container(self, config_dict):
@@ -1278,7 +1278,7 @@ class WorkerStore(BrokerMessageReceiver):
 
         # .. and create a new one
         msg['queue_build_cap'] = float(self.server.fs_server_config.misc.queue_build_cap)
-        wrapper = wrapper_class(msg)
+        wrapper = wrapper_class(msg, self.server)
         wrapper.build_queue()
 
         item = Bunch()
