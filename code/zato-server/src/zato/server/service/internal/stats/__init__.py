@@ -63,6 +63,9 @@ class Delete(AdminService):
 class BaseAggregatingService(AdminService):
     """ A base class for all services that process statistics into aggregated values.
     """
+    def stats_enabled(self):
+        return self.server.component_enabled.stats
+
     def aggregate_raw_times(self, key, service_name, max_batch_size=None):
         """ Aggregates values from a list living under a given key. Returns its
         min, max, mean and an overall usage count. 'max_batch_size' controls how
@@ -183,7 +186,10 @@ class BaseAggregatingService(AdminService):
         
 class ProcessRawTimes(BaseAggregatingService):
     def handle(self):
-        
+
+        if not self.stats_enabled():
+            return
+
         # 
         # Sample config values
         # 
@@ -224,7 +230,10 @@ class AggregateByMinute(BaseAggregatingService):
     """ Aggregates per-minute times.
     """
     def handle(self):
-        
+
+        if not self.stats_enabled():
+            return
+
         # Get all keys from a minute that is sure to have passed, for instance,
         # say it's 13:19 right now (regardless of the seconds part), we'll process everything
         # that happened in 13:17. Hence it's also important that any changes in the minutes
@@ -253,6 +262,10 @@ class AggregateByHour(BaseAggregatingService):
     """ Creates per-hour stats.
     """
     def handle(self):
+
+        if not self.stats_enabled():
+            return
+
         delta = timedelta(hours=1)
         source_strftime_format = '%Y:%m:%d:%H'
         source = KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE
@@ -264,6 +277,10 @@ class AggregateByDay(BaseAggregatingService):
     """ Creates per-day stats.
     """
     def handle(self):
+
+        if not self.stats_enabled():
+            return
+
         delta = timedelta(days=1)
         source_strftime_format = '%Y:%m:%d'
         source = KVDB.SERVICE_TIME_AGGREGATED_BY_HOUR
@@ -275,6 +292,10 @@ class AggregateByMonth(BaseAggregatingService):
     """ Creates per-month stats.
     """
     def handle(self):
+
+        if not self.stats_enabled():
+            return
+
         delta = relativedelta(datetime.utcnow(), months=1)
         source_strftime_format = '%Y:%m'
         source = KVDB.SERVICE_TIME_AGGREGATED_BY_DAY
