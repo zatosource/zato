@@ -147,6 +147,10 @@ class Migrate(ManageCommand):
             section['shadow_password_in_logs'] = True
             section['log_connection_info_sleep_time'] = 5
 
+        def update_component_enabled(section):
+            section['stats'] = True
+            section['slow_response'] = True
+
         update_handlers = {
             'main': update_main,
             'crypto': update_crypto,
@@ -155,12 +159,13 @@ class Migrate(ManageCommand):
             'singleton': update_singleton,
             'misc': update_misc,
             'kvdb': update_kvdb,
+            'component_enabled': 
         }
 
         # Order of sections in 2.0
         all_sections_2_0 = ('main', 'crypto', 'odb', 'hot_deploy', 'singleton', 'spring', 'misc', 'stats', 'kvdb', \
             'startup_services_first_worker', 'startup_services_any_worker', 'pubsub', 'patterns',
-            'profiler', 'user_config', 'newrelic', 'sentry', 'rbac')
+            'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled')
 
         buff = StringIO(server_conf_template)
 
@@ -184,7 +189,7 @@ class Migrate(ManageCommand):
 
         # Sections new to 2.0
         for name in ('stats', 'startup_services_first_worker', 'startup_services_any_worker', 'pubsub', 'patterns', \
-                    'profiler', 'user_config', 'newrelic', 'sentry', 'rbac'):
+                    'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled'):
             new_config[name] = dict(ref_cp.items(name))
 
         new_cp = ConfigParser()
