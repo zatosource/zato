@@ -495,7 +495,9 @@ class Service(object):
         """ An internal method run just before the service sets to process the payload.
         Used for incrementing the service's usage count and storing the service invocation time.
         """
-        self.usage = self.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, self.name))
+        if self.server.component_enabled.stats:
+            self.usage = self.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, self.name))
+
         self.invocation_time = datetime.utcnow()
 
     def post_handle(self):
@@ -511,23 +513,27 @@ class Service(object):
         self.handle_return_time = datetime.utcnow()
         self.processing_time_raw = self.handle_return_time - self.invocation_time
 
-        proc_time = self.processing_time_raw.total_seconds() * 1000.0
-        proc_time = proc_time if proc_time > 1 else 0
+        if self.server.component_enabled.stats:
 
-        self.processing_time = int(round(proc_time))
+            logger.warn(1)
 
-        self.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIME_BASIC, self.name), 'last', self.processing_time)
-        self.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIME_RAW, self.name), self.processing_time)
+            proc_time = self.processing_time_raw.total_seconds() * 1000.0
+            proc_time = proc_time if proc_time > 1 else 0
 
-        key = '{}{}:{}'.format(KVDB.SERVICE_TIME_RAW_BY_MINUTE,
-            self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
-        self.kvdb.conn.rpush(key, self.processing_time)
+            self.processing_time = int(round(proc_time))
 
-        # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds)
-        # to aggregate processing times for a given minute and then it will expire
+            self.kvdb.conn.hset('{}{}'.format(KVDB.SERVICE_TIME_BASIC, self.name), 'last', self.processing_time)
+            self.kvdb.conn.rpush('{}{}'.format(KVDB.SERVICE_TIME_RAW, self.name), self.processing_time)
 
-        # Note that we need Redis 2.1.3+ otherwise the key has just been overwritten
-        self.kvdb.conn.expire(key, 300)
+            key = '{}{}:{}'.format(KVDB.SERVICE_TIME_RAW_BY_MINUTE,
+                self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
+            self.kvdb.conn.rpush(key, self.processing_time)
+
+            # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds)
+            # to aggregate processing times for a given minute and then it will expire
+
+            # Note that we need Redis 2.1.3+ otherwise the key has just been overwritten
+            self.kvdb.conn.expire(key, 300)
 
         #
         # Sample requests/responses
@@ -550,21 +556,24 @@ class Service(object):
         #
         # Slow responses
         #
-        if self.processing_time > self.slow_threshold:
+        if self.server.component_enabled.slow_response:
 
-            # TODO: Don't parse it here and a moment earlier above
-            resp = (self.response.payload.getvalue() if hasattr(self.response.payload, 'getvalue') else self.response.payload) or ''
+            if self.processing_time > self.slow_threshold:
 
-            data = {
-                'cid': self.cid,
-                'proc_time': self.processing_time,
-                'slow_threshold': self.slow_threshold,
-                'req_ts': self.invocation_time.isoformat(),
-                'resp_ts': self.handle_return_time.isoformat(),
-                'req': self.request.raw_request or '',
-                'resp': resp,
-            }
-            slow_response.store(self.kvdb, self.name, **data)
+                # TODO: Don't parse it here and a moment earlier above
+                resp = (self.response.payload.getvalue() if hasattr(self.response.payload, 'getvalue') \
+                        else self.response.payload) or ''
+
+                data = {
+                    'cid': self.cid,
+                    'proc_time': self.processing_time,
+                    'slow_threshold': self.slow_threshold,
+                    'req_ts': self.invocation_time.isoformat(),
+                    'resp_ts': self.handle_return_time.isoformat(),
+                    'req': self.request.raw_request or '',
+                    'resp': resp,
+                }
+                slow_response.store(self.kvdb, self.name, **data)
 
     def translate(self, *args, **kwargs):
         raise NotImplementedError('An initializer should override this method')
