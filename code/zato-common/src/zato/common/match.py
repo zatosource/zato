@@ -48,9 +48,6 @@ class Matcher(object):
             _match = globre_match
             is_allowed = None
     
-            # This iterates over all patterns even if we already matched one
-            # but it's OK because we do it only once and subsequent results
-            # are returned from cache.
             for order in self.order1, self.order2:
                 for pattern in self.items[order]:
                     if globre_match(pattern, value):
