@@ -155,6 +155,10 @@ TOO_MANY_REQUESTS = 429
 HTTP_RESPONSES = deepcopy(responses)
 HTTP_RESPONSES[TOO_MANY_REQUESTS] = 'Too Many Requests'
 
+# Pattern matching order
+TRUE_FALSE = 'true_false'
+FALSE_TRUE = 'false_true'
+
 # Queries to use in pinging the databases.
 ping_queries = {
     'access': 'SELECT 1',
