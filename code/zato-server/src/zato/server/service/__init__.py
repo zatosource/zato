@@ -589,7 +589,7 @@ class Service(object):
         """
         raise NotImplementedError('Should be overridden by subclasses')
 
-    def lock(self, name=None, expires=20, timeout=0, backend=None):
+    def lock(self, name=None, expires=20, timeout=10, backend=None):
         """ Creates a Redis-backed distributed lock.
 
         name - defaults to self.name effectively making access to this service serialized
