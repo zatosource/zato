@@ -97,6 +97,13 @@ class DummyURLData(object):
         self.wsgi_environ = wsgi_environ
         self.post_data = post_data
 
+def get_dummy_server():
+    server = Bunch()
+    server.fs_server_config = Bunch()
+    server.fs_server_config.misc = Bunch()
+    server.fs_server_config.misc.use_soap_envelope = True
+    return server
+
 # ##############################################################################
 
 class MessageHandlingBase(TestCase):
@@ -104,7 +111,7 @@ class MessageHandlingBase(TestCase):
     """
     def get_data(self, data_format, transport, add_string=NON_ASCII_STRING, needs_payload=True,
             payload='', service_class=DummyAdminService):
-        handler = channel.RequestHandler()
+        handler = channel.RequestHandler(get_dummy_server())
 
         expected = {
             'key': 'a' + uuid4().hex + add_string,
@@ -368,7 +375,7 @@ class TestRequestHandler(TestCase):
         for merge_url_params_req in(True, False):
             expected_channel_item.merge_url_params_req = merge_url_params_req
 
-            rh = channel.RequestHandler()
+            rh = channel.RequestHandler(get_dummy_server())
 
             class _Service:
                 def update_handle(_self, _set_response_data, service, raw_request,
@@ -444,7 +451,7 @@ class TestRequestHandler(TestCase):
                 channel_item.data_format = data_format
                 channel_item.url_params_pri = url_params_pri
 
-                rh = channel.RequestHandler()
+                rh = channel.RequestHandler(get_dummy_server())
                 channel_params = rh.create_channel_params(url_match, channel_item, wsgi_environ, raw_request)
 
                 get = wsgi_environ['zato.http.GET']
