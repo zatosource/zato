@@ -261,3 +261,34 @@ class MatcherTestCase(TestCase):
         self.assertEquals(m.order2, True)
 
 # ################################################################################################################################
+
+    def test_is_allowed_cache_is_used(self):
+
+        class FakeCache(object):
+            def __init__(self):
+                self.impl = {}
+                self.getitem_used = 0
+                self.setitem_used = 0
+
+            def __setitem__(self, key, value):
+                self.setitem_used += 1
+                self.impl[key] = value
+
+            def __getitem__(self, key):
+                self.getitem_used += 1
+                return self.impl[key]
+
+        m = Matcher()
+        m.is_allowed_cache = FakeCache()
+        m.read_config(default_config)
+
+        self.assertEquals(m.config, default_config)
+        self.assertEquals(m.order1, False)
+        self.assertEquals(m.order2, True)
+
+        m.is_allowed('aaa.zxc')
+        m.is_allowed('aaa.zxc')
+        m.is_allowed('aaa.zxc')
+
+        self.assertEquals(m.is_allowed_cache.setitem_used, 1)
+        self.assertEquals(m.is_allowed_cache.getitem_used, 3) # It is 3 because the first time we attempted to return the key
