@@ -73,6 +73,10 @@ current_work_dir=./hot-deploy/current
 backup_work_dir=./hot-deploy/backup
 last_backup_work_dir=./hot-deploy/backup/last
 
+[deploy_patterns]
+order=false_true
+*=True
+
 [singleton]
 initial_sleep_time=2500
 
