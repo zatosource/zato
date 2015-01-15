@@ -127,6 +127,10 @@ class Migrate(ManageCommand):
         def update_hot_deploy(section):
             section['delete_after_pick_up'] = True
 
+        def update_deploy_patterns(section):
+            section['order'] = 'false_true'
+            section['*'] = True
+
         def update_singleton(section):
             if section['initial_sleep_time'] == '500':
                 section['initial_sleep_time'] = 2500
@@ -169,8 +173,8 @@ class Migrate(ManageCommand):
         }
 
         # Order of sections in 2.0
-        all_sections_2_0 = ('main', 'crypto', 'odb', 'hot_deploy', 'singleton', 'spring', 'misc', 'stats', 'kvdb', \
-            'startup_services_first_worker', 'startup_services_any_worker', 'pubsub', 'patterns',
+        all_sections_2_0 = ('main', 'crypto', 'odb', 'hot_deploy', 'deploy_patterns', 'singleton', 'spring', 'misc', 'stats',
+            'kvdb', 'startup_services_first_worker', 'startup_services_any_worker', 'pubsub', 'patterns',
             'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled', 'os_environ')
 
         buff = StringIO(server_conf_template)
@@ -194,8 +198,8 @@ class Migrate(ManageCommand):
             new_config[section] = section_dict
 
         # Sections new to 2.0
-        for name in ('stats', 'startup_services_first_worker', 'startup_services_any_worker', 'pubsub', 'patterns', \
-                    'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled'):
+        for name in ('stats', 'startup_services_first_worker', 'startup_services_any_worker', 'pubsub', 'patterns', 
+                    'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled', 'os_environ', 'deploy_patterns'):
             new_config[name] = dict(ref_cp.items(name))
 
         new_cp = ConfigParser()
