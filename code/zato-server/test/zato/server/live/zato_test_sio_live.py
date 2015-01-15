@@ -115,20 +115,6 @@ class FromDict(_TestBase):
 
 # ################################################################################################################################
 
-class PassthroughToRoundtrip(_TestBase):
-    """ Passes everything on to the next service.
-    """
-    passthrough_to = 'zato-test-sio-live.roundtrip'
-
-# ################################################################################################################################
-
-class PassthroughToFromDict(_TestBase):
-    """ Passes everything on to the next service.
-    """
-    passthrough_to = 'zato-test-sio-live.from-dict'
-
-# ################################################################################################################################
-
 class FromSQLAlchemy(Service):
     """ Creates response from an SQLAlchemy model.
     """
