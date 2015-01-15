@@ -945,8 +945,13 @@ class WorkerStore(BrokerMessageReceiver):
         data_format = msg.get('data_format')
         transport = msg.get('transport')
 
+        if msg.get('channel') in (CHANNEL.FANOUT_ON_EACH, CHANNEL.FANOUT_ON_ALL):
+            payload = loads(msg['payload'])
+        else:
+            payload = msg['payload']
+
         service = self.server.service_store.new_instance_by_name(msg['service'])
-        service.update_handle(self._set_service_response_data, service, msg['payload'],
+        service.update_handle(self._set_service_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, msg['cid'],
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ)
 

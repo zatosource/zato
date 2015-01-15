@@ -344,7 +344,7 @@ class KVDB(Attrs):
 
     LOCK_SERVICE_PREFIX = '{}service:'.format(LOCK_PREFIX)
 
-    LOCK_FANOUT_PATTERN = '{}fan-out:{{}}'.format(LOCK_PREFIX)
+    LOCK_FANOUT_PATTERN = '{}fanout:{{}}'.format(LOCK_PREFIX)
 
     TRANSLATION = 'zato:kvdb:data-dict:translation'
     TRANSLATION_ID = TRANSLATION + ':id'
@@ -371,8 +371,8 @@ class KVDB(Attrs):
     DELIVERY_PREFIX = 'zato:delivery:'
     DELIVERY_BY_TARGET_PREFIX = '{}by-target:'.format(DELIVERY_PREFIX)
 
-    FANOUT_COUNTER_PATTERN = 'zato:fan-out:counter:{}'
-    FANOUT_DATA_PATTERN = 'zato:fan-out:data:{}'
+    FANOUT_COUNTER_PATTERN = 'zato:fanout:counter:{}'
+    FANOUT_DATA_PATTERN = 'zato:fanout:data:{}'
 
 class SCHEDULER:
 
@@ -389,9 +389,9 @@ class CHANNEL(Attrs):
     AMQP = 'amqp'
     AUDIT = 'audit'                                 # New in 2.0
     DELIVERY = 'delivery'                           # New in 2.0
-    FANOUT_CALL = 'fan-out-call'
-    FANOUT_ON_EACH = 'fan-out-on-each'
-    FANOUT_ON_ALL = 'fan-out-on-all'
+    FANOUT_CALL = 'fanout-call'
+    FANOUT_ON_EACH = 'fanout-on-each'
+    FANOUT_ON_ALL = 'fanout-on-all'
     HTTP_SOAP = 'http-soap'
     INTERNAL_CHECK = 'internal-check'               # New in 2.0
     INVOKE = 'invoke'
