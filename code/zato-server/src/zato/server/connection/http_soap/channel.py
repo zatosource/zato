@@ -19,6 +19,9 @@ from anyjson import dumps
 # Django
 from django.http import QueryDict
 
+# Paste
+from paste.util.converters import asbool
+
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
@@ -276,6 +279,7 @@ class RequestHandler(object):
     """
     def __init__(self, server=None):
         self.server = server # A ParallelServer instance
+        self.use_soap_envelope = asbool(self.server.fs_server_config.misc.use_soap_envelope)
 
     def _set_response_data(self, service, **kwargs):
         """ A callback invoked by the services after it's done producing the response.
@@ -403,7 +407,8 @@ class RequestHandler(object):
 
         if transport == URL_TYPE.SOAP:
             if not isinstance(service_instance, AdminService):
-                response.payload = soap_doc.format(body=response.payload)
+                if self.use_soap_envelope:
+                    response.payload = soap_doc.format(body=response.payload)
 
     def set_content_type(self, response, data_format, transport, url_match, channel_item):
         """ Sets a response's content type if one hasn't been supplied by the user.
