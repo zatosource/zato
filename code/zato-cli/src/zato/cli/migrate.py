@@ -145,6 +145,7 @@ class Migrate(ManageCommand):
             section['http_server_header'] = 'Zato'
             section['zeromq_connect_sleep'] = '0.1'
             section['aws_host'] = ''
+            section['use_soap_envelope'] = True
 
         def update_kvdb(section):
             section['use_redis_sentinels'] = False
