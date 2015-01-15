@@ -936,13 +936,22 @@ class WorkerStore(BrokerMessageReceiver):
         creates a new service instance and invokes it.
         """
         # WSGI environment is the best place we have to store raw msg in
-        wsgi_environ = {'zato.request_ctx.async_msg':msg, 'zato.request_ctx.in_reply_to':msg.get('in_reply_to')}
+        wsgi_environ = {
+            'zato.request_ctx.async_msg':msg,
+            'zato.request_ctx.in_reply_to':msg.get('in_reply_to'),
+            'zato.request_ctx.fanout_cid':msg.get('zato_ctx', {}).get('fanout_cid'),
+        }
 
         data_format = msg.get('data_format')
         transport = msg.get('transport')
 
+        if msg.get('channel') in (CHANNEL.FANOUT_ON_EACH, CHANNEL.FANOUT_ON_ALL):
+            payload = loads(msg['payload'])
+        else:
+            payload = msg['payload']
+
         service = self.server.service_store.new_instance_by_name(msg['service'])
-        service.update_handle(self._set_service_response_data, service, msg['payload'],
+        service.update_handle(self._set_service_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, msg['cid'],
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ)
 
@@ -1180,7 +1189,7 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_SERVICE_PUBLISH(self, msg, args=None):
-        return self._on_message_invoke_service(msg, CHANNEL.INVOKE_ASYNC, 'SERVICE_PUBLISH', args)
+        return self._on_message_invoke_service(msg, msg.get('channel') or CHANNEL.INVOKE_ASYNC, 'SERVICE_PUBLISH', args)
 
 # ################################################################################################################################
 
