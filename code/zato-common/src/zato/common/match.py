@@ -21,6 +21,7 @@ class Matcher(object):
         self.order1 = None
         self.order2 = None
         self.is_allowed_cache = {}
+        self.special_case = None
 
     def read_config(self, config):
         self.config = config
@@ -40,7 +41,15 @@ class Matcher(object):
         for key in self.items:
             self.items[key] = list(reversed(sorted(self.items[key])))
 
+        for empty, non_empty in ((True, False), (False, True)):
+            if not self.items[empty] and '*' in self.items[non_empty]:
+                self.special_case = non_empty
+                break
+
     def is_allowed(self, value):
+
+        if self.special_case is not None:
+            return self.special_case
 
         try:
             return self.is_allowed_cache[value]
