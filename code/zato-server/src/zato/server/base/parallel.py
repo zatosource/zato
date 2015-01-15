@@ -276,6 +276,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         """
         self.worker_store = WorkerStore(self.config, self)
 
+        # Patterns to match during deployment
+        self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns)
+
         # Static config files
         self.static_config = StaticConfig(os.path.join(self.repo_location, 'static'))
 

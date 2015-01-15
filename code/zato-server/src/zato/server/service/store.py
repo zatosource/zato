@@ -38,6 +38,7 @@ from springpython.context import InitializingObject
 
 # Zato
 from zato.common import DONT_DEPLOY_ATTR_NAME, NoDistributionFound, SourceInfo, TRACE1
+from zato.common.match import Matcher
 from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, visit_py_source, \
      visit_py_source_from_distribution
 from zato.server.service import Service
@@ -63,6 +64,7 @@ class ServiceStore(InitializingObject):
         self.impl_name_to_id = {}
         self.name_to_impl_name = {}
         self.update_lock = RLock()
+        self.patterns_matcher = Matcher()
 
     def _invoke_hook(self, object_, hook_name):
         """ A utility method for invoking various service's hooks.
@@ -197,7 +199,13 @@ class ServiceStore(InitializingObject):
             if issubclass(item, Service):
                 if item is not AdminService and item is not Service:
                     if not hasattr(item, DONT_DEPLOY_ATTR_NAME):
-                        return True
+
+                        service_name = item.get_name()
+
+                        if self.patterns_matcher.is_allowed(service_name):
+                            return True
+                        else:
+                            logger.info('Skipped disallowed `%s`', service_name)
         except TypeError, e:
             # Ignore non-class objects passed in to issubclass
             logger.log(TRACE1, 'Ignoring exception, name:[%s], item:[%s], e:[%s]', name, item, format_exc(e))
@@ -272,6 +280,7 @@ class ServiceStore(InitializingObject):
                             msg = 'Skipping [{}] from [{}], should_add:[{}] is not True'.format(
                                 item, fs_location, should_add)
                             logger.info(msg)
+
         except Exception, e:
             msg = 'Exception while visit mod:[{}], is_internal:[{}], fs_location:[{}], e:[{}]'.format(
                 mod, is_internal, fs_location, format_exc(e))

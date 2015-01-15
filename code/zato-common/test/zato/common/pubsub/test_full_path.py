@@ -283,7 +283,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
 
         # Check all the Lua programs are loaded
 
-        eq_(len(ps.lua_programs), 10)
+        eq_(len(ps.lua_programs), 9)
 
         for attr in dir(ps):
             if attr.startswith('LUA'):
