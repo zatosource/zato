@@ -46,6 +46,7 @@ from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
 from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.message import MessageFacade
+from zato.server.pattern.fanout import FanOut
 from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.service.reqresp import Cloud, Outgoing, Request, Response
 
@@ -151,6 +152,7 @@ class PatternsFacade(object):
     """
     def __init__(self, invoking_service):
         self._invoke_retry = InvokeRetry(invoking_service)
+        self.fanout = FanOut(invoking_service)
 
         # Convenience API
         self.invoke_retry = self._invoke_retry.invoke_retry
@@ -163,7 +165,6 @@ class Service(object):
     the transport and protocol, be it plain HTTP, SOAP, WebSphere MQ or any other,
     regardless whether they're built-in or user-defined ones.
     """
-    passthrough_to = ''
     http_method_handlers = {}
 
     def __init__(self, *ignored_args, **ignored_kwargs):
@@ -195,9 +196,7 @@ class Service(object):
         self.name = self.__class__.get_name()
         self.impl_name = self.__class__.get_impl_name()
         self.time = TimeUtil(None)
-        self.pattern = PatternsFacade(self)
-        self.from_passthrough = False
-        self.passthrough_request = None
+        self.pattern = None
         self.user_config = None
         self.dictnav = DictNav
         self.listnav = ListNav
@@ -269,6 +268,9 @@ class Service(object):
         out_jms_wmq = WMQFacade(self.broker_client, self.server.delivery_store)
         out_zmq = ZMQFacade(self.server)
 
+        # Patterns
+        self.pattern = PatternsFacade(self)
+
         # SQL
         out_sql = self.worker_store.sql_pool_store
 
@@ -313,6 +315,41 @@ class Service(object):
 
         return response
 
+    def _invoke(self, service, channel):
+        #
+        # If channel is HTTP and there are any per-HTTP verb methods, it means we want for the service to be a REST target.
+        # Let's say it is POST. If we have handle_POST, it is invoked. If there is no handle_POST,
+        # '405 Method Not Allowed is returned'.
+        #
+        # However, if we have 'handle' only, it means this is always invoked and no default 405 is returned.
+        #
+        # In short, implement handle_* if you want REST behaviour. Otherwise, keep everything in handle.
+        #
+
+        # Ok, this is HTTP
+        if channel in (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE):
+
+            # We have at least one per-HTTP verb handler
+            if service.http_method_handlers:
+
+                # But do we have any handler matching current request's verb?
+                if service.request.http.method in service.http_method_handlers:
+
+                    # Yes, call the handler
+                    service.http_method_handlers[service.request.http.method](service)
+
+                # No, return 405
+                else:
+                    service.response.status_code = METHOD_NOT_ALLOWED
+
+            # We have no custom handlers so we always call 'handle'
+            else:
+                service.handle()
+
+        # It's not HTTP so we simply call 'handle'
+        else:
+            service.handle()
+
     def update_handle(self, set_response_func, service, raw_request, channel, data_format,
             transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
 
@@ -341,63 +378,35 @@ class Service(object):
             merge_channel_params=merge_channel_params,
             params_priority=params_priority, in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None))
 
-        # Depending on whether this is a pass-through service or not we invoke
-        # the target services or the one we have in hand right now. Note that
-        # hooks are always invoked for the one we have a handle to right now
-        # even if it's a pass-through one.
+        # Assume everything goes fine
+        e, exc_formatted = None, None
 
-        service.pre_handle()
-        service.call_hooks('before')
-
-        if service.passthrough_to:
-            sio = getattr(service, 'SimpleIO', None)
-            return self.invoke(service.passthrough_to, payload, channel, data_format, transport, serialize, as_bunch,
-                sio=sio, from_passthrough=True, passthrough_request=self.request, set_response_func=set_response_func,
-                channel_item=channel_item)
-        else:
+        try:
+            service.pre_handle()
+            service.call_hooks('before')
+    
             service.validate_input()
-
-            #
-            # If channel is HTTP and there are any per-HTTP verb methods, it means we want for the service to be a REST target.
-            # Let's say it is POST. If we have handle_POST, it is invoked. If there is no handle_POST,
-            # '405 Method Not Allowed is returned'.
-            #
-            # However, if we have 'handle' only, it means this is always invoked and no default 405 is returned.
-            #
-            # In short, implement handle_* if you want REST behaviour. Otherwise, keep everything in handle.
-            #
-
-            # Ok, this is HTTP
-            if channel in (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE):
-
-                # We have at least one per-HTTP verb handler
-                if service.http_method_handlers:
-
-                    # But do we have any handler matching current request's verb?
-                    if service.request.http.method in service.http_method_handlers:
-
-                        # Yes, call the handler
-                        service.http_method_handlers[service.request.http.method](service)
-
-                    # No, return 405
-                    else:
-                        service.response.status_code = METHOD_NOT_ALLOWED
-
-                # We have no customer handlers so we always call 'handle'
-                else:
-                    service.handle()
-
-            # It's not HTTP so we simply call 'handle'
-            else:
-                service.handle()
-
+            self._invoke(service, channel)
             service.validate_output()
+    
+            service.call_hooks('after')
+            service.post_handle()
+            service.call_hooks('finalize')
 
-        service.call_hooks('after')
-        service.post_handle()
-        service.call_hooks('finalize')
+        except Exception, e:
+            exc_formatted = format_exc(e)
 
-        return set_response_func(service, data_format=data_format, transport=transport, **kwargs)
+        finally:
+            response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
+
+            # If this is was fan-out/fan-in we need to always notify our callbacks no matter the result
+            if channel == CHANNEL.FANOUT_CALL:
+                spawn(self.pattern.fanout.on_call_finished, self, response, exc_formatted)
+
+            if e:
+                raise e
+
+            return response
 
     def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=DATA_FORMAT.DICT,
             transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
@@ -409,12 +418,6 @@ class Service(object):
             raise ZatoException(self.cid, msg)
 
         service = self.server.service_store.new_instance(impl_name)
-        service.from_passthrough = kwargs.get('from_passthrough', False)
-        service.passthrough_request = kwargs.get('passthrough_request', None)
-
-        if service.from_passthrough and kwargs.get('sio'):
-            service.SimpleIO = kwargs['sio']
-
         set_response_func = kwargs.pop('set_response_func', self.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
@@ -454,7 +457,8 @@ class Service(object):
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
 
     def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=DATA_FORMAT.DICT,
-            transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, reply_to=None):
+            transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, reply_to=None,
+            zato_ctx={}):
         """ Invokes a service asynchronously by its name.
         """
         if to_json_string:
@@ -486,6 +490,7 @@ class Service(object):
         msg['transport'] = transport
         msg['is_async'] = True
         msg['reply_to'] = reply_to
+        msg['zato_ctx'] = zato_ctx
 
         self.broker_client.invoke_async(msg, expiration=expiration)
 
@@ -584,7 +589,7 @@ class Service(object):
         """
         raise NotImplementedError('Should be overridden by subclasses')
 
-    def lock(self, name=None, expires=20, timeout=0, backend=None):
+    def lock(self, name=None, expires=20, timeout=10, backend=None):
         """ Creates a Redis-backed distributed lock.
 
         name - defaults to self.name effectively making access to this service serialized

@@ -344,6 +344,8 @@ class KVDB(Attrs):
 
     LOCK_SERVICE_PREFIX = '{}service:'.format(LOCK_PREFIX)
 
+    LOCK_FANOUT_PATTERN = '{}fanout:{{}}'.format(LOCK_PREFIX)
+
     TRANSLATION = 'zato:kvdb:data-dict:translation'
     TRANSLATION_ID = TRANSLATION + ':id'
 
@@ -369,6 +371,9 @@ class KVDB(Attrs):
     DELIVERY_PREFIX = 'zato:delivery:'
     DELIVERY_BY_TARGET_PREFIX = '{}by-target:'.format(DELIVERY_PREFIX)
 
+    FANOUT_COUNTER_PATTERN = 'zato:fanout:counter:{}'
+    FANOUT_DATA_PATTERN = 'zato:fanout:data:{}'
+
 class SCHEDULER:
 
     class JOB_TYPE(Attrs):
@@ -382,20 +387,23 @@ class SCHEDULER:
 
 class CHANNEL(Attrs):
     AMQP = 'amqp'
-    AUDIT = 'audit' # New in 2.0
-    DELIVERY = 'delivery' # New in 2.0
+    AUDIT = 'audit'                                 # New in 2.0
+    DELIVERY = 'delivery'                           # New in 2.0
+    FANOUT_CALL = 'fanout-call'
+    FANOUT_ON_EACH = 'fanout-on-each'
+    FANOUT_ON_ALL = 'fanout-on-all'
     HTTP_SOAP = 'http-soap'
-    INTERNAL_CHECK = 'internal-check' # New in 2.0
+    INTERNAL_CHECK = 'internal-check'               # New in 2.0
     INVOKE = 'invoke'
     INVOKE_ASYNC = 'invoke-async'
     INVOKE_ASYNC_CALLBACK = 'invoke-async-callback' # New in 2.0
     JMS_WMQ = 'jms-wmq'
-    NOTIFIER_RUN = 'notifier-run' # New in 2.0
-    NOTIFIER_TARGET = 'notifier-target' # New in 2.0
-    PUBLISH = 'publish' # New in 2.0
+    NOTIFIER_RUN = 'notifier-run'                   # New in 2.0
+    NOTIFIER_TARGET = 'notifier-target'             # New in 2.0
+    PUBLISH = 'publish'                             # New in 2.0
     SCHEDULER = 'scheduler'
-    STARTUP_SERVICE = 'startup-service' # New in 2.0
-    WORKER = 'worker' # New in 2.0
+    STARTUP_SERVICE = 'startup-service'             # New in 2.0
+    WORKER = 'worker'                               # New in 2.0
     ZMQ = 'zmq'
 
 class INVOCATION_TARGET(Attrs):
