@@ -321,7 +321,7 @@ class RedisPubSubTestCase(RedisPubSubCommonTestCase):
         self.api.acknowledge(sub_key, ctx.msg.msg_id)
 
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
-        self.assertEquals(len(keys), 9)
+        self.assertEquals(len(keys), 3)
 
         now = datetime.utcnow()
 
