@@ -152,8 +152,6 @@ class SIOLiveTestCase(LiveTestCase):
         service_data = (
             ('zato-test-sio-live.roundtrip', zato_test_sio_live.Roundtrip),
             ('zato-test-sio-live.from-dict', zato_test_sio_live.FromDict),
-            ('zato-test-sio-live.passthrough-to-roundtrip', zato_test_sio_live.PassthroughToRoundtrip),
-            ('zato-test-sio-live.passthrough-to-from-dict', zato_test_sio_live.PassthroughToFromDict),
         )
 
         for service_info in service_data:
