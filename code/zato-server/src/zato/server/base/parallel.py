@@ -275,9 +275,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         server's been allowed to join the cluster or not.
         """
         self.worker_store = WorkerStore(self.config, self)
+        self.worker_store.invoke_matcher.read_config(self.fs_server_config.invoke_patterns_allowed)
 
         # Patterns to match during deployment
-        self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns)
+        self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns_allowed)
 
         # Static config files
         self.static_config = StaticConfig(os.path.join(self.repo_location, 'static'))

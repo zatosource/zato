@@ -412,6 +412,9 @@ class Service(object):
             transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
+        if not self.worker_store.invoke_matcher.is_allowed(impl_name):
+            raise ZatoException(self.cid, 'Service `{}` (impl_name) cannot be invoked'.format(impl_name))
+
         if self.impl_name == impl_name:
             msg = 'A service cannot invoke itself, name:[{}]'.format(self.name)
             self.logger.error(msg)
@@ -461,6 +464,12 @@ class Service(object):
             zato_ctx={}):
         """ Invokes a service asynchronously by its name.
         """
+        # Let's first find out if the service can be invoked at all
+        impl_name = self.server.service_store.name_to_impl_name[name]
+
+        if not self.worker_store.invoke_matcher.is_allowed(impl_name):
+            raise ZatoException(self.cid, 'Service `{}` (impl_name) cannot be invoked'.format(impl_name))
+
         if to_json_string:
             payload = dumps(payload)
 
@@ -519,8 +528,6 @@ class Service(object):
         self.processing_time_raw = self.handle_return_time - self.invocation_time
 
         if self.server.component_enabled.stats:
-
-            logger.warn(1)
 
             proc_time = self.processing_time_raw.total_seconds() * 1000.0
             proc_time = proc_time if proc_time > 1 else 0

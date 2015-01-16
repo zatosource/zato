@@ -54,12 +54,13 @@ class InvokeRetryTestCase(ServiceTestCase):
 
                 post_handle = validate_output = handle = validate_input = call_hooks = pre_handle = update
 
-            service_store_name_to_impl_name = {'zato.ping':'zato.service.internal.ping'}
-            service_store_impl_name_to_service = {'zato.service.internal.ping':Ping}
-
             callback = rand_string()
             target = 'zato.ping'
             cid = new_cid()
+
+            ping_impl = 'zato.service.internal.Ping'
+            service_store_name_to_impl_name = {'zato.ping':ping_impl, callback:ping_impl}
+            service_store_impl_name_to_service = {ping_impl:Ping}
 
             payload = {
                 'orig_cid': cid,
