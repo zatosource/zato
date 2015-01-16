@@ -276,6 +276,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         """
         self.worker_store = WorkerStore(self.config, self)
         self.worker_store.invoke_matcher.read_config(self.fs_server_config.invoke_patterns_allowed)
+        self.worker_store.target_matcher.read_config(self.fs_server_config.invoke_target_patterns_allowed)
 
         # Patterns to match during deployment
         self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns_allowed)

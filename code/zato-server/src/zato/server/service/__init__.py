@@ -35,7 +35,7 @@ from retools.lock import Lock
 from gevent import Timeout, spawn
 
 # Zato
-from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException, ZATO_NOT_GIVEN
+from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException, ZATO_NONE, ZATO_NOT_GIVEN
 from zato.common.broker_message import SERVICE
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl
@@ -350,6 +350,20 @@ class Service(object):
         else:
             service.handle()
 
+    def extract_target(self, name):
+        """ Splits a service's name into name and target, if the latter is provided on input at all.
+        """
+        # It can be either a name or a name followed by the target to invoke the service on,
+        # i.e. 'myservice' or 'myservice@mytarget'.
+        if '@' in name:
+            name, target = name.split('@')
+            if not target:
+                raise ZatoException(self.cid, 'Target must not be empty in `{}`'.format(name))
+        else:
+            target = ''
+
+        return name, target
+
     def update_handle(self, set_response_func, service, raw_request, channel, data_format,
             transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
 
@@ -395,6 +409,7 @@ class Service(object):
 
         except Exception, e:
             exc_formatted = format_exc(e)
+            logger.warn(exc_formatted)
 
         finally:
             response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
@@ -412,6 +427,15 @@ class Service(object):
             transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
+        orig_impl_name = impl_name
+        impl_name, target = self.extract_target(impl_name)
+
+        # It's possible we are being invoked through self.invoke or self.invoke_by_id
+        target = target or kwargs.get('target', '')
+
+        if not self.worker_store.target_matcher.is_allowed(target):
+            raise ZatoException(self.cid, 'Invocation target `{}` not allowed ({})'.format(target, orig_impl_name))
+
         if not self.worker_store.invoke_matcher.is_allowed(impl_name):
             raise ZatoException(self.cid, 'Service `{}` (impl_name) cannot be invoked'.format(impl_name))
 
@@ -452,11 +476,17 @@ class Service(object):
             for k, v in sorted(locals().items()):
                 self.logger.info('%r=%r', k, v)
 
+        name, target = self.extract_target(name)
+        kwargs['target'] = target
+
         return self.invoke_by_impl_name(self.server.service_store.name_to_impl_name[name], *args, **kwargs)
 
     def invoke_by_id(self, service_id, *args, **kwargs):
         """ Invokes a service synchronously by its ID.
         """
+        service_id, target = self.extract_target(service_id)
+        kwargs['target'] = target
+
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
 
     def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=DATA_FORMAT.DICT,
@@ -464,6 +494,9 @@ class Service(object):
             zato_ctx={}):
         """ Invokes a service asynchronously by its name.
         """
+        name, target = self.extract_target(name)
+        zato_ctx['zato.request_ctx.target'] = target
+
         # Let's first find out if the service can be invoked at all
         impl_name = self.server.service_store.name_to_impl_name[name]
 

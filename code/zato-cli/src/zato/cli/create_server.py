@@ -74,7 +74,15 @@ backup_work_dir=./hot-deploy/backup
 last_backup_work_dir=./hot-deploy/backup/last
 
 [deploy_patterns]
-order=false_true
+order=true_false
+*=True
+
+[invoke_patterns_allowed]
+order=true_false
+*=True
+
+[invoke_target_patterns_allowed]
+order=true_false
 *=True
 
 [singleton]
