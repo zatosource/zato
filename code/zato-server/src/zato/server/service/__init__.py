@@ -539,7 +539,9 @@ class Service(object):
         msg['zato_ctx'] = zato_ctx
         msg['environ'] = environ
 
-        self.broker_client.invoke_async(msg, expiration=expiration)
+        # If we have a target we need to invoke all the servers
+        # and these which are not able to handle the target will drop the message.
+        (self.broker_client.publish if target else self.broker_client.invoke_async)(msg, expiration=expiration)
 
         return cid
 

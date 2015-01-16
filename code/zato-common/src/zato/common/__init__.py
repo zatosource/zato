@@ -346,6 +346,8 @@ class KVDB(Attrs):
 
     LOCK_FANOUT_PATTERN = '{}fanout:{{}}'.format(LOCK_PREFIX)
 
+    LOCK_ASYNC_INVOKE_WITH_TARGET_PATTERN = '{}async-invoke-with-pattern:{{}}:{{}}'.format(LOCK_PREFIX)
+
     TRANSLATION = 'zato:kvdb:data-dict:translation'
     TRANSLATION_ID = TRANSLATION + ':id'
 
@@ -373,6 +375,9 @@ class KVDB(Attrs):
 
     FANOUT_COUNTER_PATTERN = 'zato:fanout:counter:{}'
     FANOUT_DATA_PATTERN = 'zato:fanout:data:{}'
+
+    ASYNC_INVOKE_PROCESSED_FLAG_PATTERN = 'zato:async-invoke-with-pattern:processed:{}:{}'
+    ASYNC_INVOKE_PROCESSED_FLAG = '1'
 
 class SCHEDULER:
 

@@ -138,7 +138,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                 while client.keep_running == ZATO_NONE:
                     time.sleep(0.01)
 
-        def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL):
+        def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *ignored_args, **ignored_kwargs):
             msg['msg_type'] = msg_type
             topic = TOPICS[msg_type]
             self.pub_client.publish(topic, dumps(msg))

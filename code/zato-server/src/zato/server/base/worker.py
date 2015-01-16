@@ -34,9 +34,12 @@ import gevent
 from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
+# retools
+from retools.lock import Lock
+
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, SEC_DEF_TYPE, \
-     SIMPLE_IO, TRACE1, ZatoException, ZATO_NONE, ZATO_NOT_GIVEN, ZATO_ODB_POOL_NAME
+from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, \
+     SEC_DEF_TYPE, SIMPLE_IO, TRACE1, ZatoException, ZATO_NONE, ZATO_NOT_GIVEN, ZATO_ODB_POOL_NAME
 from zato.common import broker_message
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
@@ -944,9 +947,39 @@ class WorkerStore(BrokerMessageReceiver):
         """
         zato_ctx = msg.get('zato_ctx', {})
         target = zato_ctx.get('zato.request_ctx.target', '')
+        cid = msg['cid']
 
-        if not self.target_matcher.is_allowed(target):
-            raise ZatoException(msg['cid'], 'Invocation target `{}` not allowed ({})'.format(target, msg['service']))
+        if target:
+
+            if not self.target_matcher.is_allowed(target):
+                # It's not an error - we just don't accept this target
+                logger.debug('Invocation target `%s` not allowed (%s), CID:%s', target, msg['service'], cid)
+                return
+
+            # We can in theory handle this request but there's still some work first. Our server can be composed
+            # of more than 1 gunicorn worker and each of them receives the messages directed to concrete targets.
+            # Hence we must first check out if another worker from our servers didn't beat us to it yet.
+            # Everything must be done with a distributed server-wide lock so that workers don't
+            # interrupt each other.
+            else:
+                lock = KVDB.LOCK_ASYNC_INVOKE_WITH_TARGET_PATTERN.format(self.server.fs_server_config.main.token, cid)
+                processed_key = KVDB.ASYNC_INVOKE_PROCESSED_FLAG_PATTERN.format(self.server.fs_server_config.main.token, cid)
+
+                with Lock(lock, redis=self.server.kvdb.conn):
+                    processed = self.server.kvdb.conn.get(processed_key)
+
+                    # Ok, already processed
+                    if processed == KVDB.ASYNC_INVOKE_PROCESSED_FLAG_PATTERN:
+                        return
+
+                    # We are first, set the processed flag. The flag expires in 5 minutes
+                    # which is an arbitrary number huge enough to make sure other workers
+                    # within our own server will be able to receive the async message
+                    # we are about to process. Note that we don't set the flag after the processing
+                    # is finished because even if there is any error along the invocation won't be repeated,
+                    # hence we do it here already.
+                    else:
+                        self.server.kvdb.conn.set(processed_key, KVDB.ASYNC_INVOKE_PROCESSED_FLAG_PATTERN, 300)
 
         wsgi_environ = {
             'zato.request_ctx.async_msg':msg,
@@ -964,7 +997,7 @@ class WorkerStore(BrokerMessageReceiver):
 
         service = self.server.service_store.new_instance_by_name(msg['service'])
         service.update_handle(self._set_service_response_data, service, payload,
-            channel, data_format, transport, self.server, self.broker_client, self, msg['cid'],
+            channel, data_format, transport, self.server, self.broker_client, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
             environ=msg.get('environ'))
 
@@ -980,7 +1013,7 @@ class WorkerStore(BrokerMessageReceiver):
             cb_msg['data_format'] = data_format
             cb_msg['transport'] = transport
             cb_msg['is_async'] = True
-            cb_msg['in_reply_to'] = msg['cid']
+            cb_msg['in_reply_to'] = cid
 
             self.broker_client.invoke_async(cb_msg)
 
