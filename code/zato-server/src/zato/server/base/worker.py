@@ -36,7 +36,7 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, SEC_DEF_TYPE, \
-     SIMPLE_IO, TRACE1, ZATO_NONE, ZATO_NOT_GIVEN, ZATO_ODB_POOL_NAME
+     SIMPLE_IO, TRACE1, ZatoException, ZATO_NONE, ZATO_NOT_GIVEN, ZATO_ODB_POOL_NAME
 from zato.common import broker_message
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
@@ -100,6 +100,9 @@ class WorkerStore(BrokerMessageReceiver):
 
         # Which services can be invoked
         self.invoke_matcher = Matcher()
+
+        # Which targets this server supports
+        self.target_matcher = Matcher()
 
     def init(self):
 
@@ -939,11 +942,16 @@ class WorkerStore(BrokerMessageReceiver):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
         """
-        # WSGI environment is the best place we have to store raw msg in
+        zato_ctx = msg.get('zato_ctx', {})
+        target = zato_ctx.get('zato.request_ctx.target', '')
+
+        if not self.target_matcher.is_allowed(target):
+            raise ZatoException(msg['cid'], 'Invocation target `{}` not allowed ({})'.format(target, msg['service']))
+
         wsgi_environ = {
             'zato.request_ctx.async_msg':msg,
             'zato.request_ctx.in_reply_to':msg.get('in_reply_to'),
-            'zato.request_ctx.fanout_cid':msg.get('zato_ctx', {}).get('fanout_cid'),
+            'zato.request_ctx.fanout_cid':zato_ctx.get('fanout_cid'),
         }
 
         data_format = msg.get('data_format')
