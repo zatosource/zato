@@ -48,6 +48,9 @@ class InvokeRetryTestCase(ServiceTestCase):
                 def __init__(self):
                     self.response = Bunch(payload=expected_response)
 
+                def accept(self):
+                    return True
+
                 def update(self, *ignored_args, **ignored_kwargs):
                     if not is_ok:
                         raise Exception()
@@ -83,7 +86,7 @@ class InvokeRetryTestCase(ServiceTestCase):
             self.assertEquals(len(instance.broker_client.invoke_async_args[0]), 1)
 
             async_msg = Bunch(instance.broker_client.invoke_async_args[0][0])
-            self.assertEquals(len(async_msg), 10)
+            self.assertEquals(len(async_msg), 11)
 
             self.assertEquals(async_msg.action, SERVICE.PUBLISH.value)
             self.assertEquals(async_msg.channel, CHANNEL.INVOKE_ASYNC)
