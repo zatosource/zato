@@ -965,7 +965,8 @@ class WorkerStore(BrokerMessageReceiver):
         service = self.server.service_store.new_instance_by_name(msg['service'])
         service.update_handle(self._set_service_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, msg['cid'],
-            self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ)
+            self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
+            environ=msg.get('environ'))
 
         # Invoke the callback, if any.
         if msg.get('is_async') and msg.get('reply_to'):

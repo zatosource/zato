@@ -390,38 +390,42 @@ class Service(object):
             job_type=job_type,
             channel_params=channel_params,
             merge_channel_params=merge_channel_params,
-            params_priority=params_priority, in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None))
+            params_priority=params_priority, in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None),
+            environ=kwargs.get('environ'))
 
-        # Assume everything goes fine
-        e, exc_formatted = None, None
+        # It's possible the call will be completely filtered out
+        if service.accept():
 
-        try:
-            service.pre_handle()
-            service.call_hooks('before')
-    
-            service.validate_input()
-            self._invoke(service, channel)
-            service.validate_output()
-    
-            service.call_hooks('after')
-            service.post_handle()
-            service.call_hooks('finalize')
+            # Assume everything goes fine
+            e, exc_formatted = None, None
 
-        except Exception, e:
-            exc_formatted = format_exc(e)
-            logger.warn(exc_formatted)
+            try:
+                service.pre_handle()
+                service.call_hooks('before')
 
-        finally:
-            response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
+                service.validate_input()
+                self._invoke(service, channel)
+                service.validate_output()
 
-            # If this is was fan-out/fan-in we need to always notify our callbacks no matter the result
-            if channel == CHANNEL.FANOUT_CALL:
-                spawn(self.pattern.fanout.on_call_finished, self, response, exc_formatted)
+                service.call_hooks('after')
+                service.post_handle()
+                service.call_hooks('finalize')
 
-            if e:
-                raise e
+            except Exception, e:
+                exc_formatted = format_exc(e)
+                logger.warn(exc_formatted)
 
-            return response
+            finally:
+                response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
+
+                # If this is was fan-out/fan-in we need to always notify our callbacks no matter the result
+                if channel == CHANNEL.FANOUT_CALL:
+                    spawn(self.pattern.fanout.on_call_finished, self, response, exc_formatted)
+
+                if e:
+                    raise e
+
+                return response
 
     def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=DATA_FORMAT.DICT,
             transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
@@ -491,7 +495,7 @@ class Service(object):
 
     def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=DATA_FORMAT.DICT,
             transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, reply_to=None,
-            zato_ctx={}):
+            zato_ctx={}, environ={}):
         """ Invokes a service asynchronously by its name.
         """
         name, target = self.extract_target(name)
@@ -533,6 +537,7 @@ class Service(object):
         msg['is_async'] = True
         msg['reply_to'] = reply_to
         msg['zato_ctx'] = zato_ctx
+        msg['environ'] = environ
 
         self.broker_client.invoke_async(msg, expiration=expiration)
 
@@ -640,6 +645,11 @@ class Service(object):
         name = '{}{}'.format(KVDB.LOCK_SERVICE_PREFIX, name or self.name)
         backend = backend or self.kvdb.conn
         return Lock(name, expires, timeout, backend)
+
+# ################################################################################################################################
+
+    def accept(self):
+        return True
 
 # ################################################################################################################################
 
@@ -788,7 +798,7 @@ class Service(object):
     def update(service, channel, server, broker_client, worker_store, cid, payload,
                raw_request, transport=None, simple_io_config=None, data_format=None,
                wsgi_environ={}, job_type=None, channel_params=None,
-               merge_channel_params=True, params_priority=None, in_reply_to=None, init=True):
+               merge_channel_params=True, params_priority=None, in_reply_to=None, environ=None, init=True):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
@@ -815,6 +825,7 @@ class Service(object):
         service.request.merge_channel_params = merge_channel_params
         service.request.params_priority = params_priority
         service.in_reply_to = in_reply_to
+        service.environ = environ or {}
 
         if init:
             service._init()
