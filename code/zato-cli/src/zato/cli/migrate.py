@@ -127,7 +127,11 @@ class Migrate(ManageCommand):
         def update_hot_deploy(section):
             section['delete_after_pick_up'] = True
 
-        def update_deploy_patterns(section):
+        def update_deploy_patterns_allowed(section):
+            section['order'] = 'false_true'
+            section['*'] = True
+
+        def update_invoke_patterns_allowed(section):
             section['order'] = 'false_true'
             section['*'] = True
 
@@ -171,12 +175,14 @@ class Migrate(ManageCommand):
             'kvdb': update_kvdb,
             'component_enabled': update_component_enabled,
             'os_environ': update_os_environ,
+            'deploy_patterns_allowed': update_deploy_patterns_allowed,
+            'invoke_patterns_allowed': update_invoke_patterns_allowed,
         }
 
         # Order of sections in 2.0
-        all_sections_2_0 = ('main', 'crypto', 'odb', 'hot_deploy', 'deploy_patterns', 'singleton', 'spring', 'misc', 'stats',
-            'kvdb', 'startup_services_first_worker', 'startup_services_any_worker', 'pubsub', 'patterns',
-            'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled', 'os_environ')
+        all_sections_2_0 = ('main', 'crypto', 'odb', 'hot_deploy', 'deploy_patterns_allowed', 'invoke_patterns_allowed', 
+            'singleton', 'spring', 'misc', 'stats', 'kvdb', 'startup_services_first_worker', 'startup_services_any_worker',
+            'pubsub', 'patterns', 'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled', 'os_environ')
 
         buff = StringIO(server_conf_template)
 
@@ -200,7 +206,8 @@ class Migrate(ManageCommand):
 
         # Sections new to 2.0
         for name in ('stats', 'startup_services_first_worker', 'startup_services_any_worker', 'pubsub', 'patterns', 
-                    'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled', 'os_environ', 'deploy_patterns'):
+                    'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled', 'os_environ',
+                    'deploy_patterns_allowed', 'invoke_patterns_allowed'):
             new_config[name] = dict(ref_cp.items(name))
 
         new_cp = ConfigParser()
