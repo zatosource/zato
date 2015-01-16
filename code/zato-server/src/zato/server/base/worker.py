@@ -40,6 +40,7 @@ from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MSG_
 from zato.common import broker_message
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
+from zato.common.match import Matcher
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
      parse_extra_into_dict, parse_tls_channel_security_definition, store_tls
@@ -96,6 +97,9 @@ class WorkerStore(BrokerMessageReceiver):
         self.broker_client = None
         self.pubsub = None
         self.rbac = RBAC()
+
+        # Which services can be invoked
+        self.invoke_matcher = Matcher()
 
     def init(self):
 
