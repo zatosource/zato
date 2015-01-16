@@ -520,8 +520,6 @@ class Service(object):
 
         if self.server.component_enabled.stats:
 
-            logger.warn(1)
-
             proc_time = self.processing_time_raw.total_seconds() * 1000.0
             proc_time = proc_time if proc_time > 1 else 0
 
