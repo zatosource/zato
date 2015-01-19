@@ -196,7 +196,7 @@ class Service(object):
         self.name = self.__class__.get_name()
         self.impl_name = self.__class__.get_impl_name()
         self.time = TimeUtil(None)
-        self.pattern = None
+        self.patterns = None
         self.user_config = None
         self.dictnav = DictNav
         self.listnav = ListNav
@@ -269,7 +269,7 @@ class Service(object):
         out_zmq = ZMQFacade(self.server)
 
         # Patterns
-        self.pattern = PatternsFacade(self)
+        self.patterns = PatternsFacade(self)
 
         # SQL
         out_sql = self.worker_store.sql_pool_store
@@ -420,7 +420,7 @@ class Service(object):
 
                 # If this is was fan-out/fan-in we need to always notify our callbacks no matter the result
                 if channel == CHANNEL.FANOUT_CALL:
-                    spawn(self.pattern.fanout.on_call_finished, self, response, exc_formatted)
+                    spawn(self.patterns.fanout.on_call_finished, self, service.response.payload, exc_formatted)
 
                 if e:
                     raise e
