@@ -395,8 +395,8 @@ class CHANNEL(Attrs):
     AUDIT = 'audit'                                 # New in 2.0
     DELIVERY = 'delivery'                           # New in 2.0
     FANOUT_CALL = 'fanout-call'
-    FANOUT_ON_EACH = 'fanout-on-each'
-    FANOUT_ON_ALL = 'fanout-on-all'
+    FANOUT_ON_FINAL = 'fanout-on-final'             # New in 2.0
+    FANOUT_ON_TARGET = 'fanout-on-target'           # New in 2.0
     HTTP_SOAP = 'http-soap'
     INTERNAL_CHECK = 'internal-check'               # New in 2.0
     INVOKE = 'invoke'
