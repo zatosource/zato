@@ -135,6 +135,10 @@ class Migrate(ManageCommand):
             section['order'] = 'false_true'
             section['*'] = True
 
+        def update_invoke_target_patterns_allowed(section):
+            section['order'] = 'false_true'
+            section['*'] = True
+
         def update_singleton(section):
             if section['initial_sleep_time'] == '500':
                 section['initial_sleep_time'] = 2500
@@ -177,12 +181,14 @@ class Migrate(ManageCommand):
             'os_environ': update_os_environ,
             'deploy_patterns_allowed': update_deploy_patterns_allowed,
             'invoke_patterns_allowed': update_invoke_patterns_allowed,
+            'invoke_target_patterns_allowed': update_invoke_target_patterns_allowed,
         }
 
         # Order of sections in 2.0
         all_sections_2_0 = ('main', 'crypto', 'odb', 'hot_deploy', 'deploy_patterns_allowed', 'invoke_patterns_allowed', 
-            'singleton', 'spring', 'misc', 'stats', 'kvdb', 'startup_services_first_worker', 'startup_services_any_worker',
-            'pubsub', 'patterns', 'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled', 'os_environ')
+            'invoke_target_patterns_allowed', 'singleton', 'spring', 'misc', 'stats', 'kvdb', 'startup_services_first_worker',
+            'startup_services_any_worker', 'pubsub', 'profiler', 'user_config', 'newrelic', 'sentry', 'rbac',
+            'component_enabled', 'os_environ')
 
         buff = StringIO(server_conf_template)
 
