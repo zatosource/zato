@@ -73,7 +73,7 @@ current_work_dir=./hot-deploy/current
 backup_work_dir=./hot-deploy/backup
 last_backup_work_dir=./hot-deploy/backup/last
 
-[deploy_patterns]
+[deploy_patterns_allowed]
 order=true_false
 *=True
 
