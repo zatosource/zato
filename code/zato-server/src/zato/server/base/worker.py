@@ -990,7 +990,7 @@ class WorkerStore(BrokerMessageReceiver):
         data_format = msg.get('data_format')
         transport = msg.get('transport')
 
-        if msg.get('channel') in (CHANNEL.FANOUT_ON_EACH, CHANNEL.FANOUT_ON_ALL):
+        if msg.get('channel') in (CHANNEL.FANOUT_ON_TARGET, CHANNEL.FANOUT_ON_FINAL):
             payload = loads(msg['payload'])
         else:
             payload = msg['payload']
