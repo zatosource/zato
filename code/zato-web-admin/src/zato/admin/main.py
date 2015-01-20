@@ -38,9 +38,6 @@ def main():
     config['config_dir'] = os.path.abspath('.')
     update_globals(config)
 
-    # Store the PID so that the server can be later stopped by its PID.
-    open('./.web-admin.pid', 'w').write(str(os.getpid()))
-
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
     call_command('loaddata', os.path.join(repo_dir, 'initial-data.json'))
 
