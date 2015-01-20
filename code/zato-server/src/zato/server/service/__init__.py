@@ -48,6 +48,7 @@ from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.message import MessageFacade
 from zato.server.pattern.fanout import FanOut
 from zato.server.pattern.invoke_retry import InvokeRetry
+from zato.server.pattern.parallel import ParallelExec
 from zato.server.service.reqresp import Cloud, Outgoing, Request, Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
@@ -153,6 +154,7 @@ class PatternsFacade(object):
     def __init__(self, invoking_service):
         self._invoke_retry = InvokeRetry(invoking_service)
         self.fanout = FanOut(invoking_service)
+        self.parallel = ParallelExec(invoking_service)
 
         # Convenience API
         self.invoke_retry = self._invoke_retry.invoke_retry
@@ -419,8 +421,10 @@ class Service(object):
                 response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
                 # If this is was fan-out/fan-in we need to always notify our callbacks no matter the result
-                if channel == CHANNEL.FANOUT_CALL:
-                    spawn(self.patterns.fanout.on_call_finished, self, service.response.payload, exc_formatted)
+                if channel in (CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL):
+                    func = self.patterns.fanout.on_call_finished if channel == CHANNEL.FANOUT_CALL else \
+                        self.patterns.parallel.on_call_finished
+                    spawn(func, self, service.response.payload, exc_formatted)
 
                 if e:
                     raise e
