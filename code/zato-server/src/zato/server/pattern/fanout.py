@@ -20,7 +20,17 @@ logger = getLogger(__name__)
 
 JSON_KEYS = ('data', 'req_ts_utc', 'on_final', 'on_target')
 
-class FanOut(object):
+class ParallelBase(object):
+    """ Base class containing code common across both fan-out/fan-in and parallel execution features.
+    """
+    lock_pattern = None
+    counter_pattern = None
+    data_pattern = None
+    call_channel = None
+    on_target_channel = None
+    on_final_channel = None
+    needs_on_final = False
+
     def __init__(self, source):
         self.source = source
         self.cid = source.cid
@@ -39,11 +49,11 @@ class FanOut(object):
         on_target = on_target or ''
 
         # Keep everything under a distributed lock
-        with self.source.lock(KVDB.LOCK_FANOUT_PATTERN.format(cid)):
+        with self.source.lock(self.lock_pattern.format(cid)):
 
             # Store information how many targets there were + info on what to invoke when they complete
-            self.source.kvdb.conn.set(KVDB.FANOUT_COUNTER_PATTERN.format(cid), len(targets))
-            self.source.kvdb.conn.hmset(KVDB.FANOUT_DATA_PATTERN.format(cid), {
+            self.source.kvdb.conn.set(self.counter_pattern.format(cid), len(targets))
+            self.source.kvdb.conn.hmset(self.data_pattern.format(cid), {
                   'on_final': dumps(on_final),
                   'on_target': dumps(on_target),
                   'req_ts_utc': self.source.time.utcnow()
@@ -52,7 +62,7 @@ class FanOut(object):
             # Invoke targets
             for name, payload in targets.items():
                 to_json_string = False if isinstance(payload, basestring) else True
-                self.source.invoke_async(name, payload, CHANNEL.FANOUT_CALL, to_json_string=to_json_string,
+                self.source.invoke_async(name, payload, self.call_channel, to_json_string=to_json_string,
                     zato_ctx={'fanout_cid': cid})
 
         return cid
@@ -61,10 +71,10 @@ class FanOut(object):
 
         now = invoked_service.time.utcnow()
         cid = invoked_service.wsgi_environ['zato.request_ctx.fanout_cid']
-        data_key = KVDB.FANOUT_DATA_PATTERN.format(cid)
-        counter_key = KVDB.FANOUT_COUNTER_PATTERN.format(cid)
+        data_key = self.data_pattern.format(cid)
+        counter_key = self.counter_pattern.format(cid)
 
-        with invoked_service.lock(KVDB.LOCK_FANOUT_PATTERN.format(cid)):
+        with invoked_service.lock(self.lock_pattern.format(cid)):
 
             data = Bunch()
             data.cid = cid
@@ -80,27 +90,39 @@ class FanOut(object):
             # We always invoke 'on_target' callbacks, if there are any
             self.invoke_callbacks(
                 invoked_service, data, loads(invoked_service.kvdb.conn.hget(data_key, 'on_target')),
-                CHANNEL.FANOUT_ON_TARGET, cid)
+                self.on_target_channel, cid)
 
             # Was it the last parallel call?
             if not invoked_service.kvdb.conn.decr(counter_key):
 
-                payload = invoked_service.kvdb.conn.hgetall(data_key)
-                payload['data'] = {}
+                # Not every subclass will need final callbacks
+                if self.needs_on_final:
 
-                for key in (key for key in payload.keys() if key not in JSON_KEYS):
-                    payload['data'][key] = loads(payload.pop(key))
-
-                for key in JSON_KEYS:
-                    if key not in ('data', 'req_ts_utc'):
-                        payload[key] = loads(payload[key])
-
-                self.invoke_callbacks(invoked_service, payload, payload['on_final'], CHANNEL.FANOUT_ON_FINAL, cid)
-
-                invoked_service.kvdb.conn.delete(counter_key)
-                invoked_service.kvdb.conn.delete(data_key)
+                    payload = invoked_service.kvdb.conn.hgetall(data_key)
+                    payload['data'] = {}
+    
+                    for key in (key for key in payload.keys() if key not in JSON_KEYS):
+                        payload['data'][key] = loads(payload.pop(key))
+    
+                    for key in JSON_KEYS:
+                        if key not in ('data', 'req_ts_utc'):
+                            payload[key] = loads(payload[key])
+    
+                    self.invoke_callbacks(invoked_service, payload, payload['on_final'], self.on_final_channel, cid)
+    
+                    invoked_service.kvdb.conn.delete(counter_key)
+                    invoked_service.kvdb.conn.delete(data_key)
 
     def invoke_callbacks(self, invoked_service, payload, cb_list, channel, cid):
         for name in cb_list:
             if name:
                 invoked_service.invoke_async(name, payload, channel, to_json_string=True, zato_ctx={'fanout_cid': cid})
+
+class FanOut(ParallelBase):
+    lock_pattern = KVDB.LOCK_FANOUT_PATTERN
+    counter_pattern = KVDB.FANOUT_COUNTER_PATTERN
+    data_pattern = KVDB.FANOUT_DATA_PATTERN
+    call_channel = CHANNEL.FANOUT_CALL
+    on_target_channel = CHANNEL.FANOUT_ON_TARGET
+    on_final_channel = CHANNEL.FANOUT_ON_FINAL
+    needs_on_final = True
