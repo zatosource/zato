@@ -211,9 +211,9 @@ class Migrate(ManageCommand):
             new_config[section] = section_dict
 
         # Sections new to 2.0
-        for name in ('stats', 'startup_services_first_worker', 'startup_services_any_worker', 'pubsub', 'patterns', 
+        for name in ('stats', 'startup_services_first_worker', 'startup_services_any_worker', 'pubsub',  
                     'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled', 'os_environ',
-                    'deploy_patterns_allowed', 'invoke_patterns_allowed'):
+                    'deploy_patterns_allowed', 'invoke_patterns_allowed', 'invoke_target_patterns_allowed'):
             new_config[name] = dict(ref_cp.items(name))
 
         new_cp = ConfigParser()
