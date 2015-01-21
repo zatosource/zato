@@ -9,17 +9,19 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from json import dumps
 from logging import getLogger
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps
+# Arrow
+from arrow import utcnow
 
 # gevent
 from gevent import sleep
 
 # Zato
 from zato.common import ZatoException
+from zato.common.util import new_cid
 
 logger = getLogger(__name__)
 
@@ -110,38 +112,44 @@ class InvokeRetry(object):
 
 # ################################################################################################################################
 
-    def _invoke_async_retry(self, target, retry_repeats, retry_seconds, orig_cid, callback, callback_context, args, kwargs):
+    def _invoke_async_retry(self, target, retry_repeats, retry_seconds, orig_cid, call_cid, callback, callback_context, args, kwargs):
 
         # Request to invoke the background service with ..
         retry_request = {
+            'source':self.invoking_service.name,
             'target': target,
             'retry_repeats': retry_repeats,
             'retry_seconds': retry_seconds,
             'orig_cid': orig_cid,
+            'call_cid': call_cid,
             'callback': callback,
             'callback_context': callback_context,
             'args': args,
-            'kwargs': kwargs
+            'kwargs': kwargs,
+            'req_ts_utc': utcnow().isoformat()
         }
 
-        return self.invoking_service.invoke_async('zato.pattern.invoke-retry.invoke-retry', dumps(retry_request))
+        return self.invoking_service.invoke_async('zato.pattern.invoke-retry.invoke-retry', dumps(retry_request), cid=call_cid)
 
 # ################################################################################################################################
 
-    def invoke_async_retry(self, target, *args, **kwargs):
+    def invoke_async(self, target, *args, **kwargs):
         async_fallback, callback, callback_context, retry_repeats, retry_seconds, kwargs = self._get_retry_settings(
             target, **kwargs)
         return self._invoke_async_retry(
-            target, retry_repeats, retry_seconds, self.invoking_service.cid, callback, callback_context, args, kwargs)
+            target, retry_repeats, retry_seconds, self.invoking_service.cid, kwargs['cid'], callback,
+            callback_context, args, kwargs)
 
 # ################################################################################################################################
 
-    def invoke_retry(self, target, *args, **kwargs):
+    def invoke(self, target, *args, **kwargs):
         async_fallback, callback, callback_context, retry_repeats, retry_seconds, kwargs = self._get_retry_settings(
             target, **kwargs)
 
         # Let's invoke the service and find out if it works, maybe we don't need
         # to retry anything.
+
+        kwargs['cid'] = kwargs.get('cid', new_cid())
 
         try:
             result = self.invoking_service.invoke(target, *args, **kwargs)
@@ -155,16 +163,16 @@ class InvokeRetry(object):
             if async_fallback:
 
                 # .. invoke the background service and return CID to the caller.
-                cid = self._invoke_async_retry(
-                    target, retry_repeats, retry_seconds, self.invoking_service.cid, callback, callback_context, args, kwargs)
-                raise NeedsRetry(cid, e)
+                return self._invoke_async_retry(
+                    target, retry_repeats, retry_seconds, self.invoking_service.cid, kwargs['cid'], callback,
+                    callback_context, args, kwargs)
 
             # We are to block while repeating
             else:
                 # Repeat the given number of times sleeping for as many seconds as we are told
                 remaining = retry_repeats
                 result = None
-                
+
                 while remaining > 1:
                     try:
                         result = self.invoking_service.invoke(target, *args, **kwargs)
@@ -178,7 +186,6 @@ class InvokeRetry(object):
                 # OK, give up now, there's nothing more we can do
                 if not result:
                     msg = retry_limit_reached_msg(retry_repeats, target, retry_seconds, self.invoking_service.cid)
-                    logger.warn(msg)
                     raise ZatoException(self.invoking_service.cid, msg)
         else:
             # All good, simply return the response

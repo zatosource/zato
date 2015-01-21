@@ -15,7 +15,7 @@ from logging import DEBUG, getLogger
 
 logger = getLogger(__name__)
 
-JSON_KEYS = ('data', 'req_ts_utc', 'on_final', 'on_target')
+JSON_KEYS = ('source', 'on_final', 'on_target', 'data', 'req_ts_utc')
 
 class ParallelBase(object):
     """ Base class containing code common across both fan-out/fan-in and parallel execution features.
@@ -53,6 +53,7 @@ class ParallelBase(object):
             # Store information how many targets there were + info on what to invoke when they complete
             self.source.kvdb.conn.set(self.counter_pattern.format(cid), len(targets))
             self.source.kvdb.conn.hmset(self.data_pattern.format(cid), {
+                  'source': self.source.name,
                   'on_final': dumps(on_final),
                   'on_target': dumps(on_target),
                   'req_ts_utc': self.source.time.utcnow()
@@ -75,7 +76,7 @@ class ParallelBase(object):
         cid = invoked_service.wsgi_environ['zato.request_ctx.{}'.format(self.request_ctx_cid_key)]
         data_key = self.data_pattern.format(cid)
         counter_key = self.counter_pattern.format(cid)
-        req_ts_utc, on_target = invoked_service.kvdb.conn.hmget(data_key, 'req_ts_utc', 'on_target')
+        source, req_ts_utc, on_target = invoked_service.kvdb.conn.hmget(data_key, 'source', 'req_ts_utc', 'on_target')
 
         with invoked_service.lock(self.lock_pattern.format(cid)):
 
@@ -85,7 +86,8 @@ class ParallelBase(object):
             data.response = response
             data.exception = exception
             data.ok = False if exception else True
-            data.service = invoked_service.name
+            data.source = source
+            data.target = invoked_service.name
             data.req_ts_utc = req_ts_utc
 
             # First store our response and exception (if any)
@@ -113,7 +115,7 @@ class ParallelBase(object):
                         payload['data'][key] = loads(payload.pop(key))
 
                     for key in JSON_KEYS:
-                        if key not in ('data', 'req_ts_utc'):
+                        if key not in ('source', 'data', 'req_ts_utc'):
                             payload[key] = loads(payload[key])
 
                     on_final = payload['on_final']
@@ -129,5 +131,4 @@ class ParallelBase(object):
     def invoke_callbacks(self, invoked_service, payload, cb_list, channel, cid):
         for name in cb_list:
             if name:
-                logger.warn('123123 %r %r %s', name, payload, type(payload))
                 invoked_service.invoke_async(name, payload, channel, to_json_string=True, zato_ctx={'fanout_cid': cid})
