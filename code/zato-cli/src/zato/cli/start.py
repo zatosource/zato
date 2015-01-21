@@ -38,7 +38,7 @@ Examples:
     def run_check_config(self):
         cc = CheckConfig(self.args)
         cc.show_output = False
-        cc.execute(Bunch(path='.'))
+        cc.execute(Bunch(path='.', ensure_no_pidfile=True, check_server_port_available=True))
 
     def delete_pidfile(self):
         os.remove(os.path.join(self.component_dir, MISC.PIDFILE))
