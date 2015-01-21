@@ -28,6 +28,7 @@ class ParallelBase(object):
     on_target_channel = None
     on_final_channel = None
     needs_on_final = False
+    request_ctx_cid_key = None
 
     def __init__(self, source):
         self.source = source
@@ -61,7 +62,7 @@ class ParallelBase(object):
             for name, payload in targets.items():
                 to_json_string = False if isinstance(payload, basestring) else True
                 self.source.invoke_async(name, payload, self.call_channel, to_json_string=to_json_string,
-                    zato_ctx={'fanout_cid': cid})
+                    zato_ctx={self.request_ctx_cid_key: cid})
 
         return cid
 
@@ -71,9 +72,10 @@ class ParallelBase(object):
     def on_call_finished(self, invoked_service, response, exception):
 
         now = invoked_service.time.utcnow()
-        cid = invoked_service.wsgi_environ['zato.request_ctx.fanout_cid']
+        cid = invoked_service.wsgi_environ['zato.request_ctx.{}'.format(self.request_ctx_cid_key)]
         data_key = self.data_pattern.format(cid)
         counter_key = self.counter_pattern.format(cid)
+        req_ts_utc, on_target = invoked_service.kvdb.conn.hmget(data_key, 'req_ts_utc', 'on_target')
 
         with invoked_service.lock(self.lock_pattern.format(cid)):
 
@@ -83,12 +85,14 @@ class ParallelBase(object):
             data.response = response
             data.exception = exception
             data.ok = False if exception else True
+            data.service = invoked_service.name
+            data.req_ts_utc = req_ts_utc
 
             # First store our response and exception (if any)
             json_data = dumps(data)
             invoked_service.kvdb.conn.hset(data_key, invoked_service.get_name(), json_data)
 
-            on_target = loads(invoked_service.kvdb.conn.hget(data_key, 'on_target'))
+            on_target = loads(on_target)
 
             if logger.isEnabledFor(DEBUG):
                 self._log_before_callbacks('on_target', on_target, invoked_service)
@@ -125,4 +129,5 @@ class ParallelBase(object):
     def invoke_callbacks(self, invoked_service, payload, cb_list, channel, cid):
         for name in cb_list:
             if name:
+                logger.warn('123123 %r %r %s', name, payload, type(payload))
                 invoked_service.invoke_async(name, payload, channel, to_json_string=True, zato_ctx={'fanout_cid': cid})
