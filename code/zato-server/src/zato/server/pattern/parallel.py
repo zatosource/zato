@@ -19,7 +19,7 @@ class ParallelExec(ParallelBase):
     data_pattern = KVDB.PARALLEL_EXEC_DATA_PATTERN
     call_channel = CHANNEL.PARALLEL_EXEC_CALL
     on_target_channel = CHANNEL.PARALLEL_EXEC_ON_TARGET
-    on_final_channel = CHANNEL.PARALLEL_EXEC_ON_FINAL
+    request_ctx_cid_key = 'parallel_exec_cid'
 
     def invoke(self, targets, on_target, cid=None):
         return super(ParallelExec, self).invoke(targets, None, on_target, cid)

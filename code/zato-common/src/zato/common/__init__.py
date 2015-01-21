@@ -410,7 +410,6 @@ class CHANNEL(Attrs):
     NOTIFIER_RUN = 'notifier-run'                        # New in 2.0
     NOTIFIER_TARGET = 'notifier-target'                  # New in 2.0
     PARALLEL_EXEC_CALL = 'parallel-exec-call'            # New in 2.0
-    PARALLEL_EXEC_ON_FINAL = 'parallel-exec-on-final'    # New in 2.0
     PARALLEL_EXEC_ON_TARGET = 'parallel-exec-on-target'  # New in 2.0
     PUBLISH = 'publish'                                  # New in 2.0
     SCHEDULER = 'scheduler'
