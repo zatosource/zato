@@ -152,13 +152,9 @@ class PatternsFacade(object):
     """ The API through which services make use of integration patterns.
     """
     def __init__(self, invoking_service):
-        self._invoke_retry = InvokeRetry(invoking_service)
+        self.invoke_retry = InvokeRetry(invoking_service)
         self.fanout = FanOut(invoking_service)
         self.parallel = ParallelExec(invoking_service)
-
-        # Convenience API
-        self.invoke_retry = self._invoke_retry.invoke_retry
-        self.invoke_async_retry = self._invoke_retry.invoke_async_retry
 
 # ################################################################################################################################
 
