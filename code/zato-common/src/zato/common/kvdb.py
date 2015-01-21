@@ -61,6 +61,7 @@ class LuaContainer(object):
         self.lua_programs[name] = self.kvdb.register_script(program)
 
     def run_lua(self, name, keys=None, args=None):
+        logger.debug('run_lua: name/keys/args:`%s %s %s`, lua_programs:`%s', name, keys, args, self.lua_programs)
         return self.lua_programs[name](keys or [], args or [])
 
 # ################################################################################################################################
