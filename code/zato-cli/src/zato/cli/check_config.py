@@ -128,11 +128,10 @@ class CheckConfig(ManageCommand):
         self.check_sql_odb_server(cm, conf)
         self.on_server_check_kvdb(cm, conf)
 
-        # enmasse actually needs a running server and it will set the flags below to False.
-        if getattr(args, 'ensure_no_pidfile', True):
+        if getattr(args, 'ensure_no_pidfile', False):
             self.ensure_no_pidfile()
 
-        if getattr(args, 'check_server_port_available', True):
+        if getattr(args, 'check_server_port_available', False):
             self.on_server_check_port_available(conf)
 
     def _on_lb(self, *ignored_args, **ignored_kwargs):
