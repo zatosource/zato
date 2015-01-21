@@ -21,3 +21,4 @@ class FanOut(ParallelBase):
     on_target_channel = CHANNEL.FANOUT_ON_TARGET
     on_final_channel = CHANNEL.FANOUT_ON_FINAL
     needs_on_final = True
+    request_ctx_cid_key = 'fanout_cid'
