@@ -985,12 +985,13 @@ class WorkerStore(BrokerMessageReceiver):
             'zato.request_ctx.async_msg':msg,
             'zato.request_ctx.in_reply_to':msg.get('in_reply_to'),
             'zato.request_ctx.fanout_cid':zato_ctx.get('fanout_cid'),
+            'zato.request_ctx.parallel_exec_cid':zato_ctx.get('parallel_exec_cid'),
         }
 
         data_format = msg.get('data_format')
         transport = msg.get('transport')
 
-        if msg.get('channel') in (CHANNEL.FANOUT_ON_TARGET, CHANNEL.FANOUT_ON_FINAL):
+        if msg.get('channel') in (CHANNEL.FANOUT_ON_TARGET, CHANNEL.FANOUT_ON_FINAL, CHANNEL.PARALLEL_EXEC_ON_TARGET):
             payload = loads(msg['payload'])
         else:
             payload = msg['payload']
