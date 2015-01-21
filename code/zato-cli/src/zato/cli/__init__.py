@@ -333,7 +333,7 @@ class ZatoCommand(object):
         self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO) # noqa
         self.logger.handlers[:] = []
         
-        console_handler = logging.StreamHandler() # noqa
+        console_handler = logging.StreamHandler(sys.stdout) # noqa
         console_formatter = logging.Formatter('%(message)s') # noqa
         console_handler.setFormatter(console_formatter)
         self.logger.addHandler(console_handler)
