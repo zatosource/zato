@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from distutils.version import LooseVersion
 from json import loads
 from os.path import abspath, exists, join
 
@@ -78,8 +79,18 @@ class CheckConfig(ManageCommand):
         kvdb_config = Bunch(dict(conf['kvdb'].items()))
         kvdb = KVDB(None, kvdb_config, cm.decrypt)
         kvdb.init()
-        
-        kvdb.conn.info()
+
+        minimum = '2.8.4'
+
+        info = kvdb.conn.info()
+        redis_version = info.get('redis_version')
+
+        if not redis_version:
+            raise Exception('Could not obtain `redis_version` from {}'.format(info))
+
+        if not LooseVersion(redis_version) >= LooseVersion(minimum):
+            raise Exception('Redis version required: `{}` or later, found:`{}`'.format(minimum, redis_version))
+
         kvdb.close()
 
         if self.show_output:
