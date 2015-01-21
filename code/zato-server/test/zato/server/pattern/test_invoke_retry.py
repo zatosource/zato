@@ -32,12 +32,13 @@ def raise_exception():
 
 # ################################################################################################################################
 
-class DummyInvokingService(object):
+class DummyTargetService(object):
     def __init__(self, callback=None, callback_impl_name=None, cid=None, result=None, raise_on_invoke=False):
         self.server = Bunch(service_store=Bunch(name_to_impl_name={callback:callback_impl_name}))
         self.cid = cid
         self.result = result
         self.raise_on_invoke = raise_on_invoke
+        self.name = 'DummyTargetService'
 
         self.invoke_called_times = 0
         self.invoke_args = None
@@ -159,7 +160,7 @@ class InvokeRetryTestCase(TestCase):
         callback = rand_string()
         callback_impl_name = rand_string()
 
-        invoking_service = DummyInvokingService(callback, callback_impl_name)
+        invoking_service = DummyTargetService(callback, callback_impl_name)
 
         for needs_seconds in True, False:
 
@@ -283,7 +284,7 @@ class InvokeRetryTestCase(TestCase):
 # ################################################################################################################################
 
     def test_get_retry_settings_has_async_callback_invalid_target(self):
-        ir = InvokeRetry(DummyInvokingService())
+        ir = InvokeRetry(DummyTargetService())
 
         kwargs = {
             'async_fallback': True,
@@ -311,7 +312,7 @@ class InvokeRetryTestCase(TestCase):
         callback_impl_name = 'callback_impl_name_{}'.format(rand_string())
         cid = new_cid()
 
-        invoking_service = DummyInvokingService(callback, callback_impl_name, cid)
+        invoking_service = DummyTargetService(callback, callback_impl_name, cid)
         ir = InvokeRetry(invoking_service)
 
         kwargs = {
@@ -321,14 +322,15 @@ class InvokeRetryTestCase(TestCase):
             'repeats': rand_int(),
             'seconds': rand_int(),
             'minutes': 0,
+            'cid': cid
         }
 
         kwargs_copy = deepcopy(kwargs)
 
-        ir.invoke_async_retry(target, **kwargs)
+        call_cid = ir.invoke_async(target, **kwargs)
 
         self.assertTrue(len(invoking_service.invoke_async_args), 2)
-        self.assertEquals(invoking_service.invoke_async_kwargs, {})
+        self.assertEquals(invoking_service.invoke_async_kwargs, {'cid': cid})
 
         invoke_retry_service, retry_request = invoking_service.invoke_async_args
         self.assertEquals(invoke_retry_service, 'zato.pattern.invoke-retry.invoke-retry')
@@ -339,7 +341,7 @@ class InvokeRetryTestCase(TestCase):
         self.assertEquals(retry_request['callback'], callback)
         self.assertEquals(retry_request['args'], [])
         self.assertEquals(retry_request['retry_seconds'], kwargs_copy['seconds'])
-        self.assertEquals(retry_request['kwargs'], {})
+        self.assertEquals(retry_request['kwargs'], {'cid': call_cid})
         self.assertEquals(retry_request['orig_cid'], cid)
         self.assertEquals(retry_request['retry_repeats'], kwargs_copy['repeats'])
         self.assertEquals(retry_request['callback_context'], kwargs_copy['context'])
@@ -354,7 +356,7 @@ class InvokeRetryTestCase(TestCase):
         cid = new_cid()
         expected_result = rand_string()
 
-        invoking_service = DummyInvokingService(callback, callback_impl_name, cid, expected_result)
+        invoking_service = DummyTargetService(callback, callback_impl_name, cid, expected_result)
         ir = InvokeRetry(invoking_service)
 
         kwargs = {
@@ -364,14 +366,15 @@ class InvokeRetryTestCase(TestCase):
             'repeats': rand_int(),
             'seconds': rand_int(),
             'minutes': 0,
+            'cid': cid,
         }
 
-        result = ir.invoke_retry(target, 1, 2, 3, **kwargs)
+        result = ir.invoke(target, 1, 2, 3, **kwargs)
         self.assertEquals(expected_result, result)
 
         self.assertTrue(len(invoking_service.invoke_args), 2)
         self.assertEquals(invoking_service.invoke_args, (target, 1, 2, 3))
-        self.assertEquals(invoking_service.invoke_kwargs, {})
+        self.assertEquals(invoking_service.invoke_kwargs, {'cid':cid})
 
 # ################################################################################################################################
 
@@ -396,7 +399,7 @@ class InvokeRetryTestCase(TestCase):
             cid = new_cid()
             expected_result = rand_string()
     
-            invoking_service = DummyInvokingService(callback, callback_impl_name, cid, expected_result, raise_on_invoke=True)
+            invoking_service = DummyTargetService(callback, callback_impl_name, cid, expected_result, raise_on_invoke=True)
             ir = InvokeRetry(invoking_service)
     
             kwargs = {
@@ -411,7 +414,7 @@ class InvokeRetryTestCase(TestCase):
             kwargs_copy = deepcopy(kwargs)
     
             try:
-                ir.invoke_retry(target, 1, 2, 3, **kwargs)
+                ir.invoke(target, 1, 2, 3, **kwargs)
             except ZatoException, e:
                 expected_msg = retry_limit_reached_msg(kwargs_copy['repeats'], target, kwargs_copy['seconds'], invoking_service.cid)
                 self.assertEquals(e.cid, cid)
@@ -434,7 +437,7 @@ class InvokeRetryTestCase(TestCase):
         cid = new_cid()
         expected_result = rand_string()
 
-        invoking_service = DummyInvokingService(callback, callback_impl_name, cid, expected_result, raise_on_invoke=True)
+        invoking_service = DummyTargetService(callback, callback_impl_name, cid, expected_result, raise_on_invoke=True)
         ir = InvokeRetry(invoking_service)
 
         kwargs = {
@@ -446,12 +449,7 @@ class InvokeRetryTestCase(TestCase):
             'minutes': 0,
         }
 
-        try:
-            ir.invoke_retry(target, 1, 2, 3, **kwargs)
-        except NeedsRetry, e:
-            self.assertEquals(e.cid, cid)
-            self.assertEquals(e.cid, e.inner_exc.message)
-        else:
-            self.fail('Expected a NeedsRetry exception')
+        result = ir.invoke(target, 1, 2, 3, **kwargs)
+        self.assertEquals(result, cid)
 
 # ################################################################################################################################
