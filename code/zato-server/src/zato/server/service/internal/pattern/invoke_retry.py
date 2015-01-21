@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from json import dumps, loads
 
+# Arrow
+from arrow import utcnow
+
 # Bunch
 from bunch import Bunch
 
@@ -42,17 +45,22 @@ class InvokeRetry(Service):
 
 # ################################################################################################################################
 
-    def _notify_callback(self, is_ok):
+    def _notify_callback(self, is_ok, response):
         callback_request = {
             'ok': is_ok,
             'orig_cid': self.req_bunch.orig_cid,
+            'call_cid': self.req_bunch.call_cid,
+            'source': self.req_bunch.source,
             'target': self.req_bunch.target,
             'retry_seconds': self.req_bunch.retry_seconds,
             'retry_repeats': self.req_bunch.retry_repeats,
-            'context': self.req_bunch.callback_context
+            'context': self.req_bunch.callback_context,
+            'req_ts_utc': self.req_bunch.req_ts_utc,
+            'resp_ts_utc': utcnow().isoformat(),
+            'response': response
         }
 
-        self.invoke_async(self.req_bunch.callback, dumps(callback_request))
+        self.invoke_async(self.req_bunch.callback, callback_request)
 
 # ################################################################################################################################
 
@@ -75,11 +83,11 @@ class InvokeRetry(Service):
                 msg = retry_limit_reached_msg(self.req_bunch.retry_repeats,
                     self.req_bunch.target, self.req_bunch.retry_seconds, self.req_bunch.orig_cid)
                 self.logger.warn(msg)
-                self._notify_callback(False)
+                self._notify_callback(False, None)
 
         # Let the callback know it's all good
         else:
-            self._notify_callback(True)
+            self._notify_callback(True, g.value)
 
 # ################################################################################################################################
 
