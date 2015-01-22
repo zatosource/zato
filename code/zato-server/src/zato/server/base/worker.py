@@ -1003,11 +1003,11 @@ class WorkerStore(BrokerMessageReceiver):
             environ=msg.get('environ'))
 
         # Invoke the callback, if any.
-        if msg.get('is_async') and msg.get('reply_to'):
+        if msg.get('is_async') and msg.get('callback'):
 
             cb_msg = {}
             cb_msg['action'] = SERVICE.PUBLISH.value
-            cb_msg['service'] = msg['reply_to']
+            cb_msg['service'] = msg['callback']
             cb_msg['payload'] = service.response.payload
             cb_msg['cid'] = new_cid()
             cb_msg['channel'] = CHANNEL.INVOKE_ASYNC_CALLBACK
