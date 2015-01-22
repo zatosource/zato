@@ -494,7 +494,7 @@ class Service(object):
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
 
     def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=DATA_FORMAT.DICT,
-            transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, reply_to=None,
+            transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, callback=None,
             zato_ctx={}, environ={}):
         """ Invokes a service asynchronously by its name.
         """
@@ -513,16 +513,16 @@ class Service(object):
         cid = cid or new_cid()
 
         # If there is any callback at all, we need to figure out its name because that's how it will be invoked by.
-        if reply_to:
+        if callback:
 
             # The same service
-            if reply_to is self:
-                reply_to = self.name
+            if callback is self:
+                callback = self.name
 
         else:
-            sink = '{}-reply-sink'.format(self.name)
+            sink = '{}-async-callback'.format(self.name)
             if sink in self.server.service_store.name_to_impl_name:
-                reply_to = sink
+                callback = sink
 
             # Otherwise the callback must be a string pointing to the actual service to reply to so we don't need to do anything.
 
@@ -535,7 +535,7 @@ class Service(object):
         msg['data_format'] = data_format
         msg['transport'] = transport
         msg['is_async'] = True
-        msg['reply_to'] = reply_to
+        msg['callback'] = callback
         msg['zato_ctx'] = zato_ctx
         msg['environ'] = environ
 
