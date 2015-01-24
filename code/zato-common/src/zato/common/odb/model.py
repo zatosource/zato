@@ -16,8 +16,8 @@ from json import dumps
 from dictalchemy import make_class_dictable
 
 # SQLAlchemy
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Sequence, \
-     Boolean, LargeBinary, UniqueConstraint, Enum, SmallInteger
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, LargeBinary, Sequence, SmallInteger, String, \
+     Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
@@ -1633,7 +1633,7 @@ class NotificationSQL(Notification):
 
     id = Column(Integer, ForeignKey('notif.id'), primary_key=True)
 
-    query = Column(String(200000), nullable=False)
+    query = Column(Text, nullable=False)
 
     def_id = Column(Integer, ForeignKey('sql_pool.id'), primary_key=True)
     definition = relationship(SQLConnectionPool, backref=backref('notif_sql_list', order_by=id, cascade='all, delete, delete-orphan'))
