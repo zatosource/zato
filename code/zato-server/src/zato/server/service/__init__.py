@@ -112,7 +112,7 @@ class TimeUtil(object):
     def today(self, format='YYYY-MM-DD', tz='UTC', needs_format=True):
         """ Returns current day in a given timezone.
         """
-        now = arrow.utcnow()
+        now = arrow.now(tz=tz)
         today = arrow.Arrow(year=now.year, month=now.month, day=now.day)
 
         if tz != 'UTC':
