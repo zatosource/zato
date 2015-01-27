@@ -453,7 +453,7 @@ class WorkerStore(BrokerMessageReceiver):
             item = config = self.worker_config.out_odoo[name]
             config = item['config']
             config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
-            item.conn = OdooWrapper(config)
+            item.conn = OdooWrapper(config, self.server)
             item.conn.build_queue()
 
 # ################################################################################################################################
