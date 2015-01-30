@@ -70,8 +70,12 @@ class BaseHTTPSOAPWrapper(object):
         verify = False if self.config.get('tls_verify', ZATO_NONE) == ZATO_NONE else self.config['tls_verify']
 
         try:
+
+            # Suds connections don't have request_auth
+            auth = getattr(self, 'request_auth', None)
+
             return self.session.request(
-                method, address, data=data, auth=self.requests_auth, headers=headers, hooks=hooks,
+                method, address, data=data, auth=auth, headers=headers, hooks=hooks,
                 cert=cert, verify=verify, timeout=self.config['timeout'], *args, **kwargs)
         except RequestsTimeout, e:
             raise TimeoutException(cid, format_exc(e))
