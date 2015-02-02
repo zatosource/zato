@@ -37,7 +37,7 @@ class SingletonServer(BrokerMessageReceiver):
         self.broker_client = broker_client
         self.initial_sleep_time = initial_sleep_time
         self.is_cluster_wide = is_cluster_wide
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger('zato_singleton')
 
     def run(self, *ignored_args, **kwargs):
         # So that other moving parts - like connector subprocesses - have time
