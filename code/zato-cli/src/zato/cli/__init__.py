@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json, shutil, traceback
+import json, shutil
 from cStringIO import StringIO
 from getpass import getpass, getuser
 from socket import gethostname
@@ -484,7 +484,7 @@ class ZatoCommand(object):
             else:
                 sys.exit(0)
 
-        except Exception, e:
+        except Exception:
             self.reset_logger(self.args)
             self.logger.error(get_full_stack())
             sys.exit(self.SYS_ERROR.EXCEPTION_CAUGHT)
