@@ -204,7 +204,6 @@ def run(base_dir, start_gunicorn_app=True):
     if dsn:
 
         from raven import Client
-        from raven.conf import setup_logging
         from raven.handlers.logging import SentryHandler
 
         handler_level = sentry_config.pop('level')

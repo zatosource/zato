@@ -70,7 +70,7 @@ class Matcher(object):
 
             for order in self.order1, self.order2:
                 for pattern in self.items[order]:
-                    if globre_match(pattern, value):
+                    if _match(pattern, value):
                         is_allowed = order
 
             # No match at all - we don't allow it in that case

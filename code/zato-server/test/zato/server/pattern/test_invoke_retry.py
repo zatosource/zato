@@ -23,7 +23,7 @@ from mock import patch
 from zato.common import ZatoException
 from zato.common.test import rand_int, rand_string
 from zato.common.util import new_cid
-from zato.server.pattern.invoke_retry import InvokeRetry, NeedsRetry, retry_failed_msg, retry_limit_reached_msg
+from zato.server.pattern.invoke_retry import InvokeRetry, retry_failed_msg, retry_limit_reached_msg
 
 # ################################################################################################################################
 
