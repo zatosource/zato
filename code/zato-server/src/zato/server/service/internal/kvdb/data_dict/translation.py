@@ -183,4 +183,4 @@ class GetLastID(AdminService):
         output_optional = (Int('value'),)
         
     def handle(self):
-        value = self.server.kvdb.conn.get(KVDB.TRANSLATION_ID)
+        self.response.payload.value = self.server.kvdb.conn.get(KVDB.TRANSLATION_ID)

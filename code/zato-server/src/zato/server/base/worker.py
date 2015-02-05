@@ -39,7 +39,7 @@ from retools.lock import Lock
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, \
-     SEC_DEF_TYPE, SIMPLE_IO, TRACE1, ZatoException, ZATO_NONE, ZATO_NOT_GIVEN, ZATO_ODB_POOL_NAME
+     SEC_DEF_TYPE, SIMPLE_IO, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common import broker_message
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher

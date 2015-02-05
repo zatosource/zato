@@ -35,7 +35,7 @@ from retools.lock import Lock
 from gevent import Timeout, spawn
 
 # Zato
-from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException, ZATO_NONE, ZATO_NOT_GIVEN
+from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl
@@ -378,9 +378,6 @@ class Service(object):
         channel_params = kwargs.get('channel_params', {})
         merge_channel_params = kwargs.get('merge_channel_params', True)
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
-        serialize = kwargs.get('serialize')
-        as_bunch = kwargs.get('as_bunch')
-        channel_item = kwargs.get('channel_item')
 
         service.update(service, channel, server, broker_client,
             worker_store, cid, payload, raw_request, transport,
