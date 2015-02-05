@@ -188,7 +188,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 'http_version': wsgi_environ['SERVER_PROTOCOL'],
                 'status_code': wsgi_environ['zato.http.response.status'].split()[0],
                 'response_size': len(payload),
-                'user_agent': wsgi_environ['HTTP_USER_AGENT'],
+                'user_agent': wsgi_environ.get('HTTP_USER_AGENT', '(None)'),
                 })
 
         return [payload]
