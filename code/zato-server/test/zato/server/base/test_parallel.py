@@ -13,7 +13,6 @@ import httplib
 from ast import literal_eval
 from cStringIO import StringIO
 from datetime import datetime
-from hashlib import sha1
 from json import loads
 from unittest import TestCase
 
