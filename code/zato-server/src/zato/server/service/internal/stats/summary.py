@@ -201,7 +201,7 @@ class BaseSummarizingService(BaseAggregatingService):
                 values['rate'] = round(values['usage'] / total_seconds, 2)
 
         except Exception, e:
-            self.logger.warn('Count not store mean/mean. e=`%r, locals=`%r`',
+            self.logger.warn('Could not store mean/rate. e=`%r`, locals=`%r`',
                 format_exc(e), locals())
 
         else:
