@@ -232,7 +232,7 @@ def run(base_dir, start_gunicorn_app=True):
             unwind = config.profiler.unwind)
 
     # New in 2.0 - set environmet variables for servers to inherit
-    os_environ = config.get('os_environ')
+    os_environ = config.get('os_environ', {})
     for key, value in os_environ.items():
         os.environ[key] = value
 
