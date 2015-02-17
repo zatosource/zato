@@ -13,6 +13,7 @@ import logging
 from datetime import datetime
 from hashlib import sha256
 from json import dumps, loads
+from operator import attrgetter
 from threading import RLock
 from traceback import format_exc
 
@@ -29,6 +30,9 @@ from parse import compile as parse_compile
 # sec-wall
 from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
+
+# SortedContainers
+from sortedcontainers import SortedListWithKey
 
 # Zato
 from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, ZATO_NONE
@@ -50,7 +54,7 @@ class URLData(OAuthDataStore):
                  tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, openstack_config=None,
                  xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, kvdb=None, broker_client=None,
                  odb=None, json_pointer_store=None, xpath_store=None):
-        self.channel_data = channel_data
+        self.channel_data = SortedListWithKey(channel_data, key=attrgetter('name'))
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
         self.ntlm_config = ntlm_config
@@ -855,7 +859,7 @@ class URLData(OAuthDataStore):
         """ Creates a new channel, both its core data and the related security definition.
         """
         match_target = '{}{}{}'.format(msg.soap_action, MISC.SEPARATOR, msg.url_path)
-        self.channel_data.append(self._channel_item_from_msg(msg, match_target, old_data))
+        self.channel_data.add(self._channel_item_from_msg(msg, match_target, old_data))
         self.url_sec[match_target] = self._sec_info_from_msg(msg)
 
     def _delete_channel(self, msg):
