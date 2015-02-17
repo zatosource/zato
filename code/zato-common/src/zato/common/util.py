@@ -825,7 +825,7 @@ def get_full_stack():
     stackstr = trc + ''.join(traceback.format_list(stack))
 
     if not exc is None:
-        stackstr += '  ' + traceback.format_exc().lstrip(trc)
+        stackstr += '  ' + traceback.format_exc().decode('utf-8').lstrip(trc)
 
     return stackstr
 
