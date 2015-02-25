@@ -53,6 +53,9 @@ Examples:
             self.logger.info(msg)
             return self.SYS_ERROR.COMPONENT_ALREADY_RUNNING
 
+        # Returning None would have sufficed but let's be explicit.
+        return 0
+
     def start_component(self, py_path, name, program_dir, on_keyboard_interrupt=None):
         """ Starts a component in background or foreground, depending on the 'fg' flag.
         """
@@ -84,6 +87,8 @@ Examples:
             if not found_pidfile:
                 self.start_component(
                     'zato.agent.load_balancer.main', 'load-balancer', os.path.join(self.config_dir, 'repo'), stop_haproxy)
+
+        sys.exit(found_pidfile)
 
     def _on_web_admin(self, *ignored):
         self.run_check_config()
