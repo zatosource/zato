@@ -124,6 +124,7 @@ class Wrapper(object):
     def __init__(self, config, conn_type, server=None):
         self.conn_type = conn_type
         self.config = config
+        self.config.username_pretty = self.config.username or '(None)'
         self.server = server
 
         self.client = ConnectionQueue(

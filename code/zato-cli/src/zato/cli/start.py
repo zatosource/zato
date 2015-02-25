@@ -85,6 +85,8 @@ Examples:
                 self.start_component(
                     'zato.agent.load_balancer.main', 'load-balancer', os.path.join(self.config_dir, 'repo'), stop_haproxy)
 
+        sys.exit(found_pidfile)
+
     def _on_web_admin(self, *ignored):
         self.run_check_config()
         self.start_component('zato.admin.main', 'web admin', '', self.delete_pidfile)

@@ -18,6 +18,7 @@ from zato.admin import settings
 from zato.admin.web.views import account, cluster, http_soap, kvdb, load_balancer, main, scheduler, service, stats
 from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
+from zato.admin.web.views.channel import stomp as channel_stomp
 from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
@@ -35,6 +36,7 @@ from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import odoo as out_odoo
 from zato.admin.web.views.outgoing import sql as out_sql
+from zato.admin.web.views.outgoing import stomp as out_stomp
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import topics as pubsub_topics
 from zato.admin.web.views.pubsub import consumers as pubsub_consumers
@@ -679,6 +681,25 @@ urlpatterns += patterns('',
 
 # ################################################################################################################################
 
+urlpatterns += patterns('',
+
+    # .. STOMP
+    url(r'^zato/outgoing/stomp/$',
+        login_required(out_stomp.Index()), name=out_stomp.Index.url_name),
+    url(r'^zato/outgoing/stomp/create/$',
+        login_required(out_stomp.Create()), name=out_stomp.Create.url_name),
+    url(r'^zato/outgoing/stomp/edit/$',
+        login_required(out_stomp.Edit()), name=out_stomp.Edit.url_name),
+    url(r'^zato/outgoing/stomp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_stomp.Delete()), name=out_stomp.Delete.url_name),
+    url(r'^zato/outgoing/stomp/change-password/$',
+        login_required(out_stomp.change_password), name='out-stomp-change-password'),
+    url(r'^zato/outgoing/stomp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(out_stomp.ping), name='out-stomp-ping'),
+    )
+
+# ################################################################################################################################
+
     # Channels
 
 # ################################################################################################################################
@@ -709,6 +730,25 @@ urlpatterns += patterns('',
         login_required(channel_jms_wmq.edit), name='channel-jms-wmq-edit'),
     url(r'^zato/channel/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_jms_wmq.Delete()), name=channel_jms_wmq.Delete.url_name),
+    )
+
+# ################################################################################################################################
+
+urlpatterns += patterns('',
+
+    # .. STOMP
+    url(r'^zato/channel/stomp/$',
+        login_required(channel_stomp.Index()), name=channel_stomp.Index.url_name),
+    url(r'^zato/channel/stomp/create/$',
+        login_required(channel_stomp.Create()), name=channel_stomp.Create.url_name),
+    url(r'^zato/channel/stomp/edit/$',
+        login_required(channel_stomp.Edit()), name=channel_stomp.Edit.url_name),
+    url(r'^zato/channel/stomp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_stomp.Delete()), name=channel_stomp.Delete.url_name),
+    url(r'^zato/channel/stomp/change-password/$',
+        login_required(channel_stomp.change_password), name='channel-stomp-change-password'),
+    url(r'^zato/channel/stomp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_stomp.ping), name='channel-stomp-ping'),
     )
 
 # ################################################################################################################################
