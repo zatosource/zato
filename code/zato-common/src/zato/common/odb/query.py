@@ -20,13 +20,14 @@ from sqlalchemy.sql.expression import case
 # Zato
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
      URL_PARAMS_PRIORITY
-from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, CassandraQuery, ChannelAMQP, ChannelWMQ, \
-     ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, \
+from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, CassandraQuery, ChannelAMQP, ChannelSTOMP, \
+     ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, \
      DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, \
      MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
-     OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, \
-     PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMTP, Solr, \
-     SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
+     OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, \
+     PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, \
+     SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WSSDefinition, XPath, \
+     XPathSecurity
 
 logger = logging.getLogger(__name__)
 
@@ -398,6 +399,32 @@ def channel_amqp_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
+def _channel_stomp(session, cluster_id):
+    return session.query(
+        ChannelSTOMP.id, ChannelSTOMP.name, ChannelSTOMP.is_active, ChannelSTOMP.username,
+        ChannelSTOMP.password, ChannelSTOMP.address, ChannelSTOMP.proto_version,
+        ChannelSTOMP.timeout, ChannelSTOMP.sub_to, ChannelSTOMP.service_id,
+        Service.name.label('service_name')).\
+        filter(Service.id==ChannelSTOMP.service_id).\
+        filter(Cluster.id==ChannelSTOMP.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(ChannelSTOMP.name)
+
+def channel_stomp(session, cluster_id, id):
+    """ A STOMP channel.
+    """
+    return _channel_stomp(session, cluster_id).\
+        filter(ChannelSTOMP.id==id).\
+        one()
+
+@needs_columns
+def channel_stomp_list(session, cluster_id, needs_columns=False):
+    """ A list of STOMP channels.
+    """
+    return _channel_stomp(session, cluster_id)
+
+# ################################################################################################################################
+
 def _channel_jms_wmq(session, cluster_id):
     return session.query(
         ChannelWMQ.id, ChannelWMQ.name, ChannelWMQ.is_active,
@@ -422,6 +449,27 @@ def channel_jms_wmq_list(session, cluster_id, needs_columns=False):
     """ JMS WebSphere MQ channels.
     """
     return _channel_jms_wmq(session, cluster_id)
+
+# ################################################################################################################################
+
+def _out_stomp(session, cluster_id):
+    return session.query(OutgoingSTOMP).\
+        filter(Cluster.id==OutgoingSTOMP.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(OutgoingSTOMP.name)
+
+def out_stomp(session, cluster_id, id):
+    """ An outgoing STOMP connection.
+    """
+    return _out_zmq(session, cluster_id).\
+        filter(OutgoingSTOMP.id==id).\
+        one()
+
+@needs_columns
+def out_stomp_list(session, cluster_id, needs_columns=False):
+    """ Outgoing STOMP connections.
+    """
+    return _out_stomp(session, cluster_id)
 
 # ################################################################################################################################
 

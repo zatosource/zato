@@ -59,6 +59,7 @@ from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
+from zato.server.connection.stomp import STOMPWrapper
 from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.connection.zmq_.outgoing import ZMQAPI as ZMQAPIOut, ZMQConnStore as ZMQConnStoreOut
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
@@ -154,6 +155,9 @@ class WorkerStore(BrokerMessageReceiver):
         # E-mail
         self.init_email_smtp()
         self.init_email_imap()
+
+        # STOMP
+        self.init_stomp()
 
         # ZeroMQ
         self.init_zmq()
@@ -439,6 +443,17 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init_email_imap(self):
         self.init_simple(self.worker_config.email_imap, self.email_imap_api, 'an IMAP')
+
+# ################################################################################################################################
+
+    def init_stomp(self):
+        names = self.worker_config.out_stomp.keys()
+        for name in names:
+            item = config = self.worker_config.out_stomp[name]
+            config = item['config']
+            config.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
+            item.conn = STOMPWrapper(config, self.server)
+            item.conn.build_queue()
 
 # ################################################################################################################################
 
@@ -1616,5 +1631,19 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_OUTGOING_ZMQ_DELETE(self, msg):
         self.zmq_out_api.delete(msg.name)
+
+# ################################################################################################################################
+
+    def on_broker_msg_OUTGOING_STOMP_CREATE(self, msg, *args):
+        """ Creates or updates a STOMP connection.
+        """
+        self._on_broker_msg_cloud_create_edit(msg, 'STOMP', self.worker_config.out_stomp, STOMPWrapper)
+
+    on_broker_msg_OUTGOING_STOMP_CHANGE_PASSWORD = on_broker_msg_OUTGOING_STOMP_EDIT = on_broker_msg_OUTGOING_STOMP_CREATE
+
+    def on_broker_msg_OUTGOING_STOMP_DELETE(self, msg, *args):
+        """ Closes and deletes an STOMP connection.
+        """
+        self._delete_config_close_wrapper(msg['name'], self.worker_config.out_stomp, 'STOMP', logger.debug)
 
 # ################################################################################################################################

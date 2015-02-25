@@ -692,6 +692,28 @@ class ODOO:
             def __iter__(self):
                 return iter((self.XML_RPC, self.XML_RPCS, self.JSON_RPC, self.JSON_RPCS))
 
+class STOMP:
+
+    class PROTOCOL:
+        PROTO_10 = NameId('1.0', '1.0')
+        PROTO_11 = NameId('1.1', '1.1')
+        PROTO_12 = NameId('1.2', '1.2')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.PROTO_10, self.PROTO_11, self.PROTO_12))
+
+    class ACK_MODE:
+        AUTO = NameId('auto', 'auto')
+        CLIENT_INDIVIDUAL = NameId('client-individual', 'client-individual')
+
+    class DEFAULT:
+        ADDRESS = 'localhost:61613'
+        PROTOCOL = '1.0'
+        TIMEOUT = 10 # In seconds
+        USERNAME = 'guest'
+        ACK_MODE = 'client-individual'
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'

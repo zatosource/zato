@@ -694,6 +694,32 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_channel_stomp(self, cluster_id, channel_id):
+        """ Returns a particular STOMP channel.
+        """
+        with closing(self.session()) as session:
+            return query.channel_stomp(session, cluster_id, channel_id)
+
+    def get_channel_stomp_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of STOMP channels.
+        """
+        with closing(self.session()) as session:
+            return query.channel_stomp_list(session, cluster_id, needs_columns)
+
+    def get_out_stomp(self, cluster_id, out_id):
+        """ Returns an outgoing STOMP connection's details.
+        """
+        with closing(self.session()) as session:
+            return query.out_stomp(session, cluster_id, out_id)
+
+    def get_out_stomp_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of outgoing STOMP connections.
+        """
+        with closing(self.session()) as session:
+            return query.out_stomp_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
     def get_out_zmq(self, cluster_id, out_id):
         """ Returns an outgoing ZMQ connection's details.
         """
