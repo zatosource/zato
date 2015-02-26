@@ -21,6 +21,9 @@ from nose.tools import eq_
 # parse
 from parse import compile as parse_compile, Parser, Result
 
+# sortedcontainers
+from sortedcontainers import SortedList
+
 # Zato
 from zato.common import DATA_FORMAT, MISC, URL_TYPE, ZATO_NONE
 from zato.common.test import rand_string
@@ -86,19 +89,24 @@ class URLDataTestCase(TestCase):
         match_target3 = '{}{}{}'.format(soap_action3, MISC.SEPARATOR, url_path3)
 
         item1 = Bunch()
+        item1.name = 'name-2'
         item1.match_target = match_target1
         item1.match_target_compiled = parse_compile(item1.match_target)
 
         item2 = Bunch()
+        item2.name = 'name-1'
         item2.match_target = match_target2
         item2.match_target_compiled = parse_compile(item2.match_target)
 
         item3 = Bunch()
+        item3.name = 'name-3'
         item3.match_target = match_target3
         item3.match_target_compiled = parse_compile(item3.match_target)
 
-        ud.channel_data.append(item1)
+        # Note that we append in the order the 'name' attribute dictates
+        # because .channel_data is a sorted list.
         ud.channel_data.append(item2)
+        ud.channel_data.append(item1)
         ud.channel_data.append(item3)
 
         match, _ = ud.match(url_path1, soap_action1)
@@ -293,10 +301,12 @@ class URLDataTestCase(TestCase):
     def test_delete_channel_data(self):
 
         sec1 = Bunch()
+        sec1.name = uuid4().hex
         sec1.sec_type = uuid4().hex
         sec1.security_name = uuid4().hex
 
         sec2 = Bunch()
+        sec2.name = uuid4().hex
         sec2.sec_type = uuid4().hex
         sec2.security_name = uuid4().hex
 
@@ -1398,7 +1408,7 @@ class URLDataTestCase(TestCase):
         ud = url_data.URLData()
         ud._channel_item_from_msg = _dummy_channel_item_from_msg
         ud._sec_info_from_msg = _dummy_sec_info_from_msg
-        ud.channel_data = []
+        ud.channel_data = SortedList()
         ud.url_sec = {}
 
         ud._create_channel(msg, {})
