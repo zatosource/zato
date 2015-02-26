@@ -56,6 +56,7 @@ def _channel_main_loop(item, worker):
                 'service': service_name,
                 'payload': frame
             }, stomp_channel, 'STOMP_CHANNEL_MSG')
+
     except StompConnectionError, e:
 
         # We want to report it only if we are still to run,
