@@ -16,25 +16,26 @@ from time import time
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelSTOMP, Service
 from zato.common.odb.query import channel_stomp_list
+from zato.server.connection.stomp import create_stomp_session
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
-from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
+from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta, PingMeta
 
 elem = 'stomp_channel'
 model = ChannelSTOMP
 label = 'a STOMP channel'
 broker_message = CHANNEL
 broker_message_prefix = 'STOMP_'
-output_required_extra = ['service_name']
+output_optional_extra = ['service_name']
 create_edit_input_required_extra = ['service_name']
 create_edit_rewrite = ['service_name']
 list_func = channel_stomp_list
 
-def instance_hook(service, input, instance, attrs):
+def instance_hook(self, input, instance, attrs):
     # So they are not stored as None/NULL
     instance.username = input.username or ''
     instance.password = input.password or ''
 
-    with closing(service.odb.session()) as session:
+    with closing(self.odb.session()) as session:
         instance.service_id = session.query(Service).\
             filter(Service.name==input.service_name).\
             filter(Service.cluster_id==input.cluster_id).\
@@ -68,20 +69,8 @@ class ChangePassword(ChangePasswordBase):
         return self._handle(ChannelSTOMP, _auth, CHANNEL.STOMP_CHANGE_PASSWORD.value)
 
 class Ping(AdminService):
+    __metaclass__ = PingMeta
 
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_stomp_ping_request'
-        response_elem = 'zato_channel_stomp_ping_response'
-        input_required = ('id',)
-        output_required = ('info',)
-
-    def handle(self):
-
-        with closing(self.odb.session()) as session:
-            item = session.query(ChannelSTOMP).filter_by(id=self.request.input.id).one()
-
-        start_time = time()
-        self.outgoing.stomp.get(item.name, True).conn.ping()
-        response_time = time() - start_time
-
-        self.response.payload.info = 'Ping heartbeat submitted, took:`{0:03.4f} s`, check server logs for details.'.format(response_time)
+    def ping(self, config):
+        session = create_stomp_session(config)
+        session.disconnect()

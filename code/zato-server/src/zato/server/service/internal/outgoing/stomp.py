@@ -16,6 +16,7 @@ from time import time
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingSTOMP
 from zato.common.odb.query import out_stomp_list
+from zato.server.connection.stomp import create_stomp_session
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -25,7 +26,6 @@ label = 'a STOMP connection'
 broker_message = OUTGOING
 broker_message_prefix = 'STOMP_'
 list_func = out_stomp_list
-output_required_extra = ['service_id', 'service_name']
 
 def instance_hook(service, input, instance, attrs):
     # So they are not stored as None/NULL
@@ -73,7 +73,11 @@ class Ping(AdminService):
             item = session.query(OutgoingSTOMP).filter_by(id=self.request.input.id).one()
 
         start_time = time()
-        self.outgoing.stomp.get(item.name, True).conn.ping()
+
+        # Will connect and disconnect hence confirming the path to a broker.
+        session = create_stomp_session(self.outgoing.stomp[item.name].config)
+        session.disconnect()
+
         response_time = time() - start_time
 
         self.response.payload.info = 'Ping heartbeat submitted, took:`{0:03.4f} s`, check server logs for details.'.format(response_time)

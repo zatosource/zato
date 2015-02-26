@@ -396,25 +396,26 @@ class SCHEDULER:
 
 class CHANNEL(Attrs):
     AMQP = 'amqp'
-    AUDIT = 'audit'                                      # New in 2.0
-    DELIVERY = 'delivery'                                # New in 2.0
-    FANOUT_CALL = 'fanout-call'                          # New in 2.0
-    FANOUT_ON_FINAL = 'fanout-on-final'                  # New in 2.0
-    FANOUT_ON_TARGET = 'fanout-on-target'                # New in 2.0
+    AUDIT = 'audit'
+    DELIVERY = 'delivery'
+    FANOUT_CALL = 'fanout-call'
+    FANOUT_ON_FINAL = 'fanout-on-final'
+    FANOUT_ON_TARGET = 'fanout-on-target'
     HTTP_SOAP = 'http-soap'
-    INTERNAL_CHECK = 'internal-check'                    # New in 2.0
+    INTERNAL_CHECK = 'internal-check'
     INVOKE = 'invoke'
     INVOKE_ASYNC = 'invoke-async'
-    INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'      # New in 2.0
+    INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'
     JMS_WMQ = 'jms-wmq'
-    NOTIFIER_RUN = 'notifier-run'                        # New in 2.0
-    NOTIFIER_TARGET = 'notifier-target'                  # New in 2.0
-    PARALLEL_EXEC_CALL = 'parallel-exec-call'            # New in 2.0
-    PARALLEL_EXEC_ON_TARGET = 'parallel-exec-on-target'  # New in 2.0
-    PUBLISH = 'publish'                                  # New in 2.0
+    NOTIFIER_RUN = 'notifier-run'
+    NOTIFIER_TARGET = 'notifier-target'
+    PARALLEL_EXEC_CALL = 'parallel-exec-call'
+    PARALLEL_EXEC_ON_TARGET = 'parallel-exec-on-target'
+    PUBLISH = 'publish'
     SCHEDULER = 'scheduler'
-    STARTUP_SERVICE = 'startup-service'                  # New in 2.0
-    WORKER = 'worker'                                    # New in 2.0
+    STARTUP_SERVICE = 'startup-service'
+    STOMP = 'stomp'
+    WORKER = 'worker'
     ZMQ = 'zmq'
 
 class INVOCATION_TARGET(Attrs):

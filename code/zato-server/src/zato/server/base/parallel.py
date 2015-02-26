@@ -429,8 +429,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         #
 
         # STOMP
-        #query = self.odb.get_channel_stomp_list(server.cluster.id, True)
-        #self.config.channel_stomp = ConfigDict.from_query('channel_stomp', query)
+        query = self.odb.get_channel_stomp_list(server.cluster.id, True)
+        self.config.channel_stomp = ConfigDict.from_query('channel_stomp', query)
 
         #
         # Channels - end
