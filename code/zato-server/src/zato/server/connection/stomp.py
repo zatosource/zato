@@ -13,14 +13,19 @@ from logging import getLogger
 from traceback import format_exc
 
 # gevent
+from gevent import spawn
 from gevent.lock import RLock
 
 # stompest
 from stompest.config import StompConfig
+from stompest.error import StompConnectionError
 from stompest.sync import Stomp
 
 # Zato
-from zato.server.connection.queue import ConnectionQueue, Wrapper
+from zato.common import CHANNEL as common_channel
+from zato.common.broker_message import CHANNEL, OUTGOING
+from zato.common.util import new_cid
+from zato.server.connection import BaseConnPoolStore, BasePoolAPI
 
 # ################################################################################################################################
 
@@ -28,44 +33,92 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-class STOMPWrapper(Wrapper):
-    """ Wraps a queue of connections to a STOMP broker.
-    """
-    def __init__(self, config, server):
-        config.timeout = int(config.timeout)
-        config.username_pretty = config.username or '(None)'
-        config.auth_url = config.address
-        config.pool_size = 5
-        super(STOMPWrapper, self).__init__(config, 'Outgoing STOMP', server)
-
-    def _get_connected_client(self):
-        client = Stomp(StompConfig(
-            'tcp://' + self.config.address, self.config.username or None, self.config.password or None, self.config.proto_version))
-        client.connect(connectTimeout=self.config.timeout, connectedTimeout=self.config.timeout)
-
-        return client
-
-    def _get_client(self):
-        return self._get_connected_client()
-
-    def ping(self):
-        client = self._get_connected_client()
-        client.disconnect()
-
-    def add_client(self):
-        self.client.put_client(self._get_client())
+class STOMPConnection(Stomp):
+    def __init__(self, *args, **kwargs):
+        super(STOMPConnection, self).__init__(*args, **kwargs)
+        self.keep_running = True
 
 # ################################################################################################################################
 
-class STOMPChannelWrapper(STOMPWrapper):
-    """ Wraps a queue of connections to a STOMP broker listening for messsages and invoking a Zato service
-    upon receiving each.
-    """
-    def __init__(self, *args, **kwargs):
-        super(STOMPChannelWrapper, self).__init__(*args, **kwargs)
-        self.keep_running = True
+def _channel_main_loop(item, worker):
+    session = item.conn
+    stomp_channel = common_channel.STOMP
+    service_name = item.config.service_name
 
-    def main_loop(self, client):
-        while self.keep_running:
-            frame = client.receiveFrame()
-            self.server.worker_storeaaaa 'kasn d{ASID
+    for name in item.config.sub_to.splitlines():
+        session.subscribe(name)
+
+    try:
+        while session.keep_running:
+            frame = session.receiveFrame()
+            worker.on_message_invoke_service({
+                'cid': new_cid(),
+                'service': service_name,
+                'payload': frame
+            }, stomp_channel, 'STOMP_CHANNEL_MSG')
+    except StompConnectionError, e:
+
+        # We want to report it only if we are still to run,
+        # otherwise it's just an exception signalling the connection was closed.
+        if session.keep_running:
+            raise
+
+def channel_main_loop(*args, **kwargs):
+    spawn(_channel_main_loop, *args, **kwargs)
+
+# ################################################################################################################################
+
+def create_stomp_session(config):
+    session = STOMPConnection(StompConfig(
+        'tcp://' + config.address, config.username or None, config.password or None, config.proto_version))
+    session.connect(connectTimeout=config.timeout, connectedTimeout=config.timeout)
+
+    return session
+
+# ################################################################################################################################
+
+class STOMPAPI(BasePoolAPI):
+    """ API through which connections to STOMP can be obtained.
+    """
+
+# ################################################################################################################################
+
+class STOMPConnStore(BaseConnPoolStore):
+    """ Stores connections to STOMP.
+    """
+    def create_session(self, name, config, config_no_sensitive):
+        config.timeout = int(config.timeout)
+        config.pool_size = 5
+
+        return create_stomp_session(config)
+
+    def delete_session_hook(self, item):
+        """ Closes our underlying session.
+        """
+        item.conn.disconnect()
+
+# ################################################################################################################################
+
+class OutconnSTOMPConnStore(STOMPConnStore):
+    conn_name = 'STOMP outconn'
+    dispatcher_events = [OUTGOING.STOMP_DELETE, OUTGOING.STOMP_EDIT]
+    delete_event = OUTGOING.STOMP_DELETE
+    dispatcher_listen_for = OUTGOING
+
+# ################################################################################################################################
+
+
+class ChannelSTOMPConnStore(STOMPConnStore):
+    conn_name = 'STOMP channel'
+    dispatcher_events = [CHANNEL.STOMP_DELETE, CHANNEL.STOMP_EDIT]
+    delete_event = CHANNEL.STOMP_DELETE
+    dispatcher_listen_for = CHANNEL
+
+    def delete_session_hook(self, item):
+        """ Closes our mainloop and calls parent implementation.
+        """
+        session = item.conn
+        item.conn.keep_running = False
+        super(ChannelSTOMPConnStore, self).delete_session_hook(item)
+
+# ################################################################################################################################

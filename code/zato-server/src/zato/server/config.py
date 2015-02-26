@@ -210,7 +210,7 @@ class ConfigStore(object):
     def outgoing_connections(self):
         """ Returns all the outgoing connections.
         """
-        return self.out_ftp, self.out_odoo, self.out_plain_http, self.out_soap, self.out_stomp
+        return self.out_ftp, self.out_odoo, self.out_plain_http, self.out_soap
 
     def copy(self):
         """ Creates a copy of this ConfigStore. All configuration data is copied
