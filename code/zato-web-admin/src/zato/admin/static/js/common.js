@@ -284,8 +284,8 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
         }
     }
 
-    if($.fn.zato.http_soap.data_table.after_populate) {
-        $.fn.zato.http_soap.data_table.after_populate();
+    if($.fn.zato.data_table.after_populate) {
+        $.fn.zato.data_table.after_populate();
     }
 
 }
@@ -661,8 +661,8 @@ $.fn.zato.data_table.setup_forms = function(attrs) {
         }
 
         var options = {};
-        if($.fn.zato.http_soap.data_table.on_before_element_validation) {
-            options['onBeforeElementValidation'] = $.fn.zato.http_soap.data_table.on_before_element_validation;
+        if($.fn.zato.data_table.on_before_element_validation) {
+            options['onBeforeElementValidation'] = $.fn.zato.data_table.on_before_element_validation;
         }
 
         $(form_id).bValidator(options);
@@ -778,6 +778,12 @@ $.fn.zato.like_bool = function(item) {
 
 String.prototype.capitalize = function() {
     return this.charAt(0).toUpperCase() + this.slice(1);
+}
+
+if (typeof String.prototype.endsWith !== 'function') {
+    String.prototype.endsWith = function(suffix) {
+        return this.indexOf(suffix, this.length - suffix.length) !== -1;
+    };
 }
 
 $.fn.zato.dir = function(item) {
