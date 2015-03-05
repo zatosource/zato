@@ -71,8 +71,8 @@ class BaseHTTPSOAPWrapper(object):
 
         try:
 
-            # Suds connections don't have request_auth
-            auth = getattr(self, 'request_auth', None)
+            # Suds connections don't have requests_auth
+            auth = getattr(self, 'requests_auth', None)
 
             return self.session.request(
                 method, address, data=data, auth=auth, headers=headers, hooks=hooks,

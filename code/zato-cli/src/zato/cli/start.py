@@ -53,6 +53,9 @@ Examples:
             self.logger.info(msg)
             return self.SYS_ERROR.COMPONENT_ALREADY_RUNNING
 
+        # Returning None would have sufficed but let's be explicit.
+        return 0
+
     def start_component(self, py_path, name, program_dir, on_keyboard_interrupt=None):
         """ Starts a component in background or foreground, depending on the 'fg' flag.
         """
