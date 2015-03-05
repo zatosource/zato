@@ -36,15 +36,14 @@ $(document).ready(function() {
     });
 })
 
-$.fn.zato.http_soap.data_table.after_populate = function() {
+$.fn.zato.data_table.after_populate = function() {
     $.each(['', 'edit-'], function(ignored, suffix) {
         var elem = $(String.format('#id_{0}serialization_type', suffix));
         $.fn.zato.http_soap.data_table.toggle_sec_tls_ca_cert_id(suffix, elem.val() == 'suds');
     });
 }
 
-$.fn.zato.http_soap.data_table.on_before_element_validation = function(elem) {
-    var elem = $(elem);
+$.fn.zato.data_table.on_before_element_validation = function(elem) {
     if(elem.attr('id').endsWith('sec_tls_ca_cert_id')) {
         var form = elem.closest('form');
         var host = $(form.find("input[id$='host']")[0]);
