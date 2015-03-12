@@ -37,7 +37,6 @@ import yaml
 from zato.broker.thread_client import BrokerClient
 from zato.common import Inactive, SECRET_SHADOW, TRACE1, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import DEFINITION
-from zato.common.delivery import DeliveryStore
 from zato.common.dispatch import dispatcher
 from zato.common.kvdb import KVDB
 from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable, new_cid
@@ -225,10 +224,6 @@ class BaseConnector(BrokerMessageReceiver):
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         
         self._setup_odb()
-        
-        # Delivery store
-        self.delivery_store = DeliveryStore(
-            self.kvdb, self.broker_client, self.odb, float(fs_server_config.misc.delivery_lock_timeout))
 
 # ################################################################################################################################
 
