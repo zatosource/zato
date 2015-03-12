@@ -889,6 +889,15 @@ class EnMasse(ManageCommand):
                 missing = sorted(required_keys - set(item))
 
                 if missing:
+
+                    # Special case service and service_name because both can be used interchangeably
+                    _missing = list(missing)
+                    if len(_missing) == 1:
+                        service_and_service_name = missing[0] == 'service' and 'service_name' in item
+                        service_name_and_service = missing[0] == 'service_name' and 'service' in item
+                        if service_and_service_name or service_name_and_service:
+                            return
+
                     missing_value = "key '{}'".format(missing[0]) if len(missing) == 1 else "keys '{}'".format(missing)
                     raw = (key, name, item_dict, required_keys, missing)
                     value = "Missing {} in '{}', the rest is '{}' ({})".format(missing_value, name, item_dict, key)
@@ -1010,7 +1019,7 @@ class EnMasse(ManageCommand):
             for item in items:
                 if needs_service(json_key, item):
                     item_dict = item.toDict()
-                    service_name = item.get('service')
+                    service_name = item.get('service') or item.get('service_name')
                     raw = (service_name, item_dict, json_key)
                     if not service_name:
                         value = "No service defined in '{}' ({})".format(item_dict, json_key)
@@ -1102,12 +1111,20 @@ class EnMasse(ManageCommand):
                 if item.name == name:
                     return item.id
 
+        def _swap_service_name(service_class, attrs, first, second):
+            if first in getattr(service_class.SimpleIO, 'input_required', []) and second in attrs:
+                attrs[first] = attrs[second]
+
         def import_object(def_type, attrs, is_edit):
             attrs_dict = attrs.toDict()
             info_dict, info_key = (def_sec_info, attrs.type) if 'sec' in def_type else (service_info, def_type)
             import_info = info_dict[info_key]
             service_class = getattr(import_info.mod, 'Edit' if is_edit else 'Create')
             service_name = service_class.get_name()
+
+            # service and service_name are interchangeable
+            _swap_service_name(service_class, attrs, 'service', 'service_name')
+            _swap_service_name(service_class, attrs, 'service_name', 'service')
 
             # Fetch an item from a cache of ODB object and assign its ID
             # to attrs so that the Edit service knows what to update.
