@@ -8,15 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# Setting the custom logger must come first
-import locale, logging
-from zato.server.log import ZatoLogger
-logging.setLoggerClass(ZatoLogger)
-
-logging.captureWarnings(True)
-
 # stdlib
-import os, ssl, sys
+import locale, logging, os, ssl, sys
 from logging.config import dictConfig
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
@@ -106,6 +99,9 @@ def run(base_dir, start_gunicorn_app=True):
 
     # For dumping stacktraces
     register_diag_handlers()
+
+    # Capture warnings to log files
+    logging.captureWarnings(True)
 
     # Start initializing the server now
     os.chdir(base_dir)
