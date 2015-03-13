@@ -8,13 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# Setting the custom logger must come first
-import logging
-from zato.server.log import ZatoLogger
-logging.setLoggerClass(ZatoLogger)
-
 # stdlib
-import errno, os, time
+import errno, logging, os, time
 from copy import deepcopy
 from datetime import datetime
 from subprocess import Popen
