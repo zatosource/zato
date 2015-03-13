@@ -8,15 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function
 
-# Setting the custom logger must come first
-import logging
-from zato.server.log import ZatoLogger
-logging.setLoggerClass(ZatoLogger)
-
-logging.captureWarnings(True)
-
 # stdlib
-import errno, socket
+import errno, logging, socket
 from threading import RLock
 
 # Pika
