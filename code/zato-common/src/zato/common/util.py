@@ -30,13 +30,8 @@ from threading import current_thread
 from traceback import format_exc
 from urlparse import urlparse
 
-# packaging/Distutils2
-try:
-    from packaging import Config
-    from packaging import Distribution
-except ImportError:
-    from distutils2.config import Config
-    from distutils2.dist import Distribution
+# alembic
+from alembic import op
 
 # anyjson
 from anyjson import dumps, loads
@@ -90,9 +85,6 @@ from springpython.remoting.xmlrpc import SSLClientTransport
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 import sqlalchemy as sa
 
-# alembic
-from alembic import op
-
 # Texttable
 from texttable import Texttable
 
@@ -100,7 +92,6 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
-from zato.agent.load_balancer.client import LoadBalancerAgentClient
 from zato.common import DATA_FORMAT, KVDB, MISC, NoDistributionFound, SECRET_SHADOW, SIMPLE_IO, soap_body_path, soap_body_xpath, \
      TLS, TRACE1, ZatoException
 from zato.common.crypto import CryptoManager
@@ -279,6 +270,8 @@ def to_form(_object):
 def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_file, timeout):
     """ Returns an SSL XML-RPC client to the load-balancer.
     """
+    from zato.agent.load_balancer.client import LoadBalancerAgentClient
+
     agent_uri = "https://{host}:{port}/RPC2".format(host=lb_host, port=lb_agent_port)
 
     # See the 'Problems with XML-RPC over SSL' thread for details
@@ -483,25 +476,6 @@ def visit_py_source(dir_name):
         glob_path = os.path.join(dir_name, pattern)
         for py_path in sorted(glob(glob_path)):
             yield py_path
-
-def visit_py_source_from_distribution(dir_name):
-    """ Yields all the Python source modules from a Distutils2 distribution.
-    """
-    path = os.path.join(dir_name, 'setup.cfg')
-    if not os.path.exists(path):
-        msg = "Could not find setup.cfg in [{}], path:[{}] doesn't exist".format(dir_name, path)
-        logger.debug(msg)
-        raise NoDistributionFound(path)
-
-    dist = Distribution()
-    config = Config(dist)
-    config.parse_config_files([path])
-
-    logger.debug('dist.packages:[%s]' % dist.packages)
-
-    for package in dist.packages:
-        package_dir = os.path.abspath(os.path.join(dir_name, package.replace('.', os.path.sep)))
-        yield visit_py_source(package_dir)
 
 def _os_remove(path):
     """ A helper function so it's easier to mock it in unittests.

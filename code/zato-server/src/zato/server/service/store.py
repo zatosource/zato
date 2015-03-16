@@ -39,8 +39,7 @@ from springpython.context import InitializingObject
 # Zato
 from zato.common import DONT_DEPLOY_ATTR_NAME, NoDistributionFound, SourceInfo, TRACE1
 from zato.common.match import Matcher
-from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, visit_py_source, \
-     visit_py_source_from_distribution
+from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, visit_py_source
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
@@ -121,19 +120,9 @@ class ServiceStore(InitializingObject):
 
             is_internal = item_name.startswith('zato')
 
-            # distutils2 archive, decompress and import from the newly created directory ..
-            if is_archive_file(item_name):
-                new_path = self.decompress(item_name, work_dir)
-                self.import_services_from_dist2_directory(new_path)
-
-            # .. a regular directory or a Distutils2 one ..
-            elif os.path.isdir(item_name):
-                try:
-                    self.import_services_from_directory(item_name, base_dir, True)
-                except NoDistributionFound, e:
-                    msg = 'Caught an exception e=[{}]'.format(format_exc(e))
-                    logger.log(TRACE1, msg)
-                    self.import_services_from_directory(item_name, base_dir, False)
+            # A regular directory
+            if os.path.isdir(item_name):
+                self.import_services_from_directory(item_name, base_dir)
 
             # .. a .py/.pyw
             elif is_python_file(item_name):
@@ -171,7 +160,7 @@ class ServiceStore(InitializingObject):
         else:
             return self._visit_module(mod, is_internal, file_name)
 
-    def import_services_from_directory(self, dir_name, base_dir, dist2):
+    def import_services_from_directory(self, dir_name, base_dir):
         """ dir_name points to a directory. 
 
         If dist2 is True, the directory is assumed to be a Distutils2 one and its
@@ -182,8 +171,7 @@ class ServiceStore(InitializingObject):
         of Python source code to import, as is the case with services that have
         been hot-deployed.
         """
-        func = visit_py_source_from_distribution if dist2 else visit_py_source
-        for py_path in func(dir_name):
+        for py_path in visit_py_source(dir_name):
             self.import_services_from_file(py_path, False, base_dir)
 
     def import_services_from_module(self, mod_name, is_internal):
