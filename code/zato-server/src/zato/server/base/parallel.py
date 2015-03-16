@@ -327,17 +327,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         is_first = self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
 
-        # Broker callbacks
-        broker_callbacks = {
-            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,
-            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: self.worker_store.on_broker_msg,
-            }
-
-        if is_first:
-            broker_callbacks[TOPICS[MESSAGE_TYPE.TO_SINGLETON]] = self.on_broker_msg_singleton
-
-        self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks, self.get_lua_programs())
-
         if is_first:
 
             self.singleton_server = self.app_context.get_object('singleton_server')
@@ -353,10 +342,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             self.singleton_server.pickup.pickup_event_processor.pickup_dir = pickup_dir
             self.singleton_server.pickup.pickup_event_processor.server = self.singleton_server
 
-            kwargs = {'broker_client':self.broker_client}
-            Thread(target=self.singleton_server.run, kwargs=kwargs).start()
-
-            # Let the scheduler fully initialize
             self.singleton_server.server_id = server.id
 
         return is_first
@@ -624,7 +609,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         # Assign config to worker
         self.worker_store.worker_config = self.config
-        self.worker_store.broker_client = self.broker_client
         self.worker_store.pubsub = self.pubsub
         self.worker_store.init()
 
@@ -820,6 +804,23 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             logger.warn(msg.format(server.last_join_status))
 
             parallel_server._after_init_non_accepted(server)
+
+        broker_callbacks = {
+            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: parallel_server.worker_store.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: parallel_server.worker_store.on_broker_msg,
+            }
+
+        if is_first:
+            broker_callbacks[TOPICS[MESSAGE_TYPE.TO_SINGLETON]] = parallel_server.on_broker_msg_singleton
+
+        parallel_server.broker_client = BrokerClient(
+            parallel_server.kvdb, 'parallel', broker_callbacks, parallel_server.get_lua_programs())
+
+        parallel_server.worker_store.broker_client = parallel_server.broker_client
+
+        if is_first:
+            kwargs = {'broker_client':parallel_server.broker_client}
+            Thread(target=parallel_server.singleton_server.run, kwargs=kwargs).start()
 
         parallel_server.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True,
             parallel_server.host, parallel_server.port)
