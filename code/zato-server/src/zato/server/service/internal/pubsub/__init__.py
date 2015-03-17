@@ -226,8 +226,8 @@ class RESTHandler(Service):
             'payload': self.request.raw_request,
             'topic': self.request.input.item,
             'mime_type': self.request.input.mime_type or self.wsgi_environ['CONTENT_TYPE'],
-            'priority': int(self.request.input.priority),
-            'expiration': int(self.request.input.expiration),
+            'priority': int(self.request.input.priority or PUB_SUB.DEFAULT_PRIORITY),
+            'expiration': int(self.request.input.expiration or PUB_SUB.DEFAULT_EXPIRATION),
             'msg_id': self.request.input.msg_id,
             'client_id': self.environ['client_id'],
         }
