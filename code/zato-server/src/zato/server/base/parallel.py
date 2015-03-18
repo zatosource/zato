@@ -816,7 +816,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.broker_client = BrokerClient(
             parallel_server.kvdb, 'parallel', broker_callbacks, parallel_server.get_lua_programs())
 
-        parallel_server.worker_store.broker_client = parallel_server.broker_client
+        parallel_server.worker_store.set_broker_client(parallel_server.broker_client)
 
         if is_first:
             kwargs = {'broker_client':parallel_server.broker_client}
