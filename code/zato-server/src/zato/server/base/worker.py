@@ -188,6 +188,10 @@ class WorkerStore(BrokerMessageReceiver):
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
 
+    def set_broker_client(self, broker_client):
+        self.broker_client = broker_client
+        self.request_dispatcher.url_data.broker_client = broker_client
+
     def filter(self, msg):
         # TODO: Fix it, worker doesn't need to accept all the messages
         return True
