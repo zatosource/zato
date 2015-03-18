@@ -29,7 +29,7 @@ from retools.lock import Lock
 from zato.common import DEPLOYMENT_STATUS, KVDB
 from zato.common.broker_message import HOT_DEPLOY
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
-from zato.common.util import decompress, fs_safe_now, is_python_file, new_cid, visit_py_source_from_distribution
+from zato.common.util import decompress, fs_safe_now, is_python_file, new_cid
 from zato.server.service.internal import AdminService, AdminSIO
 
 MAX_BACKUPS = 1000
@@ -137,39 +137,6 @@ class Create(AdminService):
 
         return True
 
-    def _deploy_archive(self, current_work_dir, payload, payload_name):
-        """ Creates a temporary file containing the archive and decompresses it
-        into a temporary directory. The directory is scanned for Distutils2 modules,
-        each is then copied over to the work directory and hot-(re)loaded.
-        """
-        with NamedTemporaryFile(prefix='zato-hd-', suffix=payload_name) as tf:
-            tf.write(payload)
-            tf.flush()
-            
-            tmp_dir = mkdtemp(prefix='zato-hd-')
-            decompress(tf.name, None)
-
-            for tmp_py_path in visit_py_source_from_distribution(tmp_dir):
-                
-                # Get the path the stuff needs to be copied over to and create
-                # all the directories needed along
-
-                dest_py_path = os.path.join(current_work_dir, os.path.relpath(tmp_py_path, tmp_dir))
-                dest_py_dir = os.path.dirname(dest_py_path)
-
-                try:
-                    os.mkdir(dest_py_dir)
-                except OSError, e:
-                    if e.errno != EEXIST:
-                        raise
-
-                self._deploy_file(current_work_dir, open(tmp_py_path).read(), dest_py_path)
-
-            # Clean up
-            shutil.rmtree(tmp_dir)
-
-        return True
-
     def _deploy_package(self, session, package_id, payload_name, payload):
         """ Deploy a package, either a plain Python file or an archive, and update
         the deployment status.
@@ -177,11 +144,8 @@ class Create(AdminService):
         success = False
         current_work_dir = self.server.hot_deploy_config.current_work_dir
 
-        if is_python_file(payload_name):
-            file_name = os.path.join(current_work_dir, payload_name)
-            success = self._deploy_file(current_work_dir, payload, file_name)
-        elif is_archive_file(payload_name):
-            success = self._deploy_archive(current_work_dir, payload, payload_name)
+        file_name = os.path.join(current_work_dir, payload_name)
+        success = self._deploy_file(current_work_dir, payload, file_name)
 
         if success:
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
