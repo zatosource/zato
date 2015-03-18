@@ -10,13 +10,22 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import os
 from setuptools import setup, find_packages
 
-curdir = os.path.dirname(os.path.abspath(__file__))
-_version_py = os.path.normpath(os.path.join(curdir, '..', '.version.py'))
-_locals = {}
-execfile(_version_py, _locals)
-version = _locals['version']
+try:
+    curdir = os.path.dirname(os.path.abspath(__file__))
+    _version_py = os.path.normpath(os.path.join(curdir, '..', '.version.py'))
+    _locals = {}
+    execfile(_version_py, _locals)
+    version = _locals['version']
+except IOError:
+    version = '2.0.3'
 
 long_description = description = 'Convenience Python client for Zato ESB and app server (https://zato.io)'
+
+def parse_requirements(requirements):
+    ignored = ['#', 'setuptools', '-e']
+
+    with open(requirements) as f:
+        return [line for line in f if line.strip() and not any(line.startswith(prefix) for prefix in ignored)]
 
 setup(
       name = 'zato-client',
@@ -33,13 +42,9 @@ setup(
       package_dir = {'':'src'},
       packages = find_packages('src'),
       namespace_packages = ['zato'],
-      
-      install_requires=[
-          'anyjson==0.3.3',
-          'bunch==1.0.1',
-          'lxml==3.3.5',
-          'requests==2.3.0'
-          ],
+
+      install_requires = parse_requirements(
+          os.path.join(os.path.dirname(os.path.realpath(__file__)), 'requirements.txt')),
       
       keywords=('soa eai esb middleware messaging queueing asynchronous integration performance http zeromq framework events agile broker messaging server jms enterprise python middleware clustering amqp nosql websphere mq wmq mqseries ibm amqp zmq'),
       classifiers = [
