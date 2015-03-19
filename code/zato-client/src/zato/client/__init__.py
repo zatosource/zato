@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging
+import logging, os
 from datetime import datetime
 from inspect import getargspec
 from traceback import format_exc
@@ -47,6 +47,19 @@ if getargspec(anyjson_dumps).keywords:
 else:
     def dumps(data, *args, **kwargs):
         return anyjson_dumps(data)
+
+# ##############################################################################
+# Version
+# ##############################################################################
+
+try:
+    curdir = os.path.dirname(os.path.abspath(__file__))
+    _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
+    _locals = {}
+    execfile(_version_py, _locals)
+    version = _locals['version']
+except IOError:
+    version = '2.0.3.4'
 
 # ##############################################################################
 
