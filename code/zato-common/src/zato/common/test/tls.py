@@ -33,8 +33,8 @@ def get_free_port(start=20001, end=50000):
 
 class _HTTPHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        self.wfile.write(ZATO_OK)
         self.send_response(200)
+        self.wfile.write(ZATO_OK)
 
 class _TLSServer(HTTPServer):
     def __init__(self, cert_reqs, ca_cert):
