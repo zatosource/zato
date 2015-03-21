@@ -25,7 +25,7 @@ def parse_requirements(requirements):
     ignored = ['#', 'setuptools', '-e']
 
     with open(requirements) as f:
-        return [line for line in f if line.strip() and not any(line.startswith(prefix) for prefix in ignored)]
+        return [line.split('==')[0] for line in f if line.strip() and not any(line.startswith(prefix) for prefix in ignored)]
 
 setup(
       name = 'zato-client',
