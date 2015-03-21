@@ -825,10 +825,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True,
             parallel_server.host, parallel_server.port)
 
-        parallel_server.delivery_store = parallel_server.app_context.get_object('delivery_store')
-        parallel_server.delivery_store.broker_client = parallel_server.broker_client
-        parallel_server.delivery_store.odb = parallel_server.odb
-
         parallel_server.invoke_startup_services('startup_services_first_worker' if is_first else 'startup_services_any_worker')
 
     @staticmethod

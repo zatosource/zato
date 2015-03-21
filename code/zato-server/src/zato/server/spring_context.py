@@ -131,13 +131,6 @@ class ZatoContext(PythonConfig):
         return SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES
 
     # #######################################################
-    # Delivery store
-
-    @Object
-    def delivery_store(self):
-        return DeliveryStore(self.kvdb())
-
-    # #######################################################
     # SQL
 
     @Object
