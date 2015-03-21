@@ -13,13 +13,16 @@ code/local/*
 code/parts/*
 code/release-info/revision.txt
 code/sec-wall-trunk-src/*
+code/zato-cy/src/zato/cy/*.c
 code/zato-web-admin/src/zato/admin/static/css/.sass-cache/
 code/zato_extra_paths/*
 code/*/build
 code/*/dist
 hotfixes
+*.egg-info*
+*.geany*
 *.pyc
 *.pyo
-*.egg-info*
+*.so
 *.*~
 ~

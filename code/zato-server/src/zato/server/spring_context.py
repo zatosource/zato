@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Bunch
-from bunch import Bunch
+from zato.bunch import Bunch
 
 # Spring Python
 from springpython.config import Object, PythonConfig
@@ -129,13 +129,6 @@ class ZatoContext(PythonConfig):
     @Object
     def bool_parameter_prefixes(self):
         return SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES
-
-    # #######################################################
-    # Delivery store
-
-    @Object
-    def delivery_store(self):
-        return DeliveryStore(self.kvdb())
 
     # #######################################################
     # SQL
