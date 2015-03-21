@@ -1,6 +1,6 @@
---- requests/models.py.orig	2014-06-07 22:18:49.613062966 +0200
-+++ requests/models.py	2014-06-07 22:19:40.417060920 +0200
-@@ -158,9 +158,12 @@
+--- requests/models.py.orig	2015-03-21 20:46:26.346917946 +0100
++++ requests/models.py	2015-03-21 20:46:33.450918061 +0100
+@@ -163,9 +163,12 @@
      def register_hook(self, event, hook):
          """Properly register a hook."""
  
