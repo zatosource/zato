@@ -54,9 +54,11 @@ sudo pip install distribute==0.6.49
 sudo pip install virtualenv==1.9.1
 sudo pip install zato-apitest
 
-virtualenv . --no-pip
+virtualenv $CURDIR
+$CURDIR/bin/pip install --upgrade pip
 
 $CURDIR/bin/python bootstrap.py -v 1.7.0
+$CURDIR/bin/pip install cython==0.22
 $CURDIR/bin/buildout
 
 echo
