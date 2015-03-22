@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from time import sleep
 
 # Bunch
-from bunch import Bunch
+from zato.bunch import Bunch
 
 # Zato
 from zato.common import ENSURE_SINGLETON_JOB

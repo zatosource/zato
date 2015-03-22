@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Bunch
-from bunch import Bunch
+from zato.bunch import Bunch
 
 # Spring Python
 from springpython.config import Object, PythonConfig
