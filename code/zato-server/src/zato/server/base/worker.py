@@ -20,7 +20,7 @@ from urlparse import urlparse
 from uuid import uuid4
 
 # Bunch
-from bunch import Bunch
+from zato.bunch import Bunch
 
 # dateutil
 from dateutil.parser import parse
