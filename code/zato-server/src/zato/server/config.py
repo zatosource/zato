@@ -17,7 +17,7 @@ from threading import RLock
 from paste.util.multidict import MultiDict
 
 # Bunch
-from bunch import Bunch
+from zato.bunch import Bunch
 
 # Zato
 from zato.common import ZATO_NONE
