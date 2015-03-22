@@ -24,7 +24,7 @@ from anyjson import dumps
 from arrow import utcnow
 
 # Bunch
-from bunch import Bunch
+from zato.bunch import Bunch
 
 # gevent
 import gevent
