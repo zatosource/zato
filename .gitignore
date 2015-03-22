@@ -11,6 +11,7 @@ code/lib/*
 code/lib64
 code/local/*
 code/parts/*
+code/pip-selfcheck.json
 code/release-info/revision.txt
 code/sec-wall-trunk-src/*
 code/zato-cy/src/zato/cy/*.c
