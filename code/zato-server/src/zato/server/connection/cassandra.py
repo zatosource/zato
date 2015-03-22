@@ -13,8 +13,8 @@ from logging import getLogger
 
 # Cassandra
 from cassandra.auth import PlainTextAuthProvider
-#from cassandra.cluster import Cluster
-#from cassandra.query import dict_factory
+from cassandra.cluster import Cluster
+from cassandra.query import dict_factory
 
 # Zato
 from zato.common.broker_message import DEFINITION
