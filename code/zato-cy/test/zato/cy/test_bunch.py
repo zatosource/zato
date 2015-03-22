@@ -45,8 +45,6 @@ class BunchTestCase(TestCase):
         zato_taken = self._check_bunch(bunch.bunchify, test_data, 10)
         self.assertLess(zato_taken, orig_taken)
 
-        print(orig_taken.total_seconds() / zato_taken.total_seconds())
-
     def test_bunchify(self):
         test_data = {
             'foo': 'bar',
@@ -59,19 +57,6 @@ class BunchTestCase(TestCase):
         }
 
         bunchified = bunch.bunchify(test_data)
-
-        '''
-        print(bunchified.foo)
-        print(bunchified[('aa', 'bb')])
-        print(bunchified['qqq'])
-        print(bunchified.qqq)
-        print(bunchified.qqq['zz'])
-        print(bunchified.qqq.zz)
-        print(bunchified.qqq['zz']['yy'])
-        print(bunchified.qqq.zz.yy[0][0]['uu'])
-        print(bunchified.qqq.zz.yy[0][0].uu)
-        '''
-
 
     def test_set_get(self):
         value = '123'
