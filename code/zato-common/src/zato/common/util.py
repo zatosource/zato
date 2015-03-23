@@ -82,8 +82,11 @@ from springpython.remoting.http import CAValidatingHTTPSConnection
 from springpython.remoting.xmlrpc import SSLClientTransport
 
 # SQLAlchemy
-from sqlalchemy.exc import IntegrityError, ProgrammingError
 import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError, ProgrammingError
+from sqlalchemy import orm
+
+# SQLAlchemy
 
 # Texttable
 from texttable import Texttable
@@ -92,8 +95,8 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
-from zato.common import DATA_FORMAT, KVDB, MISC, NoDistributionFound, SECRET_SHADOW, SIMPLE_IO, soap_body_path, soap_body_xpath, \
-     TLS, TRACE1, ZatoException
+from zato.common import DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, SECRET_SHADOW, SIMPLE_IO, soap_body_path, \
+     soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import HTTPSOAP, IntervalBasedJob, Job, Service
 from zato.common.odb.query import _service as _service
@@ -1078,3 +1081,112 @@ def get_http_json_channel(name, service, cluster, security):
 def get_http_soap_channel(name, service, cluster, security):
     return HTTPSOAP(None, name, True, True, 'channel', 'soap', None, '/zato/soap', None, name, '1.1',
         SIMPLE_IO.FORMAT.XML, service=service, cluster=cluster, security=security)
+
+# ################################################################################################################################
+
+
+def get_engine(args):
+    return sa.create_engine(get_engine_url(args))
+
+def get_session(engine):
+    session = orm.sessionmaker() # noqa
+    session.configure(bind=engine)
+    return session()
+
+# ################################################################################################################################
+
+def get_server_client_auth(config, repo_dir):
+    """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
+    """
+    session = get_odb_session_from_server_config(config, get_crypto_manager_from_server_config(config, repo_dir))
+
+    with closing(session) as session:
+        cluster = session.query(odb.model.Server).\
+            filter(odb.model.Server.token == config.main.token).\
+            one().cluster
+
+        channel = session.query(odb.model.HTTPSOAP).\
+            filter(odb.model.HTTPSOAP.cluster_id == cluster.id).\
+            filter(odb.model.HTTPSOAP.url_path == '/zato/admin/invoke').\
+            filter(odb.model.HTTPSOAP.connection== 'channel').\
+            one()
+
+        if channel.security_id:
+            security = session.query(odb.model.HTTPBasicAuth).\
+                filter(odb.model.HTTPBasicAuth.id == channel.security_id).\
+                first()
+
+            if security:
+                return (security.username, security.password)
+
+# ################################################################################################################################
+
+django_sa_mappings = {
+    'NAME': 'db_name',
+    'HOST': 'host',
+    'PORT': 'port',
+    'USER': 'username',
+    'PASSWORD': 'password',
+    'odb_type': 'engine',
+    'db_type': 'engine',
+}
+
+cli_sa_mappings = {
+    'odb_db_name': 'db_name',
+    'odb_host': 'host',
+    'odb_port': 'port',
+    'odb_user': 'username',
+    'odb_password': 'password',
+    'odb_type': 'engine',
+}
+
+def get_engine_url(args):
+    attrs = {}
+    is_sqlite = False
+    is_django = 'NAME' in args
+    has_get = getattr(args, 'get', False)
+
+    odb_type = getattr(args, 'odb_type', None)
+    if odb_type:
+        is_sqlite = odb_type == 'sqlite'
+    else:
+        is_sqlite = args.get('engine') == 'sqlite' or args.get('db_type') == 'sqlite'
+
+    names = ('engine', 'username', 'password', 'host', 'port', 'name', 'db_name', 'db_type', 'sqlite_path', 'odb_type',
+             'odb_user', 'odb_password', 'odb_host', 'odb_port', 'odb_db_name', 'odb_type', 'ENGINE', 'NAME', 'HOST', 'USER',
+             'PASSWORD', 'PORT')
+
+    for name in names:
+        if has_get:
+            attrs[name] = args.get(name, '')
+        else:
+            attrs[name] = getattr(args, name, '')
+
+    # Re-map Django params into SQLAlchemy params
+    if is_django:
+        for name in django_sa_mappings:
+            value = attrs.get(name, ZATO_NOT_GIVEN)
+            if value != ZATO_NOT_GIVEN:
+                if not value and (name in 'db_type', 'odb_type'):
+                    continue
+                attrs[django_sa_mappings[name]] = value
+
+    # Zato CLI to SQLAlchemy
+    if not attrs.get('engine'):
+        for name in cli_sa_mappings:
+            value = attrs.get(name, ZATO_NOT_GIVEN)
+            if value != ZATO_NOT_GIVEN:
+                attrs[cli_sa_mappings[name]] = value
+
+    # Re-map server ODB params into SQLAlchemy params
+    if attrs['engine'] == 'sqlite':
+        db_name = attrs.get('db_name')
+        sqlite_path = attrs.get('sqlite_path')
+
+        if db_name:
+            attrs['sqlite_path'] = db_name
+
+        if sqlite_path:
+            attrs['db_name'] = sqlite_path
+
+    return (engine_def_sqlite if is_sqlite else engine_def).format(**attrs)

@@ -48,9 +48,9 @@ else:
     def dumps(data, *args, **kwargs):
         return anyjson_dumps(data)
 
-# ##############################################################################
+# ################################################################################################################################
 # Version
-# ##############################################################################
+# ################################################################################################################################
 
 try:
     curdir = os.path.dirname(os.path.abspath(__file__))
@@ -61,7 +61,7 @@ try:
 except IOError:
     version = '2.0.3.4'
 
-# ##############################################################################
+# ################################################################################################################################
 
 class _Response(object):
     """ A base class for all specific response types client may return.
@@ -97,7 +97,7 @@ class _Response(object):
     def init(self):
         raise NotImplementedError('Must be defined by subclasses')
 
-# ##############################################################################
+# ################################################################################################################################
 
 class _StructuredResponse(_Response):
     """ Any non-raw and non-SIO response.
@@ -167,7 +167,7 @@ class SOAPResponse(XMLResponse):
                     self.ok = True
                     return True
 
-# ##############################################################################
+# ################################################################################################################################
 
 class JSONSIOResponse(_Response):
     """ Stores responses from JSON SIO services.
@@ -276,7 +276,7 @@ class ServiceInvokeResponse(JSONSIOResponse):
 
             return True
 
-# ##############################################################################
+# ################################################################################################################################
                         
 class RawDataResponse(_Response):
     """ Stores responses from services that weren't invoked using any particular
@@ -295,7 +295,7 @@ class RawDataResponse(_Response):
             
         return self.data and len(self.data) > 0
 
-# ##############################################################################
+# ################################################################################################################################
 
 class _Client(object):
     """ A base class of convenience clients for invoking Zato services from other Python applications.
@@ -333,7 +333,7 @@ class _Client(object):
         headers = headers or {}
         return self.inner_invoke(request, response_class, async, headers)
 
-# ##############################################################################
+# ################################################################################################################################
 
 class _JSONClient(_Client):
     """ Base class for all JSON clients.
@@ -350,7 +350,7 @@ class JSONClient(_JSONClient):
     """
     response_class = JSONResponse
 
-# ##############################################################################
+# ################################################################################################################################
 
 class JSONSIOClient(_JSONClient):
     """ Client for services that accept Simple IO (SIO) in JSON.
@@ -402,7 +402,7 @@ class AnyServiceInvoker(_Client):
     def invoke_async(self, *args, **kwargs):
         return self._invoke(async=True, *args, **kwargs)
 
-# ##############################################################################
+# ################################################################################################################################
     
 class XMLClient(_Client):
     def invoke(self, payload='', headers=None):
@@ -414,7 +414,7 @@ class SOAPClient(_Client):
         headers['SOAPAction'] = soap_action
         return super(SOAPClient, self).invoke(payload, SOAPResponse, headers=headers)
 
-# ##############################################################################
+# ################################################################################################################################
     
 class RawDataClient(_Client):
     """ Client which doesn't process requests before passing them into a service.
@@ -423,4 +423,34 @@ class RawDataClient(_Client):
     def invoke(self, payload='', headers=None):
         return super(RawDataClient, self).invoke(payload, RawDataResponse, headers=headers)
 
-# ##############################################################################
+# ################################################################################################################################
+
+def get_client_from_server_conf(server_dir, client_auth_func, server_url=None):
+    """ Returns a Zato client built out of data found in a given server's config files.
+    """
+
+    class ZatoClient(AnyServiceInvoker):
+        def __init__(self, *args, **kwargs):
+            super(ZatoClient, self).__init__(*args, **kwargs)
+            self.cluster_id = None
+            self.odb_session = None
+
+    repo_dir = os.path.join(os.path.abspath(os.path.join(server_dir)), 'config', 'repo')
+    config = get_config(repo_dir, 'server.conf')
+
+    server_url = server_url if server_url else config.main.gunicorn_bind
+    self.client = ZatoClient('http://{}'.format(server_url),
+        '/zato/admin/invoke', client_auth_func(config, repo_dir), max_response_repr=15000)
+
+    session = self.get_odb_session_from_server_config(
+        config, self.get_crypto_manager_from_server_config(config, repo_dir))
+
+    self.client.cluster_id = session.query(Server).\
+        filter(Server.token == config.main.token).\
+        one().cluster_id
+
+    self.client.odb_session = session
+
+    return client
+
+# ################################################################################################################################
