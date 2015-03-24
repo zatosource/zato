@@ -31,6 +31,7 @@ from zato.common import BROKER, soap_data_path, soap_data_xpath, soap_fault_xpat
      ZatoException, zato_data_path, zato_data_xpath, zato_details_xpath, \
      ZATO_NOT_GIVEN, ZATO_OK, zato_result_xpath
 from zato.common.log_message import CID_LENGTH
+from zato.common.odb.model import Server
 
 # Set max_cid_repr to CID_NO_CLIP if it's desired to return the whole of a CID
 # in a response's __repr__ method.
@@ -425,9 +426,12 @@ class RawDataClient(_Client):
 
 # ################################################################################################################################
 
-def get_client_from_server_conf(server_dir, client_auth_func, server_url=None):
+def get_client_from_server_conf(server_dir, client_auth_func, get_config_func, server_url=None):
     """ Returns a Zato client built out of data found in a given server's config files.
     """
+
+    # To avoid circular references
+    from zato.common.util import get_crypto_manager_from_server_config, get_odb_session_from_server_config
 
     class ZatoClient(AnyServiceInvoker):
         def __init__(self, *args, **kwargs):
@@ -436,20 +440,20 @@ def get_client_from_server_conf(server_dir, client_auth_func, server_url=None):
             self.odb_session = None
 
     repo_dir = os.path.join(os.path.abspath(os.path.join(server_dir)), 'config', 'repo')
-    config = get_config(repo_dir, 'server.conf')
+    config = get_config_func(repo_dir, 'server.conf')
 
     server_url = server_url if server_url else config.main.gunicorn_bind
-    self.client = ZatoClient('http://{}'.format(server_url),
+    client = ZatoClient('http://{}'.format(server_url),
         '/zato/admin/invoke', client_auth_func(config, repo_dir), max_response_repr=15000)
 
-    session = self.get_odb_session_from_server_config(
-        config, self.get_crypto_manager_from_server_config(config, repo_dir))
+    session = get_odb_session_from_server_config(
+        config, get_crypto_manager_from_server_config(config, repo_dir))
 
-    self.client.cluster_id = session.query(Server).\
+    client.cluster_id = session.query(Server).\
         filter(Server.token == config.main.token).\
         one().cluster_id
 
-    self.client.odb_session = session
+    client.odb_session = session
 
     return client
 

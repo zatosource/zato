@@ -95,10 +95,11 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
+from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
 from zato.common import DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, SECRET_SHADOW, SIMPLE_IO, soap_body_path, \
      soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN
 from zato.common.crypto import CryptoManager
-from zato.common.odb.model import HTTPSOAP, IntervalBasedJob, Job, Service
+from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.odb.query import _service as _service
 
 logger = logging.getLogger(__name__)
@@ -1095,29 +1096,57 @@ def get_session(engine):
 
 # ################################################################################################################################
 
+def get_crypto_manager_from_server_config(config, repo_dir):
+
+    priv_key_location = os.path.abspath(os.path.join(repo_dir, config.crypto.priv_key_location))
+
+    cm = CryptoManager(priv_key_location=priv_key_location)
+    cm.load_keys()
+
+    return cm
+
+# ################################################################################################################################
+
+def get_odb_session_from_server_config(config, cm):
+
+    engine_args = Bunch()
+    engine_args.odb_type = config.odb.engine
+    engine_args.odb_user = config.odb.username
+    engine_args.odb_password = cm.decrypt(config.odb.password) if config.odb.password else ''
+    engine_args.odb_host = config.odb.host
+    engine_args.odb_port = config.odb.port
+    engine_args.odb_db_name = config.odb.db_name
+
+    return get_session(get_engine(engine_args))
+
+# ################################################################################################################################
+
 def get_server_client_auth(config, repo_dir):
     """ Returns credentials to authenticate with against Zato's own /zato/admin/invoke channel.
     """
     session = get_odb_session_from_server_config(config, get_crypto_manager_from_server_config(config, repo_dir))
 
     with closing(session) as session:
-        cluster = session.query(odb.model.Server).\
-            filter(odb.model.Server.token == config.main.token).\
+        cluster = session.query(Server).\
+            filter(Server.token == config.main.token).\
             one().cluster
 
-        channel = session.query(odb.model.HTTPSOAP).\
-            filter(odb.model.HTTPSOAP.cluster_id == cluster.id).\
-            filter(odb.model.HTTPSOAP.url_path == '/zato/admin/invoke').\
-            filter(odb.model.HTTPSOAP.connection== 'channel').\
+        channel = session.query(HTTPSOAP).\
+            filter(HTTPSOAP.cluster_id == cluster.id).\
+            filter(HTTPSOAP.url_path == '/zato/admin/invoke').\
+            filter(HTTPSOAP.connection== 'channel').\
             one()
 
         if channel.security_id:
-            security = session.query(odb.model.HTTPBasicAuth).\
-                filter(odb.model.HTTPBasicAuth.id == channel.security_id).\
+            security = session.query(HTTPBasicAuth).\
+                filter(HTTPBasicAuth.id == channel.security_id).\
                 first()
 
             if security:
                 return (security.username, security.password)
+
+def get_client_from_server_conf(server_dir):
+    return client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config)
 
 # ################################################################################################################################
 
