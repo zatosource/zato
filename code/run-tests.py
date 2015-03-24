@@ -77,6 +77,11 @@ def get_conn_info_from_path(path):
 def get_conn_info_from_env():
     """ Returns a Zato client basing on a set of environment variables allowing for a client's construction.
     """
+    out = {}
+    for key in ('ZATO_API_TEST_SERVER', 'ZATO_API_TEST_PUBAPI_USER', 'ZATO_API_TEST_PUBAPI_PASSWORD', 'ZATO_API_TEST_CLUSTER_ID'):
+        out[key] = os.environ.get(key, 'NONE_FOUND_{}'.format(key))
+
+    return out
 
 # ################################################################################################################################
 
@@ -96,7 +101,7 @@ def _apitests():
     # If we do, check out if it appears to belong to a server.
     # If it does, this is the server to test against.
     # Otherwise, the server's URL + credentials are read from environment variables.
-    # If not env variables are present, API tests cannot run.
+    # If no env variables are present, API tests cannot run.
 
     conn_info = None
     server_path = None
