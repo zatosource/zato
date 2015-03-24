@@ -26,10 +26,13 @@ from sarge import run
 # Zato
 from zato.cli import ZatoCommand
 from zato.common.component_info import get_info
+from zato.common.util import get_client_from_server_conf
 
 logging.basicConfig(
     level=logging.INFO, format='%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s')
 logger = getLogger(__name__)
+
+
 
 # ################################################################################################################################
 
@@ -44,15 +47,44 @@ def main():
 # ################################################################################################################################
 
 def get_conn_info_from_path(path):
-    """ Returns credentials and connection's info from a local path to a server having first created
-    everything that is needed - username, its password and a channel to invoke API tests through.
+    """ Returns a Zato client basing on a path to a local server.
     """
-    print(path)
-    return True
+    client = get_client_from_server_conf(path)
+
+    # Just to be on the safe side
+    client.invoke('zato.ping')
+
+    pubapi_id = None
+
+    # Get pubapi user or return None to signal that no connection info could be found
+    for item in client.invoke('zato.security.get-list', {'cluster_id': client.cluster_id}).data:
+        if item['username'] == 'pubapi':
+            pubapi_id = item['id']
+            break
+    else:
+        return None
+
+    # Update password to a well-known one - there is no way to learn the previous one through the API
+    zato.security.basic-auth.change-password
+
+    return {
+        'ZATO_API_TEST_SERVER': client.address,
+        'ZATO_API_TEST_PUBAPI_USER': 'pubapi',
+        'ZATO_API_TEST_PUBAPI_PASSWORD': client.session.auth[1],
+        'ZATO_API_TEST_CLUSTER_ID': str(client.cluster_id)
+        }
 
 def get_conn_info_from_env():
-    """ Returns credentials and connection's info from environment variables.
+    """ Returns a Zato client basing on a set of environment variables allowing for a client's construction.
     """
+
+# ################################################################################################################################
+
+def prepare():
+    pass
+
+def cleanup():
+    pass
 
 # ################################################################################################################################
 
@@ -109,12 +141,16 @@ def _apitests():
 
     # Ok, give up, we don't know how to connect to the target server
     if not conn_info:
-        logger.warn('Cannot run API tests, could not obtain connection info from local path nor environment.')
+        logger.warn('Cannot run API tests, could not obtain conn info from local path nor environment.')
 
     else:
-        apitest_cmd = 'apitest'
-        tests_dir = os.path.join(curdir, 'apitest')
-        #run('{} run {}'.format(apitest_cmd, tests_dir))
+        try:
+            os.environ.update(**conn_info)
+            apitest_cmd = 'apitest'
+            tests_dir = os.path.join(curdir, 'apitest')
+            #run('{} run {}'.format(apitest_cmd, tests_dir))
+        finally:
+            cleanup()
 
 @click.command()
 def apitests():
