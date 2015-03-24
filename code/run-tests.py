@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from logging import getLogger
 from json import loads
+from uuid import uuid4
 import logging, glob, os
 
 # Click
@@ -31,8 +32,6 @@ from zato.common.util import get_client_from_server_conf
 logging.basicConfig(
     level=logging.INFO, format='%(asctime)s - %(levelname)s - %(process)d:%(threadName)s - %(name)s:%(lineno)d - %(message)s')
 logger = getLogger(__name__)
-
-
 
 # ################################################################################################################################
 
@@ -65,12 +64,13 @@ def get_conn_info_from_path(path):
         return None
 
     # Update password to a well-known one - there is no way to learn the previous one through the API
-    zato.security.basic-auth.change-password
+    password = uuid4().hex
+    client.invoke('zato.security.basic-auth.change-password', {'id':pubapi_id, 'password1':password, 'password2':password})
 
     return {
         'ZATO_API_TEST_SERVER': client.address,
         'ZATO_API_TEST_PUBAPI_USER': 'pubapi',
-        'ZATO_API_TEST_PUBAPI_PASSWORD': client.session.auth[1],
+        'ZATO_API_TEST_PUBAPI_PASSWORD': password,
         'ZATO_API_TEST_CLUSTER_ID': str(client.cluster_id)
         }
 
@@ -148,7 +148,7 @@ def _apitests():
             os.environ.update(**conn_info)
             apitest_cmd = 'apitest'
             tests_dir = os.path.join(curdir, 'apitest')
-            #run('{} run {}'.format(apitest_cmd, tests_dir))
+            run('{} run {}'.format(apitest_cmd, tests_dir))
         finally:
             cleanup()
 
