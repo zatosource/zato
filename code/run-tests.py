@@ -80,14 +80,6 @@ def get_conn_info_from_env():
 
 # ################################################################################################################################
 
-def prepare():
-    pass
-
-def cleanup():
-    pass
-
-# ################################################################################################################################
-
 def _nosetests():
     nosetests_cmd = os.path.join(curdir, 'bin', 'nosetests')
     zato_packages = ' '.join([item for item in glob.iglob(os.path.join(curdir, 'zato-*'))])
@@ -144,13 +136,13 @@ def _apitests():
         logger.warn('Cannot run API tests, could not obtain conn info from local path nor environment.')
 
     else:
-        try:
-            os.environ.update(**conn_info)
-            apitest_cmd = 'apitest'
-            tests_dir = os.path.join(curdir, 'apitest')
-            run('{} run {}'.format(apitest_cmd, tests_dir))
-        finally:
-            cleanup()
+        os.environ.update(**conn_info)
+        apitest_cmd = 'apitest'
+        tests_dir = os.path.join(curdir, 'apitest')
+        run('{} run {}'.format(apitest_cmd, tests_dir))
+
+        # TODO: The output should be consulted - it's possible that someone
+        # will want to stop the tests if API test don't succeed.
 
 @click.command()
 def apitests():
