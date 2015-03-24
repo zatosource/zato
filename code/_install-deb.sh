@@ -31,7 +31,7 @@ sudo apt-get update
 sudo apt-get install -y git bzr gfortran haproxy  \
     libatlas-dev libatlas3gf-base libblas3gf \
     libbz2-dev libev4 libev-dev \
-    libevent-dev libffi5 libgfortran3 liblapack-dev liblapack3gf \
+    libevent-dev libgfortran3 liblapack-dev liblapack3gf \
     libpq-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack$LIBUMFPACK_VERSION \
     openssl python2.7-dev python-numpy python-pip \
     python-scipy python-zdaemon swig uuid-dev uuid-runtime libffi-dev
