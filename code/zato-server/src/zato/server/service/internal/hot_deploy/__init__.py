@@ -12,8 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, shutil
 from contextlib import closing
 from datetime import datetime
-from errno import EEXIST, ENOENT
-from tempfile import mkdtemp, NamedTemporaryFile
+from errno import ENOENT
 from traceback import format_exc
 
 # anyjson
@@ -29,7 +28,7 @@ from retools.lock import Lock
 from zato.common import DEPLOYMENT_STATUS, KVDB
 from zato.common.broker_message import HOT_DEPLOY
 from zato.common.odb.model import DeploymentPackage, DeploymentStatus
-from zato.common.util import decompress, fs_safe_now, is_python_file, new_cid
+from zato.common.util import fs_safe_now, is_python_file, new_cid
 from zato.server.service.internal import AdminService, AdminSIO
 
 MAX_BACKUPS = 1000
