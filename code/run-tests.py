@@ -77,14 +77,11 @@ def get_conn_info_from_path(path):
 def get_conn_info_from_env():
     """ Returns a Zato client basing on a set of environment variables allowing for a client's construction.
     """
+    out = {}
+    for key in ('ZATO_API_TEST_SERVER', 'ZATO_API_TEST_PUBAPI_USER', 'ZATO_API_TEST_PUBAPI_PASSWORD', 'ZATO_API_TEST_CLUSTER_ID'):
+        out[key] = os.environ.get(key, 'NONE_FOUND_{}'.format(key))
 
-# ################################################################################################################################
-
-def prepare():
-    pass
-
-def cleanup():
-    pass
+    return out
 
 # ################################################################################################################################
 
@@ -104,7 +101,7 @@ def _apitests():
     # If we do, check out if it appears to belong to a server.
     # If it does, this is the server to test against.
     # Otherwise, the server's URL + credentials are read from environment variables.
-    # If not env variables are present, API tests cannot run.
+    # If no env variables are present, API tests cannot run.
 
     conn_info = None
     server_path = None
@@ -144,13 +141,13 @@ def _apitests():
         logger.warn('Cannot run API tests, could not obtain conn info from local path nor environment.')
 
     else:
-        try:
-            os.environ.update(**conn_info)
-            apitest_cmd = 'apitest'
-            tests_dir = os.path.join(curdir, 'apitest')
-            run('{} run {}'.format(apitest_cmd, tests_dir))
-        finally:
-            cleanup()
+        os.environ.update(**conn_info)
+        apitest_cmd = 'apitest'
+        tests_dir = os.path.join(curdir, 'apitest')
+        run('{} run {}'.format(apitest_cmd, tests_dir))
+
+        # TODO: The output should be consulted - it's possible that someone
+        # will want to stop the tests if API test don't succeed.
 
 @click.command()
 def apitests():
