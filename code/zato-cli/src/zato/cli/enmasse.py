@@ -32,12 +32,11 @@ from texttable import Texttable
 # Zato
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
-from zato.client import AnyServiceInvoker
 from zato.common.odb.model import APIKeySecurity, AWSSecurity, Base, CassandraConn, ConnDefAMQP, ConnDefWMQ, HTTPBasicAuth, \
-     HTTPSOAP, IMAP, NTLM, OAuth, OutgoingOdoo, SecurityBase, Server, Service, SMTP, TechnicalAccount, TLSChannelSecurity, \
+     HTTPSOAP, IMAP, NTLM, OAuth, OutgoingOdoo, SecurityBase, Service, SMTP, TechnicalAccount, TLSChannelSecurity, \
      TLSKeyCertSecurity, to_json, WSSDefinition, XPathSecurity
 from zato.common.odb.query import cloud_openstack_swift_list, notif_cloud_openstack_swift_list, notif_sql_list, out_sql_list
-from zato.common.util import get_config
+from zato.common.util import get_client_from_server_conf
 from zato.server.service import ForceType
 from zato.server.service.internal import http_soap as http_soap_mod
 from zato.server.service.internal.channel import amqp as channel_amqp_mod
@@ -142,12 +141,6 @@ class Results(object):
 
     ok = property(_get_ok)
 
-class ZatoClient(AnyServiceInvoker):
-    def __init__(self, *args, **kwargs):
-        super(ZatoClient, self).__init__(*args, **kwargs)
-        self.cluster_id = None
-        self.odb_session = None
-
 class EnMasse(ManageCommand):
     """ Manages server objects en masse.
     """
@@ -197,7 +190,7 @@ class EnMasse(ManageCommand):
             os.chdir(self.curdir)
 
             # Get client and issue a sanity check as quickly as possible
-            self.set_client()
+            self.client = get_client_from_server_conf(self.args.path)
             self.client.invoke('zato.ping')
 
         # Imports and export are mutually excluding
@@ -253,6 +246,7 @@ class EnMasse(ManageCommand):
 
 # ################################################################################################################################
 
+    '''
     def set_client(self):
 
         repo_dir = os.path.join(os.path.abspath(os.path.join(self.args.path)), 'config', 'repo')
@@ -270,6 +264,7 @@ class EnMasse(ManageCommand):
             one().cluster_id
 
         self.client.odb_session = session
+        '''
 
 # ################################################################################################################################
 

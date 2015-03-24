@@ -56,7 +56,7 @@ class BunchTestCase(TestCase):
             'qqq': {'zz': {'yy': ([{11:22, 'uu':'44'}, 90, 18.0, 'qwerty'], 'zxc', 89)}}
         }
 
-        bunchified = bunch.bunchify(test_data)
+        bunch.bunchify(test_data)
 
     def test_set_get(self):
         value = '123'
