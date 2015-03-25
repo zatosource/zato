@@ -30,8 +30,7 @@ from springpython.context import DisposableObject
 # Zato
 from zato.common import Inactive, SECRET_SHADOW
 from zato.common.odb import ping_queries
-from zato.common.odb.util import get_engine_url
-from zato.common.util import get_component_name, parse_extra_into_dict
+from zato.common.util import get_component_name, get_engine_url, parse_extra_into_dict
 
 class SessionWrapper(object):
     """ Wraps an SQLAlchemy session.
