@@ -18,7 +18,7 @@ import yaml
 
 # Zato
 from zato.common import TRACE1
-from zato.common.odb.util import get_engine_url
+from zato.common.util import get_engine_url
 from zato_settings import * # noqa
 
 if 'DEBUG' not in globals():
