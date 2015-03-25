@@ -18,7 +18,6 @@ from sqlalchemy.sql import text
 
 # Zato
 from zato.common import ping_queries
-from zato.common.odb.util import get_engine_url
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +30,8 @@ VERSION = 1
 SUPPORTED_DB_TYPES = (b'oracle', b'postgresql', b'mysql', b'sqlite')
 
 def create_pool(crypto_manager, engine_params):
+    from zato.common.util import get_engine_url
+
     engine_params = copy.deepcopy(engine_params)
     if engine_params['engine'] != 'sqlite':
         engine_params['password'] = str(crypto_manager.decrypt(engine_params['password']))

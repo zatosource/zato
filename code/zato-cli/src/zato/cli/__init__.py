@@ -26,8 +26,7 @@ import sqlalchemy
 from zato import common
 from zato.cli import util as cli_util
 from zato.common import odb, util, ZATO_INFO_FILE
-from zato.common.odb import util as odb_util
-from zato.common.util import get_full_stack
+from zato.common.util import get_engine_url, get_full_stack
 
 ################################################################################
 
@@ -406,7 +405,7 @@ class ZatoCommand(object):
 
     def _get_engine(self, args):
         connect_args = {'application_name':util.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
-        return sqlalchemy.create_engine(odb_util.get_engine_url(args), connect_args=connect_args)
+        return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
 
     def _get_session(self, engine):
         return cli_util.get_session(engine)

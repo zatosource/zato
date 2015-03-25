@@ -95,7 +95,6 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
-from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
 from zato.common import DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, SECRET_SHADOW, SIMPLE_IO, soap_body_path, \
      soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN
 from zato.common.crypto import CryptoManager
@@ -1146,6 +1145,7 @@ def get_server_client_auth(config, repo_dir):
                 return (security.username, security.password)
 
 def get_client_from_server_conf(server_dir):
+    from zato.client import get_client_from_server_conf as client_get_client_from_server_conf
     return client_get_client_from_server_conf(server_dir, get_server_client_auth, get_config)
 
 # ################################################################################################################################
