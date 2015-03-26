@@ -26,7 +26,7 @@ import sqlalchemy
 from zato import common
 from zato.cli import util as cli_util
 from zato.common import odb, util, ZATO_INFO_FILE
-from zato.common.util import get_engine_url, get_full_stack
+from zato.common.util import get_engine_url, get_full_stack, get_session
 
 ################################################################################
 
@@ -408,7 +408,7 @@ class ZatoCommand(object):
         return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
 
     def _get_session(self, engine):
-        return cli_util.get_session(engine)
+        return get_session(engine)
 
     def _check_passwords(self, args, check_password):
         """ Get the password from a user for each argument that needs a password.
