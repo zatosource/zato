@@ -1,5 +1,5 @@
     <div class="prompt">
-    <form action="." method="get">
+    <form action="." method="get" id="choose_cluster_form">
         {{ choose_cluster_form.cluster }}
 
         {% if pattern_hint %}
@@ -9,3 +9,16 @@
         <input type="submit"  style="vertical-align:top" value="{{ page_prompt }}" />
     </form>
     </div>
+
+    {% if choose_cluster_form.zato_auto_submit %}
+    <script>
+        if(!$(document).getUrlParam('cluster')) {
+
+            {% if pattern_hint %}
+                $("#id_name_filter").val("*");
+            {% endif %}
+
+            $("#choose_cluster_form").submit();
+        }
+    </script>
+    {% endif %}
