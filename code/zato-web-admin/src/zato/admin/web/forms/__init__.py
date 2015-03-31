@@ -31,11 +31,17 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
 
 # ################################################################################################################################
 
+class SingleServiceField(forms.TextInput):
+    pass
+
+# ################################################################################################################################
+
 class ChooseClusterForm(forms.Form):
 
     cluster = forms.ChoiceField(widget=forms.Select())
     name_filter = forms.CharField(widget=forms.TextInput(
         attrs={'style':'width:30%', 'class':'required', 'placeholder':"Enter * or part of a service's name, e.g. http json"}))
+    service_id = SingleServiceField()
 
     def __init__(self, clusters, data=None):
 
