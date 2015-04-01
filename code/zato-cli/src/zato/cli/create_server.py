@@ -179,6 +179,12 @@ custom_auth_list_service=
 stats=True
 slow_response=True
 
+[content_type]
+json = application/json
+plain_xml = application/xml
+soap11 = application/xml
+soap12 = application/soap+xml; charset=utf-8
+
 [os_environ]
 sample_key=sample_value
 """.encode('utf-8')
