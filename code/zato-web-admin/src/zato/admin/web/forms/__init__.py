@@ -31,6 +31,20 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
 
 # ################################################################################################################################
 
+def add_services(form, req):
+    if req.zato.cluster_id:
+
+        # Either must exist
+        field = form.fields.get('service_name') or form.fields['service']
+        field.choices[:] = []
+        field.choices.append(INITIAL_CHOICES)
+
+        for service in req.zato.client.invoke(
+            'zato.service.get-list', {'cluster_id': req.zato.cluster_id, 'name_filter':'*'}).data:
+            field.choices.append([service.name, service.name])
+
+# ################################################################################################################################
+
 class ChooseClusterForm(forms.Form):
 
     cluster = forms.ChoiceField(widget=forms.Select())
@@ -38,7 +52,26 @@ class ChooseClusterForm(forms.Form):
         attrs={'style':'width:30%', 'class':'required', 'placeholder':"Enter * or part of a service's name, e.g. http json"}))
 
     def __init__(self, clusters, data=None):
-        super(ChooseClusterForm, self).__init__(data)
+
+        data = data or {}
+
+        #
+        # https://github.com/zatosource/zato/issues/361
+        #
+        # If the length is 1 it we have a single cluster only defined in ODB.
+        # This means we can make use that only one straightaway to display anything that is needed.
+        #
+
+        if len(clusters) == 1:
+            initial = dict(data.iteritems())
+            initial.update({'cluster':clusters[0].id})
+            self.zato_auto_submit = True
+        else:
+            initial = None
+            self.zato_auto_submit = False
+
+        super(ChooseClusterForm, self).__init__(initial)
+
         self.fields['cluster'].choices = [INITIAL_CHOICES]
         for cluster in clusters:
             server_info = '{0} - http://{1}:{2}'.format(cluster.name, cluster.lb_host, cluster.lb_port)

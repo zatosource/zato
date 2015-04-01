@@ -15,19 +15,20 @@ from operator import itemgetter
 from django import forms
 
 # Zato
-from zato.admin.web.forms import DataFormatForm
+from zato.admin.web.forms import add_services, DataFormatForm
 
 class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     def_id = forms.ChoiceField(widget=forms.Select())
     queue = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
-    service = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    service = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
 
-    def __init__(self, prefix=None, post_data=None):
+    def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         self.fields['def_id'].choices = []
-            
+        add_services(self, req)
+
     def set_def_id(self, def_ids):
         # Sort definitions by their names.
         def_ids = sorted(def_ids.iteritems(), key=itemgetter(1))
