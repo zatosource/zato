@@ -132,8 +132,9 @@ def index(req):
 
         _soap_versions = SOAP_CHANNEL_VERSIONS if connection == 'channel' else SOAP_VERSIONS
 
-        create_form = CreateForm(_security, get_tls_ca_cert_list(req.zato.client, req.zato.cluster), _soap_versions)
-        edit_form = EditForm(_security, get_tls_ca_cert_list(req.zato.client, req.zato.cluster), _soap_versions, prefix='edit')
+        create_form = CreateForm(_security, get_tls_ca_cert_list(req.zato.client, req.zato.cluster), _soap_versions, req=req)
+        edit_form = EditForm(
+            _security, get_tls_ca_cert_list(req.zato.client, req.zato.cluster), _soap_versions, prefix='edit', req=req)
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,

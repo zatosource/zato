@@ -63,8 +63,8 @@ class Index(_Index):
         output_repeated = True
     
     def handle(self):
-        create_form = CreateForm()
-        edit_form = EditForm(prefix='edit')
+        create_form = CreateForm(req=self.req)
+        edit_form = EditForm(prefix='edit', req=self.req)
         
         if self.req.zato.cluster_id:
             def_ids = get_definition_list(self.req.zato.client, self.req.zato.cluster, 'amqp')

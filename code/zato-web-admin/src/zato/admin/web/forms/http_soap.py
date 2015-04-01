@@ -12,7 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_security_select, ChooseClusterForm as _ChooseClusterForm, DataFormatForm, INITIAL_CHOICES
+from zato.admin.web.forms import add_security_select, add_services, ChooseClusterForm as _ChooseClusterForm, DataFormatForm, \
+     INITIAL_CHOICES
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
      MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
 
@@ -39,7 +40,7 @@ class CreateForm(DataFormatForm):
     method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     soap_action = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     soap_version = forms.ChoiceField(widget=forms.Select())
-    service = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    service = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
     ping_method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
     timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=MISC.DEFAULT_HTTP_TIMEOUT)
@@ -48,7 +49,8 @@ class CreateForm(DataFormatForm):
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
 
-    def __init__(self, security_list=[], sec_tls_ca_cert_list={}, soap_versions=SOAP_VERSIONS, prefix=None, post_data=None):
+    def __init__(self, security_list=[], sec_tls_ca_cert_list={}, soap_versions=SOAP_VERSIONS,
+            prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
         self.fields['url_params_pri'].choices = []
@@ -78,6 +80,7 @@ class CreateForm(DataFormatForm):
         self.fields['pool_size'].initial = DEFAULT_HTTP_POOL_SIZE
 
         add_security_select(self, security_list)
+        add_services(self, req)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
