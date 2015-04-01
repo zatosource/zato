@@ -31,6 +31,20 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
 
 # ################################################################################################################################
 
+def add_services(form, req):
+    if req.zato.cluster_id:
+
+        # Either must exist
+        field = form.fields.get('service_name') or form.fields['service']
+        field.choices[:] = []
+        field.choices.append(INITIAL_CHOICES)
+
+        for service in req.zato.client.invoke(
+            'zato.service.get-list', {'cluster_id': req.zato.cluster_id, 'name_filter':'*'}).data:
+            field.choices.append([service.name, service.name])
+
+# ################################################################################################################################
+
 class ChooseClusterForm(forms.Form):
 
     cluster = forms.ChoiceField(widget=forms.Select())

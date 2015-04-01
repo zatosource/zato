@@ -400,12 +400,12 @@ def index(req):
             'choose_cluster_form':req.zato.choose_cluster_form,
             'jobs':jobs, 
             'friendly_names':job_type_friendly_names.items(),
-            'create_one_time_form':OneTimeSchedulerJobForm(prefix=create_one_time_prefix),
-            'create_interval_based_form':IntervalBasedSchedulerJobForm(prefix=create_interval_based_prefix),
-            'create_cron_style_form':CronStyleSchedulerJobForm(prefix=create_cron_style_prefix),
-            'edit_one_time_form':OneTimeSchedulerJobForm(prefix=edit_one_time_prefix),
-            'edit_interval_based_form':IntervalBasedSchedulerJobForm(prefix=edit_interval_based_prefix),
-            'edit_cron_style_form':CronStyleSchedulerJobForm(prefix=edit_cron_style_prefix),
+            'create_one_time_form':OneTimeSchedulerJobForm(create_one_time_prefix, req),
+            'create_interval_based_form':IntervalBasedSchedulerJobForm(create_interval_based_prefix, req),
+            'create_cron_style_form':CronStyleSchedulerJobForm(create_cron_style_prefix, req),
+            'edit_one_time_form':OneTimeSchedulerJobForm(edit_one_time_prefix, req),
+            'edit_interval_based_form':IntervalBasedSchedulerJobForm(edit_interval_based_prefix, req),
+            'edit_cron_style_form':CronStyleSchedulerJobForm(edit_cron_style_prefix, req),
             'sample_dt': get_sample_dt(req.zato.user_profile),
             }
         

@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
+from zato.admin.web.forms import add_services
 from zato.common import NOTIF
 
 class CreateForm(forms.Form):
@@ -23,7 +24,7 @@ class CreateForm(forms.Form):
     name_pattern = forms.CharField(initial=NOTIF.DEFAULT.NAME_PATTERN, widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     containers = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
-    service_name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    service_name = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
 
     name_pattern_neg = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
@@ -33,12 +34,14 @@ class CreateForm(forms.Form):
 
     def_id = forms.ChoiceField(widget=forms.Select())
 
-    def __init__(self, def_list=None, prefix=None, post_data=None):
+    def __init__(self, def_list=None, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
         self.fields['def_id'].choices = []
         for item in def_list:
             self.fields['def_id'].choices.append([item.id, item.name])
+
+        add_services(self, req)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
