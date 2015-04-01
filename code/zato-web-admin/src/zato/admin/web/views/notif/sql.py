@@ -40,8 +40,8 @@ class Index(_Index):
             sql_defs = []
 
         return {
-            'create_form': CreateForm(sql_defs=sql_defs),
-            'edit_form': EditForm(prefix='edit', sql_defs=sql_defs)
+            'create_form': CreateForm(sql_defs=sql_defs, req=self.req),
+            'edit_form': EditForm(prefix='edit', sql_defs=sql_defs, req=self.req)
         }
 
 class _CreateEdit(CreateEdit):

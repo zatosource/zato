@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# I'm just waiting for someone to tell me they use apt-get on Fedora
+# I'm just waiting for someone to tell me they use apt-get on RHEL
 # or yum on Ubuntu. But I'm really not going to chase and compare all the options
 # and environment variables various shells and distros use. (dsuch 1 VI 2013)
 #
@@ -16,8 +16,7 @@ N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 git log -n 1 --pretty=format:"%H" > $CURDIR/release-info/revision.txt
 
 IS_DEB=0
-IS_FEDORA=0
-IS_DARWIN=0
+IS_RHEL=0
 
 RUN=0
 
@@ -29,10 +28,7 @@ apt-get > /dev/null 2>&1
 if (($? == 0)) ; then IS_DEB=1 ; fi
 
 yum --help > /dev/null 2>&1
-if (($? == 0)) ; then IS_FEDORA=1 ; fi
-
-brew --help > /dev/null 2>&1
-if (($? == 0)) ; then IS_DARWIN=1 ; fi
+if (($? == 0)) ; then IS_RHEL=1 ; fi
 
 #
 # Run an OS-specific installer
@@ -44,15 +40,9 @@ then
   RUN=1
 fi
 
-if [ $IS_FEDORA -eq 1 ]
+if [ $IS_RHEL -eq 1 ]
 then
-  bash $CURDIR/_install-fedora.sh
-  RUN=1
-fi
-
-if [ $IS_DARWIN -eq 1 ]
-then
-  bash $CURDIR/_install-darwin.sh
+  bash $CURDIR/_install-rhel.sh
   RUN=1
 fi
 
@@ -62,6 +52,6 @@ fi
 
 if [ $RUN -ne 1 ]
 then
-   echo "Could not find apt-get, yum nor brew. OS could not be determined, installer cannot run."
+   echo "Could not find apt-get nor yum. OS could not be determined, installer cannot run."
    exit 1
 fi
