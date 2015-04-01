@@ -46,8 +46,8 @@ class Index(_Index):
                 def_list = response.data
 
         return {
-            'create_form': CreateForm(def_list),
-            'edit_form': EditForm(def_list, prefix='edit'),
+            'create_form': CreateForm(def_list, req=self.req),
+            'edit_form': EditForm(def_list, prefix='edit', req=self.req),
         }
 
 class _CreateEdit(CreateEdit):
