@@ -428,6 +428,7 @@ class RequestHandler(object):
                     content_type = self.server.plain_xml_content_type
             elif data_format == SIMPLE_IO.FORMAT.JSON:
                 content_type = self.server.json_content_type
+
             # .. alright, let's use the default value after all.
             else:
                 content_type = response.content_type

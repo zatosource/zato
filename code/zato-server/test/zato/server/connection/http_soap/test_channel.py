@@ -29,8 +29,8 @@ from lxml import etree
 from nose.tools import eq_
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO, URL_PARAMS_PRIORITY, \
-     URL_TYPE, zato_namespace, ZATO_NONE, ZATO_OK
+from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO, URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_NONE, ZATO_OK
+from zato.common.test import rand_string
 from zato.common.util import new_cid
 from zato.server.connection.http_soap import channel
 from zato.server.service.internal import AdminService, Service
@@ -470,3 +470,82 @@ class TestRequestHandler(TestCase):
                 else:
                     eq_(channel_params['url_key1'], qs_value1)
                     eq_(channel_params['url_key2'], qs_value2)
+
+    def test_set_content_type(self):
+
+        class FakeServer(object):
+            soap11_content_type = 'soap11_content_type-' + rand_string()
+            soap12_content_type = 'soap12_content_type-' + rand_string()
+            plain_xml_content_type = 'plain_xml_content_type-' + rand_string()
+            json_content_type = 'json_content_type-' + rand_string()
+            fs_server_config = Bunch(misc=Bunch(use_soap_envelope=True))
+
+        class FakeResponse(object):
+            def __init__(self, content_type_changed=False):
+                self.content_type_changed = content_type_changed
+                self.content_type = ZATO_NONE
+
+        class FakeChannelItem(object):
+            def __init__(self, soap_version='1.1'):
+                self.soap_version = soap_version
+
+        rh = channel.RequestHandler(FakeServer())
+
+        #
+        # Here are the scenarios we support
+        #
+        # 1) User sets their own content-type
+        # 2) SOAP 1.1
+        # 3) SOAP 1.2
+        # 4) Plain XML
+        # 5) JSON
+        # 6) No content-type specified - we need to use default value
+        #
+
+        #
+        # 1)
+        #
+        response = FakeResponse(True)
+        user_content_type = rand_string()
+        response.content_type = user_content_type
+
+        rh.set_content_type(response, rand_string(), rand_string(), None, FakeChannelItem())
+        eq_(response.content_type, user_content_type)
+
+        #
+        # 2)
+        #
+        response = FakeResponse()
+        rh.set_content_type(response, SIMPLE_IO.FORMAT.XML, URL_TYPE.SOAP, None, FakeChannelItem())
+        eq_(response.content_type, FakeServer.soap11_content_type)
+
+        #
+        # 3)
+        #
+        response = FakeResponse()
+        rh.set_content_type(response, SIMPLE_IO.FORMAT.XML, URL_TYPE.SOAP, None, FakeChannelItem('1.2'))
+        eq_(response.content_type, FakeServer.soap12_content_type)
+
+        #
+        # 4)
+        #
+        response = FakeResponse()
+        rh.set_content_type(response, SIMPLE_IO.FORMAT.XML, URL_TYPE.PLAIN_HTTP, None, FakeChannelItem())
+        eq_(response.content_type, FakeServer.plain_xml_content_type)
+
+        #
+        # 5)
+        #
+        response = FakeResponse()
+        rh.set_content_type(response, SIMPLE_IO.FORMAT.JSON, URL_TYPE.PLAIN_HTTP, None, FakeChannelItem())
+        eq_(response.content_type, FakeServer.json_content_type)
+
+        #
+        # 6)
+        #
+        response = FakeResponse(False)
+        user_content_type = rand_string()
+        response.content_type = user_content_type
+
+        rh.set_content_type(response, rand_string(), rand_string(), None, FakeChannelItem())
+        eq_(response.content_type, user_content_type)
