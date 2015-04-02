@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import httplib, ssl
+from datetime import datetime
 from logging import getLogger
 from tempfile import NamedTemporaryFile
 from time import sleep
@@ -25,7 +26,8 @@ from nose.tools import eq_
 import requests
 
 # Zato
-from zato.common import SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common import CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common.util import get_component_name
 from zato.common.test import rand_float, rand_int, rand_string
 from zato.common.test.tls import TLSServer
 from zato.common.test.tls_material import ca_cert, ca_cert_invalid, client1_cert, client1_key
@@ -68,7 +70,7 @@ class Base(object):
         return {'is_active':True, 'sec_type':rand_string(), 'address_host':rand_string(), 
             'address_url_path':rand_string(), 'ping_method':rand_string(), 'soap_version':'1.1',
             'pool_size':rand_int(), 'serialization_type':'string', 'timeout':rand_int(),
-            'tls_verify':ZATO_NONE}
+            'tls_verify':ZATO_NONE, 'data_format':'', 'content_type':''}
 
 # ################################################################################################################################
 
@@ -240,6 +242,198 @@ class HTTPSOAPWrapperTestCase(TestCase, Base):
                             foo=expected_kwargs1, bar=expected_kwargs2)
 
                     eq_(http_request_value, expected_http_request_value)
+
+    def test_create_headers_json(self):
+
+        cid = rand_string()
+        now = datetime.utcnow().isoformat()
+        requests_module = _FakeRequestsModule()
+
+        config = self._get_config()
+        config['data_format'] = DATA_FORMAT.JSON
+        config['transport'] = URL_TYPE.PLAIN_HTTP
+
+        wrapper = HTTPSOAPWrapper(config, requests_module)
+        user_headers = {rand_string():rand_string(), rand_string():rand_string()}
+
+        headers = wrapper._create_headers(cid, user_headers, now)
+
+        eq_(headers.pop('X-Zato-CID'), cid)
+        eq_(headers.pop('X-Zato-Msg-TS'), now)
+        eq_(headers.pop('X-Zato-Component'), get_component_name())
+        eq_(headers.pop('Content-Type'), CONTENT_TYPE.JSON)
+
+        # Anything that is left must be user headers
+        self.assertDictEqual(headers, user_headers)
+
+    def test_create_headers_plain_xml(self):
+
+        cid = rand_string()
+        now = datetime.utcnow().isoformat()
+        requests_module = _FakeRequestsModule()
+
+        config = self._get_config()
+        config['data_format'] = DATA_FORMAT.XML
+        config['transport'] = URL_TYPE.PLAIN_HTTP
+
+        wrapper = HTTPSOAPWrapper(config, requests_module)
+        user_headers = {rand_string():rand_string(), rand_string():rand_string()}
+
+        headers = wrapper._create_headers(cid, user_headers, now)
+
+        eq_(headers.pop('X-Zato-CID'), cid)
+        eq_(headers.pop('X-Zato-Msg-TS'), now)
+        eq_(headers.pop('X-Zato-Component'), get_component_name())
+        eq_(headers.pop('Content-Type'), CONTENT_TYPE.PLAIN_XML)
+
+        # Anything that is left must be user headers
+        self.assertDictEqual(headers, user_headers)
+
+    def test_create_headers_soap11(self):
+
+        cid = rand_string()
+        now = datetime.utcnow().isoformat()
+        soap_action = rand_string()
+        requests_module = _FakeRequestsModule()
+
+        config = self._get_config()
+        config['data_format'] = DATA_FORMAT.XML
+        config['transport'] = URL_TYPE.SOAP
+        config['soap_action'] = soap_action
+
+        wrapper = HTTPSOAPWrapper(config, requests_module)
+        user_headers = {rand_string():rand_string(), rand_string():rand_string()}
+
+        headers = wrapper._create_headers(cid, user_headers, now)
+
+        eq_(headers.pop('X-Zato-CID'), cid)
+        eq_(headers.pop('X-Zato-Msg-TS'), now)
+        eq_(headers.pop('X-Zato-Component'), get_component_name())
+        eq_(headers.pop('SOAPAction'), soap_action)
+        eq_(headers.pop('Content-Type'), CONTENT_TYPE.SOAP11)
+
+        # Anything that is left must be user headers
+        self.assertDictEqual(headers, user_headers)
+
+    def test_create_headers_soap12(self):
+
+        cid = rand_string()
+        now = datetime.utcnow().isoformat()
+        soap_action = rand_string()
+        requests_module = _FakeRequestsModule()
+
+        config = self._get_config()
+        config['data_format'] = DATA_FORMAT.XML
+        config['transport'] = URL_TYPE.SOAP
+        config['soap_action'] = soap_action
+        config['soap_version'] = '1.2'
+
+        wrapper = HTTPSOAPWrapper(config, requests_module)
+        user_headers = {rand_string():rand_string(), rand_string():rand_string()}
+
+        headers = wrapper._create_headers(cid, user_headers, now)
+
+        eq_(headers.pop('X-Zato-CID'), cid)
+        eq_(headers.pop('X-Zato-Msg-TS'), now)
+        eq_(headers.pop('X-Zato-Component'), get_component_name())
+        eq_(headers.pop('SOAPAction'), soap_action)
+        eq_(headers.pop('Content-Type'), CONTENT_TYPE.SOAP12)
+
+        # Anything that is left must be user headers
+        self.assertDictEqual(headers, user_headers)
+
+    def test_create_headers_soap12(self):
+
+        cid = rand_string()
+        now = datetime.utcnow().isoformat()
+        soap_action = rand_string()
+        requests_module = _FakeRequestsModule()
+
+        config = self._get_config()
+        config['data_format'] = DATA_FORMAT.XML
+        config['transport'] = URL_TYPE.SOAP
+        config['soap_action'] = soap_action
+        config['soap_version'] = '1.2'
+
+        wrapper = HTTPSOAPWrapper(config, requests_module)
+        user_headers = {rand_string():rand_string(), rand_string():rand_string()}
+
+        headers = wrapper._create_headers(cid, user_headers, now)
+
+        eq_(headers.pop('X-Zato-CID'), cid)
+        eq_(headers.pop('X-Zato-Msg-TS'), now)
+        eq_(headers.pop('X-Zato-Component'), get_component_name())
+        eq_(headers.pop('SOAPAction'), soap_action)
+        eq_(headers.pop('Content-Type'), CONTENT_TYPE.SOAP12)
+
+        # Anything that is left must be user headers
+        self.assertDictEqual(headers, user_headers)
+
+    def test_create_headers_no_data_format(self):
+
+        cid = rand_string()
+        now = datetime.utcnow().isoformat()
+        requests_module = _FakeRequestsModule()
+
+        config = self._get_config()
+
+        wrapper = HTTPSOAPWrapper(config, requests_module)
+        user_headers = {rand_string():rand_string(), rand_string():rand_string()}
+
+        headers = wrapper._create_headers(cid, user_headers, now)
+
+        eq_(headers.pop('X-Zato-CID'), cid)
+        eq_(headers.pop('X-Zato-Msg-TS'), now)
+        eq_(headers.pop('X-Zato-Component'), get_component_name())
+
+        # Anything that is left must be user headers
+        # (note that there was no Content-Type because there was no data_format)
+        self.assertDictEqual(headers, user_headers)
+
+    def test_create_headers_user_default_data_format(self):
+
+        cid = rand_string()
+        now = datetime.utcnow().isoformat()
+        content_type = rand_string()
+        requests_module = _FakeRequestsModule()
+
+        config = self._get_config()
+        config['content_type'] = content_type
+
+        wrapper = HTTPSOAPWrapper(config, requests_module)
+        user_headers = {rand_string():rand_string(), rand_string():rand_string()}
+
+        headers = wrapper._create_headers(cid, user_headers, now)
+
+        eq_(headers.pop('X-Zato-CID'), cid)
+        eq_(headers.pop('X-Zato-Msg-TS'), now)
+        eq_(headers.pop('X-Zato-Component'), get_component_name())
+        eq_(headers.pop('Content-Type'), content_type)
+
+        # Anything that is left must be user headers
+        self.assertDictEqual(headers, user_headers)
+
+    def test_create_headers_user_headers_data_format(self):
+
+        cid = rand_string()
+        now = datetime.utcnow().isoformat()
+        content_type = rand_string()
+        requests_module = _FakeRequestsModule()
+
+        config = self._get_config()
+
+        wrapper = HTTPSOAPWrapper(config, requests_module)
+        user_headers = {rand_string():rand_string(), rand_string():rand_string(), 'Content-Type':content_type}
+
+        headers = wrapper._create_headers(cid, user_headers, now)
+
+        eq_(headers.pop('X-Zato-CID'), cid)
+        eq_(headers.pop('X-Zato-Msg-TS'), now)
+        eq_(headers.pop('X-Zato-Component'), get_component_name())
+        eq_(headers.pop('Content-Type'), content_type)
+
+        # Anything that is left must be user headers
+        self.assertDictEqual(headers, user_headers)
 
 # ################################################################################################################################
 
