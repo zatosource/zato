@@ -342,33 +342,6 @@ class HTTPSOAPWrapperTestCase(TestCase, Base):
         # Anything that is left must be user headers
         self.assertDictEqual(headers, user_headers)
 
-    def test_create_headers_soap12(self):
-
-        cid = rand_string()
-        now = datetime.utcnow().isoformat()
-        soap_action = rand_string()
-        requests_module = _FakeRequestsModule()
-
-        config = self._get_config()
-        config['data_format'] = DATA_FORMAT.XML
-        config['transport'] = URL_TYPE.SOAP
-        config['soap_action'] = soap_action
-        config['soap_version'] = '1.2'
-
-        wrapper = HTTPSOAPWrapper(config, requests_module)
-        user_headers = {rand_string():rand_string(), rand_string():rand_string()}
-
-        headers = wrapper._create_headers(cid, user_headers, now)
-
-        eq_(headers.pop('X-Zato-CID'), cid)
-        eq_(headers.pop('X-Zato-Msg-TS'), now)
-        eq_(headers.pop('X-Zato-Component'), get_component_name())
-        eq_(headers.pop('SOAPAction'), soap_action)
-        eq_(headers.pop('Content-Type'), CONTENT_TYPE.SOAP12)
-
-        # Anything that is left must be user headers
-        self.assertDictEqual(headers, user_headers)
-
     def test_create_headers_no_data_format(self):
 
         cid = rand_string()

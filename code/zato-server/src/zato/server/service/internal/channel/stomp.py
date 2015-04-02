@@ -10,14 +10,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from time import time
 
 # Zato
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelSTOMP, Service
 from zato.common.odb.query import channel_stomp_list
 from zato.server.connection.stomp import create_stomp_session
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
+from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta, PingMeta
 
 elem = 'stomp_channel'

@@ -10,11 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import getLogger
-from traceback import format_exc
 
 # gevent
 from gevent import spawn
-from gevent.lock import RLock
 
 # stompest
 from stompest.config import StompConfig
@@ -57,7 +55,7 @@ def _channel_main_loop(item, worker):
                 'payload': frame
             }, stomp_channel, 'STOMP_CHANNEL_MSG')
 
-    except StompConnectionError, e:
+    except StompConnectionError:
 
         # We want to report it only if we are still to run,
         # otherwise it's just an exception signalling the connection was closed.
@@ -118,7 +116,6 @@ class ChannelSTOMPConnStore(STOMPConnStore):
     def delete_session_hook(self, item):
         """ Closes our mainloop and calls parent implementation.
         """
-        session = item.conn
         item.conn.keep_running = False
         super(ChannelSTOMPConnStore, self).delete_session_hook(item)
 

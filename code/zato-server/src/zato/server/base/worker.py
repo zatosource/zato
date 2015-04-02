@@ -1648,7 +1648,7 @@ class WorkerStore(BrokerMessageReceiver):
         dispatcher.notify(broker_message.OUTGOING.STOMP_EDIT.value, msg)
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
-        new_def = self.stomp_outconn_api.edit_def(del_name, msg)
+        self.stomp_outconn_api.edit_def(del_name, msg)
 
     def on_broker_msg_OUTGOING_STOMP_DELETE(self, msg):
         dispatcher.notify(broker_message.OUTGOING.STOMP_DELETE.value, msg)

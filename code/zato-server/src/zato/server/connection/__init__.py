@@ -31,7 +31,6 @@ import yaml
 # Zato
 from zato.broker.thread_client import BrokerClient
 from zato.common import Inactive, SECRET_SHADOW, TRACE1, ZATO_ODB_POOL_NAME
-from zato.common.broker_message import DEFINITION
 from zato.common.dispatch import dispatcher
 from zato.common.kvdb import KVDB
 from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable, new_cid
@@ -252,7 +251,7 @@ def start_connector(repo_location, file_, env_item_name, def_id, item_id):
     program = '{0} {1}'.format(executable, file_)
     
     zato_env = {}
-    zato_env['ZATO_REPO_LOCATION'] = repo_locationcheck_dispatcher_backlog
+    zato_env['ZATO_REPO_LOCATION'] = repo_location
     if def_id:
         zato_env['ZATO_CONNECTOR_DEF_ID'] = str(def_id)
     zato_env[env_item_name] = str(item_id)
