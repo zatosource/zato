@@ -63,6 +63,7 @@ from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.connection.zmq_.outgoing import ZMQAPI as ZMQAPIOut, ZMQConnStore as ZMQConnStoreOut
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
+
 from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
 
@@ -254,7 +255,8 @@ class WorkerStore(BrokerMessageReceiver):
             'address_url_path':config.url_path,
             'soap_action':config.soap_action, 'soap_version':config.soap_version, 'ping_method':config.ping_method,
             'pool_size':config.pool_size, 'serialization_type':config.serialization_type,
-            'timeout':config.timeout}
+            'timeout':config.timeout, 'content_type':config.content_type,
+            }
         wrapper_config.update(sec_config)
 
         if config.sec_tls_ca_cert_id and config.sec_tls_ca_cert_id != ZATO_NONE:

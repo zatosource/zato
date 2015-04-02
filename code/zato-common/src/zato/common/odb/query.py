@@ -480,7 +480,7 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.url_path, HTTPSOAP.method, HTTPSOAP.soap_action,
         HTTPSOAP.soap_version, HTTPSOAP.data_format, HTTPSOAP.security_id,
         HTTPSOAP.has_rbac,
-        HTTPSOAP.connection,
+        HTTPSOAP.connection, HTTPSOAP.content_type,
         case([(HTTPSOAP.ping_method != None, HTTPSOAP.ping_method)], else_=DEFAULT_HTTP_PING_METHOD).label('ping_method'), # noqa
         case([(HTTPSOAP.pool_size != None, HTTPSOAP.pool_size)], else_=DEFAULT_HTTP_POOL_SIZE).label('pool_size'),
         case([(HTTPSOAP.merge_url_params_req != None, HTTPSOAP.merge_url_params_req)], else_=True).label('merge_url_params_req'),

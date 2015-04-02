@@ -46,6 +46,7 @@ class CreateForm(DataFormatForm):
     timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=MISC.DEFAULT_HTTP_TIMEOUT)
     security = forms.ChoiceField(widget=forms.Select())
     has_rbac = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    content_type = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
 
