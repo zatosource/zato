@@ -56,19 +56,19 @@ from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, Float, For
      Opaque, Unicode, UTC
 
 # So pyflakes doesn't complain about names being imported but not used
-AsIs
-CSV
-Boolean
-Dict
-Float
-ForceType
-Integer
-List
-ListOfDicts
-Nested
-Opaque
-Unicode
-UTC
+AsIs = AsIs
+CSV = CSV
+Boolean = Boolean
+Dict = Dict
+Float = Float
+ForceType = ForceType
+Integer = Integer
+List = List
+ListOfDicts = ListOfDicts
+Nested = Nested
+Opaque = Opaque
+Unicode = Unicode
+UTC = UTC
 
 logger = logging.getLogger(__name__)
 
@@ -275,7 +275,8 @@ class Service(object):
         # Regular outconns
         out_ftp, out_odoo, out_plain_http, out_soap = self.worker_store.worker_config.outgoing_connections()
         self.outgoing = Outgoing(
-            out_amqp, out_ftp, out_jms_wmq, out_odoo, out_plain_http, out_soap, out_sql, out_zmq)
+            out_amqp, out_ftp, out_jms_wmq, out_odoo, out_plain_http, out_soap, out_sql,
+            self.worker_store.stomp_outconn_api, out_zmq)
 
         # Cloud
         self.cloud = Cloud()

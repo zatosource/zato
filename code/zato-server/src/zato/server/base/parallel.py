@@ -410,6 +410,18 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.config.service = ConfigDict.from_query('service_list', query)
 
         #
+        # Channels - start
+        #
+
+        # STOMP
+        query = self.odb.get_channel_stomp_list(server.cluster.id, True)
+        self.config.channel_stomp = ConfigDict.from_query('channel_stomp', query)
+
+        #
+        # Channels - end
+        #
+
+        #
         # Outgoing connections - start
         #
 
@@ -434,14 +446,18 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query)
 
         # SOAP
-        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)
+        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'tym resoap', True)
         self.config.out_soap = ConfigDict.from_query('out_soap', query)
 
         # SQL
         query = self.odb.get_out_sql_list(server.cluster.id, True)
         self.config.out_sql = ConfigDict.from_query('out_sql', query)
 
-        # ZMQ
+        # STOMP
+        query = self.odb.get_out_stomp_list(server.cluster.id, True)
+        self.config.out_stomp = ConfigDict.from_query('out_stomp', query)
+
+        # ZMQtym re
         query = self.odb.get_out_zmq_list(server.cluster.id, True)
         self.config.out_zmq = ConfigDict.from_query('out_zmq', query)
 

@@ -59,6 +59,8 @@ from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
+from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
+     OutconnSTOMPConnStore
 from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.connection.zmq_.outgoing import ZMQAPI as ZMQAPIOut, ZMQConnStore as ZMQConnStoreOut
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
@@ -80,16 +82,7 @@ class SyncWorker(GunicornSyncWorker):
         super(GunicornSyncWorker, self).__init__(*args, **kwargs)
 
 class WorkerStore(BrokerMessageReceiver):
-    """ Each worker thread has its own configuration store. The store is assigned
-    to the thread's threading.local variable. All the methods assume the data's
-    being already validated and sanitized by one of Zato's internal services.
-
-    There are exactly two threads willing to access the data at any time
-    - the worker thread this store belongs to
-    - the background ZeroMQ thread which may wish to update the store's configuration
-    hence the need for employing RLocks yet there shouldn't be much contention
-    because configuration updates are extremaly rare when compared to regular
-    access by worker threads.
+    """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
     def __init__(self, worker_config=None, server=None):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -117,10 +110,14 @@ class WorkerStore(BrokerMessageReceiver):
         self.json_pointer_store = JSONPointerStore()
         self.xpath_store = XPathStore()
 
-        # Cassandra
+        # CassandraOutconnSTOMPConnStore
         self.cassandra_api = CassandraAPI(CassandraConnStore())
         self.cassandra_query_store = CassandraQueryStore()
         self.cassandra_query_api = CassandraQueryAPI(self.cassandra_query_store)
+
+        # STOMPstomp_channel_api
+        self.stomp_outconn_api = STOMPAPI(OutconnSTOMPConnStore())
+        self.stomp_channel_api = STOMPAPI(ChannelSTOMPConnStore())
 
         # Search
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
@@ -155,6 +152,9 @@ class WorkerStore(BrokerMessageReceiver):
         # E-mail
         self.init_email_smtp()
         self.init_email_imap()
+
+        # STOMP
+        self.init_stomp()
 
         # ZeroMQ
         self.init_zmq()
@@ -376,7 +376,7 @@ class WorkerStore(BrokerMessageReceiver):
         # Start a new background notifier either if it's a create action or on rename.
         if msg.source_service_type == 'create' or (old_name and old_name != msg.name):
 
-            self._on_message_invoke_service({
+            self.on_message_invoke_service({
                 'service': 'zato.notif.invoke-run-notifier',
                 'payload': {'config': msg},
                 'cid': new_cid(),
@@ -415,6 +415,22 @@ class WorkerStore(BrokerMessageReceiver):
                 gevent.spawn(self._init_cassandra_query, self.cassandra_query_api.create, k, v.config)
             except Exception, e:
                 logger.warn('Could not create a Cassandra query `%s`, e:`%s`', k, format_exc(e))
+
+# ################################################################################################################################
+
+    def init_stomp(self):
+
+        for k, v in self.worker_config.out_stomp.items():
+            try:
+                self.stomp_outconn_api.create_def(k, v.config)
+            except Exception, e:
+                logger.warn('Could not create a Stomp outgoing connection `%s`, e:`%s`', k, format_exc(e))
+
+        for k, v in self.worker_config.channel_stomp.items():
+            try:
+                self.stomp_channel_api.create_def(k, v.config, stomp_channel_main_loop, self)
+            except Exception, e:
+                logger.warn('Could not create a Stomp channel `%s`, e:`%s`', k, format_exc(e))
 
 # ################################################################################################################################
 
@@ -947,7 +963,7 @@ class WorkerStore(BrokerMessageReceiver):
         if not isinstance(service.response.payload, basestring):
             service.response.payload = service.response.payload.getvalue()
 
-    def _on_message_invoke_service(self, msg, channel, action, args=None):
+    def on_message_invoke_service(self, msg, channel, action, args=None):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
         """
@@ -1027,16 +1043,16 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
-        return self._on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
+        return self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
 
     def on_broker_msg_CHANNEL_AMQP_MESSAGE_RECEIVED(self, msg, args=None):
-        return self._on_message_invoke_service(msg, CHANNEL.AMQP, 'CHANNEL_AMQP_MESSAGE_RECEIVED', args)
+        return self.on_message_invoke_service(msg, CHANNEL.AMQP, 'CHANNEL_AMQP_MESSAGE_RECEIVED', args)
 
     def on_broker_msg_CHANNEL_JMS_WMQ_MESSAGE_RECEIVED(self, msg, args=None):
-        return self._on_message_invoke_service(msg, CHANNEL.JMS_WMQ, 'CHANNEL_JMS_WMQ_MESSAGE_RECEIVED', args)
+        return self.on_message_invoke_service(msg, CHANNEL.JMS_WMQ, 'CHANNEL_JMS_WMQ_MESSAGE_RECEIVED', args)
 
     def on_broker_msg_CHANNEL_ZMQ_MESSAGE_RECEIVED(self, msg, args=None):
-        return self._on_message_invoke_service(msg, CHANNEL.ZMQ, 'CHANNEL_ZMQ_MESSAGE_RECEIVED', args)
+        return self.on_message_invoke_service(msg, CHANNEL.ZMQ, 'CHANNEL_ZMQ_MESSAGE_RECEIVED', args)
 
 # ################################################################################################################################
 
@@ -1190,7 +1206,7 @@ class WorkerStore(BrokerMessageReceiver):
         msg.service = 'zato.hot-deploy.create'
         msg.payload = {'package_id': msg.package_id}
         msg.data_format = SIMPLE_IO.FORMAT.JSON
-        return self._on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)
+        return self.on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)
 
     def on_broker_msg_HOT_DEPLOY_AFTER_DEPLOY(self, msg, *args):
         self.rbac.create_resource(msg.id)
@@ -1242,7 +1258,7 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_SERVICE_PUBLISH(self, msg, args=None):
-        return self._on_message_invoke_service(msg, msg.get('channel') or CHANNEL.INVOKE_ASYNC, 'SERVICE_PUBLISH', args)
+        return self.on_message_invoke_service(msg, msg.get('channel') or CHANNEL.INVOKE_ASYNC, 'SERVICE_PUBLISH', args)
 
 # ################################################################################################################################
 
@@ -1316,7 +1332,7 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_RESPONSE(self, msg, *args):
-        return self._on_message_invoke_service(msg, CHANNEL.AUDIT, 'SCHEDULER_JOB_EXECUTED', args)
+        return self.on_message_invoke_service(msg, CHANNEL.AUDIT, 'SCHEDULER_JOB_EXECUTED', args)
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_CONFIG(self, msg, *args):
         return self.request_dispatcher.url_data.on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_CONFIG(msg)
@@ -1434,7 +1450,7 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_NOTIF_RUN_NOTIFIER(self, msg):
-        self._on_message_invoke_service(loads(msg.request), CHANNEL.NOTIFIER_RUN, 'NOTIF_RUN_NOTIFIER')
+        self.on_message_invoke_service(loads(msg.request), CHANNEL.NOTIFIER_RUN, 'NOTIF_RUN_NOTIFIER')
 
 # ################################################################################################################################
 
@@ -1622,5 +1638,43 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_OUTGOING_ZMQ_DELETE(self, msg):
         self.zmq_out_api.delete(msg.name)
+
+# ################################################################################################################################
+
+    def on_broker_msg_OUTGOING_STOMP_CREATE(self, msg):
+        self.stomp_outconn_api.create_def(msg.name, msg)
+
+    def on_broker_msg_OUTGOING_STOMP_EDIT(self, msg):
+        dispatcher.notify(broker_message.OUTGOING.STOMP_EDIT.value, msg)
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        new_def = self.stomp_outconn_api.edit_def(del_name, msg)
+
+    def on_broker_msg_OUTGOING_STOMP_DELETE(self, msg):
+        dispatcher.notify(broker_message.OUTGOING.STOMP_DELETE.value, msg)
+        self.stomp_outconn_api.delete_def(msg.name)
+
+    def on_broker_msg_OUTGOING_STOMP_CHANGE_PASSWORD(self, msg):
+        dispatcher.notify(broker_message.OUTGOING.STOMP_CHANGE_PASSWORD.value, msg)
+        self.stomp_outconn_api.change_password_def(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_CHANNEL_STOMP_CREATE(self, msg):
+        self.stomp_channel_api.create_def(msg.name, msg, stomp_channel_main_loop, self)
+
+    def on_broker_msg_CHANNEL_STOMP_EDIT(self, msg):
+        dispatcher.notify(broker_message.CHANNEL.STOMP_EDIT.value, msg)
+        old_name = msg.get('old_name')
+        del_name = old_name if old_name else msg['name']
+        self.stomp_channel_api.edit_def(del_name, msg, stomp_channel_main_loop, self)
+
+    def on_broker_msg_CHANNEL_STOMP_DELETE(self, msg):
+        dispatcher.notify(broker_message.CHANNEL.STOMP_DELETE.value, msg)
+        self.stomp_channel_api.delete_def(msg.name)
+
+    def on_broker_msg_CHANNEL_STOMP_CHANGE_PASSWORD(self, msg):
+        dispatcher.notify(broker_message.CHANNEL.STOMP_CHANGE_PASSWORD.value, msg)
+        self.stomp_channel_api.change_password_def(msg)
 
 # ################################################################################################################################

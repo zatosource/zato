@@ -252,7 +252,7 @@ def start_connector(repo_location, file_, env_item_name, def_id, item_id):
     program = '{0} {1}'.format(executable, file_)
     
     zato_env = {}
-    zato_env['ZATO_REPO_LOCATION'] = repo_location
+    zato_env['ZATO_REPO_LOCATION'] = repo_locationcheck_dispatcher_backlog
     if def_id:
         zato_env['ZATO_CONNECTOR_DEF_ID'] = str(def_id)
     zato_env[env_item_name] = str(item_id)
@@ -286,17 +286,16 @@ class BasePoolAPI(object):
 
     get = __getitem__
 
-    def create_def(self, name, msg, on_connection_established_callback=None):
-        self._conn_store.create(name, msg, on_connection_established_callback)
+    def create_def(self, name, msg, on_connection_established_callback=None, *args, **kwargs):
+        self._conn_store.create(name, msg, on_connection_established_callback, *args, **kwargs)
 
     create = create_def
 
-    def edit_def(self, name, msg):
-        return self._conn_store.edit(name, msg)
+    def edit_def(self, name, msg, on_connection_established_callback=None, *args, **kwargs):
+        return self._conn_store.edit(name, msg, on_connection_established_callback, *args, **kwargs)
 
     def delete_def(self, name):
-        #return self._conn_store.delete(name)
-        pass
+        return self._conn_store.delete(name)
 
     def change_password_def(self, config):
         return self._conn_store.change_password(config)
@@ -308,6 +307,7 @@ class BaseConnPoolStore(object):
     """
     conn_name = None
     dispatcher_events = []
+    dispatcher_listen_for = None
 
     def __init__(self):
 
@@ -323,7 +323,7 @@ class BaseConnPoolStore(object):
         self.keep_connecting = set() # IDs of connections to keep connecting for
 
         # Connects us to interesting events the to-be-established connections need to consult
-        dispatcher.listen_for_updates(DEFINITION, self.dispatcher_callback)
+        dispatcher.listen_for_updates(self.dispatcher_listen_for, self.dispatcher_callback)
 
         # Maps broker message IDs to their accompanying config
         self.dispatcher_backlog = []
@@ -339,26 +339,6 @@ class BaseConnPoolStore(object):
         """
         raise NotImplementedError('Must be overridden in subclasses')
 
-    def on_dispatcher_events(self, events):
-        """ Handles dispatcher events, by default returns True to indicate that connections should still continue.
-        """
-        return True
-
-    def check_dispatcher_backlog(self, item):
-        events = []
-
-        for event_info in self.dispatcher_backlog:
-            if event_info.ctx.id == item.config.id and event_info.event in self.dispatcher_events:
-                events.append(bunchify({
-                    'item': item,
-                    'event_info': event_info
-                }))
-
-        if events:
-            return self.on_dispatcher_events(events)
-        else:
-            return True, None
-
     def _log_connection_error(self, name, config_no_sensitive, e, additional=''):
         logger.warn('Could not connect to %s `%s`, config:`%s`, e:`%s`%s', self.conn_name, name, config_no_sensitive,
             format_exc(e), additional)
@@ -369,7 +349,7 @@ class BaseConnPoolStore(object):
 
         return config_no_sensitive
 
-    def _create(self, name, config, on_connection_established_callback=None):
+    def _create(self, name, config, on_connection_established_callback=None, *args, **kwargs):
         """ Actually establishes a new connection - the method is called in a new greenlet.
         """
         self.keep_connecting.add(config.id)
@@ -413,7 +393,7 @@ class BaseConnPoolStore(object):
             self._log_connection_error(name, item.config_no_sensitive, e)
         else:
 
-            # No session, we give up and quit. This may happen if we have been deleted
+            # No session, we give up and quit. This may happen if we haveon_dispatcher_events been deleted
             # through a dispatcher event before the session could have been established at all.
             if not session:
                 return
@@ -422,20 +402,34 @@ class BaseConnPoolStore(object):
             item.is_connected = True
 
             if on_connection_established_callback:
-                on_connection_established_callback(item.config)
+                on_connection_established_callback(item, *args, **kwargs)
 
         self.sessions[name] = item
 
         return item
 
-    def create(self, name, config, on_connection_established_callback=None):
+    def create(self, name, config, on_connection_established_callback=None, *args, **kwargs):
         """ Adds a new connection definition.
         """
         with self.lock:
-            self._gevent.spawn(self._create, name, config, on_connection_established_callback)
+            self._gevent.spawn(self._create, name, config, on_connection_established_callback, *args, **kwargs)
 
     def delete_session(self, name):
         """ Actually deletes a definition. Must be called with self.lock held.
+        """
+        item = self.sessions.get(name)
+        if item:
+            try:
+                self.keep_connecting.remove(item.config.id)
+            except KeyError:
+                pass # It's OK, no ongoing connection attempt at the moment
+
+            self.delete_session_hook(item)
+
+        logger.debug('Could not delete session `%s` - not among `%s`', name, self.sessions)
+
+    def delete_session_hook(self, session):
+        """ A hook for concrete subclasses to delete their sessions.
         """
         raise NotImplementedError('Must be overridden in subclasses')
 
@@ -444,7 +438,7 @@ class BaseConnPoolStore(object):
         """
         with self.lock:
             try:
-                session = self.sessions(name)
+                session = self.sessions.get(name)
                 if session and session.is_connected:
                     self.delete_session(name)
 
@@ -453,20 +447,39 @@ class BaseConnPoolStore(object):
             finally:
                 self.sessions.pop(name, None)
 
-    def edit(self, name, config):
+    def edit(self, name, config, on_connection_established_callback=None, *args, **kwargs):
         with self.lock:
             try:
                 self.delete_session(name)
             except Exception, e:
                 logger.warn('Could not delete session `%s`, config:`%s`, e:`%s`', name, config, format_exc(e))
             else:
-                return self._create(config.name, config)
+                return self._create(config.name, config, on_connection_established_callback, *args, **kwargs)
 
     def change_password(self, password_data):
         with self.lock:
             new_config = deepcopy(self.sessions[password_data.name].config_no_sensitive)
             new_config.password = password_data.password
             return self.edit(password_data.name, new_config)
+
+# ################################################################################################################################
+
+    def check_dispatcher_backlog(self, item):
+        events = []
+
+        for event_info in self.dispatcher_backlog:
+            if event_info.ctx.id == item.config.id and event_info.event in self.dispatcher_events:
+                events.append(bunchify({
+                    'item': item,
+                    'event_info': event_info
+                }))
+
+        if events:
+            return self.on_dispatcher_events(events)
+        else:
+            return True, None
+
+# ################################################################################################################################
 
     def dispatcher_callback(self, event, ctx, **opaque):
         self.dispatcher_backlog.append(bunchify({
@@ -475,5 +488,28 @@ class BaseConnPoolStore(object):
             'ctx': ctx,
             'opaque': opaque
         }))
+
+# ################################################################################################################################
+
+    def on_dispatcher_events(self, events):
+        """ Handles in-process dispatcher events. If it's a DELETE, the connection is removed
+        from a list of connections to be established. If an EDIT, the connection's config is updated.
+        In either case all subsequent dispatcher events are discarded.
+        """
+        # Only check the latest event
+        event = events[-1]
+        is_delete = event.event_info.event == self.delete_event
+
+        if is_delete:
+            self.keep_connecting.remove(event.item.config.id)
+        else:
+            new_config = event.event_info.ctx
+
+        # We always delete all the events because we processed the last one anyway
+        for event in events:
+            self.dispatcher_backlog.remove(event.event_info)
+
+        # Stop connecting if we have just been deleted
+        return (False, None) if is_delete else (True, new_config)
 
 # ################################################################################################################################

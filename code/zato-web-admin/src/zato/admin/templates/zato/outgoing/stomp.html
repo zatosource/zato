@@ -1,6 +1,6 @@
 {% extends "zato/index.html" %}
 
-{% block html_title %}ZMQ outconns{% endblock %}
+{% block html_title %}STOMP outconns{% endblock %}
 
 {% block extra_css %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
@@ -16,8 +16,8 @@
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
-    {% comment %} STOMP {% endcomment %}
-    <script type="text/javascript" src="/static/js/outgoing/zmq.js"></script>
+    {% comment %} Outgoing STOMP {% endcomment %}
+    <script type="text/javascript" src="/static/js/outgoing/stomp.js"></script>
 
 
     <script>
@@ -28,11 +28,16 @@
             'name',
             '_is_active',
             'address',
-            'socket_type',
+            '_username',
+            'proto_version',
+            '_change_password',
             '_edit',
             '_delete',
+            '_ping',
             'id',
             'is_active',
+            'timeout',
+            'username',
         ]
     }
     </script>
@@ -40,7 +45,7 @@
 {% endblock %}
 
 {% block content %}
-<h2 class="zato">Outgoing ZeroMQ connections</h2>
+<h2 class="zato">Outgoing STOMP connections</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -50,7 +55,7 @@
 
     <div class="prompt">
     {% if not cluster_id %}
-        Choose a cluster to manage outgoing ZeroMQ connections
+        Choose a cluster to manage outgoing STOMP connections
     {% endif %}
 
 {% include "zato/choose-cluster.html" with page_prompt="Show outgoing connections"%}
@@ -58,7 +63,7 @@
 
     {% if cluster_id %}
         <div class='page_prompt'>
-            <a href="javascript:$.fn.zato.outgoing.zmq.create()">Create a new outgoing ZeroMQ connection</a>
+            <a href="javascript:$.fn.zato.outgoing.stomp.create()">Create a new outgoing STOMP connection</a>
         </div>
 
 
@@ -71,9 +76,15 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Address</a></th>
-                        <th><a href="#">Socket type</a></th>
+                        <th><a href="#">Username</a></th>
+                        <th><a href="#">Protocol</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -86,16 +97,21 @@
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.address }}</td>
-                        <td>{{ item.socket_type }}</td>
-                        <td><a href="javascript:$.fn.zato.outgoing.zmq.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.outgoing.zmq.delete_('{{ item.id }}')">Delete</a></td>
+                        <td>{{ item.username|default:"<span class='form_hint'>(None)</span>" }}</td>
+                        <td>{{ item.proto_version }}</td>
+                        <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.stomp.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.outgoing.stomp.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.data_table.ping('{{ item.id }}')">Ping</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.timeout }}</td>
+                        <td class='ignore'>{{ item.username|default:"" }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='9'>No results</td>
+                        <td colspan='15'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -106,8 +122,9 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url out-zmq-create %}" method="post" id="create-form">
+                <form action="{% url out-stomp-create %}" method="post" id="create-form">
                     <table class="form-data">
+
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ create_form.name }}</td>
@@ -124,8 +141,20 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Socket type</td>
-                            <td>{{ create_form.socket_type }}</td>
+                            <td style="vertical-align:middle">Username</td>
+                            <td>{{ create_form.username }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Protocol</td>
+                            <td>{{ create_form.proto_version }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Timeout
+                            <span class="form_hint">(s)</span>
+                            </td>
+                            <td>{{ create_form.timeout }}</td>
                         </tr>
 
                         <tr>
@@ -142,8 +171,9 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url out-zmq-edit %}" method="post" id="edit-form">
+                <form action="{% url out-stomp-edit %}" method="post" id="edit-form">
                     <table class="form-data">
+
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ edit_form.name }}</td>
@@ -160,8 +190,20 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Socket type</td>
-                            <td>{{ edit_form.socket_type }}</td>
+                            <td style="vertical-align:middle">Username</td>
+                            <td>{{ edit_form.username }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Protocol</td>
+                            <td>{{ edit_form.proto_version }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Timeout
+                            <span class="form_hint">(s)</span>
+                            </td>
+                            <td>{{ edit_form.timeout }}</td>
                         </tr>
 
                         <tr>
@@ -170,15 +212,48 @@
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
                             </td>
                         </tr>
+
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
         </div>
+
+        <div id="change_password-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url out-stomp-change-password %}" method="post" id="change_password-form">
+                    <table class="form-data">
+                        <tr>
+                            <td style="vertical-align:middle">Name</td>
+                            <td id="change-password-name"></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Password</td>
+                            <td>{{ change_password_form.password1 }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Confirm password</td>
+                            <td>{{ change_password_form.password2 }}
+                                <input type="hidden" id="id_change_password-id" name="id" />
+                                <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                </form>
+            </div>
+        </div>
+
     {% endif %}
 
 
 {% endif %}{% comment %}not zato_clusters{% endcomment %}
 
 {% endblock %}
+stomp

@@ -101,53 +101,44 @@ class SECURITY(Constants):
     WSS_DELETE = ValueConstant('')
     WSS_CHANGE_PASSWORD = ValueConstant('')
 
-    # New in 2.0
     OAUTH_CREATE = ValueConstant('')
     OAUTH_EDIT = ValueConstant('')
     OAUTH_DELETE = ValueConstant('')
     OAUTH_CHANGE_PASSWORD = ValueConstant('')
 
-    # New in 2.0
     NTLM_CREATE = ValueConstant('')
     NTLM_EDIT = ValueConstant('')
     NTLM_DELETE = ValueConstant('')
     NTLM_CHANGE_PASSWORD = ValueConstant('')
 
-    # New in 2.0
     AWS_CREATE = ValueConstant('')
     AWS_EDIT = ValueConstant('')
     AWS_DELETE = ValueConstant('')
     AWS_CHANGE_PASSWORD = ValueConstant('')
 
-    # New in 2.0
     OPENSTACK_CREATE = ValueConstant('')
     OPENSTACK_EDIT = ValueConstant('')
     OPENSTACK_DELETE = ValueConstant('')
     OPENSTACK_CHANGE_PASSWORD = ValueConstant('')
 
-    # New in 2.0
     APIKEY_CREATE = ValueConstant('')
     APIKEY_EDIT = ValueConstant('')
     APIKEY_DELETE = ValueConstant('')
     APIKEY_CHANGE_PASSWORD = ValueConstant('')
 
-    # New in 2.0
     XPATH_SEC_CREATE = ValueConstant('')
     XPATH_SEC_EDIT = ValueConstant('')
     XPATH_SEC_DELETE = ValueConstant('')
     XPATH_SEC_CHANGE_PASSWORD = ValueConstant('')
 
-    # New in 2.0
     TLS_CA_CERT_CREATE = ValueConstant('')
     TLS_CA_CERT_EDIT = ValueConstant('')
     TLS_CA_CERT_DELETE = ValueConstant('')
 
-    # New in 2.0
     TLS_CHANNEL_SEC_CREATE = ValueConstant('')
     TLS_CHANNEL_SEC_EDIT = ValueConstant('')
     TLS_CHANNEL_SEC_DELETE = ValueConstant('')
 
-    # New in 2.0
     TLS_KEY_CERT_CREATE = ValueConstant('')
     TLS_KEY_CERT_EDIT = ValueConstant('')
     TLS_KEY_CERT_DELETE = ValueConstant('')
@@ -168,7 +159,6 @@ class DEFINITION(Constants):
     ZMQ_EDIT = ValueConstant('')
     ZMQ_DELETE = ValueConstant('')
 
-    # New in 2.0
     CASSANDRA_CREATE = ValueConstant('')
     CASSANDRA_EDIT = ValueConstant('')
     CASSANDRA_DELETE = ValueConstant('')
@@ -208,6 +198,11 @@ class OUTGOING(Constants):
     ODOO_DELETE = ValueConstant('')
     ODOO_CHANGE_PASSWORD = ValueConstant('')
 
+    STOMP_CREATE = ValueConstant('')
+    STOMP_EDIT = ValueConstant('')
+    STOMP_DELETE = ValueConstant('')
+    STOMP_CHANGE_PASSWORD = ValueConstant('')
+
 class CHANNEL(Constants):
     code_start = 101000
 
@@ -228,10 +223,15 @@ class CHANNEL(Constants):
 
     HTTP_SOAP_CREATE_EDIT = ValueConstant('') # Same for creating and updating
     HTTP_SOAP_DELETE = ValueConstant('')
-    HTTP_SOAP_AUDIT_RESPONSE = ValueConstant('') # New in 2.0
-    HTTP_SOAP_AUDIT_PATTERNS = ValueConstant('') # New in 2.0
-    HTTP_SOAP_AUDIT_STATE = ValueConstant('') # New in 2.0
-    HTTP_SOAP_AUDIT_CONFIG = ValueConstant('') # New in 2.0
+    HTTP_SOAP_AUDIT_RESPONSE = ValueConstant('')
+    HTTP_SOAP_AUDIT_PATTERNS = ValueConstant('')
+    HTTP_SOAP_AUDIT_STATE = ValueConstant('')
+    HTTP_SOAP_AUDIT_CONFIG = ValueConstant('')
+
+    STOMP_CREATE = ValueConstant('')
+    STOMP_EDIT = ValueConstant('')
+    STOMP_DELETE = ValueConstant('')
+    STOMP_CHANGE_PASSWORD = ValueConstant('')
 
 class AMQP_CONNECTOR(Constants):
     code_start = 101200
@@ -262,7 +262,7 @@ class HOT_DEPLOY(Constants):
     code_start = 102200
     CREATE = ValueConstant('')
 
-    # New in 2.0
+
     AFTER_DEPLOY = ValueConstant('')
 
 class SINGLETON(Constants):
@@ -272,7 +272,6 @@ class SINGLETON(Constants):
 class MSG_NS(Constants):
     code_start = 102600
 
-    # New in 2.0
     CREATE = ValueConstant('')
     EDIT = ValueConstant('')
     DELETE = ValueConstant('')
@@ -280,7 +279,6 @@ class MSG_NS(Constants):
 class MSG_XPATH(Constants):
     code_start = 102800
 
-    # New in 2.0
     CREATE = ValueConstant('')
     EDIT = ValueConstant('')
     DELETE = ValueConstant('')
@@ -288,7 +286,6 @@ class MSG_XPATH(Constants):
 class MSG_JSON_POINTER(Constants):
     code_start = 103000
 
-    # New in 2.0
     CREATE = ValueConstant('')
     EDIT = ValueConstant('')
     DELETE = ValueConstant('')
@@ -296,7 +293,6 @@ class MSG_JSON_POINTER(Constants):
 class PUB_SUB_TOPIC(Constants):
     code_start = 103200
 
-    # New in 2.0
     CREATE = ValueConstant('')
     EDIT = ValueConstant('')
     DELETE = ValueConstant('')
@@ -306,7 +302,6 @@ class PUB_SUB_TOPIC(Constants):
 class PUB_SUB_PRODUCER(Constants):
     code_start = 103400
 
-    # New in 2.0
     CREATE = ValueConstant('')
     EDIT = ValueConstant('')
     DELETE = ValueConstant('')
@@ -314,7 +309,6 @@ class PUB_SUB_PRODUCER(Constants):
 class PUB_SUB_CONSUMER(Constants):
     code_start = 103600
 
-    # New in 2.0
     CREATE = ValueConstant('')
     EDIT = ValueConstant('')
     DELETE = ValueConstant('')
@@ -322,18 +316,15 @@ class PUB_SUB_CONSUMER(Constants):
 class CLOUD(Constants):
     code_start = 103800
 
-    # New in 2.0
     OPENSTACK_SWIFT_CREATE_EDIT = ValueConstant('')
     OPENSTACK_SWIFT_DELETE = ValueConstant('')
 
-    # New in 2.0
     AWS_S3_CREATE_EDIT = ValueConstant('')
     AWS_S3_DELETE = ValueConstant('')
 
 class NOTIF(Constants):
     code_start = 104000
 
-    # New in 2.0
     RUN_NOTIFIER = ValueConstant('')
 
     CLOUD_OPENSTACK_SWIFT_CREATE_EDIT = ValueConstant('')
@@ -345,14 +336,15 @@ class NOTIF(Constants):
 
 class SEARCH(Constants):
     code_start = 104200
+    CREATE = ValueConstant('')
+    EDIT = ValueConstant('')
+    DELETE = ValueConstant('')
 
-    # New in 2.0
     ES_CREATE = ValueConstant('')
     ES_EDIT = ValueConstant('')
     ES_DELETE = ValueConstant('')
     ES_CHANGE_PASSWORD = ValueConstant('')
 
-    # New in 2.0
     SOLR_CREATE = ValueConstant('')
     SOLR_EDIT = ValueConstant('')
     SOLR_DELETE = ValueConstant('')
@@ -369,13 +361,11 @@ class QUERY(Constants):
 class EMAIL(Constants):
     code_start = 104800
 
-    # New in 2.0
     SMTP_CREATE = ValueConstant('')
     SMTP_EDIT = ValueConstant('')
     SMTP_DELETE = ValueConstant('')
     SMTP_CHANGE_PASSWORD = ValueConstant('')
 
-    # New in 2.0
     IMAP_CREATE = ValueConstant('')
     IMAP_EDIT = ValueConstant('')
     IMAP_DELETE = ValueConstant('')
@@ -384,21 +374,17 @@ class EMAIL(Constants):
 class RBAC(Constants):
     code_start = 105200
 
-    # New in 2.0
     ROLE_CREATE = ValueConstant('')
     ROLE_EDIT = ValueConstant('')
     ROLE_DELETE = ValueConstant('')
 
-    # New in 2.0
     CLIENT_ROLE_CREATE = ValueConstant('')
     CLIENT_ROLE_DELETE = ValueConstant('')
 
-    # New in 2.0
     PERMISSION_CREATE = ValueConstant('')
     PERMISSION_EDIT = ValueConstant('')
     PERMISSION_DELETE = ValueConstant('')
 
-    # New in 2.0
     ROLE_PERMISSION_CREATE = ValueConstant('')
     ROLE_PERMISSION_EDIT = ValueConstant('')
     ROLE_PERMISSION_DELETE = ValueConstant('')
