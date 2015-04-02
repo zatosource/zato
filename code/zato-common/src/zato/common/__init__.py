@@ -202,7 +202,7 @@ ZATO_ODB_POOL_NAME = 'ZATO_ODB'
 SOAP_VERSIONS = ('1.1', '1.2')
 SOAP_CHANNEL_VERSIONS = ('1.1',)
 
-    
+
 class SEARCH:
     class ES:
         class DEFAULTS(Constants):
@@ -715,6 +715,13 @@ class STOMP:
         TIMEOUT = 10 # In seconds
         USERNAME = 'guest'
         ACK_MODE = 'client-individual'
+
+CONTENT_TYPE = Bunch(
+    JSON = 'application/json',
+    PLAIN_XML = 'application/xml',
+    SOAP11 = 'application/xml',
+    SOAP12 = 'application/soap+xml; charset=utf-8',
+)
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

@@ -19,15 +19,15 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts
-from zato.common import SERVER_JOIN_STATUS
+from zato.common import CONTENT_TYPE, SERVER_JOIN_STATUS
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
 from zato.common.util import encrypt
 
 server_conf_template = """[main]
-gunicorn_bind=localhost:{port}
+gunicorn_bind=localhost:{{port}}
 gunicorn_worker_class=gevent
-gunicorn_workers={gunicorn_workers}
+gunicorn_workers={{gunicorn_workers}}
 gunicorn_timeout=240
 gunicorn_user=
 gunicorn_group=
@@ -37,7 +37,7 @@ gunicorn_logger_class=
 deployment_lock_expires=1073741824 # 2 ** 30 seconds ≅ 34 years
 deployment_lock_timeout=180
 
-token={token}
+token={{token}}
 service_sources=./service-sources.txt
 
 [crypto]
@@ -51,14 +51,14 @@ cert_location=zato-server-cert.pem
 ca_certs_location=zato-server-ca-certs.pem
 
 [odb]
-db_name={odb_db_name}
-engine={odb_engine}
+db_name={{odb_db_name}}
+engine={{odb_engine}}
 extra=
-host={odb_host}
-port={odb_port}
-password={odb_password}
-pool_size={odb_pool_size}
-username={odb_user}
+host={{odb_host}}
+port={{odb_port}}
+password={{odb_password}}
+pool_size={{odb_pool_size}}
+username={{odb_user}}
 use_async_driver=True
 
 [hot_deploy]
@@ -101,8 +101,8 @@ context_class=zato.server.spring_context.ZatoContext
 [misc]
 return_internal_objects=False
 internal_services_may_be_deleted=False
-initial_cluster_name={initial_cluster_name}
-initial_server_name={initial_server_name}
+initial_cluster_name={{initial_cluster_name}}
+initial_server_name={{initial_server_name}}
 queue_build_cap=30 # All queue-based connections need to initialize in that many seconds
 http_proxy=
 locale=
@@ -116,10 +116,10 @@ use_soap_envelope=True
 expire_after=168 # In hours, 168 = 7 days = 1 week
 
 [kvdb]
-host={kvdb_host}
-port={kvdb_port}
+host={{kvdb_host}}
+port={{kvdb_port}}
 unix_socket_path=
-password={kvdb_password}
+password={{kvdb_password}}
 db=0
 socket_timeout=
 charset=
@@ -179,9 +179,15 @@ custom_auth_list_service=
 stats=True
 slow_response=True
 
+[content_type]
+json = {JSON}
+plain_xml = {PLAIN_XML}
+soap11 = {SOAP11}
+soap12 = {SOAP12}
+
 [os_environ]
 sample_key=sample_value
-""".encode('utf-8')
+""".format(**CONTENT_TYPE).encode('utf-8')
 
 service_sources_contents = """# Visit https://zato.io/docs for more information.
 

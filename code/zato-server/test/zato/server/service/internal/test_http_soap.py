@@ -44,7 +44,7 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.output_optional, ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 
             'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type', 'timeout',
-            'sec_tls_ca_cert_id', Bool('has_rbac')))
+            'sec_tls_ca_cert_id', Bool('has_rbac'), 'content_type'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
 
@@ -76,7 +76,7 @@ class CreateTestCase(ServiceTestCase):
         self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path'))
         self.assertEquals(self.sio.input_optional, ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 'host', 
             'ping_method', 'pool_size', ForceTypeWrapper(Bool('merge_url_params_req')), 'url_params_pri', 'params_pri',
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', ForceTypeWrapper(Bool('has_rbac'))))
+            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', ForceTypeWrapper(Bool('has_rbac')), 'content_type'))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
@@ -97,7 +97,7 @@ class EditTestCase(ServiceTestCase):
         return ({'cluster_id':rand_int(), 'name':rand_string(), 'is_active':rand_bool(), 'connection':rand_string(),
                  'transport':rand_string(), 'url_path':rand_string(), 'service':rand_string(), 'security':rand_string(),
                  'security_id':rand_int(), 'method':rand_string(), 'soap_action':rand_string(), 'soap_version':rand_string(),
-                 'data_format':rand_string(), 'host':rand_string()}
+                 'data_format':rand_string(), 'host':rand_string(), 'content_type':rand_string()}
                 )
 
     def get_response_data(self):
@@ -109,7 +109,8 @@ class EditTestCase(ServiceTestCase):
         self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path'))
         self.assertEquals(self.sio.input_optional, ('service', 'security_id', 'method', 'soap_action', 'soap_version',
             'data_format', 'host', 'ping_method', 'pool_size', ForceTypeWrapper(Bool('merge_url_params_req')), 'url_params_pri',
-            'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', ForceTypeWrapper(Bool('has_rbac')))) 
+            'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', ForceTypeWrapper(Bool('has_rbac')),
+            'content_type')) 
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
