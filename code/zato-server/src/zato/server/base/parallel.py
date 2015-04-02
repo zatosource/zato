@@ -632,6 +632,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # Signal to ODB that we are done with deploying everything
         self.odb.on_deployment_finished()
 
+        # Default content type
+        self.json_content_type = self.fs_server_config.content_type.json
+        self.plain_xml_content_type = self.fs_server_config.content_type.plain_xml
+        self.soap11_content_type = self.fs_server_config.content_type.soap11
+        self.soap12_content_type = self.fs_server_config.content_type.soap12
+
     def init_connectors(self):
         """ Starts all the connector subprocesses.
         """
