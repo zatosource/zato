@@ -27,7 +27,8 @@ import requests
 from requests.exceptions import Timeout as RequestsTimeout
 
 # Zato
-from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, TimeoutException, URL_TYPE, ZATO_NONE
+from zato.common import CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, TimeoutException, \
+     URL_TYPE, ZATO_NONE
 from zato.common.util import get_component_name
 from zato.server.connection.queue import ConnectionQueue
 
@@ -57,6 +58,7 @@ class BaseHTTPSOAPWrapper(object):
         self.https_adapter = HTTPSAdapter()
         self.session.mount('https://', self.https_adapter)
         self._component_name = get_component_name()
+        self.default_content_type = self.get_default_content_type()
 
         self.address = None
         self.path_params = []
@@ -109,15 +111,49 @@ class BaseHTTPSOAPWrapper(object):
 
         return value
 
-    def _create_headers(self, cid, user_headers):
+    def get_default_content_type(self):
+
+        if self.config['content_type']:
+            return self.config['content_type']
+
+        # Set content type only if we know the data format
+        if self.config['data_format']:
+
+            # Not SOAP
+            if self.config['transport'] == URL_TYPE.PLAIN_HTTP:
+
+                # JSON
+                if self.config['data_format'] == DATA_FORMAT.JSON:
+                    return CONTENT_TYPE.JSON
+
+                # Plain XML
+                elif self.config['data_format'] == DATA_FORMAT.XML:
+                    return CONTENT_TYPE.PLAIN_XML
+
+            # SOAP
+            elif self.config['transport'] == URL_TYPE.SOAP:
+
+                # SOAP 1.1
+                if self.config['soap_version'] == '1.1':
+                    return CONTENT_TYPE.SOAP11
+
+                # SOAP 1.2
+                elif self.config['soap_version'] == '1.2':
+                    return CONTENT_TYPE.SOAP12
+
+    def _create_headers(self, cid, user_headers, now=None):
         headers = {
             'X-Zato-CID': cid,
-            'X-Zato-Component':self._component_name,
-            'X-Zato-Msg-TS':datetime.utcnow().isoformat(),
+            'X-Zato-Component': self._component_name,
+            'X-Zato-Msg-TS': now or datetime.utcnow().isoformat(),
             }
 
         if self.config.get('transport') == URL_TYPE.SOAP:
             headers['SOAPAction'] = self.config.get('soap_action')
+
+        content_type = user_headers.pop('Content-Type', self.default_content_type)
+        if content_type:
+            headers['Content-Type'] = content_type
 
         headers.update(user_headers)
 

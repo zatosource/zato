@@ -74,6 +74,7 @@
                 'ping_method',
                 'pool_size',
                 'serialization_type',
+                'content_type',
             {% endifequal %}
 
             {% ifequal connection 'channel' %}
@@ -111,7 +112,7 @@
         Choose a cluster to manage {{ transport_label }} {{ connection_label_plural }}
     {% endif %}
 
-    <form action="." method="get">
+    <form action="." method="get" id="main_page_form">
         {{ choose_cluster_form.cluster }}
         {{ choose_cluster_form.connection }}
         {{ choose_cluster_form.transport }}
@@ -119,6 +120,7 @@
     </form>
     </div>
 
+    {% include "zato/auto-submit.html" %}
 
     {% if cluster_id %}
         <div class='page_prompt'>
@@ -161,6 +163,7 @@
                         <th class='ignore'>&nbsp;</th>
 
                         {% ifequal connection 'outgoing' %}
+                            <th class='ignore'>&nbsp;</th>
                             <th class='ignore'>&nbsp;</th>
                             <th class='ignore'>&nbsp;</th>
                             <th class='ignore'>&nbsp;</th>
@@ -232,6 +235,7 @@
                             <td class='ignore'>{{ item.ping_method }}</td>
                             <td class='ignore'>{{ item.pool_size }}</td>
                             <td class='ignore'>{{ item.serialization_type }}</td>
+                            <td class='ignore'>{{ item.content_type }}</td>
                         {% endifequal %}
 
                         {% ifequal connection 'channel' %}
@@ -359,6 +363,11 @@
                             <span class="form_hint">default: {{ default_http_timeout }} </span>
                             </td>
                             <td>{{ create_form.timeout }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Content type</td>
+                            <td>{{ create_form.content_type }}</td>
                         </tr>
 
                         {% ifequal transport 'soap' %}
@@ -500,6 +509,11 @@
                             <span class="form_hint">default: {{ default_http_timeout }} </span>
                             </td>
                             <td>{{ edit_form.timeout }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Content type</td>
+                            <td>{{ edit_form.content_type }}</td>
                         </tr>
 
                         {% ifequal transport 'soap' %}

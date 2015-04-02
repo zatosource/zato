@@ -83,6 +83,7 @@ def _get_edit_create_message(params, prefix=''):
         'sec_tls_ca_cert_id': params.get(prefix + 'sec_tls_ca_cert_id'),
         'security_id': security_id,
         'has_rbac': bool(params.get(prefix + 'has_rbac')),
+        'content_type': params.get(prefix + 'content_type'),
     }
 
 def _edit_create_response(id, verb, transport, connection, name):
@@ -162,7 +163,7 @@ def index(req):
                     item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri,
                     item.serialization_type, item.timeout, item.sec_tls_ca_cert_id, service_id=item.service_id,
                     service_name=item.service_name, security_id=security_id, has_rbac=item.has_rbac,
-                    security_name=security_name)
+                    security_name=security_name, content_type=item.content_type)
             items.append(item)
 
     return_data = {'zato_clusters':req.zato.clusters,

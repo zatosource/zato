@@ -1,0 +1,12 @@
+    {% if choose_cluster_form.zato_auto_submit %}
+    <script>
+        if(!$(document).getUrlParam('cluster')) {
+
+            {% if pattern_hint %}
+                $("#id_name_filter").val("*");
+            {% endif %}
+
+            $("#main_page_form").submit();
+        }
+    </script>
+    {% endif %}
