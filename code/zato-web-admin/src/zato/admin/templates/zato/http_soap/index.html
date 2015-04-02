@@ -74,6 +74,7 @@
                 'ping_method',
                 'pool_size',
                 'serialization_type',
+                'content_type',
             {% endifequal %}
 
             {% ifequal connection 'channel' %}
@@ -165,6 +166,7 @@
                             <th class='ignore'>&nbsp;</th>
                             <th class='ignore'>&nbsp;</th>
                             <th class='ignore'>&nbsp;</th>
+                            <th class='ignore'>&nbsp;</th>
                         {% endifequal %}
 
                         {% ifequal connection 'channel' %}
@@ -233,6 +235,7 @@
                             <td class='ignore'>{{ item.ping_method }}</td>
                             <td class='ignore'>{{ item.pool_size }}</td>
                             <td class='ignore'>{{ item.serialization_type }}</td>
+                            <td class='ignore'>{{ item.content_type }}</td>
                         {% endifequal %}
 
                         {% ifequal connection 'channel' %}
@@ -360,6 +363,11 @@
                             <span class="form_hint">default: {{ default_http_timeout }} </span>
                             </td>
                             <td>{{ create_form.timeout }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Content type</td>
+                            <td>{{ create_form.content_type }}</td>
                         </tr>
 
                         {% ifequal transport 'soap' %}
@@ -501,6 +509,11 @@
                             <span class="form_hint">default: {{ default_http_timeout }} </span>
                             </td>
                             <td>{{ edit_form.timeout }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Content type</td>
+                            <td>{{ edit_form.content_type }}</td>
                         </tr>
 
                         {% ifequal transport 'soap' %}
