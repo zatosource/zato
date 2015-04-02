@@ -45,6 +45,8 @@ class CassandraConnStore(BaseConnPoolStore):
     """
     conn_name = 'Cassandra'
     dispatcher_events = [DEFINITION.CASSANDRA_DELETE, DEFINITION.CASSANDRA_EDIT]
+    delete_event = DEFINITION.CASSANDRA_DELETE
+    dispatcher_listen_for = DEFINITION
 
 # ################################################################################################################################
 
@@ -69,41 +71,9 @@ class CassandraConnStore(BaseConnPoolStore):
 
 # ################################################################################################################################
 
-    def delete_session(self, name):
-        """ Deletes a connection session. Must be called with self.lock held.
+    def delete_session_hook(self, session):
+        """ Closes our underlying session.
         """
-        session = self.sessions.get(name)
-        if session:
-            try:
-                self.keep_connecting.remove(session.config.id)
-            except KeyError:
-                pass # It's OK, no ongoing connection attempt at the moment
-
-            session.conn.shutdown()
-
-        logger.debug('Could not delete session `%s` - not among `%s`', name, self.sessions)
-
-# ################################################################################################################################
-
-    def on_dispatcher_events(self, events):
-        """ Handles in-process dispatcher events. If it's a DELETE, the connection is removed
-        from a list of connections to be established. If an EDIT, the connection's config is updated.
-        In either case all subsequent dispatcher events are discarded.
-        """
-        # Only check the latest event
-        event = events[-1]
-        is_delete = event.event_info.event == DEFINITION.CASSANDRA_DELETE
-
-        if is_delete:
-            self.keep_connecting.remove(event.item.config.id)
-        else:
-            new_config = event.event_info.ctx
-
-        # We always delete all the events because we processed the last one anyway
-        for event in events:
-            self.dispatcher_backlog.remove(event.event_info)
-
-        # Stop connecting if we have just been deleted
-        return (False, None) if is_delete else (True, new_config)
+        session.conn.shutdown()
 
 # ################################################################################################################################

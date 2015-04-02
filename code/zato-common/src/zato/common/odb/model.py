@@ -23,7 +23,7 @@ from sqlalchemy.orm import backref, relationship
 
 # Zato
 from zato.common import CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, MSG_PATTERN_TYPE, \
-     ODOO, PUB_SUB, SCHEDULER, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
+     ODOO, PUB_SUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -932,6 +932,26 @@ class OutgoingOdoo(Base):
     def __init__(self):
         self.protocol_name = None # Not used by the DB
 
+class OutgoingSTOMP(Base):
+    """ An outgoing STOMP connection.
+    """
+    __tablename__ = 'out_stomp'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('out_stomp_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    username = Column(String(200), nullable=True, server_default=STOMP.DEFAULT.USERNAME)
+    password = Column(String(200), nullable=True)
+
+    address = Column(String(200), nullable=False, server_default=STOMP.DEFAULT.ADDRESS)
+    proto_version = Column(String(20), nullable=False, server_default=STOMP.DEFAULT.PROTOCOL)
+    timeout = Column(Integer(), nullable=False, server_default=str(STOMP.DEFAULT.TIMEOUT))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('out_conns_stomp', order_by=name, cascade='all, delete, delete-orphan'))
+
 class OutgoingWMQ(Base):
     """ An outgoing WebSphere MQ connection.
     """
@@ -1020,6 +1040,30 @@ class ChannelAMQP(Base):
         self.def_name = def_name # Not used by the DB
         self.service_name = service_name # Not used by the DB
         self.data_format = data_format
+
+class ChannelSTOMP(Base):
+    """ An incoming STOMP connection.
+    """
+    __tablename__ = 'channel_stomp'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('channel_stomp_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    username = Column(String(200), nullable=True, server_default=STOMP.DEFAULT.USERNAME)
+    password = Column(String(200), nullable=True)
+
+    address = Column(String(200), nullable=False, server_default=STOMP.DEFAULT.ADDRESS)
+    proto_version = Column(String(20), nullable=False, server_default=STOMP.DEFAULT.PROTOCOL)
+    timeout = Column(Integer(), nullable=False, server_default=str(STOMP.DEFAULT.TIMEOUT))
+    sub_to = Column(Text, nullable=False)
+
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
+    service = relationship(Service, backref=backref('channels_stomp', order_by=name, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('channels_stomp', order_by=name, cascade='all, delete, delete-orphan'))
 
 class ChannelWMQ(Base):
     """ An incoming WebSphere MQ connection.

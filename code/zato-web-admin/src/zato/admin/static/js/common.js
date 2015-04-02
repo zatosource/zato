@@ -52,6 +52,7 @@ $.namespace('zato.account.basic_settings');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.jms_wmq');
+$.namespace('zato.channel.stomp');
 $.namespace('zato.channel.zmq');
 $.namespace('zato.cloud');
 $.namespace('zato.cloud.aws');
@@ -93,6 +94,7 @@ $.namespace('zato.outgoing.ftp');
 $.namespace('zato.outgoing.jms_wmq');
 $.namespace('zato.outgoing.odoo');
 $.namespace('zato.outgoing.sql');
+$.namespace('zato.outgoing.stomp');
 $.namespace('zato.outgoing.zmq');
 $.namespace('zato.pattern.delivery');
 $.namespace('zato.pattern.delivery.in_doubt');
@@ -313,10 +315,15 @@ $.fn.zato.data_table.parse = function() {
     $.each(rows, function(row_idx, row) {
         var instance = new $.fn.zato.data_table.class_()
         var tds = $(row).find('td');
+
+        console.log('columns = ' + columns);
+
         $.each(tds, function(td_idx, td) {
 
             var attr_name = columns[td_idx];
             var attr_value = $(td).text().trim();
+
+            console.log('td_idx, attr_name = ' + td_idx + ' ' + attr_name);
 
             // Don't bother with ignored attributes.
             if(attr_name[0] != '_') {
