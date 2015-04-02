@@ -111,7 +111,7 @@
         Choose a cluster to manage {{ transport_label }} {{ connection_label_plural }}
     {% endif %}
 
-    <form action="." method="get">
+    <form action="." method="get" id="main_page_form">
         {{ choose_cluster_form.cluster }}
         {{ choose_cluster_form.connection }}
         {{ choose_cluster_form.transport }}
@@ -119,6 +119,7 @@
     </form>
     </div>
 
+    {% include "zato/auto-submit.html" %}
 
     {% if cluster_id %}
         <div class='page_prompt'>
