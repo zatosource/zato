@@ -454,47 +454,24 @@ class HTTPSOAP(Base):
     soap_version = Column(String(20), nullable=True)
 
     data_format = Column(String(20), nullable=True)
+    content_type = Column(String(200), nullable=True)
 
-    # New in 2.0
     ping_method = Column(String(60), nullable=True)
-
-    # New in 2.0
     pool_size = Column(Integer, nullable=True)
-
-    # New in 2.0
-    merge_url_params_req = Column(Boolean, nullable=True, default=True)
-
-    # New in 2.0
-    url_params_pri = Column(String(200), nullable=True, default=URL_PARAMS_PRIORITY.DEFAULT)
-
-    # New in 2.0
-    params_pri = Column(String(200), nullable=True, default=PARAMS_PRIORITY.DEFAULT)
-    
-    # New in 2.0
-    audit_enabled = Column(Boolean, nullable=False, default=False)
-    
-    # New in 2.0
-    audit_back_log = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_BACK_LOG)
-    
-    # New in 2.0
-    audit_max_payload = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_MAX_PAYLOAD)
-    
-    # New in 2.0
-    audit_repl_patt_type = Column(String(200), nullable=False, default=MSG_PATTERN_TYPE.JSON_POINTER.id)
-
-    # New in 2.0
     serialization_type = Column(String(200), nullable=False, default=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id)
-
-    # New in 2.0
     timeout = Column(Integer(), nullable=False, default=MISC.DEFAULT_HTTP_TIMEOUT)
 
-    # New in 2.0
+    merge_url_params_req = Column(Boolean, nullable=True, default=True)
+    url_params_pri = Column(String(200), nullable=True, default=URL_PARAMS_PRIORITY.DEFAULT)
+    params_pri = Column(String(200), nullable=True, default=PARAMS_PRIORITY.DEFAULT)
+
+    audit_enabled = Column(Boolean, nullable=False, default=False)
+    audit_back_log = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_BACK_LOG)
+    audit_max_payload = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_MAX_PAYLOAD)
+    audit_repl_patt_type = Column(String(200), nullable=False, default=MSG_PATTERN_TYPE.JSON_POINTER.id)
+
     sec_tls_ca_cert_id = Column(Integer, ForeignKey('sec_tls_ca_cert.id', ondelete='CASCADE'), nullable=True)
-
-    # New in 2.0
     sec_tls_ca_cert = relationship('TLSCACert', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
-
-    # New in 2.0
     has_rbac = Column(Boolean, nullable=False, default=False)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
@@ -510,7 +487,7 @@ class HTTPSOAP(Base):
                  url_path=None, method=None, soap_action=None, soap_version=None, data_format=None, ping_method=None,
                  pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None, \
                  timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None, \
-                 cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None):
+                 cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None, content_type=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -540,6 +517,7 @@ class HTTPSOAP(Base):
         self.security_id = security_id
         self.has_rbac = has_rbac
         self.security_name = security_name
+        self.content_type = content_type
 
 # ################################################################################################################################
 

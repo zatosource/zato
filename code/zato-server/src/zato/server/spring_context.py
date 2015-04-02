@@ -151,25 +151,6 @@ class ZatoContext(PythonConfig):
         return KVDB()
 
     # #######################################################
-    # Channels
-
-    @Object
-    def soap11_content_type(self):
-        return 'application/xml'
-
-    @Object
-    def soap12_content_type(self):
-        return 'application/soap+xml; charset=utf-8' # We always require UTF-8
-
-    @Object
-    def plain_xml_content_type(self):
-        return 'application/xml'
-
-    @Object
-    def json_content_type(self):
-        return 'application/json'
-
-    # #######################################################
     # Servers
 
     @Object
@@ -182,10 +163,6 @@ class ZatoContext(PythonConfig):
         server.int_parameters = self.int_parameters()
         server.int_parameter_suffixes = self.int_parameter_suffixes()
         server.bool_parameter_prefixes = self.bool_parameter_prefixes()
-        server.soap11_content_type = self.soap11_content_type()
-        server.soap12_content_type = self.soap12_content_type()
-        server.plain_xml_content_type = self.plain_xml_content_type()
-        server.json_content_type = self.json_content_type()
         server.internal_service_modules = self.internal_service_modules()
         server.service_modules = self.service_modules()
         server.kvdb = self.kvdb()

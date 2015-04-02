@@ -1,5 +1,5 @@
     <div class="prompt">
-    <form action="." method="get" id="choose_cluster_form">
+    <form action="." method="get" id="main_page_form">
         {{ choose_cluster_form.cluster }}
 
         {% if pattern_hint %}
@@ -10,15 +10,4 @@
     </form>
     </div>
 
-    {% if choose_cluster_form.zato_auto_submit %}
-    <script>
-        if(!$(document).getUrlParam('cluster')) {
-
-            {% if pattern_hint %}
-                $("#id_name_filter").val("*");
-            {% endif %}
-
-            $("#choose_cluster_form").submit();
-        }
-    </script>
-    {% endif %}
+    {% include "zato/auto-submit.html" %}
