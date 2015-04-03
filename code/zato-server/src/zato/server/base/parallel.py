@@ -333,9 +333,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             self.singleton_server.initial_sleep_time = int(self.fs_server_config.singleton.initial_sleep_time) / 1000.0
             self.singleton_server.parallel_server = self
 
-            pickup_dir = self.fs_server_config.hot_deploy.pickup_dir
-            if not os.path.isabs(pickup_dir):
-                pickup_dir = os.path.join(self.repo_location, pickup_dir)
+            pickup_dir = []
+
+            for item in self.fs_server_config.hot_deploy.pickup_dir:
+                if not os.path.isabs(item):
+                    item = os.path.abspath(os.path.join(self.repo_location, item))
+                pickup_dir.append(item)
 
             self.singleton_server.pickup = get_pickup(self.has_gevent)
             self.singleton_server.pickup.pickup_dir = pickup_dir
