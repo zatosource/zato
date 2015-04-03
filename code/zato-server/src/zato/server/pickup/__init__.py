@@ -31,10 +31,9 @@ class BasePickupEventProcessor(ApplicationContextAware):
         """
         return is_python_file(event_name) or is_archive_file(event_name)
 
-    def hot_deploy(self, file_name):
+    def hot_deploy(self, full_path, file_name):
         return hot_deploy(
-            self.server.parallel_server, file_name,
-            os.path.abspath(os.path.join(self.pickup_dir, file_name)),
+            self.server.parallel_server, file_name, full_path,
             self.server.parallel_server.hot_deploy_config.delete_after_pick_up)
     
 class BasePickup(object):
