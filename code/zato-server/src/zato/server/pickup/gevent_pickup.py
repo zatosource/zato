@@ -26,10 +26,10 @@ __all__ = ['Pickup', 'PickupEventProcessor']
 logger = logging.getLogger(__name__)
 
 class PickupEventProcessor(BasePickupEventProcessor):
-    def process(self, full_path):
+    def process(self, full_path, event):
         logger.debug('IN_MODIFY full_path:`%s`', full_path)
         try:
-            self.hot_deploy(full_path)
+            self.hot_deploy(full_path, event.name)
         except(IOError, OSError), e:
             if e.errno == errno.ENOENT:
                 # It's OK, probably there is more than gunicorn worker and the other has already deleted
@@ -65,14 +65,11 @@ class Pickup(object):
             except IOError, e:
                 logger.warn('Caught IOError `%s`, name:`%s`', format_exc(e), name)
 
-        logger.warn(self.pickup_dir)
-        logger.warn(self.wd_to_name)
-
         while self.keep_running:
             try:
                 events = inotifyx.get_events(fd, 1.0)
                 for event in events:
-                    self.pickup_event_processor.process(os.path.join(self.wd_to_name[event.wd], event.name))
+                    self.pickup_event_processor.process(os.path.join(self.wd_to_name[event.wd], event.name), event)
 
                 sleep(0.1)
             except KeyboardInterrupt:
