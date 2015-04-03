@@ -335,7 +335,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
             pickup_dir = self.fs_server_config.hot_deploy.pickup_dir
             if not os.path.isabs(pickup_dir):
-                pickup_dir = os.path.join(self.repo_location, pickup_dir)
+                pickup_dir = os.path.abspath(os.path.join(self.repo_location, pickup_dir))
 
             self.singleton_server.pickup = get_pickup(self.has_gevent)
             self.singleton_server.pickup.pickup_dir = pickup_dir
