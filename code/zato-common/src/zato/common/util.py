@@ -95,7 +95,7 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
-from zato.common import DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, SECRET_SHADOW, SIMPLE_IO, soap_body_path, \
+from zato.common import DATA_FORMAT, KVDB, MISC, SECRET_SHADOW, SIMPLE_IO, soap_body_path, \
      soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
@@ -155,10 +155,12 @@ def encrypt(data, priv_key, b64=True):
     b64 - should the encrypted data be BASE64-encoded before being returned, defaults to True
     """
 
-    cm = CryptoManager(priv_key=priv_key)
-    cm.load_keys()
+    if data:
+        cm = CryptoManager(priv_key=priv_key)
+        cm.load_keys()
+        data = cm.encrypt(data, b64)
 
-    return cm.encrypt(data, b64)
+    return data
 
 def decrypt(data, priv_key, b64=True):
     """ Decrypts data using the given private key.
@@ -167,10 +169,12 @@ def decrypt(data, priv_key, b64=True):
     b64 - should the data be BASE64-decoded before being decrypted, defaults to True
     """
 
-    cm = CryptoManager(priv_key=priv_key)
-    cm.load_keys()
+    if data:
+        cm = CryptoManager(priv_key=priv_key)
+        cm.load_keys()
+        data = cm.decrypt(data, b64)
 
-    return cm.decrypt(data, b64)
+    return data
 
 def get_executable():
     """ Returns the wrapper buildout uses for executing Zato commands. This has
@@ -801,8 +805,16 @@ def get_full_stack():
     trc = 'Traceback (most recent call last):\n'
     stackstr = trc + ''.join(traceback.format_list(stack))
 
-    if not exc is None:
-        stackstr += '  ' + traceback.format_exc().decode('utf-8').lstrip(trc)
+    if exc is not None:
+        tb = traceback.format_exc()
+        try:
+            tb = tb.decode('utf-8')
+        except UnicodeDecodeError:
+            try:
+                tb = tb.decode('latin-1')
+            except UnicodeDecodeError:
+                tb = repr(tb)
+        stackstr += '  ' + tb.lstrip(trc)
 
     return stackstr
 
@@ -1207,15 +1219,23 @@ def get_engine_url(args):
             if value != ZATO_NOT_GIVEN:
                 attrs[cli_sa_mappings[name]] = value
 
-    # Re-map server ODB params into SQLAlchemy params
+    # Build database URL
+    engine_def = ['{engine}://']
     if attrs['engine'] == 'sqlite':
-        db_name = attrs.get('db_name')
-        sqlite_path = attrs.get('sqlite_path')
+        attrs['db_name'] = attrs.get('sqlite_path') or attrs.get('db_name') or 'zato.db'
+    else:
+        attrs['username'] = attrs.get('username') or attrs.get('db_name') or 'zato'
+        engine_def.append('{username}')
+        if attrs.get('password'):
+            engine_def.append(':{password}')
+        engine_def.append('@')
+        if not attrs.get('host'):
+            attrs['host'] = 'localhost'
+        engine_def.append('{host}')
+        if attrs.get('port'):
+            engine_def.append(':{port}')
+        attrs['db_name'] = attrs.get('db_name') or attrs.get('username')
+    engine_def.append('/{db_name}')
+    engine_def = ''.join(engine_def)
 
-        if db_name:
-            attrs['sqlite_path'] = db_name
-
-        if sqlite_path:
-            attrs['db_name'] = sqlite_path
-
-    return (engine_def_sqlite if is_sqlite else engine_def).format(**attrs)
+    return engine_def.format(**attrs)
