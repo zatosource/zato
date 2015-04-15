@@ -70,15 +70,18 @@ def config_from_string(data):
     config = Config()
 
     for line in data.split("\n"):
-        if zato_item_token in line:
-            value, config_token_name = line.split(zato_item_token)
-            value = value.strip()
+        if zato_item_token not in line:
+            continue
+        value, config_token_name = line.split(zato_item_token)
+        value = value.strip()
+        if value.startswith('#'):
+            continue
 
-            for token_name in config_tokens_grammar:
-                if config_token_name.startswith(token_name):
-                    result = config_tokens_grammar[token_name].parseString(value)
-                    config.set_value(token_name, result)
-    return config
+        for token_name in config_tokens_grammar:
+            if config_token_name.startswith(token_name):
+                result = config_tokens_grammar[token_name].parseString(value)
+                config.set_value(token_name, result)
+return config
 
 def string_from_config(config, config_template):
     """ Given a Config object and the current HAProxy configuration returns
