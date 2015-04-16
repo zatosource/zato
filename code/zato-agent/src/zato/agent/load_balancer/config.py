@@ -81,7 +81,7 @@ def config_from_string(data):
             if config_token_name.startswith(token_name):
                 result = config_tokens_grammar[token_name].parseString(value)
                 config.set_value(token_name, result)
-return config
+    return config
 
 def string_from_config(config, config_template):
     """ Given a Config object and the current HAProxy configuration returns
