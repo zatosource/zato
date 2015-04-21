@@ -68,6 +68,7 @@ class EnsureClusterWideSingleton(AdminService):
                     self.server.singleton_server.scheduler.delete(Bunch(name='zato.server.ensure-cluster-wide-singleton'))
                     self.server.init_connectors()
                     add_scheduler_jobs(self.server)
+                    self.server.singleton_server.init_notifiers()
 
                 else:
                     msg = 'Not becoming a cluster-wide singleton, cid:[{}], server id:[{}], name:[{}]'.format(
