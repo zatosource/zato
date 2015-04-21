@@ -19,6 +19,7 @@ from zato.bunch import Bunch
 # Zato
 from zato.common import ENSURE_SINGLETON_JOB
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER, SINGLETON
+from zato.common.util import invoke_startup_services
 from zato.server.base import BrokerMessageReceiver
 from zato.server.scheduler import Scheduler
 
@@ -106,6 +107,12 @@ class SingletonServer(BrokerMessageReceiver):
             self.scheduler.create_interval_based(job_data, MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL)
 
         return self.is_cluster_wide
+
+    def init_notifiers(self):
+
+        invoke_startup_services(
+            'Singleton', 'startup_services_first_worker', self.parallel_server.fs_server_config,
+            self.parallel_server.repo_location, None, 'zato.notif.init-notifiers', False, self.parallel_server.worker_store)
 
 ################################################################################
 

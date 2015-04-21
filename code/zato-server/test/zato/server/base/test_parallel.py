@@ -80,25 +80,25 @@ class ParallelServerTestCase(TestCase):
         class FakeBrokerClient(object):
             def __init__(self):
                 self.messages = {}
-                
+
             def invoke_async(self, msg):
                 self.messages[msg['service']] = msg
-                
+
         broker_client = FakeBrokerClient()
-        
+
         startup_services_any_worker = Bunch()
         for x in range(10):
             name =  rand_string()
             payload = rand_string()
             startup_services_any_worker[name] = payload
-        
+
         ps = ParallelServer()
         ps.broker_client = broker_client
         ps.fs_server_config = Bunch()
         ps.fs_server_config.startup_services_any_worker = startup_services_any_worker
-        
-        ps.invoke_startup_services('startup_services_any_worker')
-        
+
+        ps.invoke_startup_services(False)
+
         for expected_service, expected_payload in startup_services_any_worker.items():
             msg = Bunch(broker_client.messages[expected_service])
             eq_(msg.action, SERVICE.PUBLISH.value)

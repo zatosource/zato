@@ -86,8 +86,6 @@ import sqlalchemy as sa
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy import orm
 
-# SQLAlchemy
-
 # Texttable
 from texttable import Texttable
 
@@ -95,8 +93,9 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
-from zato.common import DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, SECRET_SHADOW, SIMPLE_IO, soap_body_path, \
+from zato.common import CHANNEL, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, SECRET_SHADOW, SIMPLE_IO, soap_body_path, \
      soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN
+from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.odb.query import _service as _service
@@ -1084,7 +1083,6 @@ def get_http_soap_channel(name, service, cluster, security):
 
 # ################################################################################################################################
 
-
 def get_engine(args):
     return sa.create_engine(get_engine_url(args))
 
@@ -1219,3 +1217,64 @@ def get_engine_url(args):
             attrs['db_name'] = sqlite_path
 
     return (engine_def_sqlite if is_sqlite else engine_def).format(**attrs)
+
+# ################################################################################################################################
+
+def startup_service_payload_from_path(name, value, repo_location):
+    """ Reads payload from a local file. Abstracted out to ease in testing.
+    """
+    orig_path = value.replace('file://', '')
+    if not os.path.isabs(orig_path):
+        path = os.path.normpath(os.path.join(repo_location, orig_path))
+    else:
+        path = orig_path
+
+    try:
+        payload = open(path).read()
+    except Exception, e:
+        logger.warn(
+            'Could not open payload path:`%s` `%s`, skipping startup service:`%s`, e:`%s`', orig_path, path, name, format_exc(e))
+    else:
+        return payload
+
+def invoke_startup_services(
+        source, key, fs_server_config, repo_location, broker_client=None, service_name=None, skip_include=True, worker_store=None):
+    """ Invoked when we are the first worker and we know we have a broker client and all the other config ready
+    so we can publish the request to execute startup services. In the worst case the requests will get back to us but it's
+    also possible that other workers are already running. In short, there is no guarantee that any server or worker in particular
+    will receive the requests, only that there will be exactly one.
+    """
+    for name, payload in fs_server_config.get(key, {}).items():
+
+        if service_name:
+
+            # We are to skip this service:
+            if skip_include:
+                if name == service_name:
+                    continue
+
+            # We are to include this service only, any other is rejected
+            else:
+                if name != service_name:
+                    continue
+
+        if payload.startswith('file://'):
+            payload = startup_service_payload_from_path(name, payload, repo_location)
+            if not payload:
+                continue
+
+        cid = new_cid()
+
+        msg = {}
+        msg['action'] = SERVICE.PUBLISH.value
+        msg['service'] = name
+        msg['payload'] = payload
+        msg['cid'] = cid
+        msg['channel'] = CHANNEL.STARTUP_SERVICE
+
+        if broker_client:
+            broker_client.invoke_async(msg)
+        else:
+            worker_store.on_message_invoke_service(msg, msg['channel'], msg['action'])
+
+# ################################################################################################################################

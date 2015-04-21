@@ -55,7 +55,8 @@ from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, KVDB, MISC, SERVER_JOIN_S
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
      JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
 from zato.common.pubsub import PubSubAPI, RedisPubSub
-from zato.common.util import add_scheduler_jobs, add_startup_jobs, get_kvdb_config_for_log, new_cid, StaticConfig, \
+from zato.common.util import add_scheduler_jobs, add_startup_jobs, get_kvdb_config_for_log, \
+     invoke_startup_services as _invoke_startup_services, new_cid, startup_service_payload_from_path, StaticConfig, \
      register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
@@ -111,6 +112,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.static_config = None
         self.component_enabled = Bunch()
         self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
+        self.broker_client = None
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -350,6 +352,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         return is_first
 
     def _after_init_accepted(self, server, deployment_key):
+
+        # Flag set to True if this worker is the cluster-wide singleton
+        is_singleton = False
 
         # Which components are enabled
         self.component_enabled.stats = asbool(self.fs_server_config.component_enabled.stats)
@@ -647,6 +652,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                     server.id, server.cluster_id, True):
                 self.init_connectors()
                 add_scheduler_jobs(self)
+                is_singleton = True
 
         # Signal to ODB that we are done with deploying everything
         self.odb.on_deployment_finished()
@@ -656,6 +662,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.plain_xml_content_type = self.fs_server_config.content_type.plain_xml
         self.soap11_content_type = self.fs_server_config.content_type.soap11
         self.soap12_content_type = self.fs_server_config.content_type.soap12
+
+        return is_singleton
+
 
     def init_connectors(self):
         """ Starts all the connector subprocesses.
@@ -751,51 +760,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         self.odb.token = self.config.odb_data.token
 
-    def _startup_service_payload_from_path(self, name, value, repo_location):
-        """ Reads payload from a local file. Abstracted out to ease in testing.
-        """
-        orig_path = value.replace('file://', '')
-        if not os.path.isabs(orig_path):
-            path = os.path.normpath(os.path.join(repo_location, orig_path))
-        else:
-            path = orig_path
-
-        try:
-            payload = open(path).read()
-        except Exception, e:
-            msg = 'Could not open payload path:[{}] [{}], skipping startup service:[{}], e:[{}]'.format(
-                orig_path, path, name, format_exc(e))
-            logger.warn(msg)
-        else:
-            return payload
-
-    def invoke_startup_services(self, key):
-        """ We are the first worker and we know we have a broker client and all the other config ready
-        so we can publish the request to execute startup services. In the worst
-        case the requests will get back to us but it's also possible that other
-        workers are already running. In short, there is no guarantee that any
-        server or worker in particular will receive the requests, only that there
-        will be exactly one.
-        """
-        for name, payload in self.fs_server_config.get(key, {}).items():
-            if payload.startswith('file://'):
-                payload = self._startup_service_payload_from_path(name, payload, self.repo_location)
-                if not payload:
-                    continue
-
-            cid = new_cid()
-
-            msg = {}
-            msg['action'] = SERVICE.PUBLISH.value
-            msg['service'] = name
-            msg['payload'] = payload
-            msg['cid'] = cid
-            msg['channel'] = CHANNEL.STARTUP_SERVICE
-
-            self.broker_client.invoke_async(msg)
-
     @staticmethod
     def start_server(parallel_server, zato_deployment_key=None):
+
+        # Will be set to True if this process is a singleton
+        is_singleton = False
 
         # Will be None if we are not running in background.
         if not zato_deployment_key:
@@ -823,7 +792,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # For now, all the servers are always ACCEPTED but future versions
         # might introduce more join states
         if server.last_join_status in(SERVER_JOIN_STATUS.ACCEPTED):
-            parallel_server._after_init_accepted(server, zato_deployment_key)
+            is_singleton = parallel_server._after_init_accepted(server, zato_deployment_key)
         else:
             msg = 'Server has not been accepted, last_join_status:[{0}]'
             logger.warn(msg.format(server.last_join_status))
@@ -850,7 +819,17 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True,
             parallel_server.host, parallel_server.port)
 
-        parallel_server.invoke_startup_services('startup_services_first_worker' if is_first else 'startup_services_any_worker')
+        if is_first:
+            parallel_server.invoke_startup_services(is_first)
+
+        # We cannot do it earlier because we need the broker client and everything be ready
+        if is_singleton:
+            parallel_server.singleton_server.init_notifiers()
+
+    def invoke_startup_services(self, is_first):
+        _invoke_startup_services(
+            'Parallel', 'startup_services_first_worker' if is_first else 'startup_services_any_worker',
+            self.fs_server_config, self.repo_location, self.broker_client, 'zato.notif.init-notifiers')
 
     @staticmethod
     def post_fork(arbiter, worker):
