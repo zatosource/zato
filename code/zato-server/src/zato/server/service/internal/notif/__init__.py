@@ -38,15 +38,6 @@ class InvokeRunNotifier(Service):
             'sql': 'zato.notif.sql.run-notifier',
         }
 
-        '''request = {
-            'payload': dumps(self.request.payload['config']),
-            'service': notif_type_service[self.request.payload['config']['notif_type']],
-            'target_server_token': self.server.fs_server_config.main.token,
-            'cid': new_cid(),
-            'data_format': DATA_FORMAT.JSON
-        }
-        '''
-
         spawn(self.invoke, notif_type_service[self.request.payload['config']['notif_type']], self.request.payload['config'])
 
 # ################################################################################################################################
