@@ -38,16 +38,16 @@ class InvokeRunNotifier(Service):
             'sql': 'zato.notif.sql.run-notifier',
         }
 
-        request = {
+        '''request = {
             'payload': dumps(self.request.payload['config']),
             'service': notif_type_service[self.request.payload['config']['notif_type']],
             'target_server_token': self.server.fs_server_config.main.token,
             'cid': new_cid(),
             'data_format': DATA_FORMAT.JSON
         }
+        '''
 
-        msg = {'action': NOTIF.RUN_NOTIFIER.value, 'request': dumps(request)}
-        self.broker_client.invoke_async(msg)
+        spawn(self.invoke, notif_type_service[self.request.payload['config']['notif_type']], self.request.payload['config'])
 
 # ################################################################################################################################
 
@@ -93,7 +93,7 @@ class NotifierService(AdminService):
 
         try:
 
-            # Grab a distributed lock so we are sure it is only us who connect to pull newest data.
+            # Grab a distributed lock so we are sure it is only us who connects to pull newest data.
             with self.lock('zato:lock:{}:{}'.format(self.notif_type, config.name)):
                 self.run_notifier_impl(config)
 
