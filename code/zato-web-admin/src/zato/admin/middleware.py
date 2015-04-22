@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from httplib import OK
+from json import loads
 
 # Django
 from django.core.urlresolvers import resolve
@@ -67,7 +68,8 @@ class Client(AnyServiceInvoker):
     def invoke(self, *args, **kwargs):
         response = super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarder_for}, **kwargs)
         if response.inner.status_code != OK:
-            raise Exception(response.inner.text)
+            zato_env = loads(response.inner.text).get('zato_env', {})
+            raise Exception('CID: {}\nDetails: {}'.format(zato_env.get('cid'), zato_env.get('details')))
         return response
 
     def invoke_async(self, *args, **kwargs):
