@@ -267,7 +267,7 @@ def source_info(req, service_name):
     if response.has_data:
         service.id = response.data.service_id
 
-        source = response.data.source.decode('base64') if response.data.source else ''
+        source = response.data.source.decode('base64').decode('utf-8') if response.data.source else ''
         if source:
             source_html = highlight(source, PythonLexer(stripnl=False), HtmlFormatter(linenos='table'))
 
