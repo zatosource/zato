@@ -212,7 +212,7 @@ class Ping(AdminService):
         request_elem = 'zato_outgoing_sql_ping_request'
         response_elem = 'zato_outgoing_sql_ping_response'
         input_required = ('id',)
-        output_required = ('response_time',)
+        output_optional = ('response_time',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
