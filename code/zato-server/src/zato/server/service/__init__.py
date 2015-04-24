@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from datetime import datetime
-from httplib import METHOD_NOT_ALLOWED
+from httplib import BAD_REQUEST, METHOD_NOT_ALLOWED
 from sys import maxint
 from traceback import format_exc
 
@@ -422,7 +422,13 @@ class Service(object):
                 if e:
                     raise e
 
-                return response
+        # We don't accept it but some response needs to be returned anyway.
+        else:
+            response = service.response
+            response.payload = ''
+            response.status_code = BAD_REQUEST
+
+        return response
 
     def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=DATA_FORMAT.DICT,
             transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
