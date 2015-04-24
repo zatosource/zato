@@ -184,10 +184,10 @@ class PingTestCase(ServiceTestCase):
         self.assertEquals(self.sio.request_elem, 'zato_outgoing_sql_ping_request')
         self.assertEquals(self.sio.response_elem, 'zato_outgoing_sql_ping_response')
         self.assertEquals(self.sio.input_required, ('id',))
-        self.assertEquals(self.sio.output_required, ('response_time',))
+        self.assertEquals(self.sio.output_optional, ('response_time',))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
-        self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
+        self.assertRaises(AttributeError, getattr, self.sio, 'output_required')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
         
     def test_impl(self):
