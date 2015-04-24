@@ -123,6 +123,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
             self.name = '{}-{}'.format(client_type, new_cid())
             self.topic_callbacks = topic_callbacks
             self.lua_container = LuaContainer(self.kvdb.conn, initial_lua_programs)
+            self.ready = False
 
         def run(self):
             logger.info('Starting broker client, host:[{}], port:[{}], name:[{}], topics:[{}]'.format(
@@ -137,6 +138,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
             for client in(self.pub_client, self.sub_client):
                 while client.keep_running == ZATO_NONE:
                     time.sleep(0.01)
+                self.ready = True
 
         def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL, *ignored_args, **ignored_kwargs):
             msg['msg_type'] = msg_type

@@ -100,7 +100,7 @@ class Scheduler(object):
 
 # ################################################################################################################################
 
-    def create_edit(self, action, job_data, broker_msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY):
+    def create_edit(self, action, job_data, broker_msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, **kwargs):
         """ Invokes a handler appropriate for the given action and job_data.job_type.
         """
         if logger.isEnabledFor(logging.DEBUG):
@@ -115,7 +115,7 @@ class Scheduler(object):
         handler = getattr(self, handler)
 
         try:
-            handler(job_data, broker_msg_type)
+            handler(job_data, broker_msg_type, **kwargs)
         except Exception, e:
             msg = 'Caught exception [{0}]'.format(format_exc(e))
             logger.error(msg)
@@ -123,7 +123,7 @@ class Scheduler(object):
 # ################################################################################################################################
 
     def create_edit_job(self, id, name, start_time, job_type, service, is_create=True, max_repeats=1, days=0, hours=0,
-            minutes=0, seconds=0, extra=None, cron_definition=None):
+            minutes=0, seconds=0, extra=None, cron_definition=None, **kwargs):
         """ A base method for scheduling of jobs.
         """
         cb_kwargs = {
@@ -140,30 +140,30 @@ class Scheduler(object):
             cron_definition=cron_definition)
 
         func = self.sched.create if is_create else self.sched.edit
-        func(job)
+        func(job, **kwargs)
 
 # ################################################################################################################################
 
-    def create_edit_one_time(self, job_data, broker_msg_type, is_create=True):
+    def create_edit_one_time(self, job_data, broker_msg_type, is_create=True, **kwargs):
         """ Re-/schedules the execution of a one-time job.
         """
         self.create_edit_job(job_data.id, job_data.name, _start_date(job_data), SCHEDULER.JOB_TYPE.ONE_TIME,
-            job_data.service, is_create, extra=job_data.extra)
+            job_data.service, is_create, extra=job_data.extra, **kwargs)
 
-    def create_one_time(self, job_data, broker_msg_type):
+    def create_one_time(self, job_data, broker_msg_type, **kwargs):
         """ Schedules the execution of a one-time job.
         """
-        self.create_edit_one_time(job_data, broker_msg_type)
+        self.create_edit_one_time(job_data, broker_msg_type, **kwargs)
 
-    def edit_one_time(self, job_data, broker_msg_type):
+    def edit_one_time(self, job_data, broker_msg_type, **kwargs):
         """ First unschedules a one-time job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
-        self.create_edit_one_time(job_data, broker_msg_type, False)
+        self.create_edit_one_time(job_data, broker_msg_type, False, **kwargs)
 
 # ################################################################################################################################
 
-    def create_edit_interval_based(self, job_data, broker_msg_type, is_create=True):
+    def create_edit_interval_based(self, job_data, broker_msg_type, is_create=True, **kwargs):
         """ Re-/schedules the execution of an interval-based job.
         """
         start_date = _start_date(job_data)
@@ -175,45 +175,45 @@ class Scheduler(object):
         max_repeats = job_data.repeats if job_data.get('repeats') else None
 
         self.create_edit_job(job_data.id, job_data.name, start_date, SCHEDULER.JOB_TYPE.INTERVAL_BASED, job_data.service,
-            is_create, max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra)
+            is_create, max_repeats, days+weeks*7, hours, minutes, seconds, job_data.extra, **kwargs)
 
-    def create_interval_based(self, job_data, broker_msg_type):
+    def create_interval_based(self, job_data, broker_msg_type, **kwargs):
         """ Schedules the execution of an interval-based job.
         """
-        self.create_edit_interval_based(job_data, broker_msg_type)
+        self.create_edit_interval_based(job_data, broker_msg_type, **kwargs)
 
-    def edit_interval_based(self, job_data, broker_msg_type):
+    def edit_interval_based(self, job_data, broker_msg_type, **kwargs):
         """ First unschedules an interval-based job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
-        self.create_edit_interval_based(job_data, broker_msg_type, False)
+        self.create_edit_interval_based(job_data, broker_msg_type, False, **kwargs)
 
 # ################################################################################################################################
 
-    def create_edit_cron_style(self, job_data, broker_msg_type, is_create=True):
+    def create_edit_cron_style(self, job_data, broker_msg_type, is_create=True, **kwargs):
         """ Re-/schedules the execution of a cron-style job.
         """
         start_date = _start_date(job_data)
         self.create_edit_job(job_data.id, job_data.name, start_date, SCHEDULER.JOB_TYPE.CRON_STYLE, job_data.service,
-            is_create, max_repeats=None, extra=job_data.extra, cron_definition=job_data.cron_definition)
+            is_create, max_repeats=None, extra=job_data.extra, cron_definition=job_data.cron_definition, **kwargs)
 
-    def create_cron_style(self, job_data, broker_msg_type):
+    def create_cron_style(self, job_data, broker_msg_type, **kwargs):
         """ Schedules the execution of a cron-style job.
         """
-        self.create_edit_cron_style(job_data, broker_msg_type)
+        self.create_edit_cron_style(job_data, broker_msg_type, **kwargs)
 
     def edit_cron_style(self, job_data, broker_msg_type):
         """ First unschedules a cron-style job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
-        self.create_edit_cron_style(job_data, broker_msg_type, False)
+        self.create_edit_cron_style(job_data, broker_msg_type, False, **kwargs)
 
 # ################################################################################################################################
 
-    def delete(self, job_data):
+    def delete(self, job_data, **kwargs):
         """ Deletes the job from the scheduler.
         """
-        self.sched.unschedule_by_name(job_data.old_name if job_data.get('old_name') else job_data.name)
+        self.sched.unschedule_by_name(job_data.old_name if job_data.get('old_name') else job_data.name, **kwargs)
 
 # ################################################################################################################################
 
