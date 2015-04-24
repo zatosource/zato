@@ -19,7 +19,7 @@ from bunch import Bunch
 # Zato
 from zato.common import ENSURE_SINGLETON_JOB
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER, SINGLETON
-from zato.common.util import invoke_startup_services
+from zato.common.util import add_scheduler_jobs, invoke_startup_services
 from zato.server.base import BrokerMessageReceiver
 from zato.server.scheduler import Scheduler
 
@@ -34,7 +34,7 @@ class SingletonServer(BrokerMessageReceiver):
                  broker_client=None, initial_sleep_time=None, is_cluster_wide=False):
         self.parallel_server = parallel_server
         self.server_id = server_id
-        self.scheduler = scheduler or Scheduler()
+        self.scheduler = scheduler or Scheduler(self)
         self.broker_client = broker_client
         self.initial_sleep_time = initial_sleep_time
         self.is_cluster_wide = is_cluster_wide
@@ -49,10 +49,6 @@ class SingletonServer(BrokerMessageReceiver):
         for name in('broker_client',):
             if name in kwargs:
                 setattr(self, name, kwargs[name])
-
-        # Initialize scheduler
-        self.scheduler.singleton = self
-        self.scheduler.init()
 
         # Start the hot-reload pickup monitor
         self.logger.info('Pickup notifier starting')
@@ -113,6 +109,10 @@ class SingletonServer(BrokerMessageReceiver):
         invoke_startup_services(
             'Singleton', 'startup_services_first_worker', self.parallel_server.fs_server_config,
             self.parallel_server.repo_location, None, 'zato.notif.init-notifiers', False, self.parallel_server.worker_store)
+
+    def init_scheduler(self):
+        add_scheduler_jobs(self.parallel_server, spawn=False)
+        self.scheduler.init()
 
 ################################################################################
 

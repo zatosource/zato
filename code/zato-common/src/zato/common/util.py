@@ -1013,7 +1013,7 @@ class StaticConfig(Bunch):
 
 # ################################################################################################################################
 
-def add_scheduler_jobs(server):
+def add_scheduler_jobs(server, spawn=True):
     for(id, name, is_active, job_type, start_date, extra, service_name, _,
         _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
             in server.odb.get_job_list(server.cluster_id):
@@ -1025,7 +1025,7 @@ def add_scheduler_jobs(server):
                 'days':days, 'hours':hours, 'minutes':minutes,
                 'seconds':seconds, 'repeats':repeats,
                 'cron_definition':cron_definition})
-            server.singleton_server.scheduler.create_edit('create', job_data)
+            server.singleton_server.scheduler.create_edit('create', job_data, spawn=spawn)
 
 # ################################################################################################################################
 
