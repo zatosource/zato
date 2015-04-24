@@ -69,9 +69,8 @@ class PublisherFacade(object):
     """ An AMQP facade for services so they aren't aware that publishing AMQP
     messages actually requires us to use the Zato broker underneath.
     """
-    def __init__(self, broker_client, delivery_store):
+    def __init__(self, broker_client):
         self.broker_client = broker_client # A Zato broker client, not the AMQP one.
-        self.delivery_store = delivery_store
     
     def send(self, msg, out_name, exchange, routing_key, properties={}, headers={}, *args, **kwargs):
         """ Publishes the message on the Zato broker which forwards it to one of the

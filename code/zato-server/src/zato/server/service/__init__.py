@@ -181,7 +181,6 @@ class Service(object):
         self.transport = None
         self.wsgi_environ = None
         self.job_type = None
-        self.delivery_store = None
         self.environ = {}
         self.request = Request(self.logger)
         self.response = Response(self.logger)
@@ -262,8 +261,8 @@ class Service(object):
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
 
         # Queues
-        out_amqp = PublisherFacade(self.broker_client, self.server.delivery_store)
-        out_jms_wmq = WMQFacade(self.broker_client, self.server.delivery_store)
+        out_amqp = PublisherFacade(self.broker_client)
+        out_jms_wmq = WMQFacade(self.broker_client)
         out_zmq = ZMQFacade(self.server)
 
         # Patterns
@@ -815,7 +814,6 @@ class Service(object):
         service.wsgi_environ = wsgi_environ
         service.job_type = job_type
         service.translate = server.kvdb.translate
-        service.delivery_store = server.delivery_store
         service.user_config = server.user_config
 
         if channel_params:
