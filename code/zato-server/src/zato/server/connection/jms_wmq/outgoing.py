@@ -37,9 +37,8 @@ class WMQFacade(object):
     """ A WebSphere MQ facade for services so they aren't aware that sending WMQ
     messages actually requires us to use the Zato broker underneath.
     """
-    def __init__(self, broker_client, delivery_store):
+    def __init__(self, broker_client):
         self.broker_client = broker_client # A Zato broker client
-        self.delivery_store = delivery_store
     
     def send(self, msg, out_name, queue, delivery_mode=None, expiration=None, priority=None, max_chars_printed=None, 
             task_id=None, *args, **kwargs):
@@ -75,8 +74,8 @@ class WMQFacade(object):
         return self
 
 class OutgoingConnection(BaseJMSWMQConnection):
-    def __init__(self, factory, name, kvdb, delivery_store):
-        super(OutgoingConnection, self).__init__(factory, name, kvdb, delivery_store)
+    def __init__(self, factory, name, kvdb):
+        super(OutgoingConnection, self).__init__(factory, name, kvdb)
         self.jms_template = JmsTemplate(self.factory)
         
         # So people don't have to install PyMQI if they don't need it
@@ -100,10 +99,7 @@ class OutgoingConnection(BaseJMSWMQConnection):
                 'inner_exc': inner_exc,
                 'needs_reconnect': needs_reconnect
             }
-            
-            self.delivery_store.on_target_completed(
-                INVOCATION_TARGET.OUTCONN_WMQ, self.name, msg, start, end, target_ok, target_self_info, exc_info)
-        
+
     def send(self, msg, default_delivery_mode, default_expiration, default_priority, default_max_chars_printed):
         
         jms_msg = TextMessage()
@@ -232,7 +228,7 @@ class OutgoingConnector(BaseJMSWMQConnector):
     def _sender(self, factory):
         """ Starts the outgoing connection in a new thread and returns it.
         """
-        sender = OutgoingConnection(factory, self.out.name, self.kvdb, self.delivery_store)
+        sender = OutgoingConnection(factory, self.out.name, self.kvdb)
         t = Thread(target=sender._run)
         t.start()
         

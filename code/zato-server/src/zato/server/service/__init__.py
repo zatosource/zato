@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from datetime import datetime
-from httplib import METHOD_NOT_ALLOWED
+from httplib import BAD_REQUEST, METHOD_NOT_ALLOWED
 from sys import maxint
 from traceback import format_exc
 
@@ -181,7 +181,6 @@ class Service(object):
         self.transport = None
         self.wsgi_environ = None
         self.job_type = None
-        self.delivery_store = None
         self.environ = {}
         self.request = Request(self.logger)
         self.response = Response(self.logger)
@@ -262,8 +261,8 @@ class Service(object):
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
 
         # Queues
-        out_amqp = PublisherFacade(self.broker_client, self.server.delivery_store)
-        out_jms_wmq = WMQFacade(self.broker_client, self.server.delivery_store)
+        out_amqp = PublisherFacade(self.broker_client)
+        out_jms_wmq = WMQFacade(self.broker_client)
         out_zmq = ZMQFacade(self.server)
 
         # Patterns
@@ -423,7 +422,13 @@ class Service(object):
                 if e:
                     raise e
 
-                return response
+        # We don't accept it but some response needs to be returned anyway.
+        else:
+            response = service.response
+            response.payload = ''
+            response.status_code = BAD_REQUEST
+
+        return response
 
     def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=DATA_FORMAT.DICT,
             transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
@@ -820,7 +825,6 @@ class Service(object):
         service.wsgi_environ = wsgi_environ
         service.job_type = job_type
         service.translate = server.kvdb.translate
-        service.delivery_store = server.delivery_store
         service.user_config = server.user_config
 
         if channel_params:
