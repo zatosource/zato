@@ -410,11 +410,3 @@ class Scheduler(object):
 
             if self.iter_cb:
                 self.iter_cb(*self.iter_cb_args)
-
-if __name__ == '__main__':
-    basicConfig(level=INFO)
-    job = Job(123, 'a', SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_time=datetime.datetime.utcnow(),
-        interval=Interval(seconds=1), max_repeats=20)
-    scheduler = Scheduler()
-    scheduler.create(job, False)
-    scheduler.run()

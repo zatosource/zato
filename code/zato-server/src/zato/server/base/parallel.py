@@ -55,7 +55,7 @@ from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, KVDB, MISC, SERVER_JOIN_S
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
      JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
 from zato.common.pubsub import PubSubAPI, RedisPubSub
-from zato.common.util import add_scheduler_jobs, add_startup_jobs, get_kvdb_config_for_log, \
+from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, \
      invoke_startup_services as _invoke_startup_services, new_cid, startup_service_payload_from_path, StaticConfig, \
      register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
@@ -653,7 +653,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                     self.connector_server_keep_alive_job_time, self.connector_server_grace_time,
                     server.id, server.cluster_id, True):
                 self.init_connectors()
-                add_scheduler_jobs(self)
                 is_singleton = True
 
         # Signal to ODB that we are done with deploying everything
@@ -826,6 +825,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         # We cannot do it earlier because we need the broker client and everything be ready
         if is_singleton:
+
+            # Let's wait for the broker client to connect before continuing with anything
+            while not parallel_server.singleton_server.broker_client and parallel_server.singleton_server.broker_client.ready:
+                time.sleep(0.01)
+
+            parallel_server.singleton_server.init_scheduler()
             parallel_server.singleton_server.init_notifiers()
 
     def invoke_startup_services(self, is_first):
