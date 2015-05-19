@@ -14,9 +14,6 @@ from datetime import datetime
 from threading import RLock, Thread
 from traceback import format_exc
 
-# anyjson
-from anyjson import dumps
-
 # Bunch
 from bunch import Bunch
 
@@ -24,7 +21,7 @@ from bunch import Bunch
 from springpython.jms.core import JmsTemplate, TextMessage
 
 # Zato
-from zato.common import INVOCATION_TARGET, TRACE1
+from zato.common import TRACE1
 from zato.common.broker_message import MESSAGE_TYPE, OUTGOING, TOPICS
 from zato.server.connection import setup_logging, start_connector as _start_connector
 from zato.server.connection.jms_wmq import BaseJMSWMQConnection, BaseJMSWMQConnector
@@ -84,21 +81,6 @@ class OutgoingConnection(BaseJMSWMQConnection):
         
         self.MQMIError = MQMIError
         self.dont_reconnect_errors = (MQRC_UNKNOWN_OBJECT_NAME,)
-        
-    def maybe_on_target_delivery(self, msg, start, end, target_ok, queue, inner_exc=None, needs_reconnect=None):
-        if msg.get('confirm_delivery'):
-            target_self_info = dumps({
-                'name': self.name,
-                'details': {
-                    'conn_info':self.factory.get_connection_info(),
-                    'queue': queue
-                }
-            })
-            
-            exc_info = {
-                'inner_exc': inner_exc,
-                'needs_reconnect': needs_reconnect
-            }
 
     def send(self, msg, default_delivery_mode, default_expiration, default_priority, default_max_chars_printed):
         
@@ -125,7 +107,6 @@ class OutgoingConnection(BaseJMSWMQConnection):
         try:
             start = datetime.utcnow()
             self.jms_template.send(jms_msg, queue)
-            self.maybe_on_target_delivery(msg, start, datetime.utcnow(), True, queue)
                 
         except Exception, e:
             if isinstance(e, self.MQMIError) and e.reason in self.dont_reconnect_errors:
@@ -135,7 +116,6 @@ class OutgoingConnection(BaseJMSWMQConnection):
                 
             else:
                 logger.warn('Caught [{}] while sending the message [{}] (reconnecting)'.format(format_exc(e), jms_msg))
-                self.maybe_on_target_delivery(msg, start, datetime.utcnow(), False, queue, format_exc(e), True)
                 
                 if self._keep_connecting(e):
                     self.close()
