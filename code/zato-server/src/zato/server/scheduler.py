@@ -202,7 +202,7 @@ class Scheduler(object):
         """
         self.create_edit_cron_style(job_data, broker_msg_type, **kwargs)
 
-    def edit_cron_style(self, job_data, broker_msg_type):
+    def edit_cron_style(self, job_data, broker_msg_type, **kwargs):
         """ First unschedules a cron-style job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """
