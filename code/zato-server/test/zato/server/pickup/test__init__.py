@@ -53,7 +53,7 @@ class BasePickupEventProcessorTest(TestCase):
             
             with NamedTemporaryFile(prefix='zato-test-', suffix=file_name) as tf:
                 tf.flush()
-                ret = processor.hot_deploy(tf.name, os.path.basename(tf.name))
+                ret = processor.hot_deploy(tf.name)
                 self.assertEquals(ret, True)
                 
                 if delete_after_pick_up:
