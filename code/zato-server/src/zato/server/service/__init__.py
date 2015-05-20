@@ -426,12 +426,12 @@ class Service(object):
                     logger.warn(format_exc(resp_e))
 
                     if e:
-                        raise e
+                        raise Exception(exc_formatted)
                     raise resp_e
 
                 else:
                     if e:
-                        raise e
+                        raise Exception(exc_formatted)
 
         # We don't accept it but some response needs to be returned anyway.
         else:
