@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import copy, errno, gc, inspect, json, linecache, logging, os, random, re, signal, string, threading, traceback, sys
+from ast import literal_eval
 from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
@@ -842,6 +843,13 @@ def parse_extra_into_dict(lines, convert_bool=True):
                     # OK, not an integer
                     pass
 
+                # Could be a dict or another simple type then
+                try:
+                    value = literal_eval(value)
+                except Exception:
+                    pass
+
+                # OK, let's just treat it as string
                 _extra[key.strip()] = value
 
     return _extra
