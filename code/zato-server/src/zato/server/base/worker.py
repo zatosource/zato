@@ -980,7 +980,7 @@ class WorkerStore(BrokerMessageReceiver):
 
             # We can in theory handle this request but there's still some work first. Our server can be composed
             # of more than 1 gunicorn worker and each of them receives the messages directed to concrete targets.
-            # Hence we must first check out if another worker from our servers didn't beat us to it yet.
+            # Hence we must first check out if another worker from our server didn't beat us to it already.
             # Everything must be done with a distributed server-wide lock so that workers don't
             # interrupt each other.
             else:
