@@ -265,7 +265,6 @@ class TestRequest(TestCase):
         
         request.channel_params['a'] = 'channel_param_a'
         request.channel_params['b'] = 'channel_param_b'
-        request.channel_params['c'] = 'channel_param_c'
         request.channel_params['d'] = 'channel_param_d'
         request.channel_params['e'] = 'channel_param_e'
         request.channel_params['f'] = 'channel_param_f'
@@ -280,7 +279,7 @@ class TestRequest(TestCase):
 
                 if io is io_default:
                     eq_(sorted(request.input.items()), 
-                        sorted({'a': 'channel_param_a', 'b': 'channel_param_b', 'c': 'channel_param_c',
+                        sorted({'a': 'channel_param_a', 'b': 'channel_param_b', 'c': 'c-req',
                          'd': 'channel_param_d', 'e': 'channel_param_e', 'f': 'channel_param_f',
                          'h':'channel_param_h'}.items()))
                 else:
