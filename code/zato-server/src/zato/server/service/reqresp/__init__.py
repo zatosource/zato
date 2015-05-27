@@ -129,14 +129,19 @@ class Request(SIOConverter):
             else:
                 optional_params = {}
 
-            if self.params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG:
-                self.input.update(required_params)
-                self.input.update(optional_params)
-                self.input.update(self.channel_params)
-            else:
-                self.input.update(self.channel_params)
-                self.input.update(required_params)
-                self.input.update(optional_params)
+            self.input.update(required_params)
+            self.input.update(optional_params)
+
+            logger.warn('000 %r', '*' * 90)
+            logger.warn('111 %r %r %r', required_list, required_params, sio.input_required)
+            logger.warn('111 %r %r %r', optional_list, optional_params, sio.input_optional)
+
+            #logger.warn('111 %r', self.input)
+            #logger.warn('222 %r', self.channel_params)
+
+            #for param, value in self.channel_params.iteritems():
+            #    if param not in self.input:
+            #        self.input[param] = value
 
         # We merge channel params in if requested even if it's not SIO
         else:
@@ -154,7 +159,7 @@ class Request(SIOConverter):
                 param_name, value = convert_param(
                     self.cid, '' if use_channel_params_only else self.payload, param, self.data_format, is_required,
                     default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
-                    self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes)
+                    self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes, self.params_priority)
                 params[param_name] = value
 
             except Exception, e:
