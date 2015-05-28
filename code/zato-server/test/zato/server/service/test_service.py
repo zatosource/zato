@@ -44,7 +44,7 @@ faker = Faker()
 # ################################################################################################################################
 
 class HooksTestCase(ServiceTestCase):
-    def test_hooks(self):
+    def test__hooks(self):
         
         class MyJob(Service):
             def handle(self):
@@ -76,7 +76,7 @@ class HooksTestCase(ServiceTestCase):
 # ################################################################################################################################
 
 class TestLogInputOutput(ServiceTestCase):
-    def test_log_input_output(self):
+    def test__log_input_output(self):
         
         class MyLogger(object):
             def __init__(self):
@@ -120,7 +120,7 @@ class TestLogInputOutput(ServiceTestCase):
 # ################################################################################################################################
 
 class TestLock(ServiceTestCase):
-    def test_lock_ok(self):
+    def test__lock_ok(self):
         """ Succesfully grab a service lock.
         """ 
         my_kvdb = FakeKVDB()
@@ -153,7 +153,7 @@ class TestLock(ServiceTestCase):
         self.assertAlmostEquals(my_kvdb.conn.setnx_args[1], expires_approx, delta=3)
         
         
-    def test_lock_timeout(self):
+    def test__lock_timeout(self):
         """ A timeout is caught while trying to obtain a service lock.
         """
         my_kvdb = FakeKVDB()
@@ -181,13 +181,13 @@ class TestLock(ServiceTestCase):
 # ################################################################################################################################
 
 class TestHTTPRequestData(TestCase):
-    def test_empty(self):
+    def test__empty(self):
         data = HTTPRequestData()
         self.assertEquals(data.GET, None)
         self.assertEquals(data.POST, None)
         self.assertEquals(data.method, None)
         
-    def test_non_empty(self):
+    def test__non_empty(self):
         get1, get2 = uuid4().hex, uuid4().hex
         post1, post2 = uuid4().hex, uuid4().hex
         request_method = uuid4().hex
@@ -208,7 +208,7 @@ class TestHTTPRequestData(TestCase):
 # ################################################################################################################################
 
 class TestRequest(TestCase):
-    def test_init_no_sio(self):
+    def test__init_no_sio(self):
         is_sio = False
         cid = uuid4().hex
         data_format = uuid4().hex
@@ -251,58 +251,75 @@ class TestRequest(TestCase):
             'REQUEST_METHOD': uuid4().hex, 
         }
         
-        def _get_params(request_params, *ignored):
-            # 'g' is never overridden
-            if request_params is io_custom['input_required']:
-                return {'a':'a-req', 'b':'b-req', 'c':'c-req', 'g':'g-msg'}
-            else:
-                return {'d':'d-opt', 'e':'e-opt', 'f':'f-opt', 'g':'g-msg'}
-        
-        request = Request(logger)
-        request.payload = None
-        request.raw_request = io_default
-        request.get_params = _get_params
-        
-        request.channel_params['a'] = 'channel_param_a'
-        request.channel_params['b'] = 'channel_param_b'
-        request.channel_params['c'] = 'channel_param_c'
-        request.channel_params['d'] = 'channel_param_d'
-        request.channel_params['e'] = 'channel_param_e'
-        request.channel_params['f'] = 'channel_param_f'
-        request.channel_params['h'] = 'channel_param_h' # Never overridden
-        
+
         for io in(io_default, io_custom):
             for params_priority in PARAMS_PRIORITY:
+
+                request = Request(logger)
+                request.payload = None
+                request.raw_request = io_default
+
+                request.channel_params['a'] = 'channel_param_a'
+                request.channel_params['b'] = 'channel_param_b'
+                request.channel_params['c'] = 'channel_param_c'
+                request.channel_params['d'] = 'channel_param_d'
+                request.channel_params['e'] = 'channel_param_e'
+                request.channel_params['f'] = 'channel_param_f'
+                request.channel_params['h'] = 'channel_param_h' # Never overridden
+
+                def _get_params(request_params, *ignored):
+
+                    # Note that 'g' is never overridden
+
+                    if params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG:
+                        if request_params is io_custom['input_required']:
+                            return {'a':request.channel_params['a'], 'b':request.channel_params['b'],
+                                    'c':request.channel_params['c'], 'g':'g-msg'}
+                        else:
+                            return {'d':request.channel_params['d'], 'e':request.channel_params['e'],
+                                    'f':request.channel_params['f'], 'g':'g-msg'}
+                    else:
+                        if request_params is io_custom['input_required']:
+                            return {'a':'a-req', 'b':'b-req', 'c':'c-req', 'g':'g-msg'}
+                        else:
+                            return {'d':'d-opt', 'e':'e-opt', 'f':'f-opt', 'g':'g-msg'}
+
+                request.get_params = _get_params
+
                 request.params_priority = params_priority
                 request.http.init(wsgi_environ)
                 request.payload = io
                 request.init(is_sio, cid, io, data_format, transport, wsgi_environ)
 
                 if io is io_default:
+
                     eq_(sorted(request.input.items()), 
-                        sorted({'a': 'channel_param_a', 'b': 'channel_param_b', 'c': 'channel_param_c',
-                         'd': 'channel_param_d', 'e': 'channel_param_e', 'f': 'channel_param_f',
+                        sorted({'a': 'channel_param_a', 'b': 'channel_param_b',
+                         'c':'channel_param_c', 'd': 'channel_param_d', 'e': 'channel_param_e', 'f': 'channel_param_f',
                          'h':'channel_param_h'}.items()))
+
                 else:
                     if params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG:
+
                         eq_(sorted(request.input.items()), 
                             sorted({'a': 'channel_param_a', 'b': 'channel_param_b', 'c': 'channel_param_c',
                              'd': 'channel_param_d', 'e': 'channel_param_e', 'f': 'channel_param_f',
                              'g': 'g-msg',
                              'h':'channel_param_h'}.items()))
+
                     else:
                         eq_(sorted(request.input.items()), 
                             sorted({'a': 'a-req', 'b': 'b-req', 'c': 'c-req',
                              'd': 'd-opt', 'e': 'e-opt', 'f': 'f-opt',
                              'g': 'g-msg',
                              'h':'channel_param_h'}.items()))
-                        
+
 # ################################################################################################################################
 
 class TestSIOListDataType(ServiceTestCase):
     # https://github.com/zatosource/zato/issues/114
     
-    def test_sio_list_data_type_input_json(self):
+    def test__sio_list_data_type_input_json(self):
         cid = rand_string()
         data_format = DATA_FORMAT.JSON
         transport = rand_string()
@@ -329,7 +346,7 @@ class TestSIOListDataType(ServiceTestCase):
         eq_(r.input.last_name, expected_last_name)
         eq_(r.input.emails, expected_emails)
 
-    def test_sio_list_data_type_input_xml(self):
+    def test__sio_list_data_type_input_xml(self):
         cid = rand_string()
         data_format = DATA_FORMAT.XML
         transport = rand_string()
@@ -360,7 +377,7 @@ class TestSIOListDataType(ServiceTestCase):
         eq_(r.input.last_name, expected_last_name)
         eq_(r.input.emails, expected_emails)
 
-    def test_sio_list_data_type_output_json(self):
+    def test__sio_list_data_type_output_json(self):
         expected_first_name = faker.first_name()
         expected_last_name = faker.last_name()
         expected_emails = sorted([faker.email(), faker.email()])
@@ -381,7 +398,7 @@ class TestSIOListDataType(ServiceTestCase):
         eq_(response['last_name'], expected_last_name)
         eq_(response['emails'], expected_emails)
         
-    def test_sio_list_data_type_output_xml(self):
+    def test__sio_list_data_type_output_xml(self):
         expected_first_name = faker.first_name()
         expected_last_name = faker.last_name()
         expected_emails = sorted([faker.email(), faker.email()])
@@ -447,7 +464,7 @@ class TestNav(TestCase):
         eq_(service.response.payload['has_key_nested_false'], False)
         eq_(service.response.payload['has_path'], True)
 
-    def test_listnav(self):
+    def test__listnav(self):
         self.test_dictnav() # Right now dictnav and listnav do the same thing
 
 # ################################################################################################################################
@@ -455,7 +472,7 @@ class TestNav(TestCase):
 class RESTTargetType(ServiceTestCase):
     # https://github.com/zatosource/zato/issues/177
 
-    def test_add_http_method_handlers(self):
+    def test__add_http_method_handlers(self):
 
         class MyService(Service):
         
