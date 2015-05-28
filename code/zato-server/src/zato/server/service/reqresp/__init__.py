@@ -132,16 +132,9 @@ class Request(SIOConverter):
             self.input.update(required_params)
             self.input.update(optional_params)
 
-            logger.warn('000 %r', '*' * 90)
-            logger.warn('111 %r %r %r', required_list, required_params, sio.input_required)
-            logger.warn('111 %r %r %r', optional_list, optional_params, sio.input_optional)
-
-            #logger.warn('111 %r', self.input)
-            #logger.warn('222 %r', self.channel_params)
-
-            #for param, value in self.channel_params.iteritems():
-            #    if param not in self.input:
-            #        self.input[param] = value
+            for param, value in self.channel_params.iteritems():
+                if param not in self.input:
+                    self.input[param] = value
 
         # We merge channel params in if requested even if it's not SIO
         else:
