@@ -67,6 +67,7 @@ class BaseHTTPSOAPWrapper(object):
 
         cert = self.config['tls_key_cert_full_path'] if self.config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT else None
         verify = False if self.config.get('tls_verify', ZATO_NONE) == ZATO_NONE else self.config['tls_verify']
+        verify = verify if isinstance(verify, bool) else verify.encode('utf-8')
 
         try:
 

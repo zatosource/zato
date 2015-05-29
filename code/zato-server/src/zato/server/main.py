@@ -122,6 +122,11 @@ def run(base_dir, start_gunicorn_app=True):
     psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
     psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
 
+    # We know we don't need warnings because users may explicitly configure no certificate validation.
+    # We don't want for urllib3 to warn us about it.
+    import requests as _r
+    _r.packages.urllib3.disable_warnings()
+
     repo_location = os.path.join(base_dir, 'config', 'repo')
 
     # Configure the logging first, before configuring the actual server.

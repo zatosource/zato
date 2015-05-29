@@ -23,6 +23,7 @@ from nose.tools import eq_
 
 # requests
 import requests
+requests.packages.urllib3.disable_warnings()
 
 # Zato
 from zato.common import SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
@@ -276,7 +277,7 @@ class TLSPingTestCase(TestCase, Base):
             server = TLSServer()
             server.start()
 
-            sleep(2)
+            sleep(1)
 
             port = server.get_port()
 
@@ -291,7 +292,8 @@ class TLSPingTestCase(TestCase, Base):
             try:
                 wrapper.ping(rand_string())
             except Exception, e:
-                self.assertIn('SSL3_GET_SERVER_CERTIFICATE:certificate verify failed', e.message[0][1])
+                details = e.message[0][1][0][0]
+                self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
             else:
                 self.fail('Excepted a TLS error here because the CA is invalid')
 
@@ -320,7 +322,8 @@ class TLSPingTestCase(TestCase, Base):
             try:
                 wrapper.ping(rand_string())
             except Exception, e:
-                self.assertIn('SSL3_READ_BYTES:sslv3 alert handshake failure', e.message[0][1])
+                details = e.message[0][1][0][0]
+                self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
             else:
                 self.fail('Excepted a TLS error here because no TLS cert has been provided by client')
 
@@ -406,7 +409,8 @@ class TLSHTTPTestCase(TestCase, Base):
             try:
                 wrapper.get('123')
             except Exception, e:
-                self.assertIn('SSL3_GET_SERVER_CERTIFICATE:certificate verify failed', e.message[0][1])
+                details = e.message[0][1][0][0]
+                self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
             else:
                 self.fail('Excepted a TLS error here because the CA is invalid')
 
@@ -436,7 +440,8 @@ class TLSHTTPTestCase(TestCase, Base):
             try:
                 wrapper.get('123')
             except Exception, e:
-                self.assertIn('SSL3_READ_BYTES:sslv3 alert handshake failure', e.message[0][1])
+                details = e.message[0][1][0][0]
+                self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
             else:
                 self.fail('Excepted a TLS error here because no TLS cert has been provided by client')
 
