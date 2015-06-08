@@ -59,7 +59,7 @@ try:
     execfile(_version_py, _locals)
     version = _locals['version']
 except IOError:
-    version = '2.0.3.4'
+    version = '2.0.4'
 
 # ##############################################################################
 
