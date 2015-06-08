@@ -1,29 +1,15 @@
---- requests/packages/urllib3connectionpool.py.orig	2014-05-06 18:47:11.346680199 +0200
-+++ requests/packages/urllib3connectionpool.py	2014-05-06 18:47:38.246679116 +0200
-@@ -134,7 +134,7 @@
-     ConnectionCls = HTTPConnection
+--- requests/packages/urllib3/connectionpool.py.orig	2015-06-08 18:13:01.136948026 +0200
++++ requests/packages/urllib3/connectionpool.py	2015-06-08 18:13:04.568869138 +0200
+@@ -308,12 +308,6 @@
+         if hasattr(err, 'errno') and err.errno in _blocking_errnos:
+             raise ReadTimeoutError(self, url, "Read timed out. (read timeout=%s)" % timeout_value)
  
-     def __init__(self, host, port=None, strict=False,
--                 timeout=Timeout.DEFAULT_TIMEOUT, maxsize=1, block=False,
-+                 timeout=Timeout.DEFAULT_TIMEOUT, maxsize=600, block=False,
-                  headers=None, _proxy=None, _proxy_headers=None):
-         ConnectionPool.__init__(self, host, port)
-         RequestMethods.__init__(self, headers)
-@@ -148,14 +148,14 @@
- 
-         self.timeout = timeout
- 
--        self.pool = self.QueueCls(maxsize)
-+        self.pool = self.QueueCls(600)
-         self.block = block
- 
-         self.proxy = _proxy
-         self.proxy_headers = _proxy_headers or {}
- 
-         # Fill the queue up so that doing get() on it will block properly
--        for _ in xrange(maxsize):
-+        for _ in xrange(600):
-             self.pool.put(None)
- 
-         # These are mostly for testing and debugging purposes.
-
+-        # Catch possible read timeouts thrown as SSL errors. If not the
+-        # case, rethrow the original. We need to do this because of:
+-        # http://bugs.python.org/issue10272
+-        if 'timed out' in str(err) or 'did not complete (read)' in str(err):  # Python 2.6
+-            raise ReadTimeoutError(self, url, "Read timed out. (read timeout=%s)" % timeout_value)
+-
+     def _make_request(self, conn, method, url, timeout=_Default,
+                       **httplib_request_kw):
+         """
