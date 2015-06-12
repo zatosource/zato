@@ -301,7 +301,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         else:
             soap_header = ''
 
-        return soap_config['message'].format(header=soap_header, data=data), headers
+        return soap_config['message'].format(header=soap_header, data=data).encode('utf-8'), headers
 
 # ################################################################################################################################
 
