@@ -301,7 +301,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         else:
             soap_header = ''
 
-        return soap_config['message'].format(header=soap_header, data=data).encode('utf-8'), headers
+        return soap_config['message'].format(header=soap_header, data=data), headers
 
 # ################################################################################################################################
 
@@ -326,7 +326,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         else:
             address, qs_params = self.address, dict(params)
 
-        logger.info('CID:[%s], address:[%s], qs_params:[%s], auth:[%s], kwargs:[%s]', cid, address, qs_params, self.requests_auth, kwargs) 
+        if isinstance(data, unicode):
+            data = data.encode('utf-8')
+
+        logger.info(
+            'CID:[%s], address:[%s], qs_params:[%s], auth:[%s], kwargs:[%s]', cid, address, qs_params, self.requests_auth, kwargs) 
 
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
