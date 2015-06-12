@@ -26,7 +26,7 @@ import requests
 requests.packages.urllib3.disable_warnings()
 
 # Zato
-from zato.common import SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common import DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
 from zato.common.test import rand_float, rand_int, rand_string
 from zato.common.test.tls import TLSServer
 from zato.common.test.tls_material import ca_cert, ca_cert_invalid, client1_cert, client1_key
@@ -467,16 +467,34 @@ class TLSHTTPTestCase(TestCase, Base):
                 port = server.get_port()
 
                 config = self._get_config()
-                config['address_host'] = 'https://localhost:{}/'.format(port)
-                config['address_url_path'] = ''
                 config['ping_method'] = 'GET'
-                config['transport'] = URL_TYPE.PLAIN_HTTP
                 config['tls_verify'] = ca_cert_tf.name
                 config['tls_key_cert_full_path'] = client_cert_tf.name
                 config['sec_type'] = SEC_DEF_TYPE.TLS_KEY_CERT
+                config['address_host'] = 'https://localhost:{}/'.format(port)
 
-                wrapper = HTTPSOAPWrapper(config, requests)
+                uni_data = u'uni_data'
+                string_data = b'string_data'
+                needs_data = 'post', 'send', 'put', 'patch'
 
-                wrapper.get('123')
+                for url_type in URL_TYPE:
+                    config['transport'] = url_type
+
+                    for data_format in DATA_FORMAT:
+                        config['data_format'] = data_format
+
+                        for data in uni_data, string_data:
+
+                            for name in('get', 'delete', 'options', 'post', 'send', 'put', 'patch'):
+                                cid = '{}_{}'.format(name, data)
+
+                                config['address_url_path'] = '{}-{}-{}'.format(url_type, data_format, data)
+                                wrapper = HTTPSOAPWrapper(config, requests)
+                                func = getattr(wrapper, name)
+
+                                if name in needs_data:
+                                    func(cid, data=data)
+                                else:
+                                    func(cid)
 
 # ################################################################################################################################
