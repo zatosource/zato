@@ -13,6 +13,7 @@ import logging, os, time, signal
 from datetime import datetime
 from httplib import INTERNAL_SERVER_ERROR, responses
 from logging import INFO
+from tempfile import mkstemp
 from threading import Thread
 from traceback import format_exc
 from uuid import uuid4
@@ -52,10 +53,10 @@ from tzlocal import get_localzone
 from zato.broker.client import BrokerClient
 from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, KVDB, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS,\
      ZATO_ODB_POOL_NAME
-from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY,\
-     JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, TOPICS, ZMQ_CONNECTOR
+from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, \
+     TOPICS, ZMQ_CONNECTOR
 from zato.common.pubsub import PubSubAPI, RedisPubSub
-from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, \
+from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, startup_service_payload_from_path, StaticConfig, \
      register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
@@ -195,6 +196,47 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         return [payload]
 
+    def deploy_missing_services(self, locally_deployed):
+        """ Deploys services that exist on other servers but not on ours.
+        """
+
+        # The locally_deployed list are all the services that we could import based on our current
+        # understanding of the contents of the cluster. However, it's possible that we have
+        # been shut down for a long time and during that time other servers deployed services
+        # we don't know anything about. They are not stored locally because we were down.
+        # Hence we need to check out if there are any other servers in the cluster and if so,
+        # grab their list of services, compare it with what we have deployed and deploy
+        # any that are missing.
+
+        # Continue only if there is more than one running server in the cluster.
+        other_servers = self.odb.get_servers()
+
+        if other_servers:
+            other_server = other_servers[0] # Index 0 is as random as any other because the list is not sorted.
+            missing = self.odb.get_missing_services(other_server, locally_deployed)
+
+            if missing:
+                logger.info('Found extra services to deploy: %s', ', '.join(sorted(item.name for item in missing)))
+
+                for service_id, name, source_path, source in missing:
+                    file_name = os.path.basename(source_path)
+                    _, full_path = mkstemp(suffix='-'+ file_name)
+
+                    f = open(full_path, 'wb')
+                    f.write(source)
+                    f.close()
+
+                    # Create a deployment package in ODB out of which all the services will be picked up ..
+                    msg = Bunch()
+                    msg.action = HOT_DEPLOY.CREATE.value
+                    msg.msg_type = MESSAGE_TYPE.TO_PARALLEL_ALL
+                    msg.package_id = hot_deploy(self, file_name, full_path, notify=False)
+
+                    # .. and tell the worker to actually deploy all the services the package contains.
+                    gevent.spawn(self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE, msg)
+
+                    logger.warn('Deployed an extra service found: %s (%s)', name, service_id)
+
     def maybe_on_first_worker(self, server, redis_conn, deployment_key):
         """ This method will execute code with a Redis lock held. We need a lock
         because we can have multiple worker processes fighting over the right to
@@ -210,7 +252,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         def import_initial_services_jobs():
             # (re-)deploy the services from a clear state
-            self.service_store.import_services_from_anywhere(
+            locally_deployed = self.service_store.import_services_from_anywhere(
                 self.internal_service_modules + self.service_modules +
                 self.service_sources, self.base_dir)
 
@@ -219,6 +261,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
             # Migrations
             self.odb.add_channels_2_0()
+
+            return set(locally_deployed)
 
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
@@ -233,8 +277,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 msg = 'Not attempting to grab the lock_name:[{}]'.format(lock_name)
                 logger.debug(msg)
 
-                # Simply deploy services, the first worker has already cleared out the ODB
-                import_initial_services_jobs()
+                # Simply deploy services, including any missing ones, the first worker has already cleared out the ODB
+                locally_deployed = import_initial_services_jobs()
+
+                return False, locally_deployed
+
             else:
                 # We are this server's first worker so we need to re-populate
                 # the database and create the flag indicating we're done.
@@ -245,8 +292,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 # .. Remove all the deployed services from the DB ..
                 self.odb.drop_deployed_services(server.id)
 
-                # .. deploy them back.
-                import_initial_services_jobs()
+                # .. deploy them back including any missing ones found on other servers.
+                locally_deployed = import_initial_services_jobs()
 
                 # Add the flag to Redis indicating that this server has already
                 # deployed its services. Note that by default the expiration
@@ -259,7 +306,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 redis_conn.set(already_deployed_flag, dumps({'create_time_utc':datetime.utcnow().isoformat()}))
                 redis_conn.expire(already_deployed_flag, self.deployment_lock_expires)
 
-                return True
+                return True, locally_deployed
 
     def get_lua_programs(self):
         for item in 'internal', 'user':
@@ -327,7 +374,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                   self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
-        is_first = self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
+        is_first, locally_deployed = self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
 
         if is_first:
 
@@ -346,9 +393,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
             self.singleton_server.server_id = server.id
 
-        return is_first
+        return is_first, locally_deployed
 
-    def _after_init_accepted(self, server, deployment_key):
+    def _after_init_accepted(self, server, deployment_key, locally_deployed):
 
         # Flag set to True if this worker is the cluster-wide singleton
         is_singleton = False
@@ -634,6 +681,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.init_connectors()
                 is_singleton = True
 
+        # Deployed missing services found on other servers
+        if locally_deployed:
+            self.deploy_missing_services(locally_deployed)
+
         # Signal to ODB that we are done with deploying everything
         self.odb.on_deployment_finished()
 
@@ -760,12 +811,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.name = server.name
         parallel_server.cluster_id = server.cluster_id
 
-        is_first = parallel_server._after_init_common(server, zato_deployment_key)
+        is_first, locally_deployed = parallel_server._after_init_common(server, zato_deployment_key)
 
         # For now, all the servers are always ACCEPTED but future versions
         # might introduce more join states
         if server.last_join_status in(SERVER_JOIN_STATUS.ACCEPTED):
-            is_singleton = parallel_server._after_init_accepted(server, zato_deployment_key)
+            is_singleton = parallel_server._after_init_accepted(server, zato_deployment_key, locally_deployed)
         else:
             msg = 'Server has not been accepted, last_join_status:[{0}]'
             logger.warn(msg.format(server.last_join_status))
