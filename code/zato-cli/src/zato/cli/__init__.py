@@ -581,7 +581,7 @@ class CACreateCommand(ZatoCommand):
             else:
                 template_args['organizational_unit'] = ca_defaults['organizational_unit']
             
-        template_args['common_name'] = self._get_arg(args, 'common_name', default_ca_name)
+        template_args['common_name'] = self._get_arg(args, 'common_name', default_common_name)
         template_args['target_dir'] = self.target_dir
 
         f = tempfile.NamedTemporaryFile() # noqa
