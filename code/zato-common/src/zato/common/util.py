@@ -485,9 +485,8 @@ def _os_remove(path):
     """
     return os.remove(path)
 
-def hot_deploy(parallel_server, file_name, path, delete_path=True):
-    """ Hot-deploys a package if it looks like a Python module or an archive
-    which might contain a Distutils2 distribution.
+def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True):
+    """ Hot-deploys a package if it looks like a Python module or archive.
     """
     if is_python_file(file_name) or is_archive_file(file_name):
 
@@ -499,15 +498,17 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True):
         package_id = parallel_server.odb.hot_deploy(
             now, di, file_name, open(path, 'rb').read(), parallel_server.id)
 
-        # .. and notify all the servers they're to pick up a delivery
-        parallel_server.notify_new_package(package_id)
+        # .. and optionally notify all the servers they're to pick up a delivery
+        if notify:
+            parallel_server.notify_new_package(package_id)
 
         if delete_path:
             _os_remove(path)
 
-        return True
+        return package_id
 
     else:
+        qq
         logger.warn('Ignoring {}'.format(path))
 
 
