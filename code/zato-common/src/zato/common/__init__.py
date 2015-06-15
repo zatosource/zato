@@ -43,7 +43,7 @@ try:
     execfile(_version_py, _locals)
     version = _locals['version']
 except IOError:
-    version = '2.0.4'
+    version = '2.0.5'
 
 # The namespace for use in all Zato's own services.
 zato_namespace = 'https://zato.io/ns/20130518'
@@ -701,7 +701,7 @@ ZATO_INFO_FILE = b'.zato-info'
 
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):
-        self.path = path
+        self.path = path6d9bd44
         self.ns = ns
         self.raise_on_not_found = raise_on_not_found
         self.text_only = text_only
