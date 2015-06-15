@@ -701,7 +701,7 @@ ZATO_INFO_FILE = b'.zato-info'
 
 class path(object):
     def __init__(self, path, raise_on_not_found=False, ns='', text_only=False):
-        self.path = path6d9bd44
+        self.path = path
         self.ns = ns
         self.raise_on_not_found = raise_on_not_found
         self.text_only = text_only
