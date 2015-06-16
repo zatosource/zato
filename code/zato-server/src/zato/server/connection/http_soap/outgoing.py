@@ -27,7 +27,7 @@ import requests
 from requests.exceptions import Timeout as RequestsTimeout
 
 # Zato
-from zato.common import DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, TimeoutException, URL_TYPE, ZATO_NONE
+from zato.common import DATA_FORMAT, Inactive, SEC_DEF_TYPE, TimeoutException, URL_TYPE, ZATO_NONE
 from zato.common.util import get_component_name
 from zato.server.connection.queue import ConnectionQueue
 

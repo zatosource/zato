@@ -51,14 +51,12 @@ from tzlocal import get_localzone
 
 # Zato
 from zato.broker.client import BrokerClient
-from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, KVDB, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS,\
-     ZATO_ODB_POOL_NAME
-from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, SERVICE, \
-     TOPICS, ZMQ_CONNECTOR
+from zato.common import ACCESS_LOG_DT_FORMAT, KVDB, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, TOPICS, \
+     ZMQ_CONNECTOR
 from zato.common.pubsub import PubSubAPI, RedisPubSub
 from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, hot_deploy, \
-     invoke_startup_services as _invoke_startup_services, new_cid, startup_service_payload_from_path, StaticConfig, \
-     register_diag_handlers
+     invoke_startup_services as _invoke_startup_services, new_cid, StaticConfig, register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore

@@ -107,7 +107,7 @@ class ODBManager(SessionWrapper):
 
         with closing(self.session()) as session:
 
-            server_services = self._session.query(
+            server_services = session.query(
                 Service.id, Service.name,
                 DeployedService.source_path, DeployedService.source).\
                 join(DeployedService, Service.id==DeployedService.service_id).\

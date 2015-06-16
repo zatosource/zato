@@ -93,8 +93,8 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, KVDB, MISC, NoDistributionFound, SECRET_SHADOW, SIMPLE_IO, soap_body_path, soap_body_xpath, \
-     TLS, TRACE1, ZatoException
+from zato.common import CHANNEL, DATA_FORMAT, KVDB, MISC, SECRET_SHADOW, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, \
+     TRACE1, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import HTTPSOAP, IntervalBasedJob, Job, Service

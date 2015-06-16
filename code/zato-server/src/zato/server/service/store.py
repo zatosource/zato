@@ -19,9 +19,6 @@ from uuid import uuid4
 # gevent
 from gevent.lock import RLock
 
-# pip
-from pip.download import is_archive_file
-
 # anyjson
 from anyjson import dumps
 
@@ -37,7 +34,7 @@ except ImportError:
 from springpython.context import InitializingObject
 
 # Zato
-from zato.common import DONT_DEPLOY_ATTR_NAME, NoDistributionFound, SourceInfo, TRACE1
+from zato.common import DONT_DEPLOY_ATTR_NAME, SourceInfo, TRACE1
 from zato.common.match import Matcher
 from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, visit_py_source
 from zato.server.service import Service

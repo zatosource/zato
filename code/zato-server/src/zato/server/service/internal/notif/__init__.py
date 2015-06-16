@@ -8,9 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from json import dumps
-
 # Bunch
 from bunch import bunchify
 
@@ -21,9 +18,6 @@ from gevent import sleep, spawn
 from retools.lock import LockTimeout
 
 # Zato
-from zato.common.broker_message import NOTIF
-from zato.common import DATA_FORMAT
-from zato.common.util import new_cid
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
