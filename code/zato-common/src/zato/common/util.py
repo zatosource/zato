@@ -508,9 +508,7 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True):
         return package_id
 
     else:
-        qq
         logger.warn('Ignoring {}'.format(path))
-
 
 # As taken from http://wiki.python.org/moin/SortingListsOfDictionaries
 def multikeysort(items, columns):
