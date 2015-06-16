@@ -12,8 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os, shutil
 from contextlib import closing
 from datetime import datetime
-from errno import EEXIST, ENOENT
-from tempfile import mkdtemp, NamedTemporaryFile
+from errno import ENOENT
 from time import sleep
 from traceback import format_exc
 
