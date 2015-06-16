@@ -233,7 +233,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                     # .. and tell the worker to actually deploy all the services the package contains.
                     gevent.spawn(self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE, msg)
 
-                    logger.warn('Deployed an extra service found: %s (%s)', name, service_id)
+                    logger.info('Deployed an extra service found: %s (%s)', name, service_id)
 
     def maybe_on_first_worker(self, server, redis_conn, deployment_key):
         """ This method will execute code with a Redis lock held. We need a lock
