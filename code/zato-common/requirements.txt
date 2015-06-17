@@ -25,8 +25,7 @@ pyOpenSSL==0.14
 pyparsing==2.0.1
 python-dateutil==2.2
 pytz==2014.4
-pyzmq==2.2.0.1
-pyzmq-static==2.2
+pyzmq==14.6.0
 redis==2.9.1
 requests==2.6.0
 rsa==3.1.2
