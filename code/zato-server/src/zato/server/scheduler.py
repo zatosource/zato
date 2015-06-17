@@ -93,7 +93,7 @@ class Scheduler(object):
                 'service': 'zato.scheduler.job.set-active-status',
                 'payload': {'id':ctx['id'], 'is_active':False},
                 'cid': new_cid(),
-                'channel': CHANNEL.SCHEDULER,
+                'channel': CHANNEL.SCHEDULER_AFTER_ONE_TIME,
                 'data_format': DATA_FORMAT.JSON,
             }
             self.singleton.broker_client.publish(msg)
