@@ -153,7 +153,7 @@ class ZatoContext(PythonConfig):
 
     @Object
     def soap11_content_type(self):
-        return 'application/xml'
+        return 'text/xml'
 
     @Object
     def soap12_content_type(self):
