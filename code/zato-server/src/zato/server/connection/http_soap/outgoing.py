@@ -27,8 +27,7 @@ import requests
 from requests.exceptions import Timeout as RequestsTimeout
 
 # Zato
-from zato.common import CONTENT_TYPE, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, Inactive, SEC_DEF_TYPE, TimeoutException, \
-     URL_TYPE, ZATO_NONE
+from zato.common import CONTENT_TYPE, DATA_FORMAT, Inactive, SEC_DEF_TYPE, TimeoutException, URL_TYPE, ZATO_NONE
 from zato.common.util import get_component_name
 from zato.server.connection.queue import ConnectionQueue
 
@@ -64,12 +63,12 @@ class BaseHTTPSOAPWrapper(object):
         self.path_params = []
 
         self.set_address_data()
-        self.set_auth()
 
     def invoke_http(self, cid, method, address, data, headers, hooks, *args, **kwargs):
 
         cert = self.config['tls_key_cert_full_path'] if self.config['sec_type'] == SEC_DEF_TYPE.TLS_KEY_CERT else None
         verify = False if self.config.get('tls_verify', ZATO_NONE) == ZATO_NONE else self.config['tls_verify']
+        verify = verify if isinstance(verify, bool) else verify.encode('utf-8')
 
         try:
 
@@ -159,22 +158,6 @@ class BaseHTTPSOAPWrapper(object):
 
         return headers
 
-    def set_auth(self):
-        """ Configures the security for requests, if any is to be configured at all.
-        """
-        # Suds SOAP requests
-        if self.config['serialization_type'] == HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id:
-            self.suds_auth = {'username':self.config['username'], 'password':self.config['password']}
-
-        # Everything else
-        else:
-            self.requests_auth = self.auth if self.config['sec_type'] == SEC_DEF_TYPE.BASIC_AUTH else None
-
-            if self.config['sec_type'] == SEC_DEF_TYPE.WSS:
-                self.soap[self.config['soap_version']]['header'] = \
-                    self.soap[self.config['soap_version']]['header_template'].format(
-                        Username=self.config['username'], Password=self.config['password'])
-
     def set_address_data(self):
         """Sets the full address to invoke and parses input URL's configuration, 
         to extract any named parameters that will have to be passed in by users
@@ -233,6 +216,15 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
           </wsse:Security>
         </s12:Header>
         """
+        self.set_auth()
+
+    def set_auth(self):
+        self.requests_auth = self.auth if self.config['sec_type'] == SEC_DEF_TYPE.BASIC_AUTH else None
+
+        if self.config['sec_type'] == SEC_DEF_TYPE.WSS:
+            self.soap[self.config['soap_version']]['header'] = \
+                self.soap[self.config['soap_version']]['header_template'].format(
+                    Username=self.config['username'], Password=self.config['password'])
 
 # ################################################################################################################################
         
@@ -333,7 +325,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         else:
             address, qs_params = self.address, dict(params)
 
-        logger.info('CID:[%s], address:[%s], qs_params:[%s], auth:[%s], kwargs:[%s]', cid, address, qs_params, self.requests_auth, kwargs) 
+        if isinstance(data, unicode):
+            data = data.encode('utf-8')
+
+        logger.info(
+            'CID:[%s], address:[%s], qs_params:[%s], auth:[%s], kwargs:[%s]', cid, address, qs_params, self.requests_auth, kwargs) 
 
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
@@ -376,6 +372,7 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
     """
     def __init__(self, config):
         super(SudsSOAPWrapper, self).__init__(config)
+        self.set_auth()
         self.update_lock = RLock()
         self.config = config
         self.config['timeout'] = float(self.config['timeout'])
@@ -386,6 +383,11 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
         self.client = ConnectionQueue(
             self.config['pool_size'], self.config['queue_build_cap'], self.config['name'], self.conn_type, self.address,
             self.add_client)
+
+    def set_auth(self):
+        """ Configures the security for requests, if any is to be configured at all.
+        """
+        self.suds_auth = {'username':self.config['username'], 'password':self.config['password']}
 
     def add_client(self):
 

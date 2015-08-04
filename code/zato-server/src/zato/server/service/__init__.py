@@ -411,16 +411,27 @@ class Service(object):
                 logger.warn(exc_formatted)
 
             finally:
-                response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
+                try:
+                    response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
-                # If this is was fan-out/fan-in we need to always notify our callbacks no matter the result
-                if channel in (CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL):
-                    func = self.patterns.fanout.on_call_finished if channel == CHANNEL.FANOUT_CALL else \
-                        self.patterns.parallel.on_call_finished
-                    spawn(func, self, service.response.payload, exc_formatted)
+                    # If this is was fan-out/fan-in we need to always notify our callbacks no matter the result
+                    if channel in (CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL):
+                        func = self.patterns.fanout.on_call_finished if channel == CHANNEL.FANOUT_CALL else \
+                            self.patterns.parallel.on_call_finished
+                        spawn(func, self, service.response.payload, exc_formatted)
 
-                if e:
-                    raise e
+                except Exception, resp_e:
+
+                    # If we already have an exception around, log the new one but don't overwrite the old one with it.
+                    logger.warn(format_exc(resp_e))
+
+                    if e:
+                        raise Exception(exc_formatted)
+                    raise resp_e
+
+                else:
+                    if e:
+                        raise Exception(exc_formatted)
 
         # We don't accept it but some response needs to be returned anyway.
         else:

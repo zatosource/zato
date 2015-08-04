@@ -93,7 +93,7 @@ class Scheduler(object):
                 'service': 'zato.scheduler.job.set-active-status',
                 'payload': {'id':ctx['id'], 'is_active':False},
                 'cid': new_cid(),
-                'channel': CHANNEL.SCHEDULER,
+                'channel': CHANNEL.SCHEDULER_AFTER_ONE_TIME,
                 'data_format': DATA_FORMAT.JSON,
             }
             self.singleton.broker_client.publish(msg)
@@ -202,7 +202,7 @@ class Scheduler(object):
         """
         self.create_edit_cron_style(job_data, broker_msg_type, **kwargs)
 
-    def edit_cron_style(self, job_data, broker_msg_type):
+    def edit_cron_style(self, job_data, broker_msg_type, **kwargs):
         """ First unschedules a cron-style job and then schedules its execution. 
         The operations aren't parts of an atomic transaction.
         """

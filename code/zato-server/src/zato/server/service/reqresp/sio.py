@@ -24,7 +24,7 @@ from lxml.objectify import Element
 from paste.util.converters import asbool
 
 # Zato
-from zato.common import DATA_FORMAT, NO_DEFAULT_VALUE, ParsingException, path, ZatoException, ZATO_NONE
+from zato.common import DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, path, ZatoException, ZATO_NONE
 
 logger = logging.getLogger(__name__)
 
@@ -386,10 +386,29 @@ convert_impl = {
 }
 
 def convert_param(cid, payload, param, data_format, is_required, default_value, path_prefix, use_text, 
-                  channel_params, has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes):
+                  channel_params, has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes,
+                  params_priority):
     """ Converts request parameters from any data format supported into Python objects.
     """
     param_name = param.name if isinstance(param, ForceType) else param
+
+    # First thing is to find out if we have the parameters in channel_params. If so and they have priority
+    # over payload, we don't look further. If they don't have priority, whether the value from channel_params
+    # is used depends on whether the payload one exists at all.
+
+    # We've got a value from the channel, i.e. in GET parameters
+    channel_value = channel_params.get(param_name, ZATO_NONE)
+
+    # Convert it to a native Python data type
+    if channel_value != ZATO_NONE:
+        channel_value = convert_sio(param, param_name, channel_value, has_simple_io_config, False, bool_parameter_prefixes,
+                    int_parameters, int_parameter_suffixes, None, data_format, False)
+
+    # Return the value immediately if we already know channel_params are of higer priority
+    if params_priority == PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG and channel_value != ZATO_NONE:
+        return param_name, channel_value
+
+    # Ok, at that point we either don't have anything in channel_params or they don't have priority over payload.
 
     if payload:
         value = convert_impl[data_format](payload, param_name, cid, is_required, isinstance(param, COMPLEX_VALUE), 
@@ -401,13 +420,13 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
         if default_value != NO_DEFAULT_VALUE:
             value = default_value
         else:
-            if is_required and not channel_params.get(param_name):
+            if is_required:
                 msg = 'Required input element:`{}` not found, value:`{}`, data_format:`{}`, payload:`{}`'.format(
                     param, value, data_format, payload)
                 raise ParsingException(cid, msg)
             else:
                 # Not required and not provided on input
-                value = ''
+                value = channel_value if (channel_value and channel_value != ZATO_NONE) else ''
     else:
         if value is not None and not isinstance(param, COMPLEX_VALUE):
             value = unicode(value)

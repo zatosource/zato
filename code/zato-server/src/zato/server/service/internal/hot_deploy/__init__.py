@@ -13,6 +13,7 @@ import os, shutil
 from contextlib import closing
 from datetime import datetime
 from errno import ENOENT
+from time import sleep
 from traceback import format_exc
 
 # anyjson
@@ -132,6 +133,13 @@ class Create(AdminService):
             msg['cid'] = new_cid()
             msg['id'] = service_id
             msg['action'] = HOT_DEPLOY.AFTER_DEPLOY.value
+
+            # Now, it's possible we don't have the broker_client yet - this will happen if we are deploying
+            # missing services found on other servers during our own server's startup. In that case we just
+            # need to wait a moment for the server we are on to fully initialize.
+            while not self.broker_client:
+                sleep(1)
+
             self.broker_client.publish(msg)
 
         return True

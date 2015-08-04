@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import copy, errno, gc, inspect, json, linecache, logging, os, random, re, signal, string, threading, traceback, sys
+from ast import literal_eval
 from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
@@ -484,9 +485,8 @@ def _os_remove(path):
     """
     return os.remove(path)
 
-def hot_deploy(parallel_server, file_name, path, delete_path=True):
-    """ Hot-deploys a package if it looks like a Python module or an archive
-    which might contain a Distutils2 distribution.
+def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True):
+    """ Hot-deploys a package if it looks like a Python module or archive.
     """
     if is_python_file(file_name) or is_archive_file(file_name):
 
@@ -498,17 +498,17 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True):
         package_id = parallel_server.odb.hot_deploy(
             now, di, file_name, open(path, 'rb').read(), parallel_server.id)
 
-        # .. and notify all the servers they're to pick up a delivery
-        parallel_server.notify_new_package(package_id)
+        # .. and optionally notify all the servers they're to pick up a delivery
+        if notify:
+            parallel_server.notify_new_package(package_id)
 
         if delete_path:
             _os_remove(path)
 
-        return True
+        return package_id
 
     else:
         logger.warn('Ignoring {}'.format(path))
-
 
 # As taken from http://wiki.python.org/moin/SortingListsOfDictionaries
 def multikeysort(items, columns):
@@ -843,6 +843,13 @@ def parse_extra_into_dict(lines, convert_bool=True):
                     # OK, not an integer
                     pass
 
+                # Could be a dict or another simple type then
+                try:
+                    value = literal_eval(value)
+                except Exception:
+                    pass
+
+                # OK, let's just treat it as string
                 _extra[key.strip()] = value
 
     return _extra

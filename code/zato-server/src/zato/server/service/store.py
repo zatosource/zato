@@ -112,6 +112,8 @@ class ServiceStore(InitializingObject):
         """ Imports services from any of the supported sources, be it module names,
         individual files, directories or distutils2 packages (compressed or not).
         """
+        deployed = []
+
         for item_name in items:
             logger.debug('About to import services from:[%s]', item_name)
 
@@ -119,19 +121,23 @@ class ServiceStore(InitializingObject):
 
             # A regular directory
             if os.path.isdir(item_name):
-                self.import_services_from_directory(item_name, base_dir)
+                deployed.extend(self.import_services_from_directory(item_name, base_dir))
 
             # .. a .py/.pyw
             elif is_python_file(item_name):
-                self.import_services_from_file(item_name, is_internal, base_dir)
+                deployed.extend(self.import_services_from_file(item_name, is_internal, base_dir))
 
             # .. must be a module object
             else:
-                self.import_services_from_module(item_name, is_internal)
+                deployed.extend(self.import_services_from_module(item_name, is_internal))
+
+        return deployed
 
     def import_services_from_file(self, file_name, is_internal, base_dir):
         """ Imports all the services from the path to a file.
         """
+        deployed = []
+
         if not os.path.isabs(file_name):
             file_name = os.path.normpath(os.path.join(base_dir, file_name))
 
@@ -155,7 +161,9 @@ class ServiceStore(InitializingObject):
                 mod_name, file_name, format_exc(e))
             logger.error(msg)
         else:
-            return self._visit_module(mod, is_internal, file_name)
+            deployed.extend(self._visit_module(mod, is_internal, file_name))
+        finally:
+            return deployed
 
     def import_services_from_directory(self, dir_name, base_dir):
         """ dir_name points to a directory. 
@@ -168,14 +176,18 @@ class ServiceStore(InitializingObject):
         of Python source code to import, as is the case with services that have
         been hot-deployed.
         """
+        deployed = []
+
         for py_path in visit_py_source(dir_name):
-            self.import_services_from_file(py_path, False, base_dir)
+            deployed.extend(self.import_services_from_file(py_path, False, base_dir))
+
+        return deployed
 
     def import_services_from_module(self, mod_name, is_internal):
         """ Imports all the services from a module specified by the given name.
         """
         mod = import_module(mod_name)
-        self._visit_module(mod, is_internal, inspect.getfile(mod))
+        return self._visit_module(mod, is_internal, inspect.getfile(mod))
 
     def _should_deploy(self, name, item):
         """ Is an object something we can deploy on a server?
@@ -248,7 +260,7 @@ class ServiceStore(InitializingObject):
                             service_id, is_active, slow_threshold = self.odb.add_service(
                                 name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
 
-                            deployed.append(service_id)
+                            deployed.append(name)
 
                             self.services[impl_name]['is_active'] = is_active
                             self.services[impl_name]['slow_threshold'] = slow_threshold
@@ -270,9 +282,5 @@ class ServiceStore(InitializingObject):
             msg = 'Exception while visit mod:[{}], is_internal:[{}], fs_location:[{}], e:[{}]'.format(
                 mod, is_internal, fs_location, format_exc(e))
             logger.error(msg)
-        else:
+        finally:
             return deployed
-
-if __name__ == '__main__':
-    store = ServiceStore()
-    store.import_services_from_directory('/home/dsuch/tmp/zato-sample-project1')

@@ -414,6 +414,7 @@ class CHANNEL(Attrs):
     PARALLEL_EXEC_ON_TARGET = 'parallel-exec-on-target'
     PUBLISH = 'publish'
     SCHEDULER = 'scheduler'
+    SCHEDULER_AFTER_ONE_TIME = 'scheduler-after-one-time'
     STARTUP_SERVICE = 'startup-service'
     STOMP = 'stomp'
     WORKER = 'worker'
@@ -719,7 +720,7 @@ class STOMP:
 CONTENT_TYPE = Bunch(
     JSON = 'application/json',
     PLAIN_XML = 'application/xml',
-    SOAP11 = 'application/xml',
+    SOAP11 = 'text/xml',
     SOAP12 = 'application/soap+xml; charset=utf-8',
 )
 

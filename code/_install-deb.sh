@@ -50,6 +50,9 @@ mkdir $CURDIR/zato_extra_paths
 symlink_py 'numpy'
 symlink_py 'scipy'
 
+export CYTHON=$CURDIR/bin/cython
+
+sudo pip install --upgrade pip
 sudo pip install distribute==0.6.49
 sudo pip install virtualenv==1.9.1
 sudo pip install zato-apitest

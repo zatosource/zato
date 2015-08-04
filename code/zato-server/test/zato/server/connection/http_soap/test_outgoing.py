@@ -24,6 +24,7 @@ from nose.tools import eq_
 
 # requests
 import requests
+requests.packages.urllib3.disable_warnings()
 
 # Zato
 from zato.common import CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
@@ -443,7 +444,7 @@ class TLSPingTestCase(TestCase, Base):
             server = TLSServer()
             server.start()
 
-            sleep(2)
+            sleep(1)
 
             port = server.get_port()
 
@@ -458,7 +459,8 @@ class TLSPingTestCase(TestCase, Base):
             try:
                 wrapper.ping(rand_string())
             except Exception, e:
-                self.assertIn('SSL3_GET_SERVER_CERTIFICATE:certificate verify failed', e.message[0][1])
+                details = e.message[0][1][0][0]
+                self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
             else:
                 self.fail('Excepted a TLS error here because the CA is invalid')
 
@@ -487,7 +489,8 @@ class TLSPingTestCase(TestCase, Base):
             try:
                 wrapper.ping(rand_string())
             except Exception, e:
-                self.assertIn('SSL3_READ_BYTES:sslv3 alert handshake failure', e.message[0][1])
+                details = e.message[0][1][0][0]
+                self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
             else:
                 self.fail('Excepted a TLS error here because no TLS cert has been provided by client')
 
@@ -573,7 +576,8 @@ class TLSHTTPTestCase(TestCase, Base):
             try:
                 wrapper.get('123')
             except Exception, e:
-                self.assertIn('SSL3_GET_SERVER_CERTIFICATE:certificate verify failed', e.message[0][1])
+                details = e.message[0][1][0][0]
+                self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
             else:
                 self.fail('Excepted a TLS error here because the CA is invalid')
 
@@ -603,7 +607,8 @@ class TLSHTTPTestCase(TestCase, Base):
             try:
                 wrapper.get('123')
             except Exception, e:
-                self.assertIn('SSL3_READ_BYTES:sslv3 alert handshake failure', e.message[0][1])
+                details = e.message[0][1][0][0]
+                self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
             else:
                 self.fail('Excepted a TLS error here because no TLS cert has been provided by client')
 
@@ -629,16 +634,34 @@ class TLSHTTPTestCase(TestCase, Base):
                 port = server.get_port()
 
                 config = self._get_config()
-                config['address_host'] = 'https://localhost:{}/'.format(port)
-                config['address_url_path'] = ''
                 config['ping_method'] = 'GET'
-                config['transport'] = URL_TYPE.PLAIN_HTTP
                 config['tls_verify'] = ca_cert_tf.name
                 config['tls_key_cert_full_path'] = client_cert_tf.name
                 config['sec_type'] = SEC_DEF_TYPE.TLS_KEY_CERT
+                config['address_host'] = 'https://localhost:{}/'.format(port)
 
-                wrapper = HTTPSOAPWrapper(config, requests)
+                uni_data = u'uni_data'
+                string_data = b'string_data'
+                needs_data = 'post', 'send', 'put', 'patch'
 
-                wrapper.get('123')
+                for url_type in URL_TYPE:
+                    config['transport'] = url_type
+
+                    for data_format in DATA_FORMAT:
+                        config['data_format'] = data_format
+
+                        for data in uni_data, string_data:
+
+                            for name in('get', 'delete', 'options', 'post', 'send', 'put', 'patch'):
+                                cid = '{}_{}'.format(name, data)
+
+                                config['address_url_path'] = '{}-{}-{}'.format(url_type, data_format, data)
+                                wrapper = HTTPSOAPWrapper(config, requests)
+                                func = getattr(wrapper, name)
+
+                                if name in needs_data:
+                                    func(cid, data=data)
+                                else:
+                                    func(cid)
 
 # ################################################################################################################################

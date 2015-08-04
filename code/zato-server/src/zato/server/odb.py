@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError, ProgrammingError
 from bunch import Bunch
 
 # Zato
-from zato.common import DEPLOYMENT_STATUS, MISC, SEC_DEF_TYPE, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common import DEPLOYMENT_STATUS, MISC, SEC_DEF_TYPE, SERVER_UP_STATUS, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition
 from zato.common.odb import query
@@ -74,13 +74,51 @@ class ODBManager(SessionWrapper):
                        filter(Server.token == self.token).\
                        one()
                 self.server = _Server(server, server.cluster)
+                self.server_id = server.id
                 self.cluster = server.cluster
+                self.cluster_id = server.cluster.id
                 return self.server
             except Exception:
                 msg = 'Could not find the server in the ODB, token:[{0}]'.format(
                     self.token)
                 logger.error(msg)
                 raise
+
+    def get_servers(self, up_status=SERVER_UP_STATUS.RUNNING, filter_out_self=True):
+        """ Returns all servers matching criteria provided on input.
+        """
+        with closing(self.session()) as session:
+
+            query = session.query(Server).\
+                filter(Server.cluster_id == self.cluster_id)
+
+            if up_status:
+                query = query.filter(Server.up_status == up_status)
+
+            if filter_out_self:
+                query = query.filter(Server.id != self.server_id)
+
+            return query.all()
+
+    def get_missing_services(self, server, locally_deployed):
+        """ Returns services deployed on the server given on input that are not among locally_deployed.
+        """
+        missing = []
+
+        with closing(self.session()) as session:
+
+            server_services = session.query(
+                Service.id, Service.name,
+                DeployedService.source_path, DeployedService.source).\
+                join(DeployedService, Service.id==DeployedService.service_id).\
+                join(Server, DeployedService.server_id==Server.id).\
+                all()
+
+            for item in server_services:
+                if item.name not in locally_deployed:
+                    missing.append(item)
+
+        return missing
 
     def server_up_down(self, token, status, update_host=False, bind_host=None, bind_port=None):
         """ Updates the information regarding the server is RUNNING or CLEAN_DOWN etc.

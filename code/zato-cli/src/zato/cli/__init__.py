@@ -580,7 +580,7 @@ class CACreateCommand(ZatoCommand):
             else:
                 template_args['organizational_unit'] = ca_defaults['organizational_unit']
             
-        template_args['common_name'] = self._get_arg(args, 'common_name', default_ca_name)
+        template_args['common_name'] = self._get_arg(args, 'common_name', default_common_name)
         template_args['target_dir'] = self.target_dir
 
         f = tempfile.NamedTemporaryFile() # noqa
@@ -661,6 +661,9 @@ class CACreateCommand(ZatoCommand):
                 self.logger.debug(msg)
             else:
                 self.logger.info('OK')
+
+        # Make sure permissions are tight (GH #440)
+        os.chmod(priv_key_name, 0640)
 
         # In case someone needs to invoke us directly and wants to find out
         # what the format_args were.
