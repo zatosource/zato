@@ -1,6 +1,28 @@
---- requests/packages/urllib3/connectionpool.py.orig	2015-06-08 18:13:01.136948026 +0200
-+++ requests/packages/urllib3/connectionpool.py	2015-06-08 18:13:04.568869138 +0200
-@@ -308,12 +308,6 @@
+--- requests/packages/urllib3/connectionpool.py.orig	2015-08-21 00:21:08.620310276 +0200
++++ requests/packages/urllib3/connectionpool.py	2015-08-21 00:22:47.780311879 +0200
+@@ -236,11 +236,16 @@
+         # If this is a persistent connection, check if it got disconnected
+         if conn and is_connection_dropped(conn):
+             log.info("Resetting dropped connection: %s" % self.host)
+-            conn.close()
+-            if getattr(conn, 'auto_open', 1) == 0:
+-                # This is a proxied connection that has been mutated by
+-                # httplib._tunnel() and cannot be reused (since it would
+-                # attempt to bypass the proxy)
++
++            try:
++                conn.close()
++                if getattr(conn, 'auto_open', 1) == 0:
++                    # This is a proxied connection that has been mutated by
++                    # httplib._tunnel() and cannot be reused (since it would
++                    # attempt to bypass the proxy)
++                    conn = None
++            except Exception, e:
++                log.info("Closing connection failed: %s, force new connection" % str(e))
+                 conn = None
+ 
+         return conn or self._new_conn()
+@@ -308,12 +313,6 @@
          if hasattr(err, 'errno') and err.errno in _blocking_errnos:
              raise ReadTimeoutError(self, url, "Read timed out. (read timeout=%s)" % timeout_value)
  
