@@ -168,7 +168,7 @@ class Create(_CreateEdit):
                 item.security_id = input.security_id or None # So SQLite doesn't reject ''
                 item.method = input.method
                 item.soap_action = input.soap_action
-                item.soap_version = input.soap_version
+                item.soap_version = input.soap_version or None
                 item.data_format = input.data_format
                 item.service = service
                 item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
@@ -280,7 +280,7 @@ class Edit(_CreateEdit):
                 item.cluster_id = input.cluster_id
                 item.method = input.method
                 item.soap_action = input.soap_action
-                item.soap_version = input.soap_version
+                item.soap_version = input.soap_version or None
                 item.data_format = input.data_format
                 item.service = service
                 item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
