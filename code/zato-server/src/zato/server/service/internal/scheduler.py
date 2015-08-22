@@ -108,6 +108,10 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                 if value != ZATO_NONE:
                     setattr(ib_job, param, value)
 
+            value = input['repeats'] or None
+            if value != ZATO_NONE:
+                setattr(ib_job, 'repeats', value)
+
             session.add(ib_job)
 
         elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
