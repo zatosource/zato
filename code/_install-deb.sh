@@ -13,14 +13,14 @@ function symlink_py {
 
 bash $CURDIR/clean.sh
 
-# Default libumfpack version on Debian 8 and Ubuntu 14.04
-LIBUMFPACK_VERSION=5.6.2
-
-# Ubuntu 12.04 and Debian Wheezy needs a different one
+# Ubuntu 12.04 and Debian Wheezy needs a different version
+# of libumfpack package than Ubuntu 14.04 and Debian Jessie
 if command -v lsb_release > /dev/null; then
     release=$(lsb_release -r | cut -f2)
     if [[ "$release" == "12.04" ]] || [[ "$release" == "7.4" ]]; then
         LIBUMFPACK_VERSION=5.4.0
+    else
+        LIBUMFPACK_VERSION=5.6.2
     fi
 fi
 
@@ -32,7 +32,7 @@ sudo apt-get install -y git bzr gfortran haproxy  \
     libatlas-dev libatlas3gf-base libblas3gf \
     libbz2-dev libev4 libev-dev \
     libevent-dev libgfortran3 liblapack-dev liblapack3gf \
-    libpq-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack \
+    libpq-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack$LIBUMFPACK_VERSION \
     openssl python2.7-dev python-numpy python-pip \
     python-scipy python-zdaemon swig uuid-dev uuid-runtime libffi-dev
 
