@@ -17,7 +17,7 @@ bash $CURDIR/clean.sh
 # of libumfpack package than Ubuntu 14.04 and Debian Jessie
 if command -v lsb_release > /dev/null; then
     release=$(lsb_release -r | cut -f2)
-    if [[ "$release" == "12.04" ]] || [[ "$release" == "7.4" ]]; then
+    if [[ "$release" == "12.04" ]] || [[ "$release" == "7.8" ]]; then
         LIBUMFPACK_VERSION=5.4.0
     else
         LIBUMFPACK_VERSION=5.6.2
