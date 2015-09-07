@@ -19,7 +19,7 @@ LIBUMFPACK_VERSION=5.6.2
 # Ubuntu 12.04 and Debian Wheezy needs a different one
 if command -v lsb_release > /dev/null; then
     release=$(lsb_release -r | cut -f2)
-    if [[ "$release" == "12.04" ]] || [[ "$release" == "7.4" ]]; then
+    if [[ "$release" == "12.04" ]] || [[ "$release" == "7.8" ]]; then
         LIBUMFPACK_VERSION=5.4.0
     fi
 fi
