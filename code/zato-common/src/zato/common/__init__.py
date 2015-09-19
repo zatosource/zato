@@ -55,18 +55,20 @@ engine_def_sqlite = 'sqlite:///{sqlite_path}'
 
 # Convenience access functions and constants.
 
-soapenv_namespace = 'http://schemas.xmlsoap.org/soap/envelope/'
+soapenv11_namespace = 'http://schemas.xmlsoap.org/soap/envelope/'
+soapenv12_namespace = 'http://www.w3.org/2003/05/soap-envelope'
+
 wsse_namespace = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd'
 wsu_namespace = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'
 
 common_namespaces = {
-    'soapenv':soapenv_namespace,
+    'soapenv':soapenv11_namespace,
     'wsse':wsse_namespace,
     'wsu':wsu_namespace,
     'zato':zato_namespace
 }
 
-soap_doc = Template("""<soap:Envelope xmlns:soap='%s'><soap:Body>$body</soap:Body></soap:Envelope>""" % soapenv_namespace)
+soap_doc = Template("""<soap:Envelope xmlns:soap='%s'><soap:Body>$body</soap:Body></soap:Envelope>""" % soapenv11_namespace)
 
 soap_body_path = '/soapenv:Envelope/soapenv:Body'
 soap_body_xpath = etree.XPath(soap_body_path, namespaces=common_namespaces)

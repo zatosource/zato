@@ -18,6 +18,9 @@ from unittest import TestCase
 # bunch
 from bunch import Bunch
 
+# lxml
+from lxml import etree
+
 # nose
 from nose.tools import eq_
 
@@ -26,7 +29,7 @@ import requests
 requests.packages.urllib3.disable_warnings()
 
 # Zato
-from zato.common import DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
+from zato.common import DATA_FORMAT, SEC_DEF_TYPE, soapenv11_namespace, soapenv12_namespace, URL_TYPE, ZATO_NONE
 from zato.common.test import rand_float, rand_int, rand_string
 from zato.common.test.tls import TLSServer
 from zato.common.test.tls_material import ca_cert, ca_cert_invalid, client1_cert, client1_key
@@ -74,7 +77,22 @@ class Base(object):
 # ################################################################################################################################
 
 class HTTPSOAPWrapperTestCase(TestCase, Base):
-    
+
+    def test_soap_ns(self):
+        """ https://github.com/zatosource/zato/issues/474 (SOAP namespace in string-based messages)
+        """
+        config = self._get_config()
+        requests_module = _FakeRequestsModule()
+        wrapper = HTTPSOAPWrapper(config, requests_module)
+
+        soap11 = etree.fromstring(wrapper.soap['1.1']['message'].encode('utf-8'))
+        root = soap11.xpath('/*')[0]
+        self.assertEquals(root.nsmap['s11'], soapenv11_namespace)
+
+        soap12 = etree.fromstring(wrapper.soap['1.2']['message'].encode('utf-8'))
+        root = soap12.xpath('/*')[0]
+        self.assertEquals(root.nsmap['s12'], soapenv12_namespace)
+
     def test_ping_method(self):
         """ https://github.com/zatosource/zato/issues/44 (outconn HTTP/SOAP ping method)
         """

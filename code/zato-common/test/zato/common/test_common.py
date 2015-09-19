@@ -15,7 +15,7 @@ from unittest import TestCase
 from nose.tools import eq_
 
 # Zato
-from zato.common import StatsElem
+from zato.common import soapenv11_namespace, soapenv12_namespace, StatsElem
 
 class StatsElemTestCase(TestCase):
     def test_from_json(self):
@@ -34,3 +34,8 @@ class StatsElemTestCase(TestCase):
         for k, v in item.items():
             value = getattr(stats_elem, k)
             eq_(v, value)
+
+class TestSOAPNamespace(TestCase):
+    def test_soap_ns(self):
+        self.assertEquals(soapenv11_namespace, 'http://schemas.xmlsoap.org/soap/envelope/')
+        self.assertEquals(soapenv12_namespace, 'http://www.w3.org/2003/05/soap-envelope')

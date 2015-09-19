@@ -27,7 +27,8 @@ import requests
 from requests.exceptions import Timeout as RequestsTimeout
 
 # Zato
-from zato.common import DATA_FORMAT, Inactive, SEC_DEF_TYPE, TimeoutException, URL_TYPE, ZATO_NONE
+from zato.common import DATA_FORMAT, Inactive, SEC_DEF_TYPE, soapenv11_namespace, soapenv12_namespace, TimeoutException, \
+     URL_TYPE, ZATO_NONE
 from zato.common.util import get_component_name
 from zato.server.connection.queue import ConnectionQueue
 
@@ -151,10 +152,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         self.soap['1.1'] = {}
         self.soap['1.1']['content_type'] = 'text/xml; charset=utf-8'
         self.soap['1.1']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<s11:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s11="http://schemas.xmlsoap.org/soap/envelope/">
+<s11:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s11="%s">
   {header}
   <s11:Body>{data}</s11:Body>
-</s11:Envelope>"""
+</s11:Envelope>""" % (soapenv11_namespace,)
+
         self.soap['1.1']['header_template'] = """<s11:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
           <wsse:Security>
             <wsse:UsernameToken>
@@ -168,10 +170,11 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         self.soap['1.2'] = {}
         self.soap['1.2']['content_type'] = 'application/soap+xml; charset=utf-8'
         self.soap['1.2']['message'] = """<?xml version="1.0" encoding="utf-8"?>
-<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s12="http://www.w3.org/2003/05/soap-envelope/">
+<s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s12="%s">
   {header}
   <s12:Body></s12:Body>
-</s12:Envelope>"""
+</s12:Envelope>""" % (soapenv12_namespace,)
+
         self.soap['1.2']['header_template'] = """<s12:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
           <wsse:Security>
             <wsse:UsernameToken>
