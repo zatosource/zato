@@ -81,6 +81,23 @@ class Base(object):
 
 class HTTPSOAPWrapperTestCase(TestCase, Base):
 
+    def test_soap_body(self):
+        """ https://github.com/zatosource/zato/issues/475 (Body ignored in string-based outgoing SOAP connections)
+        """
+        config = self._get_config()
+        config['transport'] = URL_TYPE.SOAP
+
+        requests_module = _FakeRequestsModule()
+        wrapper = HTTPSOAPWrapper(config, requests_module)
+
+        body_text = rand_string()
+
+        wrapper.post(rand_int(), body_text)
+
+        data = etree.fromstring(wrapper.requests_module.session_obj.request_kwargs['data'])
+        body = data.xpath('//*[local-name() = "Body"]')[0]
+        self.assertEquals(body.text, body_text)
+
     def test_soap_ns(self):
         """ https://github.com/zatosource/zato/issues/474 (SOAP namespace in string-based messages)
         """
