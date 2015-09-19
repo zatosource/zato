@@ -103,7 +103,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
             else:
                 ib_job = session.query(IntervalBasedJob).filter_by(id=job.interval_based.id).one()
 
-            for param in ib_params:
+            for param in ib_params + ('repeats',):
                 value = input[param] or None
                 if value != ZATO_NONE:
                     setattr(ib_job, param, value)
@@ -140,7 +140,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
                 msg['old_name'] = old_name
 
             if job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
-                for param in ib_params:
+                for param in ib_params + ('repeats',):
                     value = input[param]
                     msg[param] = int(value) if value else 0
 
