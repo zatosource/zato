@@ -13,14 +13,14 @@ function symlink_py {
 
 bash $CURDIR/clean.sh
 
-# Default libumfpack version on Debian 8 and Ubuntu 14.04
-LIBUMFPACK_VERSION=5.6.2
-
-# Ubuntu 12.04 and Debian Wheezy needs a different one
+# Ubuntu 12.04 and Debian Wheezy needs a different version
+# of libumfpack package than Ubuntu 14.04 and Debian Jessie
 if command -v lsb_release > /dev/null; then
     release=$(lsb_release -r | cut -f2)
-    if [[ "$release" == "12.04" ]] || [[ "$release" == "7.4" ]]; then
+    if [[ "$release" == "12.04" ]] || [[ "$release" == "7.8" ]]; then
         LIBUMFPACK_VERSION=5.4.0
+    else
+        LIBUMFPACK_VERSION=5.6.2
     fi
 fi
 
