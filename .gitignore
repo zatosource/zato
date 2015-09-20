@@ -14,8 +14,9 @@ code/parts/*
 code/pip-selfcheck.json
 code/release-info/revision.txt
 code/sec-wall-trunk-src/*
-code/zato-web-admin/src/zato/admin/static/css/.sass-cache/
+code/zato-cy/
 code/zato_extra_paths/*
+code/zato-web-admin/src/zato/admin/static/css/.sass-cache/
 code/*/build
 code/*/dist
 hotfixes
