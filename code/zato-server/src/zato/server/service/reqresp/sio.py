@@ -392,7 +392,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
     """
     param_name = param.name if isinstance(param, ForceType) else param
 
-    # First thing is to find out if we have the parameters in channel_params. If so and they have priority
+    # First thing is to find out if we have parameters in channel_params. If so and they have priority
     # over payload, we don't look further. If they don't have priority, whether the value from channel_params
     # is used depends on whether the payload one exists at all.
 
@@ -421,12 +421,19 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
             value = default_value
         else:
             if is_required:
-                msg = 'Required input element:`{}` not found, value:`{}`, data_format:`{}`, payload:`{}`'.format(
-                    param, value, data_format, payload)
-                raise ParsingException(cid, msg)
+
+                # Ok, we don't have anything in payload but it still may be in channel_params.
+                # We arrive here if params priority is not params over msg.
+                value = channel_value if (channel_value is not None and channel_value != ZATO_NONE) else ZATO_NONE
+
+                if value == ZATO_NONE:
+                    msg = 'Required input element:`{}` not found, value:`{}`, data_format:`{}`, payload:`{}`'\
+                        ', channel_params:`{}`'.format(param, value, data_format, payload, channel_params)
+                    raise ParsingException(cid, msg)
             else:
-                # Not required and not provided on input
-                value = channel_value if (channel_value and channel_value != ZATO_NONE) else ''
+                # Not required and not provided on input either in msg or channel params
+                value = ''
+
     else:
         if value is not None and not isinstance(param, COMPLEX_VALUE):
             value = unicode(value)

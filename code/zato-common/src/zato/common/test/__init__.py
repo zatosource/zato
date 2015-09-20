@@ -44,6 +44,38 @@ from zato.common.util import new_cid
 def rand_bool():
     return choice((True, False))
 
+def rand_csv(count=3):
+    return ','.join(str(elem) for elem in rand_int(count=count))
+
+def rand_dict():
+    out = {}
+    funcs = [rand_bool, rand_int, rand_string]
+
+    for x in range(rand_int(30)):
+        out[choice(funcs)()] = choice(funcs)()
+
+    return out
+
+def rand_list():
+    out = []
+    funcs = [rand_bool, rand_int, rand_string]
+
+    for x in range(rand_int(30)):
+        out.append(choice(funcs)())
+
+    return out
+
+def rand_list_of_dicts():
+    out = []
+    for x in range(rand_int(30)):
+        out.append(rand_dict())
+    return out
+
+def rand_opaque():
+    return rand_object()
+
+rand_nested = rand_opaque
+
 def rand_datetime():
     return datetime.utcnow().isoformat() # Random in the sense of not repeating
 
@@ -62,11 +94,17 @@ def rand_string(count=1):
     else:
         return ['a' + uuid4().hex for x in range(count)]
 
+def rand_unicode():
+    return u'ϠϡϢϣϤϥϦϧϨϩϪϫϬϭ'
+
 def rand_object():
     return object()
 
-def rand_date_utc():
-    return datetime.utcnow() # Now is as random as any other date
+def rand_date_utc(as_string=False):
+    value = datetime.utcnow() # Now is as random as any other date
+    if as_string:
+        return value.isoformat()
+    return value
 
 def is_like_cid(cid):
     """ Raises ValueError if the cid given on input does not look like a genuine CID
