@@ -543,7 +543,7 @@ class PARAMS_PRIORITY:
 
     class __metaclass__(type):
         def __iter__(self):
-            return iter((self.CHANNEL_PARAMS_OVER_MSG, self.MSG_OVER_CHANNEL_PARAMS))
+            return iter((self.CHANNEL_PARAMS_OVER_MSG, self.MSG_OVER_CHANNEL_PARAMS, self.DEFAULT))
 
 class NONCE_STORE:
     KEY_PATTERN = 'zato:nonce-store:{}:{}' # E.g. zato:nonce-store:oauth:27
