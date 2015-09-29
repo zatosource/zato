@@ -172,7 +172,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         self.soap['1.2']['message'] = """<?xml version="1.0" encoding="utf-8"?>
 <s12:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:s12="%s">
   {header}
-  <s12:Body>{body}</s12:Body>
+  <s12:Body>{data}</s12:Body>
 </s12:Envelope>""" % (soapenv12_namespace,)
 
         self.soap['1.2']['header_template'] = """<s12:Header xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" >
