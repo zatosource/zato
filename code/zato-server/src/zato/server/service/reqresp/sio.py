@@ -75,16 +75,16 @@ class ForceType(object):
     def __repr__(self):
         return '<{} at {} name:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.name)
 
-    def from_json(self, value):
+    def from_json(self, value, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Subclasses should override it')
 
-    def to_json(self, value):
+    def to_json(self, value, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Subclasses should override it')
 
-    def from_xml(self, value):
+    def from_xml(self, value, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Subclasses should override it')
 
-    def to_xml(self, value):
+    def to_xml(self, value, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Subclasses should override it')
 
     def convert(self, value, param_name, data_type, from_sio_to_external):
@@ -116,6 +116,10 @@ class AsIs(ForceType):
     it would've been, for instance, because its name is 'user_id' and should've
     been converted over to an int.
     """
+    def from_json(self, value, *ignored_args, **ignored_kwargs):
+        return value
+
+    from_xml = from_json
 
 # ################################################################################################################################
 
@@ -307,9 +311,12 @@ class ServiceInput(Bunch):
 
     def require_any(self, *elems):
         for name in elems:
+            if isinstance(name, ForceType):
+                name = name.name
             if self.get(name):
                 break
         else:
+            elems = [elem if isinstance(elem, basestring) else elem.name for elem in elems]
             raise ValueError('At least one of `{}` is required'.format(', '.join(elems)))
 
 # ################################################################################################################################
