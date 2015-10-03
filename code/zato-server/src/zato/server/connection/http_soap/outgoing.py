@@ -9,11 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging
 from copy import deepcopy
 from cStringIO import StringIO
 from datetime import datetime
 from json import dumps, loads
+from logging import DEBUG, getLogger
 from traceback import format_exc
 
 # gevent
@@ -32,7 +32,7 @@ from zato.common import CONTENT_TYPE, DATA_FORMAT, Inactive, SEC_DEF_TYPE, soape
 from zato.common.util import get_component_name
 from zato.server.connection.queue import ConnectionQueue
 
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 
@@ -85,7 +85,7 @@ class BaseHTTPSOAPWrapper(object):
     def ping(self, cid):
         """ Pings a given HTTP/SOAP resource
         """
-        if logger.isEnabledFor(logging.DEBUG):
+        if logger.isEnabledFor(DEBUG):
             msg = 'About to ping:[{}]'.format(self.config_no_sensitive)
             logger.debug(msg)
 
@@ -336,7 +336,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
-        logger.debug('CID:[%s], response:[%s]', cid, response.text)
+        if logger.isEnabledFor(DEBUG):
+            logger.debug('CID:[%s], response:[%s]', cid, response.text)
 
         if needs_serialize:
             if self.config['data_format'] == DATA_FORMAT.JSON:
