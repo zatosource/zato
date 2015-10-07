@@ -430,7 +430,7 @@ class Service(object):
 
                 else:
                     if e:
-                        raise Exception(exc_formatted)
+                        raise
 
         # We don't accept it but some response needs to be returned anyway.
         else:
