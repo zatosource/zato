@@ -23,7 +23,7 @@ class CreateForm(DataFormatForm):
     def_id = forms.ChoiceField(widget=forms.Select())
     queue = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     consumer_tag_prefix = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
-    is_sync = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    is_sync = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     nack_timeout = forms.IntegerField(widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:30px'}))
     service = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
 
