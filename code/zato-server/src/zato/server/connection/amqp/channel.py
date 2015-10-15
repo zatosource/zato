@@ -32,11 +32,12 @@ logger = logging.getLogger('zato_connector')
 class ConsumingConnection(BaseAMQPConnection):
     """ A connection for consuming the AMQP messages.
     """
-    def __init__(self, conn_params, channel_name, queue, consumer_tag_prefix, is_sync, callback):
+    def __init__(self, conn_params, channel_name, queue, consumer_tag_prefix, is_sync, nack_timeout, callback):
         super(ConsumingConnection, self).__init__(conn_params, channel_name)
         self.queue = queue
         self.consumer_tag_prefix = consumer_tag_prefix
         self.is_sync = is_sync
+        self.nack_timeout = nack_timeout
         self.callback = callback
         
     def _on_channel_open(self, channel):
@@ -53,7 +54,7 @@ class ConsumingConnection(BaseAMQPConnection):
             channel.basic_ack(delivery_tag=method_frame.delivery_tag)
         except Exception as e:
             channel.basic_nack(delivery_tag=method_frame.delivery_tag, requeue=True)
-            time.sleep(5) #FIXME
+            time.sleep(self.nack_timeout)
 
     def consume(self, queue=None, consumer_tag_prefix=None):
         """ Starts consuming messages from the broker.
@@ -100,6 +101,7 @@ class ConsumingConnector(BaseAMQPConnector):
         self.channel_amqp.queue = item.queue
         self.channel_amqp.consumer_tag_prefix = item.consumer_tag_prefix
         self.channel_amqp.is_sync = item.is_sync
+        self.channel_amqp.nack_timeout = item.nack_timeout
         self.channel_amqp.service = item.service_name
         self.channel_amqp.data_format = item.data_format
         
@@ -141,7 +143,7 @@ class ConsumingConnector(BaseAMQPConnector):
     def _amqp_consumer(self):
         consumer = ConsumingConnection(self._amqp_conn_params(), self.channel_amqp.name,
             self.channel_amqp.queue, self.channel_amqp.consumer_tag_prefix,
-            self.channel_amqp.is_sync, self._on_message)
+            self.channel_amqp.is_sync, self.channel_amqp.nack_timeout, self._on_message)
         t = Thread(target=consumer._run)
         t.start()
         

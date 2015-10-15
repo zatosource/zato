@@ -374,7 +374,7 @@ def _channel_amqp(session, cluster_id):
     return session.query(
         ChannelAMQP.id, ChannelAMQP.name, ChannelAMQP.is_active,
         ChannelAMQP.queue, ChannelAMQP.consumer_tag_prefix,
-        ChannelAMQP.is_sync,
+        ChannelAMQP.is_sync, ChannelAMQP.nack_timeout,
         ConnDefAMQP.name.label('def_name'), ChannelAMQP.def_id,
         ChannelAMQP.data_format,
         Service.name.label('service_name'),
