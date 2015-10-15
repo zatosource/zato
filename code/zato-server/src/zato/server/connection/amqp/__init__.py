@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function
 
 # stdlib
-import errno, logging, socket
+import errno, logging, socket, time
 from threading import RLock
 
 # Pika
@@ -42,11 +42,18 @@ class BaseAMQPConnection(BaseConnection):
         self.properties = properties
         self.conn = None
         self.channel = None
+        self.reconnect_timeout = 30 # Seconds
         self.reconnect_exceptions = (TypeError, EnvironmentError)
 
     def _start(self):
-        self.conn = SelectConnection(self.conn_params, self._on_connected)
-        self.conn.ioloop.start()
+        try:
+            self.conn = SelectConnection(self.conn_params, self._on_connected, stop_ioloop_on_close=False)
+            self.conn.ioloop.start()
+        except Exception as e:
+            msg = 'Failed to connect to {0}'.format(self._conn_info())
+            logger.warning(msg+'. Re-try in %d seconds.', self.reconnect_sleep_time)
+            time.sleep(self.reconnect_sleep_time)
+            self._start()
         
     def _close(self):
         """ Actually close the connection.
@@ -64,10 +71,43 @@ class BaseAMQPConnection(BaseConnection):
             
     def _on_channel_open(self, channel):
         self.channel = channel
+        self.channel.add_on_close_callback(self._on_channel_closed)
+        self.channel.add_on_cancel_callback(self._on_consumer_cancelled)
         if logger.isEnabledFor(logging.DEBUG):
             msg = u'Got a channel for {0}'.format(self._conn_info())
             logger.debug(msg)
         
+    def _on_channel_closed(self, channel, reply_code=None, reply_text=None):
+        """ Invoked by pika when RabbitMQ unexpectedly closes the channel.
+        Channels are usually closed if you attempt to do something that
+        violates the protocol, such as re-declare an exchange or queue with
+        different parameters. In this case, we'll close the connection
+        to shutdown the object.
+
+        Attrs:
+            channel: The closed channel
+            reply_code: The numeric reason the channel was closed
+            reply_text: The text reason the channel was closed
+        """
+        logger.warning(
+            'Channel %i was closed: (%s) %s', channel, reply_code, reply_text)
+        self.conn.add_timeout(self.reconnect_timeout, self._start)
+
+    def _on_consumer_cancelled(self, method_frame):
+        """ Invoked by pika when RabbitMQ sends a Basic.Cancel for a consumer
+        receiving messages.
+
+        Attrs:
+            method_frame: The Basic.Cancel frame
+        """
+        logger.info(
+            'Consumer was cancelled remotely, shutting down: %r', method_frame)
+
+        if self.channel:
+            self.channel.close()
+
+        self.conn.add_timeout(self.reconnect_timeout, self._start)
+
     def _keep_connecting(self, e):
         # We need to catch TypeError because pika will sometimes erroneously raise
         # it in self._start's self.conn.ioloop.start().
@@ -82,8 +122,24 @@ class BaseAMQPConnection(BaseConnection):
         """
         self.has_valid_connection = True
         super(BaseAMQPConnection, self)._on_connected()
+        conn.add_on_close_callback(self._on_connection_closed)
         conn.channel(self._on_channel_open)
         
+    def _on_connection_closed(self, connection, reply_code, reply_text):
+        """This method is invoked by pika when the connection to RabbitMQ is
+        closed unexpectedly. Since it is unexpected, we will reconnect to
+        RabbitMQ if it disconnects.
+
+        :param pika.connection.Connection connection: The closed connection obj
+        :param int reply_code: The server provided reply_code if given
+        :param str reply_text: The server provided reply_text if given
+        """
+        self.channel = None
+        super(BaseAMQPConnection, self).close()
+        msg = 'Connection closed for {0}'.format(self._conn_info())
+        logger.warning(msg+' (%s) %s', reply_code, reply_text)
+        self.conn.add_timeout(self.reconnect_timeout, self._start)
+
 class BaseAMQPConnector(BaseConnector):
     """ A base connector for any AMQP-related ones.
     """
