@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function
 
 # stdlib
-import logging, os
+import logging, os, time
 from random import getrandbits
 from os import getpid
 from socket import getfqdn, gethostbyname, gethostname
@@ -32,10 +32,11 @@ logger = logging.getLogger('zato_connector')
 class ConsumingConnection(BaseAMQPConnection):
     """ A connection for consuming the AMQP messages.
     """
-    def __init__(self, conn_params, channel_name, queue, consumer_tag_prefix, callback):
+    def __init__(self, conn_params, channel_name, queue, consumer_tag_prefix, is_sync, callback):
         super(ConsumingConnection, self).__init__(conn_params, channel_name)
         self.queue = queue
         self.consumer_tag_prefix = consumer_tag_prefix
+        self.is_sync = is_sync
         self.callback = callback
         
     def _on_channel_open(self, channel):
@@ -47,9 +48,13 @@ class ConsumingConnection(BaseAMQPConnection):
     def _on_basic_consume(self, channel, method_frame, header_frame, body):
         """ We've got a message to handle.
         """
-        self.callback(method_frame, header_frame, body)
-        channel.basic_ack(delivery_tag=method_frame.delivery_tag)
-        
+        try:
+            self.callback(method_frame, header_frame, body)
+            channel.basic_ack(delivery_tag=method_frame.delivery_tag)
+        except Exception as e:
+            channel.basic_nack(delivery_tag=method_frame.delivery_tag, requeue=True)
+            time.sleep(5) #FIXME
+
     def consume(self, queue=None, consumer_tag_prefix=None):
         """ Starts consuming messages from the broker.
         """
@@ -94,6 +99,7 @@ class ConsumingConnector(BaseAMQPConnector):
         self.channel_amqp.is_active = item.is_active
         self.channel_amqp.queue = item.queue
         self.channel_amqp.consumer_tag_prefix = item.consumer_tag_prefix
+        self.channel_amqp.is_sync = item.is_sync
         self.channel_amqp.service = item.service_name
         self.channel_amqp.data_format = item.data_format
         
@@ -135,7 +141,7 @@ class ConsumingConnector(BaseAMQPConnector):
     def _amqp_consumer(self):
         consumer = ConsumingConnection(self._amqp_conn_params(), self.channel_amqp.name,
             self.channel_amqp.queue, self.channel_amqp.consumer_tag_prefix,
-            self._on_message)
+            self.channel_amqp.is_sync, self._on_message)
         t = Thread(target=consumer._run)
         t.start()
         
@@ -144,7 +150,7 @@ class ConsumingConnector(BaseAMQPConnector):
     def _channel_amqp_create_edit(self, msg, *args):
         """ Creates or updates an outgoing AMQP connection and its associated
         AMQP consumer.
-        """ 
+        """
         with self.def_amqp_lock:
             with self.channel_amqp_lock:
                 consumer = self.channel_amqp.get('consumer')
@@ -169,8 +175,13 @@ class ConsumingConnector(BaseAMQPConnector):
                 params['data_format'] = self.channel_amqp.data_format
                 params['cid'] = new_cid()
                 params['payload'] = body
-                
-                self.broker_client.invoke_async(params)
+
+                if self.channel_amqp.is_sync:
+                    r = self.util.client.invoke(name=self.channel_amqp.service, payload=params)
+                    if not r.ok:
+                        raise Exception(r.details)
+                else:
+                    self.broker_client.invoke_async(params)
 
     def on_broker_msg_CHANNEL_AMQP_CREATE(self, msg, *args):
         """ Creates a new outgoing AMQP connection. Note that the implementation

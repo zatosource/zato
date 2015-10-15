@@ -32,7 +32,7 @@ class GetList(AdminService):
         response_elem = 'zato_channel_amqp_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 
-            'def_name', 'def_id', 'service_name', 'data_format')
+            'is_sync', 'def_name', 'def_id', 'service_name', 'data_format')
         
     def get_data(self, session):
         return channel_amqp_list(session, self.request.input.cluster_id, False)
@@ -47,7 +47,7 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_amqp_create_request'
         response_elem = 'zato_channel_amqp_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service')
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'is_sync', 'service')
         input_optional = ('data_format',)
         output_required = ('id', 'name')
 
@@ -82,6 +82,7 @@ class Create(AdminService):
                 item.is_active = input.is_active
                 item.queue = input.queue
                 item.consumer_tag_prefix = input.consumer_tag_prefix
+                item.is_sync = input.is_sync
                 item.def_id = input.def_id
                 item.service = service
                 item.data_format = input.data_format
@@ -108,7 +109,7 @@ class Edit(_AMQPService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_amqp_edit_request'
         response_elem = 'zato_channel_amqp_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'is_sync', 'service')
         input_optional = ('data_format',)
         output_required = ('id', 'name')
 
@@ -144,6 +145,7 @@ class Edit(_AMQPService):
                 item.is_active = input.is_active
                 item.queue = input.queue
                 item.consumer_tag_prefix = input.consumer_tag_prefix
+                item.is_sync = input.is_sync
                 item.def_id = input.def_id
                 item.service = service
                 item.data_format = input.data_format

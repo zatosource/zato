@@ -54,7 +54,7 @@ class GetListTestCase(ServiceTestCase):
     def get_response_data(self):
         return Bunch(
             {'id':rand_int(), 'name':rand_string(), 'is_active':rand_bool(), 'queue':rand_string(), 
-             'consumer_tag_prefix':rand_string(), 'def_name':rand_string(), 'def_id':rand_int(), 
+             'consumer_tag_prefix':rand_string(), 'is_sync':rand.bool(), 'def_name':rand_string(), 'def_id':rand_int(), 
              'service_name':rand_string(), 'data_format':rand_string()}
         )
     
@@ -63,7 +63,7 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.response_elem, 'zato_channel_amqp_get_list_response')
         self.assertEquals(self.sio.input_required, ('cluster_id',))
         self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 
-            'def_name', 'def_id', 'service_name', 'data_format'))
+            'is_sync', 'def_name', 'def_id', 'service_name', 'data_format'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
@@ -93,7 +93,7 @@ class CreateTestCase(_Base):
     def get_request_data(self):
         return {'cluster_id':rand_int(), 'name':self.name, 'is_active':rand_bool(), 'def_id':self.def_id,
                 'queue':rand_string(), 'consumer_tag_prefix':rand_string(), 'service':rand_string(),
-                'data_format':rand_string()}
+                'is_sync':rand_bool(), 'data_format':rand_string()}
     
     def get_response_data(self):
         return Bunch({'id':self.id, 'name':self.name})
@@ -102,7 +102,7 @@ class CreateTestCase(_Base):
         
         self.assertEquals(self.sio.request_elem, 'zato_channel_amqp_create_request')
         self.assertEquals(self.sio.response_elem, 'zato_channel_amqp_create_response')
-        self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service'))
+        self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service', 'is_sync'))
         self.assertEquals(self.sio.input_optional, ('data_format',))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
@@ -142,7 +142,7 @@ class EditTestCase(_Base):
     
     def get_request_data(self):
         return {'id': self.id, 'cluster_id':rand_int(), 'name':self.name, 'is_active':rand_bool(), 'queue':rand_string(), 
-             'consumer_tag_prefix':rand_string(), 'def_id':self.def_id, 'service':rand_string(), 'data_format':rand_string()}
+             'consumer_tag_prefix':rand_string(), 'is_sync':rand_bool(), 'def_id':self.def_id, 'service':rand_string(), 'data_format':rand_string()}
     
     def get_response_data(self):
         return Bunch({'id':self.id, 'name':self.name})
@@ -150,7 +150,7 @@ class EditTestCase(_Base):
     def test_sio(self):
         self.assertEquals(self.sio.request_elem, 'zato_channel_amqp_edit_request')
         self.assertEquals(self.sio.response_elem, 'zato_channel_amqp_edit_response')
-        self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service'))
+        self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'is_sync', 'service'))
         self.assertEquals(self.sio.input_optional, ('data_format',))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)

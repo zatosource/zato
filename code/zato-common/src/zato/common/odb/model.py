@@ -1020,6 +1020,7 @@ class ChannelAMQP(Base):
     is_active = Column(Boolean(), nullable=False)
     queue = Column(String(200), nullable=False)
     consumer_tag_prefix = Column(String(200), nullable=False)
+    is_sync = Column(Boolean(), nullable=False)
     data_format = Column(String(20), nullable=True)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
@@ -1029,13 +1030,14 @@ class ChannelAMQP(Base):
     def_ = relationship(ConnDefAMQP, backref=backref('channels_amqp', cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, queue=None,
-                 consumer_tag_prefix=None, def_id=None, def_name=None,
+                 consumer_tag_prefix=None, is_sync=None, def_id=None, def_name=None,
                  service_name=None, data_format=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.queue = queue
         self.consumer_tag_prefix = consumer_tag_prefix
+        self.is_sync = is_sync
         self.def_id = def_id
         self.def_name = def_name # Not used by the DB
         self.service_name = service_name # Not used by the DB

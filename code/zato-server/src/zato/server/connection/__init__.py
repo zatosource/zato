@@ -35,6 +35,7 @@ from zato.common.dispatch import dispatcher
 from zato.common.kvdb import KVDB
 from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable, new_cid
 from zato.server.base import BrokerMessageReceiver
+from zato.cli.util import Util
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ class BaseConnection(object):
     
     def _run(self):
         """ Run the main (re-)connecting loop, close on Ctrl-C.
-        """ 
+        """
         try:
             self.start()
         except KeyboardInterrupt:
@@ -184,9 +185,13 @@ class BaseConnector(BrokerMessageReceiver):
         self.kvdb.decrypt_func = self.odb.crypto_manager.decrypt
         self.kvdb.init()
         
-        # Broker client
+        # Broker client (async)
         self.broker_client = BrokerClient(self.kvdb, self.broker_client_id, self.broker_callbacks)
         self.broker_client.start()
+
+        # CLI util client (sync)
+        self.util = Util(os.path.dirname(os.path.dirname(self.repo_location)))
+        self.util.set_zato_client()
 
         # ODB        
         

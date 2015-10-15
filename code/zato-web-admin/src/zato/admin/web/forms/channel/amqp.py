@@ -23,6 +23,7 @@ class CreateForm(DataFormatForm):
     def_id = forms.ChoiceField(widget=forms.Select())
     queue = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     consumer_tag_prefix = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    is_sync = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     service = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
 
     def __init__(self, prefix=None, post_data=None, req=None):

@@ -37,6 +37,7 @@ def _get_edit_create_message(params, prefix=''):
         'def_id': params[prefix + 'def_id'],
         'queue': params[prefix + 'queue'],
         'consumer_tag_prefix': params[prefix + 'consumer_tag_prefix'],
+        'is_sync': bool(params.get(prefix + 'is_sync')),
         'service': params[prefix + 'service'],
         'data_format': params.get(prefix + 'data_format'),
     }
@@ -59,7 +60,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 
-            'def_name', 'def_id', 'service_name', 'data_format')
+            'is_sync', 'def_name', 'def_id', 'service_name', 'data_format')
         output_repeated = True
     
     def handle(self):
