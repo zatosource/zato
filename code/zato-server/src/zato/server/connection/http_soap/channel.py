@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
+from httplib import BAD_REQUEST, CONFLICT, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
 from traceback import format_exc
 
 # anyjson
@@ -26,13 +26,14 @@ from paste.util.converters import asbool
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_RESPONSES, SEC_DEF_TYPE, SIMPLE_IO, TOO_MANY_REQUESTS, TRACE1, \
      URL_PARAMS_PRIORITY, URL_TYPE, zato_namespace, ZATO_ERROR, ZATO_NONE, ZATO_OK
 from zato.common.util import payload_from_request
-from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
+from zato.server.connection.http_soap import BadRequest, Conflict, ClientHTTPError, Forbidden, MethodNotAllowed, NotFound, \
      TooManyRequests, Unauthorized
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
 
 _status_bad_request = b'{} {}'.format(BAD_REQUEST, HTTP_RESPONSES[BAD_REQUEST])
+_status_conflict = b'{} {}'.format(CONFLICT, HTTP_RESPONSES[CONFLICT])
 _status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
 _status_not_found = b'{} {}'.format(NOT_FOUND, HTTP_RESPONSES[NOT_FOUND])
 _status_method_not_allowed = b'{} {}'.format(METHOD_NOT_ALLOWED, HTTP_RESPONSES[METHOD_NOT_ALLOWED])
@@ -221,6 +222,9 @@ class RequestDispatcher(object):
                     elif isinstance(e, BadRequest):
                         status = _status_bad_request
 
+                    elif isinstance(e, Conflict):
+                        status = _status_conflict
+
                     elif isinstance(e, NotFound):
                         status = _status_not_found
 
@@ -232,6 +236,8 @@ class RequestDispatcher(object):
 
                     elif isinstance(e, TooManyRequests):
                         status = _status_too_many_requests
+                    else:
+                        status = b'{} {}'.format(status_code, HTTP_RESPONSES[status_code])
 
                 else:
                     status_code = INTERNAL_SERVER_ERROR
@@ -256,7 +262,6 @@ class RequestDispatcher(object):
                 wsgi_environ['zato.http.response.status'] = status
                 
                 return response
-
         # This is 404, no such URL path and SOAP action is known.
         else:
             response = b"[{}] Unknown URL:[{}] or SOAP action:[{}]".format(cid, path_info, soap_action)
@@ -428,7 +433,6 @@ class RequestHandler(object):
                     content_type = self.server.plain_xml_content_type
             elif data_format == SIMPLE_IO.FORMAT.JSON:
                 content_type = self.server.json_content_type
-
             # .. alright, let's use the default value after all.
             else:
                 content_type = response.content_type
