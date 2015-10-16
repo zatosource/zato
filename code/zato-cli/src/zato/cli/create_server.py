@@ -355,7 +355,7 @@ class Create(ZatoCommand):
             server_conf.write(
                 server_conf_template.format(
                     port=port,
-                    gunicorn_workers=2,
+                    gunicorn_workers=1,
                     odb_db_name=args.odb_db_name or args.sqlite_path,
                     odb_engine=odb_engine,
                     odb_host=args.odb_host or '',
