@@ -1,34 +1,79 @@
---- springpython/jms/factory.py.orig	2013-12-20 01:00:03.539102337 +0100
-+++ springpython/jms/factory.py	2013-12-20 01:12:31.286810230 +0100
-@@ -99,7 +99,8 @@
+--- springpytohn/jms/factory.py.orig	2015-10-16 10:45:18.610222114 +0200
++++ springpython/jms/factory.py	2015-10-16 10:45:35.182222382 +0200
+@@ -38,8 +38,8 @@
+ from springpython.jms.core import reserved_attributes, TextMessage
+ from springpython.util import TRACE1, synchronized
+ from springpython.jms import JMSException, WebSphereMQJMSException, \
+-    NoMessageAvailableException, DELIVERY_MODE_NON_PERSISTENT, \
+-    DELIVERY_MODE_PERSISTENT
++     NoMessageAvailableException, DELIVERY_MODE_NON_PERSISTENT, \
++     DELIVERY_MODE_PERSISTENT
+ 
+ 
+ # Don't pollute the caller's namespace
+@@ -97,9 +97,10 @@
+ class WebSphereMQConnectionFactory(DisposableObject):
+ 
      def __init__(self, queue_manager=None, channel=None, host=None, listener_port=None,
-             cache_open_send_queues=True, cache_open_receive_queues=True,
-             use_shared_connections=True, dynamic_queue_template="SYSTEM.DEFAULT.MODEL.QUEUE",
+-            cache_open_send_queues=True, cache_open_receive_queues=True,
+-            use_shared_connections=True, dynamic_queue_template="SYSTEM.DEFAULT.MODEL.QUEUE",
 -            ssl=False, ssl_cipher_spec=None, ssl_key_repository=None, needs_mcd=True):
-+            ssl=False, ssl_cipher_spec=None, ssl_key_repository=None, needs_mcd=True,
-+            needs_jms=False):
++                 cache_open_send_queues=True, cache_open_receive_queues=True,
++                 use_shared_connections=True, dynamic_queue_template="SYSTEM.DEFAULT.MODEL.QUEUE",
++                 ssl=False, ssl_cipher_spec=None, ssl_key_repository=None, needs_mcd=True,
++                 needs_jms=False):
          self.queue_manager = queue_manager
          self.channel = channel
          self.host = host
-@@ -115,6 +116,9 @@
-         
+@@ -112,13 +113,16 @@
+         self.ssl = ssl
+         self.ssl_cipher_spec = ssl_cipher_spec
+         self.ssl_key_repository = ssl_key_repository
+-        
++
          # WMQ >= 7.0 must not use the mcd folder
          self.needs_mcd = needs_mcd
-+        
+ 
 +        # Whether we expect to both send and receive JMS messages or not
 +        self.needs_jms = needs_jms
- 
++
          self.logger = logging.getLogger("springpython.jms.factory.WebSphereMQConnectionFactory")
  
-@@ -217,7 +221,10 @@
-             self.logger.info("Successfully connected to queue manager [%s]" \
-                 ", channel [%s], connection info [%s]" % (self.queue_manager, self.channel, conn_name))
+-        import CMQC
++        from pymqi import CMQC
+         import pymqi
  
--    def _get_queue_from_cache(self, destination, cache):
+         self.CMQC = CMQC
+@@ -158,7 +162,7 @@
+             except Exception, e:
+                 try:
+                     self.logger.error("Could not disconnect from queue manager [%s], exception [%s] " % (self.queue_manager,
+-                        format_exc()))
++                                                                                                         format_exc()))
+                 except Exception:
+                     pass
+ 
+@@ -179,7 +183,7 @@
+         conn_name = "%s(%s)" % (self.host, self.listener_port)
+ 
+         self.logger.info("Connecting to queue manager [%s], channel [%s]" \
+-            ", connection info [%s]" % (self.queue_manager, self.channel, conn_name))
++                         ", connection info [%s]" % (self.queue_manager, self.channel, conn_name))
+         self.mgr = self.mq.QueueManager(None)
+ 
+         sco = self.mq.sco()
+@@ -215,9 +219,12 @@
+         else:
+             self._is_connected = True
+             self.logger.info("Successfully connected to queue manager [%s]" \
+-                ", channel [%s], connection info [%s]" % (self.queue_manager, self.channel, conn_name))
++                             ", channel [%s], connection info [%s]" % (self.queue_manager, self.channel, conn_name))
++
 +    def _get_queue_from_cache(self, destination, cache, open_options=None):
 +        if not open_options:
 +            open_options = self.CMQC.MQOO_INPUT_SHARED | self.CMQC.MQOO_OUTPUT
-+            
+ 
+-    def _get_queue_from_cache(self, destination, cache):
          lock = RLock()
          lock.acquire()
          try:
@@ -58,7 +103,7 @@
 +    def get_queue_for_receiving(self, destination, open_options=None):
 +        if not open_options:
 +            open_options = self.CMQC.MQOO_INPUT_SHARED
-+            
++
          if self.cache_open_receive_queues:
 -            queue = self._get_queue_from_cache(destination, self._open_receive_queues_cache)
 +            queue = self._get_queue_from_cache(destination, self._open_receive_queues_cache, open_options)
@@ -84,34 +129,41 @@
 +        # Create MQRFH2 header, if requested to
 +        if self.needs_jms:
 +            mqrfh2jms = MQRFH2JMS(self.needs_mcd).build_header(message, destination, self.CMQC, now)
-+    
++
 +            buff.write(mqrfh2jms)
-+            
++
          if message.text != None:
              buff.write(message.text.encode("utf-8"))
  
-@@ -427,8 +440,9 @@
+@@ -369,7 +382,7 @@
+             self.logger.log(TRACE1, "open_dynamic_queue -> _is_connected2 %s" % self._is_connected)
  
+         dynamic_queue = self.mq.Queue(self.mgr, self.dynamic_queue_template,
+-            self.CMQC.MQOO_INPUT_SHARED)
++                                      self.CMQC.MQOO_INPUT_SHARED)
+ 
+         # A bit hackish, but there's no other way to get its name.
+         dynamic_queue_name = dynamic_queue._Queue__qDesc.ObjectName.strip()
+@@ -428,7 +441,8 @@
      def _build_text_message(self, md, message):
          self.logger.log(TRACE1, "Building a text message [%r], md [%r]" % (repr(message), repr(md)))
--
+ 
 -        mqrfh2 = MQRFH2JMS(self.needs_mcd)
-+        
 +        class_ = MQRFH2JMS if self.needs_jms else DummyMQRFH2JMS
 +        mqrfh2 = class_(self.needs_mcd)
          mqrfh2.build_folders_and_payload_from_message(message)
  
          jms_folder = mqrfh2.folders.get("jms", None)
-@@ -455,6 +469,9 @@
- 
+@@ -456,6 +470,9 @@
              if jms_folder.find("Cid") is not None:
                  text_message.jms_correlation_id = jms_folder.find("Cid").text
-+                
+ 
 +        else:
 +            text_message.jms_correlation_id = getattr(md, 'CorrelId', None)
- 
++
          if md.Persistence == self.CMQC.MQPER_NOT_PERSISTENT:
              text_message.jms_delivery_mode = DELIVERY_MODE_NON_PERSISTENT
+         elif md.Persistence in(self.CMQC.MQPER_PERSISTENT, self.CMQC.MQPER_PERSISTENCE_AS_Q_DEF):
 @@ -516,7 +533,7 @@
  
          # .. and its payload too.
@@ -121,7 +173,7 @@
  
          return text_message
  
-@@ -533,18 +550,19 @@
+@@ -533,12 +550,13 @@
      def _build_md(self, message):
          md = self.mq.md()
  
@@ -137,13 +189,6 @@
          if message.jms_correlation_id:
              if message.jms_correlation_id.startswith(_WMQ_ID_PREFIX):
                  md.CorrelId = unhexlify_wmq_id(message.jms_correlation_id)
-             else:
-                 md.CorrelId = message.jms_correlation_id.ljust(24)[:24]
--
-+                
-         if message.jms_delivery_mode:
- 
-             if message.jms_delivery_mode == DELIVERY_MODE_NON_PERSISTENT:
 @@ -552,7 +570,7 @@
              elif message.jms_delivery_mode == DELIVERY_MODE_PERSISTENT:
                  persistence = self.CMQC.MQPER_PERSISTENT
@@ -153,6 +198,24 @@
                  self.logger.error(info)
                  exc = JMSException(info)
                  raise exc
+@@ -566,7 +584,7 @@
+             md.ReplyToQ = message.jms_reply_to
+ 
+             self.logger.log(TRACE1, ("Set jms_reply_to. md.ReplyToQ=[%r],"
+-                " message.jms_reply_to=[%r]" % (md.ReplyToQ, message.jms_reply_to)))
++                                     " message.jms_reply_to=[%r]" % (md.ReplyToQ, message.jms_reply_to)))
+ 
+         # jms_expiration is in milliseconds, md.Expiry is in centiseconds.
+         if message.jms_expiration:
+@@ -591,7 +609,7 @@
+             md.MsgFlags |= self.CMQC.MQMF_MSG_IN_GROUP
+ 
+         for report_name in("Exception", "Expiration", "COA", "COD", "PAN",
+-            "NAN", "Pass_Msg_ID", "Pass_Correl_ID", "Discard_Msg"):
++                           "NAN", "Pass_Msg_ID", "Pass_Correl_ID", "Discard_Msg"):
+ 
+             report = getattr(message, "JMS_IBM_Report_" + report_name, None)
+             if report != None:
 @@ -612,6 +630,17 @@
  
          return md
@@ -164,10 +227,64 @@
 +    def __init__(self, ignored):
 +        self.folders = {'jms':None, 'mcd':None, 'usr':None}
 +        self.payload = None
-+        
++
 +    def build_folders_and_payload_from_message(self, payload):
 +        self.payload = payload
 +
  class MQRFH2JMS(object):
      """ A class for representing a subset of MQRFH2, suitable for passing
      WebSphere MQ JMS headers around.
+@@ -634,11 +663,11 @@
+     FOLDER_SIZE_HEADER_LENGTH = 4
+ 
+     def __init__(self, needs_mcd=True):
+-        
++
+         # Whether to add the mcd folder. Needs to be False for everything to
+         # work properly with WMQ >= 7.0
+         self.needs_mcd = needs_mcd
+-        
++
+         self.folders = {}
+         self.payload = None
+ 
+@@ -690,7 +719,7 @@
+ 
+         folder = etree.fromstring(raw_folder)
+         root_name = folder.tag
+-        
++
+         root_names = ["jms", "usr"]
+         if self.needs_mcd:
+             root_names.append("mcd")
+@@ -702,14 +731,14 @@
+ 
+ 
+     def build_header(self, message, queue_name, CMQC, now):
+-        
++
+         if self.needs_mcd:
+             self.folders["mcd"] = _mcd
+             mcd = self._pad_folder(etree.tostring(self.folders["mcd"]))
+             mcd_len = len(mcd)
+         else:
+             mcd_len = 0
+-            
++
+         self.add_jms(message, queue_name, now)
+         self.add_usr(message)
+ 
+@@ -742,11 +771,11 @@
+         buff.write(CMQC.MQFMT_STRING)
+         buff.write(_WMQ_MQRFH_NO_FLAGS_WIRE_FORMAT)
+         buff.write(_WMQ_DEFAULT_CCSID_WIRE_FORMAT)
+-        
++
+         if self.needs_mcd:
+             buff.write(pack("!l", mcd_len))
+             buff.write(mcd)
+-            
++
+         buff.write(pack("!l", jms_len))
+         buff.write(jms)
+ 
