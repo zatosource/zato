@@ -140,7 +140,7 @@ class RequestDispatcher(object):
         url_match, channel_item = self.url_data.match(path_info, soap_action)
 
         if channel_item:
-            logger.debug('url_match:[%r], channel_item:[%r]', url_match, sorted(channel_item.items()))
+            logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))
 
         # This is needed in parallel.py's on_wsgi_request
         wsgi_environ['zato.http.channel_item'] = channel_item
@@ -159,7 +159,7 @@ class RequestDispatcher(object):
 
                 # Raise 404 if the channel is inactive
                 if not channel_item['is_active']:
-                    logger.warn('url_data:[%s] is not active, raising NotFound', sorted(url_match.items()))
+                    logger.warn('url_data:`%s` is not active, raising NotFound', sorted(url_match.items()))
                     raise NotFound(cid, 'Channel inactive')
 
                 expected_method = channel_item['method']
@@ -240,14 +240,14 @@ class RequestDispatcher(object):
                 # TODO: This should be configurable. Some people may want such
                 # things to be on DEBUG whereas for others ERROR will make most sense
                 # in given circumstances.
-                logger.error('Caught an exception, cid:[%s], status_code:[%s], _format_exc:[%s]', cid, status_code, _format_exc)
+                logger.error('Caught an exception, cid:`%s`, status_code:`%s`, _format_exc:`%s`', cid, status_code, _format_exc)
 
                 try:
                     error_wrapper = get_client_error_wrapper(channel_item['transport'], channel_item['data_format'])
                 except KeyError:
                     # It's OK. Apparently it's neither 'soap' nor json'
                     if logger.isEnabledFor(TRACE1):
-                        msg = 'No client error wrapper for transport:[{}], data_format:[{}]'.format(
+                        msg = 'No client error wrapper for transport:`{}`, data_format:`{}`'.format(
                             channel_item['transport'], channel_item['data_format'])
                         logger.log(TRACE1, msg)
                 else:
