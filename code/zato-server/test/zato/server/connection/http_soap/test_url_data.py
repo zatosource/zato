@@ -119,6 +119,62 @@ class URLDataTestCase(TestCase):
         match, _ = ud.match('/foo/bar', '')
         self.assertIsNone(match)
 
+    def test_match_greedy(self):
+
+        ud = url_data.URLData([])
+
+        soap_action1 = ''
+        url_path1 = '/customer/{cid}'
+        match_target1 = '{}{}{}'.format(soap_action1, MISC.SEPARATOR, url_path1)
+
+        soap_action2 = ''
+        url_path2 = '/customer/{cid}/order/{oid}'
+        match_target2 = '{}{}{}'.format(soap_action2, MISC.SEPARATOR, url_path2)
+
+        soap_action3 = 'aaabbbccc'
+        url_path3 = '/customer/{cid}/order'
+        match_target3 = '{}{}{}'.format(soap_action3, MISC.SEPARATOR, url_path3)
+
+        item1 = Bunch()
+        item1.name = 'name-1'
+        item1.match_target = match_target1
+        item1.match_target_compiled = url_data.Matcher(item1.match_target)
+
+        item2 = Bunch()
+        item2.name = 'name-2'
+        item2.match_target = match_target2
+        item2.match_target_compiled = url_data.Matcher(item2.match_target)
+
+        item3 = Bunch()
+        item3.name = 'name-3'
+        item3.match_target = match_target3
+        item3.match_target_compiled = url_data.Matcher(item3.match_target)
+
+        ud.channel_data.append(item1)
+        ud.channel_data.append(item2)
+        ud.channel_data.append(item3)
+
+        match, info = ud.match('/customer/123/order/456', '')
+        eq_(sorted(match.items()), [('cid', '123'), ('oid', '456')])
+        eq_(info.match_target, ':::/customer/{cid}/order/{oid}')
+        eq_(sorted(info.match_target_compiled.group_names), ['cid','oid'])
+        eq_(info.match_target_compiled.pattern, ':::/customer/{cid}/order/{oid}')
+        eq_(info.match_target_compiled.matcher.pattern, ':::/customer/(?P<cid>\\w+)/order/(?P<oid>\\w+)$')
+
+        match, info = ud.match('/customer/abc', '')
+        eq_(sorted(match.items()), [('cid', 'abc')])
+        eq_(info.match_target, ':::/customer/{cid}')
+        eq_(sorted(info.match_target_compiled.group_names), ['cid'])
+        eq_(info.match_target_compiled.pattern, ':::/customer/{cid}')
+        eq_(info.match_target_compiled.matcher.pattern, ':::/customer/(?P<cid>\\w+)$')
+
+        match, info = ud.match('/customer/QWERTY/order', 'aaabbbccc')
+        eq_(sorted(match.items()), [('cid', 'QWERTY')])
+        eq_(info.match_target, 'aaabbbccc:::/customer/{cid}/order')
+        eq_(sorted(info.match_target_compiled.group_names), ['cid'])
+        eq_(info.match_target_compiled.pattern, 'aaabbbccc:::/customer/{cid}/order')
+        eq_(info.match_target_compiled.matcher.pattern, 'aaabbbccc:::/customer/(?P<cid>\\w+)/order$')
+
 # ################################################################################################################################
 
     def test_check_security(self):
