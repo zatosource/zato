@@ -31,9 +31,6 @@ from bunch import Bunch
 import gevent
 import gevent.monkey # Needed for Cassandra
 
-# parse
-from parse import compile as parse_compile
-
 # Paste
 from paste.util.converters import asbool
 
@@ -62,6 +59,7 @@ from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore
 from zato.server.connection.amqp.channel import start_connector as amqp_channel_start_connector
 from zato.server.connection.amqp.outgoing import start_connector as amqp_out_start_connector
+from zato.server.connection.http_soap.url_data import Matcher
 from zato.server.connection.jms_wmq.channel import start_connector as jms_wmq_channel_start_connector
 from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_out_start_connector
 from zato.server.connection.zmq_.channel import start_connector as zmq_channel_start_connector
@@ -605,7 +603,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             hs_item.replace_patterns_xpath = item.replace_patterns_xpath
 
             hs_item.match_target = '{}{}{}'.format(hs_item.soap_action, MISC.SEPARATOR, hs_item.url_path)
-            hs_item.match_target_compiled = parse_compile(hs_item.match_target)
+            hs_item.match_target_compiled = Matcher(hs_item.match_target)
 
             http_soap.append(hs_item)
 

@@ -148,7 +148,7 @@ class RequestDispatcher(object):
         payload = wsgi_environ['wsgi.input'].read()
         
         # OK, we can possibly handle it
-        if url_match:
+        if url_match not in (None, False):
 
             # This is a synchronous call so that whatever happens next we are always
             # able to have at least initial audit log of requests.
@@ -249,6 +249,7 @@ class RequestDispatcher(object):
                     if logger.isEnabledFor(TRACE1):
                         msg = 'No client error wrapper for transport:[{}], data_format:[{}]'.format(
                             channel_item['transport'], channel_item['data_format'])
+
                         logger.log(TRACE1, msg)
                 else:
                     response = error_wrapper(cid, response)
@@ -292,12 +293,10 @@ class RequestHandler(object):
 
         return service.response
 
-    def create_channel_params(self, url_match, channel_item, wsgi_environ, raw_request, post_data=None):
+    def create_channel_params(self, path_params, channel_item, wsgi_environ, raw_request, post_data=None):
         """ Collects parameters specific to this channel (HTTP) and updates wsgi_environ
         with HTTP-specific data.
         """
-        path_params = url_match.named
-
         qs = wsgi_environ.get('QUERY_STRING')
         qs = QueryDict(qs, encoding='utf-8')
 

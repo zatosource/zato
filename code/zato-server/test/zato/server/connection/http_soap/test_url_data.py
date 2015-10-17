@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from datetime import datetime
 from unittest import TestCase
 from uuid import uuid4
 
@@ -17,9 +18,6 @@ from bunch import Bunch
 
 # nose
 from nose.tools import eq_
-
-# parse
-from parse import compile as parse_compile, Parser, Result
 
 # sortedcontainers
 from sortedcontainers import SortedList
@@ -91,17 +89,17 @@ class URLDataTestCase(TestCase):
         item1 = Bunch()
         item1.name = 'name-2'
         item1.match_target = match_target1
-        item1.match_target_compiled = parse_compile(item1.match_target)
+        item1.match_target_compiled = url_data.Matcher(item1.match_target)
 
         item2 = Bunch()
         item2.name = 'name-1'
         item2.match_target = match_target2
-        item2.match_target_compiled = parse_compile(item2.match_target)
+        item2.match_target_compiled = url_data.Matcher(item2.match_target)
 
         item3 = Bunch()
         item3.name = 'name-3'
         item3.match_target = match_target3
-        item3.match_target_compiled = parse_compile(item3.match_target)
+        item3.match_target_compiled = url_data.Matcher(item3.match_target)
 
         # Note that we append in the order the 'name' attribute dictates
         # because .channel_data is a sorted list.
@@ -110,19 +108,13 @@ class URLDataTestCase(TestCase):
         ud.channel_data.append(item3)
 
         match, _ = ud.match(url_path1, soap_action1)
-        self.assertIsInstance(match, Result)
-        eq_(match.named, {})
-        eq_(match.spans, {})
+        eq_(match, {})
 
         match, _ = ud.match(url_path2, soap_action2)
-        self.assertIsInstance(match, Result)
-        eq_(match.named, {})
-        eq_(match.spans, {})
+        eq_(match, {})
 
         match, _ = ud.match('/customer/123/order/456', soap_action3)
-        self.assertIsInstance(match, Result)
-        eq_(sorted(match.named.items()), [(u'cid', u'123'), (u'oid', u'456')])
-        eq_(sorted(match.spans.items()), [(u'cid', (13, 16)), (u'oid', (23, 26))])
+        eq_(sorted(match.items()), [(u'cid', u'123'), (u'oid', u'456')])
 
         match, _ = ud.match('/foo/bar', '')
         self.assertIsNone(match)
@@ -1329,7 +1321,6 @@ class URLDataTestCase(TestCase):
 
             eq_(channel_item.service_impl_name, msg.impl_name)
             eq_(channel_item.match_target, match_target)
-            self.assertIsInstance(channel_item.match_target_compiled, Parser)
 
             for name in('connection', 'data_format', 'has_rbac', 'host', 'id', 'is_active',
                 'is_internal', 'method', 'name', 'ping_method', 'pool_size',
