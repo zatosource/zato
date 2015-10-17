@@ -49,15 +49,15 @@ class Matcher(object):
     of '/permission/user/(?P<user_id>\\w+)/group/(?P<group_id>\\w+)$' which in runtime is used for matching.
     """
     def __init__(self, pattern):
+        self.group_names = []
+        self.pattern = pattern
+        self.matcher = None
         self._brace_pattern = re_compile('\{\w+\}')
         self._elem_re_template = r'(?P<{}>\w+)'
-        self._group_names = []
-        self._matcher = None
-        self._pattern = pattern
-        self._set_up_matcher(self._pattern)
+        self._set_up_matcher(self.pattern)
 
     def __str__(self):
-        return '<{} at {} {} {}>'.format(self.__class__.__name__, hex(id(self)), self._pattern, self._matcher)
+        return '<{} at {} {} {}>'.format(self.__class__.__name__, hex(id(self)), self.pattern, self.matcher)
 
     __repr__ = __str__
 
@@ -69,13 +69,13 @@ class Matcher(object):
         for idx, (group, re) in enumerate(groups):
             pattern = pattern.replace(orig_groups[idx], re)
 
-        self._group_names.extend([elem[0] for elem in groups])
-        self._matcher = re_compile(pattern + '$')
+        self.group_names.extend([elem[0] for elem in groups])
+        self.matcher = re_compile(pattern + '$')
 
     def match(self, value):
-        m = self._matcher.match(value)
+        m = self.matcher.match(value)
         if m:
-            return dict(zip(self._group_names, m.groups()))
+            return dict(zip(self.group_names, m.groups()))
 
 class OAuthStore(object):
     def __init__(self, oauth_config):
