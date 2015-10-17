@@ -423,9 +423,8 @@ class TestRequestHandler(TestCase):
     def test_create_channel_params(self):
 
         url_match = Bunch()
-        url_match.named = Bunch()
-        url_match.named.url_key1 = 'path-{}'.format(uuid4().hex)
-        url_match.named.url_key2 = 'path-{}'.format(uuid4().hex)
+        url_match.url_key1 = 'path-{}'.format(uuid4().hex)
+        url_match.url_key2 = 'path-{}'.format(uuid4().hex)
 
         qs_key1, qs_value1 = 'url_key1', 'qs-aaa-{}'.format(uuid4().hex)
         qs_key2, qs_value2 = 'url_key2', 'qs-bbbb-{}'.format(uuid4().hex)
@@ -465,8 +464,8 @@ class TestRequestHandler(TestCase):
                     eq_(sorted(wsgi_environ['zato.http.POST'].items()), [(post_key1, post_value1), (post_key2, post_value2)])
 
                 if url_params_pri == URL_PARAMS_PRIORITY.PATH_OVER_QS:
-                    eq_(channel_params['url_key1'], url_match.named.url_key1)
-                    eq_(channel_params['url_key2'], url_match.named.url_key2)
+                    eq_(channel_params['url_key1'], url_match.url_key1)
+                    eq_(channel_params['url_key2'], url_match.url_key2)
                 else:
                     eq_(channel_params['url_key1'], qs_value1)
                     eq_(channel_params['url_key2'], qs_value2)

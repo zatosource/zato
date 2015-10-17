@@ -24,8 +24,8 @@ from bunch import Bunch
 from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
      OAuthSignatureMethod_PLAINTEXT, OAuthToken
 
-# parse
-from parse import compile as parse_compile
+# regex
+from regex import compile as re_compile, match as re_match
 
 # sec-wall
 from secwall.server import on_basic_auth, on_wsse_pwd
@@ -42,6 +42,40 @@ from zato.common.util import parse_tls_channel_security_definition
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 
 logger = logging.getLogger(__name__)
+
+class Matcher(object):
+    """ Matches incoming URL paths in requests received against the pattern it's configured to react to.
+    For instance, '/permission/user/{user_id}/group/{group_id}' gets translated and compiled to the regex 
+    of '/permission/user/(?P<user_id>\\w+)/group/(?P<group_id>\\w+)$' which in runtime is used for matching.
+    """
+    def __init__(self, pattern):
+        self._brace_pattern = re_compile('\{\w+\}')
+        self._elem_re_template = r'(?P<{}>\w+)'
+        self._group_names = []
+        self._matcher = None
+        self._pattern = pattern
+        self._set_up_matcher(self._pattern)
+
+    def __str__(self):
+        return '<{} at {} {} {}>'.format(self.__class__.__name__, hex(id(self)), self._pattern, self._matcher)
+
+    __repr__ = __str__
+
+    def _set_up_matcher(self, pattern):
+        orig_groups = self._brace_pattern.findall(pattern)
+        groups = [elem.replace('{', '').replace('}', '') for elem in orig_groups]
+        groups = [[elem, self._elem_re_template.format(elem)] for elem in groups]
+
+        for idx, (group, re) in enumerate(groups):
+            pattern = pattern.replace(orig_groups[idx], re)
+
+        self._group_names.extend([elem[0] for elem in groups])
+        self._matcher = re_compile(pattern + '$')
+
+    def match(self, value):
+        m = self._matcher.match(value)
+        if m:
+            return dict(zip(self._group_names, m.groups()))
 
 class OAuthStore(object):
     def __init__(self, oauth_config):
@@ -308,10 +342,10 @@ class URLData(OAuthDataStore):
         """
         target = '{}{}{}'.format(soap_action, self._target_separator, url_path)
         for item in self.channel_data:
-            match = item.match_target_compiled.parse(target)
-            if match:
+            match = item.match_target_compiled.match(target)
+            if match is not None:
                 if logger.isEnabledFor(TRACE1):
-                    logger.log(TRACE1, 'Matched target:[%s] with:[%r]', target, item)
+                    logger.log(TRACE1, 'Matched target:`%s` with:`%r`', target, item)
                 return match, item
 
         return None, None
@@ -830,7 +864,7 @@ class URLData(OAuthDataStore):
 
         channel_item.service_impl_name = msg.impl_name
         channel_item.match_target = match_target
-        channel_item.match_target_compiled = parse_compile(channel_item.match_target)
+        channel_item.match_target_compiled = Matcher(channel_item.match_target)
 
         return channel_item
 
