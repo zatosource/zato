@@ -21,7 +21,6 @@ class Matcher(object):
         self._group_names = []
         self._matcher = None
         self._set_up_matcher(pattern)
-        print(self._matcher)
 
     def _set_up_matcher(self, pattern):
         orig_groups = self._brace_pattern.findall(pattern)
