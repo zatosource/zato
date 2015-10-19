@@ -49,7 +49,7 @@ class _FakeSession(object):
         self.request_args = args
         self.request_kwargs = kwargs
 
-        return Bunch({'status_code':rand_string(), 'text':rand_string()})
+        return Bunch({'status_code':rand_string(), 'text':'"{}"'.format(rand_string())})
 
     def mount(self, *ignored):
         pass
@@ -72,7 +72,7 @@ class Base(object):
         return {'is_active':True, 'sec_type':rand_string(), 'address_host':rand_string(), 
             'address_url_path':rand_string(), 'ping_method':rand_string(), 'soap_version':'1.1',
             'pool_size':rand_int(), 'serialization_type':'string', 'timeout':rand_int(),
-            'tls_verify':ZATO_NONE}
+            'tls_verify':ZATO_NONE, 'data_format':DATA_FORMAT.JSON}
 
 # ################################################################################################################################
 
@@ -248,7 +248,7 @@ class HTTPSOAPWrapperTestCase(TestCase, Base):
                         eq_(cid, _cid)
 
                         if name in('get', 'delete', 'options'):
-                            eq_(data, '')
+                            eq_(data, None)
                         else:
                             eq_(data, _data)
 
