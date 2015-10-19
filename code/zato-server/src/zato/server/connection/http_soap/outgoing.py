@@ -19,6 +19,9 @@ from traceback import format_exc
 # gevent
 from gevent.lock import RLock
 
+# lxml
+from lxml.etree import fromstring, tostring
+
 # parse
 from parse import PARSE_RE
 
@@ -316,6 +319,8 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
         if needs_serialize:
             if self.config['data_format'] == DATA_FORMAT.JSON:
                 data = dumps(data)
+            elif data and self.config['data_format'] == DATA_FORMAT.XML:
+                data = tostring(data)
 
         headers = self._create_headers(cid, kwargs.pop('headers', {}))
         if self.config['transport'] == 'soap':
@@ -340,8 +345,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             logger.debug('CID:`%s`, response:`%s`', cid, response.text)
 
         if needs_serialize:
+
             if self.config['data_format'] == DATA_FORMAT.JSON:
                 response.data = loads(response.text)
+
+            elif self.config['data_format'] == DATA_FORMAT.XML:
+                if response.text and response.headers.get('Content-Type') in ('application/xml', 'text/xml'):
+                    response.data = fromstring(response.text)
 
         return response
 
