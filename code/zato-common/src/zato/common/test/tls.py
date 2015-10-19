@@ -35,6 +35,7 @@ def get_free_port(start=20001, end=50000):
 class _HTTPHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(OK)
+        self.send_header('Content-Type', 'application/json')
         self.wfile.write('\n')
         self.wfile.write('"{}"'.format(ZATO_OK))
 
