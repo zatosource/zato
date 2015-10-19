@@ -37,24 +37,3 @@ class Matcher(object):
         m = self._matcher.match(value)
         if m:
             return dict(zip(self._group_names, m.groups()))
-
-if __name__ == '__main__':
-
-    patterns = [
-        '/customer/{cid}/order/{oid}',
-        '/permission/user/{user_id}',
-        '/permission/user/{user_id}/update',
-        '/permission/user/{user_id}/group/{group_id}',
-    ]
-
-    m = Matcher('/permission/user/{user_id}/group/{group_id}')
-
-    n = 100000
-    req = range(n)
-    start = datetime.utcnow()
-
-    for x in req:
-        result = m.match('/permission/user/123/group/456')
-
-    taken = datetime.utcnow() - start
-    print(taken)
