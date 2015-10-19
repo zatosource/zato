@@ -332,12 +332,12 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             data = data.encode('utf-8')
 
         logger.info(
-            'CID:[%s], address:[%s], qs_params:[%s], auth:[%s], kwargs:[%s]', cid, address, qs_params, self.requests_auth, kwargs) 
+            'CID:`%s`, address:`%s`, qs:`%s`, auth:`%s`, kwargs:`%s`', cid, address, qs_params, self.requests_auth, kwargs) 
 
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 
         if logger.isEnabledFor(DEBUG):
-            logger.debug('CID:[%s], response:[%s]', cid, response.text)
+            logger.debug('CID:`%s`, response:`%s`', cid, response.text)
 
         if needs_serialize:
             if self.config['data_format'] == DATA_FORMAT.JSON:
@@ -348,13 +348,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 # ################################################################################################################################
 
     def get(self, cid, params=None, *args, **kwargs):
-        return self.http_request('GET', cid, '', params, *args, **kwargs)
+        return self.http_request('GET', cid, None, params, *args, **kwargs)
 
     def delete(self, cid, params=None, *args, **kwargs):
-        return self.http_request('DELETE', cid, '', params, *args, **kwargs)
+        return self.http_request('DELETE', cid, None, params, *args, **kwargs)
 
     def options(self, cid, params=None, *args, **kwargs):
-        return self.http_request('OPTIONS', cid, '', params, *args, **kwargs)
+        return self.http_request('OPTIONS', cid, None, params, *args, **kwargs)
 
 # ################################################################################################################################
 

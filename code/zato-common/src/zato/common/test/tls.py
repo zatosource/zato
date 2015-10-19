@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import socket, ssl
+from httplib import OK
 from tempfile import NamedTemporaryFile
 from threading import Thread
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
@@ -33,8 +34,9 @@ def get_free_port(start=20001, end=50000):
 
 class _HTTPHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        self.send_response(200)
-        self.wfile.write(ZATO_OK)
+        self.send_response(OK)
+        self.wfile.write('\n')
+        self.wfile.write('"{}"'.format(ZATO_OK))
 
     do_DELETE = do_OPTIONS = do_POST = do_PUT = do_PATCH = do_GET
 
