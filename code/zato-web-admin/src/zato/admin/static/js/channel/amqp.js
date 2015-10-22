@@ -3,7 +3,8 @@
 
 $.fn.zato.data_table.ChannelAMQP = new Class({
     toString: function() {
-        var s = '<ChannelAMQP id:{0} name:{1} is_active:{2} def_id:{3} queue:{4} consumer_tag_prefix:{5} is_sync:{6} nack_timeout:{7} service:{8}>';
+        var s = '<ChannelAMQP id:{0} name:{1} is_active:{2} def_id:{3} queue:{4} consumer_tag_prefix:{5}'+
+            ' is_sync:{6} nack_timeout:{7} prefetch_count:{8} service:{9}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
                                 this.is_active ? this.is_active : '(none)',
@@ -12,6 +13,7 @@ $.fn.zato.data_table.ChannelAMQP = new Class({
                                 this.consumer_tag_prefix ? this.consumer_tag_prefix : '(none)',
                                 this.is_sync ? this.is_sync : '(none)',
                                 this.nack_timeout ? this.nack_timeout : '(none)',
+                                this.prefetch_count ? this.prefetch_count : '(none)',
                                 this.service ? this.service : '(none)');
     }
 });
@@ -54,6 +56,7 @@ $.fn.zato.channel.amqp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.consumer_tag_prefix);
     row += String.format('<td>{0}</td>', is_sync ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.nack_timeout);
+    row += String.format('<td>{0}</td>', item.prefetch_count);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.amqp.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.amqp.delete_({0});'>Delete</a>", item.id));

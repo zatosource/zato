@@ -32,6 +32,7 @@
             'consumer_tag_prefix',
             '_is_sync',
             'nack_timeout',
+            'prefetch_count',
             'service',
             '_edit',
             '_delete',
@@ -77,6 +78,7 @@
                         <th><a href="#">Consumer tag prefix</a></th>
                         <th><a href="#">Synchronous</a></th>
                         <th><a href="#">NACK timeout</a></th>
+                        <th><a href="#">Prefetch count</a></th>
                         <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -99,8 +101,10 @@
                         <td>{{ item.is_sync|yesno:'Yes,No' }}</td>
                         {% if item.is_sync %}
                             <td>{{ item.nack_timeout }}</td>
+                            <td>{{ item.prefetch_count }}</td>
                         {% else %}
-                            <td></td>
+                            <td>0</td>
+                            <td>0</td>
                         {% endif %}
                         <td><a href="{% url service-overview item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         <td><a href="javascript:$.fn.zato.channel.amqp.edit('{{ item.id }}')">Edit</a></td>
@@ -163,6 +167,11 @@
                         </tr>
 
                         <tr>
+                            <td style="vertical-align:middle">Prefetch count </td>
+                            <td>{{ create_form.prefetch_count }}</td>
+                        </tr>
+
+                        <tr>
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ create_form.service }}</td>
                         </tr>
@@ -221,6 +230,11 @@
                         <tr>
                             <td style="vertical-align:middle">NACK timeout <span class='form_hint'>(seconds)</span></td>
                             <td>{{ edit_form.nack_timeout }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Prefetch count </td>
+                            <td>{{ edit_form.prefetch_count }}</td>
                         </tr>
 
                         <tr>

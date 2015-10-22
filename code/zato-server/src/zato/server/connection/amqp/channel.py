@@ -32,12 +32,13 @@ logger = logging.getLogger('zato_connector')
 class ConsumingConnection(BaseAMQPConnection):
     """ A connection for consuming the AMQP messages.
     """
-    def __init__(self, conn_params, channel_name, queue, consumer_tag_prefix, is_sync, nack_timeout, callback):
+    def __init__(self, conn_params, channel_name, queue, consumer_tag_prefix, is_sync, nack_timeout, prefetch_count, callback):
         super(ConsumingConnection, self).__init__(conn_params, channel_name)
         self.queue = queue
         self.consumer_tag_prefix = consumer_tag_prefix
         self.is_sync = is_sync
         self.nack_timeout = nack_timeout
+        self.prefetch_count = prefetch_count
         self.callback = callback
         
     def _on_channel_open(self, channel):
@@ -59,13 +60,16 @@ class ConsumingConnection(BaseAMQPConnection):
     def consume(self, queue=None, consumer_tag_prefix=None):
         """ Starts consuming messages from the broker.
         """
+        if (self.prefetch_count is not None and self.prefetch_count > 0):
+            self.channel.basic_qos(prefetch_count=self.prefetch_count)
+
         _queue = queue if queue else self.queue
         _consumer_tag_prefix = consumer_tag_prefix if consumer_tag_prefix else self.consumer_tag_prefix
         
         consumer_tag = '{0}:{1}:{2}:{3}:{4}'.format(
             _consumer_tag_prefix, gethostbyname(gethostname()), getfqdn(),
             getpid(), getrandbits(64)).ljust(72, '0')
-        
+
         self.channel.basic_consume(self._on_basic_consume, queue=_queue, consumer_tag=consumer_tag)
         logger.info(u'Started an AMQP consumer for [{0}], queue [{1}], tag [{2}]'.format(
             self._conn_info(), _queue, consumer_tag))
@@ -102,6 +106,7 @@ class ConsumingConnector(BaseAMQPConnector):
         self.channel_amqp.consumer_tag_prefix = item.consumer_tag_prefix
         self.channel_amqp.is_sync = item.is_sync
         self.channel_amqp.nack_timeout = item.nack_timeout
+        self.channel_amqp.prefetch_count = item.prefetch_count
         self.channel_amqp.service = item.service_name
         self.channel_amqp.data_format = item.data_format
         
@@ -143,7 +148,8 @@ class ConsumingConnector(BaseAMQPConnector):
     def _amqp_consumer(self):
         consumer = ConsumingConnection(self._amqp_conn_params(), self.channel_amqp.name,
             self.channel_amqp.queue, self.channel_amqp.consumer_tag_prefix,
-            self.channel_amqp.is_sync, self.channel_amqp.nack_timeout, self._on_message)
+            self.channel_amqp.is_sync, self.channel_amqp.nack_timeout,
+            self.channel_amqp.prefetch_count, self._on_message)
         t = Thread(target=consumer._run)
         t.start()
         

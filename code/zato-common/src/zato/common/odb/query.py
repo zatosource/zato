@@ -375,6 +375,7 @@ def _channel_amqp(session, cluster_id):
         ChannelAMQP.id, ChannelAMQP.name, ChannelAMQP.is_active,
         ChannelAMQP.queue, ChannelAMQP.consumer_tag_prefix,
         ChannelAMQP.is_sync, ChannelAMQP.nack_timeout,
+        ChannelAMQP.prefetch_count,
         ConnDefAMQP.name.label('def_name'), ChannelAMQP.def_id,
         ChannelAMQP.data_format,
         Service.name.label('service_name'),

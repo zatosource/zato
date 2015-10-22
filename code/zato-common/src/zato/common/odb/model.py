@@ -1022,6 +1022,7 @@ class ChannelAMQP(Base):
     consumer_tag_prefix = Column(String(200), nullable=False)
     is_sync = Column(Boolean(), nullable=False)
     nack_timeout = Column(Integer, nullable=True)
+    prefetch_count = Column(Integer, nullable=True)
     data_format = Column(String(20), nullable=True)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
@@ -1032,7 +1033,8 @@ class ChannelAMQP(Base):
 
     def __init__(self, id=None, name=None, is_active=None, queue=None,
                  consumer_tag_prefix=None, is_sync=None, nack_timeout=None,
-                 def_id=None, def_name=None, service_name=None, data_format=None):
+                 prefetch_count=None, def_id=None, def_name=None,
+                 service_name=None, data_format=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -1040,6 +1042,7 @@ class ChannelAMQP(Base):
         self.consumer_tag_prefix = consumer_tag_prefix
         self.is_sync = is_sync
         self.nack_timeout = nack_timeout
+        self.prefetch_count = prefetch_count
         self.def_id = def_id
         self.def_name = def_name # Not used by the DB
         self.service_name = service_name # Not used by the DB
