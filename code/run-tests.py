@@ -35,7 +35,7 @@ def _nosetests():
     nosetests_cmd = os.path.join(curdir, 'bin', 'nosetests')
     zato_packages = ' '.join([item for item in glob.iglob(os.path.join(curdir, 'zato-*'))])
 
-    run('{} {} --with-coverage --cover-package=zato --nocapture'.format(nosetests_cmd, zato_packages))
+    run('{} {} --nocapture'.format(nosetests_cmd, zato_packages))
 
 @click.command()
 def nosetests():
