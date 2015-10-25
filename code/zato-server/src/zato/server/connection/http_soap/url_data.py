@@ -52,8 +52,8 @@ class Matcher(object):
         self.group_names = []
         self.pattern = pattern
         self.matcher = None
-        self._brace_pattern = re_compile('\{\w+\}')
-        self._elem_re_template = r'(?P<{}>\w+)'
+        self._brace_pattern = re_compile('\{[a-zA-Z0-9_\$.\-|=~^]+\}')
+        self._elem_re_template = r'(?P<{}>[a-zA-Z0-9_\$.\-|=~^]+)'
         self._set_up_matcher(self.pattern)
 
     def __str__(self):
