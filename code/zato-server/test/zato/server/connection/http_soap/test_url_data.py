@@ -159,21 +159,51 @@ class URLDataTestCase(TestCase):
         eq_(info.match_target, ':::/customer/{cid}/order/{oid}')
         eq_(sorted(info.match_target_compiled.group_names), ['cid','oid'])
         eq_(info.match_target_compiled.pattern, ':::/customer/{cid}/order/{oid}')
-        eq_(info.match_target_compiled.matcher.pattern, ':::/customer/(?P<cid>\\w+)/order/(?P<oid>\\w+)$')
+        eq_(
+            info.match_target_compiled.matcher.pattern,
+            ':::/customer/(?P<cid>[a-zA-Z0-9_\\$.\\-|=~^]+)/order/(?P<oid>[a-zA-Z0-9_\\$.\\-|=~^]+)$')
 
         match, info = ud.match('/customer/abc', '')
         eq_(sorted(match.items()), [('cid', 'abc')])
         eq_(info.match_target, ':::/customer/{cid}')
         eq_(sorted(info.match_target_compiled.group_names), ['cid'])
         eq_(info.match_target_compiled.pattern, ':::/customer/{cid}')
-        eq_(info.match_target_compiled.matcher.pattern, ':::/customer/(?P<cid>\\w+)$')
+        eq_(info.match_target_compiled.matcher.pattern, ':::/customer/(?P<cid>[a-zA-Z0-9_\\$.\\-|=~^]+)$')
 
         match, info = ud.match('/customer/QWERTY/order', 'aaabbbccc')
         eq_(sorted(match.items()), [('cid', 'QWERTY')])
         eq_(info.match_target, 'aaabbbccc:::/customer/{cid}/order')
         eq_(sorted(info.match_target_compiled.group_names), ['cid'])
         eq_(info.match_target_compiled.pattern, 'aaabbbccc:::/customer/{cid}/order')
-        eq_(info.match_target_compiled.matcher.pattern, 'aaabbbccc:::/customer/(?P<cid>\\w+)/order$')
+        eq_(info.match_target_compiled.matcher.pattern, 'aaabbbccc:::/customer/(?P<cid>[a-zA-Z0-9_\\$.\\-|=~^]+)/order$')
+
+    def test_match_non_ascii(self):
+
+        for elem in '_$.-|=~^abcdefABCDEF':
+
+            cid = 'abc{}def'.format(elem)
+
+            ud = url_data.URLData([])
+
+            soap_action1 = ''
+            url_path1 = '/customer/{cid}'
+            match_target1 = '{}{}{}'.format(soap_action1, MISC.SEPARATOR, url_path1)
+
+            item1 = Bunch()
+            item1.name = 'name-1'
+            item1.match_target = match_target1
+            item1.match_target_compiled = url_data.Matcher(item1.match_target)
+
+            ud.channel_data.append(item1)
+
+            match, info = ud.match('/customer/{}'.format(cid), '')
+            self.assertTrue(bool(match), 'bool(match) is not True, cid:`{}`'.format(cid))
+
+            eq_(sorted(match.items()), [('cid', cid)])
+            eq_(info.match_target, ':::/customer/{cid}')
+            eq_(sorted(info.match_target_compiled.group_names), ['cid'])
+            eq_(info.match_target_compiled.pattern, ':::/customer/{cid}')
+            eq_(info.match_target_compiled.matcher.pattern, ':::/customer/(?P<cid>[a-zA-Z0-9_\\$.\\-|=~^]+)$')
 
 # ################################################################################################################################
 
