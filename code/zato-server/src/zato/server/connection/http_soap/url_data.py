@@ -25,7 +25,7 @@ from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer
      OAuthSignatureMethod_PLAINTEXT, OAuthToken
 
 # regex
-from regex import compile as re_compile, match as re_match
+from regex import compile as re_compile
 
 # sec-wall
 from secwall.server import on_basic_auth, on_wsse_pwd
