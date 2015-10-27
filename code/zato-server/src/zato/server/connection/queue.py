@@ -28,14 +28,16 @@ class _Connection(object):
     """ Meant to be used as a part of a 'with' block - returns a connection from its queue each time 'with' is entered
     assuming the queue isn't empty.
     """
-    def __init__(self, client_queue, conn_name):
+    def __init__(self, client_queue, conn_name, blocking, blocking_time):
         self.queue = client_queue
         self.conn_name = conn_name
+        self.blocking = blocking
+        self.blocking_time = blocking_time
         self.client = None
 
     def __enter__(self):
         try:
-            self.client = self.queue.get(block=False)
+            self.client = self.queue.get(block=self.blocking, timeout=self.blocking_time)
         except Empty:
             self.client = None
             msg = 'No free connections to `{}`'.format(self.conn_name)
@@ -54,19 +56,21 @@ class ConnectionQueue(object):
     """ Holds connections to resources. Each time it's called a connection is fetched from its underlying queue
     assuming any connection is still available.
     """
-    def __init__(self, pool_size, queue_build_cap, conn_name, conn_type, address, add_client_func):
+    def __init__(self, pool_size, queue_build_cap, conn_name, conn_type, address, add_client_func, blocking, blocking_time):
         self.queue = Queue(pool_size)
         self.queue_build_cap = queue_build_cap
         self.conn_name = conn_name
         self.conn_type = conn_type
         self.address = address
         self.add_client_func = add_client_func
+        self.blocking = blocking
+        self.blocking_time = blocking_time
         self.keep_connecting = True
 
         self.logger = logging.getLogger(self.__class__.__name__)
 
     def __call__(self):
-        return _Connection(self.queue, self.conn_name)
+        return _Connection(self.queue, self.conn_name, self.blocking, self.blocking_time)
 
     def put_client(self, client):
         self.queue.put(client)

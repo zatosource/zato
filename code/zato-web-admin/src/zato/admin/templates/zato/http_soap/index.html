@@ -73,6 +73,8 @@
             {% ifequal connection 'outgoing' %}
                 'ping_method',
                 'pool_size',
+                'blocking',
+                'blocking_time',
                 'serialization_type',
                 'content_type',
             {% endifequal %}
@@ -234,6 +236,12 @@
                         {% ifequal connection 'outgoing' %}
                             <td class='ignore'>{{ item.ping_method }}</td>
                             <td class='ignore'>{{ item.pool_size }}</td>
+                            <td class='ignore'>{{ item.blocking }}</td>
+                            {% if item.blocking and item.blocking_time %}
+                                <td class='ignore'>{{ item.blocking_time }}</td>
+                            {% else %}
+                                <td class='ignore'>0</td>
+                            {% endif %}
                             <td class='ignore'>{{ item.serialization_type }}</td>
                             <td class='ignore'>{{ item.content_type }}</td>
                         {% endifequal %}
@@ -355,6 +363,16 @@
                             <span class="form_hint">default: {{ default_http_pool_size }} </span>
                             </td>
                             <td>{{ create_form.pool_size }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Blocking pool </td>
+                            <td>{{ create_form.blocking }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Blocking pool timeout (s) </td>
+                            <td>{{ create_form.blocking_time }}</td>
                         </tr>
 
                         <tr>
@@ -501,6 +519,16 @@
                             <span class="form_hint">default: {{ default_http_pool_size }} </span>
                             </td>
                             <td>{{ edit_form.pool_size }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Blocking pool </td>
+                            <td>{{ edit_form.blocking }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Blocking pool timeout (s) </td>
+                            <td>{{ edit_form.blocking_time }}</td>
                         </tr>
 
                         <tr>

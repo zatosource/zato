@@ -152,6 +152,8 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     if(is_outgoing) {
         row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.ping_method);
         row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.pool_size);
+        row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.blocking);
+        row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.blocking_time);
         row += String.format("<td class='ignore item_id_{0}'>{0}</td>", serialization_type);
     }
 

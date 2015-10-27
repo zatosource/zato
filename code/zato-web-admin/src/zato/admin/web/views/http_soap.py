@@ -79,6 +79,8 @@ def _get_edit_create_message(params, prefix=''):
         'service': params.get(prefix + 'service'),
         'ping_method': params.get(prefix + 'ping_method'),
         'pool_size': params.get(prefix + 'pool_size'),
+        'blocking': bool(params.get(prefix + 'blocking')),
+        'blocking_time': params.get(prefix + 'blocking_time'),
         'timeout': params.get(prefix + 'timeout'),
         'sec_tls_ca_cert_id': params.get(prefix + 'sec_tls_ca_cert_id'),
         'security_id': security_id,
@@ -160,7 +162,7 @@ def index(req):
             item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection,
                     transport, item.host, item.url_path, item.method, item.soap_action,
                     item.soap_version, item.data_format, item.ping_method,
-                    item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri,
+                    item.pool_size, item.blocking, item.blocking_time, item.merge_url_params_req, item.url_params_pri, item.params_pri,
                     item.serialization_type, item.timeout, item.sec_tls_ca_cert_id, service_id=item.service_id,
                     service_name=item.service_name, security_id=security_id, has_rbac=item.has_rbac,
                     security_name=security_name, content_type=item.content_type)

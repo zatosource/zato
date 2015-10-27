@@ -86,8 +86,9 @@ class GetList(AdminService):
         input_required = ('cluster_id', 'connection', 'transport')
         output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type', 
-            'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
-            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
+            'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size',
+            'blocking', 'blocking_time', 'merge_url_params_req', 'url_params_pri', 'params_pri',
+            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
             'content_type')
         output_repeated = True
 
@@ -115,8 +116,9 @@ class Create(_CreateEdit):
         response_elem = 'zato_http_soap_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
-            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type')
+            'host', 'ping_method', 'pool_size', Boolean('blocking'), 'blocking_time', Boolean('merge_url_params_req'),
+            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id',
+            Boolean('has_rbac'), 'content_type')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -174,6 +176,8 @@ class Create(_CreateEdit):
                 item.service = service
                 item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
                 item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
+                item.blocking = input.get('blocking') or False
+                item.blocking_time = input.get('blocking_time') or 0
                 item.merge_url_params_req = input.get('merge_url_params_req') or True
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
@@ -223,8 +227,9 @@ class Edit(_CreateEdit):
         response_elem = 'zato_http_soap_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 
-            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type')
+            'host', 'ping_method', 'pool_size', Boolean('blocking'), 'blocking_time', Boolean('merge_url_params_req'),
+            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id',
+            Boolean('has_rbac'), 'content_type')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -287,6 +292,8 @@ class Edit(_CreateEdit):
                 item.service = service
                 item.ping_method = input.get('ping_method') or DEFAULT_HTTP_PING_METHOD
                 item.pool_size = input.get('pool_size') or DEFAULT_HTTP_POOL_SIZE
+                item.blocking = input.get('blocking') or False
+                item.blocking_time = input.get('blocking_time') or 0
                 item.merge_url_params_req = input.get('merge_url_params_req') or False
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
@@ -311,6 +318,9 @@ class Edit(_CreateEdit):
                 else:
                     input.ping_method = item.ping_method
                     input.pool_size = item.pool_size
+                    input.blocking = item.blocking
+                    input.blocking_time = item.blocking_time
+
 
                 input.is_internal = item.is_internal
                 input.old_name = old_name

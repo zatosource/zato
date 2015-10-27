@@ -386,7 +386,7 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
         self.conn_type = 'Suds SOAP'
         self.client = ConnectionQueue(
             self.config['pool_size'], self.config['queue_build_cap'], self.config['name'], self.conn_type, self.address,
-            self.add_client)
+            self.add_client, self.config['blocking'], self.config['blocking_time'])
 
     def set_auth(self):
         """ Configures the security for requests, if any is to be configured at all.

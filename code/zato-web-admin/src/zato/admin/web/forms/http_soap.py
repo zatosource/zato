@@ -43,6 +43,8 @@ class CreateForm(DataFormatForm):
     service = forms.ChoiceField(widget=forms.Select(attrs={'class':'required', 'style':'width:100%'}))
     ping_method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
     pool_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
+    blocking = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    blocking_time = forms.CharField(initial='0', widget=forms.TextInput(attrs={'style':'width:10%'}))
     timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}), initial=MISC.DEFAULT_HTTP_TIMEOUT)
     security = forms.ChoiceField(widget=forms.Select())
     has_rbac = forms.BooleanField(required=False, widget=forms.CheckboxInput())

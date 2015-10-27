@@ -458,6 +458,8 @@ class HTTPSOAP(Base):
 
     ping_method = Column(String(60), nullable=True)
     pool_size = Column(Integer, nullable=True)
+    blocking = Column(Boolean, nullable=True, default=False)
+    blocking_time = Column(Integer, nullable=True)
     serialization_type = Column(String(200), nullable=False, default=HTTP_SOAP_SERIALIZATION_TYPE.SUDS.id)
     timeout = Column(Integer(), nullable=False, default=MISC.DEFAULT_HTTP_TIMEOUT)
 
@@ -483,11 +485,12 @@ class HTTPSOAP(Base):
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
     security = relationship(SecurityBase, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, name=None, is_active=None, is_internal=None, connection=None, transport=None, host=None, \
+    def __init__(self, id=None, name=None, is_active=None, is_internal=None, connection=None, transport=None, host=None,
                  url_path=None, method=None, soap_action=None, soap_version=None, data_format=None, ping_method=None,
-                 pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None, \
-                 timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None, \
-                 cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None, content_type=None):
+                 pool_size=None, blocking=None, blocking_time=None, merge_url_params_req=None, url_params_pri=None,
+                 params_pri=None, serialization_type=None, timeout=None, sec_tls_ca_cert_id=None, service_id=None, 
+                 service=None, security=None, cluster_id=None, cluster=None, service_name=None, security_id=None,
+                 has_rbac=None, security_name=None, content_type=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -502,6 +505,8 @@ class HTTPSOAP(Base):
         self.data_format = data_format
         self.ping_method = ping_method
         self.pool_size = pool_size
+        self.blocking = blocking
+        self.blocking_time = blocking_time
         self.merge_url_params_req = merge_url_params_req
         self.url_params_pri = url_params_pri
         self.params_pri = params_pri
