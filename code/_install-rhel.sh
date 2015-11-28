@@ -28,9 +28,9 @@ symlink_py 'scipy'
 
 export CYTHON=$CURDIR/bin/cython
 
-sudo pip-python install distribute==0.6.49
-sudo pip-python install virtualenv==1.9.1
-sudo pip-python install zato-apitest
+sudo pip install distribute==0.6.49
+sudo pip install virtualenv==1.9.1
+sudo pip install zato-apitest
 
 virtualenv $CURDIR
 $CURDIR/bin/pip install --upgrade pip
