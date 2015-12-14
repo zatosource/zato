@@ -72,8 +72,8 @@ class Job(object):
             self.start_time = start_time
 
         elif self.type == SCHEDULER.JOB_TYPE.CRON_STYLE:
-            now = datetime.datetime.utcnow()
-            self.start_time =  now + datetime.timedelta(seconds=(self.get_sleep_time(now)))
+            now = datetime.datetime.now()
+            self.start_time = now + datetime.timedelta(seconds=(self.get_sleep_time(now)))
 
         else:
             self.start_time = self.get_start_time(start_time if start_time is not None else datetime.datetime.utcnow())
@@ -131,7 +131,11 @@ class Job(object):
         # 2a) means we already seen some executions of this job and there's still at least one in the future
         # 2b) means we already seen some executions of this job and it won't be run in the future anymore
 
-        now = datetime.datetime.utcnow()
+        if self.type == SCHEDULER.JOB_TYPE.CRON_STYLE:
+            now = datetime.datetime.now()
+        else:
+            now = datetime.datetime.utcnow()
+
         interval = datetime.timedelta(seconds=self.interval.in_seconds)
 
         if start_time > now:
@@ -222,7 +226,7 @@ class Job(object):
 
             finally:
                 # Pause the greenlet for however long is needed
-                _sleep(self.get_sleep_time(datetime.datetime.utcnow()))
+                _sleep(self.get_sleep_time(datetime.datetime.now()))
 
         if logger.isEnabledFor(DEBUG):
             logger.debug('Job leaving main loop `%s` after %d iterations', self, self.current_run)
@@ -233,11 +237,15 @@ class Job(object):
         if logger.isEnabledFor(DEBUG):
             logger.debug('Job starting `%s`', self)
 
-        _utcnow = datetime.datetime.utcnow
+        if self.type == SCHEDULER.JOB_TYPE.CRON_STYLE:
+            _now = datetime.datetime.now
+        else:
+            _now = datetime.datetime.utcnow
+
         _sleep = gevent.sleep
 
         # If the job has a start time in the future, sleep until it's ready to go.
-        now = _utcnow()
+        now = _now()
 
         while self.start_time > now:
             _sleep(self.wait_sleep_time)
@@ -245,7 +253,7 @@ class Job(object):
             if self.wait_iter_cb:
                 self.wait_iter_cb(self.start_time, now, *self.wait_iter_cb_args)
 
-            now = _utcnow()
+            now = _now()
 
         # OK, we're ready
         self.main_loop()
@@ -280,7 +288,8 @@ class Scheduler(object):
                 if logger.isEnabledFor(DEBUG):
                     logger.debug('Job scheduled `%s`', job)
                 else:
-                    logger.info('Job scheduled `%s` (%s, start: %s UTC)', job.name, job.type, job.start_time)
+                    logger.info('Job scheduled `%s` (%s, start: %s %s)', job.name, job.type,
+                        job.start_time, 'local' if job.type == SCHEDULER.JOB_TYPE.CRON_STYLE else 'UTC')
 
         else:
             logger.warn('Skipping inactive job `%s`', job)
