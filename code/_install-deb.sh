@@ -28,13 +28,13 @@ fi
 # comes to fetching the packages from repositories.
 sudo apt-get update
 
-sudo apt-get install -y git bzr gfortran haproxy  \
+sudo apt-get install -y git bzr gfortran haproxy \
     libatlas-dev libatlas3gf-base libblas3gf \
     libbz2-dev libev4 libev-dev \
     libevent-dev libgfortran3 liblapack-dev liblapack3gf libldap2-dev \
-    libpq-dev libsasl2-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack \
+    libpq-dev libsasl2-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack5.6.2 \
     openssl python2.7-dev python-numpy python-pip \
-    python-scipy python-zdaemon swig uuid-dev uuid-runtime libffi-dev
+    python-scipy python-zdaemon swig uuid-dev uuid-runtime libffi-dev libssl-dev
 
 # On Debian and Ubuntu the binary goes to /usr/sbin/haproxy so we need to symlink it 
 # to a directory that can be easily found on PATH so that starting the load-balancer
