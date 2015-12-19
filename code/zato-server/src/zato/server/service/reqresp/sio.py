@@ -88,7 +88,7 @@ class ForceType(object):
         raise NotImplementedError('Subclasses should override it')
 
     def convert(self, value, param_name, data_type, from_sio_to_external):
-        return self.serialize_dispatch[(from_sio_to_external, data_type)](value, param_name) if value else value
+        return self.serialize_dispatch[(from_sio_to_external, data_type)](value, param_name) if value is not None else value
 
     def get_xml_dict(self, _dict, name):
         xml_dict = Element(name)
@@ -410,7 +410,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
 
     # Ok, at that point we either don't have anything in channel_params or they don't have priority over payload.
 
-    if payload:
+    if payload is not None:
         value = convert_impl[data_format](payload, param_name, cid, is_required, isinstance(param, COMPLEX_VALUE), 
                                           default_value, path_prefix, use_text)
     else:
