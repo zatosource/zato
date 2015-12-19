@@ -71,15 +71,19 @@ class _FakeRequestsModule(object):
 
 class Base(object):
 
-    def _get_config(self):
+    def _get_config(self, needs_data_format=True):
         return {'is_active':True, 'sec_type':rand_string(), 'address_host':rand_string(), 
             'address_url_path':rand_string(), 'ping_method':rand_string(), 'soap_version':'1.1',
             'pool_size':rand_int(), 'serialization_type':'string', 'timeout':rand_int(),
-            'tls_verify':ZATO_NONE, 'data_format':'', 'content_type':'', 'data_format':DATA_FORMAT.JSON}
+            'tls_verify':ZATO_NONE, 'data_format':'', 'content_type':'',
+            'data_format':DATA_FORMAT.JSON if needs_data_format else None, 'transport':'plain_http'}
 
 # ################################################################################################################################
 
 class HTTPSOAPWrapperTestCase(TestCase, Base):
+
+    def setUp(self):
+        self.maxDiff = None
 
     def test_soap_body(self):
         """ https://github.com/zatosource/zato/issues/475 (Body ignored in string-based outgoing SOAP connections)
@@ -385,7 +389,7 @@ class HTTPSOAPWrapperTestCase(TestCase, Base):
         now = datetime.utcnow().isoformat()
         requests_module = _FakeRequestsModule()
 
-        config = self._get_config()
+        config = self._get_config(False)
 
         wrapper = HTTPSOAPWrapper(config, requests_module)
         user_headers = {rand_string():rand_string(), rand_string():rand_string()}
