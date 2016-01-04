@@ -161,21 +161,21 @@ class URLDataTestCase(TestCase):
         eq_(info.match_target_compiled.pattern, ':::/customer/{cid}/order/{oid}')
         eq_(
             info.match_target_compiled.matcher.pattern,
-            ':::/customer/(?P<cid>[a-zA-Z0-9_\\$.\\-|=~^]+)/order/(?P<oid>[a-zA-Z0-9_\\$.\\-|=~^]+)$')
+            ':::/customer/(?P<cid>[a-zA-Z0-9 _\\$.\\-|=~^]+)/order/(?P<oid>[a-zA-Z0-9 _\\$.\\-|=~^]+)$')
 
         match, info = ud.match('/customer/abc', '')
         eq_(sorted(match.items()), [('cid', 'abc')])
         eq_(info.match_target, ':::/customer/{cid}')
         eq_(sorted(info.match_target_compiled.group_names), ['cid'])
         eq_(info.match_target_compiled.pattern, ':::/customer/{cid}')
-        eq_(info.match_target_compiled.matcher.pattern, ':::/customer/(?P<cid>[a-zA-Z0-9_\\$.\\-|=~^]+)$')
+        eq_(info.match_target_compiled.matcher.pattern, ':::/customer/(?P<cid>[a-zA-Z0-9 _\\$.\\-|=~^]+)$')
 
         match, info = ud.match('/customer/QWERTY/order', 'aaabbbccc')
         eq_(sorted(match.items()), [('cid', 'QWERTY')])
         eq_(info.match_target, 'aaabbbccc:::/customer/{cid}/order')
         eq_(sorted(info.match_target_compiled.group_names), ['cid'])
         eq_(info.match_target_compiled.pattern, 'aaabbbccc:::/customer/{cid}/order')
-        eq_(info.match_target_compiled.matcher.pattern, 'aaabbbccc:::/customer/(?P<cid>[a-zA-Z0-9_\\$.\\-|=~^]+)/order$')
+        eq_(info.match_target_compiled.matcher.pattern, 'aaabbbccc:::/customer/(?P<cid>[a-zA-Z0-9 _\\$.\\-|=~^]+)/order$')
 
     def test_match_non_ascii(self):
 
@@ -203,7 +203,27 @@ class URLDataTestCase(TestCase):
             eq_(info.match_target, ':::/customer/{cid}')
             eq_(sorted(info.match_target_compiled.group_names), ['cid'])
             eq_(info.match_target_compiled.pattern, ':::/customer/{cid}')
-            eq_(info.match_target_compiled.matcher.pattern, ':::/customer/(?P<cid>[a-zA-Z0-9_\\$.\\-|=~^]+)$')
+            eq_(info.match_target_compiled.matcher.pattern, ':::/customer/(?P<cid>[a-zA-Z0-9 _\\$.\\-|=~^]+)$')
+
+    def test_match_whitespace(self):
+        """ GH #505 HTTP channels do not take whitespace into account
+        https://github.com/zatosource/zato/issues/505
+        """
+        ud = url_data.URLData([])
+
+        soap_action3 = ''
+        url_path3 = '/customer/{cid}/order/{oid}'
+        match_target3 = '{}{}{}'.format(soap_action3, MISC.SEPARATOR, url_path3)
+
+        item3 = Bunch()
+        item3.name = 'name-3'
+        item3.match_target = match_target3
+        item3.match_target_compiled = url_data.Matcher(item3.match_target)
+
+        ud.channel_data.append(item3)
+
+        match, _ = ud.match('/customer/1 23/order/4 56', soap_action3)
+        eq_(sorted(match.items()), [(u'cid', u'1 23'), (u'oid', u'4 56')])
 
 # ################################################################################################################################
 
