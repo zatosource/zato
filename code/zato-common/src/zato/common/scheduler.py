@@ -73,7 +73,7 @@ class Job(object):
 
         elif self.type == SCHEDULER.JOB_TYPE.CRON_STYLE:
             now = datetime.datetime.utcnow()
-            self.start_time =  now + datetime.timedelta(seconds=(self.get_sleep_time(now)))
+            self.start_time = now + datetime.timedelta(seconds=(self.get_sleep_time(now)))
 
         else:
             self.start_time = self.get_start_time(start_time if start_time is not None else datetime.datetime.utcnow())

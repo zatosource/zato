@@ -552,7 +552,7 @@ class RedisPubSub(PubSub, LuaContainer):
             self.run_lua(
                 self.LUA_PUBLISH, [
                     id_key, self.MSG_VALUES_KEY, self.MSG_METADATA_KEY, self.MSG_EXPIRE_AT_KEY, self.LAST_PUB_TIME_KEY,
-                      self.LAST_SEEN_PRODUCER_KEY],
+                       self.LAST_SEEN_PRODUCER_KEY],
                     [score, ctx.msg.msg_id, ctx.msg.expire_at_utc.isoformat(), ctx.msg.payload, ctx.msg.to_json(),
                        ctx.topic, datetime.utcnow().isoformat(), ctx.client_id])
         except Exception, e:
@@ -961,7 +961,6 @@ class PubSubAPI(object):
         return self.impl.update_consumer(consumer, topic)
 
 # ############################################################################################################################
-
 
     def get_topic_depth(self, topic):
         return self.impl.get_topic_depth(topic)

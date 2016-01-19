@@ -818,8 +818,8 @@ def _http_soap_audit(session, cluster_id, conn_id=None, start=None, stop=None, q
     if query:
         query = '%{}%'.format(query)
         q = q.filter(
-            HTTSOAPAudit.cid.ilike(query) | \
-            HTTSOAPAudit.req_headers.ilike(query) | HTTSOAPAudit.req_payload.ilike(query) | \
+            HTTSOAPAudit.cid.ilike(query) |
+            HTTSOAPAudit.req_headers.ilike(query) | HTTSOAPAudit.req_payload.ilike(query) |
             HTTSOAPAudit.resp_headers.ilike(query) | HTTSOAPAudit.resp_payload.ilike(query)
         )
 
@@ -988,8 +988,6 @@ def _notif_cloud_openstack_swift(session, cluster_id, needs_password):
         NotifOSS.interval, NotifOSS.name_pattern, NotifOSS.name_pattern_neg, NotifOSS.get_data, NotifOSS.get_data_patt,
         NotifOSS.get_data_patt_neg, OpenStackSwift.name.label('def_name'), Service.name.label('service_name')]
 
-    #if needs_password:
-
     return session.query(*columns).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==NotifOSS.cluster_id).\
@@ -1016,7 +1014,7 @@ def _notif_sql(session, cluster_id, needs_password):
     """ SQL notifications.
     """
 
-    columns = [NotifSQL.id, NotifSQL.is_active, NotifSQL.name, NotifSQL.query, NotifSQL.notif_type, NotifSQL.interval, \
+    columns = [NotifSQL.id, NotifSQL.is_active, NotifSQL.name, NotifSQL.query, NotifSQL.notif_type, NotifSQL.interval,
         NotifSQL.def_id, SQLConnectionPool.name.label('def_name'), Service.name.label('service_name')]
 
     if needs_password:

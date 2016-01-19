@@ -45,7 +45,7 @@ class MatcherTestCase(TestCase):
 
         # Note that it's reversed because we match from narrowest
         # to broadest patterns, sorted lexicographically.
-        self.assertListEqual(m.items[True], [ 'abc.*', '*.zxc',])
+        self.assertListEqual(m.items[True], ['abc.*', '*.zxc',])
         self.assertListEqual(m.items[False], ['qwe.*.zxc', '*'])
 
 # ################################################################################################################################

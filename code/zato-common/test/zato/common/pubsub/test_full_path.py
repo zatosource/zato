@@ -383,7 +383,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         pub_ctx_msg_crm2 = PubCtx()
         pub_ctx_msg_crm2.client_id = client_id_crm.id
         pub_ctx_msg_crm2.topic = topic_cust_update.name
-        pub_ctx_msg_crm2.msg = Message(msg_crm2_value,  mime_type='application/json', priority=2, expiration=0.2)
+        pub_ctx_msg_crm2.msg = Message(msg_crm2_value, mime_type='application/json', priority=2, expiration=0.2)
 
         msg_crm2_id = ps.publish(pub_ctx_msg_crm2).msg.msg_id
 
@@ -391,7 +391,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         pub_ctx_msg_billing1 = PubCtx()
         pub_ctx_msg_billing1.client_id = client_id_billing.id
         pub_ctx_msg_billing1.topic = topic_adsl_new.name
-        pub_ctx_msg_billing1.msg = Message(msg_billing1_value,  mime_type='application/soap+xml', priority=3, expiration=0.3)
+        pub_ctx_msg_billing1.msg = Message(msg_billing1_value, mime_type='application/soap+xml', priority=3, expiration=0.3)
 
         msg_billing1_id = ps.publish(pub_ctx_msg_billing1).msg.msg_id
 
