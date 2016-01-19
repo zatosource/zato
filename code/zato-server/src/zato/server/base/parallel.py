@@ -714,7 +714,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         return is_singleton
 
-
     def init_connectors(self):
         """ Starts all the connector subprocesses.
         """

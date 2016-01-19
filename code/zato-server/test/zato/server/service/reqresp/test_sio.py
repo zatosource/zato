@@ -19,8 +19,8 @@ from zato.common import DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, SIMPLE_I
 from zato.common.test import rand_bool, rand_csv, rand_date_utc, rand_dict, rand_float, rand_int, rand_list, rand_list_of_dicts, \
      rand_nested, rand_opaque, rand_string, rand_unicode
 from zato.common.util import new_cid
-from zato.server.service.reqresp.sio import AsIs, Boolean, convert_param, CSV, Dict, Float, ForceType, Integer, List, \
-     ListOfDicts, Nested, Opaque, Unicode, UTC, ValidationException
+from zato.server.service.reqresp.sio import Boolean, convert_param, CSV, Dict, Float, Integer, List, ListOfDicts, Nested, \
+     Opaque, Unicode, UTC, ValidationException
 
 class SIOTestCase(TestCase):
     def test_dict_no_keys_specified(self):
