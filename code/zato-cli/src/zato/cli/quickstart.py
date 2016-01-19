@@ -374,11 +374,13 @@ class Create(ZatoCommand):
         start_steps = 4 + servers
         stop_steps = 2 + servers
 
-        zato_qs_start_head = zato_qs_start_head_template.format(zato_bin=zato_bin, script_dir=script_dir, cluster_name=cluster_name, start_steps=start_steps)
+        zato_qs_start_head = zato_qs_start_head_template.format(
+            zato_bin=zato_bin, script_dir=script_dir, cluster_name=cluster_name, start_steps=start_steps)
         zato_qs_start_body = zato_qs_start_body_template.format(sanity_checks=sanity_checks, start_servers=start_servers)
         zato_qs_start = zato_qs_start_head + zato_qs_start_body + zato_qs_start_tail
 
-        zato_qs_stop = zato_qs_stop_template.format(zato_bin=zato_bin, script_dir=script_dir, cluster_name=cluster_name, stop_steps=stop_steps, stop_servers=stop_servers)
+        zato_qs_stop = zato_qs_stop_template.format(
+            zato_bin=zato_bin, script_dir=script_dir, cluster_name=cluster_name, stop_steps=stop_steps, stop_servers=stop_servers)
 
         open(zato_qs_start_path, 'w').write(zato_qs_start)
         open(zato_qs_stop_path, 'w').write(zato_qs_stop)
