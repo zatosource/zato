@@ -506,10 +506,10 @@ class HTTPSOAP(Base):
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
     security = relationship(SecurityBase, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, name=None, is_active=None, is_internal=None, connection=None, transport=None, host=None, \
+    def __init__(self, id=None, name=None, is_active=None, is_internal=None, connection=None, transport=None, host=None,
                  url_path=None, method=None, soap_action=None, soap_version=None, data_format=None, ping_method=None,
-                 pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None, \
-                 timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None, \
+                 pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None,
+                 timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None,
                  cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None):
         self.id = id
         self.name = name

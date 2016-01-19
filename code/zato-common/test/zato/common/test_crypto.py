@@ -68,7 +68,7 @@ HtO3lDnY8Qno29yTCP4+GWM=
 
 # Plain text and its value after encrypting with the private key
 plain_text = 'zato1'
-secret = 'T8irIao63mrrSIItl1JDgs8K+9zIXi3OTXYzEHtSpzB9m52Q34LYeeiyYJTvEq8nWb3Lpuav29QuJAfgyPCUgf8RZAWNNkIgmfwsNPAcP4os62i13QGp2Vuxk22QZ7qOjZtMRXncQ8sDgL9JyEo+bphthw8TEdo08I1aGe0iSMg8QQhbwtEGVgdY0286cvSFLbadwNYQCSdadUMlCmtBft2vVUxM/cZGYc5VAgE4ey2KeFgGYVtg7GZjbiWT1JUPKsJESksrvKMmv5SZ9aVBa8Ex/ahIWy+IDPcNKe4MskZrGnqCxWF3+yQYa/1xv0hCw1N7LlW592xDzNWdTALE5A=='
+secret = 'T8irIao63mrrSIItl1JDgs8K+9zIXi3OTXYzEHtSpzB9m52Q34LYeeiyYJTvEq8nWb3Lpuav29QuJAfgyPCUgf8RZAWNNkIgmfwsNPAcP4os62i13QGp2Vuxk22QZ7qOjZtMRXncQ8sDgL9JyEo+bphthw8TEdo08I1aGe0iSMg8QQhbwtEGVgdY0286cvSFLbadwNYQCSdadUMlCmtBft2vVUxM/cZGYc5VAgE4ey2KeFgGYVtg7GZjbiWT1JUPKsJESksrvKMmv5SZ9aVBa8Ex/ahIWy+IDPcNKe4MskZrGnqCxWF3+yQYa/1xv0hCw1N7LlW592xDzNWdTALE5A==' # nopep8
 
 # ##############################################################################
 

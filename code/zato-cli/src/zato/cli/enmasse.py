@@ -152,7 +152,7 @@ class EnMasse(ManageCommand):
     """ Manages server objects en masse.
     """
     opts = [
-        {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},
+        {'name':'--server-url', 'help':'URL of the server that enmasse should talk to, provided in host[:port] format. Defaults to server.conf\'s \'gunicorn_bind\''},  # nopep8
         {'name':'--export-local', 'help':'Export local JSON definitions into one file (can be used with --export-odb)', 'action':'store_true'},
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
         {'name':'--import', 'help':'Import definitions from a local JSON (excludes --export-*)', 'action':'store_true'},
@@ -623,7 +623,7 @@ class EnMasse(ManageCommand):
 
         for item in self.client.odb_session.query(HTTPSOAP).\
             filter(HTTPSOAP.cluster_id == self.client.cluster_id).\
-            filter(HTTPSOAP.is_internal == False).all():
+            filter(HTTPSOAP.is_internal == False).all(): # noqa E713 test for membership should be 'not in'
             if item.name not in('admin.invoke', 'pubapi', 'zato.check.service'):
                 self.odb_objects.http_soap.append(get_fields(item))
 
@@ -707,7 +707,7 @@ class EnMasse(ManageCommand):
         errors = []
         missing_def_names = {}
 
-        def _add_error(item,  key_name, def_, json_key):
+        def _add_error(item, key_name, def_, json_key):
             raw = (item, def_)
             value = "{} does not define '{}' (value is {}) ({})".format(item.toDict(), key_name, def_, json_key)
             errors.append(Error(raw, value, ERROR_DEF_KEY_NOT_DEFINED))
