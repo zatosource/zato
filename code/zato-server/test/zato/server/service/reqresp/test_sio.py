@@ -74,7 +74,7 @@ class SIOTestCase(TestCase):
             'sub2': expected_sub2_1,
             'my_bool1': expected_my_bool1_1,
             'sub3': expected_sub3_1,
-            'my_dict1' : {
+            'my_dict1': {
                 'key1': expected_key1_1,
                 'key2': expected_key2_1,
             }
@@ -105,7 +105,7 @@ class SIOTestCase(TestCase):
             'sub2': expected_sub2_2,
             'my_bool1': expected_my_bool1_2,
             'sub3': expected_sub3_2,
-            'my_dict1' : {
+            'my_dict1': {
                 'key1': expected_key1_2,
                 'key2': expected_key2_2,
             }

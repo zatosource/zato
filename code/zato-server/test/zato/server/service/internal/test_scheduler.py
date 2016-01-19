@@ -47,7 +47,7 @@ class GetListTestCase(ServiceTestCase):
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.scheduler.job.get-list')
         
-###############################################################################   
+# ##############################################################################   
 
 
 class GetByNameTestCase(ServiceTestCase):

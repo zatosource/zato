@@ -333,7 +333,7 @@ class TestMapper(TestCase):
             'a': {
                 'b': [1, 2, '3', 4],
                 'c': {'d':'123'}
-        }}
+            }}
 
         m = Mapper(source)
 

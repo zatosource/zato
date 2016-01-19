@@ -128,7 +128,7 @@ class CreateTestCase(ServiceTestCase):
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.definition.jms-wmq.create')
 
-############################################################################### 
+# ############################################################################## 
            
 class EditTestCase(ServiceTestCase):
     

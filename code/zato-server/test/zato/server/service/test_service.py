@@ -132,6 +132,7 @@ class TestLock(ServiceTestCase):
         
         class DummyService(Service):
             kvdb = my_kvdb
+
             def handle(self):
                 with self.lock(lock_name, expires, timeout):
                     pass
@@ -152,7 +153,6 @@ class TestLock(ServiceTestCase):
         expires_approx = time() + expires
         self.assertAlmostEquals(my_kvdb.conn.setnx_args[1], expires_approx, delta=3)
         
-        
     def test__lock_timeout(self):
         """ A timeout is caught while trying to obtain a service lock.
         """
@@ -165,6 +165,7 @@ class TestLock(ServiceTestCase):
         
         class DummyService(Service):
             kvdb = my_kvdb
+
             def handle(self):
                 with self.lock(lock_name, expires, timeout):
                     pass
@@ -250,7 +251,6 @@ class TestRequest(TestCase):
             'zato.http.POST': {uuid4().hex:uuid4().hex}, 
             'REQUEST_METHOD': uuid4().hex, 
         }
-        
 
         for io in(io_default, io_custom):
             for params_priority in PARAMS_PRIORITY:
@@ -444,10 +444,10 @@ class TestNav(TestCase):
                 response = {
                     'key1': sorted(dn.get(['nested', 'a']).items()),
                     'value': dn.get(['nested', 'a', 'b', 'c']),
-                    'has_key_flat_true': dn.has_key('flat', False),
-                    'has_key_flat_false': dn.has_key(rand_string(), True),
-                    'has_key_nested_true': dn.has_key('b'),
-                    'has_key_nested_false': dn.has_key(rand_string()),
+                    'has_key_flat_true': 'flat' in dn,
+                    'has_key_flat_false': rand_string() in dn,
+                    'has_key_nested_true': 'b' in dn,
+                    'has_key_nested_false': rand_string() in dn,
                     'has_path': dn.has_path(['nested', 'a', 'b', 'c']),
                 }
                 self.response.payload = response

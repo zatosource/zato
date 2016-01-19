@@ -14,7 +14,6 @@ from bunch import Bunch
 # Zato
 from zato.common import zato_namespace
 from zato.common.test import rand_int, rand_string, ServiceTestCase
-#from zato.server.service import Boolean, Integer
 from zato.server.service.internal.kvdb.data_dict.translation import GetList, Create, Edit, Delete, Translate, GetLastID
 
 ################################################################################
@@ -73,7 +72,7 @@ class CreateTestCase(ServiceTestCase):
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.kvdb.data-dict.translation.create')
 
-############################################################################### 
+# ############################################################################## 
           
 class EditTestCase(ServiceTestCase):
     
@@ -155,7 +154,7 @@ class TranslateTestCase(ServiceTestCase):
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.kvdb.data-dict.translation.translate')
 
-############################################################################### 
+# ############################################################################## 
         
 class GetLastIDCase(ServiceTestCase):
     

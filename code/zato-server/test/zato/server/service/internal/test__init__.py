@@ -70,7 +70,7 @@ class Ping2TestCase(ServiceTestCase):
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.ping2')
         
-###############################################################################         
+# ##############################################################################         
 
 class ChangePasswordBaseTestCase(ServiceTestCase):
     

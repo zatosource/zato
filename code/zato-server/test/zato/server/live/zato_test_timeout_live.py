@@ -39,7 +39,7 @@ class InvokeSlowService(Service):
             kwargs = {}
             if self.request.input.timeout:
                 kwargs['timeout'] = self.request.input.timeout
-            if self.request.input.raise_timeout != None: # Need to check, because it's a boolean and can be False
+            if self.request.input.raise_timeout != None: # nopep8 - This is OK, because it's a boolean and can be False
                 kwargs['raise_timeout'] = self.request.input.raise_timeout
             result = self.invoke(SlowService.get_name(), **kwargs)
             self.logger.info('Got result: {}'.format(result))
