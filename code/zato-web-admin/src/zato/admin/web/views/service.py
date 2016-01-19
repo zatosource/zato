@@ -500,7 +500,6 @@ def slow_response_details(req, cid, service_name):
             for name in('req', 'resp'):
                 value = getattr(response.data, name)
                 if value:
-                    #value = value.decode('base64')
                     if isinstance(value, dict):
                         value = dumps(value)
                         data_format = 'json'

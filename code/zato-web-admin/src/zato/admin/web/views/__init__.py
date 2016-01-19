@@ -208,7 +208,7 @@ class _BaseView(object):
         self.input.update({'cluster_id':self.cluster_id})
         for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
             if name != 'cluster_id':
-                value =  req.GET.get(self.form_prefix + name) or \
+                value = req.GET.get(self.form_prefix + name) or \
                     req.POST.get(self.form_prefix + name) or req.zato.args.get(self.form_prefix + name)
                 self.input[name] = value
 

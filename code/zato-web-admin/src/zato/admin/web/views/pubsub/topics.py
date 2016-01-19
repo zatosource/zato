@@ -37,7 +37,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'current_depth',\
+        output_required = ('id', 'name', 'is_active', 'current_depth',
             'max_depth', 'consumers_count', 'producers_count', 'last_pub_time')
         output_repeated = True
 
