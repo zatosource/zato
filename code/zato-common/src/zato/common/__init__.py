@@ -203,7 +203,7 @@ ZATO_ODB_POOL_NAME = 'ZATO_ODB'
 SOAP_VERSIONS = ('1.1', '1.2')
 SOAP_CHANNEL_VERSIONS = ('1.1',)
 
-    
+
 class SEARCH:
     class ES:
         class DEFAULTS(Constants):
@@ -550,7 +550,7 @@ class NONCE_STORE:
 class MSG_PATTERN_TYPE:
     JSON_POINTER = NameId('JSONPointer', 'json-pointer')
     XPATH = NameId('XPath', 'xpath')
-    
+
     class __metaclass__(type):
         def __iter__(self):
             return iter((self.JSON_POINTER, self.XPATH))
@@ -603,7 +603,7 @@ class PUB_SUB:
     class MESSAGE_SOURCE:
         TOPIC = NameId('Topic', 'topic')
         CONSUMER_QUEUE = NameId('Consumer queue', 'consumer-queue')
-    
+
         class __metaclass__(type):
             def __iter__(self):
                 return iter((self.TOPIC, self.CONSUMER_QUEUE))
@@ -613,7 +613,7 @@ class PUB_SUB:
         JSON = NameId('JSON', 'json')
         XML = NameId('XML', 'xml')
         DEFAULT = JSON
-    
+
         class __metaclass__(type):
             def __iter__(self):
                 return iter((self.OBJECT, self.JSON, self.XML))
@@ -621,7 +621,7 @@ class PUB_SUB:
     class URL_ITEM_TYPE:
         TOPIC = NameId('Topic', 'topic')
         MESSAGES = NameId('Messages', 'msg')
-    
+
         class __metaclass__(type):
             def __iter__(self):
                 return iter((self.TOPIC.id, self.MESSAGES.id))

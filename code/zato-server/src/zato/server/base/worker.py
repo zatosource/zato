@@ -1100,7 +1100,7 @@ class WorkerStore(BrokerMessageReceiver):
 
     def _delete_config_close_wrapper_http_soap(self, name, transport, log_func):
         """ Deletes/closes an HTTP/SOAP outconn.
-        """ 
+        """
         # Are we dealing with plain HTTP or SOAP?
         config_dict = getattr(self.worker_config, 'out_' + transport)
 
@@ -1438,7 +1438,7 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_NOTIF_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT(self, msg):
         self.create_edit_notifier(msg, 'NOTIF_CLOUD_OPENSTACK_SWIFT_CREATE_EDIT',
-            self.server.worker_store.worker_config.notif_cloud_openstack_swift, 
+            self.server.worker_store.worker_config.notif_cloud_openstack_swift,
             self._update_cloud_openstack_swift_container)
 
     def on_broker_msg_NOTIF_CLOUD_OPENSTACK_SWIFT_DELETE(self, msg):

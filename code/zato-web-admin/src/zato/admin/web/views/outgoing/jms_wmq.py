@@ -26,7 +26,7 @@ from zato.admin.web.views import Delete as _Delete, get_definition_list, method_
 from zato.common.odb.model import OutgoingWMQ
 
 logger = logging.getLogger(__name__)
-        
+
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base dictionary which can be used by both 'edit' and 'create' actions.
     """
@@ -42,13 +42,13 @@ def _get_edit_create_message(params, prefix=''):
     }
 
 def _edit_create_response(client, verb, id, name, delivery_mode_text, cluster_id, def_id):
-    response = client.invoke('zato.definition.jms-wmq.get-by-id', {'id':def_id, 'cluster_id':cluster_id})    
+    response = client.invoke('zato.definition.jms-wmq.get-by-id', {'id':def_id, 'cluster_id':cluster_id})
     return_data = {'id': id,
                    'message': 'Successfully {0} the outgoing JMS WebSphere MQ connection [{1}]'.format(verb, name),
                    'delivery_mode_text': delivery_mode_text,
                    'def_name': response.data.name
                 }
-    
+
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 @method_allowed('GET')
@@ -63,8 +63,8 @@ def index(req):
         edit_form.set_def_id(def_ids)
 
         for item in req.zato.client.invoke('zato.outgoing.jms-wmq.get-list', {'cluster_id': req.zato.cluster_id}):
-            _item = OutgoingWMQ(item.id, item.name, item.is_active, item.delivery_mode, 
-                item.priority, item.expiration, item.def_id, delivery_friendly_name[item.delivery_mode], 
+            _item = OutgoingWMQ(item.id, item.name, item.is_active, item.delivery_mode,
+                item.priority, item.expiration, item.def_id, delivery_friendly_name[item.delivery_mode],
                 item.def_name)
             items.append(_item)
 
@@ -84,14 +84,14 @@ def create(req):
         response = req.zato.client.invoke('zato.outgoing.jms-wmq.create', _get_edit_create_message(req.POST))
         delivery_mode_text = delivery_friendly_name[int(req.POST['delivery_mode'])]
 
-        return _edit_create_response(req.zato.client, 'created', response.data.id, 
+        return _edit_create_response(req.zato.client, 'created', response.data.id,
             req.POST['name'], delivery_mode_text, req.POST['cluster_id'], req.POST['def_id'])
     except Exception, e:
         msg = 'Could not create an outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-    
+
 @method_allowed('POST')
 def edit(req):
     try:
@@ -101,13 +101,13 @@ def edit(req):
 
         return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'],
             delivery_mode_text, req.POST['cluster_id'], req.POST['edit-def_id'])
-        
+
     except Exception, e:
         msg = 'Could not update the outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-    
-   
+
+
 class Delete(_Delete):
     url_name = 'out-jms-wmq-delete'
     error_message = 'Could not delete the outgoing JMS WebSphere MQ connection'

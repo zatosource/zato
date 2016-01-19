@@ -38,7 +38,7 @@ class _Transport(Transport):
     to Kombu.
     """
     def establish_connection(self):
-        
+
         conninfo = self.client
         for name, default_value in self.default_connection_params.items():
             if not getattr(conninfo, name, None):
@@ -55,7 +55,7 @@ class _Transport(Transport):
                                connect_timeout=conninfo.connect_timeout,
                                heartbeat=conninfo.heartbeat,
                                client_properties={'zato-component':get_component_name(COMPONENT_PREFIX)})
-        
+
         conn.client = self.client
         return conn
 
@@ -71,7 +71,7 @@ class PublisherFacade(object):
     """
     def __init__(self, broker_client):
         self.broker_client = broker_client # A Zato broker client, not the AMQP one.
-    
+
     def send(self, msg, out_name, exchange, routing_key, properties={}, headers={}, *args, **kwargs):
         """ Publishes the message on the Zato broker which forwards it to one of the
         AMQP connectors.
@@ -86,9 +86,9 @@ class PublisherFacade(object):
         params['headers'] = headers
         params['args'] = args
         params['kwargs'] = kwargs
-        
+
         self.broker_client.publish(params, msg_type=MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL)
-        
+
     def conn(self):
         """ Returns self. Added to make the facade look like other outgoing
         connection wrappers.
@@ -101,7 +101,7 @@ class OutgoingConnector(BaseAMQPConnector):
     def __init__(self, repo_location=None, def_id=None, out_id=None, init=True):
         super(OutgoingConnector, self).__init__(repo_location, def_id)
         self.out_id = out_id
-        
+
         self.broker_client_id = 'amqp-publishing-connector'
         self.broker_callbacks = {
             TOPICS[MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL]: self.on_broker_msg,
@@ -109,15 +109,15 @@ class OutgoingConnector(BaseAMQPConnector):
         }
         self.broker_messages = self.broker_callbacks.keys()
         self.component_name = get_component_name('out-amqp')
-        
+
         if init:
             self._init()
-        
+
         logger.info('Started an AMQP publisher for [{}]'.format(self._conn_info()))
-            
+
     def _setup_odb(self):
         super(OutgoingConnector, self)._setup_odb()
-        
+
         item = self.odb.get_out_amqp(self.server.cluster.id, self.out_id)
         self.out_amqp = Bunch()
         self.out_amqp.id = item.id
@@ -132,15 +132,15 @@ class OutgoingConnector(BaseAMQPConnector):
         self.out_amqp.app_id = item.app_id
         self.out_amqp.def_name = item.def_name
         self.out_amqp.def_id = item.def_id
-                
+
     def filter(self, msg):
-        """ Finds out whether the incoming message actually belongs to the 
-        listener. All the listeners receive each of the incoming PUB messages 
+        """ Finds out whether the incoming message actually belongs to the
+        listener. All the listeners receive each of the incoming PUB messages
         and filtering out is being performed here, on the client side, not in the broker.
         """
         if super(OutgoingConnector, self).filter(msg):
             return True
-        
+
         elif msg.action == OUTGOING.AMQP_PUBLISH.value:
             if self.out_amqp.name == msg.out_name:
                 return True
@@ -151,16 +151,16 @@ class OutgoingConnector(BaseAMQPConnector):
             if logger.isEnabledFor(TRACE1):
                 logger.log(TRACE1, 'Returning False for msg [{0}]'.format(msg))
             return False
-    
+
     def def_amqp_get(self, id):
         """ Returns the configuration of the AMQP definition of the given name.
         """
         with self.def_amqp_lock:
             return self.def_amqp.get(id)
-        
+
     def _out_amqp_create_edit(self, msg, *args):
         """ Creates or updates an outgoing AMQP connection details.
-        """ 
+        """
         with self.def_amqp_lock:
             with self.out_amqp_lock:
                 self.out_amqp = msg
@@ -178,51 +178,51 @@ class OutgoingConnector(BaseAMQPConnector):
         is the same for both OUTGOING_AMQP_CREATE and OUTGOING_AMQP_EDIT.
         """
         self._out_amqp_create_edit(msg, *args)
-        
+
     def on_broker_msg_OUTGOING_AMQP_EDIT(self, msg, *args):
         """ Updates an outgoing AMQP connection. Note that the implementation
         is the same for both OUTGOING_AMQP_CREATE and OUTGOING_AMQP_EDIT.
         """
         self._out_amqp_create_edit(msg, *args)
-        
+
     def on_broker_msg_OUTGOING_AMQP_DELETE(self, msg, *args):
         """ Deletes an outgoing AMQP connection, closes all the other connections
         and stops the process.
         """
         self._close()
-                
+
     def on_broker_msg_OUTGOING_AMQP_PUBLISH(self, msg, *args):
         """ Publishes an AMQP message on the broker.
         """
         properties = {}
         msg_properties = msg['properties']
-        
-        for name in ('content_type', 'content_encoding', 'delivery_mode', 
+
+        for name in ('content_type', 'content_encoding', 'delivery_mode',
                      'priority', 'expiration', 'user_id', 'app_id', 'correlation_id', 'cluster_id'):
             if msg_properties:
                 value = msg_properties.get(name) if msg_properties.get(name) else getattr(self.out_amqp, name, None)
             else:
                 value = getattr(self.out_amqp, name, None)
             properties[name] = value
-       
+
         headers = msg.get('headers') or {}
-        
+
         if not 'X-Zato-Component' in headers:
             headers['X-Zato-Component'] = self.component_name
-            
+
         if not 'X-Zato-Msg-TS' in headers:
             headers['X-Zato-Msg-TS'] = datetime.utcnow().isoformat()
-        
+
         conn = _Connection(CONN_TEMPLATE.format(**self.def_amqp), heartbeat=self.def_amqp.heartbeat)
-        
+
         with producers[conn].acquire(block=True) as producer:
             producer.publish(msg.body, retry=True, routing_key=msg.routing_key, exchange=msg.exchange, headers=headers, **properties)
-        
+
     def _stop_amqp_connection(self):
         """ Stops any underlying connections.
         """
         reset_pools()
-        
+
     def _recreate_sender(self):
         return self._stop_amqp_connection()
 
@@ -230,18 +230,18 @@ def run_connector():
     """ Invoked on the process startup.
     """
     setup_logging()
-    
+
     repo_location = os.environ['ZATO_REPO_LOCATION']
     def_id = os.environ['ZATO_CONNECTOR_DEF_ID']
     item_id = os.environ[ENV_ITEM_NAME]
-    
+
     OutgoingConnector(repo_location, def_id, item_id)
-    
+
     logger.info('Starting AMQP connector, repo_location [{0}], item_id [{1}], def_id [{2}]'.format(
         repo_location, item_id, def_id))
-    
+
 def start_connector(repo_location, item_id, def_id):
     _start_connector(repo_location, __file__, ENV_ITEM_NAME, def_id, item_id)
-    
+
 if __name__ == '__main__':
     run_connector()

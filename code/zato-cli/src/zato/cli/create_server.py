@@ -258,10 +258,10 @@ class Create(ZatoCommand):
     """
     needs_empty_dir = True
     allow_empty_secrets = True
-    
+
     opts = deepcopy(common_odb_opts)
     opts.extend(kvdb_opts)
-    
+
     opts.append({'name':'pub_key_path', 'help':"Path to the server's public key in PEM"})
     opts.append({'name':'priv_key_path', 'help':"Path to the server's private key in PEM"})
     opts.append({'name':'cert_path', 'help':"Path to the server's certificate in PEM"})
@@ -278,7 +278,7 @@ class Create(ZatoCommand):
     def prepare_directories(self, show_output):
         if show_output:
             self.logger.debug('Creating directories..')
-            
+
         for d in sorted(directories):
             d = os.path.join(self.target_dir, d)
             if show_output:
@@ -288,19 +288,19 @@ class Create(ZatoCommand):
         self.dirs_prepared = True
 
     def execute(self, args, port=http_plain_server_port, show_output=True):
-        
+
         engine = self._get_engine(args)
         session = self._get_session(engine)
 
         cluster = session.query(Cluster).\
             filter(Cluster.name == args.cluster_name).\
             first()
-        
+
         if not cluster:
             msg = "Cluster [{}] doesn't exist in the ODB".format(args.cluster_name)
             self.logger.error(msg)
             return self.SYS_ERROR.NO_SUCH_CLUSTER
-        
+
         server = Server()
         server.cluster_id = cluster.id
         server.name = args.server_name
@@ -308,21 +308,21 @@ class Create(ZatoCommand):
         server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED
         server.last_join_mod_by = self._get_user_host()
         server.last_join_mod_date = datetime.utcnow()
-        
+
         session.add(server)
 
         try:
             if not self.dirs_prepared:
                 self.prepare_directories(show_output)
-    
+
             repo_dir = os.path.join(self.target_dir, 'config', 'repo')
             self.copy_server_crypto(repo_dir, args)
             priv_key = open(os.path.join(repo_dir, 'zato-server-priv-key.pem')).read()
-            
+
             if show_output:
                 self.logger.debug('Created a Bazaar repo in {}'.format(repo_dir))
                 self.logger.debug('Creating files..')
-                
+
             for file_name, contents in sorted(files.items()):
                 file_name = os.path.join(self.target_dir, file_name)
                 if show_output:
@@ -330,13 +330,13 @@ class Create(ZatoCommand):
                 f = file(file_name, 'w')
                 f.write(contents)
                 f.close()
-    
+
             logging_conf_loc = os.path.join(self.target_dir, 'config/repo/logging.conf')
-    
+
             logging_conf = open(logging_conf_loc).read()
             open(logging_conf_loc, 'w').write(logging_conf.format(
                 log_path=os.path.join(self.target_dir, 'logs', 'zato.log')))
-    
+
             if show_output:
                 self.logger.debug('Logging configuration stored in {}'.format(logging_conf_loc))
 
@@ -354,10 +354,10 @@ class Create(ZatoCommand):
                     odb_engine=odb_engine,
                     odb_host=args.odb_host or '',
                     odb_port=args.odb_port or '',
-                    odb_password=encrypt(args.odb_password, priv_key) if args.odb_password else '',  
-                    odb_pool_size=default_odb_pool_size, 
-                    odb_user=args.odb_user or '', 
-                    token=self.token, 
+                    odb_password=encrypt(args.odb_password, priv_key) if args.odb_password else '',
+                    odb_pool_size=default_odb_pool_size,
+                    odb_user=args.odb_user or '',
+                    token=self.token,
                     kvdb_host=args.kvdb_host,
                     kvdb_port=args.kvdb_port,
                     kvdb_password=encrypt(args.kvdb_password, priv_key) if args.kvdb_password else '',
@@ -373,10 +373,10 @@ class Create(ZatoCommand):
 
             if show_output:
                 self.logger.debug('Core configuration stored in {}'.format(server_conf_loc))
-            
+
             # Initial info
             self.store_initial_info(self.target_dir, self.COMPONENTS.SERVER.code)
-            
+
             session.commit()
 
         except IntegrityError, e:
@@ -386,9 +386,9 @@ class Create(ZatoCommand):
                 self.logger.error(msg)
             self.logger.error(msg)
             session.rollback()
-            
+
             return self.SYS_ERROR.SERVER_NAME_ALREADY_EXISTS
-            
+
         except Exception, e:
             msg = 'Could not create the server, e:[{}]'.format(format_exc(e))
             self.logger.error(msg)

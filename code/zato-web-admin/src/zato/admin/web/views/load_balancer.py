@@ -142,7 +142,7 @@ def manage(req, cluster_id):
     lb_config = client.get_config()
     lb_work_config = client.get_work_config()
     lb_work_config['verify_fields'] = ', '.join(['%s=%s' % (k,v) for (k, v) in sorted(lb_work_config['verify_fields'].items())])
-    
+
     form_data = {
         'global_log_host': lb_config['global_']['log']['host'],
         'global_log_port': lb_config['global_']['log']['port'],

@@ -21,6 +21,6 @@ class CreateForm(forms.Form):
 
     def __repr__(self):
         return make_repr(self)
-    
+
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

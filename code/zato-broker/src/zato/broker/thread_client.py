@@ -43,9 +43,9 @@ class _ClientThread(Thread):
         self.on_message = on_message
         self.client = None
         self.keep_running = ZATO_NONE
-        
+
     def run(self):
-        
+
         # We're in a new thread and we can initialize the KVDB connection now.
         self.kvdb.init()
         self.keep_running = True
@@ -68,12 +68,12 @@ class _ClientThread(Thread):
 
         else:
             self.client = self.kvdb
-            
+
     def publish(self, topic, msg):
         if logger.isEnabledFor(TRACE1):
             logger.log(TRACE1, 'Publishing [{}] to [{}]'.format(msg, topic))
         return self.client.publish(topic, msg)
-    
+
     def close(self):
         self.keep_running = False
         self.client.close()
@@ -81,20 +81,20 @@ class _ClientThread(Thread):
 class BrokerClient(Thread):
     """ Zato broker client. Starts two background threads, one for publishing
     and one for receiving of the messages.
-    
+
     There may be 3 types of messages sent out:
-    
+
     1) to the singleton server
     2) to all the servers/connectors/all connectors of a certain type (e.g. only AMQP ones)
     3) to one of the parallel servers
-    
+
     1) and 2) are straightforward, a message is being published on a topic,
        off which it is read by broker client(s).
-    
+
     3) needs more work - the actual message is added to Redis and what is really
        being published is a Redis key it's been stored under. The first client
        to read it will be the one to handle it.
-       
+
        Yup, it means the messages are sent across to all of the clients
        and the winning one is the one that picked up the Redis message; it's not
        that bad as it may seem, there will be at most as many clients as there
@@ -107,29 +107,29 @@ class BrokerClient(Thread):
         self.decrypt_func = kvdb.decrypt_func
         self.name = '{}-{}'.format(client_type, new_cid())
         self.topic_callbacks = topic_callbacks
-        
+
     def run(self):
         logger.info('Starting broker client, host:[{}], port:[{}], name:[{}], topics:[{}]'.format(
             self.kvdb.config.host, self.kvdb.config.port, self.name, sorted(self.topic_callbacks)))
-        
+
         self.pub_client = _ClientThread(self.kvdb.copy(), 'pub', self.name)
         self.sub_client = _ClientThread(self.kvdb.copy(), 'sub', self.name, self.topic_callbacks, self.on_message)
-        
+
         self.pub_client.start()
         self.sub_client.start()
-        
+
         for client in(self.pub_client, self.sub_client):
             while client.keep_running == ZATO_NONE:
                 time.sleep(0.01)
-        
+
     def publish(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ALL):
         msg['msg_type'] = msg_type
         topic = TOPICS[msg_type]
         self.pub_client.publish(topic, dumps(msg))
-        
+
     def invoke_async(self, msg, msg_type=MESSAGE_TYPE.TO_PARALLEL_ANY, expiration=BROKER.DEFAULT_EXPIRATION):
         msg['msg_type'] = msg_type
-        
+
         try:
             msg = dumps(msg)
         except Exception, e:
@@ -139,22 +139,22 @@ class BrokerClient(Thread):
         else:
             topic = TOPICS[msg_type]
             key = broker_msg = b'zato:broker{}:{}'.format(KEYS[msg_type], new_cid())
-            
+
             self.kvdb.conn.set(key, str(msg))
             self.kvdb.conn.expire(key, expiration)  # In seconds
-            
+
             self.pub_client.publish(topic, broker_msg)
-        
+
     def on_message(self, msg):
         if logger.isEnabledFor(logging.DEBUG):
             logger.debug('Got broker message:[{}]'.format(msg))
-        
+
         if msg.type == 'message':
-    
+
             # Replace payload with stuff read off the KVDB in case this is where the actual message happens to reside.
             if msg.channel in NEEDS_TMP_KEY:
                 tmp_key = '{}.tmp'.format(msg.data)
-                
+
                 try:
                     self.kvdb.conn.rename(msg.data, tmp_key)
                 except redis.ResponseError, e:
@@ -171,14 +171,14 @@ class BrokerClient(Thread):
                         payload = loads(payload)
             else:
                 payload = loads(msg.data)
-                
+
             if payload:
                 payload = Bunch(payload)
                 if logger.isEnabledFor(logging.DEBUG):
                     logger.debug('Got broker message payload [{}]'.format(payload))
-                    
+
                 return self.topic_callbacks[msg.channel](payload)
-            
+
             else:
                 if logger.isEnabledFor(logging.DEBUG):
                     logger.debug('No payload in msg:[{}]'.format(msg))

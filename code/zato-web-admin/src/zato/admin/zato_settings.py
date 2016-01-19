@@ -36,7 +36,7 @@ def update_globals(config, base_dir='.'):
                 v = decrypt(v, priv_key)
             elif k == 'log_config':
                 v = os.path.join(base_dir, v)
-            globals()[k] = v            
+            globals()[k] = v
 
 # ##############################################################################
 

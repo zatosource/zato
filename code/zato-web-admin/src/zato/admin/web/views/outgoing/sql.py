@@ -68,11 +68,11 @@ def index(req):
         for item in req.zato.client.invoke('zato.outgoing.sql.get-list', {'cluster_id': req.zato.cluster_id}):
 
             _item = SQLConnectionPool()
-            
+
             for name in('id', 'name', 'is_active', 'engine', 'host', 'port', 'db_name', 'username', 'pool_size'):
                 value = getattr(item, name)
                 setattr(_item, name, value)
-            
+
             _item.extra = item.extra or ''
             _item.engine_text = engine_friendly_name[_item.engine]
             items.append(_item)
@@ -132,9 +132,9 @@ def ping(req, cluster_id, id):
     """
     try:
         response = req.zato.client.invoke('zato.outgoing.sql.ping', {'id':id})
-        
+
         if response.ok:
-            return TemplateResponse(req, 'zato/outgoing/sql-ping-ok.html', 
+            return TemplateResponse(req, 'zato/outgoing/sql-ping-ok.html',
                 {'response_time':'%.3f' % float(response.data.response_time)})
         else:
             return HttpResponseServerError(response.details)

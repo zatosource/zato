@@ -52,7 +52,7 @@ edit_cron_style_prefix = 'edit-cron_style'
 def _get_start_date(start_date):
     if not start_date:
         return ''
-        
+
     if not isinstance(start_date, datetime):
         start_date = parse(start_date)
 
@@ -110,9 +110,9 @@ def _get_success_message(action, job_type, job_name):
     msg = 'Successfully {0} the {1} job [{2}]'
     verb = 'created' if action == 'create' else 'updated'
     job_type = job_type.replace('_', '-')
-    
+
     return msg.format(verb, job_type, job_name)
-        
+
 
 def _cron_style_job_def(user_profile, start_date, cron_definition):
     start_date = _get_start_date(start_date)
@@ -122,7 +122,7 @@ def _cron_style_job_def(user_profile, start_date, cron_definition):
         from_utc_to_user(start_date, user_profile, 'date'),
         from_utc_to_user(start_date, user_profile, 'time')))
     buf.write('<br/>{0}'.format(cron_definition))
-    
+
     return buf.getvalue()
 
 def _get_create_edit_message(user_profile, cluster, params, form_prefix=""):
@@ -142,7 +142,7 @@ def _get_create_edit_message(user_profile, cluster, params, form_prefix=""):
         'extra': params.get(form_prefix + 'extra', ''),
         'start_date': start_date.isoformat(),
     }
-    
+
 def _get_create_edit_one_time_message(user_profile, cluster, params, form_prefix=''):
     """ Creates a base document which can be used by both 'edit' and 'create'
     actions. Used when creating one_time jobs.
@@ -181,7 +181,7 @@ def _create_one_time(client, user_profile, cluster, params):
     """ Creates a one_time scheduler job.
     """
     logger.debug('About to create a one_time job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
-    
+
     input_dict = _get_create_edit_one_time_message(user_profile, cluster, params, create_one_time_prefix+'-')
     response = client.invoke('zato.scheduler.job.create', input_dict)
 
@@ -193,7 +193,7 @@ def _create_interval_based(client, user_profile, cluster, params):
     """ Creates an interval_based scheduler job.
     """
     logger.debug('About to create an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
-    
+
     input_dict = _get_create_edit_interval_based_message(user_profile, cluster, params, create_interval_based_prefix+'-')
     response = client.invoke('zato.scheduler.job.create', input_dict)
     logger.debug('Successfully created an interval_based job, cluster.id:[{0}], params:[{1}]'.format(cluster.id, params))
@@ -288,16 +288,16 @@ def _edit_cron_style(client, user_profile, cluster, params):
 def index(req):
     try:
         jobs = []
-        
+
         # Build a list of schedulers for a given Zato cluster.
         if req.zato.cluster_id and req.method == 'GET':
-    
+
             # We have a server to pick the schedulers from, try to invoke it now.
             response = req.zato.client.invoke('zato.scheduler.job.get-list', {'cluster_id': req.zato.cluster_id})
-            
+
             if response.has_data:
                 for job_elem in response.data:
-                    
+
                     id = job_elem.id
                     name = job_elem.name
                     is_active = job_elem.is_active
@@ -306,49 +306,49 @@ def index(req):
                     service_name = job_elem.service_name
                     extra = job_elem.extra
                     job_type_friendly = job_type_friendly_names[job_type]
-                    
-                    job = Job(id, name, is_active, job_type, 
+
+                    job = Job(id, name, is_active, job_type,
                               from_utc_to_user(start_date+'+00:00', req.zato.user_profile),
-                              extra, service_name=service_name, 
+                              extra, service_name=service_name,
                               job_type_friendly=job_type_friendly)
-                    
+
                     if job_type == SCHEDULER.JOB_TYPE.ONE_TIME:
                         definition_text=_one_time_job_def(req.zato.user_profile, start_date)
-                        
+
                     elif job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
                         definition_text = _interval_based_job_def(req.zato.user_profile,
                             _get_start_date(job_elem.start_date),
                             job_elem.repeats, job_elem.weeks, job_elem.days,
                             job_elem.hours, job_elem.minutes, job_elem.seconds)
-                        
+
                         weeks = job_elem.weeks or ''
                         days = job_elem.days or ''
                         hours = job_elem.hours or ''
                         minutes = job_elem.minutes or ''
                         seconds = job_elem.seconds or ''
                         repeats = job_elem.repeats or ''
-                        
+
                         ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes,
                                             seconds, repeats)
                         job.interval_based = ib_job
-                        
+
                     elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
                         cron_definition = job_elem.cron_definition or ''
                         definition_text=_cron_style_job_def(req.zato.user_profile, start_date, cron_definition)
-                        
+
                         cs_job = CronStyleJob(None, None, cron_definition)
                         job.cron_style = cs_job
-                        
+
                     else:
                         msg = 'Unrecognized job type, name:[{0}], type:[{1}]'.format(name, job_type)
                         logger.error(msg)
                         raise ZatoException(msg)
-    
+
                     job.definition_text = definition_text
                     jobs.append(job)
             else:
                 logger.info('No jobs found, response:[{}]'.format(response))
-    
+
         if req.method == 'POST':
 
             action = req.POST.get('zato_action', '')
@@ -356,29 +356,29 @@ def index(req):
                 msg = 'req.POST contains no [zato_action] parameter.'
                 logger.error(msg)
                 return HttpResponseServerError(msg)
-    
+
             job_type = req.POST.get('job_type', '')
             if action != 'execute' and not job_type:
                 msg = 'req.POST contains no [job_type] parameter.'
                 logger.error(msg)
                 return HttpResponseServerError(msg)
-    
+
             job_name = req.POST['{0}-{1}-name'.format(action, job_type)]
-    
+
             # Try to match the action and a job type with an action handler..
             handler_name = '_' + action
             if action != 'execute':
                 handler_name += '_' + job_type
-    
+
             handler = globals().get(handler_name)
             if not handler:
                 msg = ('No handler found for action [{0}], job_type:[{1}], '
                        'req.POST:[{2}], req.GET:[{3}].'.format(action, job_type,
                           pprint(req.POST), pprint(req.GET)))
-    
+
                 logger.error(msg)
                 return HttpResponseServerError(msg)
-    
+
             # .. invoke the action handler.
             try:
                 response = handler(req.zato.client, req.zato.user_profile, req.zato.cluster, req.POST)
@@ -391,14 +391,14 @@ def index(req):
                 msg = ('Could not invoke action [%s], job_type:[%s], e:[%s]'
                        'req.POST:[%s], req.GET:[%s]') % (action, job_type,
                           format_exc(), pprint(req.POST), pprint(req.GET))
-    
+
                 logger.error(msg)
                 return HttpResponseServerError(msg)
 
         return_data = {'zato_clusters':req.zato.clusters,
             'cluster_id':req.zato.cluster_id,
             'choose_cluster_form':req.zato.choose_cluster_form,
-            'jobs':jobs, 
+            'jobs':jobs,
             'friendly_names':job_type_friendly_names.items(),
             'create_one_time_form':OneTimeSchedulerJobForm(prefix=create_one_time_prefix),
             'create_interval_based_form':IntervalBasedSchedulerJobForm(prefix=create_interval_based_prefix),
@@ -408,7 +408,7 @@ def index(req):
             'edit_cron_style_form':CronStyleSchedulerJobForm(prefix=edit_cron_style_prefix),
             'sample_dt': get_sample_dt(req.zato.user_profile),
             }
-        
+
         return_data.update(get_js_dt_format(req.zato.user_profile))
 
         return TemplateResponse(req, 'zato/scheduler.html', return_data)
@@ -422,7 +422,7 @@ class Delete(_Delete):
     url_name = 'scheduler-job-delete'
     error_message = 'Could not delete the job'
     service_name = 'zato.scheduler.job.delete'
-    
+
 @method_allowed('POST')
 def execute(req, job_id, cluster_id):
     """ Executes a scheduler's job.

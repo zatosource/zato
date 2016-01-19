@@ -146,7 +146,7 @@ class RequestDispatcher(object):
         wsgi_environ['zato.http.channel_item'] = channel_item
 
         payload = wsgi_environ['wsgi.input'].read()
-        
+
         # OK, we can possibly handle it
         if url_match not in (None, False):
 
@@ -255,7 +255,7 @@ class RequestDispatcher(object):
                     response = error_wrapper(cid, response)
 
                 wsgi_environ['zato.http.response.status'] = status
-                
+
                 return response
 
         # This is 404, no such URL path and SOAP action is known.

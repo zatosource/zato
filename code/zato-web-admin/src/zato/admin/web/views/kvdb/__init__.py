@@ -26,14 +26,14 @@ from zato.common import ZatoException
 
 @method_allowed('GET')
 def remote_command(req):
-    
-    return_data = {'form':RemoteCommandForm(), 
+
+    return_data = {'form':RemoteCommandForm(),
                    'cluster':req.zato.get('cluster'),
                    'choose_cluster_form':ChooseClusterForm(req.zato.clusters, req.GET),
                    'zato_clusters':req.zato.clusters,
                    'cluster_id':req.zato.cluster_id,
                    }
-    
+
     return TemplateResponse(req, 'zato/kvdb/remote-command.html', return_data)
 
 @method_allowed('POST')

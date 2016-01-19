@@ -31,9 +31,9 @@ def settings_basic(req):
     initial = {}
     for attr in('timezone', 'date_format', 'time_format'):
         initial[attr] = getattr(req.zato.user_profile, attr)
-        
+
     return_data = {'clusters':req.zato.clusters, 'default_prompt':DEFAULT_PROMPT, 'form':BasicSettingsForm(initial)}
-    
+
     cluster_colors = {str(getattr(item, 'cluster_id')):getattr(item, 'color') for item in req.zato.user_profile.cluster_color_markers.all()}
     return_data['cluster_colors'] = cluster_colors
 
@@ -41,7 +41,7 @@ def settings_basic(req):
 
 @method_allowed('POST')
 def settings_basic_save(req):
-    
+
     for attr in('timezone', 'date_format', 'time_format'):
         setattr(req.zato.user_profile, attr, req.POST[attr])
     req.zato.user_profile.save()
@@ -49,7 +49,7 @@ def settings_basic_save(req):
     for key, value in req.POST.items():
         if key.startswith('color_') and value != DEFAULT_PROMPT:
             cluster_id = key.replace('color_', '')
-            
+
             if 'checkbox_{}'.format(cluster_id) in req.POST:
                 try:
                     ccm = ClusterColorMarker.objects.get(cluster_id=cluster_id, user_profile=req.zato.user_profile)
@@ -61,7 +61,7 @@ def settings_basic_save(req):
                 ccm.save()
             else:
                 ClusterColorMarker.objects.filter(cluster_id=cluster_id, user_profile=req.zato.user_profile).delete()
-            
+
     msg = 'Settings saved'
     messages.add_message(req, messages.INFO, msg, extra_tags='success')
     return redirect(reverse('account-settings-basic'))

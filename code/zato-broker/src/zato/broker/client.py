@@ -46,7 +46,7 @@ CODE_RENAMED = 10
 CODE_NO_SUCH_FROM_KEY = 11
 
 def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
-    
+
     # Imported here so it's guaranteed to be monkey-patched using gevent.monkey.patch_all by whoever called us
     from thread import start_new_thread
 
@@ -157,7 +157,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
             else:
                 topic = TOPICS[msg_type]
                 key = broker_msg = b'zato:broker{}:{}'.format(KEYS[msg_type], new_cid())
-                
+
                 self.kvdb.conn.set(key, str(msg))
                 self.kvdb.conn.expire(key, expiration)  # In seconds
 
@@ -189,7 +189,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                     payload = Bunch(payload)
                     if logger.isEnabledFor(logging.DEBUG):
                         logger.debug('Got broker message payload [{}]'.format(payload))
-                        
+
                     callback = self.topic_callbacks[msg.channel]
                     spawn(callback, payload)
 
@@ -204,5 +204,5 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
 
     client = _BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs)
     start_new_thread(client.run, ())
-    
+
     return client

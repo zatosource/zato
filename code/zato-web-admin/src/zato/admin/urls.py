@@ -612,7 +612,7 @@ urlpatterns += patterns('',
 
     # .. JMS WebSphere MQ
 
-    url(r'^zato/outgoing/jms-wmq/$', 
+    url(r'^zato/outgoing/jms-wmq/$',
         login_required(out_jms_wmq.index), name='out-jms-wmq'),
     url(r'^zato/outgoing/jms-wmq/create/$',
         login_required(out_jms_wmq.create), name='out-jms-wmq-create'),
@@ -686,7 +686,7 @@ urlpatterns += patterns('',
 urlpatterns += patterns('',
 
     # .. AMQP
-    url(r'^zato/channel/amqp/$', 
+    url(r'^zato/channel/amqp/$',
         login_required(channel_amqp.Index()), name=channel_amqp.Index.url_name),
     url(r'^zato/channel/amqp/create/$',
         login_required(channel_amqp.create), name='channel-amqp-create'),
@@ -701,7 +701,7 @@ urlpatterns += patterns('',
 urlpatterns += patterns('',
 
     # .. JMS WebSphere MQ
-    url(r'^zato/channel/jms-wmq/$', 
+    url(r'^zato/channel/jms-wmq/$',
         login_required(channel_jms_wmq.Index()), name=channel_jms_wmq.Index.url_name),
     url(r'^zato/channel/jms-wmq/create/$',
         login_required(channel_jms_wmq.create), name='channel-jms-wmq-create'),
@@ -734,7 +734,7 @@ urlpatterns += patterns('',
 
     url(r'^zato/http-soap/$',
         login_required(http_soap.index), name='http-soap'),
-    url(r'^zato/http-soap/details/(?P<connection>.*)/(?P<transport>.*)/(?P<id>.*)/(?P<name>.*)/(?P<cluster_id>.*)/$', 
+    url(r'^zato/http-soap/details/(?P<connection>.*)/(?P<transport>.*)/(?P<id>.*)/(?P<name>.*)/(?P<cluster_id>.*)/$',
         login_required(http_soap.details), name='http-soap-details'),
     url(r'^zato/http-soap/audit/set-state/(?P<connection>.*)/(?P<transport>.*)/(?P<id>.*)/(?P<name>.*)/(?P<cluster_id>.*)/$',
         login_required(http_soap.audit_set_state), name='http-soap-audit-set-state'),

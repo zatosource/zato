@@ -52,13 +52,13 @@ def get_job(name=None, interval_in_seconds=None, start_time=None, max_repeats=No
     interval_in_seconds = interval_in_seconds or rand_int()
     start_time = start_time or rand_date_utc()
     callback = callback or dummy_callback
-    
+
     return Job(rand_int(), name, SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(in_seconds=interval_in_seconds),
         start_time, callback, max_repeats=max_repeats)
 
 def iter_cb(scheduler, stop_time):
     """ Stop the scheduler after stop_time is reached (test_wait_time seconds from test's start time) -
-    which should plenty enough for all the jobs to be spawned and the iteration loop to 
+    which should plenty enough for all the jobs to be spawned and the iteration loop to
     """
     if datetime.utcnow() >= stop_time:
         scheduler.keep_running = False
@@ -336,9 +336,9 @@ class JobTestCase(TestCase):
             job = get_job()
             job.main_loop = main_loop
             job.start_time = start_time
-    
+
             job.run()
-    
+
             self.assertTrue(data['main_loop_called'])
             self.assertEquals(data['sleep'], 1)
 

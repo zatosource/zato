@@ -55,22 +55,22 @@ class Index(_Index):
     template = 'zato/channel/amqp.html'
     service_name = 'zato.channel.amqp.get-list'
     output_class = ChannelAMQP
-    
+
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 
+        output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix',
             'def_name', 'def_id', 'service_name', 'data_format')
         output_repeated = True
-    
+
     def handle(self):
         create_form = CreateForm()
         edit_form = EditForm(prefix='edit')
-        
+
         if self.req.zato.cluster_id:
             def_ids = get_definition_list(self.req.zato.client, self.req.zato.cluster, 'amqp')
             create_form.set_def_id(def_ids)
             edit_form.set_def_id(def_ids)
-        
+
         return {
             'create_form': create_form,
             'edit_form': edit_form,
@@ -80,26 +80,26 @@ class Index(_Index):
 def create(req):
     try:
         response = req.zato.client.invoke('zato.channel.amqp.create', _get_edit_create_message(req.POST))
-        return _edit_create_response(req.zato.client, 'created', response.data.id, 
+        return _edit_create_response(req.zato.client, 'created', response.data.id,
             req.POST['name'], req.POST['def_id'], req.POST['cluster_id'])
     except Exception, e:
         msg = 'Could not create an AMQP channel, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-    
+
 @method_allowed('POST')
 def edit(req):
     try:
         req.zato.client.invoke('zato.channel.amqp.edit', _get_edit_create_message(req.POST, 'edit-'))
-        return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'], 
+        return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'],
             req.POST['edit-def_id'], req.POST['cluster_id'])
-        
+
     except Exception, e:
         msg = 'Could not update the AMQP channel, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-    
+
 class Delete(_Delete):
     url_name = 'channel-amqp-delete'
     error_message = 'Could not delete the AMQP channel'

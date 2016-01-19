@@ -22,5 +22,5 @@ class GetTrends(StatsReturningService):
         input_required = StatsReturningService.SimpleIO.input_required + (Integer('n'), 'n_type')
 
     def handle(self):
-        self.response.payload[:] = (elem.to_dict() for elem in self.get_stats(self.request.input.start, 
+        self.response.payload[:] = (elem.to_dict() for elem in self.get_stats(self.request.input.start,
             self.request.input.stop, n=int(self.request.input.n), n_type=self.request.input.n_type))

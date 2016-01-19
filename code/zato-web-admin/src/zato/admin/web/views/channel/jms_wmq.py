@@ -24,7 +24,7 @@ from zato.admin.web.views import Delete as _Delete, get_definition_list, Index a
 from zato.common.odb.model import ChannelWMQ
 
 logger = logging.getLogger(__name__)
-        
+
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base dictionary which can be used by both 'edit' and 'create' actions.
     """
@@ -44,7 +44,7 @@ def _edit_create_response(client, verb, id, name, cluster_id, def_id):
     return_data = {'id': id,
                    'message': 'Successfully {0} the JMS WebSphere MQ channel [{1}]'.format(verb, name),
                    'def_name': response.data.name}
-    
+
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 class Index(_Index):
@@ -53,21 +53,21 @@ class Index(_Index):
     template = 'zato/channel/jms_wmq.html'
     service_name = 'zato.channel.jms-wmq.get-list'
     output_class = ChannelWMQ
-    
+
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'queue', 'def_name', 'def_id', 'service_name', 'data_format')
         output_repeated = True
-    
+
     def handle(self):
         create_form = CreateForm()
         edit_form = EditForm(prefix='edit')
-        
+
         if self.req.zato.cluster_id:
             def_ids = get_definition_list(self.req.zato.client, self.req.zato.cluster, 'jms-wmq')
             create_form.set_def_id(def_ids)
             edit_form.set_def_id(def_ids)
-        
+
         return {
             'create_form': create_form,
             'edit_form': edit_form,
@@ -83,7 +83,7 @@ def create(req):
         logger.error(msg)
         return HttpResponseServerError(msg)
 
-    
+
 @method_allowed('POST')
 def edit(req):
     try:
@@ -93,7 +93,7 @@ def edit(req):
         msg = 'Could not update the JMS WebSphere MQ channel, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-    
+
 class Delete(_Delete):
     url_name = 'channel-jms-wmq-delete'
     error_message = 'Could not delete the JMS WebSphere MQ channel'

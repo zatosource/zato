@@ -181,7 +181,7 @@ lua_ack_delete = """
     local msg_expire_at = KEYS[5]
     local msg_metadata_key = KEYS[6]
     local cons_queue = KEYS[7]
- 
+
     local is_delete = ARGV[1]
     local ids = get_ids(ARGV)
     local unack_id_count = 0

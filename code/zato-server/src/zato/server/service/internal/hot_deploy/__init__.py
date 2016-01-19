@@ -161,7 +161,7 @@ class Create(AdminService):
         else:
             msg = 'Package id:[{}], payload_name:[{}] has not been deployed'.format(package_id, payload_name)
             self.logger.warn(msg)
-    
+
     def _update_deployment_status(self, session, package_id, status):
         ds = session.query(DeploymentStatus).\
             filter(DeploymentStatus.package_id==package_id).\
@@ -179,7 +179,7 @@ class Create(AdminService):
         if is_archive_file(dp.payload_name) or is_python_file(dp.payload_name):
             self._deploy_package(session, package_id, dp.payload_name, dp.payload)
         else:
-            # This shouldn't really happen at all because the pickup notifier is to 
+            # This shouldn't really happen at all because the pickup notifier is to
             # filter such things out but life is full of surprises
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
             self.logger.warn('Ignoring package id:[{}], payload_name:[{}], not a Python file nor an archive'.format(dp.id, dp.payload_name))
@@ -195,7 +195,7 @@ class Create(AdminService):
         lock_name = '{}{}:{}'.format(KVDB.LOCK_PACKAGE_UPLOADING, server_token, package_id)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_PACKAGE_ALREADY_UPLOADED, server_token, package_id)
 
-        # TODO: Stuff below - and the methods used - needs to be rectified. 
+        # TODO: Stuff below - and the methods used - needs to be rectified.
         # As of now any worker process will always set deployment status
         # to DEPLOYMENT_STATUS.DEPLOYED but what we really want is per-worker
         # reporting of whether the deployment succeeded or not.
@@ -209,7 +209,7 @@ class Create(AdminService):
                         self.backup_current_work_dir()
 
                         self.server.kvdb.conn.set(already_deployed_flag, dumps({'create_time_utc':datetime.utcnow().isoformat()}))
-                        self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires) 
+                        self.server.kvdb.conn.expire(already_deployed_flag, self.server.deployment_lock_expires)
 
                     # .. all workers get here.
                     self.deploy_package(self.request.input.package_id, session)
