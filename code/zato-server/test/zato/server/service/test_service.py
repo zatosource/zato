@@ -441,13 +441,18 @@ class TestNav(TestCase):
         class MyService(Service):
             def handle(self):
                 dn = self.dictnav(self.request.input)
+
+                # 'nopep8' is needed because otherwise flake8 treats .has_key as though
+                # it belonged to a dict which is not the case.
+                # I.e. W601 .has_key() is deprecated, use 'in'
+
                 response = {
                     'key1': sorted(dn.get(['nested', 'a']).items()),
                     'value': dn.get(['nested', 'a', 'b', 'c']),
-                    'has_key_flat_true': 'flat' in dn,
-                    'has_key_flat_false': rand_string() in dn,
-                    'has_key_nested_true': 'b' in dn,
-                    'has_key_nested_false': rand_string() in dn,
+                    'has_key_flat_true': dn.has_key('flat', False), # nopep8 
+                    'has_key_flat_false': dn.has_key(rand_string(), True),
+                    'has_key_nested_true': dn.has_key('b'),
+                    'has_key_nested_false': dn.has_key(rand_string()),
                     'has_path': dn.has_path(['nested', 'a', 'b', 'c']),
                 }
                 self.response.payload = response
