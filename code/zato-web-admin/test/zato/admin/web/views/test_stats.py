@@ -38,13 +38,13 @@ class StatsTestCase(TestCase):
         self.user_profile.time_format_py = 'H:i:s'
         self.user_profile.month_year_format_py = 'm-Y'
         self.user_profile.date_time_format_py = 'd-m-Y H:i:s'
-        
+
     def _fake_now(self):
         return datetime(2012, 3, 1, 0, 47, 24, 54903, tzinfo=utc) # 1st of March in a leap year
-        
+
     def _utcnow(self):
         return self._fake_now()
-    
+
     def _now(self, *ignored):
         return self._fake_now()
 
@@ -58,7 +58,7 @@ class TrendsTestCase(StatsTestCase):
             eq_(info.user_stop, '01-03-2012 01:47:24')
             eq_(info.label, 'Last hour')
             eq_(info.step, 'hour')
-            
+
     def test_shift_prev_hour(self):
         with patch('zato.common.util._utcnow', self._utcnow):
             now = utcnow()
@@ -68,7 +68,7 @@ class TrendsTestCase(StatsTestCase):
             eq_(info.user_start, '01-03-2012 00:47:24')
             eq_(info.user_stop, '01-03-2012 01:47:24')
             eq_(info.step, None)
-            
+
     def test_shift_prev_hour2(self):
         now = parse('2012-10-30T21:09:02.141791+00:00')
         info = shift(now, '2012-10-30 23:09:02', self.user_profile, 'last_hour_prev', 'hour', 'date_time')
@@ -108,7 +108,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(info.user_stop, '')
             eq_(info.label, 'Today')
             eq_(info.step, 'day')
-            
+
     def test_start_stop_yesterday(self):
         with patch('zato.common.util._now', self._now):
             info = get_default_date('yesterday', self.user_profile, 'date')
@@ -118,7 +118,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(info.user_stop, '')
             eq_(info.label, 'Yesterday')
             eq_(info.step, 'day')
-            
+
     def test_start_stop_this_week(self):
         with patch('zato.common.util._now', self._now):
             info = get_default_date('this_week', self.user_profile, 'date')
@@ -128,7 +128,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(info.user_stop, '01-03-2012') # The date now() returns
             eq_(info.label, 'This week')
             eq_(info.step, 'week')
-            
+
     def test_start_stop_this_month(self):
         with patch('zato.common.util._now', self._now):
             info = get_default_date('this_month', self.user_profile, 'month_year')
@@ -138,7 +138,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(info.user_stop, '')
             eq_(info.label, 'This month')
             eq_(info.step, 'month')
-            
+
     def test_start_stop_this_year(self):
         with patch('zato.common.util._now', self._now):
             info = get_default_date('this_year', self.user_profile, 'year')
@@ -148,7 +148,7 @@ class SummaryTestCase(StatsTestCase):
             eq_(info.user_stop, '')
             eq_(info.label, 'This year')
             eq_(info.step, 'year')
-            
+
     def test_shift_prev_day_by_day(self):
         now = parse('2012-03-21T00:39:19+00:00')
         info = shift(now, from_utc_to_user(now, self.user_profile), self.user_profile, 'today_prev_day', 'day', 'date')
@@ -157,7 +157,7 @@ class SummaryTestCase(StatsTestCase):
         eq_(info.user_start, '20-03-2012')
         eq_(info.user_stop, '21-03-2012')
         eq_(info.step, None)
-        
+
     def test_shift_prev_week_by_day(self):
         now = parse('2012-03-21T00:39:19+00:00')
         info = shift(now, from_utc_to_user(now, self.user_profile), self.user_profile, 'today_prev_day_week', 'day', 'date')

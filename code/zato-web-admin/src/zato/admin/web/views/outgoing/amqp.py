@@ -26,7 +26,7 @@ from zato.admin.web.views import Delete as _Delete, get_definition_list, \
 from zato.common.odb.model import OutgoingAMQP
 
 logger = logging.getLogger(__name__)
-        
+
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base dictionary which can be used by both 'edit' and 'create' actions.
     """
@@ -58,28 +58,28 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'out-amqp'
     template = 'zato/outgoing/amqp.html'
-    
+
     service_name = 'zato.outgoing.amqp.get-list'
     output_class = OutgoingAMQP
-    
+
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'delivery_mode', 'priority',
             'content_type', 'content_encoding', 'expiration', 'user_id', 'app_id', 'delivery_mode_text', 'def_name', 'def_id')
         output_repeated = True
-    
+
     def handle(self):
         create_form = CreateForm()
         edit_form = EditForm(prefix='edit')
-        
+
         if self.req.zato.cluster_id:
             def_ids = get_definition_list(self.req.zato.client, self.req.zato.cluster, 'amqp')
             create_form.set_def_id(def_ids)
             edit_form.set_def_id(def_ids)
-            
+
         for item in self.items:
             item.delivery_mode_text = delivery_friendly_name[item.delivery_mode]
-        
+
         return {
             'create_form': create_form,
             'edit_form': edit_form,
@@ -92,7 +92,7 @@ def create(req):
         response = req.zato.client.invoke('zato.outgoing.amqp.create', request)
         delivery_mode_text = delivery_friendly_name[int(req.POST['delivery_mode'])]
 
-        return _edit_create_response(req.zato.client, 'created', response.data.id, 
+        return _edit_create_response(req.zato.client, 'created', response.data.id,
             req.POST['name'], delivery_mode_text, req.POST['def_id'], req.POST['cluster_id'])
     except Exception, e:
         msg = 'Could not create an outgoing AMQP connection, e:[{e}]'.format(e=format_exc(e))
@@ -112,7 +112,7 @@ def edit(req):
         msg = 'Could not update the outgoing AMQP connection, e:[{e}]'.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-    
+
 class Delete(_Delete):
     url_name = 'out-amqp-delete'
     error_message = 'Could not delete the outgoing AMQP connection'

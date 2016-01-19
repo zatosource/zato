@@ -29,14 +29,14 @@ class GetList(AdminService):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'def_id', Integer('delivery_mode'), Integer('priority'), 'def_name')
         output_optional = ('expiration',)
-        
+
     def get_data(self, session):
         return out_jms_wmq_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
-        
+
 class Create(AdminService):
     """ Creates a new outgoing JMS WebSphere MQ connection.
     """
@@ -53,16 +53,16 @@ class Create(AdminService):
             if not(input.priority >= 0 and input.priority <= 9):
                 msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(input.priority))
                 raise ValueError(msg)
-            
+
             existing_one = session.query(OutgoingWMQ.id).\
                 filter(ConnDefWMQ.cluster_id==input.cluster_id).\
                 filter(OutgoingWMQ.def_id==ConnDefWMQ.id).\
                 filter(OutgoingWMQ.name==input.name).\
                 first()
-            
+
             if existing_one:
                 raise Exception('An outgoing JMS WebSphere MQ connection [{0}] already exists on this cluster'.format(input.name))
-            
+
             try:
                 item = OutgoingWMQ()
                 item.name = input.name
@@ -71,22 +71,22 @@ class Create(AdminService):
                 item.delivery_mode = input.delivery_mode
                 item.priority = input.priority
                 item.expiration = input.expiration
-                
+
                 session.add(item)
                 session.commit()
-                
+
                 if item.is_active:
                     start_connector(self.server.repo_location, item.id, item.def_id)
-                
+
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
-                
+
             except Exception, e:
                 msg = 'Could not create an outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
-                raise 
+
+                raise
 
 class Edit(AdminService):
     """ Updates an outgoing JMS WebSphere MQ connection.
@@ -104,17 +104,17 @@ class Edit(AdminService):
             if not(input.priority >= 0 and input.priority <= 9):
                 msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(input.priority))
                 raise ValueError(msg)
-            
+
             existing_one = session.query(OutgoingWMQ.id).\
                 filter(ConnDefWMQ.cluster_id==input.cluster_id).\
                 filter(OutgoingWMQ.def_id==ConnDefWMQ.id).\
                 filter(OutgoingWMQ.name==input.name).\
                 filter(OutgoingWMQ.id!=input.id).\
                 first()
-            
+
             if existing_one:
                 raise Exception('An outgoing JMS WebSphere MQ connection [{0}] already exists on this cluster'.format(input.name))
-            
+
             try:
                 item = session.query(OutgoingWMQ).filter_by(id=input.id).one()
                 old_name = item.name
@@ -124,24 +124,24 @@ class Edit(AdminService):
                 item.delivery_mode = input.delivery_mode
                 item.priority = input.priority
                 item.expiration = input.expiration
-                
+
                 session.add(item)
                 session.commit()
-                
+
                 input.action = OUTGOING.JMS_WMQ_EDIT.value
                 input.old_name = old_name
                 self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL)
-                
+
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
-                
+
             except Exception, e:
                 msg = 'Could not update the JMS WebSphere MQ definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
-                raise  
-        
+
+                raise
+
 class Delete(AdminService):
     """ Deletes an outgoing JMS WebSphere MQ connection.
     """
@@ -156,17 +156,17 @@ class Delete(AdminService):
                 item = session.query(OutgoingWMQ).\
                     filter(OutgoingWMQ.id==self.request.input.id).\
                     one()
-                
+
                 session.delete(item)
                 session.commit()
 
                 msg = {'action': OUTGOING.JMS_WMQ_DELETE.value, 'name': item.name,
                        'old_name': item.name, 'id':item.id}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL)
-                
+
             except Exception, e:
                 session.rollback()
                 msg = 'Could not delete the outgoing JMS WebSphere MQ connection, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
-                
+
                 raise

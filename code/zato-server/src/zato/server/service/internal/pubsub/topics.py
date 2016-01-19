@@ -130,7 +130,7 @@ class Create(AdminService):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise 
+                raise
             else:
                 input.action = PUB_SUB_TOPIC.CREATE.value
                 self.broker_client.publish(input)
@@ -176,7 +176,7 @@ class Edit(AdminService):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise 
+                raise
             else:
                 input.action = PUB_SUB_TOPIC.EDIT.value
                 input.old_name = old_name

@@ -23,18 +23,18 @@ class BasicSettingsForm(forms.Form):
     timezone = forms.ChoiceField()
     date_format = forms.ChoiceField()
     time_format = forms.ChoiceField()
-    
+
     def __init__(self, initial, *args, **kwargs):
         super(BasicSettingsForm, self).__init__(initial, *args, **kwargs)
-        
+
         for field in self.fields:
             self.fields[field].choices[:] = []
-        
+
         for tz in common_timezones:
             self.fields['timezone'].choices.append([tz, tz])
-            
+
         for item in sorted(DATE_FORMATS):
             self.fields['date_format'].choices.append([item, item])
-        
+
         for item in sorted(TIME_FORMATS):
             self.fields['time_format'].choices.append([item, '{}-hour'.format(item)])

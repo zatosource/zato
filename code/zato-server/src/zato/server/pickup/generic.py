@@ -26,7 +26,7 @@ __all__ = ['Pickup', 'PickupEventProcessor']
 class PickupEventProcessor(FileSystemEventHandler, BasePickupEventProcessor):
     def process(self, src_path):
         self.hot_deploy(src_path)
-        
+
     def on_created(self, event):
         logger.debug('EVENT_TYPE_CREATED event.src_path:[{}], event:[{}]'.format(event.src_path, event))
         self.process(event.src_path)
@@ -41,7 +41,7 @@ class Pickup(BasePickup):
         observer = PollingObserver()
         observer.schedule(self.pickup_event_processor, path=self.pickup_dir)
         observer.start()
-        
+
         try:
             while self.keep_running:
                 sleep(3)

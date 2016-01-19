@@ -28,7 +28,7 @@ class CreateForm(forms.Form):
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        
+
         self.fields['delivery_mode'].choices = []
         self.fields['def_id'].choices = []
 
@@ -37,7 +37,7 @@ class CreateForm(forms.Form):
 
         for mode, friendly_name in modes:
             self.fields['delivery_mode'].choices.append([mode, friendly_name])
-            
+
     def set_def_id(self, def_ids):
         # Sort definitions by their names.
         def_ids = sorted(def_ids.iteritems(), key=itemgetter(1))

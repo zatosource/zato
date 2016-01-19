@@ -41,7 +41,7 @@ class AdminService(Service):
                     request[k] = SECRET_SHADOW
 
             logger.info('cid:[%s], name:[%s], SIO request:[%s]', self.cid, self.name, request)
-        
+
     def handle(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
 
@@ -72,7 +72,7 @@ class Ping2(Ping):
 class ChangePasswordBase(AdminService):
     """ A base class for handling the changing of any of the ODB passwords.
     """
-    # Subclasses may wish to set it to False to special-case what they need to deal with 
+    # Subclasses may wish to set it to False to special-case what they need to deal with
     password_required = True
 
     class SimpleIO(AdminSIO):

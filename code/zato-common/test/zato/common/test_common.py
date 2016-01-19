@@ -28,9 +28,9 @@ class StatsElemTestCase(TestCase):
          'all_services_usage': 82, 'time': 769.0, 'usage': 1,
          'usage_trend': '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0',
          'mean': 12.61}
-        
+
         stats_elem = StatsElem.from_json(item)
-        
+
         for k, v in item.items():
             value = getattr(stats_elem, k)
             eq_(v, value)

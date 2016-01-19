@@ -31,14 +31,14 @@ class TestFTP(TestCase):
 
         with patch('zato.server.connection.ftp.FTPFacade', FTPFacade):
             store = FTPStore()
-    
+
             conn_name = 'test'
             timeout = '20' # String at that point
             params = Bunch({'name':conn_name, 'is_active':True, 'port':21, 'dircache':True, 'timeout':timeout})
-    
+
             for name in 'host', 'user', 'password', 'acct':
                 params[name] = rand_string()
-    
+
             store.add_params([params])
             conn = store.get(conn_name)
             self.assertIsInstance(conn.timeout, float)

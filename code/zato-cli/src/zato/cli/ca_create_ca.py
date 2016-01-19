@@ -137,7 +137,7 @@ class Create(ZatoCommand):
 
         # Mark the directory being a Zato CA one.
         open(os.path.join(self.target_dir, '.zato-ca-dir'), 'w')
-        
+
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.CA.code)
 

@@ -25,7 +25,7 @@ class GetList(DataDictService):
         request_elem = 'zato_kvdb_data_dict_dictionary_get_list_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_get_list_response'
         output_required = ('id', 'system', 'key', 'value')
-        
+
     def get_data(self):
         return self._get_dict_items()
 
@@ -35,12 +35,12 @@ class GetList(DataDictService):
 class _CreateEdit(DataDictService):
     NAME_PATTERN = '\w+'
     NAME_RE = re.compile(NAME_PATTERN)
-    
+
     class SimpleIO(AdminSIO):
         input_required = ('system', 'key', 'value')
         input_optional = ('id',)
         output_required = ('id',)
-        
+
     def _validate_entry(self, validate_item, id=None):
         for elem in('system', 'key'):
             name = self.request.input[elem]
@@ -51,7 +51,7 @@ class _CreateEdit(DataDictService):
                 msg = "System and key may contain only letters, digits and an underscore, failed to validate [{}] against the regular expression {}".format(
                     name, self.NAME_PATTERN)
                 raise ZatoException(self.cid, msg)
-        
+
         for item in self._get_dict_items():
             joined = KVDB.SEPARATOR.join((item['system'], item['key'], item['value']))
             if validate_item == joined and id != item['id']:
@@ -70,15 +70,15 @@ class _CreateEdit(DataDictService):
             id = self.request.input.id
         else:
             id = self.server.kvdb.conn.incr(KVDB.DICTIONARY_ITEM_ID)
-            
+
         id = str(id)
-            
+
         if self._validate_entry(item, id):
             self._handle(id)
-        
+
         self.server.kvdb.conn.hset(KVDB.DICTIONARY_ITEM, id, item)
         self.response.payload.id = id
-        
+
     def _handle(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented by a subclass')
 
@@ -88,17 +88,17 @@ class Create(_CreateEdit):
     class SimpleIO(_CreateEdit.SimpleIO):
         request_elem = 'zato_kvdb_data_dict_dictionary_create_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_create_response'
-    
+
     def _handle(self, *ignored_args, **ignored_kwargs):
         pass
-        
+
 class Edit(_CreateEdit):
     """ Updates a dictionary entry.
     """
     class SimpleIO(_CreateEdit.SimpleIO):
         request_elem = 'zato_kvdb_data_dict_dictionary_edit_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_edit_response'
-    
+
     def _handle(self, id):
         for item in self._get_translations():
             if item['id1'] == id or item['id2'] == id:
@@ -107,10 +107,10 @@ class Edit(_CreateEdit):
                     hash_name = self._name(self.request.input.system, self.request.input.key, self.request.input.value, item['system2'], item['key2'])
                 else:
                     hash_name = self._name(item['system1'], item['key1'], item['value1'], self.request.input.system, self.request.input.key)
-                    
+
                 if existing_name == hash_name and item['value2'] == self.request.input:
                     continue
-                
+
                 if existing_name != hash_name:
                     self.server.kvdb.conn.renamenx(existing_name, hash_name)
 
@@ -125,16 +125,16 @@ class Delete(DataDictService):
         response_elem = 'zato_kvdb_data_dict_dictionary_delete_response'
         input_required = ('id',)
         output_required = ('id',)
-        
+
     def handle(self):
         id = str(self.request.input.id)
         self.server.kvdb.conn.hdel(KVDB.DICTIONARY_ITEM, id)
         for item in self._get_translations():
             if item['id1'] == id or item['id2'] == id:
                 self.server.kvdb.conn.delete(self._name(item['system1'], item['key1'], item['value1'], item['system2'], item['key2']))
-                
+
         self.response.payload.id = self.request.input.id
-        
+
 class _DictionaryEntryService(DataDictService):
     """ Base class for returning a list of systems, keys and values.
     """
@@ -157,7 +157,7 @@ class GetSystemList(_DictionaryEntryService):
         request_elem = 'zato_kvdb_data_dict_dictionary_get_system_list_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_get_system_list_response'
         output_required = ('name',)
-        
+
     def handle(self):
         self.response.payload[:] = ({'name':elem} for elem in sorted(set(self.get_data(True))))
 
@@ -169,7 +169,7 @@ class GetKeyList(_DictionaryEntryService):
         response_elem = 'zato_kvdb_data_dict_dictionary_get_key_list_response'
         input_required = ('system',)
         output_required = ('name',)
-        
+
     def handle(self):
         self.response.payload[:] = ({'name':elem} for elem in sorted(set(self.get_data(False, self.request.input.system))))
 
@@ -181,7 +181,7 @@ class GetValueList(_DictionaryEntryService):
         response_elem = 'zato_kvdb_data_dict_dictionary_get_value_list_response'
         input_required = ('system', 'key')
         output_required = ('name',)
-        
+
     def handle(self):
         self.response.payload[:] = ({'name':elem} for elem in sorted(set(self.get_data(False, self.request.input.system, self.request.input.key))))
 
@@ -193,6 +193,6 @@ class GetLastID(AdminService):
         request_elem = 'zato_kvdb_data_dict_dictionary_get_last_id_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_get_last_id_response'
         output_optional = (Int('value'),)
-        
+
     def handle(self):
         self.response.payload.value = self.server.kvdb.conn.get(KVDB.DICTIONARY_ITEM_ID) or ''

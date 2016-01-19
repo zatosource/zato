@@ -158,10 +158,10 @@ class CryptoMaterialLocation(object):
         self.pub_path = None
         self.priv_path = None
         self.locate()
-        
+
     def __repr__(self):
         return make_repr(self)
-        
+
     def locate(self):
         for crypto_name in('cert', 'priv', 'pub'):
             path = os.path.join(self.ca_dir, 'out-{}'.format(crypto_name))
@@ -201,7 +201,7 @@ class Create(ZatoCommand):
         bunch.cluster_name = cluster_name
 
         return bunch
-    
+
     def execute(self, args):
         """ Quickly creates Zato components
         1) CA and crypto material
@@ -232,28 +232,28 @@ class Create(ZatoCommand):
         lb_host = 'localhost'
         lb_port = 11223
         lb_agent_port = 20151
-        
+
         args_path = os.path.abspath(args.path)
-        
+
         # This could've been set to True by user in the command-line so we'd want
         # to unset it so that individual commands quickstart invokes don't attempt
         # to store their own configs.
         args.store_config = False
-        
+
         #
         # 1) CA
         #
         ca_path = os.path.join(args_path, 'ca')
         os.mkdir(ca_path)
-        
+
         ca_args = self._bunch_from_args(args, cluster_name)
         ca_args.path = ca_path
-        
+
         ca_create_ca.Create(ca_args).execute(ca_args, False)
         ca_create_lb_agent.Create(ca_args).execute(ca_args, False)
-        
+
         ca_create_web_admin.Create(ca_args).execute(ca_args, False)
-        
+
         server_crypto_loc = {}
 
         for name in server_names:
@@ -261,12 +261,12 @@ class Create(ZatoCommand):
             ca_args_server.server_name = server_names[name]
             ca_create_server.Create(ca_args_server).execute(ca_args_server, False)
             server_crypto_loc[name] = CryptoMaterialLocation(ca_path, '{}-{}'.format(cluster_name, server_names[name]))
-        
+
         lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
         web_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'web-admin')
-        
+
         self.logger.info('[{}/{}] Certificate authority created'.format(next_step.next(), total_steps))
-        
+
         #
         # 2) ODB
         #
@@ -286,16 +286,16 @@ class Create(ZatoCommand):
         create_cluster_args.lb_agent_port = lb_agent_port
         create_cluster_args.admin_invoke_password = admin_invoke_password
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False)
-        
+
         self.logger.info('[{}/{}] ODB initial data created'.format(next_step.next(), total_steps))
-        
+
         #
         # 4) servers
         #
         for name in server_names:
             server_path = os.path.join(args_path, server_names[name])
             os.mkdir(server_path)
-            
+
             create_server_args = self._bunch_from_args(args, cluster_name)
             create_server_args.server_name = server_names[name]
             create_server_args.path = server_path
@@ -303,37 +303,37 @@ class Create(ZatoCommand):
             create_server_args.pub_key_path = server_crypto_loc[name].pub_path
             create_server_args.priv_key_path = server_crypto_loc[name].priv_path
             create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path
-            
+
             create_server.Create(create_server_args).execute(create_server_args, next_port.next(), False)
-            
+
             self.logger.info('[{}/{}] server{} created'.format(next_step.next(), total_steps, name))
-            
+
         #
         # 5) load-balancer
         #
         lb_path = os.path.join(args_path, 'load-balancer')
         os.mkdir(lb_path)
-        
+
         create_lb_args = self._bunch_from_args(args, cluster_name)
         create_lb_args.path = lb_path
         create_lb_args.cert_path = lb_agent_crypto_loc.cert_path
         create_lb_args.pub_key_path = lb_agent_crypto_loc.pub_path
         create_lb_args.priv_key_path = lb_agent_crypto_loc.priv_path
         create_lb_args.ca_certs_path = lb_agent_crypto_loc.ca_certs_path
-        
+
         # Need to substract 1 because we've already called .next() twice
         # when creating servers above.
         servers_port = next_port.next() - 1
-        
+
         create_lb.Create(create_lb_args).execute(create_lb_args, True, servers_port, False)
         self.logger.info('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps))
-        
+
         #
         # 6) Web admin
         #
         web_admin_path = os.path.join(args_path, 'web-admin')
         os.mkdir(web_admin_path)
-        
+
         create_web_admin_args = self._bunch_from_args(args, cluster_name)
         create_web_admin_args.path = web_admin_path
         create_web_admin_args.cert_path = web_admin_crypto_loc.cert_path
@@ -341,16 +341,16 @@ class Create(ZatoCommand):
         create_web_admin_args.priv_key_path = web_admin_crypto_loc.priv_path
         create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path
         create_web_admin_args.admin_invoke_password = admin_invoke_password
-        
+
         password = generate_password()
         admin_created = create_web_admin.Create(create_web_admin_args).execute(
             create_web_admin_args, False, password, True)
-        
+
         # Need to reset the logger here because executing the create_web_admin command
         # loads the web admin's logger which doesn't like that of ours.
         self.reset_logger(args, True)
         self.logger.info('[{}/{}] Web admin created'.format(next_step.next(), total_steps))
-        
+
         #
         # 7) Scripts
         #
@@ -387,19 +387,19 @@ class Create(ZatoCommand):
         open(zato_qs_restart_path, 'w').write(zato_qs_restart.format(script_dir=script_dir, cluster_name=cluster_name))
 
         file_mod = stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR | stat.S_IRGRP
-        
+
         os.chmod(zato_qs_start_path, file_mod)
         os.chmod(zato_qs_stop_path, file_mod)
         os.chmod(zato_qs_restart_path, file_mod)
-        
+
         self.logger.info('[{}/{}] Management scripts created'.format(next_step.next(), total_steps))
         self.logger.info('Quickstart cluster {} created'.format(cluster_name))
-        
+
         if admin_created:
             self.logger.info('Web admin user:[admin], password:[{}]'.format(password))
         else:
             self.logger.info('User [admin] already exists in the ODB')
-            
+
         start_command = os.path.join(args_path, 'zato-qs-start.sh')
         self.logger.info('Start the cluster by issuing the {} command'.format(start_command))
         self.logger.info('Visit https://zato.io/support for more information and support options')

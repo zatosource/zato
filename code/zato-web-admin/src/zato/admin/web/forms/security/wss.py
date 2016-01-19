@@ -20,7 +20,7 @@ class CreateForm(forms.Form):
     reject_stale_tokens = forms.BooleanField(widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     reject_expiry_limit = forms.IntegerField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:20%"}))
     nonce_freshness_time = forms.IntegerField(widget=forms.TextInput(attrs={"class":"required validate-digits", "style":"width:20%"}))
-            
+
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     reject_empty_nonce_creat = forms.BooleanField(widget=forms.CheckboxInput())

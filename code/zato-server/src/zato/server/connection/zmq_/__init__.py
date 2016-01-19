@@ -28,26 +28,26 @@ class BaseZMQConnection(BaseConnection):
         self.factory.init()
         self.factory.start()
         self.keep_connecting = False
-        
+
     def _close(self):
         self.factory.close()
 
     def _conn_info(self):
-        return '[{0} ({1})]'.format(self.factory.get_connection_info(), self.name)    
+        return '[{0} ({1})]'.format(self.factory.get_connection_info(), self.name)
 
 class BaseZMQConnector(BaseConnector):
-    
+
     def __init__(self, *args, **kwargs):
         super(BaseZMQConnector, self).__init__(*args, **kwargs)
         self.socket_type = None
         self.name = None
-    
+
     def _get_factory(self, msg_handler, address, sub_key):
 
         zmq_client = ZMQClient()
         zmq_client.name = 'zmq-connector-{}'.format(self.name)
         zmq_client.zmq_context = zmq.Context()
-        
+
         if self.socket_type == 'PUSH':
             zmq_client.client_push_broker_pull = address
         elif self.socket_type == 'PULL':
@@ -59,18 +59,18 @@ class BaseZMQConnector(BaseConnector):
             zmq_client.sub_key = zmq.utils.strtypes.asbytes(sub_key)
         else:
             raise ZatoException('Unrecognized socket_type [{0}]'.format(self.socket_type))
-        
+
         return zmq_client
-    
+
     def filter(self, msg):
         """ Can we handle the incoming message?
         """
         if super(BaseZMQConnector, self).filter(msg):
             return True
-        
+
         elif msg.action == ZMQ_CONNECTOR.CLOSE:
             return self.odb.token == msg['token']
-        
+
         elif msg.action in(DEFINITION.ZMQ_EDIT.value, DEFINITION.ZMQ_DELETE.value):
             return self.def_.id == msg.id
 

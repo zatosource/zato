@@ -41,7 +41,7 @@ class DeleteClusterForm(forms.Form):
             raise Exception(msg)
 
         return data
-    
+
 class EditServerForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     old_name = forms.CharField(widget=forms.HiddenInput(attrs={'class':'required'}))

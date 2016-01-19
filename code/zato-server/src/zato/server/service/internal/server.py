@@ -33,17 +33,17 @@ class ClusterWideSingletonKeepAlive(AdminService):
         s1, s2 = self.request.payload.split(';')
         server_id = int(s1.split(':')[1])
         cluster_id = int(s2.split(':')[1])
-        
+
         with closing(self.odb.session()) as session:
             cluster = session.query(Cluster).\
                 with_lockmode('update').\
                 filter(Cluster.id == cluster_id).\
                 one()
-            
+
             server = session.query(Server).\
                 filter(Server.id == server_id).\
                 one()
-            
+
             cluster.cw_srv_keep_alive_dt = datetime.utcnow()
             session.add(cluster)
             session.commit()
@@ -64,7 +64,7 @@ class EnsureClusterWideSingleton(AdminService):
                 if self.server.singleton_server.become_cluster_wide(
                     self.server.connector_server_keep_alive_job_time, self.server.connector_server_grace_time,
                         self.server.id, self.server.cluster_id, False):
-                    
+
                     self.server.singleton_server.scheduler.delete(Bunch(name='zato.server.ensure-cluster-wide-singleton'))
                     self.server.init_connectors()
                     add_scheduler_jobs(self.server)
@@ -87,7 +87,7 @@ class Edit(AdminService):
         response_elem = 'zato_server_edit_response'
         input_required = ('id', 'name')
         output_required = ('id', 'cluster_id', 'name', 'host')
-        output_optional = ('bind_host', 'bind_port', 'last_join_status', 
+        output_optional = ('bind_host', 'bind_port', 'last_join_status',
             'last_join_mod_date', 'last_join_mod_by', 'up_status', 'up_mod_date')
 
     def handle(self):
@@ -106,16 +106,16 @@ class Edit(AdminService):
 
                 session.add(item)
                 session.commit()
-                
+
                 self.response.payload = item
-                
+
             except Exception, e:
                 msg = 'Could not update the server, id:[{}], e:[{}]'.format(self.request.input.id, format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
 
                 raise
-            
+
 class GetByID(AdminService):
     """ Returns a particular server
     """
@@ -124,9 +124,9 @@ class GetByID(AdminService):
         response_elem = 'zato_server_get_by_id_response'
         input_required = ('id',)
         output_required = ('id', 'cluster_id', 'name', 'host')
-        output_optional = ('bind_host', 'bind_port', 'last_join_status', 
+        output_optional = ('bind_host', 'bind_port', 'last_join_status',
             'last_join_mod_date', 'last_join_mod_by', 'up_status', 'up_mod_date')
-        
+
     def get_data(self, session):
         return session.query(Server).\
             filter(Server.id==self.request.input.id).\
@@ -135,7 +135,7 @@ class GetByID(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload = self.get_data(session)
-            
+
             for name in('last_join_mod_date', 'up_mod_date'):
                 attr = getattr(self.response.payload, name, None)
                 if attr:
@@ -155,20 +155,20 @@ class Delete(AdminService):
                 server = session.query(Server).\
                     filter(Server.id==self.request.input.id).\
                     one()
-                
+
                 # Sanity check
                 if server.id == self.server.id:
                     msg = 'A server cannot delete itself, id:[{}], name:[{}]'.format(server.id, server.name)
                     self.logger.error(msg)
                     raise ZatoException(self.cid, msg)
-                
+
                 # This will cascade and delete every related object
                 session.delete(server)
                 session.commit()
-                
+
             except Exception, e:
                 session.rollback()
                 msg = 'Could not delete the server, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
-                
+
                 raise

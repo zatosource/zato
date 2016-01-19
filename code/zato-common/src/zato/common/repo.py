@@ -40,7 +40,7 @@ class RepoManager(object):
         except bzrlib.errors.NotBranchError:
             logger.info('Location [{}] is not a Bazaar branch. Will turn it into one.'.format(self.repo_location))
             BzrDir.create_branch_convenience(self.repo_location)
-            
+
         c = Branch.open(self.repo_location).get_config_stack()
         c.set('email', '{}@{}'.format(get_current_user(), socket.getfqdn()))
 

@@ -45,7 +45,7 @@ setup(
 
       install_requires = parse_requirements(
           os.path.join(os.path.dirname(os.path.realpath(__file__)), 'requirements.txt')),
-      
+
       keywords=('soa eai esb middleware messaging queueing asynchronous integration performance http zeromq framework events agile broker messaging server jms enterprise python middleware clustering amqp nosql websphere mq wmq mqseries ibm amqp zmq'),
       classifiers = [
           'Development Status :: 5 - Production/Stable',

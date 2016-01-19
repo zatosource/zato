@@ -25,27 +25,27 @@ class Index(_Index):
     template = 'zato/pattern/delivery/definition/index.html'
     service_name = 'zato.pattern.delivery.definition.get-list'
     output_class = DeliveryItem
-    
+
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'target_type')
-        output_required = ('id', 'name', 'callback_list', 'last_updated_utc', 'last_used_utc', 'target', 'target_type', 
-            'expire_after', 'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
-            'retry_repeats', 'retry_seconds', 'short_def', 'total_count', 
+        output_required = ('id', 'name', 'callback_list', 'last_updated_utc', 'last_used_utc', 'target', 'target_type',
+            'expire_after', 'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after',
+            'retry_repeats', 'retry_seconds', 'short_def', 'total_count',
             'in_progress_count', 'in_doubt_count', 'confirmed_count', 'failed_count')
         output_repeated = True
-        
+
     def on_before_append_item(self, item):
         if getattr(item, 'callback_list', None):
             item.callback_list = '\n'.join(item.callback_list.split(','))
-            
+
         for name_utc in('last_updated_utc', 'last_used_utc'):
             value = getattr(item, name_utc, None)
             if value:
                 name = name_utc.replace('_utc', '')
                 setattr(item, name, from_utc_to_user(value + '+00:00', self.req.zato.user_profile))
-            
+
         return item
-        
+
     def handle(self):
         target_type = self.req.GET.get('target_type')
         return {
@@ -61,10 +61,10 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ['name', 'target', 'target_type', 'expire_after',
-            'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after', 
+            'expire_arch_succ_after', 'expire_arch_fail_after', 'check_after',
             'retry_repeats', 'retry_seconds', 'callback_list']
         output_required = ['id', 'name', 'target', 'short_def']
-        
+
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
         self.set_input(req)
         initial_input_dict['callback_list'] = ','.join(elem for elem in (self.input.get('callback_list', None) or '').split())
@@ -72,21 +72,21 @@ class _CreateEdit(CreateEdit):
         initial_return_data['target'] = self.input.target
         initial_return_data['short_def'] = '{}-{}-{}'.format(
             self.input.check_after, self.input.retry_repeats, self.input.retry_seconds)
-        
+
         return super(_CreateEdit, self).__call__(req, initial_input_dict, initial_return_data, args, kwargs)
-        
+
 class Create(_CreateEdit):
     url_name = 'pattern-delivery-create'
     service_name = 'zato.pattern.delivery.definition.create'
-    
+
     def success_message(self, item):
         return 'Definition [{}] created successfully'.format(item.name)
-    
+
 class Edit(_CreateEdit):
     url_name = 'pattern-delivery-edit'
     form_prefix = 'edit-'
     service_name = 'zato.pattern.delivery.definition.edit'
-    
+
     def success_message(self, item):
         return 'Definition [{}] updated successfully'.format(item.name)
 

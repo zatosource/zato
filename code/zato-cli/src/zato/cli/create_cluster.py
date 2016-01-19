@@ -165,7 +165,7 @@ zato_services = {
     'zato.outgoing.amqp.delete':'zato.server.service.internal.outgoing.amqp.Delete',
     'zato.outgoing.amqp.edit':'zato.server.service.internal.outgoing.amqp.Edit',
     'zato.outgoing.amqp.get-list':'zato.server.service.internal.outgoing.amqp.GetList',
-    
+
     # Outgoing connections - FTP
     'zato.outgoing.ftp.change-password':'zato.server.service.internal.outgoing.ftp.ChangePassword',
     'zato.outgoing.ftp.create':'zato.server.service.internal.outgoing.ftp.Create',
@@ -194,7 +194,7 @@ zato_services = {
     'zato.outgoing.sql.edit':'zato.server.service.internal.outgoing.sql.Edit',
     'zato.outgoing.sql.get-list':'zato.server.service.internal.outgoing.sql.GetList',
     'zato.outgoing.sql.ping':'zato.server.service.internal.outgoing.sql.Ping',
-    
+
     # Outgoing connections - ZeroMQ
     'zato.outgoing.zmq.create':'zato.server.service.internal.outgoing.zmq.Create',
     'zato.outgoing.zmq.delete':'zato.server.service.internal.outgoing.zmq.Delete',
@@ -412,7 +412,7 @@ class Create(ZatoCommand):
     opts += get_tech_account_opts('for web admin instances to use')
 
     def execute(self, args, show_output=True):
-        
+
         engine = self._get_engine(args)
         session = self._get_session(engine)
 
@@ -451,7 +451,7 @@ class Create(ZatoCommand):
                 self.logger.error(msg)
             self.logger.error(msg)
             session.rollback()
-            
+
             return self.SYS_ERROR.CLUSTER_NAME_ALREADY_EXISTS
 
         if show_output:

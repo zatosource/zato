@@ -246,16 +246,16 @@ class CreateEditMeta(AdminServiceMeta):
                         # Let's see if we already have an instance of that name before committing
                         # any stuff to the database. However, this is wrapped in an if condition
                         # because certain models don't have the .name attribute.
-    
+
                         existing_one = session.query(attrs.model).\
                             filter(Cluster.id==input.cluster_id).\
                             filter(attrs.model.name==input.name)
-    
+
                         if attrs.is_edit:
                             existing_one = existing_one.filter(attrs.model.id!=input.id)
-    
+
                         existing_one = existing_one.first()
-    
+
                         if existing_one and not attrs.is_edit:
                             raise Exception('{} [{}] already exists on this cluster'.format(
                                 attrs.label[0].upper() + attrs.label[1:], input.name))

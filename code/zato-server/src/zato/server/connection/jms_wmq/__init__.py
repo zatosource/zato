@@ -22,7 +22,7 @@ class BaseJMSWMQConnection(BaseConnection):
         self.factory = factory
         self.name = name
         self.reconnect_exceptions = (JMSException, )
-        
+
         # Not everyone uses WebSphere MQ
         from pymqi import MQMIError
         self.MQMIError = MQMIError
@@ -32,20 +32,20 @@ class BaseJMSWMQConnection(BaseConnection):
         super(BaseJMSWMQConnection, self)._start()
         self._on_connected()
         self.keep_connecting = False
-        
+
     def _close(self):
         self.factory.destroy()
 
     def _conn_info(self):
-        return '[{0} ({1})]'.format(self.factory.get_connection_info(), self.name)    
-    
+        return '[{0} ({1})]'.format(self.factory.get_connection_info(), self.name)
+
     def _keep_connecting(self, exception):
         # Assume we can always deal with JMS exception and network errors
         return isinstance(exception, (JMSException, self.MQMIError)) \
                or (isinstance(exception, EnvironmentError) and exception.errno in self.reconnect_error_numbers)
 
 class BaseJMSWMQConnector(BaseConnector):
-    
+
     def _get_factory(self):
         return WebSphereMQConnectionFactory(
             self.def_.queue_manager,
@@ -60,16 +60,16 @@ class BaseJMSWMQConnector(BaseConnector):
             ssl_key_repository = str(self.def_.ssl_key_repository) if self.def_.get('ssl_key_repository') else None,
             needs_mcd = self.def_.needs_mcd,
         )
-    
+
     def filter(self, msg):
         """ Can we handle the incoming message?
         """
         if super(BaseJMSWMQConnector, self).filter(msg):
             return True
-        
+
         elif msg.action == JMS_WMQ_CONNECTOR.CLOSE.value:
             return self.odb.token == msg['token']
-        
+
         elif msg.action in(DEFINITION.JMS_WMQ_EDIT.value, DEFINITION.JMS_WMQ_DELETE.value):
             return self.def_.id == msg.id
 

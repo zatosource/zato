@@ -25,12 +25,12 @@ class Index(_Index):
     template = 'zato/outgoing/ftp.html'
     service_name = 'zato.outgoing.ftp.get-list'
     output_class = OutgoingFTP
-    
+
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'host', 'user', 'acct', 'timeout', 'port', 'dircache')
         output_repeated = True
-    
+
     def handle(self):
         return {
             'create_form': CreateForm(),
@@ -44,10 +44,10 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'host', 'user', 'timeout', 'acct', 'port', 'dircache')
         output_required = ('id', 'name')
-        
+
     def success_message(self, item):
         return 'Successfully {0} the outgoing FTP connection [{1}]'.format(self.verb, item.name)
-    
+
 class Create(_CreateEdit):
     url_name = 'out-ftp-create'
     service_name = 'zato.outgoing.ftp.create'

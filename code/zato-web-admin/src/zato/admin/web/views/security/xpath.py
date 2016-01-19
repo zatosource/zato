@@ -25,7 +25,7 @@ class Index(_Index):
     template = 'zato/security/xpath.html'
     service_name = 'zato.security.xpath.get-list'
     output_class = XPathSecurity
-    
+
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'username', 'username_expr')
@@ -46,7 +46,7 @@ class _CreateEdit(CreateEdit):
         input_required = ('name', 'is_active', 'username', 'username_expr')
         input_optional = ('password_expr',)
         output_required = ('id', 'name')
-        
+
     def success_message(self, item):
         return 'Successfully {0} the XPath security definition [{1}]'.format(self.verb, item.name)
 
@@ -63,7 +63,7 @@ class Delete(_Delete):
     url_name = 'security-xpath-delete'
     error_message = 'Could not delete the XPath security definition'
     service_name = 'zato.security.xpath.delete'
-    
+
 @method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.security.xpath.change-password', success_msg='XPath security definition updated')

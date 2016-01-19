@@ -25,7 +25,7 @@ class Index(_Index):
     template = 'zato/security/apikey.html'
     service_name = 'zato.security.apikey.get-list'
     output_class = APIKeySecurity
-    
+
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'username')
@@ -44,7 +44,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'username')
         output_required = ('id', 'name')
-        
+
     def success_message(self, item):
         return 'Successfully {0} the API key [{1}]'.format(self.verb, item.name)
 
@@ -61,7 +61,7 @@ class Delete(_Delete):
     url_name = 'security-apikey-delete'
     error_message = 'Could not delete the API key'
     service_name = 'zato.security.apikey.delete'
-    
+
 @method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.security.apikey.change-password', success_msg='API key updated')

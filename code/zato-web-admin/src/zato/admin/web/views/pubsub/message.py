@@ -60,7 +60,7 @@ def _index(req, cluster_id, topic_name, source_name, source_type):
         'source_name':source_name,
         'source_type': source_type
     }
-    
+
     for _item in req.zato.client.invoke('zato.pubsub.message.get-list', input_dict):
         _item = Message(**_item)
         _item.creation_time = from_utc_to_user(_item.creation_time_utc+'+00:00', req.zato.user_profile)
@@ -75,7 +75,7 @@ def _index(req, cluster_id, topic_name, source_name, source_type):
         'source_type': source_type,
         'source_name': source_name
         }
-        
+
     return TemplateResponse(req, 'zato/pubsub/message/index.html', return_data)
 
 # ################################################################################################################################

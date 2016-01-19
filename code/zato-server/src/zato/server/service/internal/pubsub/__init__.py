@@ -54,7 +54,7 @@ class InvokeCallbacks(AdminService):
     def _reject(self, msg_ids, sub_key, consumer, reason):
         self.pubsub.reject(sub_key, msg_ids)
         self.logger.error('Could not deliver messages `%s`, sub_key `%s` to `%s`, reason `%s`', msg_ids, sub_key, consumer, reason)
-        
+
     def _invoke_callbacks(self):
         callback_consumers = list(self.pubsub.impl.get_callback_consumers())
         self.logger.debug('Callback consumers found `%s`', callback_consumers)

@@ -61,7 +61,7 @@ def get_tls_ca_cert_list(client, cluster):
     return _get_list(client, cluster, 'zato.security.tls.ca-cert.get-list')
 
 def get_sample_dt(user_profile):
-    """ A sample date and time an hour in the future serving as a hint as to what 
+    """ A sample date and time an hour in the future serving as a hint as to what
     format to use when entering date and time manually in the user-provided format.
     """
     return from_utc_to_user((datetime.utcnow() + timedelta(hours=1)).replace(tzinfo=UTC), user_profile)
@@ -280,7 +280,7 @@ class Index(_BaseView):
         pass
 
     def __call__(self, req, *args, **kwargs):
-        """ Handles the request, taking care of common things and delegating 
+        """ Handles the request, taking care of common things and delegating
         control to the subclass for fetching this view-specific data.
         """
         self.clear_user_message()
@@ -293,7 +293,7 @@ class Index(_BaseView):
 
             return_data = {'cluster_id':self.cluster_id}
             output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
-            
+
             if self.can_invoke_admin_service():
                 self.before_invoke_admin_service()
                 response = self.invoke_admin_service()
@@ -333,14 +333,14 @@ class Index(_BaseView):
 class CreateEdit(_BaseView):
     """ Subclasses of this class will handle the creation/updates of Zato objects.
     """
-    
+
     def __init__(self):
         super(CreateEdit, self).__init__()
         self.input = Bunch()
         self.input_dict = {}
 
     def __call__(self, req, initial_input_dict={}, initial_return_data={}, *args, **kwargs):
-        """ Handles the request, taking care of common things and delegating 
+        """ Handles the request, taking care of common things and delegating
         control to the subclass for fetching this view-specific data.
         """
         self.input_dict.clear()

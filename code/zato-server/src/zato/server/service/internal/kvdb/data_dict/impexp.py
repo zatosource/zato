@@ -25,30 +25,30 @@ class Import(DataDictService):
         request_elem = 'zato_kvdb_data_dict_impexp_import_request'
         response_elem = 'zato_kvdb_data_dict_impexp_import_response'
         input_required = ('data',)
-        
+
     def handle(self):
         data = loads(self.request.input.data.decode('base64').decode('bz2'))
         with self.server.kvdb.conn.pipeline() as p:
             p.delete(KVDB.DICTIONARY_ITEM_ID)
             p.delete(KVDB.DICTIONARY_ITEM)
             p.delete(KVDB.TRANSLATION_ID)
-            
+
             for item in self._get_translations():
                 key = translation_name(item['system1'], item['key1'], item['value1'], item['system2'], item['key2'])
                 p.delete(key)
-                
+
             # Another proof software engineering and philosophy have /a lot/ in common!
-            data = data['data'] 
-            
+            data = data['data']
+
             p.set(KVDB.DICTIONARY_ITEM_ID, data['last_dict_id'])
             p.set(KVDB.TRANSLATION_ID, data['last_translation_id'])
-            
+
             for item in data['dict_list']:
                 p.hset(KVDB.DICTIONARY_ITEM, item['id'], dict_item_name(item['system'], item['key'], item['value']))
-                
+
             for item in data['translation_list']:
                 key = item.keys()[0]
                 for value_key, value in item[key].items():
                     p.hset(key, value_key, value)
-                
+
             p.execute()

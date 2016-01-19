@@ -30,14 +30,14 @@ class GetList(AdminService):
         response_elem = 'zato_security_tech_account_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active')
-        
+
     def get_data(self, session):
         return tech_acc_list(session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
-    
+
 class GetByID(AdminService):
     """ Returns a technical account of a given ID.
     """
@@ -46,9 +46,9 @@ class GetByID(AdminService):
         response_elem = 'zato_security_tech_account_get_by_id_response'
         input_required = ('id',)
         output_required = ('id', 'name', 'is_active')
-        
+
     def get_data(self, session):
-        return session.query(TechnicalAccount.id, 
+        return session.query(TechnicalAccount.id,
             TechnicalAccount.name, TechnicalAccount.is_active).\
             filter(TechnicalAccount.id==self.request.input.id).\
             one()
@@ -56,7 +56,7 @@ class GetByID(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload = self.get_data(session)
-    
+
 class Create(AdminService):
     """ Creates a new technical account.
     """
@@ -71,36 +71,36 @@ class Create(AdminService):
         input = self.request.input
         input.password = tech_account_password(uuid4().hex, salt)
         input.salt = salt
-        
+
         with closing(self.odb.session()) as session:
             cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
-            
+
             # Let's see if we already have an account of that name before committing
             # any stuff into the database.
             existing_one = session.query(TechnicalAccount).\
                 filter(Cluster.id==input.cluster_id).\
                 filter(TechnicalAccount.name==input.name).first()
-            
+
             if existing_one:
                 raise Exception('Technical account [{0}] already exists on this cluster'.format(input.name))
-            
+
             try:
                 tech_account = TechnicalAccount(None, input.name, input.is_active, input.password, salt, cluster=cluster)
                 session.add(tech_account)
                 session.commit()
-                
+
             except Exception, e:
                 msg = 'Could not create a technical account, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
-                raise 
+
+                raise
             else:
                 input.action = SECURITY.TECH_ACC_CREATE.value
                 input.password = input.password
                 input.sec_type = SEC_DEF_TYPE.TECH_ACCOUNT
                 self.broker_client.publish(input)
-            
+
                 self.response.payload.id = tech_account.id
                 self.response.payload.name = tech_account.name
 
@@ -121,15 +121,15 @@ class Edit(AdminService):
                 filter(TechnicalAccount.name==input.name).\
                 filter(TechnicalAccount.id!=input.id).\
                 first()
-            
+
             if existing_one:
                 raise Exception('Technical account [{0}] already exists on this cluster'.format(input.name))
-            
+
             tech_account = session.query(TechnicalAccount).\
                 filter(TechnicalAccount.id==input.id).\
                 one()
             old_name = tech_account.name
-            
+
             tech_account.name = input.name
             tech_account.is_active = input.is_active
 
@@ -141,34 +141,34 @@ class Edit(AdminService):
                 msg = "Could not update the technical account, e:[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
-                raise 
+
+                raise
             else:
                 input.action = SECURITY.TECH_ACC_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.TECH_ACCOUNT
                 self.broker_client.publish(input)
-            
+
                 self.response.payload.id = tech_account.id
                 self.response.payload.name = tech_account.name
-    
+
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a technical account.
     """
     class SimpleIO(ChangePasswordBase.SimpleIO):
         request_elem = 'zato_security_tech_account_change_password_request'
         response_elem = 'zato_security_tech_account_change_password_response'
-    
+
     def handle(self):
         salt = uuid4().hex
-        
+
         def _auth(instance, password):
             instance.password = tech_account_password(password, salt)
             instance.salt = salt
 
-        return self._handle(TechnicalAccount, _auth, 
+        return self._handle(TechnicalAccount, _auth,
                             SECURITY.TECH_ACC_CHANGE_PASSWORD.value, salt=salt)
-    
+
 class Delete(AdminService):
     """ Deletes a technical account.
     """
@@ -184,12 +184,12 @@ class Delete(AdminService):
             tech_account = session.query(TechnicalAccount).\
                 filter(TechnicalAccount.id==input.id).\
                 one()
-            
+
             if tech_account.name == input.current_tech_account_name:
                 msg = "Can't delete account [{0}], at least one client console uses it".\
                     format(input.current_tech_account_name)
                 raise Exception(msg)
-            
+
             try:
                 session.delete(tech_account)
                 session.commit()
@@ -197,7 +197,7 @@ class Delete(AdminService):
                 msg = 'Could not delete the account, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
+
                 raise
             else:
                 input.action = SECURITY.TECH_ACC_DELETE.value

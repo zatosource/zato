@@ -32,7 +32,7 @@ class _WebAdminAuthCommand(ManageCommand):
         self.logger.info('OK')
 
 # ################################################################################################################################
-        
+
 class CreateUser(_WebAdminAuthCommand):
     """ Creates a new web admin user
     """

@@ -26,13 +26,13 @@ def bunchget(obj, args):
     """
     args = str(args).split(',')
     if len(args) == 1:
-        (attribute, default) = [args[0], ''] 
+        (attribute, default) = [args[0], '']
     else:
         (attribute, default) = args
-        
+
     if attribute in obj:
         return obj[attribute]
-    
+
     return default
 
 # Taken from https://stackoverflow.com/a/16609498

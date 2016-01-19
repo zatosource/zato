@@ -63,7 +63,7 @@ defaults
 backend bck_http_plain
     mode http
     balance roundrobin
-    
+
 # ZATO begin backend bck_http_plain
 
 {default_backend}
@@ -120,7 +120,7 @@ class Create(ZatoCommand):
     def execute(self, args, use_default_backend=False, server02_port=None, show_output=True):
         os.mkdir(os.path.join(self.target_dir, 'config')) # noqa
         os.mkdir(os.path.join(self.target_dir, 'logs')) # noqa
-        
+
         repo_dir = os.path.join(self.target_dir, 'config', 'repo') # noqa
         os.mkdir(repo_dir) # noqa
 
@@ -129,7 +129,7 @@ class Create(ZatoCommand):
 
         open(os.path.join(repo_dir, 'lb-agent.conf'), 'w').write(config_template) # noqa
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write((common_logging_conf_contents.format(log_path=log_path))) # noqa
-        
+
         if use_default_backend:
             backend = default_backend.format(server01_port=http_plain_server_port, server02_port=server02_port)
         else:
@@ -145,7 +145,7 @@ class Create(ZatoCommand):
         open(os.path.join(repo_dir, '503.http'), 'w').write(http_503) # noqa
 
         self.copy_lb_crypto(repo_dir, args)
-        
+
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.LOAD_BALANCER.code)
 

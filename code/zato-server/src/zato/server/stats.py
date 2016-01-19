@@ -18,18 +18,18 @@ from dateutil.rrule import MINUTELY, rrule
 from zato.common import KVDB
 
 logger = logging.getLogger(__name__)
-                
+
 class MaintenanceTool(object):
     """ A tool for performing maintenance-related tasks, such as deleting the statistics.
     """
     def __init__(self, conn):
         self.conn = conn
-        
+
     def delete(self, start, stop, interval):
         with self.conn.pipeline() as p:
             suffixes = (elem.strftime(':%Y:%m:%d:%H:%M') for elem in rrule(MINUTELY, dtstart=start, until=stop))
             for suffix in suffixes:
                 for key in self.conn.keys('{}*{}'.format(KVDB.SERVICE_TIME_AGGREGATED_BY_MINUTE, suffix)):
                     p.delete(key)
-                    
+
             p.execute()

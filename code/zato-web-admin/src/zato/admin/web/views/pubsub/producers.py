@@ -81,7 +81,7 @@ class _CreateEdit(CreateEdit):
         client_id = self.req.POST.get('id')
         if client_id:
             response = self.req.zato.client.invoke('zato.pubsub.producers.get-info', {'id': client_id})
-    
+
             if response.ok:
                 if response.data.last_seen:
                     return_data['last_seen'] = from_utc_to_user(response.data.last_seen + '+00:00', self.req.zato.user_profile)

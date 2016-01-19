@@ -28,10 +28,10 @@ class GetList(AdminService):
         request_elem = 'zato_security_wss_get_list_request'
         response_elem = 'zato_security_wss_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'password_type', 'username', 
-            Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'), Integer('reject_expiry_limit'), 
+        output_required = ('id', 'name', 'is_active', 'password_type', 'username',
+            Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'), Integer('reject_expiry_limit'),
             Integer('nonce_freshness_time'))
-        
+
     def get_data(self, session):
         return wss_list(session, self.request.input.cluster_id, False)
 
@@ -45,14 +45,14 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_wss_create_request'
         response_elem = 'zato_security_wss_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'username', 
+        input_required = ('cluster_id', 'name', 'is_active', 'username',
             'password_type', Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'),
             Integer('reject_expiry_limit'), Integer('nonce_freshness_time'))
         output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
-        
+
         with closing(self.odb.session()) as session:
             cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
             # Let's see if we already have a definition of that name before committing
@@ -60,34 +60,34 @@ class Create(AdminService):
             existing_one = session.query(WSSDefinition).\
                 filter(Cluster.id==input.cluster_id).\
                 filter(WSSDefinition.name==input.name).first()
-            
+
             if existing_one:
                 raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(input.name))
-            
+
             password = uuid4().hex
-    
+
             try:
                 wss = WSSDefinition(
                     None, input.name, input.is_active, input.username,
                     password, input.password_type, input.reject_empty_nonce_creat,
                     input.reject_stale_tokens, input.reject_expiry_limit, input.nonce_freshness_time,
                     cluster)
-                
+
                 session.add(wss)
                 session.commit()
-                
+
             except Exception, e:
                 msg = "Could not create a WS-Security definition, e:[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
+
                 raise
             else:
                 input.action = SECURITY.WSS_CREATE.value
                 input.password = password
                 input.sec_type = SEC_DEF_TYPE.WSS
                 self.broker_client.publish(self.request.input)
-            
+
             self.response.payload.id = wss.id
             self.response.payload.name = input.name
 
@@ -111,14 +111,14 @@ class Edit(AdminService):
                 filter(WSSDefinition.name==input.name).\
                 filter(WSSDefinition.id!=input.id).\
                 first()
-            
+
             if existing_one:
                 raise Exception('WS-Security definition [{0}] already exists on this cluster'.format(input.name))
-            
+
             try:
                 wss = session.query(WSSDefinition).filter_by(id=input.id).one()
                 old_name = wss.name
-                
+
                 wss.name = input.name
                 wss.is_active = input.is_active
                 wss.username = input.username
@@ -127,38 +127,38 @@ class Edit(AdminService):
                 wss.reject_stale_tokens = input.reject_stale_tokens
                 wss.reject_expiry_limit = input.reject_expiry_limit
                 wss.nonce_freshness_time = input.nonce_freshness_time
-    
+
                 session.add(wss)
                 session.commit()
-                
+
             except Exception, e:
                 msg = "Could not update the WS-Security definition, e:[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
+
                 raise
             else:
                 input.action = SECURITY.WSS_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.WSS
                 self.broker_client.publish(self.request.input)
-    
+
             self.response.payload.id = input.id
             self.response.payload.name = input.name
-    
+
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a WS-Security definition.
     """
     class SimpleIO(ChangePasswordBase.SimpleIO):
         request_elem = 'zato_security_wss_change_password_request'
         response_elem = 'zato_security_wss_change_password_response'
-        
+
     def handle(self):
         def _auth(instance, password):
             instance.password = password
-            
+
         return self._handle(WSSDefinition, _auth, SECURITY.WSS_CHANGE_PASSWORD.value)
-    
+
 class Delete(AdminService):
     """ Deletes a WS-Security definition.
     """
@@ -168,7 +168,7 @@ class Delete(AdminService):
         input_required = ('id',)
 
     def handle(self):
-        
+
         with closing(self.odb.session()) as session:
             try:
                 wss = session.query(WSSDefinition).\
@@ -181,7 +181,7 @@ class Delete(AdminService):
                 msg = "Could not delete the WS-Security definition, e:[{e}]".format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
+
                 raise
             else:
                 self.request.input.action = SECURITY.WSS_DELETE.value

@@ -98,7 +98,7 @@ class BaseHTTPSOAPWrapper(object):
         start = datetime.utcnow()
 
         def zato_pre_request_hook(hook_data, *args, **kwargs):
-            entry = '{} (UTC) {} {}\n'.format(datetime.utcnow().isoformat(), 
+            entry = '{} (UTC) {} {}\n'.format(datetime.utcnow().isoformat(),
                 hook_data['request'].method, hook_data['request'].url)
             verbose.write(entry)
 
@@ -163,7 +163,7 @@ class BaseHTTPSOAPWrapper(object):
         return headers
 
     def set_address_data(self):
-        """Sets the full address to invoke and parses input URL's configuration, 
+        """Sets the full address to invoke and parses input URL's configuration,
         to extract any named parameters that will have to be passed in by users
         during actual calls to the resource.
         """
@@ -233,7 +233,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
                     Username=self.config['username'], Password=self.config['password'])
 
 # ################################################################################################################################
-        
+
     def __str__(self):
         return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
 
@@ -258,9 +258,9 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 
             return (self.address.format(**path_params), dict(params))
         except(KeyError, ValueError), e:
-            logger.warn('CID:[%s] Could not build URL address `%r` path:`%r` with params:`%r`, e:`%s`', 
+            logger.warn('CID:[%s] Could not build URL address `%r` path:`%r` with params:`%r`, e:`%s`',
                 cid, self.address, self.config['address_url_path'], params, format_exc(e))
-            
+
             raise ValueError('CID:[{}] Could not build URL path'.format(cid))
 
 # ################################################################################################################################
@@ -337,7 +337,7 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
             data = data.encode('utf-8')
 
         logger.info(
-            'CID:`%s`, address:`%s`, qs:`%s`, auth:`%s`, kwargs:`%s`', cid, address, qs_params, self.requests_auth, kwargs) 
+            'CID:`%s`, address:`%s`, qs:`%s`, auth:`%s`, kwargs:`%s`', cid, address, qs_params, self.requests_auth, kwargs)
 
         response = self.invoke_http(cid, method, address, data, headers, {}, params=qs_params, *args, **kwargs)
 

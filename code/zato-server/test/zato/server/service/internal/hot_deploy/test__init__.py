@@ -19,19 +19,19 @@ from zato.server.service.internal.hot_deploy import Create
 ##############################################################################
 
 class CreateTestCase(ServiceTestCase):
-    
+
     def setUp(self):
         self.service_class = Create
         self.sio = self.service_class.SimpleIO
-    
+
     def get_request_data(self):
         return {'package_id':rand_int()}
-    
+
     def get_response_data(self):
         return Bunch({})
-    
+
     def test_sio(self):
-        
+
         self.assertEquals(self.sio.request_elem, 'zato_hot_deploy_create_request')
         self.assertEquals(self.sio.response_elem, 'zato_hot_deploy_create_response')
         self.assertEquals(self.sio.input_required, ('package_id',))
@@ -40,6 +40,6 @@ class CreateTestCase(ServiceTestCase):
         self.assertRaises(AttributeError, getattr, self.sio, 'output_required')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
-        
+
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.hot-deploy.create')

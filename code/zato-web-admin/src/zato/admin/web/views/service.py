@@ -54,7 +54,7 @@ ExposedThrough = namedtuple('ExposedThrough', ['id', 'name', 'url'])
 DeploymentInfo = namedtuple('DeploymentInfo', ['server_name', 'details'])
 
 class SlowResponse(object):
-    def __init__(self, cid=None, service_name=None, threshold=None, req_ts=None, 
+    def __init__(self, cid=None, service_name=None, threshold=None, req_ts=None,
             resp_ts=None, proc_time=None, req=None, resp=None, req_html=None, resp_html=None):
         self.cid = cid
         self.service_name = service_name
@@ -64,7 +64,7 @@ class SlowResponse(object):
         self.proc_time = proc_time
         self.req = req
         self.resp = resp
-        self.req_html = req_html 
+        self.req_html = req_html
         self.resp_html = resp_html
 
 data_format_lexer = {
@@ -89,7 +89,7 @@ def known_data_format(data):
 def get_public_wsdl_url(cluster, service_name):
     """ Returns an address under which a service's WSDL is publically available.
     """
-    return 'http://{}:{}/zato/wsdl?service={}&cluster_id={}'.format(cluster.lb_host, 
+    return 'http://{}:{}/zato/wsdl?service={}&cluster_id={}'.format(cluster.lb_host,
         cluster.lb_port, service_name, cluster.id)
 
 def _get_channels(client, cluster, id, channel_type):
@@ -117,24 +117,24 @@ def _get_channels(client, cluster, id, channel_type):
         out.append(channel)
 
     return out
-    
+
 def _get_service(req, name):
     """ Returns service details by its name.
     """
     service = Service(name=name)
-    
+
     input_dict = {
         'name': name,
         'cluster_id': req.zato.cluster_id
     }
     response = req.zato.client.invoke('zato.service.get-by-name', input_dict)
-    
+
     if response.has_data:
         for name in('id', 'slow_threshold'):
             setattr(service, name, getattr(response.data, name))
-        
+
     return service
-    
+
 def get_pretty_print(value, data_format):
     if data_format == 'xml':
         parser = etree.XMLParser(remove_blank_text=True)
@@ -156,7 +156,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         input_optional = ('name_filter',)
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name', 
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name',
             'may_be_deleted', 'usage', 'slow_threshold')
         output_repeated = True
 
@@ -197,13 +197,13 @@ def overview(req, service_name):
             'name': service_name,
             'cluster_id': req.zato.cluster_id
         }
-        
+
         response = req.zato.client.invoke('zato.service.get-by-name', input_dict)
         if response.has_data:
             service = Service()
-            
-            for name in('id', 'name', 'is_active', 'impl_name', 'is_internal', 
-                  'usage', 'time_last', 'time_min_all_time', 'time_max_all_time', 
+
+            for name in('id', 'name', 'is_active', 'impl_name', 'is_internal',
+                  'usage', 'time_last', 'time_min_all_time', 'time_max_all_time',
                   'time_mean_all_time'):
 
                 value = getattr(response.data, name)
@@ -214,7 +214,7 @@ def overview(req, service_name):
 
             now = datetime.utcnow()
             start = now+relativedelta(minutes=-60)
-                
+
             response = req.zato.client.invoke('zato.stats.get-by-service', {'service_id':service.id, 'start':start, 'stop':now})
             if response.has_data:
                 for name in('mean_trend', 'usage_trend', 'min_resp_time', 'max_resp_time', 'mean', 'usage', 'rate'):
@@ -230,7 +230,7 @@ def overview(req, service_name):
 
             for item in req.zato.client.invoke('zato.service.get-deployment-info-list', {'id': service.id}):
                 service.deployment_info.append(DeploymentInfo(item.server_name, loads(item.details)))
-                
+
             # TODO: There needs to be a new service added zato.service.scheduler.job.get-by-service
             #       or .get-list should start accept a service name. Right now we pull all the
             #       jobs which is suboptimal.
@@ -296,7 +296,7 @@ def wsdl(req, service_name):
         'name': service_name,
         'cluster_id': req.zato.cluster_id
     }
-    
+
     response = req.zato.client.invoke('zato.service.has-wsdl', input_dict)
     if response.has_data:
         service.id = response.data.service_id
@@ -339,12 +339,12 @@ def wsdl_download(req, service_name, cluster_id):
 def request_response(req, service_name):
     service = Service(name=service_name)
     pretty_print = asbool(req.GET.get('pretty_print'))
-    
+
     input_dict = {
         'name': service_name,
         'cluster_id': req.zato.cluster_id
     }
-    
+
     service_response = req.zato.client.invoke('zato.service.get-request-response', input_dict)
     if service_response.ok:
         request = (service_response.data.sample_req if service_response.data.sample_req else '').decode('base64')
@@ -352,7 +352,7 @@ def request_response(req, service_name):
         if request_data_format:
             if pretty_print:
                 request = get_pretty_print(request, request_data_format)
-            service.sample_req_html = highlight(request, data_format_lexer[request_data_format](), 
+            service.sample_req_html = highlight(request, data_format_lexer[request_data_format](),
                 HtmlFormatter(linenos='table'))
 
         response = (service_response.data.sample_resp if service_response.data.sample_resp else '').decode('base64')
@@ -360,7 +360,7 @@ def request_response(req, service_name):
         if response_data_format:
             if pretty_print:
                 response = get_pretty_print(response, response_data_format)
-            service.sample_resp_html = highlight(response, data_format_lexer[response_data_format](), 
+            service.sample_resp_html = highlight(response, data_format_lexer[response_data_format](),
                 HtmlFormatter(linenos='table'))
 
         service.sample_req = request
@@ -373,7 +373,7 @@ def request_response(req, service_name):
             if value:
                 value = from_utc_to_user(value+'+00:00', req.zato.user_profile)
             ts[full_name] = value
-                
+
         service.id = service_response.data.service_id
         service.sample_cid = service_response.data.sample_cid
         service.sample_req_ts = ts['sample_req_ts']
@@ -417,21 +417,21 @@ def package_upload(req, cluster_id):
 
 @method_allowed('POST')
 def last_stats(req, service_id, cluster_id):
-    
+
     return_data = {
         'rate': '(error)',
         'mean': '(error)',
         'mean_trend': '(error)',
         }
-    
+
     try:
         start, stop = last_hour_start_stop(datetime.utcnow())
         response = req.zato.client.invoke('zato.stats.get-by-service', {'service_id': service_id, 'start':start, 'stop':stop})
-        
+
         if response.has_data:
             for key in return_data:
                 value = getattr(response.data, key) or ''
-                
+
                 if value and key.endswith('trend') and value != ZATO_NONE:
                     value = [int(float(elem)) for elem in value.split(',')]
 
@@ -443,7 +443,7 @@ def last_stats(req, service_id, cluster_id):
     except Exception, e:
         msg = 'Caught an exception while invoking zato.service.get-by-service, e:[{}]'.format(format_exc(e))
         logger.error(msg)
-    
+
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 
@@ -454,7 +454,7 @@ def slow_response(req, service_name):
     input_dict = {
         'name': service_name,
     }
-    
+
     for _item in req.zato.client.invoke('zato.service.slow-response.get-list', input_dict):
         item = SlowResponse()
         item.cid = _item.cid
@@ -462,30 +462,30 @@ def slow_response(req, service_name):
         item.resp_ts = from_utc_to_user(_item.resp_ts+'+00:00', req.zato.user_profile)
         item.proc_time = _item.proc_time
         item.service_name = service_name
-        
+
         items.append(item)
-        
+
     return_data = {
         'cluster_id': req.zato.cluster_id,
         'service': _get_service(req, service_name),
         'items': items,
         }
-        
+
     return TemplateResponse(req, 'zato/service/slow-response.html', return_data)
-    
+
 @method_allowed('GET')
 def slow_response_details(req, cid, service_name):
 
     item = None
     service = _get_service(req, service_name)
     pretty_print = asbool(req.GET.get('pretty_print'))
-    
+
     input_dict = {
         'cid': cid,
         'name': service_name,
     }
     response = req.zato.client.invoke('zato.service.slow-response.get', input_dict)
-    
+
     if response.has_data:
         cid = response.data.cid
         if cid != ZATO_NONE:
@@ -496,7 +496,7 @@ def slow_response_details(req, cid, service_name):
             item.proc_time = response.data.proc_time
             item.service_name = service_name
             item.threshold = service.slow_threshold
-            
+
             for name in('req', 'resp'):
                 value = getattr(response.data, name)
                 if value:
@@ -505,12 +505,12 @@ def slow_response_details(req, cid, service_name):
                         data_format = 'json'
                     else:
                         data_format = known_data_format(value)
-                        
+
                     if data_format:
                         if pretty_print:
                             value = get_pretty_print(value, data_format)
                         attr_name = name + '_html'
-                        setattr(item, attr_name, highlight(value, 
+                        setattr(item, attr_name, highlight(value,
                              data_format_lexer[data_format](), HtmlFormatter(linenos='table')))
 
     return_data = {
@@ -519,7 +519,7 @@ def slow_response_details(req, cid, service_name):
         'item': item,
         'pretty_print': not pretty_print,
         }
-        
+
     return TemplateResponse(req, 'zato/service/slow-response-details.html', return_data)
 
 @method_allowed('GET')
@@ -541,7 +541,7 @@ def invoke(req, name, cluster_id):
         for attr in('payload', 'data_format', 'transport'):
             input_dict[attr] = req.POST.get(attr, '')
             input_dict['to_json'] = True if input_dict.get('data_format') == DATA_FORMAT.JSON else False
-        
+
         response = req.zato.client.invoke(name, **input_dict)
 
     except Exception, e:

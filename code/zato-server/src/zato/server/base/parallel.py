@@ -413,7 +413,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # the server's configuration from.
         self.config.repo_location = self.repo_location
 
-        # 
+        #
         # Cassandra - start
         #
 
@@ -423,11 +423,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_cassandra_query_list(server.cluster.id, True)
         self.config.cassandra_query = ConfigDict.from_query('cassandra_query', query)
 
-        # 
+        #
         # Cassandra - end
         #
 
-        # 
+        #
         # Search - start
         #
 
@@ -437,11 +437,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_search_solr_list(server.cluster.id, True)
         self.config.search_solr = ConfigDict.from_query('search_solr', query)
 
-        # 
+        #
         # Search - end
         #
 
-        # 
+        #
         # Cloud - start
         #
 
@@ -453,7 +453,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_cloud_aws_s3_list(server.cluster.id, True)
         self.config.cloud_aws_s3 = ConfigDict.from_query('cloud_aws_s3', query)
 
-        # 
+        #
         # Cloud - end
         #
 

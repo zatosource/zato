@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 class Matcher(object):
     """ Matches incoming URL paths in requests received against the pattern it's configured to react to.
-    For instance, '/permission/user/{user_id}/group/{group_id}' gets translated and compiled to the regex 
+    For instance, '/permission/user/{user_id}/group/{group_id}' gets translated and compiled to the regex
     of '/permission/user/(?P<user_id>\\w+)/group/(?P<group_id>\\w+)$' which in runtime is used for matching.
     """
     def __init__(self, pattern):

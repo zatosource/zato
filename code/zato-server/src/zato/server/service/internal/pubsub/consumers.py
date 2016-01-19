@@ -74,7 +74,7 @@ class GetInfo(AdminService):
             self.response.payload.current_depth = self.pubsub.get_consumer_queue_current_depth(consumer.sub_key)
             self.response.payload.in_flight_depth = self.pubsub.get_consumer_queue_in_flight_depth(consumer.sub_key)
             self.response.payload.sub_key = consumer.sub_key
-    
+
 # ################################################################################################################################
 
 class _CreateEdit(AdminService):
@@ -143,7 +143,7 @@ class Create(_CreateEdit):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise 
+                raise
             else:
                 input.action = PUB_SUB_CONSUMER.CREATE.value
                 input.client_name = consumer.sec_def.name
@@ -201,7 +201,7 @@ class Edit(_CreateEdit):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise 
+                raise
             else:
                 msg = Bunch()
                 msg.action = PUB_SUB_CONSUMER.EDIT.value

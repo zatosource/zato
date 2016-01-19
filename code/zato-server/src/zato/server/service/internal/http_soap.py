@@ -47,13 +47,13 @@ class _HTTPSOAPService(object):
                 raise ZatoException(self.cid, 'TLS CA certs is a required field if TLS keys/certs are used')
 
     def _handle_security_info(self, session, security_id, connection, transport):
-        """ First checks whether the security type is correct for the given 
+        """ First checks whether the security type is correct for the given
         connection type. If it is, returns a dictionary of security-related information.
         """
         info = {'security_name':None, 'sec_type':None}
 
         if security_id:
-            
+
             security = session.query(SecurityBase.name, SecurityBase.sec_type).\
                 filter(SecurityBase.id==security_id).\
                 one()
@@ -85,7 +85,7 @@ class GetList(AdminService):
         response_elem = 'zato_http_soap_get_list_response'
         input_required = ('cluster_id', 'connection', 'transport')
         output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
-        output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type', 
+        output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
             'content_type')
@@ -152,7 +152,7 @@ class Create(_CreateEdit):
 
             # Will raise exception if the security type doesn't match connection
             # type and transport
-            sec_info = self._handle_security_info(session, input.security_id, 
+            sec_info = self._handle_security_info(session, input.security_id,
                 input.connection, input.transport)
 
             try:
@@ -222,7 +222,7 @@ class Edit(_CreateEdit):
         request_elem = 'zato_http_soap_edit_request'
         response_elem = 'zato_http_soap_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path')
-        input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format', 
+        input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
             'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
             'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type')
         output_required = ('id', 'name')
@@ -374,7 +374,7 @@ class Delete(AdminService, _HTTPSOAPService):
                 self.logger.error(msg)
 
                 raise
-            
+
 class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
     """
@@ -423,7 +423,7 @@ class GetURLSecurity(AdminService):
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################
-        
+
 class GetAuditConfig(AdminService):
     """ Returns audit configuration for a given HTTP/SOAP object.
     """
@@ -431,7 +431,7 @@ class GetAuditConfig(AdminService):
         request_elem = 'zato_http_soap_get_audit_config_request'
         response_elem = 'zato_http_soap_get_audit_config_response'
         input_required = ('id',)
-        output_required = (Boolean('audit_enabled'), Integer('audit_back_log'), 
+        output_required = (Boolean('audit_enabled'), Integer('audit_back_log'),
             Integer('audit_max_payload'), 'audit_repl_patt_type')
 
     def handle(self):
@@ -570,7 +570,7 @@ class SetAuditState(AdminService):
                 one()
 
             item.audit_enabled = self.request.input.audit_enabled
-            
+
             session.add(item)
             session.commit()
 
@@ -609,7 +609,7 @@ class _BaseAuditService(AdminService):
         batch_size = self.request.input.get('batch_size', BATCH_DEFAULTS.SIZE)
         batch_size = min(batch_size, BATCH_DEFAULTS.MAX_SIZE)
 
-        q = http_soap_audit_item_list(session, self.server.cluster_id, self.request.input.conn_id, 
+        q = http_soap_audit_item_list(session, self.server.cluster_id, self.request.input.conn_id,
             self.request.input.get('start'), self.request.input.get('stop'), self.request.input.get('query'), False)
 
         return Page(q, page=current_batch, items_per_page=batch_size)
@@ -664,7 +664,7 @@ class GetAuditItem(_BaseAuditService):
         response_elem = 'zato_http_soap_get_audit_item_response'
         input_required = ('id',)
         output_required = ('id', 'cid', 'req_time_utc', 'remote_addr',)
-        output_optional = ('resp_time_utc', 'user_token', 'invoke_ok', 'auth_ok', 'req_headers', 'req_payload', 
+        output_optional = ('resp_time_utc', 'user_token', 'invoke_ok', 'auth_ok', 'req_headers', 'req_payload',
             'resp_headers', 'resp_payload')
 
     def handle(self):

@@ -43,7 +43,7 @@ class CheckConfig(ManageCommand):
         self.ensure_port_free(prefix, conf['port'], address)
 
     def ping_sql(self, cm, engine_params):
-        
+
         query = ping_queries[engine_params['engine']]
 
         session = create_pool(cm, engine_params)

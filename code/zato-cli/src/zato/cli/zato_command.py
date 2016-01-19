@@ -37,7 +37,7 @@ def add_opts(parser, opts):
             except KeyError:
                 # Almost no command uses 'action' or 'default' parameters
                 pass
-            
+
         parser.add_argument(opt['name'], **arguments)
 
 def get_parser():
@@ -50,7 +50,7 @@ def get_parser():
 
     parser = argparse.ArgumentParser(prog='zato')
     parser.add_argument('--version', action='version', version=version)
-    
+
     subs = parser.add_subparsers()
 
     #
@@ -70,7 +70,7 @@ def get_parser():
     ca_create_lb_agent.set_defaults(command='ca_create_lb_agent')
     ca_create_lb_agent.add_argument('path', help='Path to a CA directory')
     add_opts(ca_create_lb_agent, ca_create_lb_agent_mod.Create.opts)
-        
+
     ca_create_server = ca_create_subs.add_parser('server', description=ca_create_server_mod.Create.__doc__, parents=[base_parser])
     ca_create_server.set_defaults(command='ca_create_server')
     ca_create_server.add_argument('path', help='Path to a CA directory')
@@ -112,7 +112,7 @@ def get_parser():
     create_cluster = create_subs.add_parser('cluster', description=create_cluster_mod.Create.__doc__, parents=[base_parser])
     create_cluster.set_defaults(command='create_cluster')
     add_opts(create_cluster, create_cluster_mod.Create.opts)
-    
+
     create_lb = create_subs.add_parser('load_balancer', description=create_lb_mod.Create.__doc__, parents=[base_parser])
     create_lb.add_argument('path', help='Path to an empty directory to install the load-balancer in')
     create_lb.set_defaults(command='create_lb')
@@ -121,7 +121,7 @@ def get_parser():
     create_odb = create_subs.add_parser('odb', description=create_odb_mod.Create.__doc__, parents=[base_parser])
     create_odb.set_defaults(command='create_odb')
     add_opts(create_odb, create_odb_mod.Create.opts)
-    
+
     create_server = create_subs.add_parser('server', description=create_server_mod.Create.__doc__, parents=[base_parser])
     create_server.add_argument('path', help='Path to an empty directory to install the server in')
     create_server.set_defaults(command='create_server')
@@ -209,7 +209,7 @@ def get_parser():
     #
     service = subs.add_parser('service', description='Commands related to the management of Zato services')
     service_subs = service.add_subparsers()
-    
+
     service_invoke = service_subs.add_parser('invoke', description=service_mod.Invoke.__doc__, parents=[base_parser])
     service_invoke.set_defaults(command='service_invoke')
     add_opts(service_invoke, service_mod.Invoke.opts)
@@ -243,7 +243,7 @@ def get_parser():
     add_opts(update_crypto, crypto_mod.UpdateCrypto.opts)
 
     # .. update password
-    
+
     update_password = update_subs.add_parser('password', description=web_admin_auth_mod.UpdatePassword.__doc__, parents=[base_parser])
     update_password.add_argument('path', help='Path to a web admin directory')
     update_password.set_defaults(command='update_password')

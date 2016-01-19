@@ -24,35 +24,35 @@ class ExecuteCommand(AdminService):
         response_elem = 'zato_kvdb_remote_command_execute_response'
         input_required = ('command',)
         output_required = ('result',)
-        
+
     def handle(self):
         input_command = self.request.input.command or ''
-        
+
         if not input_command:
             msg = 'No command sent'
             raise ZatoException(self.cid, msg)
 
         try:
             parse_result = redis_grammar.parseString(input_command)
-            
+
             options = {}
             command = parse_result.command
             parameters = parse_result.parameters if parse_result.parameters else []
-            
+
             if command == 'CONFIG':
                 options['parse'] = parameters[0]
             elif command == 'OBJECT':
                 options['infotype'] = parameters[0]
-                
+
             response = self.server.kvdb.conn.execute_command(command, *parameters, **options) or ''
-            
+
             if response and command in('KEYS', 'HKEYS', 'HVALS'):
                 response = unicode(response).encode('utf-8')
             elif command in('HLEN', 'LLEN', 'LRANGE', 'SMEMBERS', 'HGETALL'):
                 response = str(response)
-                
+
             self.response.payload.result = response
-            
+
         except Exception, e:
             msg = 'Command parsing error, command:[{}], e:[{}]'.format(input_command, format_exc(e))
             self.logger.error(msg)

@@ -25,7 +25,7 @@ class CreateForm(DataFormatForm):
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        
+
         self.fields['socket_type'].choices = []
         for name in sorted(ZMQ_CHANNEL_TYPES):
             self.fields['socket_type'].choices.append([name, name])

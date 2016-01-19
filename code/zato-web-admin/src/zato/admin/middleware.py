@@ -130,5 +130,5 @@ class ZatoMiddleware(object):
             resp.context_data['cluster_color'] = ccm.color
 
         resp.render()
-        
+
         return resp

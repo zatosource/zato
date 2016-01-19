@@ -24,13 +24,13 @@ class Index(_Index):
     template = 'zato/definition/jms_wmq.html'
     service_name = 'zato.definition.jms-wmq.get-list'
     output_class = ConnDefWMQ
-    
+
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'host', 'port', 'queue_manager', 'channel', 'cache_open_send_queues', 
+        output_required = ('id', 'name', 'host', 'port', 'queue_manager', 'channel', 'cache_open_send_queues',
             'cache_open_receive_queues', 'use_shared_connections', 'ssl', 'ssl_cipher_spec', 'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
         output_repeated = True
-        
+
     def handle(self):
         return {
             'create_form': CreateForm(),
@@ -41,17 +41,17 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'host', 'port', 'queue_manager', 'channel', 'cache_open_send_queues', 'cache_open_receive_queues', 
+        input_required = ('name', 'host', 'port', 'queue_manager', 'channel', 'cache_open_send_queues', 'cache_open_receive_queues',
             'use_shared_connections', 'ssl', 'ssl_cipher_spec', 'ssl_key_repository', 'needs_mcd', 'max_chars_printed')
         output_required = ('id',)
-        
+
     def success_message(self, item):
         return 'Successfully {0} the JMS WebSphere MQ definition [{1}]'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'def-jms-wmq-create'
     service_name = 'zato.definition.jms-wmq.create'
-    
+
 class Edit(_CreateEdit):
     url_name = 'def-jms-wmq-edit'
     form_prefix = 'edit-'

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from traceback import format_exc
 
-# jsonpointer 
+# jsonpointer
 # Using 'as' below because Wing IDE confuses it with JSONPointer
 from jsonpointer import JsonPointer as _JsonPointer
 

@@ -67,24 +67,24 @@ class UpdateDeliveryCounters(AdminService):
         request_elem = 'zato_pattern_delivery_update_delivery_counters_request'
         response_elem = 'zato_pattern_delivery_update_delivery_counters_response'
         input_required = ('def_id', 'def_name')
-        
+
     def handle(self):
         counters = {}
         with closing(self.odb.session()) as session:
             for state, count in delivery_count_by_state(session, self.request.input.def_id):
                 counters[state] = count
-                
-        in_progress = 0 
+
+        in_progress = 0
         for name in (DELIVERY_STATE.IN_PROGRESS_STARTED, DELIVERY_STATE.IN_PROGRESS_TARGET_FAILURE, DELIVERY_STATE.IN_PROGRESS_TARGET_OK):
             in_progress += counters.get(name, 0)
-            
+
         self.delivery_store.update_counters(
             self.request.input.def_name,
             in_progress,
             counters.get(DELIVERY_STATE.IN_DOUBT, 0),
             counters.get(DELIVERY_STATE.CONFIRMED, 0),
             counters.get(DELIVERY_STATE.FAILED, 0))
-        
+
 class UpdateCounters(AdminService):
     """ Asynchronously invokes a services to update counters for each delivery definition in the ODB.
     """
@@ -107,13 +107,13 @@ class GetCounters(AdminService):
 
     def handle(self):
         counters = self.delivery_store.get_counters(self.request.input.def_name)
-        
+
         counters['in_progress'] = counters['in-progress']
         counters['in_doubt'] = counters['in-doubt']
-        
+
         del counters['in-doubt']
         del counters['in-progress']
-        
+
         self.response.payload = counters
 
 # ##############################################################################
@@ -132,10 +132,10 @@ class GetBatchInfo(_Base):
     def handle(self):
         input = self.request.input
         state = self._validate_get_state(input)
-        
+
         input['batch_size'] = input['batch_size'] or 25
         input['current_batch'] = input['current_batch'] or 1
-        
+
         self.response.payload = self.delivery_store.get_batch_info(self.server.cluster_id, input, state)
 
 # ##############################################################################
@@ -173,30 +173,30 @@ class GetHistoryList(AdminService):
         input_required = (AsIs('task_id'),)
         output_required = ('entry_type', 'entry_time', 'entry_ctx', 'resubmit_count', 'delta')
         output_repeated = True
-        
+
     def _get_delta(self, start, stop):
         delta = stop - start
         fract = round(float('0.{}'.format(delta.microseconds)), 2)
         delta = str(timedelta(days=delta.days, seconds=delta.seconds + fract))
-        
+
         # 0:00:00
         if '.' not in delta:
             return delta + '.00'
-        
+
         delta = delta.rstrip('0')
         split = delta.split('.')
-        
+
         # 0:05:56.4
-        if len(split[1]) == 1: 
+        if len(split[1]) == 1:
             return delta + '0'
-        
+
         # 0:41:48.14
         return delta
 
     def handle(self):
         with closing(self.odb.session()) as session:
             creation_time = session.merge(self.delivery_store.get_delivery(self.request.input.task_id)).creation_time
-            
+
             history = list(delivery_history_list(session, self.request.input.task_id))
             columns = [elem.name for elem in history.pop()]
             for item in history:
@@ -215,7 +215,7 @@ class GetDetails(AdminService):
         request_elem = 'zato_pattern_delivery_in_doubt_get_list_request'
         response_elem = 'zato_pattern_delivery_in_doubt_get_list_response'
         input_required = (AsIs('task_id'),)
-        output_required = ('def_name', 'target_type', AsIs('task_id'), 'creation_time_utc', 'last_used_utc', 
+        output_required = ('def_name', 'target_type', AsIs('task_id'), 'creation_time_utc', 'last_used_utc',
             'source_count', 'target_count', 'resubmit_count', 'state', 'retry_repeats', 'check_after', 'retry_seconds')
         output_optional = ('payload', 'args', 'kwargs', 'target', 'payload_sha1', 'payload_sha256')
         output_repeated = True
@@ -238,7 +238,7 @@ class GetList(_Base):
         response_elem = 'zato_pattern_delivery_in_doubt_get_list_response'
         input_required = ('def_name', 'state')
         input_optional = ('batch_size', 'current_batch', 'start', 'stop',)
-        output_required = ('def_name', 'target_type', AsIs('task_id'), 'creation_time_utc', 'last_used_utc', 
+        output_required = ('def_name', 'target_type', AsIs('task_id'), 'creation_time_utc', 'last_used_utc',
             'source_count', 'target_count', 'resubmit_count', 'retry_repeats', 'check_after', 'retry_seconds')
         output_repeated = True
 
@@ -247,11 +247,11 @@ class GetList(_Base):
         state = self._validate_get_state(input)
         input['batch_size'] = input['batch_size'] or 25
         input['current_batch'] = input['current_batch'] or 1
-        
+
         self.response.payload[:] = self.delivery_store.get_delivery_instance_list(self.server.cluster_id, input, state)
 
 # ##############################################################################
-    
+
 class Delete(AdminService):
     """ Deletes a delivery task.
     """
@@ -265,7 +265,7 @@ class Delete(AdminService):
             delivery = session.merge(self.delivery_store.get_delivery(self.request.input.task_id))
             session.delete(delivery)
             session.commit()
-            
+
 # ##############################################################################
 
 class Edit(AdminService):
@@ -293,23 +293,23 @@ class AutoResubmit(AdminService):
         request_elem = 'zato_pattern_delivery_edit_request'
         response_elem = 'zato_pattern_delivery_edit_response'
         input_required = ('def_id', 'def_name', Integer('retry_seconds'))
-    
+
     def handle(self):
         now = datetime.utcnow()
         multiplier = int(self.server.fs_server_config.patterns.delivery_retry_threshold_multiplier)
         stop = now - timedelta(seconds=multiplier*self.request.input.retry_seconds)
         lock_name = '{}{}'.format(KVDB.LOCK_DELIVERY_AUTO_RESUBMIT, self.request.input.def_name)
-        
+
         timeout = int(self.server.fs_server_config.patterns.delivery_auto_lock_timeout)
         with self.lock(lock_name, timeout):
             for item in self.delivery_store.get_delivery_list_for_auto_resubmit(self.server.cluster_id, self.request.input.def_name, stop):
-                
+
                 kwargs = loads(item['kwargs'])
                 kwargs['is_resubmit'] = True
                 kwargs['is_auto'] = True
-                
+
                 self.deliver(item['def_name'], item['payload'], item['task_id'], *loads(item['args']), **kwargs)
-    
+
 class DispatchAutoResubmit(AdminService):
     """ Dispatches as many async requests for auto-resubmitting delivery tasks
     as there are delivery definitions.
@@ -317,12 +317,12 @@ class DispatchAutoResubmit(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             for def_id, def_name, retry_seconds in session.query(
-                DeliveryDefinitionBase.id, 
+                DeliveryDefinitionBase.id,
                 DeliveryDefinitionBase.name,
                 DeliveryDefinitionBase.retry_seconds,)\
                 .all():
                 self.invoke_async(
-                    AutoResubmit.get_name(), 
+                    AutoResubmit.get_name(),
                         {'def_id':def_id, 'def_name':def_name, 'retry_seconds':retry_seconds})
 
 # ##############################################################################

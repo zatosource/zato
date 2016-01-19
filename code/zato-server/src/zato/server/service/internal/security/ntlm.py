@@ -48,11 +48,11 @@ class Create(AdminService):
     def handle(self):
         input = self.request.input
         input.password = uuid4().hex
-        
+
         with closing(self.odb.session()) as session:
             try:
                 cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
-                
+
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
                 existing_one = session.query(NTLM).\
@@ -61,9 +61,9 @@ class Create(AdminService):
 
                 if existing_one:
                     raise Exception('NTLM definition [{0}] already exists on this cluster'.format(input.name))
-                
+
                 auth = NTLM(None, input.name, input.is_active, input.username, input.password, cluster)
-                
+
                 session.add(auth)
                 session.commit()
 
@@ -72,7 +72,7 @@ class Create(AdminService):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise 
+                raise
             else:
                 input.action = SECURITY.NTLM_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.NTLM
@@ -102,10 +102,10 @@ class Edit(AdminService):
 
                 if existing_one:
                     raise Exception('NTLM definition [{0}] already exists on this cluster'.format(input.name))
-                
+
                 definition = session.query(NTLM).filter_by(id=input.id).one()
                 old_name = definition.name
-                
+
                 definition.name = input.name
                 definition.is_active = input.is_active
                 definition.username = input.username
@@ -118,7 +118,7 @@ class Edit(AdminService):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise 
+                raise
             else:
                 input.action = SECURITY.NTLM_EDIT.value
                 input.old_name = old_name
@@ -127,7 +127,7 @@ class Edit(AdminService):
 
                 self.response.payload.id = definition.id
                 self.response.payload.name = definition.name
-    
+
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an NTLM definition.
     """
@@ -136,11 +136,11 @@ class ChangePassword(ChangePasswordBase):
     class SimpleIO(ChangePasswordBase.SimpleIO):
         request_elem = 'zato_security_ntlm_change_password_request'
         response_elem = 'zato_security_ntlm_change_password_response'
-    
+
     def handle(self):
         def _auth(instance, password):
             instance.password = password
-            
+
         return self._handle(NTLM, _auth, SECURITY.NTLM_CHANGE_PASSWORD.value)
 
 class Delete(AdminService):

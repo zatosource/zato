@@ -31,7 +31,7 @@ def _edit_create_response(service_response, action, name, password_type):
         'message': 'Successfully {0} the WS-Security definition [{1}]'.format(action, name),
         'password_type_raw':password_type,
         'password_type':ZATO_WSS_PASSWORD_TYPES[password_type]}
-    
+
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 def _get_edit_create_message(params, prefix=''):
@@ -61,8 +61,8 @@ def index(req):
 
         for item in req.zato.client.invoke('zato.security.wss.get-list', {'cluster_id':req.zato.cluster_id}):
             wss = WSSDefinition(item.id, item.name, item.is_active, item.username, None,
-                    ZATO_WSS_PASSWORD_TYPES[item.password_type], item.reject_empty_nonce_creat, 
-                    item.reject_stale_tokens, item.reject_expiry_limit, item.nonce_freshness_time, 
+                    ZATO_WSS_PASSWORD_TYPES[item.password_type], item.reject_empty_nonce_creat,
+                    item.reject_stale_tokens, item.reject_expiry_limit, item.nonce_freshness_time,
                     password_type_raw=item.password_type)
 
             items.append(wss)
@@ -99,7 +99,7 @@ def create(req):
         msg = "Could not create a WS-Security definition, e:[{e}]".format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
-    
+
 class Delete(_Delete):
     url_name = 'security-wss-delete'
     error_message = 'Could not delete the WS-Security definition'

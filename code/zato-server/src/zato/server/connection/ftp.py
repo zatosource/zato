@@ -42,7 +42,7 @@ class FTPStore(object):
         self.conn_params[params.name] = params
 
         msg = 'FTP params added:[{!r}]'
-        
+
         if logger.isEnabledFor(TRACE1):
             logger.log(TRACE1, msg.format(params))
 

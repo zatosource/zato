@@ -30,7 +30,7 @@ _service_name_prefix = 'zato.scheduler.job.'
 
 def _create_edit(action, cid, input, payload, logger, session, broker_client, response):
     """ Creating and updating a job requires a series of very similar steps
-    so they've been all put here and depending on the 'action' parameter 
+    so they've been all put here and depending on the 'action' parameter
     (be it 'create'/'edit') some additional operations are performed.
     """
     job_type = input.job_type
@@ -38,7 +38,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     name = input.name
     service_name = input.service
 
-    if job_type not in(SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED, 
+    if job_type not in(SCHEDULER.JOB_TYPE.ONE_TIME, SCHEDULER.JOB_TYPE.INTERVAL_BASED,
                            SCHEDULER.JOB_TYPE.CRON_STYLE):
         msg = 'Unrecognized job type [{0}]'.format(job_type)
         logger.error(msg)
@@ -75,7 +75,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     extra = input.extra.encode('utf-8')
     is_active = input.is_active
     start_date = parse(input.start_date)
-    
+
     if action == 'create':
         job = Job(None, name, is_active, job_type, start_date, extra, cluster_id=cluster_id, service=service)
     else:
@@ -178,7 +178,7 @@ class _CreateEdit(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            _create_edit(self.__class__.__name__.lower(), self.cid, self.request.input, self.request.payload, 
+            _create_edit(self.__class__.__name__.lower(), self.cid, self.request.input, self.request.payload,
                     self.logger, session, self.broker_client, self.response)
 
 class _Get(AdminService):
@@ -268,7 +268,7 @@ class Delete(AdminService):
 
                 msg = {'action': SCHEDULER_MSG.DELETE.value, 'name': job.name}
                 self.broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
-                
+
             except Exception, e:
                 session.rollback()
                 msg = 'Could not delete the job, e:[{e}]'.format(e=format_exc(e))
