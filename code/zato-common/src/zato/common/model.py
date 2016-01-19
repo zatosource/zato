@@ -26,16 +26,13 @@ _key_func_dict = {
     'target_type': None,
     'on_delivery_success': None,
     'on_delivery_failed': None,
-    
+
     'expire_arch_success_after': int,
     'expire_arch_failed_after': int,
     'check_after': int,
     'retry_repeats': int,
     'retry_seconds': int,
-    
-    #'business_payload': loads,
-    #'failed_attempt_list': loads,
-    #'in_doubt_history': loads,
+
 }
 
 class DeliveryItem(object):
@@ -80,7 +77,6 @@ class DeliveryItem(object):
         return make_repr(self)
 
     @staticmethod
-    #@profile
     def from_in_doubt_delivery(payload):
         """ Creates a new delivery item out of previous in-doubt data.
         """
