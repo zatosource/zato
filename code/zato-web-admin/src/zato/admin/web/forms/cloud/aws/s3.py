@@ -45,4 +45,3 @@ class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     suppr_cons_slashes = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     encrypt_at_rest = forms.BooleanField(required=False, widget=forms.CheckboxInput())
-
