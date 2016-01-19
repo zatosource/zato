@@ -28,7 +28,7 @@ class GetList(AdminService):
         response_elem = 'zato_security_basic_auth_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'username', 'realm')
-        
+
     def get_data(self, session):
         return basic_auth_list(session, self.request.input.cluster_id, False)
 
@@ -48,38 +48,38 @@ class Create(AdminService):
     def handle(self):
         input = self.request.input
         input.password = uuid4().hex
-        
+
         with closing(self.odb.session()) as session:
             try:
                 cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
-                
+
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
                 existing_one = session.query(HTTPBasicAuth).\
                     filter(Cluster.id==input.cluster_id).\
                     filter(HTTPBasicAuth.name==input.name).first()
-                
+
                 if existing_one:
                     raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(input.name))
-                
-                auth = HTTPBasicAuth(None, input.name, input.is_active, input.username, 
+
+                auth = HTTPBasicAuth(None, input.name, input.is_active, input.username,
                     input.realm, input.password, cluster)
-                
+
                 session.add(auth)
                 session.commit()
-                
+
             except Exception, e:
                 msg = 'Could not create an HTTP Basic Auth definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
-                raise 
+
+                raise
             else:
                 input.action = SECURITY.BASIC_AUTH_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
                 input.id = auth.id
                 self.broker_client.publish(input)
-            
+
             self.response.payload.id = auth.id
             self.response.payload.name = auth.name
 
@@ -101,49 +101,49 @@ class Edit(AdminService):
                     filter(HTTPBasicAuth.name==input.name).\
                     filter(HTTPBasicAuth.id!=input.id).\
                     first()
-                
+
                 if existing_one:
                     raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(input.name))
-                
+
                 definition = session.query(HTTPBasicAuth).filter_by(id=input.id).one()
                 old_name = definition.name
-                
+
                 definition.name = input.name
                 definition.is_active = input.is_active
                 definition.username = input.username
                 definition.realm = input.realm
-    
+
                 session.add(definition)
                 session.commit()
-                
+
             except Exception, e:
                 msg = 'Could not update the HTTP Basic Auth definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
-                raise 
+
+                raise
             else:
                 input.action = SECURITY.BASIC_AUTH_EDIT.value
                 input.old_name = old_name
                 input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
                 self.broker_client.publish(input)
-    
+
                 self.response.payload.id = definition.id
                 self.response.payload.name = definition.name
-    
+
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an HTTP Basic Auth definition.
     """
     password_required = False
-    
+
     class SimpleIO(ChangePasswordBase.SimpleIO):
         request_elem = 'zato_security_basic_auth_change_password_request'
         response_elem = 'zato_security_basic_auth_change_password_response'
-    
+
     def handle(self):
         def _auth(instance, password):
             instance.password = password
-            
+
         return self._handle(HTTPBasicAuth, _auth, SECURITY.BASIC_AUTH_CHANGE_PASSWORD.value)
 
 class Delete(AdminService):
@@ -160,14 +160,14 @@ class Delete(AdminService):
                 auth = session.query(HTTPBasicAuth).\
                     filter(HTTPBasicAuth.id==self.request.input.id).\
                     one()
-                
+
                 session.delete(auth)
                 session.commit()
             except Exception, e:
                 msg = 'Could not delete the HTTP Basic Auth definition, e:[{e}]'.format(e=format_exc(e))
                 self.logger.error(msg)
                 session.rollback()
-                
+
                 raise
             else:
                 self.request.input.action = SECURITY.BASIC_AUTH_DELETE.value

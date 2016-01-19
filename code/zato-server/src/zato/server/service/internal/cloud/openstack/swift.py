@@ -79,7 +79,7 @@ class Create(AdminService):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise 
+                raise
 
 class Edit(AdminService):
     """ Updates an OpenStack Swift connection.
@@ -114,7 +114,7 @@ class Edit(AdminService):
                 input.action = CLOUD.OPENSTACK_SWIFT_CREATE_EDIT.value
                 input.old_name = old_name
                 self.broker_client.publish(input)
-                
+
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
@@ -123,7 +123,7 @@ class Edit(AdminService):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise  
+                raise
 
 class Delete(AdminService):
     """ Deletes an OpenStack Swift connection.
@@ -145,7 +145,7 @@ class Delete(AdminService):
 
                 msg = {'action': CLOUD.OPENSTACK_SWIFT_DELETE.value, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg)
-                
+
             except Exception, e:
                 session.rollback()
                 msg = 'Could not delete the OpenStack Swift connection, e:[{e}]'.format(e=format_exc(e))

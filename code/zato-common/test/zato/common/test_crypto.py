@@ -73,18 +73,18 @@ secret = 'T8irIao63mrrSIItl1JDgs8K+9zIXi3OTXYzEHtSpzB9m52Q34LYeeiyYJTvEq8nWb3Lpu
 # ##############################################################################
 
 class CryptoTestCase(TestCase):
-    
+
     def test_decrypt_priv_key_in_file(self):
         """ Decrypt a message using a private key from file.
         """
         with NamedTemporaryFile(prefix='zato-test-') as tf:
             tf.write(priv_key)
             tf.flush()
-            
+
             cm = CryptoManager()
             cm.priv_key_location = tf.name
             cm.load_keys()
-            
+
             eq_(plain_text, cm.decrypt(secret))
 
     def test_decrypt_priv_key_in_string(self):
@@ -93,42 +93,42 @@ class CryptoTestCase(TestCase):
         cm = CryptoManager()
         cm.priv_key = priv_key
         cm.load_keys()
-        
+
         eq_(plain_text, cm.decrypt(secret))
-        
+
     def test_enrypt(self):
         """ Encrypt a message using the public key.
         """
         _plain_text = uuid4().hex
-        
+
         with NamedTemporaryFile(prefix='zato-test-') as tf_priv:
             with NamedTemporaryFile(prefix='zato-test-') as tf_pub:
-                
+
                 tf_priv.write(priv_key)
                 tf_priv.flush()
-                
+
                 tf_pub.write(pub_key)
                 tf_pub.flush()
-                
+
                 cm_priv = CryptoManager()
                 cm_priv.priv_key_location = tf_priv.name
                 cm_priv.load_keys()
-                
+
                 cm_pub = CryptoManager()
                 cm_pub.pub_key_location = tf_pub.name
                 cm_pub.load_keys()
-                
+
                 encrypted = cm_pub.encrypt(_plain_text)
                 decrypted = cm_priv.decrypt(encrypted)
-                
+
                 eq_(_plain_text, decrypted)
-        
+
     def test_reset(self):
         """ Resets all keys to None.
         """
         cm = CryptoManager()
         cm.reset()
-        
+
         eq_(cm.priv_key_location, None)
         eq_(cm.pub_key_location, None)
         eq_(cm.priv_key, None)

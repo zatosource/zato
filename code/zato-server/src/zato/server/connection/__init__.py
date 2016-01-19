@@ -54,7 +54,7 @@ class BaseConnection(object):
     def __init__(self, kvdb=None, delivery_store=None):
         self.kvdb = kvdb
         self.delivery_store = delivery_store
-        self.reconnect_error_numbers = (errno.ENETUNREACH, errno.ENETRESET, errno.ECONNABORTED, 
+        self.reconnect_error_numbers = (errno.ENETUNREACH, errno.ENETRESET, errno.ECONNABORTED,
             errno.ECONNRESET, errno.ETIMEDOUT, errno.ECONNREFUSED, errno.EHOSTUNREACH)
         self.reconnect_exceptions = ()
         self.connection_attempts = 1
@@ -65,9 +65,9 @@ class BaseConnection(object):
 
     def _start(self):
         """ Actually start a specific resource.
-        """ 
+        """
         self.has_valid_connection = True
-    
+
     def _close(self):
         """ Perform a resource-specific close operation.
         """
@@ -77,34 +77,34 @@ class BaseConnection(object):
         """ A textual information regarding the connection for logging purposes.
         """
         raise NotImplementedError('Must be implemented by a subclass')
-    
+
     def _keep_connecting(self, e):
         """ Invoked on an exception being caught during establishing a connection.
         Receives the exception object and has to answer whether to keep on (re-)connecting.
         """
         raise NotImplementedError('Must be implemented by a subclass')
-    
+
     def _run(self):
         """ Run the main (re-)connecting loop, close on Ctrl-C.
-        """ 
+        """
         try:
             self.start()
         except KeyboardInterrupt:
             self.close()
-    
+
     def close(self):
         """ Attempt to close the connection to an external resource.
         """
         if(logger.isEnabledFor(TRACE1)):
             msg = 'About to close the connection for {0}'.format(self._conn_info())
             logger.log(TRACE1, msg)
-            
+
         self.keep_connecting = False
         self._close()
-            
+
         msg = 'Closed the connection for {0}'.format(self._conn_info())
         logger.info(msg)
-    
+
     def _on_connected(self, *ignored_args, **ignored_kwargs):
         """ Invoked after establishing a successful connection to the resource.
         Will report a diagnostic message regarding how many attempts there were
@@ -115,12 +115,12 @@ class BaseConnection(object):
             msg = '(Re-)connected to {0} after {1} attempt(s), time spent {2}'.format(
                 self._conn_info(), self.connection_attempts, delta)
             logger.warn(msg)
-            
+
         if self.has_valid_connection:
             self.connection_attempts = 1
-            
+
         self.first_connection_attempt_time = datetime.utcnow()
-            
+
     def start(self):
         """ Start the connection, reconnect on any recoverable errors.
         """
@@ -156,7 +156,7 @@ class BaseConnector(BrokerMessageReceiver):
         self.odb = None
         self.odb_config = None
         self.sql_pool_store = None
-        
+
     def _close(self):
         """ Close the process, don't forget about the ODB connection if it exists.
         """
@@ -164,13 +164,13 @@ class BaseConnector(BrokerMessageReceiver):
             self.odb.close()
         p = psutil.Process(os.getpid())
         p.terminate()
-    
+
     def _setup_odb(self):
         # First let's see if the server we're running on top of exists in the ODB.
         self.server = self.odb.fetch_server(self.odb_config)
         if not self.server:
             raise Exception('Server does not exist in the ODB')
-        
+
     def _init(self):
         """ Initializes all the basic run-time data structures and connects
         to the Zato broker.
@@ -178,29 +178,29 @@ class BaseConnector(BrokerMessageReceiver):
         fs_server_config = get_config(self.repo_location, 'server.conf')
         app_context = get_app_context(fs_server_config)
         crypto_manager = get_crypto_manager(self.repo_location, app_context, fs_server_config)
-        
+
         config_odb = fs_server_config.odb
         self.odb = app_context.get_object('odb_manager')
         self.odb.crypto_manager = crypto_manager
         self.odb.token = fs_server_config.main.token
-        
+
         # Key-value DB
         self.kvdb = KVDB()
         self.kvdb.config = fs_server_config.kvdb
         self.kvdb.decrypt_func = self.odb.crypto_manager.decrypt
         self.kvdb.init()
-        
+
         # Broker client
         self.broker_client = BrokerClient(self.kvdb, self.broker_client_id, self.broker_callbacks)
         self.broker_client.start()
 
-        # ODB        
-        
+        # ODB
+
         #
         # Ticket #35 Don't ignore odb_port when creating an ODB
         # https://github.com/zatosource/zato/issues/35
         #
-        
+
         engine = config_odb.engine
         port = config_odb['port']
 
@@ -216,13 +216,13 @@ class BaseConnector(BrokerMessageReceiver):
             self.odb_config.port = port
             self.odb_config.pool_size = config_odb.pool_size
             self.odb_config.username = config_odb.username
-        
+
         self.odb_config.is_odb = True
-        
+
         self.sql_pool_store = app_context.get_object('sql_pool_store')
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.odb_config
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
-        
+
         self._setup_odb()
 
 # ################################################################################################################################
@@ -239,32 +239,32 @@ def setup_logging():
 def start_connector(repo_location, file_, env_item_name, def_id, item_id):
     """ Starts a new connector process.
     """
-    
-    # Believe it or not but this is the only sane way to make connector subprocesses 
+
+    # Believe it or not but this is the only sane way to make connector subprocesses
     # work as of now (15 XI 2011).
-    
+
     # Subprocesses spawned in a shell need to use
     # the wrapper which sets up the PYTHONPATH instead of the regular Python
     # executable, because the executable may not have all the dependencies required.
-    # Of course, this needs to be squared away before Zato gets into any Linux 
-    # distribution but then the situation will be much simpler as we simply won't 
+    # Of course, this needs to be squared away before Zato gets into any Linux
+    # distribution but then the situation will be much simpler as we simply won't
     # have to patch up anything, the distro will take care of any dependencies.
     executable = get_executable()
-    
+
     if file_[-1] in('c', 'o'): # Need to use the source code file
         file_ = file_[:-1]
-    
+
     program = '{0} {1}'.format(executable, file_)
-    
+
     zato_env = {}
     zato_env['ZATO_REPO_LOCATION'] = repo_location
     if def_id:
         zato_env['ZATO_CONNECTOR_DEF_ID'] = str(def_id)
     zato_env[env_item_name] = str(item_id)
-    
+
     _env = os.environ
     _env.update(zato_env)
-    
+
     Popen(program, close_fds=True, shell=True, env=_env)
 
 # ################################################################################################################################

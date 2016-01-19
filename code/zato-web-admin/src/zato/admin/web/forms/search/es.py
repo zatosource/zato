@@ -24,7 +24,7 @@ class CreateForm(forms.Form):
     hosts = forms.CharField(
         initial=SEARCH.ES.DEFAULTS.HOSTS.value, widget=forms.Textarea(attrs={'style':'width:100%', 'class':'required'}))
     timeout = forms.CharField(initial=DEFAULT_TIMEOUT, widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
-    body_as = forms.CharField(initial=SEARCH.ES.DEFAULTS.BODY_AS.value, 
+    body_as = forms.CharField(initial=SEARCH.ES.DEFAULTS.BODY_AS.value,
         widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
 
 class EditForm(CreateForm):

@@ -325,7 +325,7 @@ COMPLEX_VALUE = (Dict, List, ListOfDicts, Nested)
 
 # ################################################################################################################################
 
-def convert_sio(param, param_name, value, has_simple_io_config, is_xml, bool_parameter_prefixes, int_parameters, 
+def convert_sio(param, param_name, value, has_simple_io_config, is_xml, bool_parameter_prefixes, int_parameters,
                 int_parameter_suffixes, date_time_format=None, data_format=ZATO_NONE, from_sio_to_external=False):
     try:
         if any(param_name.startswith(prefix) for prefix in bool_parameter_prefixes) or isinstance(param, Boolean):
@@ -392,7 +392,7 @@ convert_impl = {
     None: convert_from_dict,
 }
 
-def convert_param(cid, payload, param, data_format, is_required, default_value, path_prefix, use_text, 
+def convert_param(cid, payload, param, data_format, is_required, default_value, path_prefix, use_text,
                   channel_params, has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes,
                   params_priority):
     """ Converts request parameters from any data format supported into Python objects.
@@ -418,7 +418,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
     # Ok, at that point we either don't have anything in channel_params or they don't have priority over payload.
 
     if payload:
-        value = convert_impl[data_format](payload, param_name, cid, is_required, isinstance(param, COMPLEX_VALUE), 
+        value = convert_impl[data_format](payload, param_name, cid, is_required, isinstance(param, COMPLEX_VALUE),
                                           default_value, path_prefix, use_text)
     else:
         value = NOT_GIVEN

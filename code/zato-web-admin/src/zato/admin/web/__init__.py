@@ -74,11 +74,11 @@ def last_hour_start_stop(now):
     return (now + relativedelta(minutes=-60)).isoformat(), now.isoformat()
 
 def from_utc_to_user(dt, user_profile, format='date_time'):
-    """ Converts a datetime object from UTC to a user-selected timezone and datetime format. 
+    """ Converts a datetime object from UTC to a user-selected timezone and datetime format.
     """
     return django_date_filter(
         _from_utc_to_local(dt, user_profile.timezone), getattr(user_profile, '{}_format_py'.format(format)))
-    
+
 def from_user_to_utc(dt, user_profile, format='date_time'):
     """ Converts a datetime object from a user-selected timezone to UTC.
     """
@@ -88,9 +88,9 @@ def from_user_to_utc(dt, user_profile, format='date_time'):
     if user_profile.time_format == '12':
         # Reverse the string, replace the first occurence of . with a : and reverse it back
         dt = dt[::-1].replace('.', ':', 1)[::-1]
-        
+
     if format == 'year':
         dt = '01-01-' + dt
-    
+
     dt_format = getattr(user_profile, '{}_format_py'.format(format))
     return _from_local_to_utc(dt, user_profile.timezone, dt_format.startswith('d')).replace(tzinfo=None)

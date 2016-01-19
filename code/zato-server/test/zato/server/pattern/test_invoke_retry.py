@@ -398,10 +398,10 @@ class InvokeRetryTestCase(TestCase):
             callback_impl_name = 'callback_impl_name_{}'.format(rand_string())
             cid = new_cid()
             expected_result = rand_string()
-    
+
             invoking_service = DummyTargetService(callback, callback_impl_name, cid, expected_result, raise_on_invoke=True)
             ir = InvokeRetry(invoking_service)
-    
+
             kwargs = {
                 'async_fallback': False,
                 'callback': callback,
@@ -410,9 +410,9 @@ class InvokeRetryTestCase(TestCase):
                 'seconds': 0.01,
                 'minutes': 0,
             }
-    
+
             kwargs_copy = deepcopy(kwargs)
-    
+
             try:
                 ir.invoke(target, 1, 2, 3, **kwargs)
             except ZatoException, e:

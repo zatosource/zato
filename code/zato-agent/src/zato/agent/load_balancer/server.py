@@ -52,7 +52,7 @@ class LoadBalancerAgent(SSLServer):
 
         self.repo_dir = os.path.abspath(repo_dir)
         self.json_config = json.loads(open(os.path.join(self.repo_dir, 'lb-agent.conf')).read())
-        
+
         self.work_dir = os.path.abspath(os.path.join(self.repo_dir, self.json_config['work_dir']))
         self.haproxy_command = self.json_config['haproxy_command']
         self.verify_fields = self.json_config['verify_fields']
@@ -60,7 +60,7 @@ class LoadBalancerAgent(SSLServer):
         self.keyfile = os.path.abspath(os.path.join(self.repo_dir, self.json_config['keyfile']))
         self.certfile = os.path.abspath(os.path.join(self.repo_dir, self.json_config['certfile']))
         self.ca_certs = os.path.abspath(os.path.join(self.repo_dir, self.json_config['ca_certs']))
-        
+
         self.pid_path = os.path.abspath(os.path.join(self.repo_dir, '../', '../', self.json_config['pid_file']))
 
         log_config = os.path.abspath(os.path.join(self.repo_dir, self.json_config['log_config']))
@@ -71,7 +71,7 @@ class LoadBalancerAgent(SSLServer):
         self.config = self._read_config()
         self.start_time = datetime.utcnow().replace(tzinfo=UTC).isoformat()
         self.haproxy_stats = HAProxyStats(self.config.global_["stats_socket"])
-        
+
         RepoManager(self.repo_dir).ensure_repo_consistency()
 
         super(LoadBalancerAgent, self).__init__(
@@ -79,16 +79,16 @@ class LoadBalancerAgent(SSLServer):
             port=self.json_config['port'], keyfile=self.keyfile, certfile=self.certfile,
             ca_certs=self.ca_certs, cert_reqs=ssl.CERT_REQUIRED,
             verify_fields=self.verify_fields)
-        
+
     def _popen(self, command, timeout, timeout_msg, rc_non_zero_msg, common_msg=''):
         """ Runs a command in background and returns its return_code, stdout and stderr.
         stdout and stderr will be None if return code = 0
         """
         stdout, stderr = None, None
-        
+
         # Run the command
         p = Popen(command, stdout=PIPE, stderr=PIPE)
-        
+
         # Sleep as long as requested and poll for results
         sleep(timeout)
         p.poll()
@@ -102,7 +102,7 @@ class LoadBalancerAgent(SSLServer):
                 msg = rc_non_zero_msg + common_msg + 'command:[{}], return code:[{}], stdout:[{}], stderr:[{}] '.format(
                     command, p.returncode, stdout, stderr)
                 raise Exception(msg)
-            
+
         return p.returncode
 
     def _re_start_load_balancer(self, timeout_msg, rc_non_zero_msg, additional_params=[]):
@@ -111,7 +111,7 @@ class LoadBalancerAgent(SSLServer):
         command = [self.haproxy_command, '-D', '-f', self.config_path, '-p', self.pid_path]
         command.extend(additional_params)
         self._popen(command, 5.0, timeout_msg, rc_non_zero_msg)
-        
+
     def start_load_balancer(self):
         """ Starts the HAProxy load balancer in background.
         """
@@ -143,7 +143,7 @@ class LoadBalancerAgent(SSLServer):
                 msg = "Registering [{attr}] under public name [{public_name}]"
                 logger.info(msg.format(attr=attr, public_name=public_name))  # TODO: Add logging config
                 self.register_function(attr, public_name)
-                
+
     def _read_config_string(self):
         """ Returns the HAProxy config as a string.
         """
@@ -153,7 +153,7 @@ class LoadBalancerAgent(SSLServer):
         """ Read and parse the HAProxy configuration.
         """
         return config_from_string(self._read_config_string())
-    
+
     def _validate(self, config_string):
         """ Writes the config into a temporary file and validates it using the HAProxy's
         -c check mode.
@@ -163,13 +163,13 @@ class LoadBalancerAgent(SSLServer):
 
                 tf.write(config_string)
                 tf.flush()
-                
+
                 common_msg = 'config_file:[{}]'
                 common_msg = common_msg.format(open(tf.name).read())
-                
+
                 timeout_msg = "HAProxy didn't respond in [{}] seconds. "
                 rc_non_zero_msg = 'Failed to validate the config file using HAProxy. '
-                
+
                 command = [self.haproxy_command, '-c', '-f', tf.name]
                 self._popen(command, HAPROXY_VALIDATE_TIMEOUT, timeout_msg, rc_non_zero_msg, common_msg)
 
@@ -186,9 +186,9 @@ class LoadBalancerAgent(SSLServer):
         f = open(self.config_path, "wb")
         f.write(config_string)
         f.close()
-        
+
         self.config = self._read_config()
-        
+
     def _validate_save_config_string(self, config_string, save):
         """ Given a string representing the HAProxy config file it first validates
         it and then optionally saves it and restarts the load balancer.
@@ -210,14 +210,14 @@ class LoadBalancerAgent(SSLServer):
             if line.startswith('#') or not line.strip():
                 continue
             line = line.split(',')
-            
+
             haproxy_name = line[0]
             haproxy_type_or_name = line[1]
 
             if haproxy_name.startswith('bck') and not haproxy_type_or_name == 'BACKEND':
                 backend_name, state = line[1], line[17]
                 access_type, server_name = backend_name.split('--')
-                
+
                 yield access_type, server_name, state
 
     def _lb_agent_validate_save_source_code(self, source_code, save=False):
@@ -252,7 +252,7 @@ class LoadBalancerAgent(SSLServer):
             'DOWN': {'http_plain':[]},
             'MAINT': {'http_plain':[]},
         }
-        
+
         for access_type, server_name, state in self._show_stat():
             # Don't bail out when future HAProxy versions introduce states
             # we aren't currently aware of.
@@ -262,30 +262,30 @@ class LoadBalancerAgent(SSLServer):
             else:
                 servers_state[state][access_type].append(server_name)
         return servers_state
-    
+
     def _lb_agent_get_server_data_dict(self, name=None):
         """ Returns a dictionary whose keys are server names and values are their
         access types and the server's status as reported by HAProxy.
         """
         backend_config = self.config.backend['bck_http_plain']
         servers = {}
-        
+
         def _dict(access_type, state, server_name):
             return {
                 'access_type':access_type,
                 'state':state,
                 'address': '{}:{}'.format(backend_config[server_name]['address'], backend_config[server_name]['port'])
             }
-        
+
         for access_type, server_name, state in self._show_stat():
             if name:
                 if name == server_name:
                     servers[server_name] = _dict(access_type, state, server_name)
             else:
                 servers[server_name] = _dict(access_type, state, server_name)
-            
+
         return servers
-    
+
     def _lb_agent_rename_server(self, old_name, new_name):
         """ Renames the server, validates and saves the config.
         """
@@ -293,7 +293,7 @@ class LoadBalancerAgent(SSLServer):
             msg = 'Skipped renaming, old_name:[{}] is the same as new_name:[{}]'.format(old_name, new_name)
             self.logger.warn(msg)
             return True
-            
+
         new_config = []
         config_string = self._read_config_string()
         old_servers = Counter()
@@ -302,35 +302,35 @@ class LoadBalancerAgent(SSLServer):
         def _get_lines():
             for line in config_string.splitlines():
                 yield line
-               
+
         old_server = '# ZATO backend bck_http_plain:server--{}'.format(old_name)
         new_server = '# ZATO backend bck_http_plain:server--{}'.format(new_name)
-        
+
         for line in _get_lines():
             if old_server in line:
                 old_servers[old_name] += 1
 
             if new_server in line:
                 new_servers[new_name] += 1
-                
+
         if not old_servers[old_name]:
             raise Exception("old_name:[{}] not found in the load balancer's configuration".format(old_name))
-        
+
         if new_servers[new_name]:
             raise Exception('new_name:[{}] is not unique'.format(new_name))
-        
+
         for line in _get_lines():
             if old_server in line:
                 line = line.replace(old_name, new_name)
             new_config.append(line)
-            
+
         self._validate_save_config_string('\n'.join(new_config), True)
-        
+
         return True
-    
+
     def _lb_agent_add_remove_server(self, action, server_name):
         bck_http_plain = self.config.backend['bck_http_plain']
-        
+
         if action == 'remove':
             del bck_http_plain[server_name]
         elif action == 'add':
@@ -340,7 +340,7 @@ class LoadBalancerAgent(SSLServer):
             bck_http_plain[server_name]['port'] = '123456'
         else:
             raise Exception('Unrecognized action:[{}]'.format(action))
-        
+
         new_config = []
         config_string = self._read_config_string()
 
@@ -359,14 +359,14 @@ class LoadBalancerAgent(SSLServer):
                             'extra':bck_http_plain[server_name]['extra'],
                             'zato_item_token':zato_item_token,
                             'backend_type':'bck_http_plain',
-                            
+
                         }
                         backends.append(backend_template.format(**data_dict))
                 line += ('\n' * 2) + '\n'.join(backends)
             new_config.append(line.rstrip())
-            
+
         self._validate_save_config_string('\n'.join(new_config), True)
-        
+
         return True
 
     def _lb_agent_execute_command(self, command, timeout, extra=""):
@@ -407,7 +407,7 @@ class LoadBalancerAgent(SSLServer):
         by Zato.
         """
         return self.config
-    
+
     def _lb_agent_get_config_source_code(self):
         """ Return the HAProxy configuration file's source.
         """

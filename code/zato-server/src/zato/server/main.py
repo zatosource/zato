@@ -95,7 +95,7 @@ class ZatoGunicornApplication(Application):
             self.cfg.set('do_handshake_on_connect', True)
 
         self.zato_wsgi_app.has_gevent = 'gevent' in self.cfg.settings['worker_class'].value
-        
+
     def load(self):
         return self.zato_wsgi_app.on_wsgi_request
 

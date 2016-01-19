@@ -21,7 +21,7 @@ from dateutil.parser import parse
 # gevent
 from gevent import sleep, spawn
 
-# Zato 
+# Zato
 from zato.common import CHANNEL, DATA_FORMAT, ENSURE_SINGLETON_JOB, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG, SERVICE
 from zato.common.scheduler import Interval, Job, Scheduler as _Scheduler
@@ -65,7 +65,7 @@ class Scheduler(object):
         msg = {
             'action': SCHEDULER_MSG.JOB_EXECUTED.value,
             'name':name,
-            'service': ctx['cb_kwargs']['service'], 
+            'service': ctx['cb_kwargs']['service'],
             'payload':ctx['cb_kwargs']['extra'],
             'cid':ctx['cid'],
             'job_type': ctx['type']
@@ -156,7 +156,7 @@ class Scheduler(object):
         self.create_edit_one_time(job_data, broker_msg_type, **kwargs)
 
     def edit_one_time(self, job_data, broker_msg_type, **kwargs):
-        """ First unschedules a one-time job and then schedules its execution. 
+        """ First unschedules a one-time job and then schedules its execution.
         The operations aren't parts of an atomic transaction.
         """
         self.create_edit_one_time(job_data, broker_msg_type, False, **kwargs)
@@ -183,7 +183,7 @@ class Scheduler(object):
         self.create_edit_interval_based(job_data, broker_msg_type, **kwargs)
 
     def edit_interval_based(self, job_data, broker_msg_type, **kwargs):
-        """ First unschedules an interval-based job and then schedules its execution. 
+        """ First unschedules an interval-based job and then schedules its execution.
         The operations aren't parts of an atomic transaction.
         """
         self.create_edit_interval_based(job_data, broker_msg_type, False, **kwargs)
@@ -203,7 +203,7 @@ class Scheduler(object):
         self.create_edit_cron_style(job_data, broker_msg_type, **kwargs)
 
     def edit_cron_style(self, job_data, broker_msg_type, **kwargs):
-        """ First unschedules a cron-style job and then schedules its execution. 
+        """ First unschedules a cron-style job and then schedules its execution.
         The operations aren't parts of an atomic transaction.
         """
         self.create_edit_cron_style(job_data, broker_msg_type, False, **kwargs)

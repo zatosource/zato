@@ -112,7 +112,7 @@ class _CreateEdit(AdminService):
                 self.logger.error(msg, self.source_service_type, format_exc(e))
                 session.rollback()
 
-                raise 
+                raise
 
 # ################################################################################################################################
 
@@ -168,7 +168,7 @@ class Delete(AdminService):
 
                 msg = {'action': NOTIF.CLOUD_OPENSTACK_SWIFT_DELETE.value, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg)
-                
+
             except Exception, e:
                 session.rollback()
                 msg = 'Could not delete the OpenStack Swift notification definition, e:[{e}]'.format(e=format_exc(e))

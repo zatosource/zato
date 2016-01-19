@@ -29,7 +29,7 @@ class _SQLService(object):
         """
         params['action'] = action
         self.broker_client.publish(params)
-        
+
     def validate_extra(self, cid, extra):
         if extra and not b'=' in extra:
             raise ZatoException(cid, 'extra should be a list of key=value parameters, possibly one-element long, instead of [{}]'.format(extra.decode('utf-8')))
@@ -43,7 +43,7 @@ class GetList(AdminService):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', Integer('pool_size'))
         output_optional = ('extra',)
-        
+
     def get_data(self, session):
         return out_sql_list(session, self.request.input.cluster_id, False)
 
@@ -65,9 +65,9 @@ class Create(AdminService, _SQLService):
         input = self.request.input
         input.password = uuid4().hex
         input.extra = input.extra.encode('utf-8') if input.extra else b''
-        
+
         self.validate_extra(self.cid, input.extra.decode('utf-8'))
-        
+
         with closing(self.odb.session()) as session:
             existing_one = session.query(SQLConnectionPool.id).\
                 filter(SQLConnectionPool.cluster_id==input.cluster_id).\
@@ -93,9 +93,9 @@ class Create(AdminService, _SQLService):
 
                 session.add(item)
                 session.commit()
-                
+
                 self.notify_worker_threads(input)
-                
+
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
@@ -105,7 +105,7 @@ class Create(AdminService, _SQLService):
                 session.rollback()
 
                 raise
-            
+
 class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
@@ -119,9 +119,9 @@ class Edit(AdminService, _SQLService):
     def handle(self):
         input = self.request.input
         input.extra = input.extra.encode('utf-8') if input.extra else ''
-        
+
         self.validate_extra(self.cid, input.extra)
-        
+
         with closing(self.odb.session()) as session:
             existing_one = session.query(SQLConnectionPool.id).\
                 filter(SQLConnectionPool.cluster_id==input.cluster_id).\
@@ -162,7 +162,7 @@ class Edit(AdminService, _SQLService):
                 session.rollback()
 
                 raise
-            
+
 class Delete(AdminService, _SQLService):
     """ Deletes an outgoing SQL connection.
     """
@@ -181,7 +181,7 @@ class Delete(AdminService, _SQLService):
 
                 session.delete(item)
                 session.commit()
-                
+
                 self.notify_worker_threads({'name':old_name}, OUTGOING.SQL_DELETE.value)
 
             except Exception, e:
@@ -198,13 +198,13 @@ class ChangePassword(ChangePasswordBase):
     class SimpleIO(ChangePasswordBase.SimpleIO):
         request_elem = 'zato_outgoing_sql_change_password_request'
         response_elem = 'zato_outgoing_sql_change_password_response'
-    
+
     def handle(self):
         def _auth(instance, password):
             instance.password = password
 
         self._handle(SQLConnectionPool, _auth, OUTGOING.SQL_CHANGE_PASSWORD.value)
-            
+
 class Ping(AdminService):
     """ Pings an SQL database
     """

@@ -109,12 +109,12 @@ def index(req):
         log_msg = "Redirecting to / because at least one of ('connection', 'transport') GET parameters was missing"
         logger.debug(log_msg)
         return HttpResponseRedirect('/')
-    
+
     create_form = None
     edit_form = None
 
     colspan = 17
-    
+
     if transport == 'soap':
         colspan += 2
 
@@ -246,7 +246,7 @@ def details(req, **kwargs):
 
     return_data['pattern_list'] = '\n'.join(pattern_list)
     return_data['replace_patterns_form'] = ReplacePatternsForm(initial=return_data)
-    
+
     return TemplateResponse(req, 'zato/http_soap/details.html', return_data)
 
 @method_allowed('POST')
@@ -269,7 +269,7 @@ def audit_set_config(req, **kwargs):
     try:
         args = {
             'id':kwargs['id'],
-            'pattern_list': req.POST['pattern_list'].splitlines(), 
+            'pattern_list': req.POST['pattern_list'].splitlines(),
             'audit_repl_patt_type': req.POST['audit_repl_patt_type'],
             'audit_max_payload': req.POST['audit_max_payload'],
         }
@@ -284,7 +284,7 @@ def audit_set_config(req, **kwargs):
             response = req.zato.client.invoke(service_name, request)
             if not response.ok:
                 raise Exception(response.details)
-        
+
         return HttpResponse('OK')
     except Exception, e:
         msg = format_exc(e)
@@ -304,7 +304,7 @@ def audit_log(req, **kwargs):
             out[key] = value
 
     out['form'] = AuditLogEntryList(initial=out)
-    
+
     request = {
         'conn_id': out['conn_id'],
         'start': out.get('start', ''),
@@ -315,16 +315,16 @@ def audit_log(req, **kwargs):
     }
 
     out['items'] = []
-    
+
     response = req.zato.client.invoke('zato.http-soap.get-audit-item-list', request)
     if response.ok:
         for item in response.data:
             item.req_time = from_utc_to_user(item.req_time_utc+'+00:00', req.zato.user_profile)
             item.resp_time = from_utc_to_user(item.resp_time_utc+'+00:00', req.zato.user_profile) if item.resp_time_utc else '(None)'
             out['items'].append(item)
-        
+
     out.update(**req.zato.client.invoke('zato.http-soap.get-audit-batch-info', request).data)
-    
+
     return TemplateResponse(req, 'zato/http_soap/audit/log.html', out)
 
 @method_allowed('GET')

@@ -28,7 +28,7 @@ class Create(ZatoCommand):
     def execute(self, args, show_output=True):
         engine = self._get_engine(args)
         session = self._get_session(engine)
-        
+
         if engine.dialect.has_table(engine.connect(), 'install_state'):
             if show_output:
                 version = session.query(ZatoInstallState.version).one().version
@@ -37,7 +37,7 @@ class Create(ZatoCommand):
                     "Use the 'zato delete odb' command first if you'd like to start afresh and " +
                     'recreate all ODB objects.').format(version)
                 self.logger.error(msg)
-            
+
             return self.SYS_ERROR.ODB_EXISTS
 
         else:

@@ -22,7 +22,7 @@ class CreateForm(forms.Form):
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        
+
         self.fields['socket_type'].choices = []
         for name in sorted(ZMQ_OUTGOING_TYPES):
             self.fields['socket_type'].choices.append([name, name])

@@ -487,7 +487,7 @@ def _http_soap(session, cluster_id):
         case([(HTTPSOAP.url_params_pri != None, HTTPSOAP.url_params_pri)], else_=URL_PARAMS_PRIORITY.DEFAULT).label('url_params_pri'),
         case([(HTTPSOAP.params_pri != None, HTTPSOAP.params_pri)], else_=PARAMS_PRIORITY.DEFAULT).label('params_pri'),
         case([(
-            HTTPSOAP.serialization_type != None, HTTPSOAP.serialization_type)], 
+            HTTPSOAP.serialization_type != None, HTTPSOAP.serialization_type)],
              else_=HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id).label('serialization_type'),
         HTTPSOAP.audit_enabled,
         HTTPSOAP.audit_back_log,
@@ -766,7 +766,7 @@ def _http_soap_audit(session, cluster_id, conn_id=None, start=None, stop=None, q
         ])
 
     q = session.query(*columns)
-    
+
     if query:
         query = '%{}%'.format(query)
         q = q.filter(

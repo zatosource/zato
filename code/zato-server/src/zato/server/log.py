@@ -31,6 +31,6 @@ class ZatoLogger(Logger):
     info = wrapper('info')
     warning = wrapper('warning')
     error = wrapper('error')
-    
+
     # Alias
     warn = warning

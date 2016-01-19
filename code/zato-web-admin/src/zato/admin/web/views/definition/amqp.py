@@ -26,12 +26,12 @@ class Index(_Index):
     template = 'zato/definition/amqp.html'
     service_name = 'zato.definition.amqp.get-list'
     output_class = ConnDefAMQP
-    
+
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
         output_repeated = True
-    
+
     def handle(self):
         return {
             'create_form': CreateForm(),
@@ -45,7 +45,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
         output_required = ('id',)
-        
+
     def success_message(self, item):
         return 'Successfully {0} the AMQP definition [{1}]'.format(self.verb, item.name)
 

@@ -24,7 +24,7 @@ class BasePickupEventProcessor(ApplicationContextAware):
         self.pickup_dir = pickup_dir
         self.server = server
         super(BasePickupEventProcessor, self).__init__(*args, **kwargs)
-        
+
     def _should_process(self, event_name):
         """ Returns True if the file name's is either a Python source code file
         we can handle or an archive that can be uncompressed.
@@ -36,7 +36,7 @@ class BasePickupEventProcessor(ApplicationContextAware):
             self.server.parallel_server, file_name,
             os.path.abspath(os.path.join(self.pickup_dir, file_name)),
             self.server.parallel_server.hot_deploy_config.delete_after_pick_up)
-    
+
 class BasePickup(object):
     def stop(self):
         logger.debug('Stopping the notifier')

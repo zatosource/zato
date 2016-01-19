@@ -568,7 +568,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         keys = self.kvdb.keys('{}*'.format(self.key_prefix))
         eq_(len(keys), 8)
 
-        expected_keys = [ps.MSG_VALUES_KEY, ps.MSG_EXPIRE_AT_KEY, ps.UNACK_COUNTER_KEY, 
+        expected_keys = [ps.MSG_VALUES_KEY, ps.MSG_EXPIRE_AT_KEY, ps.UNACK_COUNTER_KEY,
                          ps.CONSUMER_MSG_IDS_PREFIX.format(sub_key_crm)]
         for key in expected_keys:
             self.assertTrue(key in keys, 'Key not found `{}` in `{}`'.format(key, keys))

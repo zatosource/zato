@@ -76,7 +76,7 @@ class Create(AdminService):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise 
+                raise
             else:
                 input.action = PUB_SUB_PRODUCER.CREATE.value
                 input.name = producer.sec_def.name
@@ -144,7 +144,7 @@ class Edit(AdminService):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise 
+                raise
             else:
                 msg = Bunch()
                 msg.action = PUB_SUB_PRODUCER.EDIT.value

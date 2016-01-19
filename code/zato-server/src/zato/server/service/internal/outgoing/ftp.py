@@ -37,7 +37,7 @@ class GetList(AdminService):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'host', 'port')
         output_optional = ('user', 'acct', 'timeout', Boolean('dircache'))
-        
+
     def get_data(self, session):
         return out_ftp_list(session, self.request.input.cluster_id, False)
 
@@ -57,7 +57,7 @@ class Create(_FTPService):
 
     def handle(self):
         input = self.request.input
-        
+
         with closing(self.odb.session()) as session:
             existing_one = session.query(OutgoingFTP.id).\
                 filter(OutgoingFTP.cluster_id==input.cluster_id).\
@@ -165,7 +165,7 @@ class Delete(_FTPService):
 
                 session.delete(item)
                 session.commit()
-                
+
                 self.notify_worker_threads({'name':old_name}, OUTGOING.FTP_DELETE.value)
 
             except Exception, e:
@@ -181,9 +181,9 @@ class ChangePassword(ChangePasswordBase):
     class SimpleIO(ChangePasswordBase.SimpleIO):
         request_elem = 'zato_outgoing_ftp_change_password_request'
         response_elem = 'zato_outgoing_ftp_change_password_response'
-    
+
     def handle(self):
         def _auth(instance, password):
             instance.password = password
-            
+
         self._handle(OutgoingFTP, _auth, OUTGOING.FTP_CHANGE_PASSWORD.value)

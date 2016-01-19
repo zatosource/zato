@@ -40,7 +40,7 @@ class Index(_Index):
     template = 'zato/kvdb/data_dict/translation/index.html'
     service_name = 'zato.kvdb.data-dict.translation.get-list'
     output_class = DictItem
-    
+
     class SimpleIO(_Index.SimpleIO):
         output_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2')
         output_repeated = True
@@ -54,11 +54,11 @@ class Index(_Index):
 
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
-    
+
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('system1', 'key1', 'value1', 'system2', 'key2', 'value2')
         output_required = ('id',)
-        
+
     def success_message(self, item):
         return 'Successfully {} the translation between system1:[{}], key1:[{}], value1:[{}] and system2:[{}], key2:[{}], value2:[{}]'.format(
             self.verb, self.input_dict['system1'], self.input_dict['key1'], self.input_dict['value1'],
@@ -82,7 +82,7 @@ def _get_key_value_list(req, service_name, input_dict):
     return_data = []
     for item in req.zato.client.invoke(service_name, input_dict):
         return_data.append({'name':item.name})
-    
+
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 @method_allowed('GET')
@@ -95,9 +95,9 @@ def get_value_list(req):
 
 @method_allowed('GET', 'POST')
 def translate(req):
-    
+
     result_names = ('system1', 'key1', 'value1', 'system2', 'key2')
-    
+
     post_data = {}
     for name in result_names:
         post_data[name] = req.POST.get(name, '')
@@ -105,20 +105,20 @@ def translate(req):
     def _translate():
         result = {}
         response = req.zato.client.invoke('zato.kvdb.data-dict.translation.translate', post_data)
-        
+
         if response.has_data:
             for name in('value2', 'repr', 'hex', 'sha1', 'sha256'):
                 value = getattr(response.data, name, None)
                 if value and value != ZATO_NONE:
                     result[name] = value
-        
+
         return result
 
     if req.zato.get('cluster'):
         translate_form = TranslateForm(_get_systems(req.zato.client), req.POST)
     else:
         translate_form = None
-        
+
     return_data = {
         'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,

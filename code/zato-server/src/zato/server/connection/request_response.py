@@ -19,10 +19,10 @@ def should_store(kvdb, service_usage, service_name):
     """
     key = '{}{}'.format(KVDB.REQ_RESP_SAMPLE, service_name)
     freq = int(kvdb.conn.hget(key, 'freq') or 0)
-    
+
     if freq and service_usage % freq == 0:
         return key, freq
-    
+
     return None, None
 
 def store(kvdb, key, usage, freq, **data):
@@ -31,5 +31,5 @@ def store(kvdb, key, usage, freq, **data):
     if logger.isEnabledFor(TRACE1):
         msg = 'key:[{}], usage:[{}], freq:[{}], data:[{}]'.format(key, usage, freq, data)
         logger.log(TRACE1, msg)
-        
+
     kvdb.conn.hmset(key, data)

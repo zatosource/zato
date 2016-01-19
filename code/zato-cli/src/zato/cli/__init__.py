@@ -261,7 +261,7 @@ def run_command(args):
     )
     for k, v in command_imports:
         command_class[k] = importString(v)
-        
+
     command_class[args.command](args).run(args)
 
 ################################################################################
@@ -279,7 +279,7 @@ class ZatoCommand(object):
     target_dir = None
     show_output = True
     opts = []
-    
+
     class SYS_ERROR(object):
         """ All non-zero sys.exit return codes the commands may use.
         """
@@ -300,13 +300,13 @@ class ZatoCommand(object):
         INVALID_INPUT = 15
         EXCEPTION_CAUGHT = 16
         CANNOT_MIGRATE = 17
-        
+
     class COMPONENTS(object):
         class _ComponentName(object):
             def __init__(self, code, name):
                 self.code = code
                 self.name = name
-    
+
         CA = _ComponentName('CA', 'Certificate authority')
         LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
         SERVER = _ComponentName('SERVER', 'Server')
@@ -318,32 +318,32 @@ class ZatoCommand(object):
         self.show_output = False if 'ZATO_CLI_DONT_SHOW_OUTPUT' in os.environ else True
         self.verbose = args.verbose
         self.reset_logger(args)
-            
+
         if args.store_config:
             self.store_config(args)
-        
+
         self.engine = None
-        
+
     def reset_logger(self, args, reload_=False):
         if reload_:
             logging.shutdown() # noqa
             reload(logging) # noqa
-        
+
         self.logger = logging.getLogger(self.__class__.__name__) # noqa
         self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO) # noqa
         self.logger.handlers[:] = []
-        
+
         console_handler = logging.StreamHandler(sys.stdout) # noqa
         console_formatter = logging.Formatter('%(message)s') # noqa
         console_handler.setFormatter(console_formatter)
         self.logger.addHandler(console_handler)
-        
+
         if args.store_log:
             verbose_handler = logging.FileHandler('zato.{}.log'.format(util.fs_safe_now())) # noqa
             verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s') # noqa
             verbose_handler.setFormatter(verbose_formatter)
             self.logger.addHandler(verbose_handler)
-        
+
     def _get_secret(self, template, needs_confirm, allow_empty, secret_name='password'):
         """ Runs an infinite loop until a user enters the secret. User needs
         to confirm the secret if 'needs_confirm' is True. New line characters
@@ -376,7 +376,7 @@ class ZatoCommand(object):
 
     def _get_user_host(self):
         return getuser() + '@' + gethostname()
-    
+
     def store_initial_info(self, target_dir, component):
         info = {'version': common.version, # noqa
                 'created_user_host': self._get_user_host(),
@@ -391,7 +391,7 @@ class ZatoCommand(object):
         now = util.fs_safe_now() # noqa
         file_name = 'zato.{}.config'.format(now)
         file_args = StringIO()
-        
+
         for arg, value in args._get_kwargs():
             if value:
                 file_args.write('{}={}\n'.format(arg, value))
@@ -504,13 +504,13 @@ class ZatoCommand(object):
             arg_name = '{}_path'.format(name.replace('-', '_'))
             full_path = os.path.join(repo_dir, 'zato-{}-{}.pem'.format(middle_part, name))
             shutil.copyfile(os.path.abspath(getattr(args, arg_name)), full_path)
-        
+
     def copy_lb_crypto(self, repo_dir, args):
         self._copy_lb_server_crypto(repo_dir, args, 'lba')
-            
+
     def copy_server_crypto(self, repo_dir, args):
         self._copy_lb_server_crypto(repo_dir, args, 'server')
-            
+
     def copy_web_admin_crypto(self, repo_dir, args):
         for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'), ('ca_certs_path', 'ca-certs')):
             file_name = os.path.join(repo_dir, 'web-admin-{}.pem'.format(name))
@@ -562,7 +562,7 @@ class CACreateCommand(ZatoCommand):
     def _execute(self, args, extension, show_output=True):
         now = self._get_now()
         openssl_template = open(os.path.join(self.target_dir, 'ca-material/openssl-template.conf')).read()
-        
+
         ou_attrs = ('organizational_unit', 'organizational-unit')
         template_args = {}
         for name in('organization', 'locality', 'state_or_province', 'country'):
@@ -580,7 +580,7 @@ class CACreateCommand(ZatoCommand):
                 template_args['organizational_unit'] = self.get_organizational_unit(args)
             else:
                 template_args['organizational_unit'] = ca_defaults['organizational_unit']
-            
+
         template_args['common_name'] = self._get_arg(args, 'common_name', default_common_name)
         template_args['target_dir'] = self.target_dir
 
@@ -681,10 +681,10 @@ class ManageCommand(ZatoCommand):
         }
 
     command_files = set([ZATO_INFO_FILE])
-    
+
     def _on_lb(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Should be implemented by subclasses')
-    
+
     _on_web_admin = _on_server = _on_lb
 
     def execute(self, args):

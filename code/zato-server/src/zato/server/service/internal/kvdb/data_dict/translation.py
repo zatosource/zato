@@ -34,13 +34,13 @@ class GetList(DataDictService):
         request_elem = 'zato_kvdb_data_dict_translation_get_list_request'
         response_elem = 'zato_kvdb_data_dict_translation_get_list_response'
         output_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2', 'id1', 'id2')
-        
+
     def get_data(self):
         return multikeysort(self._get_translations(), ['system1', 'key1', 'value1', 'system2', 'key2', 'value2'])
 
     def handle(self):
         self.response.payload[:] = self.get_data()
-        
+
 class _CreateEdit(DataDictService):
     """ A base class for both Create and Edit actions.
     """
@@ -57,7 +57,7 @@ class _CreateEdit(DataDictService):
             # No ID means it's a Create so it's a genuine match of an existing mapping
             if not id:
                 _exception()
-            
+
             # We've got an ID so it's an Edit and we need ignore it if we're
             # editing ourself.
             existing_id = self.server.kvdb.conn.hget(name, 'id')
@@ -65,18 +65,18 @@ class _CreateEdit(DataDictService):
                 _exception()
 
         return True
-        
+
     def _get_item_ids(self):
         """ Returns IDs of the dictionary entries used in the translation.
         """
         item_ids = {'id1':None, 'id2':None}
-        
+
         for idx in('1', '2'):
             system = self.request.input.get('system' + idx)
             key = self.request.input.get('key' + idx)
             value = self.request.input.get('value' + idx)
             item_ids['id' + idx] = self._get_dict_item_id(system, key, value)
-         
+
         # This is a sanity check, in theory the input data can't possibly be outside
         # of what's in the KVDB.DICTIONARY_ITEM key
         for idx in('1', '2'):
@@ -85,30 +85,30 @@ class _CreateEdit(DataDictService):
                     self.request.input.get('system' + idx), self.request.input.get('key' + idx),
                     self.request.input.get('value' + idx))
                 raise ZatoException(self.cid, msg)
-            
+
         return item_ids
-    
+
     def handle(self):
         system1 = self.request.input.system1
         key1 = self.request.input.key1
         value1 = self.request.input.value1
         system2 = self.request.input.system2
         key2 = self.request.input.key2
-        
+
         item_ids = self._get_item_ids()
         hash_name = self._name(system1, key1, value1, system2, key2)
-        
+
         if self._validate_name(hash_name, system1, key1, value1, system2, key2, self.request.input.get('id')):
             self.response.payload.id = self._handle(hash_name, item_ids)
-            
+
     def _handle(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented by a subclass')
-    
+
     def _set_hash_fields(self, hash_name, item_ids):
         self.server.kvdb.conn.hset(hash_name, 'id1', item_ids['id1'])
         self.server.kvdb.conn.hset(hash_name, 'id2', item_ids['id2'])
         self.server.kvdb.conn.hset(hash_name, 'value2', self.request.input.value2)
-            
+
 class Create(_CreateEdit):
     """ Creates a translation between dictionary entries.
     """
@@ -117,13 +117,13 @@ class Create(_CreateEdit):
         response_elem = 'zato_kvdb_data_dict_translation_create_response'
         input_required = ('system1', 'key1', 'value1', 'system2', 'key2', 'value2')
         output_required = ('id',)
-        
+
     def _handle(self, hash_name, item_ids):
         id = self.server.kvdb.conn.incr(KVDB.TRANSLATION_ID)
         self.server.kvdb.conn.hset(hash_name, 'id', id)
         self._set_hash_fields(hash_name, item_ids)
         return id
-    
+
 class Edit(_CreateEdit):
     """ Updates a translation between dictionary entries.
     """
@@ -132,7 +132,7 @@ class Edit(_CreateEdit):
         response_elem = 'zato_kvdb_data_dict_translation_edit_response'
         input_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2')
         output_required = ('id',)
-        
+
     def _handle(self, hash_name, item_ids):
         for item in self._get_translations():
             if item['id'] == str(self.request.input.id):
@@ -151,7 +151,7 @@ class Delete(_DeletingService):
         request_elem = 'zato_kvdb_data_dict_translation_delete_request'
         response_elem = 'zato_kvdb_data_dict_translation_delete_response'
         input_required = ('id',)
-        
+
     def handle(self):
         self.delete(self.request.input.id)
 
@@ -161,11 +161,11 @@ class Translate(AdminService):
         response_elem = 'zato_kvdb_data_dict_translation_translate_response'
         input_required = ('system1', 'key1', 'value1', 'system2', 'key2')
         output_optional = ('value2', 'repr', 'hex', 'sha1', 'sha256')
-        
+
     def handle(self):
-        result = self.translate(self.request.input.system1, self.request.input.key1, self.request.input.value1, 
+        result = self.translate(self.request.input.system1, self.request.input.key1, self.request.input.value1,
             self.request.input.system2, self.request.input.key2)
-        
+
         if result:
             self.response.payload.value2 = result.decode('utf-8')
             self.response.payload.repr = repr(result)
@@ -181,6 +181,6 @@ class GetLastID(AdminService):
         request_elem = 'zato_kvdb_data_dict_translation_get_last_id_request'
         response_elem = 'zato_kvdb_data_dict_translation_get_last_id_response'
         output_optional = (Int('value'),)
-        
+
     def handle(self):
         self.response.payload.value = self.server.kvdb.conn.get(KVDB.TRANSLATION_ID)

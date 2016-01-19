@@ -21,7 +21,7 @@ class Index(_Index):
     template = 'zato/kvdb/data_dict/dictionary.html'
     service_name = 'zato.kvdb.data-dict.dictionary.get-list'
     output_class = DictItem
-    
+
     class SimpleIO(_Index.SimpleIO):
         output_required = ('id', 'system', 'key', 'value')
         output_repeated = True
@@ -38,7 +38,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('system', 'key', 'value')
         output_required = ('id',)
-        
+
     def success_message(self, item):
         return 'Successfully {} the dictionary entry system:[{}], key:[{}], value:[{}]'.format(
             self.verb, self.input_dict['system'], self.input_dict['key'], self.input_dict['value'])

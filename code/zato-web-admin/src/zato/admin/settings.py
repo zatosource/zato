@@ -119,7 +119,7 @@ if 'DATABASES' in globals():
 
     db_data = DATABASES['default']
     db_data['ENGINE'] = 'django.db.backends.' + django_sqlalchemy_engine[db_type]
-    
+
     for name in('ENGINE', 'NAME', 'USER', 'PASSWORD', 'HOST', 'PORT'):
         globals()['DATABASE_{}'.format(name)] = DATABASES['default'][name]
 
@@ -134,7 +134,7 @@ if 'DATABASES' in globals():
     SASession = scoped_session(sessionmaker())
     engine = create_engine(get_engine_url(db_data), **{'pool_recycle':600} if db_data['db_type'] == 'mysql' else {})
     SASession.configure(bind=engine)
-    
+
     TEMPLATE_DEBUG = True
 else:
     ADMIN_INVOKE_NAME = 'dummy'
@@ -142,13 +142,13 @@ else:
     DATABASES = {}
     DATABASES['default'] = {}
     DATABASES['default']['ENGINE'] = 'django.db.backends.sqlite3'
-    
+
     ssl_key_file = 'dummy'
     ssl_cert_file = 'dummy'
     ssl_ca_certs = 'dummy'
-    
+
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
-    
+
     DATABASE_ENGINE = DATABASES['default']['ENGINE']
     DATABASE_NAME = 'dummy'
     DATABASE_USER = 'dummy'

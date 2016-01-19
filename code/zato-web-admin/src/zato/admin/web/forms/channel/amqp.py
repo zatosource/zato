@@ -28,7 +28,7 @@ class CreateForm(DataFormatForm):
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         self.fields['def_id'].choices = []
-            
+
     def set_def_id(self, def_ids):
         # Sort AMQP definitions by their names.
         def_ids = sorted(def_ids.iteritems(), key=itemgetter(1))

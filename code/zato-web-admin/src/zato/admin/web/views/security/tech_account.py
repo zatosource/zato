@@ -22,12 +22,12 @@ from zato.admin.web.views import change_password as _change_password, CreateEdit
 from zato.common.odb.model import TechnicalAccount
 
 logger = logging.getLogger(__name__)
-    
+
 @method_allowed('POST')
 def change_password(req):
     return _change_password(req, 'zato.security.tech-account.change-password')
-    
-    
+
+
 @method_allowed('GET')
 def get_by_id(req, id_, cluster_id):
     try:
@@ -43,15 +43,15 @@ def get_by_id(req, id_, cluster_id):
         tech_account.is_active = response.data.is_active
 
         return HttpResponse(tech_account.to_json(), mimetype='application/javascript')
-    
+
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'security-tech-account'
     template = 'zato/security/tech-account.html'
-    
+
     service_name = 'zato.security.tech-account.get-list'
     output_class = TechnicalAccount
-    
+
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active')
@@ -70,7 +70,7 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active')
         output_required = ('id', 'name')
-        
+
     def success_message(self, item):
         return 'Successfully {0} the technical account [{1}]'.format(self.verb, item.name)
 
