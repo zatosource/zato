@@ -123,7 +123,7 @@ class SIOLiveTestCase(LiveTestCase):
             client = self.set_up_client_and_channel(service_name, 'xml', transport)
             response = self.invoke_xml(client, request_wrapper.format(request).encode('utf-8'))
 
-            for name in('should_as_is', 'is_boolean', 'should_boolean', 'csv1', 'float', 'integer', 'integer2',\
+            for name in('should_as_is', 'is_boolean', 'should_boolean', 'csv1', 'float', 'integer', 'integer2',
                         'unicode1', 'unicode2', 'utc'):
 
                 expected = test_data[name]
@@ -202,4 +202,3 @@ class SIOLiveTestCase(LiveTestCase):
             eq_(sorted(actual_items.items()), expected)
 
 # ################################################################################################################################
-

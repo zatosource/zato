@@ -88,7 +88,7 @@ class ParallelServerTestCase(TestCase):
 
         startup_services_any_worker = Bunch()
         for x in range(10):
-            name =  rand_string()
+            name = rand_string()
             payload = rand_string()
             startup_services_any_worker[name] = payload
 
@@ -117,7 +117,7 @@ class AuditTestCase(TestCase):
                 for use_x_remote_addr in(True, False):
 
                     expected_auth_ok = True if expected_status_code == httplib.OK else False
-                    expected_invoke_ok  = True if expected_auth_ok is True else False
+                    expected_invoke_ok = True if expected_auth_ok is True else False
 
                     expected_cid = new_cid()
                     expected_url_scheme = rand_string()

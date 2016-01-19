@@ -761,7 +761,6 @@ class IsAllowedTestCase(TestCase):
         # Denied explicitly
         self.assertFalse(rbac.is_role_allowed(role_id2, perm_id2, res_name2))
 
-
     def test_is_role_allowed_parent_hierarchy(self):
 
         role_id1, role_id2 = 1, 2
