@@ -47,11 +47,11 @@ engine_friendly_name = {
     'mysql+pymysql': 'MySQL',
 
     # These are not supported /yet/.
-    #'mssql': 'MS SQL Server',
-    #'access': 'MS Access',
-    #'firebird': 'Firebird',
-    #'db2': 'DB2',
-    #'informix':'Informix'
+    # 'mssql': 'MS SQL Server',
+    # 'access': 'MS Access',
+    # 'firebird': 'Firebird',
+    # 'db2': 'DB2',
+    # 'informix':'Informix'
 }
 
 odb_engine_friendly_name = {

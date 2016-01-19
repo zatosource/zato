@@ -20,7 +20,7 @@ class CreateForm(forms.Form):
     username = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:90%'}))
     sig_method = forms.ChoiceField(widget=forms.Select())    
     max_nonce_log = forms.IntegerField(initial=NONCE_STORE.DEFAULT_MAX_LOG,
-        widget=forms.TextInput( attrs={'class':'required validate-digits', 'style':'width:20%'}))
+        widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:20%'}))
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)

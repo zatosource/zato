@@ -12,7 +12,7 @@ from django import template
 
 register = template.Library()
 
-# Taken from http://djangosnippets.org/snippets/38/ and slightly updated
+# Taken from https://djangosnippets.org/snippets/38/ and slightly updated
 
 @register.filter
 def bunchget(obj, args):
@@ -35,7 +35,7 @@ def bunchget(obj, args):
     
     return default
 
-# Taken from http://stackoverflow.com/a/16609498
+# Taken from https://stackoverflow.com/a/16609498
 
 @register.simple_tag
 def url_replace(request, field, value):
