@@ -631,7 +631,7 @@ class Service(object):
             if self.processing_time > self.slow_threshold:
 
                 # TODO: Don't parse it here and a moment earlier above
-                resp = (self.response.payload.getvalue() if hasattr(self.response.payload, 'getvalue') \
+                resp = (self.response.payload.getvalue() if hasattr(self.response.payload, 'getvalue')
                         else self.response.payload) or ''
 
                 data = {

@@ -89,7 +89,7 @@ class ConnectionQueue(object):
                         self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.conn_name, now - start,
                         self.queue_build_cap)
 
-                    if  now >= build_until:
+                    if now >= build_until:
 
                         self.logger.warn('Built %s/%s %s clients to `%s` within %s seconds, sleeping until %s',
                             self.queue.qsize(), self.queue.maxsize, self.conn_type, self.address, self.queue_build_cap, build_until)

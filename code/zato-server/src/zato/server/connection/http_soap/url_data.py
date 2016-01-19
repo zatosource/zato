@@ -998,7 +998,7 @@ class URLData(OAuthDataStore):
         payload = dumps({
             'cid': cid,
             'invoke_ok': wsgi_environ['zato.http.response.status'][0] not in ('4', '5'),
-            'auth_ok':  wsgi_environ['zato.http.response.status'][0] != '4',
+            'auth_ok': wsgi_environ['zato.http.response.status'][0] != '4',
             'resp_time': datetime.utcnow().isoformat(),
             'resp_headers': self._dump_wsgi_environ(wsgi_environ),
             'resp_payload': response,
@@ -1065,7 +1065,6 @@ class URLData(OAuthDataStore):
                 yield item.id, pattern_list
 
 # ################################################################################################################################
-
 
     def on_broker_msg_SECURITY_TLS_CA_CERT_CREATE(self, msg):
         # Ignored, does nothing.
