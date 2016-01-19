@@ -81,7 +81,7 @@ class IntervalTestCase(TestCase):
             (0, 48, 0, 17, 172817.0),
             (0, 0, 192, 17, 11537.0),
             (0, 0, 7, 0, 420.0),
-            (0, 0, 0, 32, 32.0)):
+            (0, 0, 0, 32, 32.0)): # noqa
 
             interval = Interval(days, hours, minutes, seconds)
             self.assertEquals(interval.in_seconds, expected)
@@ -131,7 +131,7 @@ class JobTestCase(TestCase):
 
     def test_clone(self):
 
-        interval = Interval(seconds=5)#rand_int(30, 50))
+        interval = Interval(seconds=5)
         start_time = datetime.utcnow()
 
         def callback():

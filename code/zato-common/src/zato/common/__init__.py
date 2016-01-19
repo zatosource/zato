@@ -119,7 +119,6 @@ TRACE1 = 6
 
 SECONDS_IN_DAY = 86400 # 60 seconds * 60 minutes * 24 hours (and we ignore leap seconds)
 
-#iso8601_format = '%Y-%m-%dT%H:%M:%S.%fZ'
 scheduler_date_time_format = '%Y-%m-%d %H:%M:%S'
 soap_date_time_format = '%Y-%m-%dT%H:%M:%S.%fZ'
 
@@ -588,7 +587,6 @@ class PUB_SUB:
     class MOVE_RESULT:
         MOVED = 'moved'
         OVERFLOW = 'overflow'
-
 
     class CALLBACK_TYPE:
         OUTCONN_PLAIN_HTTP = 'outconn-plain-http'
