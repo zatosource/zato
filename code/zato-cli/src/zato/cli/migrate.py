@@ -185,7 +185,7 @@ class Migrate(ManageCommand):
         }
 
         # Order of sections in 2.0
-        all_sections_2_0 = ('main', 'crypto', 'odb', 'hot_deploy', 'deploy_patterns_allowed', 'invoke_patterns_allowed', 
+        all_sections_2_0 = ('main', 'crypto', 'odb', 'hot_deploy', 'deploy_patterns_allowed', 'invoke_patterns_allowed',
             'invoke_target_patterns_allowed', 'singleton', 'spring', 'misc', 'stats', 'kvdb', 'startup_services_first_worker',
             'startup_services_any_worker', 'pubsub', 'profiler', 'user_config', 'newrelic', 'sentry', 'rbac',
             'component_enabled', 'os_environ')
@@ -211,7 +211,7 @@ class Migrate(ManageCommand):
             new_config[section] = section_dict
 
         # Sections new to 2.0
-        for name in ('stats', 'startup_services_first_worker', 'startup_services_any_worker', 'pubsub',  
+        for name in ('stats', 'startup_services_first_worker', 'startup_services_any_worker', 'pubsub',
                     'profiler', 'user_config', 'newrelic', 'sentry', 'rbac', 'component_enabled', 'os_environ',
                     'deploy_patterns_allowed', 'invoke_patterns_allowed', 'invoke_target_patterns_allowed'):
             new_config[name] = dict(ref_cp.items(name))

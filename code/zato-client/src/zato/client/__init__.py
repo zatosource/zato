@@ -228,7 +228,7 @@ class SOAPSIOResponse(_Response):
 
             # We have a payload but hadn't there been any errors at the server's side?
             zato_result = zato_result_xpath(response)
-            
+
             if zato_result[0] == ZATO_OK:
                 self.ok = True
                 self.data = zato_data[0]
@@ -278,7 +278,7 @@ class ServiceInvokeResponse(JSONSIOResponse):
             return True
 
 # ################################################################################################################################
-                        
+
 class RawDataResponse(_Response):
     """ Stores responses from services that weren't invoked using any particular
     data format
@@ -293,7 +293,7 @@ class RawDataResponse(_Response):
             self.data = self.inner.text
         else:
             self.details = self.inner.text
-            
+
         return self.data and len(self.data) > 0
 
 # ################################################################################################################################
@@ -340,7 +340,7 @@ class _JSONClient(_Client):
     """ Base class for all JSON clients.
     """
     response_class = None
-    
+
     def invoke(self, payload='', headers=None, to_json=True):
         if to_json:
             payload = dumps(payload)
@@ -375,14 +375,14 @@ class AnyServiceInvoker(_Client):
         if isinstance(value, datetime):
             return value.isoformat()
         raise TypeError('Cannot serialize [{}]'.format(value))
-        
+
     def _invoke(self, name=None, payload='', headers=None, channel='invoke', data_format='json',
                 transport=None, async=False, expiration=BROKER.DEFAULT_EXPIRATION, id=None,
                 to_json=True, output_repeated=ZATO_NOT_GIVEN):
 
         if not(name or id):
             raise ZatoException(msg='Either name or id must be provided')
-        
+
         if name and output_repeated == ZATO_NOT_GIVEN:
             output_repeated = name.lower().endswith('list')
 
@@ -396,7 +396,7 @@ class AnyServiceInvoker(_Client):
                    }
 
         return super(AnyServiceInvoker, self).invoke(dumps(request), ServiceInvokeResponse, async, headers, output_repeated)
-        
+
     def invoke(self, *args, **kwargs):
         return self._invoke(async=False, *args, **kwargs)
 
@@ -404,7 +404,7 @@ class AnyServiceInvoker(_Client):
         return self._invoke(async=True, *args, **kwargs)
 
 # ################################################################################################################################
-    
+
 class XMLClient(_Client):
     def invoke(self, payload='', headers=None):
         return super(XMLClient, self).invoke(payload, XMLResponse, headers=headers)
@@ -416,7 +416,7 @@ class SOAPClient(_Client):
         return super(SOAPClient, self).invoke(payload, SOAPResponse, headers=headers)
 
 # ################################################################################################################################
-    
+
 class RawDataClient(_Client):
     """ Client which doesn't process requests before passing them into a service.
     Likewise, no parsing of response is performed.

@@ -22,10 +22,10 @@ def store(kvdb, name, **data):
     """
     key = '{}{}'.format(KVDB.RESP_SLOW, name)
     data = dumps(data)
-    
+
     if logger.isEnabledFor(TRACE1):
         msg = 'key:[{}], name:[{}], data:[{}]'.format(key, name, data)
         logger.log(TRACE1, msg)
-        
+
     kvdb.conn.lpush(key, data)
     kvdb.conn.ltrim(key, 0, 99) # TODO: This should be configurable

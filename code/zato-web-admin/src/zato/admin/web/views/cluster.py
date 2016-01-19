@@ -76,16 +76,16 @@ def _create_edit(req, verb, item, form_class, prefix=''):
         try:
             req.zato.odb.add(item)
             req.zato.odb.commit()
-            
+
             try:
                 item.lb_config = get_lb_client(item).get_config()
             except Exception, e:
                 item.lb_config = None
                 msg = "Exception caught while fetching the load balancer's config, e:[{0}]".format(format_exc(e))
-                logger.error(msg)                    
-            
+                logger.error(msg)
+
             return _edit_create_response(item, verb)
-        
+
         except Exception, e:
             msg = 'Exception caught, e:[{0}]'.format(format_exc(e))
             logger.error(msg)
@@ -108,7 +108,7 @@ def _get_server_data(client, server_name):
         in_lb = False
         state = '(unknown)'
         lb_address = '(unknown)'
-        
+
     return Bunch({
         'in_lb': in_lb,
         'state': state,
@@ -126,7 +126,7 @@ def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_
         'up_status': up_status if up_status else '(unknown)',
         'up_mod_date': from_utc_to_user(up_mod_date+'+00:00', user_profile) if up_mod_date else '(unknown)',
         'cluster_id': cluster_id if cluster_id else '',
-        
+
         'lb_state': '(unknown)',
         'lb_address': '(unknown)',
         'in_lb': '(unknown)',
@@ -135,13 +135,13 @@ def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_
 
     if fetch_lb_data:
         lb_server_data = _get_server_data(client, name)
-        
+
         return_data.update({
             'lb_state': lb_server_data.state,
             'lb_address': lb_server_data.lb_address,
             'in_lb': lb_server_data.in_lb,
         })
-    
+
     return HttpResponse(dumps(return_data), mimetype='application/javascript')
 
 
@@ -181,7 +181,7 @@ def index(req):
 
 @method_allowed('POST')
 def edit(req):
-    return _create_edit(req, 'updated', 
+    return _create_edit(req, 'updated',
         req.zato.odb.query(Cluster).filter_by(id=req.POST['id']).one(), EditClusterForm, 'edit')
 
 def _get(req, **filter):
@@ -227,13 +227,13 @@ def delete(req, id):
         return HttpResponseServerError(msg)
     else:
         return HttpResponse()
-    
+
 @method_allowed('GET')
 def servers(req):
     """ A view for server management.
     """
     items = req.zato.odb.query(Server).order_by('name').all()
-    
+
     try:
         client = get_lb_client(req.zato.get('cluster'))
         server_data_dict = client.get_server_data_dict()
@@ -242,7 +242,7 @@ def servers(req):
     except Exception, e:
         logger.error(format_exc(e))
         lb_client_invoked = False
-    
+
     if lb_client_invoked:
         def _update_item(server_name, lb_address, lb_state):
             for item in items:
@@ -250,10 +250,10 @@ def servers(req):
                     item.in_lb = True
                     item.lb_address = lb_address
                     item.lb_state = lb_state
-                    
+
                     if item.up_mod_date:
                         item.up_mod_date_user = from_utc_to_user(item.up_mod_date.replace(tzinfo=UTC).isoformat(), req.zato.user_profile)
-                       
+
                     if item.up_status == SERVER_UP_STATUS.RUNNING:
                         item.may_be_deleted = False
                     else:
@@ -270,7 +270,7 @@ def servers(req):
         'cluster':req.zato.get('cluster'),
         'edit_form':EditServerForm(prefix='edit')
     }
-    
+
     return TemplateResponse(req, 'zato/cluster/servers.html', return_data)
 
 @method_allowed('POST')
@@ -279,10 +279,10 @@ def servers_edit(req):
     """
     try:
         client = get_lb_client(req.zato.cluster)
-        
+
         server_id = req.POST['id']
         server = req.zato.odb.query(Server).filter_by(id=server_id).one()
-        
+
         if client.get_server_data_dict(server.name):
             fetch_lb_data = True
             client.rename_server(req.POST['edit-old_name'], req.POST['edit-name'])
@@ -290,12 +290,12 @@ def servers_edit(req):
             fetch_lb_data = False
 
         response = req.zato.client.invoke('zato.cluster.server.edit', {'id':server_id, 'name':req.POST['edit-name']})
-        
-        return _common_edit_message(client, 'Server [{}] updated', 
+
+        return _common_edit_message(client, 'Server [{}] updated',
             response.data.id, response.data.name, response.data.host,
             response.data.up_status, response.data.up_mod_date,
             req.zato.cluster_id, req.zato.user_profile, fetch_lb_data)
-    
+
     except Exception, e:
         return HttpResponseServerError(format_exc(e))
 
@@ -305,18 +305,18 @@ def servers_add_remove_lb(req, action, server_id):
     """
     server = req.zato.odb.query(Server).filter_by(id=server_id).one()
     up_mod_date = server.up_mod_date.isoformat() if server.up_mod_date else ''
-    
+
     client = get_lb_client(req.zato.cluster)
     client.add_remove_server(action, server.name)
-    
+
     if action == 'add':
         success_msg = 'added to'
         fetch_lb_data = True
     else:
         success_msg = 'removed from'
         fetch_lb_data = False
-    
-    return _common_edit_message(client, 
+
+    return _common_edit_message(client,
         'Server [{{}}] {} the load balancer'.format(success_msg),
         server.id, server.name, server.host, server.up_status, up_mod_date,
         server.cluster_id, req.zato.user_profile, fetch_lb_data)
@@ -325,7 +325,7 @@ class ServerDelete(_Delete):
     url_name = 'cluster-servers-delete'
     error_message = 'Could not delete the server'
     service_name = 'zato.server.delete'
-    
+
     def __call__(self, req, *args, **kwargs):
         response = req.zato.client.invoke('zato.server.get-by-id', {'id':req.zato.id})
 
@@ -334,5 +334,5 @@ class ServerDelete(_Delete):
         client = get_lb_client(req.zato.cluster) # Checks whether the server is known by LB
         if client.get_server_data_dict(server.name):
             client.add_remove_server('remove', response.data.name)
-            
+
         return super(ServerDelete, self).__call__(req, *args, **kwargs)

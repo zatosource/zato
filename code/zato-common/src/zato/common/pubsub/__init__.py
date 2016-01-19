@@ -298,7 +298,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def add_producer(self, client, topic):
-        """ Adds information that this client can publish to the topic. 
+        """ Adds information that this client can publish to the topic.
         """
         with self.update_lock:
 
@@ -354,7 +354,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def add_consumer(self, client, topic):
-        """ Adds information that this client can publish to the topic. 
+        """ Adds information that this client can publish to the topic.
         """
         with self.update_lock:
             topics = self.cons_to_topic.setdefault(client.id, set())
@@ -638,9 +638,9 @@ class RedisPubSub(PubSub, LuaContainer):
         result = self.run_lua(
             self.LUA_ACK_DELETE,
             keys=[
-                cons_in_flight_ids, cons_in_flight_data, self.UNACK_COUNTER_KEY, self.MSG_VALUES_KEY, 
+                cons_in_flight_ids, cons_in_flight_data, self.UNACK_COUNTER_KEY, self.MSG_VALUES_KEY,
                 self.MSG_EXPIRE_AT_KEY, self.MSG_METADATA_KEY, cons_queue],
-            args=[int(is_delete)] + ctx.msg_ids) 
+            args=[int(is_delete)] + ctx.msg_ids)
 
         self.logger.info(
             '%s: result `%s` for sub_key `%s` with msgs `%s`',
@@ -662,7 +662,7 @@ class RedisPubSub(PubSub, LuaContainer):
         cons_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(ctx.sub_key)
         cons_in_flight_data = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
 
-        result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight_ids, cons_in_flight_data], args=ctx.msg_ids) 
+        result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight_ids, cons_in_flight_data], args=ctx.msg_ids)
 
         if self.logger.isEnabledFor(logging.DEBUG):
             self.logger.info(
@@ -693,7 +693,7 @@ class RedisPubSub(PubSub, LuaContainer):
                 consumer_msg_ids = self.CONSUMER_MSG_IDS_PREFIX.format(sub_key)
                 consumer_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key)
 
-                keys = [consumer_msg_ids, consumer_in_flight_ids, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY, 
+                keys = [consumer_msg_ids, consumer_in_flight_ids, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY,
                         self.UNACK_COUNTER_KEY]
 
                 self.logger.info('Delete expired (consumer) `%r` for keys `%s`',
@@ -704,7 +704,7 @@ class RedisPubSub(PubSub, LuaContainer):
     def move_to_target_queues(self):
         """ Invoked periodically in order to fetch data sent to a topic and move it to each consumer's queue.
         """
-        # TODO: We currently deliver messages to each consumer. However, we also need to support 
+        # TODO: We currently deliver messages to each consumer. However, we also need to support
         # the delivery to only one consumer chosen randomly from each of the subscribed ones.
 
         with self.update_lock:

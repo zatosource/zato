@@ -22,7 +22,7 @@ class CreateForm(forms.Form):
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         self.fields['client_id'].choices = []
-            
+
     def set_client_id(self, client_ids):
         # Sort clients by their names.
         client_ids = sorted(client_ids, key=attrgetter('name'))

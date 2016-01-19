@@ -38,13 +38,13 @@ class ChangePassword(ChangePasswordBase):
     """ Changes the password of a Cassandra connection definition.
     """
     password_required = False
-    
+
     class SimpleIO(ChangePasswordBase.SimpleIO):
         request_elem = 'zato_definition_cassandra_change_password_request'
         response_elem = 'zato_definition_cassandra_change_password_response'
-    
+
     def handle(self):
         def _auth(instance, password):
             instance.password = password
-            
+
         return self._handle(CassandraConn, _auth, DEFINITION.CASSANDRA_CHANGE_PASSWORD.value)

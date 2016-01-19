@@ -17,6 +17,6 @@ class CreateForm(forms.Form):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
     realm = forms.CharField(widget=forms.TextInput(attrs={'class':'required'}))
-    
+
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

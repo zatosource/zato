@@ -60,19 +60,19 @@ class DeliveryItem(object):
         self.uq_by_target_type_key = None
         self.on_delivery_success = None
         self.on_delivery_failed = None
-        
+
         self.source_count = None
         self.target_count = None
-        
+
         self.creation_time_utc = None
         self.creation_time = None # In current user's timezone
-        
+
         self.in_doubt_created_at_utc = None
         self.in_doubt_created_at = None # In current user's timezone
-        
+
         self.last_updated_utc = None
         self.last_updated = None # In current user's timezone
-        
+
     def __repr__(self):
         return make_repr(self)
 
@@ -86,11 +86,11 @@ class DeliveryItem(object):
                 value = payload[key]
             except TypeError:
                 raise KeyError('[{}] [{}] [{}]'.format(key, type(payload), payload))
-            
+
             if func:
                 value = func(value)
             setattr(item, key, value)
-        
+
         logger.debug('Returning item %r', item)
-        
+
         return item

@@ -29,7 +29,7 @@ try:
 except ImportError:
     from yaml import Dumper   # ditto
     Dumper = Dumper
-    
+
 # Spring Python
 from springpython.context import InitializingObject
 
@@ -96,7 +96,7 @@ class ServiceStore(InitializingObject):
         """
         # 6 characters will do, we won't deploy millions of services
         # in the very same (micro-)second after all
-        rand = uuid4().hex[:6] 
+        rand = uuid4().hex[:6]
 
         dir_name = os.path.join(work_dir, '{}-{}'.format(fs_safe_now(), rand), os.path.split(archive)[1])
         os.makedirs(dir_name)
@@ -147,7 +147,7 @@ class ServiceStore(InitializingObject):
         _, mod_file = os.path.split(file_name)
         mod_name, _ = os.path.splitext(mod_file)
 
-        # Delete compiled bytecode if it exists so that imp.load_source 
+        # Delete compiled bytecode if it exists so that imp.load_source
         # actually picks up the source module
         for suffix in('c', 'o'):
             path = file_name + suffix
@@ -166,10 +166,10 @@ class ServiceStore(InitializingObject):
             return deployed
 
     def import_services_from_directory(self, dir_name, base_dir):
-        """ dir_name points to a directory. 
+        """ dir_name points to a directory.
 
         If dist2 is True, the directory is assumed to be a Distutils2 one and its
-        setup.cfg file is read and all the modules from packages pointed to by the 
+        setup.cfg file is read and all the modules from packages pointed to by the
         'files' section are scanned for services.
 
         If dist2 is False, this will be treated as a directory with a flat list
@@ -219,7 +219,7 @@ class ServiceStore(InitializingObject):
             # We would've used inspect.getsource(mod) hadn't it been apparently using
             # cached copies of the source code
             si.source = open(file_name, 'rb').read()
-            
+
             si.path = inspect.getsourcefile(mod)
             si.hash = sha256(si.source).hexdigest()
             si.hash_method = 'SHA-256'

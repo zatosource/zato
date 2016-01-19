@@ -51,7 +51,7 @@ config_template = """{{
 
   "SITE_ID": {SITE_ID},
   "SECRET_KEY": "{SECRET_KEY}",
-  
+
   "ADMIN_INVOKE_NAME": "{ADMIN_INVOKE_NAME}",
   "ADMIN_INVOKE_PASSWORD": "{ADMIN_INVOKE_PASSWORD}",
   "ADMIN_INVOKE_PATH": "/zato/admin/invoke",
@@ -75,16 +75,16 @@ class Create(ZatoCommand):
     """
     needs_empty_dir = True
     allow_empty_secrets = True
-    
+
     opts = deepcopy(common_odb_opts)
-    
+
     opts.append({'name':'pub_key_path', 'help':"Path to the web admin's public key in PEM"})
     opts.append({'name':'priv_key_path', 'help':"Path to the web admin's private key in PEM"})
     opts.append({'name':'cert_path', 'help':"Path to the web admin's certificate in PEM"})
     opts.append({'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
-    
+
     opts += get_tech_account_opts()
-    
+
     def __init__(self, args):
         self.target_dir = os.path.abspath(args.path)
         super(Create, self).__init__(args)
@@ -99,13 +99,13 @@ class Create(ZatoCommand):
         os.mkdir(os.path.join(self.target_dir, 'logs'))
         os.mkdir(os.path.join(self.target_dir, 'config'))
         os.mkdir(repo_dir)
-        
+
         user_name = 'admin'
         password = password if password else generate_password()
-        
+
         self.copy_web_admin_crypto(repo_dir, args)
         priv_key = open(os.path.join(repo_dir, 'web-admin-priv-key.pem')).read()
-        
+
         config = {
             'host': web_admin_host,
             'port': web_admin_port,
@@ -121,28 +121,28 @@ class Create(ZatoCommand):
             'ADMIN_INVOKE_NAME':'admin.invoke',
             'ADMIN_INVOKE_PASSWORD':encrypt(getattr(args, 'admin_invoke_password', None) or getattr(args, 'tech_account_password'), priv_key),
         }
-        
+
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write(common_logging_conf_contents.format(log_path='./logs/web-admin.log'))
         open(web_admin_conf_path, 'w').write(config_template.format(**config))
         open(initial_data_json_path, 'w').write(initial_data_json.format(**config))
-        
+
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.WEB_ADMIN.code)
-        
+
         config = json.loads(open(os.path.join(repo_dir, 'web-admin.conf')).read())
         config['config_dir'] = self.target_dir
         update_globals(config, self.target_dir)
-        
+
         os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
-        
+
         # Can't import these without DJANGO_SETTINGS_MODULE being set
         from django.contrib.auth.models import User
         from django.db import connection
         from django.db.utils import IntegrityError
-        
+
         call_command('syncdb', interactive=False, verbosity=0)
         call_command('loaddata', initial_data_json_path, verbosity=0)
-        
+
         try:
             call_command(
                 'createsuperuser', interactive=False, username=user_name, first_name='admin-first-name',
@@ -152,12 +152,12 @@ class Create(ZatoCommand):
             user = User.objects.get(username=user_name)
             user.set_password(password)
             user.save()
-            
+
         except IntegrityError, e:
             admin_created = False
             connection._rollback()
             self.logger.info('Ignoring IntegrityError e:[%s]', format_exc(e).decode('utf-8'))
-            
+
         # Needed because Django took over our logging config
         self.reset_logger(args, True)
 

@@ -294,7 +294,7 @@ Yield pairs of consecutive elements in iterable.
     for b in iterator:
         yield a, b
         a = b
-        
+
 class MarkovChain(object):
     """
 If a system transits from a state to another and the next state depends
@@ -309,12 +309,12 @@ Elements of the sample that are not a valid state are ignored.
         self.counts = counts = defaultdict(lambda: defaultdict(int))
         for current, next in pairwise(sample):
             counts[current][next] += 1
-        
+
         self.totals = dict(
             (current, sum(next_counts.itervalues()))
             for current, next_counts in counts.iteritems()
         )
-        
+
     def next(self, state):
         """
 Choose at random and return a next state from a current state,
@@ -329,7 +329,7 @@ according to the probabilities for this chain
             if rand < weight:
                 return next_state
             rand -= weight
-    
+
     def __iter__(self):
         """
 Return an infinite iterator of states.

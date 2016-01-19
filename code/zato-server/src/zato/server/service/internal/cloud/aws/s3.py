@@ -83,7 +83,7 @@ class Create(AdminService):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise 
+                raise
 
 class Edit(AdminService):
     """ Updates an AWS S3 connection.
@@ -123,7 +123,7 @@ class Edit(AdminService):
                 input.password = item.security.password
 
                 self.broker_client.publish(input)
-                
+
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
@@ -132,7 +132,7 @@ class Edit(AdminService):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise  
+                raise
 
 class Delete(AdminService):
     """ Deletes an AWS S3 connection.
@@ -154,7 +154,7 @@ class Delete(AdminService):
 
                 msg = {'action': CLOUD.AWS_S3_DELETE.value, 'name': item.name, 'id':item.id}
                 self.broker_client.publish(msg)
-                
+
             except Exception, e:
                 session.rollback()
                 msg = 'Could not delete the AWS S3 connection, e:[{e}]'.format(e=format_exc(e))

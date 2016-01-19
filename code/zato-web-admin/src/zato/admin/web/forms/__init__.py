@@ -87,7 +87,7 @@ class ChangePasswordForm(forms.Form):
 
 class DataFormatForm(forms.Form):
     data_format = forms.ChoiceField(widget=forms.Select())
-    
+
     def __init__(self, *args, **kwargs):
         super(DataFormatForm, self).__init__(*args, **kwargs)
         self.fields['data_format'].choices = []

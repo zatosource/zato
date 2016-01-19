@@ -28,7 +28,7 @@ class BrokerMessageReceiver(object):
         self.broker_client_id = '{}-{}'.format(ZATO_NONE, new_cid())
         self.broker_callbacks = {}
         self.broker_messages = []
-    
+
     def on_broker_msg(self, msg):
         """ Receives a configuration message, parses its JSON contents and invokes
         an appropriate handler, the one indicated by the msg's 'action' key so
@@ -40,7 +40,7 @@ class BrokerMessageReceiver(object):
         try:
             if logger.isEnabledFor(logging.DEBUG):
                 logger.debug('Got message [{!r}]'.format(msg))
-    
+
             if self.filter(msg):
                 action = code_to_name[msg['action']]
                 handler = 'on_broker_msg_{0}'.format(action)
@@ -51,10 +51,10 @@ class BrokerMessageReceiver(object):
         except Exception, e:
             msg = 'Could not handle broker msg:[{!r}], e:[{}]'.format(msg, format_exc(e))
             logger.error(msg)
-            
+
     def filter(self, msg):
         """ Subclasses may override the method in order to filter the messages
-        prior to invoking the actual message handler. Default implementation 
+        prior to invoking the actual message handler. Default implementation
         always returns False which rejects all the incoming messages.
         """
         return False

@@ -26,7 +26,7 @@ class GetList(AdminService):
         response_elem = 'zato_outgoing_zmq_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'address', 'socket_type')
-        
+
     def get_data(self, session):
         return out_zmq_list(session, self.request.input.cluster_id, False)
 
@@ -76,7 +76,7 @@ class Create(AdminService):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise 
+                raise
 
 class Edit(AdminService):
     """ Updates an outgoing ZeroMQ connection.
@@ -113,7 +113,7 @@ class Edit(AdminService):
                 input.action = OUTGOING.ZMQ_EDIT.value
                 input.old_name = old_name
                 self.broker_client.publish(input)
-                
+
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
@@ -122,7 +122,7 @@ class Edit(AdminService):
                 self.logger.error(msg)
                 session.rollback()
 
-                raise  
+                raise
 
 class Delete(AdminService):
     """ Deletes an outgoing ZeroMQ connection.

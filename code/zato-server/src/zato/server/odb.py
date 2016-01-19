@@ -842,7 +842,7 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def audit_set_request_http_soap(self, conn_id, name, cid, transport, 
+    def audit_set_request_http_soap(self, conn_id, name, cid, transport,
             connection, req_time, user_token, remote_addr, req_headers,
             req_payload):
 

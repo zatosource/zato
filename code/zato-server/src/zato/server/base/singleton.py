@@ -30,7 +30,7 @@ class SingletonServer(BrokerMessageReceiver):
     Holds and processes data which can't be made parallel, such as scheduler,
     hot-deployment or on-disk configuration management.
     """
-    def __init__(self, parallel_server=None, server_id=None, scheduler=None, 
+    def __init__(self, parallel_server=None, server_id=None, scheduler=None,
                  broker_client=None, initial_sleep_time=None, is_cluster_wide=False):
         self.parallel_server = parallel_server
         self.server_id = server_id
@@ -66,17 +66,17 @@ class SingletonServer(BrokerMessageReceiver):
             self.logger.info('Worker not ready, sleeping for %s s', worker_not_ready_sleep_time)
             sleep(worker_not_ready_sleep_time)
 
-    def become_cluster_wide(self, connector_server_keep_alive_job_time, connector_server_grace_time, 
+    def become_cluster_wide(self, connector_server_keep_alive_job_time, connector_server_grace_time,
             server_id, cluster_id, starting_up):
         """ Attempts to become a connector server, the one to start the connector
         processes.
         """
         base_job_data = Bunch({
             'id': 0, # Dummy ID
-            'weeks': None, 'days': None, 
-            'hours': None, 'minutes': None, 
-            'seconds': connector_server_keep_alive_job_time, 
-            'repeats': None, 
+            'weeks': None, 'days': None,
+            'hours': None, 'minutes': None,
+            'seconds': connector_server_keep_alive_job_time,
+            'repeats': None,
             'extra': 'server_id:{};cluster_id:{}'.format(server_id, cluster_id),
         })
         job_data = None

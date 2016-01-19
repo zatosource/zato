@@ -37,21 +37,21 @@ class DeliveryTargetForm(forms.Form):
         self.fields['target_type'].choices = []
         for id, name in sorted(_targets.iteritems(), key=itemgetter(1)):
             self.fields['target_type'].choices.append([id, name])
-            
+
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     target = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    
+
     check_after = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:18%'}))
     retry_repeats = forms.CharField(initial=5, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
     retry_seconds = forms.CharField(initial=600, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:18%'}))
-    
+
     expire_after = forms.CharField(widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:18%'}))
     expire_arch_succ_after = forms.CharField(initial=72, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
     expire_arch_fail_after = forms.CharField(initial=168, widget=forms.TextInput(attrs={'class':'validate-digits', 'style':'width:12%'}))
-    
+
     callback_list = forms.CharField(widget=forms.Textarea(attrs={'rows':7}), required=False)
-    
+
 class EditForm(CreateForm):
     pass
 

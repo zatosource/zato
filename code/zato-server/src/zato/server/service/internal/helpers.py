@@ -39,7 +39,7 @@ class InputLogger(Service):
     """
     def handle(self):
         pass
-    
+
     def finalize_handle(self):
         self.log_input()
 
@@ -60,16 +60,16 @@ class HTMLService(Service):
         c = Context(ctx)
         t = Template(template)
         payload = t.render(c).encode('utf-8')
-        
+
         self.logger.debug('Ctx:[%s]', ctx)
         self.logger.debug('Payload:[%s]', payload)
-        
+
         if self.logger.isEnabledFor(DEBUG):
             buff = StringIO()
             pprint(ctx, buff)
             self.logger.debug(buff.getvalue())
             buff.close()
-        
+
         self.response.payload = payload
         self.response.content_type = 'text/html; charset=utf-8'
 
