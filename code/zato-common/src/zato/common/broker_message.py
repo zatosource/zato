@@ -261,8 +261,6 @@ class STATS(Constants):
 class HOT_DEPLOY(Constants):
     code_start = 102200
     CREATE = ValueConstant('')
-
-
     AFTER_DEPLOY = ValueConstant('')
 
 class SINGLETON(Constants):

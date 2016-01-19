@@ -327,7 +327,7 @@ class DeleteMeta(AdminServiceMeta):
                         one()
 
                     session.delete(instance)
-                    #session.commit()
+                    session.commit()
                 except Exception, e:
                     msg = 'Could not delete {}, e:`%s`'.format(attrs.label)
                     self.logger.error(msg, format_exc(e))
@@ -344,9 +344,7 @@ class DeleteMeta(AdminServiceMeta):
                     if attrs.broker_message_hook:
                         attrs.broker_message_hook(self, self.request.input, instance, attrs, 'delete')
 
-                    self.logger.warn('ppp')
                     self.broker_client.publish(self.request.input)
-                    self.logger.warn('aaa')
 
                     if attrs.delete_hook:
                         attrs.delete_hook(self, input, instance, attrs)

@@ -16,7 +16,7 @@ from unittest import TestCase
 from zato.common import CHANNEL, DATA_FORMAT, ENSURE_SINGLETON_JOB, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import SERVICE, SCHEDULER as SCHEDULER_MSG
 from zato.common.log_message import CID_LENGTH
-from zato.common.test import rand_int, rand_string
+from zato.common.test import rand_string
 from zato.common.util import new_cid
 from zato.server.scheduler import Scheduler
 
@@ -100,8 +100,6 @@ class SchedulerTestCase(TestCase):
                         else:
                             self.assertEquals(len(async_msgs), 0)
                             self.assertEquals(len(publish_msgs), 1)
-
-                        ensure_msg = publish_msgs[0]
 
                     else:
                         self.assertEquals(len(async_msgs), 1)

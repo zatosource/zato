@@ -30,7 +30,6 @@ import requests
 requests.packages.urllib3.disable_warnings()
 
 # Zato
-from zato.common import CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, URL_TYPE, ZATO_NONE
 from zato.common.util import get_component_name
 from zato.common import CONTENT_TYPE, DATA_FORMAT, SEC_DEF_TYPE, soapenv11_namespace, soapenv12_namespace, URL_TYPE, ZATO_NONE
 from zato.common.test import rand_float, rand_int, rand_string
