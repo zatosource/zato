@@ -100,7 +100,7 @@ class EditTestCase(ServiceTestCase):
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.security.basic-auth.edit')
         
-############################################################################### 
+# ############################################################################## 
            
 class ChangePasswordTestCase(ServiceTestCase):
     
