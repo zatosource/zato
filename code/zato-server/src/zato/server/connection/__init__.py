@@ -300,8 +300,7 @@ class BasePoolAPI(object):
         return self._conn_store.edit(name, msg)
 
     def delete_def(self, name):
-        #return self._conn_store.delete(name)
-        pass
+        return self._conn_store.delete(name)
 
     def change_password_def(self, config):
         return self._conn_store.change_password(config)

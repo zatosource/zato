@@ -409,10 +409,6 @@ class ODBManager(SessionWrapper):
         """ Adds information about the server's deployed service into the ODB.
         """
         raise NotImplementedError()
-        #with closing(self.session()) as session:
-        #    dp = DeliveryPayload
-        #    session.add(dp)
-        #    session.commit()
 
     def add_channels_2_0(self):
         """ Adds channels new in 2.0 - cannot be added to Alembic migrations because they need access
@@ -556,10 +552,10 @@ class ODBManager(SessionWrapper):
 
             if connection == 'channel':
                 for item in item_list:
-                    item.replace_patterns_json_pointer = [elem.pattern.name for elem in session.query(HTTPSOAP).\
+                    item.replace_patterns_json_pointer = [elem.pattern.name for elem in session.query(HTTPSOAP).
                         filter(HTTPSOAP.id == item.id).one().replace_patterns_json_pointer]
 
-                    item.replace_patterns_xpath = [elem.pattern.name for elem in session.query(HTTPSOAP).\
+                    item.replace_patterns_xpath = [elem.pattern.name for elem in session.query(HTTPSOAP).
                         filter(HTTPSOAP.id == item.id).one().replace_patterns_xpath]
 
             return item_list
