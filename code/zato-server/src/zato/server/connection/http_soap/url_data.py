@@ -52,6 +52,7 @@ class Matcher(object):
         self.group_names = []
         self.pattern = pattern
         self.matcher = None
+        self.is_static = True
         self._brace_pattern = re_compile('\{[a-zA-Z0-9 _\$.\-|=~^]+\}')
         self._elem_re_template = r'(?P<{}>[a-zA-Z0-9 _\$.\-|=~^]+)'
         self._set_up_matcher(self.pattern)
@@ -71,6 +72,7 @@ class Matcher(object):
 
         self.group_names.extend([elem[0] for elem in groups])
         self.matcher = re_compile(pattern + '$')
+        self.is_static = not bool(self.group_names) # No groups = URL is static and has no dynamic variables in the pattern
 
     def match(self, value):
         m = self.matcher.match(value)
@@ -116,6 +118,8 @@ class URLData(OAuthDataStore):
         self._oauth_server = OAuthServer(self)
         self._oauth_server.add_signature_method(OAuthSignatureMethod_HMAC_SHA1())
         self._oauth_server.add_signature_method(OAuthSignatureMethod_PLAINTEXT())
+
+        self.url_path_cache = {}
 
         dispatcher.listen_for_updates(SECURITY, self.dispatcher_callback)
 
@@ -341,11 +345,22 @@ class URLData(OAuthDataStore):
         the list of HTTP channel targets.
         """
         target = '{}{}{}'.format(soap_action, self._target_separator, url_path)
+
+        # Check if we already have it in URL cache
+        out = self.url_path_cache.get(target)
+        if out:
+            return out
+
         for item in self.channel_data:
             match = item.match_target_compiled.match(target)
             if match is not None:
                 if logger.isEnabledFor(TRACE1):
                     logger.log(TRACE1, 'Matched target:`%s` with:`%r`', target, item)
+
+                # Cache that URL if it's a static one, i.e. does not contain dynamically computed variables
+                if item.match_target_compiled.is_static:
+                    self.url_path_cache[target] = (match, item)
+
                 return match, item
 
         return None, None
@@ -891,13 +906,16 @@ class URLData(OAuthDataStore):
 
     def _create_channel(self, msg, old_data):
         """ Creates a new channel, both its core data and the related security definition.
+        Clears out URL cache for that entry, if it existed at all.
         """
         match_target = '{}{}{}'.format(msg.soap_action, MISC.SEPARATOR, msg.url_path)
         self.channel_data.add(self._channel_item_from_msg(msg, match_target, old_data))
         self.url_sec[match_target] = self._sec_info_from_msg(msg)
+        self.url_path_cache.pop(match_target, None)
 
     def _delete_channel(self, msg):
-        """ Deletes a channel, both its core data and the related security definition. Returns the deleted data.
+        """ Deletes a channel, both its core data and the related security definition. Clears relevant
+        entry in URL cache. Returns the deleted data.
         """
         old_match_target = '{}{}{}'.format(
             msg.get('old_soap_action'), MISC.SEPARATOR, msg.get('old_url_path'))
@@ -916,6 +934,9 @@ class URLData(OAuthDataStore):
 
         # Channel's security now
         del self.url_sec[old_match_target]
+
+        # Delete from URL cache
+        self.url_path_cache.pop(old_match_target, None)
 
         return old_data
 
