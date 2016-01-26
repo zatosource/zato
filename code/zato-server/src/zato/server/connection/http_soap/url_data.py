@@ -43,6 +43,8 @@ from zato.server.connection.http_soap import Forbidden, Unauthorized
 
 logger = logging.getLogger(__name__)
 
+_internal_url_path_indicator = '{}/zato/'.format(MISC.SEPARATOR)
+
 class Matcher(object):
     """ Matches incoming URL paths in requests received against the pattern it's configured to react to.
     For instance, '/permission/user/{user_id}/group/{group_id}' gets translated and compiled to the regex
@@ -72,7 +74,12 @@ class Matcher(object):
 
         self.group_names.extend([elem[0] for elem in groups])
         self.matcher = re_compile(pattern + '$')
-        self.is_static = not bool(self.group_names) # No groups = URL is static and has no dynamic variables in the pattern
+
+        # No groups = URL is static and has no dynamic variables in the pattern
+        self.is_static = not bool(self.group_names)
+
+        # URL path contains /zato = this is a path to an internal service
+        self.is_internal = _internal_url_path_indicator in self.pattern
 
     def match(self, value):
         m = self.matcher.match(value)
@@ -344,6 +351,7 @@ class URLData(OAuthDataStore):
         """ Attemps to match the combination of SOAP Action and URL path against
         the list of HTTP channel targets.
         """
+        needs_is_internal = url_path.startswith('/zato')
         target = '{}{}{}'.format(soap_action, self._target_separator, url_path)
 
         # Check if we already have it in URL cache
@@ -352,6 +360,9 @@ class URLData(OAuthDataStore):
             return out
 
         for item in self.channel_data:
+            if not needs_is_internal and item.match_target_compiled.is_internal:
+                continue
+
             match = item.match_target_compiled.match(target)
             if match is not None:
                 if logger.isEnabledFor(TRACE1):
