@@ -351,7 +351,7 @@ class URLData(OAuthDataStore):
         """ Attemps to match the combination of SOAP Action and URL path against
         the list of HTTP channel targets.
         """
-        needs_is_internal = url_path.startswith('/zato')
+        needs_user = not url_path.startswith('/zato')
         target = '{}{}{}'.format(soap_action, self._target_separator, url_path)
 
         # Check if we already have it in URL cache
@@ -360,7 +360,7 @@ class URLData(OAuthDataStore):
             return out
 
         for item in self.channel_data:
-            if not needs_is_internal and item.match_target_compiled.is_internal:
+            if needs_user and item.match_target_compiled.is_internal:
                 continue
 
             match = item.match_target_compiled.match(target)
