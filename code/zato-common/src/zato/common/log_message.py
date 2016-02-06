@@ -14,8 +14,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # LMC stands for the 'log message code'
 # CID stands for the 'correlation ID'
 
-# Needs to be kept in sync with zato.common.util.new_cid
-CID_LENGTH = 27
+CID_LENGTH = 24
 
 NULL_LMC = '0000.0000'
-NULL_CID = 'K' + '0' * (CID_LENGTH - 1)
+NULL_CID = '0' * CID_LENGTH
+

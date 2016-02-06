@@ -197,8 +197,7 @@ class RedisPubSubInternalTestCase(RedisPubSubCommonTestCase):
         sub_key = ps.subscribe(sub_ctx)
 
         # Does it looks like a CID?
-        eq_(len(sub_key), 28)
-        eq_(sub_key[0], 'K')
+        eq_(len(sub_key), 24)
 
     def test_full_path(self):
         """ Tests full sub/pub/ack/reject path with 4 topics and 3 clients. Doesn't test background tasks.

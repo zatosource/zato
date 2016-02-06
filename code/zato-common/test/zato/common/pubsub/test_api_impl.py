@@ -669,7 +669,7 @@ class CtxObjectsTestCase(TestCase):
         self.assertEquals(msg.mime_type, PUB_SUB.DEFAULT_MIME_TYPE)
         self.assertEquals(msg.priority, PUB_SUB.DEFAULT_PRIORITY)
         self.assertEquals(msg.expiration, PUB_SUB.DEFAULT_EXPIRATION)
-        self.assertEquals(len(msg.msg_id), CID_LENGTH+1) # +1 because CID_LENGTH doesn't take the 'K' prefix into account
+        self.assertEquals(len(msg.msg_id), CID_LENGTH)
         self.assertEquals(msg.producer, None)
         self.assertEquals(msg.expiration, PUB_SUB.DEFAULT_EXPIRATION)
 

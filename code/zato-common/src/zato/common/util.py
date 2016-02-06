@@ -308,12 +308,9 @@ def new_cid(random_bytes=random_bytes):
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     Changed in 2.0: The number is now 28 characters long not 40, like in previous versions.
-    Changed in 2.1: The number is now 96 bits rather than 128, 25 characters, and prefix is 'c'.
+    Changed in 2.1: The number is now 96 bits rather than 128, 24 characters, with no constant prefix.
     """
-    # There is nothing special in the 'c' prefix, it's just so that a CID always
-    # begins with a letter and 'c' seems like something
-    # that can't be taken for some other ASCII letter (e.g. is it Z or 2 etc.)
-    return 'c%s' % random_bytes(12).encode('hex')
+    return random_bytes(12).encode('hex')
 
 def get_config(repo_location, config_name, bunchified=True):
     """ Returns the configuration object. Will load additional user-defined config files,
