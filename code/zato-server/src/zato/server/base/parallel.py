@@ -24,9 +24,6 @@ from anyjson import dumps
 # arrow
 from arrow import utcnow
 
-# Bunch
-from zato.bunch import Bunch
-
 # gevent
 import gevent
 import gevent.monkey # Needed for Cassandra
@@ -48,11 +45,13 @@ from tzlocal import get_localzone
 
 # Zato
 from zato.broker.client import BrokerClient
+from zato.bunch import Bunch
 from zato.common import ACCESS_LOG_DT_FORMAT, KVDB, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS,\
      ZATO_ODB_POOL_NAME
 from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, TOPICS, \
      ZMQ_CONNECTOR
 from zato.common.pubsub import PubSubAPI, RedisPubSub
+from zato.common.time_util import TimeUtil
 from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, StaticConfig, register_diag_handlers
 from zato.server.base import BrokerMessageReceiver
@@ -111,6 +110,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.component_enabled = Bunch()
         self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
         self.broker_client = None
+        self.time_util = None
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -349,6 +349,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # Lua programs, both internal and user defined ones.
         for name, program in self.get_lua_programs():
             self.kvdb.lua_container.add_lua_program(name, program)
+
+        # TimeUtil needs self.kvdb so it can be set now
+        self.time_util = TimeUtil(self.kvdb)
 
         # Service sources
         self.service_sources = []

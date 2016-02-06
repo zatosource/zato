@@ -81,74 +81,6 @@ Int = Integer
 
 # ################################################################################################################################
 
-class TimeUtil(object):
-    """ A thin layer around Arrow's date/time handling library customized for our needs.
-    Default format is always taken from ISO 8601 (so it's sorted lexicographically)
-    and default timezone is always UTC.
-    """
-    def __init__(self, kvdb):
-        self.kvdb = kvdb
-
-    def get_format_from_kvdb(self, format):
-        """ Returns format stored under a key pointed to by 'format' or raises
-        ValueError if the key is missing/has no value.
-        """
-        key = 'kvdb:date-format:{}'.format(format[5:])
-        format = self.kvdb.conn.get(key)
-        if not format:
-            msg = 'Key [{}] does not exist'.format(key)
-            logger.error(msg)
-            raise ValueError(msg)
-
-        return format
-
-    def utcnow(self, format='YYYY-MM-DD HH:mm:ss', needs_format=True):
-        """ Returns now in UTC formatted as given in 'format'.
-        """
-        now = arrow.utcnow()
-        if needs_format:
-            return now.format(format)
-        return now
-
-    def today(self, format='YYYY-MM-DD', tz='UTC', needs_format=True):
-        """ Returns current day in a given timezone.
-        """
-        now = arrow.now(tz=tz)
-        today = arrow.Arrow(year=now.year, month=now.month, day=now.day)
-
-        if tz != 'UTC':
-            today = today.to(tz)
-
-        if format.startswith('kvdb:'):
-            format = self.get_format_from_kvdb(format)
-
-        if needs_format:
-            return today.format(format)
-        else:
-            return today
-
-    def reformat(self, value, from_, to):
-        """ Reformats value from one datetime format to another, for instance
-        from 23-03-2013 to 03/23/13 (MM-DD-YYYY to DD/MM/YY).
-        """
-        if from_.startswith('kvdb:'):
-            from_ = self.get_format_from_kvdb(from_)
-
-        if to.startswith('kvdb:'):
-            to = self.get_format_from_kvdb(to)
-
-        try:
-            # Arrow compares to str, not basestring
-            value = str(value) if isinstance(value, unicode) else value
-            from_ = str(from_) if isinstance(from_, unicode) else from_
-            return arrow.get(value, from_).format(to)
-        except Exception:
-            logger.error('Could not reformat value:`%s` from:`%s` to:`%s`',
-                value, from_, to)
-            raise
-
-# ################################################################################################################################
-
 class PatternsFacade(object):
     """ The API through which services make use of integration patterns.
     """
@@ -193,7 +125,7 @@ class Service(object):
         self.slow_threshold = maxint # After how many ms to consider the response came too late
         self.name = self.__class__.get_name()
         self.impl_name = self.__class__.get_impl_name()
-        self.time = TimeUtil(None)
+        self.time = None
         self.patterns = None
         self.user_config = None
         self.dictnav = DictNav
@@ -256,7 +188,6 @@ class Service(object):
         """
         self.odb = self.worker_store.server.odb
         self.kvdb = self.worker_store.kvdb
-        self.time.kvdb = self.kvdb
         self.pubsub = self.worker_store.pubsub
 
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
@@ -314,7 +245,7 @@ class Service(object):
 
         return response
 
-    def _invoke(self, service, channel):
+    def _invoke(self, service, channel, http_channels=(CHANNEL.HTTP_SOAP, CHANNEL.INVOKE)):
         #
         # If channel is HTTP and there are any per-HTTP verb methods, it means we want for the service to be a REST target.
         # Let's say it is POST. If we have handle_POST, it is invoked. If there is no handle_POST,
@@ -326,7 +257,7 @@ class Service(object):
         #
 
         # Ok, this is HTTP
-        if channel in (CHANNEL.HTTP_SOAP, CHANNEL.INVOKE):
+        if channel in http_channels:
 
             # We have at least one per-HTTP verb handler
             if service.http_method_handlers:
@@ -838,6 +769,7 @@ class Service(object):
         service.job_type = job_type
         service.translate = server.kvdb.translate
         service.user_config = server.user_config
+        service.time = server.time_util
 
         if channel_params:
             service.request.channel_params.update(channel_params)

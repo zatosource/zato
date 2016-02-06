@@ -206,6 +206,7 @@ class FakeServer(object):
         self.repo_location = rand_string()
         self.delivery_store = None
         self.user_config = Bunch()
+        self.time_util = Bunch()
 
 class ForceTypeWrapper(object):
     """ Makes comparison between two ForceType elements use their names.
