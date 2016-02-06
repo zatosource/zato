@@ -35,7 +35,7 @@ from zato.common.odb.model import Server
 
 # Set max_cid_repr to CID_NO_CLIP if it's desired to return the whole of a CID
 # in a response's __repr__ method.
-CID_NO_CLIP = int(CID_LENGTH / 2) + 1
+CID_NO_CLIP = int(CID_LENGTH / 2)
 
 DEFAULT_MAX_RESPONSE_REPR = 2500
 DEFAULT_MAX_CID_REPR = 5

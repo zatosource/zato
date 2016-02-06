@@ -105,8 +105,7 @@ class ParallelServerTestCase(TestCase):
             eq_(msg.channel, CHANNEL.STARTUP_SERVICE)
             eq_(msg.payload, expected_payload)
             eq_(msg.service, expected_service)
-            ok_(msg.cid.startswith('K'))
-            self.assertEquals(len(msg.cid), 28)
+            self.assertEquals(len(msg.cid), 24)
 
 # ################################################################################################################################
 

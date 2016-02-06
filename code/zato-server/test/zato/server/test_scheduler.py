@@ -78,7 +78,7 @@ class SchedulerTestCase(TestCase):
                         self.assertEquals(msg['service'], 'zato.scheduler.job.set-active-status')
                         self.assertEquals(msg['payload']['id'], id)
                         self.assertEquals(msg['payload']['is_active'], False)
-                        self.assertEquals(len(msg['cid']), CID_LENGTH+1)
+                        self.assertEquals(len(msg['cid']), CID_LENGTH)
                         self.assertEquals(msg['channel'], CHANNEL.SCHEDULER_AFTER_ONE_TIME)
                         self.assertEquals(msg['data_format'], DATA_FORMAT.JSON)
 
@@ -87,7 +87,7 @@ class SchedulerTestCase(TestCase):
                         if msg['action'] == SCHEDULER_MSG.JOB_EXECUTED.value:
                             self.assertEquals(msg['service'], service)
                             self.assertEquals(msg['payload'], extra)
-                            self.assertEquals(len(msg['cid']), CID_LENGTH+1)
+                            self.assertEquals(len(msg['cid']), CID_LENGTH)
 
                     if _name == ENSURE_SINGLETON_JOB:
                         self.assertEquals(len(async_msgs), 0)
