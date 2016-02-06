@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
+from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, responses, UNAUTHORIZED
 from traceback import format_exc
 
 # anyjson
@@ -39,6 +39,10 @@ _status_method_not_allowed = b'{} {}'.format(METHOD_NOT_ALLOWED, HTTP_RESPONSES[
 _status_unauthorized = b'{} {}'.format(UNAUTHORIZED, HTTP_RESPONSES[UNAUTHORIZED])
 _status_forbidden = b'{} {}'.format(FORBIDDEN, HTTP_RESPONSES[FORBIDDEN])
 _status_too_many_requests = b'{} {}'.format(TOO_MANY_REQUESTS, HTTP_RESPONSES[TOO_MANY_REQUESTS])
+
+status_response = {}
+for code, response in HTTP_RESPONSES.items():
+    status_response[code] = b'{} {}'.format(code, response)
 
 soap_doc = b"""<?xml version='1.0' encoding='UTF-8'?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns="https://zato.io/ns/20130518"><soap:Body>{body}</soap:Body></soap:Envelope>""" # noqa
 
@@ -117,13 +121,13 @@ class RequestDispatcher(object):
 
         return soap_action
 
-    def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store):
+    def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
+        no_url_match=(None, False)):
         """ Base method for dispatching incoming HTTP/SOAP messages. If the security
         configuration is one of the technical account or HTTP basic auth,
         the security validation is being performed. Otherwise, that step
         is postponed until a concrete transport-specific handler is invoked.
         """
-
         # Needed in later steps
         path_info = wsgi_environ['PATH_INFO']
         soap_action = wsgi_environ.get('HTTP_SOAPACTION', '')
@@ -148,7 +152,7 @@ class RequestDispatcher(object):
         payload = wsgi_environ['wsgi.input'].read()
 
         # OK, we can possibly handle it
-        if url_match not in (None, False):
+        if url_match not in no_url_match:
 
             # This is a synchronous call so that whatever happens next we are always
             # able to have at least initial audit log of requests.
@@ -197,10 +201,11 @@ class RequestDispatcher(object):
                 response = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
                     payload, worker_store, self.simple_io_config, post_data)
 
-                # Got response from the service so we can construct response headers now
-                self.add_response_headers(wsgi_environ, response)
+                wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
+                wsgi_environ['zato.http.response.headers'].update(response.headers)
+                wsgi_environ['zato.http.response.status'] = _status_response[response.status_code]
 
-                # Return the payload to the client
+                # Finally return payload to the client
                 return response.payload
 
             except Exception, e:
@@ -259,18 +264,11 @@ class RequestDispatcher(object):
 
         # This is 404, no such URL path and SOAP action is known.
         else:
-            response = b"[{}] Unknown URL:[{}] or SOAP action:[{}]".format(cid, path_info, soap_action)
+            response = b'[{}] Unknown URL:[{}] or SOAP action:[{}]'.format(cid, path_info, soap_action)
             wsgi_environ['zato.http.response.status'] = _status_not_found
 
             logger.error(response)
             return response
-
-    def add_response_headers(self, wsgi_environ, response):
-        """ Adds HTTP response headers on a 200 OK.
-        """
-        wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
-        wsgi_environ['zato.http.response.headers'].update(response.headers)
-        wsgi_environ['zato.http.response.status'] = b'{} {}'.format(response.status_code, HTTP_RESPONSES[response.status_code])
 
 # ##############################################################################
 
