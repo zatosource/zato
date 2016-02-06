@@ -124,13 +124,15 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         gevent.signal(signal.SIGINT, self.destroy)
 
-    def on_wsgi_request(self, wsgi_environ, start_response, **kwargs):
+    def on_wsgi_request(self, wsgi_environ, start_response, _new_cid=new_cid,
+        _get_localzone=get_localzone, _utcnow=utcnow,  **kwargs):
         """ Handles incoming HTTP requests.
         """
-        cid = kwargs.get('cid', new_cid())
+        cid = kwargs.get('cid', _new_cid())
+        now = _utcnow()
 
-        wsgi_environ['zato.local_tz'] = get_localzone()
-        wsgi_environ['zato.request_timestamp_utc'] = utcnow()
+        wsgi_environ['zato.local_tz'] = _get_localzone()
+        wsgi_environ['zato.request_timestamp_utc'] = now
 
         local_dt = wsgi_environ['zato.request_timestamp_utc'].replace(tzinfo=UTC).astimezone(wsgi_environ['zato.local_tz'])
         wsgi_environ['zato.request_timestamp'] = wsgi_environ['zato.local_tz'].normalize(local_dt)
@@ -146,9 +148,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         wsgi_environ['zato.http.remote_addr'] = remote_addr
 
         try:
-
-            payload = self.worker_store.request_dispatcher.dispatch(
-                cid, datetime.utcnow(), wsgi_environ, self.worker_store) or b''
+            payload = self.worker_store.request_dispatcher.dispatch(cid, now, wsgi_environ, self.worker_store) or b''
 
         # Any exception at this point must be our fault
         except Exception, e:
@@ -159,10 +159,20 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             payload = error_msg
             raise
 
-        # Note that this call is asynchronous and we do it the last possible moment.
-        if wsgi_environ['zato.http.channel_item'] and wsgi_environ['zato.http.channel_item'].get('audit_enabled'):
-            self.worker_store.request_dispatcher.url_data.audit_set_response(
-                cid, payload, wsgi_environ)
+        channel_item = wsgi_environ['zato.http.channel_item']
+
+        if channel_item:
+
+            # For access log
+            channel_name = channel_item.get('name', '-')
+
+            # Note that this call is asynchronous and we do it the last possible moment.
+            if wsgi_environ['zato.http.channel_item'].get('audit_enabled'):
+                self.worker_store.request_dispatcher.url_data.audit_set_response(cid, payload, wsgi_environ)
+
+        else:
+            # 404 Not Found since we cannot find the channel
+            channel_name = '-'
 
         headers = [(k.encode('utf-8'), v.encode('utf-8')) for k, v in wsgi_environ['zato.http.response.headers'].items()]
         start_response(wsgi_environ['zato.http.response.status'], headers)
@@ -172,15 +182,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         if self.needs_access_log:
 
-            channel_item = wsgi_environ.get('zato.http.channel_item')
-            if channel_item:
-                channel_name = channel_item.get('name', '-')
-            else:
-                channel_name = '-'
-
             self.access_logger.info('', extra = {
                 'remote_ip': wsgi_environ['zato.http.remote_addr'],
-                'cid_resp_time': '{}/{}'.format(cid, (utcnow() - wsgi_environ['zato.request_timestamp_utc']).total_seconds()),
+                'cid_resp_time': '%s/%s' % (cid, (utcnow() - wsgi_environ['zato.request_timestamp_utc']).total_seconds()),
                 'channel_name': channel_name,
                 'req_timestamp_utc': wsgi_environ['zato.request_timestamp_utc'].strftime(ACCESS_LOG_DT_FORMAT),
                 'req_timestamp': wsgi_environ['zato.request_timestamp'].strftime(ACCESS_LOG_DT_FORMAT),
@@ -190,7 +194,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 'status_code': wsgi_environ['zato.http.response.status'].split()[0],
                 'response_size': len(payload),
                 'user_agent': wsgi_environ.get('HTTP_USER_AGENT', '(None)'),
-                })
+            })
 
         return [payload]
 
@@ -264,7 +268,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
-            self.fs_server_config.main.token, deployment_key)
+                                                 self.fs_server_config.main.token, deployment_key)
 
         logger.debug('Will use the lock_name: [{}]'.format(lock_name))
 
@@ -370,7 +374,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.hot_deploy_config[name] = value
             else:
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
-                  self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
+                    self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
         is_first, locally_deployed = self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
 
@@ -695,8 +699,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.fs_server_config.singleton.grace_time_multiplier) * self.connector_server_keep_alive_job_time
 
             if self.singleton_server.become_cluster_wide(
-                    self.connector_server_keep_alive_job_time, self.connector_server_grace_time,
-                    server.id, server.cluster_id, True):
+                self.connector_server_keep_alive_job_time, self.connector_server_grace_time,
+                server.id, server.cluster_id, True):
                 self.init_connectors()
                 is_singleton = True
 
@@ -851,7 +855,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         broker_callbacks = {
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: parallel_server.worker_store.on_broker_msg,
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: parallel_server.worker_store.on_broker_msg,
-            }
+        }
 
         if is_first:
             broker_callbacks[TOPICS[MESSAGE_TYPE.TO_SINGLETON]] = parallel_server.on_broker_msg_singleton
@@ -866,7 +870,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             Thread(target=parallel_server.singleton_server.run, kwargs=kwargs).start()
 
         parallel_server.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True,
-            parallel_server.host, parallel_server.port)
+                                           parallel_server.host, parallel_server.port)
 
         if is_first:
             parallel_server.invoke_startup_services(is_first)
@@ -907,9 +911,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
             # Close all the connector subprocesses this server has possibly started
             pairs = ((AMQP_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL),
-                    (JMS_WMQ_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL),
-                    (ZMQ_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL),
-                    )
+                     (JMS_WMQ_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL),
+                     (ZMQ_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL),
+                     )
 
             for action, msg_type in pairs:
                 msg = {}
