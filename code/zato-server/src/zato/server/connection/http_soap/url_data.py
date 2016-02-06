@@ -351,30 +351,30 @@ class URLData(OAuthDataStore):
         """ Attemps to match the combination of SOAP Action and URL path against
         the list of HTTP channel targets.
         """
-        needs_user = not url_path.startswith('/zato')
         target = '{}{}{}'.format(soap_action, self._target_separator, url_path)
 
-        # Check if we already have it in URL cache
-        out = self.url_path_cache.get(target)
-        if out:
-            return out
+        # Return from cache if already seen
+        try:
+            return self.url_path_cache[target]
+        except KeyError:
+            needs_user = not url_path.startswith('/zato')
 
-        for item in self.channel_data:
-            if needs_user and item.match_target_compiled.is_internal:
-                continue
+            for item in self.channel_data:
+                if needs_user and item.match_target_compiled.is_internal:
+                    continue
 
-            match = item.match_target_compiled.match(target)
-            if match is not None:
-                if logger.isEnabledFor(TRACE1):
-                    logger.log(TRACE1, 'Matched target:`%s` with:`%r`', target, item)
+                match = item.match_target_compiled.match(target)
+                if match is not None:
+                    if logger.isEnabledFor(TRACE1):
+                        logger.log(TRACE1, 'Matched target:`%s` with:`%r`', target, item)
 
-                # Cache that URL if it's a static one, i.e. does not contain dynamically computed variables
-                if item.match_target_compiled.is_static:
-                    self.url_path_cache[target] = (match, item)
+                    # Cache that URL if it's a static one, i.e. does not contain dynamically computed variables
+                    if item.match_target_compiled.is_static:
+                        self.url_path_cache[target] = (match, item)
 
-                return match, item
+                    return match, item
 
-        return None, None
+            return None, None
 
     def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store):
         """ Authenticates and authorizes a given request. Returns None on success
