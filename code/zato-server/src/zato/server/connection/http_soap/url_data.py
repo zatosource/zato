@@ -17,9 +17,6 @@ from operator import attrgetter
 from threading import RLock
 from traceback import format_exc
 
-# Bunch
-from bunch import Bunch
-
 # oauth
 from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
      OAuthSignatureMethod_PLAINTEXT, OAuthToken
@@ -35,6 +32,7 @@ from secwall.wsse import WSSE
 from sortedcontainers import SortedListWithKey
 
 # Zato
+from zato.bunch import Bunch
 from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, ZATO_NONE
 from zato.common.broker_message import code_to_name, CHANNEL, SECURITY
 from zato.common.dispatch import dispatcher
