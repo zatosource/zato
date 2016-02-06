@@ -56,6 +56,9 @@ from gevent.hub import Hub
 # lxml
 from lxml import etree, objectify
 
+# numpy
+from numpy.random import bytes as random_bytes
+
 # OpenSSL
 from OpenSSL import crypto
 
@@ -300,25 +303,17 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
 def tech_account_password(password_clear, salt):
     return sha256(password_clear+ ':' + salt).hexdigest()
 
-def new_cid(shift=1 << 127, _getrandbits=getrandbits, _encode_cid_symbols=encode_cid_symbols, _cid_base=cid_base):
-    """ Returns a new 128-bit correlation identifier. It's *not* safe to use the ID
+def new_cid(random_bytes=random_bytes):
+    """ Returns a new 96-bit correlation identifier. It's *not* safe to use the ID
     for any cryptographical purposes, it's only meant to be used as a conveniently
     formatted ticket attached to each of the requests processed by Zato servers.
     Changed in 2.0: The number is now 28 characters long not 40, like in previous versions.
+    Changed in 2.1: The number is now 96 bits rather than 128, 25 characters, and prefix is 'c'.
     """
-    # There is nothing special in the 'k' prefix, it's just so that a CID always
-    # begins with a letter and 'k' seems like something
+    # There is nothing special in the 'c' prefix, it's just so that a CID always
+    # begins with a letter and 'c' seems like something
     # that can't be taken for some other ASCII letter (e.g. is it Z or 2 etc.)
-
-    number = _getrandbits(127) + shift
-    out = ['k']
-
-    while number > 0:
-        remainder = number % _cid_base
-        number //= _cid_base
-        out.append(_encode_cid_symbols[remainder])
-
-    return ''.join(out)
+    return 'c%s' % random_bytes(12).encode('hex')
 
 def get_config(repo_location, config_name, bunchified=True):
     """ Returns the configuration object. Will load additional user-defined config files,
