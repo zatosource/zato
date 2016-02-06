@@ -35,6 +35,7 @@ from retools.lock import Lock
 from gevent import Timeout, spawn
 
 # Zato
+from zato.bunch import Bunch
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.nav import DictNav, ListNav
@@ -181,7 +182,7 @@ class Service(object):
         self.transport = None
         self.wsgi_environ = None
         self.job_type = None
-        self.environ = {}
+        self.environ = Bunch()
         self.request = Request(self.logger)
         self.response = Response(self.logger)
         self.invocation_time = None # When was the service invoked
