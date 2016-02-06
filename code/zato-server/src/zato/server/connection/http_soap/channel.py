@@ -330,7 +330,7 @@ class RequestHandler(object):
         return channel_params
 
     def handle(self, cid, url_match, channel_item, wsgi_environ, raw_request,
-            worker_store, simple_io_config, post_data):
+            worker_store, simple_io_config, post_data, channel_type=CHANNEL.HTTP_SOAP):
         """ Create a new instance of a service and invoke it.
         """
         service = self.server.service_store.new_instance(channel_item.service_impl_name)
@@ -342,7 +342,7 @@ class RequestHandler(object):
             channel_params = None
 
         response = service.update_handle(self._set_response_data, service, raw_request,
-            CHANNEL.HTTP_SOAP, channel_item.data_format, channel_item.transport, self.server, worker_store.broker_client,
+            channel_type, channel_item.data_format, channel_item.transport, self.server, worker_store.broker_client,
             worker_store, cid, simple_io_config, wsgi_environ=wsgi_environ,
             url_match=url_match, channel_item=channel_item, channel_params=channel_params,
             merge_channel_params=channel_item.merge_url_params_req,
