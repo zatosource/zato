@@ -117,6 +117,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.user_ctx_lock = gevent.lock.RLock()
 
         self.access_logger = logging.getLogger('zato_access_log')
+        self.needs_access_log = self.access_logger.isEnabledFor(INFO)
 
         # The main config store
         self.config = ConfigStore()
@@ -169,7 +170,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         if isinstance(payload, unicode):
             payload = payload.encode('utf-8')
 
-        if self.access_logger.isEnabledFor(INFO):
+        if self.needs_access_log:
 
             channel_item = wsgi_environ.get('zato.http.channel_item')
             if channel_item:
