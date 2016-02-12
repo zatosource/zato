@@ -216,7 +216,11 @@ class OutgoingConnector(BaseAMQPConnector):
         conn = _Connection(CONN_TEMPLATE.format(**self.def_amqp), heartbeat=self.def_amqp.heartbeat)
 
         with producers[conn].acquire(block=True) as producer:
-            producer.publish(msg.body, retry=True, routing_key=msg.routing_key, exchange=msg.exchange, headers=headers, **properties)
+            delivery_mode = properties.pop('delivery_mode', None)
+            producer.publish(
+                body=msg.body, retry=True, routing_key=msg.routing_key,
+                delivery_mode=delivery_mode, exchange=msg.exchange, headers=headers, properties=properties
+            )
 
     def _stop_amqp_connection(self):
         """ Stops any underlying connections.
