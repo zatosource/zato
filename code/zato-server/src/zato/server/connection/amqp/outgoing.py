@@ -203,7 +203,8 @@ class OutgoingConnector(BaseAMQPConnector):
                 value = msg_properties.get(name) if msg_properties.get(name) else getattr(self.out_amqp, name, None)
             else:
                 value = getattr(self.out_amqp, name, None)
-            properties[name] = value
+            if value:
+                properties[name] = value
 
         headers = msg.get('headers') or {}
 
