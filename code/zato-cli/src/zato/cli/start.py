@@ -78,6 +78,8 @@ Examples:
         self.start_component('zato.server.main', 'server', self.component_dir, self.delete_pidfile)
 
     def _on_lb(self, *ignored):
+        self.run_check_config()
+
         def stop_haproxy():
             Stop(self.args).stop_haproxy(self.component_dir)
 

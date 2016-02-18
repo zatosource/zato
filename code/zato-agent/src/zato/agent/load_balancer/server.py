@@ -12,9 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import httplib, json, logging, logging.config, os, ssl, urllib
 from collections import Counter
 from datetime import datetime
-from subprocess import Popen, PIPE
-from tempfile import NamedTemporaryFile
-from time import sleep
 from traceback import format_exc
 
 # pytz
@@ -30,8 +27,9 @@ import yaml
 from zato.agent.load_balancer.config import backend_template, config_from_string, string_from_config, zato_item_token
 from zato.agent.load_balancer.haproxy_stats import HAProxyStats
 from zato.common import TRACE1, ZATO_OK
-from zato.common.haproxy import haproxy_stats
+from zato.common.haproxy import haproxy_stats, validate_haproxy_config
 from zato.common.repo import RepoManager
+from zato.common.util import timeouting_popen
 
 public_method_prefix = "_lb_agent_"
 config_file = "zato.config"
@@ -43,9 +41,6 @@ logging.addLevelName('TRACE1', TRACE1)
 haproxy_commands = {}
 for version, commands in haproxy_stats.items():
     haproxy_commands.update(commands)
-
-# We'll wait up to that many seconds for HAProxy to validate the config file.
-HAPROXY_VALIDATE_TIMEOUT = 0.3
 
 class LoadBalancerAgent(SSLServer):
     def __init__(self, repo_dir):
@@ -80,37 +75,12 @@ class LoadBalancerAgent(SSLServer):
             ca_certs=self.ca_certs, cert_reqs=ssl.CERT_REQUIRED,
             verify_fields=self.verify_fields)
 
-    def _popen(self, command, timeout, timeout_msg, rc_non_zero_msg, common_msg=''):
-        """ Runs a command in background and returns its return_code, stdout and stderr.
-        stdout and stderr will be None if return code = 0
-        """
-        stdout, stderr = None, None
-
-        # Run the command
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-
-        # Sleep as long as requested and poll for results
-        sleep(timeout)
-        p.poll()
-
-        if p.returncode is None:
-            msg = timeout_msg + common_msg + 'command:[{}]'.format(command)
-            raise Exception(msg.format(timeout))
-        else:
-            if p.returncode != 0:
-                stdout, stderr = p.communicate()
-                msg = rc_non_zero_msg + common_msg + 'command:[{}], return code:[{}], stdout:[{}], stderr:[{}] '.format(
-                    command, p.returncode, stdout, stderr)
-                raise Exception(msg)
-
-        return p.returncode
-
     def _re_start_load_balancer(self, timeout_msg, rc_non_zero_msg, additional_params=[]):
         """ A common method for (re-)starting HAProxy.
         """
         command = [self.haproxy_command, '-D', '-f', self.config_path, '-p', self.pid_path]
         command.extend(additional_params)
-        self._popen(command, 5.0, timeout_msg, rc_non_zero_msg)
+        timeouting_popen(command, 5.0, timeout_msg, rc_non_zero_msg)
 
     def start_load_balancer(self):
         """ Starts the HAProxy load balancer in background.
@@ -155,28 +125,7 @@ class LoadBalancerAgent(SSLServer):
         return config_from_string(self._read_config_string())
 
     def _validate(self, config_string):
-        """ Writes the config into a temporary file and validates it using the HAProxy's
-        -c check mode.
-        """
-        try:
-            with NamedTemporaryFile(prefix='zato-tmp', dir=self.work_dir) as tf:
-
-                tf.write(config_string)
-                tf.flush()
-
-                common_msg = 'config_file:[{}]'
-                common_msg = common_msg.format(open(tf.name).read())
-
-                timeout_msg = "HAProxy didn't respond in [{}] seconds. "
-                rc_non_zero_msg = 'Failed to validate the config file using HAProxy. '
-
-                command = [self.haproxy_command, '-c', '-f', tf.name]
-                self._popen(command, HAPROXY_VALIDATE_TIMEOUT, timeout_msg, rc_non_zero_msg, common_msg)
-
-        except Exception, e:
-            msg = 'Caught an exception, e:[{e}]'.format(e=format_exc(e))
-            logger.error(msg)
-            raise Exception(msg)
+        validate_haproxy_config(config_string, self.haproxy_command)
 
     def _save_config(self, config_string):
         """ Save a new HAProxy config file on disk. It is assumed the file

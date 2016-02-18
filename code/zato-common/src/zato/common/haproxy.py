@@ -10,11 +10,16 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import getLogger
+from tempfile import NamedTemporaryFile
+from traceback import format_exc
 
 # Zato
-from zato.common.util import make_repr
+from zato.common.util import make_repr, timeouting_popen
 
 logger = getLogger(__name__)
+
+# We'll wait up to that many seconds for HAProxy to validate the config file.
+HAPROXY_VALIDATE_TIMEOUT = 0.6
 
 # Statistics commands understood by HAproxy 1.3.x and newer. Note that the
 # command numbers must be consecutively increasing across HAProxy versions.
@@ -123,3 +128,27 @@ class Config(object):
             msg = 'Could not parse config, name:[{name}], data:[{data}]'.format(name=name, data=data)
             logger.error(msg)
             raise Exception(msg)
+
+def validate_haproxy_config(config_data, haproxy_command):
+    """ Writes the config into a temporary file and validates it using the HAProxy's
+    -c check mode.
+    """
+    try:
+        with NamedTemporaryFile(prefix='zato-tmp') as tf:
+
+            tf.write(config_data)
+            tf.flush()
+
+            common_msg = 'config_file:`{}`'
+            common_msg = common_msg.format(open(tf.name).read())
+
+            timeout_msg = 'HAProxy didn\'t respond in `{}` seconds. '
+            rc_non_zero_msg = 'Failed to validate the config file using HAProxy. '
+
+            command = [haproxy_command, '-c', '-f', tf.name]
+            timeouting_popen(command, HAPROXY_VALIDATE_TIMEOUT, timeout_msg, rc_non_zero_msg, common_msg)
+
+    except Exception, e:
+        msg = 'Caught an exception, e:`{}`'.format(format_exc(e))
+        logger.error(msg)
+        raise Exception(msg)
