@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import json, logging
 from traceback import format_exc
+from xmlrpclib import Fault
 
 # OrderedDict is new in 2.7
 try:
@@ -84,10 +85,19 @@ def _client_validate_save(req, func, *args):
     file on a remote SSL XML-RPC server.
     """
     save = args[1]
+    has_error = False
+
     try:
         func(*args)
+    except Fault, e:
+        msg = e.faultString
+        has_error = True
     except Exception, e:
-        msg = 'Caught an exception while invoking the load-balancer agent, e:[{}]'.format(format_exc(e))
+        msg = format_exc(e)
+        has_error = True
+
+    if has_error:
+        msg = 'Caught an exception while invoking the load-balancer agent, e:`{}`'.format(msg)
         logger.error(msg)
         return HttpResponseServerError(msg)
     else:

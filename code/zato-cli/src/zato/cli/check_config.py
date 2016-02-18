@@ -23,6 +23,7 @@ from configobj import ConfigObj
 from zato.cli import ManageCommand
 from zato.common.crypto import CryptoManager
 from zato.common.kvdb import KVDB
+from zato.common.haproxy import validate_haproxy_config
 from zato.common.odb import create_pool, ping_queries
 from zato.common.util import is_port_taken
 
@@ -37,8 +38,8 @@ class CheckConfig(ManageCommand):
         if is_port_taken(port):
             raise Exception('{} check failed. Address `{}` already taken.'.format(prefix, address))
 
-    def ensure_json_config_port_free(self, conf_name, prefix):
-        conf = self.get_json_conf(conf_name)
+    def ensure_json_config_port_free(self, prefix, conf_name=None, conf=None):
+        conf = self.get_json_conf(conf_name) if conf_name else conf
         address = '{}:{}'.format(conf['host'], conf['port'])
         self.ensure_port_free(prefix, conf['port'], address)
 
@@ -138,13 +139,16 @@ class CheckConfig(ManageCommand):
         self.ensure_no_pidfile()
         repo_dir = join(self.config_dir, 'repo')
 
+        lba_conf = self.get_json_conf('lb-agent.conf')
+        lb_conf_string =  open(join(repo_dir, 'zato.config')).read()
+
         # Load-balancer's agent
-        self.ensure_json_config_port_free('lb-agent.conf', 'Load balancer agent')
+        self.ensure_json_config_port_free('Load balancer\'s agent', None, lba_conf)
 
         # Load balancer itself
         lb_address = None
         marker = 'ZATO frontend front_http_plain:bind'
-        lb_conf = open(join(repo_dir, 'zato.config')).read().splitlines()
+        lb_conf = lb_conf_string.splitlines()
         for line in lb_conf:
             if marker in line:
                 lb_address = line.split(marker)[0].strip().split()[1]
@@ -156,6 +160,8 @@ class CheckConfig(ManageCommand):
         _, port = lb_address.split(':')
         self.ensure_port_free('Load balancer', int(port), lb_address)
 
+        validate_haproxy_config(lb_conf_string, lba_conf['haproxy_command'])
+
     def _on_web_admin(self, *ignored_args, **ignored_kwargs):
         repo_dir = join(self.component_dir, 'config', 'repo')
 
@@ -164,4 +170,4 @@ class CheckConfig(ManageCommand):
             self.get_json_conf('web-admin.conf', repo_dir))
 
         self.ensure_no_pidfile()
-        self.ensure_json_config_port_free('web-admin.conf', 'Web admin')
+        self.ensure_json_config_port_free('Web admin', 'web-admin.conf')
