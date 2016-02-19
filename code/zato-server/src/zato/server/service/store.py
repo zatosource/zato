@@ -13,6 +13,7 @@ import imp, inspect, logging, os
 from datetime import datetime
 from hashlib import sha256
 from importlib import import_module
+from json import dumps
 from traceback import format_exc
 from uuid import uuid4
 
@@ -243,7 +244,7 @@ class ServiceStore(InitializingObject):
                         if should_add:
 
                             timestamp = datetime.utcnow()
-                            depl_info = deployment_info('service-store', item, timestamp, fs_location)
+                            depl_info = dumps(deployment_info('service-store', str(item), timestamp.isoformat(), fs_location))
 
                             item.add_http_method_handlers()
 
