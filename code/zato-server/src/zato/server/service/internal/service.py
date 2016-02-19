@@ -285,12 +285,17 @@ class GetDeploymentInfoList(AdminService):
         output_required = ('server_id', 'server_name', 'details')
 
     def get_data(self, session):
-        return session.query(DeployedService.details,
+        items = session.query(DeployedService.details,
             Server.name.label('server_name'),
             Server.id.label('server_id')).\
             outerjoin(Server, DeployedService.server_id==Server.id).\
             filter(DeployedService.service_id==self.request.input.id).\
             all()
+
+        for item in items:
+            item.details = loads(loads(item.details))
+
+        return items
 
     def handle(self):
         with closing(self.odb.session()) as session:
