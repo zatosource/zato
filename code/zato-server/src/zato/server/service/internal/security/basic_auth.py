@@ -63,7 +63,7 @@ class Create(AdminService):
                     raise Exception('HTTP Basic Auth definition [{0}] already exists on this cluster'.format(input.name))
 
                 auth = HTTPBasicAuth(None, input.name, input.is_active, input.username,
-                    input.realm, input.password, cluster)
+                    input.realm or None, input.password, cluster)
 
                 session.add(auth)
                 session.commit()
@@ -111,7 +111,7 @@ class Edit(AdminService):
                 definition.name = input.name
                 definition.is_active = input.is_active
                 definition.username = input.username
-                definition.realm = input.realm
+                definition.realm = input.realm or None
 
                 session.add(definition)
                 session.commit()
