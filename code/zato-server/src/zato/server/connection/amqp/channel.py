@@ -158,6 +158,16 @@ class ConsumingConnector(BaseAMQPConnector):
         if self.channel_amqp.get('consumer'):
             self.channel_amqp.consumer.close()
 
+    def _get_frame_data(self, frame):
+        """ Inspired by pika.amqp_object.AMQPObject.__repr__
+        """
+        items = {}
+        for key, value in frame.__dict__.iteritems():
+            if getattr(frame.__class__, key, None) != value:
+                items[key] = value
+
+        return items
+
     def _on_message(self, method_frame, header_frame, body):
         """ A callback to be invoked by ConsumingConnection on each new AMQP message.
         """
@@ -169,6 +179,8 @@ class ConsumingConnector(BaseAMQPConnector):
                 params['data_format'] = self.channel_amqp.data_format
                 params['cid'] = new_cid()
                 params['payload'] = body
+                params['method_frame'] = self._get_frame_data(method_frame)
+                params['header_frame'] = self._get_frame_data(header_frame)
 
                 self.broker_client.invoke_async(params)
 
