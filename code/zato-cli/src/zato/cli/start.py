@@ -17,7 +17,7 @@ from time import time, sleep
 from bunch import Bunch
 
 # Sarge
-from sarge import Capture, run
+from sarge import run
 
 # Zato
 from zato.cli import ManageCommand
@@ -86,14 +86,12 @@ Examples:
         stderr_redirect = '2> {}'.format(tmp_path)
         program = '{} -m {} {} {} {}'.format(get_executable(), py_path, program_dir, stdout_redirect, stderr_redirect)
         try:
-            #if not self.args.fg:
             _stderr = _StdErr(
                 tmp_path, stderr_sleep_fg if self.args.fg else stderr_sleep_bg)
 
-            out = run(program, async=False if self.args.fg else True)
+            run(program, async=False if self.args.fg else True)
 
             # Wait a moment for any potential errors
-            #if not self.args.fg:
             _err = _stderr.wait_for_error()
             if _err:
                 self.logger.warn(_err)
