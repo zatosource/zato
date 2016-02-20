@@ -1,5 +1,5 @@
---- gunicorn/glogging.py.orig	2015-01-16 09:24:13.121546744 +0100
-+++ gunicorn/glogging.py	2015-01-16 09:24:33.073547066 +0100
+--- gunicorn/glogging.py.orig	2016-02-20 16:05:01.558349358 +0100
++++ gunicorn/glogging.py	2016-02-20 16:05:21.650349683 +0100
 @@ -50,11 +50,11 @@
  
          loggers={
@@ -14,7 +14,7 @@
              }
          },
          handlers={
-@@ -155,7 +155,7 @@
+@@ -155,50 +155,13 @@
      atoms_wrapper_class = SafeAtoms
  
      def __init__(self, cfg):
@@ -23,3 +23,46 @@
          self.access_log = logging.getLogger("gunicorn.access")
          self.error_handlers = []
          self.access_handlers = []
+         self.cfg = cfg
+         self.logfile = None
+         self.lock = threading.Lock()
+-        self.setup(cfg)
+-
+-    def setup(self, cfg):
+-        if not cfg.logconfig:
+-            loglevel = self.LOG_LEVELS.get(cfg.loglevel.lower(), logging.INFO)
+-            self.error_log.setLevel(loglevel)
+-            self.access_log.setLevel(logging.INFO)
+-
+-            if cfg.errorlog != "-":
+-                # if an error log file is set redirect stdout & stderr to
+-                # this log file.
+-                for stream in sys.stdout, sys.stderr:
+-                    stream.flush()
+-
+-                self.logfile = open(cfg.errorlog, 'a+')
+-                os.dup2(self.logfile.fileno(), sys.stdout.fileno())
+-                os.dup2(self.logfile.fileno(), sys.stderr.fileno())
+-
+-            # set gunicorn.error handler
+-            self._set_handler(self.error_log, cfg.errorlog,
+-                    logging.Formatter(self.error_fmt, self.datefmt))
+-
+-            # set gunicorn.access handler
+-            if cfg.accesslog is not None:
+-                self._set_handler(self.access_log, cfg.accesslog,
+-                    fmt=logging.Formatter(self.access_fmt))
+-
+-            # set syslog handler
+-            if cfg.syslog:
+-                self._set_syslog_handler(self.error_log, cfg, self.syslog_fmt)
+-
+-        else:
+-            if os.path.exists(cfg.logconfig):
+-                fileConfig(cfg.logconfig, defaults=CONFIG_DEFAULTS,
+-                        disable_existing_loggers=False)
+-            else:
+-                raise RuntimeError("Error: log config '%s' not found" % cfg.logconfig)
+ 
+     def critical(self, msg, *args, **kwargs):
+         self.error_log.critical(msg, *args, **kwargs)
