@@ -140,7 +140,7 @@ class CheckConfig(ManageCommand):
         repo_dir = join(self.config_dir, 'repo')
 
         lba_conf = self.get_json_conf('lb-agent.conf')
-        lb_conf_string =  open(join(repo_dir, 'zato.config')).read()
+        lb_conf_string = open(join(repo_dir, 'zato.config')).read()
 
         # Load-balancer's agent
         self.ensure_json_config_port_free('Load balancer\'s agent', None, lba_conf)
