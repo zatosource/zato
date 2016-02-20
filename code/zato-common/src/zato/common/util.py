@@ -643,13 +643,16 @@ def get_service_by_name(session, cluster_id, name):
            filter(Service.name==name).\
            one()
 
-def add_startup_jobs(cluster_id, odb, stats_jobs):
-    """ Adds one of the interval jobs to the ODB. Note that it isn't being added
+def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
+    """ Adds internal jobs to the ODB. Note that it isn't being added
     directly to the scheduler because we want users to be able to fine-tune the job's
     settings.
     """
     with closing(odb.session()) as session:
-        for item in stats_jobs:
+        for item in jobs:
+
+            if not stats_enabled and item['name'].startswith('zato.stats'):
+                continue
 
             try:
                 service_id = get_service_by_name(session, cluster_id, item['service'])[0]
