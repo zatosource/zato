@@ -253,7 +253,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.service_sources, self.base_dir)
 
             # Add the statistics-related scheduler jobs to the ODB
-            add_startup_jobs(self.cluster_id, self.odb, self.startup_jobs)
+            add_startup_jobs(self.cluster_id, self.odb, self.startup_jobs, asbool(self.fs_server_config.component_enabled.stats))
 
             # Migrations
             self.odb.add_channels_2_0()
