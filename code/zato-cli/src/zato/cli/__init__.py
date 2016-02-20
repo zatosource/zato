@@ -150,6 +150,7 @@ handlers:
     stdout:
         formatter: colour
         class: logging.StreamHandler
+        stream: ext://sys.stdout
     http_access_log:
         formatter: http_access_log
         class: logging.handlers.ConcurrentRotatingFileHandler
@@ -299,6 +300,7 @@ class ZatoCommand(object):
         INVALID_INPUT = 15
         EXCEPTION_CAUGHT = 16
         CANNOT_MIGRATE = 17
+        FAILED_TO_START = 18
 
     class COMPONENTS(object):
         class _ComponentName(object):
