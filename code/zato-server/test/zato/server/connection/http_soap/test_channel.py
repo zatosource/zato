@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from cStringIO import StringIO
+from httplib import OK
 from unittest import TestCase
 from uuid import uuid4
 
@@ -59,6 +60,9 @@ class DummyResponse(object):
         self.payload = payload
         self.result = result
         self.result_details = result_details if result_details else uuid4().hex
+        self.content_type = 'text/plain'
+        self.status_code = OK
+        self.headers = {}
 
 class DummyService(Service):
     def __init__(self, response=None, cid=None):
@@ -288,6 +292,11 @@ class TestRequestDispatcher(MessageHandlingBase):
                 self.worker_store = worker_store
                 self.simple_io_config = simple_io_config
 
+                return DummyResponse('dummy_response')
+
+        class DummySecDef(object):
+            sec_type = 'basic_auth'
+
         cid = uuid4().hex
         req_timestamp = uuid4().hex
         path_info = uuid4().hex
@@ -322,7 +331,7 @@ class TestRequestDispatcher(MessageHandlingBase):
         }
 
         ud = DummyURLData(match_return_value, channel_item_return_value)
-        ud.url_sec[channel_item_return_value.match_target] = Bunch(sec_def=ZATO_NONE)
+        ud.url_sec[channel_item_return_value.match_target] = Bunch(sec_def=DummySecDef())
 
         rd = channel.RequestDispatcher(ud)
         rd.simple_io_config = simple_io_config

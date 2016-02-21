@@ -41,6 +41,9 @@ class _HTTPHandler(BaseHTTPRequestHandler):
 
     do_DELETE = do_OPTIONS = do_POST = do_PUT = do_PATCH = do_GET
 
+    def log_message(self, *ignored_args, **ignored_kwargs):
+        pass # Base class logs to stderr and we want to silence it outs
+
 class _TLSServer(HTTPServer):
     def __init__(self, cert_reqs, ca_cert):
         self.port = get_free_port()

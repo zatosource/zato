@@ -278,11 +278,9 @@ class URLDataTestCase(TestCase):
         sec_def1 = DummySecDef()
 
         wrapper1 = DummySecWrapper(sec_def1)
-        wrapper2 = DummySecWrapper(ZATO_NONE)
 
         url_sec = {
             match_target1: wrapper1,
-            match_target2: wrapper2
         }
 
         ud = url_data.URLData(url_sec=url_sec)
@@ -303,10 +301,6 @@ class URLDataTestCase(TestCase):
 
         ud = url_data.URLData(url_sec=url_sec)
         ud._handle_security_basic_auth = dummy_basic_auth
-
-        ud.check_security(
-            wrapper2, expected_cid, match2, expected_path_info, expected_payload,
-            expected_wsgi_environ, None, None)
 
         eq_(dummy_basic_auth.cid, ZATO_NONE)
         eq_(dummy_basic_auth.sec_def, ZATO_NONE)
