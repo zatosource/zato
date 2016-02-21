@@ -9,6 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import os
+os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
+
 from datetime import datetime
 from unittest import TestCase
 
