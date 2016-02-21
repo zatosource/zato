@@ -63,10 +63,10 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.response_elem, 'zato_channel_amqp_get_list_response')
         self.assertEquals(self.sio.input_required, ('cluster_id',))
         self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix',
-            'def_name', 'def_id', 'service_name', 'data_format'))
+            'def_name', 'def_id', 'service_name'))
+        self.assertEquals(self.sio.output_optional, ('data_format',))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
-        self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
 
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.channel.amqp.get-list')

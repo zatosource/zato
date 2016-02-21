@@ -379,7 +379,7 @@ class URLData(OAuthDataStore):
         or raises an exception otherwise.
         """
         sec_def, sec_def_type = sec.sec_def, sec.sec_def.sec_type
-        handler_name = '_handle_security_{%s}' % sec_def_type.replace('-', '_')
+        handler_name = '_handle_security_%s' % sec_def_type.replace('-', '_')
         getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ, post_data)
 
         # Ok, we now know that the credentials are valid so we can check RBAC permissions if need be.
