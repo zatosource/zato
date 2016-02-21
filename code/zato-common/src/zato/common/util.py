@@ -39,9 +39,6 @@ from alembic import op
 # anyjson
 from anyjson import dumps, loads
 
-# base32_crockford
-from base32_crockford import encode2 as b32_crockford_encode
-
 # Bunch
 from bunch import Bunch, bunchify
 

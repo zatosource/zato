@@ -17,9 +17,6 @@ from uuid import uuid4
 # anyjson
 from anyjson import loads
 
-# base32_crockford
-from base32_crockford import decode
-
 # Bunch
 from bunch import Bunch
 

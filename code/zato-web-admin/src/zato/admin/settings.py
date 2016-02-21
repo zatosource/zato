@@ -89,7 +89,6 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.humanize',
     'django_openid_auth',
-    'debug_toolbar',
     'django_settings',
     'zato.admin.web',
 )
