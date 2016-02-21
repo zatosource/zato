@@ -13,9 +13,6 @@ from json import loads
 from datetime import datetime
 from unittest import TestCase
 
-# datadiff
-from datadiff.tools import assert_equal
-
 # dateutil
 from dateutil.parser import parse
 
@@ -710,12 +707,12 @@ class CtxObjectsTestCase(TestCase):
         }
 
         # Dicts must be equal ..
-        assert_equal(actual.to_dict(), expected)
+        self.assertDictEqual(actual.to_dict(), expected)
 
         # .. as well as JSON.
         json = actual.to_json()
         self.assertIsInstance(json, str)
         unjsonified = loads(json)
-        assert_equal(unjsonified, expected)
+        self.assertDictEqual(unjsonified, expected)
 
 # ################################################################################################################################
