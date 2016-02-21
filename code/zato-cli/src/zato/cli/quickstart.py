@@ -207,10 +207,11 @@ class Create(ZatoCommand):
         1) CA and crypto material
         2) ODB
         3) ODB initial data
-        4) servers
-        5) load-balancer
-        6) Web admin
-        7) Scripts
+        4) server1
+        5) server2
+        6) load-balancer
+        7) Web admin
+        8) Scripts
         """
 
         if args.odb_type == 'sqlite':
@@ -290,7 +291,8 @@ class Create(ZatoCommand):
         self.logger.info('[{}/{}] ODB initial data created'.format(next_step.next(), total_steps))
 
         #
-        # 4) servers
+        # 4) server1
+        # 5) server2
         #
         for name in server_names:
             server_path = os.path.join(args_path, server_names[name])
@@ -309,7 +311,7 @@ class Create(ZatoCommand):
             self.logger.info('[{}/{}] server{} created'.format(next_step.next(), total_steps, name))
 
         #
-        # 5) load-balancer
+        # 6) load-balancer
         #
         lb_path = os.path.join(args_path, 'load-balancer')
         os.mkdir(lb_path)
@@ -329,8 +331,9 @@ class Create(ZatoCommand):
         self.logger.info('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps))
 
         #
-        # 6) Web admin
+        # 7) Web admin
         #
+        self.reset_logger(args, True)
         web_admin_path = os.path.join(args_path, 'web-admin')
         os.mkdir(web_admin_path)
 
@@ -352,7 +355,7 @@ class Create(ZatoCommand):
         self.logger.info('[{}/{}] Web admin created'.format(next_step.next(), total_steps))
 
         #
-        # 7) Scripts
+        # 8) Scripts
         #
         zato_bin = 'zato'
         zato_qs_start_path = os.path.join(args_path, 'zato-qs-start.sh')
