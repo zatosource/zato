@@ -660,7 +660,7 @@ class CASSANDRA:
         CONTACT_POINTS = ValueConstant('127.0.0.1\n')
         EXEC_SIZE = ValueConstant(2)
         PORT = ValueConstant(9042)
-        PROTOCOL_VERSION = ValueConstant(2)
+        PROTOCOL_VERSION = ValueConstant(4)
         KEYSPACE = ValueConstant('not-set')
 
     class COMPRESSION(Constants):

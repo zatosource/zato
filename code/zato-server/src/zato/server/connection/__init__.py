@@ -448,7 +448,7 @@ class BaseConnPoolStore(object):
         """
         with self.lock:
             try:
-                session = self.sessions(name)
+                session = self.sessions[name]
                 if session and session.is_connected:
                     self.delete_session(name)
 

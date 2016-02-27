@@ -14,6 +14,7 @@ from logging import getLogger
 # Cassandra
 from cassandra.auth import PlainTextAuthProvider
 from cassandra.cluster import Cluster
+from cassandra.io.geventreactor import GeventConnection
 from cassandra.query import dict_factory
 
 # Zato
@@ -59,7 +60,8 @@ class CassandraConnStore(BaseConnPoolStore):
         cluster = Cluster(
             config.contact_points.splitlines(), int(config.port), cql_version=config.cql_version,
             protocol_version=int(config.proto_version), executor_threads=int(config.exec_size),
-            auth_provider=auth_provider, ssl_options=tls_options, control_connection_timeout=3)
+            auth_provider=auth_provider, ssl_options=tls_options, control_connection_timeout=3,
+            connection_class=GeventConnection)
 
         session = cluster.connect()
         session.row_factory = dict_factory
