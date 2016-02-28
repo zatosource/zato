@@ -96,7 +96,7 @@ def _edit_create_response(id, verb, transport, connection, name):
                        name),
                 }
 
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 @method_allowed('GET')
 def index(req):

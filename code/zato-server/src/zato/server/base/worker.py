@@ -527,7 +527,7 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init_json_pointer_store(self):
         for k, v in self.worker_config.json_pointer.items():
-            self.json_pointer_store.add(k, v.config.value)
+            self.json_pointer_store.add(k, v.config)
 
 # ################################################################################################################################
 

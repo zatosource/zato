@@ -47,7 +47,7 @@ def _edit_create_response(client, verb, id, name, def_id, cluster_id):
                    'message': 'Successfully {0} the AMQP channel [{1}]'.format(verb, name),
                    'def_name': response.data.name
                 }
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 class Index(_Index):
     method_allowed = 'GET'

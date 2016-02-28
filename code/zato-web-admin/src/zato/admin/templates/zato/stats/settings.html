@@ -2,15 +2,15 @@
 
 {% block html_title %}Stats settings{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/stats/settings.js"></script>
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -31,6 +31,7 @@
 
 <div id="markup">
     <form action="./save/?cluster={{ cluster_id }}" method="post" id="settings_form">
+    {% csrf_token %}
     <table id="data-table">
         <tr>
             <td class="inline_header" colspan="4">Scheduler</td>

@@ -43,7 +43,7 @@ def remote_command_execute(req):
     try:
         response = req.zato.client.invoke('zato.kvdb.remote-command.execute', {'command': req.POST['command']})
         if response.has_data:
-            return HttpResponse(dumps({'message': dumps(response.data.result)}), mimetype='application/javascript')
+            return HttpResponse(dumps({'message': dumps(response.data.result)}), content_type='application/javascript')
         else:
             raise ZatoException(msg=response.details)
     except Exception, e:

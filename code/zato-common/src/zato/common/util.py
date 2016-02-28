@@ -207,8 +207,7 @@ class ColorFormatter(logging.Formatter):
 
     def __init__(self, fmt):
         self.use_color = True
-        msg = self.formatter_msg(fmt, self.use_color)
-        logging.Formatter.__init__(self, msg)
+        super(ColorFormatter, self).__init__(fmt)
 
     def formatter_msg(self, msg, use_color=True):
         if use_color:

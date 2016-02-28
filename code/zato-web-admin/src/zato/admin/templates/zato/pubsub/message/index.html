@@ -2,11 +2,11 @@
 
 {% block html_title %}Pub/sub messages : {{ topic_name }}{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
@@ -36,8 +36,8 @@
 
 {% endblock %}
 
-{% block content %}
-<h2 class="zato">Pub/sub : <a href="{% url pubsub-topics %}?cluster={{ cluster_id }}" class="common">Topics</a> : Messages : {{ topic_name }}
+{% block "content" %}
+<h2 class="zato">Pub/sub : <a href="{% url "pubsub-topics" %}?cluster={{ cluster_id }}" class="common">Topics</a> : Messages : {{ topic_name }}
   {% ifequal source_type 'consumer-queue' %}: Consumer : {{ source_name }}{% endifequal %}</h2>
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
@@ -70,7 +70,7 @@
                         <td>{{ item.expiration }}</td>
                         <td>{{ item.expire_at }}</td>
                         <td>{{ item.producer }}</td>
-                        <td><a href="{% url pubsub-message-details source_type item.msg_id cluster_id topic_name %}{% ifequal source_type 'consumer-queue' %}?sub_key={{ source_name }}{% endifequal %}" class="common">Details</a></td>
+                        <td><a href="{% url "pubsub-message-details" source_type item.msg_id cluster_id topic_name %}{% ifequal source_type 'consumer-queue' %}?sub_key={{ source_name }}{% endifequal %}" class="common">Details</a></td>
                         {% ifequal source_type 'consumer-queue' %}
                             <td><a href="javascript:$.fn.zato.pubsub.message.delete_('{{ item.msg_id }}', '{{ source_name }}')">Delete</a></td>
                         {% else %}

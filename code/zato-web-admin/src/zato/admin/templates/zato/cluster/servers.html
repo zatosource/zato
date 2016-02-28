@@ -2,11 +2,11 @@
 
 {% block html_title %}Servers{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
@@ -40,8 +40,8 @@
 
 {% endblock %}
 
-{% block content %}
-<h2 class="zato">Clusters : {% if cluster %}<a href='{% url cluster %}?highlight={{ cluster.id }}'>{{ cluster.name }}</a> :{% endif %} Servers</h2>
+{% block "content" %}
+<h2 class="zato">Clusters : {% if cluster %}<a href='{% url "cluster" %}?highlight={{ cluster.id }}'>{{ cluster.name }}</a> :{% endif %} Servers</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -112,7 +112,7 @@
         
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url cluster-servers-edit %}" method="post" id="edit-form">
+                <form action="{% url "cluster-servers-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                     
                         <tr>

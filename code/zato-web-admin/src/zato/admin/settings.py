@@ -7,7 +7,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import logging, logging.config, os
+import logging
+import logging.config
+import os
+from uuid import uuid4
 
 # SQLAlchemy
 from sqlalchemy.orm import sessionmaker, scoped_session
@@ -59,27 +62,33 @@ MEDIA_URL = '/static/'
 # Examples: 'http://foo.com/media/', '/media/'.
 ADMIN_MEDIA_PREFIX = '/media/'
 
-# List of callables that know how to import templates from various sources.
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.load_template_source',
-    'django.template.loaders.app_directories.load_template_source',
-)
-
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
-    'django.middleware.csrf.CsrfResponseMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'zato.admin.middleware.ZatoMiddleware',
 )
 
 ROOT_URLCONF = 'zato.admin.urls'
 
-TEMPLATE_DIRS = (
-    os.path.join(os.path.dirname(__file__), 'templates'),
-)
+TEMPLATES = [{
+    'BACKEND': 'django.template.backends.django.DjangoTemplates',
+    'DIRS': [os.path.join(os.path.dirname(__file__), 'templates')],
+    'OPTIONS': {
+        'context_processors': [
+            'django.contrib.auth.context_processors.auth',
+            'django.template.context_processors.debug',
+            'django.template.context_processors.i18n',
+            'django.template.context_processors.media',
+            'django.template.context_processors.static',
+            'django.template.context_processors.tz',
+            'django.contrib.messages.context_processors.messages',
+        ],
+        'loaders': ['django.template.loaders.filesystem.Loader']
+    },
+}]
 
 INSTALLED_APPS = (
     'django.contrib.auth',
@@ -132,10 +141,15 @@ if 'DATABASES' in globals():
 
     # SQLAlchemy setup
     SASession = scoped_session(sessionmaker())
-    engine = create_engine(get_engine_url(db_data), **{'pool_recycle':600} if db_data['db_type'] == 'mysql' else {})
+
+    kwargs = {}
+
+    if db_data['db_type'] == 'mysql':
+        kwargs['pool_recycle'] = 600
+
+    engine = create_engine(get_engine_url(db_data), **kwargs)
     SASession.configure(bind=engine)
 
-    TEMPLATE_DEBUG = True
 else:
     ADMIN_INVOKE_NAME = 'dummy'
     ADMIN_INVOKE_PASSWORD = 'dummy'
@@ -155,3 +169,4 @@ else:
     DATABASE_PASSWORD = 'dummy'
     DATABASE_HOST = 'dummy'
     DATABASE_PORT = 123456
+    SECRET_KEY = uuid4().hex

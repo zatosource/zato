@@ -2,11 +2,11 @@
 
 {% block html_title %}FTP outconns{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
@@ -44,7 +44,7 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 <h2 class="zato">Outgoing FTP connections</h2>
 
 {% if not zato_clusters %}
@@ -119,7 +119,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url out-ftp-create %}" method="post" id="create-form">
+                <form action="{% url "out-ftp-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
@@ -175,7 +175,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url out-ftp-edit %}" method="post" id="edit-form">
+                <form action="{% url "out-ftp-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:20%">Name</td>
@@ -232,7 +232,7 @@
         
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url out-ftp-change-password %}" method="post" id="change_password-form">
+                <form action="{% url "out-ftp-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>

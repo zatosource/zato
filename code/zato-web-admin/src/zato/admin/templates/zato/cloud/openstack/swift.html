@@ -2,11 +2,11 @@
 
 {% block html_title %}Cloud - OpenStack Swift{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
@@ -58,7 +58,7 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 <h2 class="zato">OpenStack Swift connections</h2>
 
 {% if not zato_clusters %}
@@ -164,7 +164,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url cloud-openstack-swift-create %}" method="post" id="create-form">
+                <form action="{% url "cloud-openstack-swift-create" %}" method="post" id="create-form">
                     <table class="form-data">
 
                         <tr>
@@ -256,7 +256,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url cloud-openstack-swift-edit %}" method="post" id="edit-form">
+                <form action="{% url "cloud-openstack-swift-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
 
                         <tr>

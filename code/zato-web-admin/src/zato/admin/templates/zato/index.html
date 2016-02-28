@@ -30,9 +30,9 @@
     {% comment %} Our CSS must come last {% endcomment %}
     <link rel="stylesheet" type="text/css" href="/static/css/style.css">
 
-    {% block extra_css %}{% endblock %}
+    {% block "extra_css" %}{% endblock %}
 
-    {% block extra_js %}
+    {% block "extra_js" %}
     {% endblock %}
 
 {% endblock %}
@@ -43,8 +43,8 @@
             <div id="console-header">&nbsp;<img src="/static/gfx/logo.png" alt="Zato samurai helmet logo" style="vertical-align:bottom"/><span id="logo">Zato</span>
             {% if user.is_authenticated %}
                 <span id="logout">
-                    <a class="top" href="{% url account-settings-basic %}">My settings</a>
-                    <a class="top"  href="{% url logout %}">Log out ({{ user.username }})</a>
+                    <a class="top" href="{% url "account-settings-basic" %}">My settings</a>
+                    <a class="top"  href="{% url "logout" %}">Log out ({{ user.username }})</a>
                 </span>
             {% endif %}
             </div>
@@ -53,11 +53,11 @@
 
             <div id="main-menu">
                 <ul class="sf-menu" >
-                <li><a href="{% url cluster %}">Clusters</a></li>
+                <li><a href="{% url "cluster" %}">Clusters</a></li>
 
                 <li><span class="like-a">Services &darr;</span>
                     <ul>
-                        <li><a href="{% url service %}?cluster={{ cluster_id|default:'' }}">List services</a></li>
+                        <li><a href="{% url "service" %}?cluster={{ cluster_id|default:'' }}">List services</a></li>
                     </ul>
                 </li>
 
@@ -66,14 +66,14 @@
                         <li>
                             <span class="like-a">JSON &rarr;</span>
                             <ul>
-                                <li><a href="{% url message-json-pointer %}?cluster={{ cluster_id|default:'' }}">JSON Pointers</a></li>
+                                <li><a href="{% url "message-json-pointer" %}?cluster={{ cluster_id|default:'' }}">JSON Pointers</a></li>
                             </ul>
                         </li>
                         <li>
                             <span class="like-a">XML &rarr;</span>
                             <ul>
-                                <li><a href="{% url message-namespace %}?cluster={{ cluster_id|default:'' }}">Namespaces</a></li>
-                                <li><a href="{% url message-xpath %}?cluster={{ cluster_id|default:'' }}">XPath</a></li>
+                                <li><a href="{% url "message-namespace" %}?cluster={{ cluster_id|default:'' }}">Namespaces</a></li>
+                                <li><a href="{% url "message-xpath" %}?cluster={{ cluster_id|default:'' }}">XPath</a></li>
                             </ul>
                         </li>
                     </ul>
@@ -81,19 +81,19 @@
 
                 <li><span class="like-a">Security &darr;</span>
                     <ul>
-                        <li><a href="{% url security-apikey %}?cluster={{ cluster_id|default:'' }}">API keys</a></li>
-                        <li><a href="{% url security-aws %}?cluster={{ cluster_id|default:'' }}">AWS</a></li>
-                        <li><a href="{% url security-basic-auth %}?cluster={{ cluster_id|default:'' }}">HTTP Basic Auth</a></li>
-                        <li><a href="{% url security-ntlm %}?cluster={{ cluster_id|default:'' }}">NTLM</a></li>
-                        <li><a href="{% url security-oauth %}?cluster={{ cluster_id|default:'' }}">OAuth</a></li>
+                        <li><a href="{% url "security-apikey" %}?cluster={{ cluster_id|default:'' }}">API keys</a></li>
+                        <li><a href="{% url "security-aws" %}?cluster={{ cluster_id|default:'' }}">AWS</a></li>
+                        <li><a href="{% url "security-basic-auth" %}?cluster={{ cluster_id|default:'' }}">HTTP Basic Auth</a></li>
+                        <li><a href="{% url "security-ntlm" %}?cluster={{ cluster_id|default:'' }}">NTLM</a></li>
+                        <li><a href="{% url "security-oauth" %}?cluster={{ cluster_id|default:'' }}">OAuth</a></li>
 
                         <li>
                             <span class="like-a">RBAC &rarr;</span>
                             <ul>
-                                <li><a href="{% url security-rbac-role %}?cluster={{ cluster_id|default:'' }}">Roles</a></li>
-                                <li><a href="{% url security-rbac-client-role %}?cluster={{ cluster_id|default:'' }}">Client roles</a></li>
-                                <li><a href="{% url security-rbac-permission %}?cluster={{ cluster_id|default:'' }}">Permissions</a></li>
-                                <li><a href="{% url security-rbac-role-permission %}?cluster={{ cluster_id|default:'' }}">Permissions<br/>for roles</a></li>
+                                <li><a href="{% url "security-rbac-role" %}?cluster={{ cluster_id|default:'' }}">Roles</a></li>
+                                <li><a href="{% url "security-rbac-client-role" %}?cluster={{ cluster_id|default:'' }}">Client roles</a></li>
+                                <li><a href="{% url "security-rbac-permission" %}?cluster={{ cluster_id|default:'' }}">Permissions</a></li>
+                                <li><a href="{% url "security-rbac-role-permission" %}?cluster={{ cluster_id|default:'' }}">Permissions<br/>for roles</a></li>
                             </ul>
                         </li>
 
@@ -101,21 +101,21 @@
                             <span class="like-a">SSL/TLS &rarr;</span>
                             <ul>
                                 <li>
-                                    <li><a href="{% url security-tls-channel %}?cluster={{ cluster_id|default:'' }}">Channels</a></li>
+                                    <li><a href="{% url "security-tls-channel" %}?cluster={{ cluster_id|default:'' }}">Channels</a></li>
                                 </li>
                                 <li>
                                     <span class="like-a">Outgoing &rarr;</span>
                                     <ul>
-                                        <li><a href="{% url security-tls-ca-cert %}?cluster={{ cluster_id|default:'' }}">CA certs</a></li>
-                                        <li><a href="{% url security-tls-key-cert %}?cluster={{ cluster_id|default:'' }}">Keys and certs</a></li>
+                                        <li><a href="{% url "security-tls-ca-cert" %}?cluster={{ cluster_id|default:'' }}">CA certs</a></li>
+                                        <li><a href="{% url "security-tls-key-cert" %}?cluster={{ cluster_id|default:'' }}">Keys and certs</a></li>
                                     </ul>
                                 </li>
                             </ul>
                         </li>
 
-                        <li><a href="{% url security-tech-account %}?cluster={{ cluster_id|default:'' }}">Technical accounts</a></li>
-                        <li><a href="{% url security-wss %}?cluster={{ cluster_id|default:'' }}">WS-Security</a></li>
-                        <li><a href="{% url security-xpath %}?cluster={{ cluster_id|default:'' }}">XPath</a></li>
+                        <li><a href="{% url "security-tech-account" %}?cluster={{ cluster_id|default:'' }}">Technical accounts</a></li>
+                        <li><a href="{% url "security-wss" %}?cluster={{ cluster_id|default:'' }}">WS-Security</a></li>
+                        <li><a href="{% url "security-xpath" %}?cluster={{ cluster_id|default:'' }}">XPath</a></li>
                     </ul>
                 </li>
                 <li><span class="like-a">Connections &darr;</span>
@@ -123,39 +123,39 @@
                         <li>
                             <span class="like-a">Definitions &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url def-amqp %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
-                                <li class='wide'><a href="{% url def-cassandra %}?cluster={{ cluster_id|default:'' }}">Cassandra</a></li>
-                                <li class='wide'><a href="{% url def-jms-wmq %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
+                                <li class='wide'><a href="{% url "def-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
+                                <li class='wide'><a href="{% url "def-cassandra" %}?cluster={{ cluster_id|default:'' }}">Cassandra</a></li>
+                                <li class='wide'><a href="{% url "def-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
                             </ul>
                         </li>
                         <li>
                             <span class="like-a">Channels &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url channel-amqp %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
-                                <li class='wide'><a href="{% url channel-jms-wmq %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
-                                <li class='wide'><a href="{% url http-soap %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=plain_http">Plain HTTP</a></li>
-                                <li class='wide'><a href="{% url http-soap %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
-                                <li class='wide'><a href="{% url channel-zmq %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
+                                <li class='wide'><a href="{% url "channel-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
+                                <li class='wide'><a href="{% url "channel-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
+                                <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=plain_http">Plain HTTP</a></li>
+                                <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
+                                <li class='wide'><a href="{% url "channel-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>
                         <li>
                             <span class="like-a">Outgoing &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url out-amqp %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
-                                <li class='wide'><a href="{% url out-ftp %}?cluster={{ cluster_id|default:'' }}">FTP</a></li>
-                                <li class='wide'><a href="{% url out-jms-wmq %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
-                                <li class='wide'><a href="{% url out-odoo %}?cluster={{ cluster_id|default:'' }}">Odoo</a></li>
-                                <li class='wide'><a href="{% url http-soap %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http">Plain HTTP</a></li>
-                                <li class='wide'><a href="{% url http-soap %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
-                                <li class='wide'><a href="{% url out-sql %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
-                                <li class='wide'><a href="{% url out-zmq %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
+                                <li class='wide'><a href="{% url "out-amqp" %}?cluster={{ cluster_id|default:'' }}">AMQP</a></li>
+                                <li class='wide'><a href="{% url "out-ftp" %}?cluster={{ cluster_id|default:'' }}">FTP</a></li>
+                                <li class='wide'><a href="{% url "out-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
+                                <li class='wide'><a href="{% url "out-odoo" %}?cluster={{ cluster_id|default:'' }}">Odoo</a></li>
+                                <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http">Plain HTTP</a></li>
+                                <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
+                                <li class='wide'><a href="{% url "out-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
+                                <li class='wide'><a href="{% url "out-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>
                         <li>
                             <span class="like-a">Search &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url search-es %}?cluster={{ cluster_id|default:'' }}">ElasticSearch</a></li>
-                                <li class='wide'><a href="{% url search-solr %}?cluster={{ cluster_id|default:'' }}">Solr</a></li>
+                                <li class='wide'><a href="{% url "search-es" %}?cluster={{ cluster_id|default:'' }}">ElasticSearch</a></li>
+                                <li class='wide'><a href="{% url "search-solr" %}?cluster={{ cluster_id|default:'' }}">Solr</a></li>
                             </ul>
                         </li>
                         <li>
@@ -164,22 +164,22 @@
                                 <li>
                                     <span class="like-a">Cloud &rarr;</span>
                                     <ul>
-                                        <li class='wide'><a href="{% url notif-cloud-openstack-swift %}?cluster={{ cluster_id|default:'' }}">OpenStack Swift</a></li>
+                                        <li class='wide'><a href="{% url "notif-cloud-openstack-swift" %}?cluster={{ cluster_id|default:'' }}">OpenStack Swift</a></li>
                                     </ul>
                                 </li>
-                                <li><a href="{% url notif-sql %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
+                                <li><a href="{% url "notif-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
                             </ul>
                         <li>
                             <span class="like-a">Queries &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url query-cassandra %}?cluster={{ cluster_id|default:'' }}">Cassandra</a></li>
+                                <li class='wide'><a href="{% url "query-cassandra" %}?cluster={{ cluster_id|default:'' }}">Cassandra</a></li>
                             </ul>
                         </li>
                         <li>
                             <span class="like-a">E-mail &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url email-imap %}?cluster={{ cluster_id|default:'' }}">IMAP</a></li>
-                                <li class='wide'><a href="{% url email-smtp %}?cluster={{ cluster_id|default:'' }}">SMTP</a></li>
+                                <li class='wide'><a href="{% url "email-imap" %}?cluster={{ cluster_id|default:'' }}">IMAP</a></li>
+                                <li class='wide'><a href="{% url "email-smtp" %}?cluster={{ cluster_id|default:'' }}">SMTP</a></li>
                             </ul>
                         </li>
                     </ul>
@@ -190,13 +190,13 @@
                         <li>
                             <span class="like-a">AWS &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url cloud-aws-s3 %}?cluster={{ cluster_id|default:'' }}">S3</a></li>
+                                <li class='wide'><a href="{% url "cloud-aws-s3" %}?cluster={{ cluster_id|default:'' }}">S3</a></li>
                             </ul>
                         </li>
                         <li>
                             <span class="like-a">OpenStack &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url cloud-openstack-swift %}?cluster={{ cluster_id|default:'' }}">Swift</a></li>
+                                <li class='wide'><a href="{% url "cloud-openstack-swift" %}?cluster={{ cluster_id|default:'' }}">Swift</a></li>
                             </ul>
                         </li>
                     </ul>
@@ -204,36 +204,36 @@
 
                 <li><span class="like-a">Key/value DB &darr;</span>
                     <ul>
-                        <li><a href="{% url kvdb-data-dict-dictionary %}?cluster={{ cluster_id|default:'' }}">Data dictionaries</a></li>
-                        <li><a href="{% url kvdb-remote-command %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></li>
+                        <li><a href="{% url "kvdb-data-dict-dictionary" %}?cluster={{ cluster_id|default:'' }}">Data dictionaries</a></li>
+                        <li><a href="{% url "kvdb-remote-command" %}?cluster={{ cluster_id|default:'' }}">Remote commands</a></li>
                     </ul>
                 </li>
 
                 <li><span class="like-a">Pub/sub &darr;</span>
                     <ul>
-                        <li><a href="{% url pubsub-topics %}?cluster={{ cluster_id|default:'' }}">Topics</a></li>
+                        <li><a href="{% url "pubsub-topics" %}?cluster={{ cluster_id|default:'' }}">Topics</a></li>
                     </ul>
                 </li>
 
-                <li><a href="{% url scheduler %}?cluster={{ cluster_id|default:'' }}">Scheduler</a></li>
+                <li><a href="{% url "scheduler" %}?cluster={{ cluster_id|default:'' }}">Scheduler</a></li>
                 <li><a href="#">Statistics &darr;</a>
                     <ul>
 
                         <li>
                             <span class="like-a">Trends &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url stats-trends 'last_hour' %}?cluster={{ cluster_id|default:'' }}">Last hour</a></li>
+                                <li class='wide'><a href="{% url "stats-trends" 'last_hour' %}?cluster={{ cluster_id|default:'' }}">Last hour</a></li>
                             </ul>
                         </li>
 
                         <li>
                             <span class="like-a">Summary &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url stats-summary 'today' %}?cluster={{ cluster_id|default:'' }}">Today</a></li>
-                                <li class='wide'><a href="{% url stats-summary 'yesterday' %}?cluster={{ cluster_id|default:'' }}">Yesterday</a></li>
-                                <li class='wide'><a href="{% url stats-summary 'this_week' %}?cluster={{ cluster_id|default:'' }}">This week</a></li>
-                                <li class='wide'><a href="{% url stats-summary 'this_month' %}?cluster={{ cluster_id|default:'' }}">This month</a></li>
-                                <li class='wide'><a href="{% url stats-summary 'this_year' %}?cluster={{ cluster_id|default:'' }}">This year</a></li>
+                                <li class='wide'><a href="{% url "stats-summary" 'today' %}?cluster={{ cluster_id|default:'' }}">Today</a></li>
+                                <li class='wide'><a href="{% url "stats-summary" 'yesterday' %}?cluster={{ cluster_id|default:'' }}">Yesterday</a></li>
+                                <li class='wide'><a href="{% url "stats-summary" 'this_week' %}?cluster={{ cluster_id|default:'' }}">This week</a></li>
+                                <li class='wide'><a href="{% url "stats-summary" 'this_month' %}?cluster={{ cluster_id|default:'' }}">This month</a></li>
+                                <li class='wide'><a href="{% url "stats-summary" 'this_year' %}?cluster={{ cluster_id|default:'' }}">This year</a></li>
                             </ul>
                         </li>
 
@@ -241,10 +241,10 @@
                         <li>
 
                         <li>
-                            <a href="{% url stats-settings %}?cluster={{ cluster_id|default:'' }}">Settings</a>
+                            <a href="{% url "stats-settings" %}?cluster={{ cluster_id|default:'' }}">Settings</a>
                         </li>
                         <li>
-                            <a href="{% url stats-maintenance %}?cluster={{ cluster_id|default:'' }}">Maintenance</a>
+                            <a href="{% url "stats-maintenance" %}?cluster={{ cluster_id|default:'' }}">Maintenance</a>
                         </li>
                     </ul>
                 </li>
@@ -280,7 +280,7 @@
 
         <div id="bd">
         <div id="yui-main">
-            <div class="yui-b">{% block content %}{% endblock %}</div>
+            <div class="yui-b">{% block "content" %}{% endblock %}</div>
         </div>
     </div>
 </div>
