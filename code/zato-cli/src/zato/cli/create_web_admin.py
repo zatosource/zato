@@ -135,12 +135,16 @@ class Create(ZatoCommand):
 
         os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
 
+        import django
+        django.setup()
+        self.reset_logger(args, True)
+
         # Can't import these without DJANGO_SETTINGS_MODULE being set
         from django.contrib.auth.models import User
         from django.db import connection
         from django.db.utils import IntegrityError
 
-        call_command('syncdb', interactive=False, verbosity=0)
+        call_command('migrate', run_syncdb=True, interactive=False, verbosity=0)
         call_command('loaddata', initial_data_json_path, verbosity=0)
 
         try:

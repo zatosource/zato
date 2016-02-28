@@ -2,7 +2,7 @@
 
 {% block html_title %}{{ service.name }} - Invoker{% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/service/invoker.js"></script>
@@ -10,19 +10,19 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-<h2 class="zato">Services : <a href="{% url service %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Invoker</h2>
+<h2 class="zato">Services : <a href="{% url "service" %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Invoker</h2>
 
 <div class='page_prompt'>
-    <a href="{% url service-overview service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
-    <a href="{% url service-invoker service.name %}?cluster={{ cluster_id }}" class="common current">Invoker</a>
-    <a href="{% url service-source-info service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
-    <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
-    <a href="{% url service-request-response service.name %}?cluster={{ cluster_id }}" class="common">Sample request/response</a>
-    <a href="{% url service-slow-response service.name %}?cluster={{ cluster_id }}" class="common">Slow responses</a>
+    <a href="{% url "service-overview" service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
+    <a href="{% url "service-invoker" service.name %}?cluster={{ cluster_id }}" class="common current">Invoker</a>
+    <a href="{% url "service-source-info" service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
+    <a href="{% url "service-wsdl" service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
+    <a href="{% url "service-request-response" service.name %}?cluster={{ cluster_id }}" class="common">Sample request/response</a>
+    <a href="{% url "service-slow-response" service.name %}?cluster={{ cluster_id }}" class="common">Slow responses</a>
 </div>
 
 <div id="markup">
@@ -32,7 +32,8 @@
         </tr>
         <tr>
             <td>
-                <form id="invoke_service_form" action="{% url service-invoke service.name cluster_id %}" method="post">
+                <form id="invoke_service_form" action="{% url "service-invoke" service.name cluster_id %}" method="post">
+                {% csrf_token %}
                     <textarea style="width:100%; height:350px" id="payload" name="payload"></textarea>
                     <br/><br/>
                     

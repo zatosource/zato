@@ -52,7 +52,7 @@ def _edit_create_response(item, verb):
         'addresses': addresses,
         'has_lb_config': has_lb_config
         }
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 def _create_edit(req, verb, item, form_class, prefix=''):
 
@@ -142,7 +142,7 @@ def _common_edit_message(client, success_msg, id, name, host, up_status, up_mod_
             'in_lb': lb_server_data.in_lb,
         })
 
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 
 @method_allowed('GET')
@@ -186,7 +186,7 @@ def edit(req):
 
 def _get(req, **filter):
     cluster = req.zato.odb.query(Cluster).filter_by(**filter).one()
-    return HttpResponse(cluster.to_json(), mimetype='application/javascript')
+    return HttpResponse(cluster.to_json(), content_type='application/javascript')
 
 @method_allowed('GET')
 def get_by_id(req, cluster_id):

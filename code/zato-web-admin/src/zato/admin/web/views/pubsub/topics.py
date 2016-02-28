@@ -143,7 +143,7 @@ def publish_action(req, cluster_id, topic):
 
         if response.ok:
             msg = 'Published message `{}` to topic `{}`'.format(response.data.msg_id, req.POST['name'])
-            return HttpResponse(dumps({'msg': msg}), mimetype='application/javascript')
+            return HttpResponse(dumps({'msg': msg}), content_type='application/javascript')
         else:
             raise Exception(response.details)
     except Exception, e:

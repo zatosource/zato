@@ -32,7 +32,7 @@ def _edit_create_response(service_response, action, name, password_type):
         'password_type_raw':password_type,
         'password_type':ZATO_WSS_PASSWORD_TYPES[password_type]}
 
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 def _get_edit_create_message(params, prefix=''):
     """ Creates a base dictionary which can be used by both 'edit' and 'create' actions.

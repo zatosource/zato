@@ -1,17 +1,17 @@
 {% extends "zato/index.html" %}
 {% load extras %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/colorpicker/css/colorpicker.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/account/settings.js"></script>
     <script type="text/javascript" src="/static/js/colorpicker/js/colorpicker.js"></script>
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 
 <h2 class="zato">Account : Basic settings</h2>
 
@@ -24,6 +24,7 @@
 
 <div id="markup">
     <form action="./save/" method="post" id="settings_form">
+    {% csrf_token %}
     <table id="data-table">
         <tr>
             <td class="inline_header" colspan="4">Date and time</td>

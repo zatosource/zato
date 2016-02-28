@@ -2,11 +2,11 @@
 
 {% block html_title %}{{ service.name }} - Samples{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/pygments.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/service/request-response.js"></script>
@@ -14,25 +14,25 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-<h2 class="zato">Services : <a href="{% url service %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Sample request/response</h2>
+<h2 class="zato">Services : <a href="{% url "service" %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Sample request/response</h2>
 
 <div class='page_prompt'>
-    <a href="{% url service-overview service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
-    <a href="{% url service-invoker service.name %}?cluster={{ cluster_id }}" class="common">Invoker</a>
-    <a href="{% url service-source-info service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
-    <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
-    <a href="{% url service-request-response service.name %}?cluster={{ cluster_id }}" 
+    <a href="{% url "service-overview" service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
+    <a href="{% url "service-invoker" service.name %}?cluster={{ cluster_id }}" class="common">Invoker</a>
+    <a href="{% url "service-source-info" service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
+    <a href="{% url "service-wsdl" service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>
+    <a href="{% url "service-request-response" service.name %}?cluster={{ cluster_id }}" 
         class="common current">Sample request/response</a>
-    <a href="{% url service-slow-response service.name %}?cluster={{ cluster_id }}" class="common">Slow responses</a>
+    <a href="{% url "service-slow-response" service.name %}?cluster={{ cluster_id }}" class="common">Slow responses</a>
 </div>
 
 <div class='page_prompt'>
     <a 
-    href="{% url service-request-response service.name %}?cluster={{ cluster_id }}&amp;pretty_print={{ pretty_print }}" 
+    href="{% url "service-request-response" service.name %}?cluster={{ cluster_id }}&amp;pretty_print={{ pretty_print }}" 
         class="common">Toggle pretty print</a>
 </div>
 
@@ -45,8 +45,9 @@
             <td>
                 One in how many request/response pairs should be stored? 
                 
-                <form action="{% url service-request-response-configure service.name cluster_id %}"
+                <form action="{% url "service-request-response-configure" service.name cluster_id %}"
                      id="request_response_configure_form" method="post" style="padding-top:6px">
+                     {% csrf_token %}
                     <input type="text" id="sample_req_resp_freq" name="sample_req_resp_freq" style="width:120px"
                          value="{{ service.sample_req_resp_freq }}"/>
                     <input type="hidden" id="service_name" name="service_name" value="{{ service.name }}"/>

@@ -2,11 +2,11 @@
 
 {% block html_title %}Pub/sub topics{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
@@ -39,7 +39,7 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 <h2 class="zato">Pub/sub topics</h2>
 
 {% if not zato_clusters %}
@@ -83,12 +83,12 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
-                        <td><a href="{% url pubsub-message-topic cluster_id item.name %}">{{ item.current_depth }}</a></td>
+                        <td><a href="{% url "pubsub-message-topic" cluster_id item.name %}">{{ item.current_depth }}</a></td>
                         <td>{{ item.max_depth }}</td>
                         <td>{% if item.last_pub_time %}{{ item.last_pub_time }}{% else %}<span class="form_hint">(Never)</span>{% endif %}</td>
-                        <td><a href="{% url pubsub-producers cluster_id item.name %}">{{ item.producers_count }} producer{% if item.producers_count == 0 or item.producers_count >= 2 %}s{% endif %}</a></td>
-                        <td><a href="{% url pubsub-consumers cluster_id item.name %}">{{ item.consumers_count }} consumer{% if item.consumers_count == 0 or item.consumers_count >= 2 %}s{% endif %}</a></td>
-                        <td><a href="{% url pubsub-topics-publish cluster_id item.name %}">Publish a message</a></td>
+                        <td><a href="{% url "pubsub-producers" cluster_id item.name %}">{{ item.producers_count }} producer{% if item.producers_count == 0 or item.producers_count >= 2 %}s{% endif %}</a></td>
+                        <td><a href="{% url "pubsub-consumers" cluster_id item.name %}">{{ item.consumers_count }} consumer{% if item.consumers_count == 0 or item.consumers_count >= 2 %}s{% endif %}</a></td>
+                        <td><a href="{% url "pubsub-topics-publish" cluster_id item.name %}">Publish a message</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topics.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topics.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -107,7 +107,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url pubsub-topics-create %}" method="post" id="create-form">
+                <form action="{% url "pubsub-topics-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>
@@ -138,7 +138,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url pubsub-topics-edit %}" method="post" id="edit-form">
+                <form action="{% url "pubsub-topics-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Active</td>

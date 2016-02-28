@@ -2,12 +2,12 @@
 
 {% block html_title %}Deliveries : {{ req.zato.args.state }}{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/slideout.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
@@ -43,8 +43,8 @@
 
 {% endblock %}
 
-{% block content %}
-<h2 class="zato"><a href="{% url pattern-delivery %}?cluster={{ cluster_id }}&amp;target_type={{ req.zato.args.target_type }}">Guaranteed delivery</a> : {{ req.zato.args.def_name }} : {{ req.zato.args.state }}</h2>
+{% block "content" %}
+<h2 class="zato"><a href="{% url "pattern-delivery" %}?cluster={{ cluster_id }}&amp;target_type={{ req.zato.args.target_type }}">Guaranteed delivery</a> : {{ req.zato.args.def_name }} : {{ req.zato.args.state }}</h2>
 
 {% include "zato/user-message.html" %}
 
@@ -75,7 +75,7 @@
             <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.task_id }}'>
                 <td class='numbering'>&nbsp;</td>
                 <td class="impexp"><input type="checkbox" /></td>
-                <td><a href="{% url pattern-delivery-details item.task_id %}?cluster={{ cluster_id }}">{{ item.task_id }}</a></td>
+                <td><a href="{% url "pattern-delivery-details" item.task_id %}?cluster={{ cluster_id }}">{{ item.task_id }}</a></td>
                 <td>{{ item.creation_time }}</td>
                 <td>{% ifequal req.zato.args.state 'in-doubt' %}{{ item.last_used }}{% else %}<span class="form_hint">n/a</a>{% endifequal %}</td>
                 <td>{{ item.source_count }}/{{ item.target_count }}</td>

@@ -141,7 +141,7 @@ def clear_queue(req, queue_type, client_id, cluster_id):
         response = req.zato.client.invoke(
             'zato.pubsub.consumers.clear-queue', {'queue_type': queue_type, 'client_id': client_id})
         if response.ok:
-            return HttpResponse('OK', mimetype='application/javascript')
+            return HttpResponse('OK', content_type='application/javascript')
         else:
             raise Exception(response.details)
     except Exception, e:

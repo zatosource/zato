@@ -2,12 +2,12 @@
 
 {% block html_title %}{{ conn_name }} - Audit log{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/slideout.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
@@ -39,13 +39,13 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 
 <h2 class="zato">{{ conn_name }} : Audit log</h2>
 
 <div class='page_prompt'>
-    <a href="{% url http-soap-details connection transport conn_id conn_name cluster_id %}" class="common">Overview</a>
-    <a href="{% url http-soap-audit-log connection transport conn_id conn_name cluster_id %}" class="common current">Audit log</a>
+    <a href="{% url "http-soap-details" connection transport conn_id conn_name cluster_id %}" class="common">Overview</a>
+    <a href="{% url "http-soap-audit-log" connection transport conn_id conn_name cluster_id %}" class="common current">Audit log</a>
 </div>
 
 {% include "zato/user-message.html" %}
@@ -76,7 +76,7 @@
             <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.task_id }}'>
                 <td class='numbering'>&nbsp;</td>
                 <td class="impexp"><input type="checkbox" /></td>
-                <td><a href="{% url http-soap-audit-item connection transport conn_id conn_name cluster_id item.id %}">{{ item.cid }}</a></td>
+                <td><a href="{% url "http-soap-audit-item" connection transport conn_id conn_name cluster_id item.id %}">{{ item.cid }}</a></td>
                 <td>{{ item.invoke_ok|default:'False' }}</td>
                 <td>{{ item.auth_ok|default:'False' }}</td>
                 <td>{{ item.user_token|default:'<span class="form_hint">(None)</span>' }}</td>

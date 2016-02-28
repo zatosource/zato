@@ -2,12 +2,12 @@
 
 {% block html_title %}Guaranteed delivery{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/slideout.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
@@ -15,7 +15,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-	<script type="text/javascript" src="/static/js/pattern/delivery/look-up-task.js"></script>
+    <script type="text/javascript" src="/static/js/pattern/delivery/look-up-task.js"></script>
     <script type="text/javascript" src="/static/js/pattern/delivery/definition/index.js"></script>
 
 
@@ -51,7 +51,7 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 <h2 class="zato">Guaranteed delivery</h2>
 
 {% if not zato_clusters %}
@@ -111,10 +111,10 @@
                         <td>{{ item.target }}</td>
                         <td>{{ item.short_def }}</td>
                         <td>{{ item.total_count }}</td>
-                        <td>{{ item.in_progress_count }} <a href="{% url pattern-delivery-index item.name item.target_type item.target 'in-progress-any' cluster_id %}">(list)</a></td>
-                        <td>{{ item.in_doubt_count }} <a href="{% url pattern-delivery-index item.name item.target_type item.target 'in-doubt' cluster_id %}">(list)</a></td>
-                        <td>{{ item.confirmed_count }} <a href="{% url pattern-delivery-index item.name item.target_type item.target 'confirmed' cluster_id %}">(list)</a></td>
-                        <td>{{ item.failed_count }} <a href="{% url pattern-delivery-index item.name item.target_type item.target 'failed' cluster_id %}">(list)</a></td>
+                        <td>{{ item.in_progress_count }} <a href="{% url "pattern-delivery-index" item.name item.target_type item.target 'in-progress-any' cluster_id %}">(list)</a></td>
+                        <td>{{ item.in_doubt_count }} <a href="{% url "pattern-delivery-index" item.name item.target_type item.target 'in-doubt' cluster_id %}">(list)</a></td>
+                        <td>{{ item.confirmed_count }} <a href="{% url "pattern-delivery-index" item.name item.target_type item.target 'confirmed' cluster_id %}">(list)</a></td>
+                        <td>{{ item.failed_count }} <a href="{% url "pattern-delivery-index" item.name item.target_type item.target 'failed' cluster_id %}">(list)</a></td>
                         <td>{% if item.last_updated %}{{ item.last_updated }}{% else %}<span class="form_hint">(Never)</span>{% endif %}</td>
                         <td>{% if item.last_used %}{{ item.last_used }}{% else %}<span class="form_hint">(Never)</span>{% endif %}</td>
                         <td><a href="javascript:$.fn.zato.pattern.delivery.edit('{{ item.id }}')">Edit</a></td>
@@ -141,7 +141,7 @@
         
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url pattern-delivery-create %}" method="post" id="create-form">
+                <form action="{% url "pattern-delivery-create" %}" method="post" id="create-form">
                     <table class="form-data">
     
                         <tr>
@@ -230,7 +230,7 @@
         
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url pattern-delivery-edit %}" method="post" id="edit-form">
+                <form action="{% url "pattern-delivery-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
     
                         <tr>

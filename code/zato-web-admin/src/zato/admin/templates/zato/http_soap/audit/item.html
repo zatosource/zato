@@ -2,23 +2,23 @@
 
 {% block html_title %}{{ conn_name }} - Audit log - {{ cid }}{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/slideout.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
     <script type="text/javascript" src="/static/js/common.js"></script>
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 
 <h2 class="zato">{{ conn_name }} : Audit log : {{ cid }}</h2>
 
 <div class='page_prompt'>
-    <a href="{% url http-soap-details connection transport conn_id conn_name cluster_id %}" class="common">Overview</a>
-    <a href="{% url http-soap-audit-log connection transport conn_id conn_name cluster_id %}" class="common">Audit log</a>
+    <a href="{% url "http-soap-details" connection transport conn_id conn_name cluster_id %}" class="common">Overview</a>
+    <a href="{% url "http-soap-audit-log" connection transport conn_id conn_name cluster_id %}" class="common">Audit log</a>
 </div>
 
 <div id="markup">

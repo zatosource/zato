@@ -2,7 +2,7 @@
 
 {% block html_title %}Stats{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
 
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
 
@@ -18,7 +18,7 @@
 </style>
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
     <script type="text/javascript" src="/static/js/underscore.string.min.js"></script>
     
     <script type="text/javascript" src="/static/jquery/jquery.sparkline.min.js"></script>
@@ -32,7 +32,7 @@
     <script type="text/javascript" src="/static/js/stats/trends_summary.js"></script>
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}

@@ -128,7 +128,11 @@ class Create(AdminService):
         f.write(payload)
         f.close()
 
-        for service_id in self.server.service_store.import_services_from_file(file_name, False, current_work_dir):
+        for service_name in self.server.service_store.import_services_from_file(file_name, False, current_work_dir):
+
+            impl_name = self.server.service_store.name_to_impl_name[service_name]
+            service_id = self.server.service_store.impl_name_to_id[impl_name]
+
             msg = {}
             msg['cid'] = new_cid()
             msg['id'] = service_id

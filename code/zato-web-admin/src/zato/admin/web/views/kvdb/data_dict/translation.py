@@ -83,7 +83,7 @@ def _get_key_value_list(req, service_name, input_dict):
     for item in req.zato.client.invoke(service_name, input_dict):
         return_data.append({'name':item.name})
 
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 @method_allowed('GET')
 def get_key_list(req):

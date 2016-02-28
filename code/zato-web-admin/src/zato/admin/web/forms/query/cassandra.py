@@ -22,12 +22,7 @@ class CreateForm(forms.Form):
     value = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%', 'class':'required'}))
 
     def set_def_id(self, def_ids):
-        self.fields['def_id'].choices[:] = []
-
-        def_ids = sorted(def_ids.iteritems(), key=itemgetter(1))
-
-        for id, name in def_ids:
-            self.fields['def_id'].choices.append([id, name])
+        self.fields['def_id'].choices = ((id, name) for (id, name) in sorted(def_ids.iteritems(), key=itemgetter(1)))
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

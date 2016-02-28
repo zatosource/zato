@@ -2,7 +2,7 @@
 
 {% block html_title %}KVDB remote commands{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <style type="text/css">
         #command-list a {
             font-size:10px;
@@ -12,7 +12,7 @@
     </style>
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/js/service/request-response.js"></script>
@@ -22,7 +22,7 @@
 {% endblock %}    
     
 
-{% block content %}
+{% block "content" %}
 <h2 class="zato">Key/value DB : Remote commands</h2>
 
 

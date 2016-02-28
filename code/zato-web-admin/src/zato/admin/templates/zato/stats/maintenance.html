@@ -2,11 +2,11 @@
 
 {% block html_title %}Stats maint.{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     
     <script type="text/javascript" src="/static/jquery/jquery.ui.slideraccess.js"></script>
@@ -16,7 +16,7 @@
     <script type="text/javascript" src="/static/js/stats/maintenance.js"></script>
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -37,6 +37,7 @@
 
 <div id="markup">
     <form action="./delete/" method="post" id="maintenance_form">
+    {% csrf_token %}
     <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
     <table id="data-table">
         <tr>

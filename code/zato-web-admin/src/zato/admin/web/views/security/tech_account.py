@@ -42,7 +42,7 @@ def get_by_id(req, id_, cluster_id):
         tech_account.name = response.data.name
         tech_account.is_active = response.data.is_active
 
-        return HttpResponse(tech_account.to_json(), mimetype='application/javascript')
+        return HttpResponse(tech_account.to_json(), content_type='application/javascript')
 
 class Index(_Index):
     method_allowed = 'GET'

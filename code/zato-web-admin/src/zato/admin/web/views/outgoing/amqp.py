@@ -52,7 +52,7 @@ def _edit_create_response(client, verb, id, name, delivery_mode_text, def_id, cl
                    'delivery_mode_text': delivery_mode_text,
                    'def_name': response.data.name
                 }
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 class Index(_Index):
     method_allowed = 'GET'

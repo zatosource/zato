@@ -49,7 +49,7 @@ def _edit_create_response(client, verb, id, name, delivery_mode_text, cluster_id
                    'def_name': response.data.name
                 }
 
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 @method_allowed('GET')
 def index(req):

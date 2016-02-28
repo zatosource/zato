@@ -386,7 +386,7 @@ def index(req):
                 if response:
                     response['message'] = _get_success_message(action, job_type, job_name)
                     response = dumps(response)
-                return HttpResponse(response, mimetype='application/javascript')
+                return HttpResponse(response, content_type='application/javascript')
             except Exception, e:
                 msg = ('Could not invoke action [%s], job_type:[%s], e:[%s]'
                        'req.POST:[%s], req.GET:[%s]') % (action, job_type,

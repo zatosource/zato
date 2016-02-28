@@ -14,9 +14,16 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
 
 from datetime import datetime
 from unittest import TestCase
+import os
 
 # dateutil
 from dateutil.parser import parse
+
+# Django
+import django
+
+os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
+django.setup()
 
 # mock
 from mock import patch
