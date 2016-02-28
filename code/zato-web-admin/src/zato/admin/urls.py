@@ -683,7 +683,7 @@ urlpatterns += [
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. STOMP
     url(r'^zato/outgoing/stomp/$',
@@ -698,7 +698,7 @@ urlpatterns += patterns('',
         login_required(out_stomp.change_password), name='out-stomp-change-password'),
     url(r'^zato/outgoing/stomp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_stomp.ping), name='out-stomp-ping'),
-    )
+    ]
 
 # ################################################################################################################################
 
@@ -751,11 +751,11 @@ urlpatterns += [
         login_required(channel_stomp.change_password), name='channel-stomp-change-password'),
     url(r'^zato/channel/stomp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_stomp.ping), name='channel-stomp-ping'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. ZeroMQ
     url(r'^zato/channel/zmq/$',

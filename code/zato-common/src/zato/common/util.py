@@ -23,7 +23,6 @@ from os import getuid
 from os.path import abspath, isabs, join
 from pprint import pprint as _pprint, PrettyPrinter
 from pwd import getpwuid
-from random import getrandbits
 from socket import gethostname, getfqdn
 from string import Template
 from subprocess import Popen, PIPE

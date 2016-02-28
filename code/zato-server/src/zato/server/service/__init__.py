@@ -18,9 +18,6 @@ from traceback import format_exc
 # anyjson
 from anyjson import dumps
 
-# Arrow
-import arrow
-
 # Bunch
 from bunch import bunchify
 
