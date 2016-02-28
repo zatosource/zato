@@ -20,9 +20,6 @@ from uuid import uuid4
 # gevent
 from gevent.lock import RLock
 
-# anyjson
-from anyjson import dumps
-
 # PyYAML
 try:
     from yaml import CDumper  # Looks awkward but

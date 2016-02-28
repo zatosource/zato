@@ -273,10 +273,7 @@ class URLDataTestCase(TestCase):
         expected_post_data = uuid4().hex
 
         match1 = DummyMatch(match_target1)
-        match2 = DummyMatch(match_target2)
-
         sec_def1 = DummySecDef()
-
         wrapper1 = DummySecWrapper(sec_def1)
 
         url_sec = {
