@@ -9,9 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Django
-from django.conf.urls.defaults import include, patterns, url
+from django.conf.urls import include, url
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import login
+from django.views.static import serve as django_static_serve
 
 # Zato
 from zato.admin import settings
@@ -49,7 +50,7 @@ from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, 
      tech_account, wss, xpath as xpath_sec
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
 
-urlpatterns = patterns('',
+urlpatterns = [
 
 # ################################################################################################################################
 
@@ -57,18 +58,19 @@ urlpatterns = patterns('',
 
 # ################################################################################################################################
 
-    (r'^accounts/login/$', login, {'template_name': 'zato/login.html'}),
-
-    (r'^$', main.index_redirect),
+    url(r'^accounts/login/$',
+         login, {'template_name': 'zato/login.html'}),
+    url(r'^$',
+        main.index_redirect),
     url(r'^zato/$',
         login_required(main.index), name='main-page'),
     url(r'^logout/$',
         login_required(main.logout), name='logout'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # User accounts
 
@@ -76,11 +78,11 @@ urlpatterns += patterns('',
         login_required(account.settings_basic), name='account-settings-basic'),
     url(r'^account/settings/basic/save/$',
         login_required(account.settings_basic_save), name='account-settings-basic-save'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # Clusters
 
@@ -104,11 +106,11 @@ urlpatterns += patterns('',
         login_required(cluster.servers_add_remove_lb), name='cluster-servers-add-remove-lb'),
     url(r'^zato/cluster/servers/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cluster.ServerDelete()), name=cluster.ServerDelete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # Load balancer
 
@@ -123,11 +125,11 @@ urlpatterns += patterns('',
         login_required(load_balancer.manage_source_code), name='lb-manage-source-code'),
     url(r'^zato/load-balancer/remote-command/(?P<cluster_id>.*)/$',
         login_required(load_balancer.remote_command), name='lb-remote-command'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # Services
 
@@ -166,7 +168,7 @@ urlpatterns += patterns('',
         login_required(service.slow_response_details), name='service-slow-response-details'),
     url(r'^zato/service/slow-response/(?P<service_name>.*)/$',
         login_required(service.slow_response), name='service-slow-response'),
-    )
+    ]
 
 # ################################################################################################################################
 
@@ -174,7 +176,7 @@ urlpatterns += patterns('',
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. Namespace
     url(r'^zato/messages/namespace/$',
@@ -185,11 +187,11 @@ urlpatterns += patterns('',
         login_required(namespace.Edit()), name=namespace.Edit.url_name),
     url(r'^zato/messages/namespace/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(namespace.Delete()), name=namespace.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. XPath
     url(r'^zato/messages/xpath/$',
@@ -200,11 +202,11 @@ urlpatterns += patterns('',
         login_required(xpath.Edit()), name=xpath.Edit.url_name),
     url(r'^zato/messages/xpath/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(xpath.Delete()), name=xpath.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. JSON Pointer
     url(r'^zato/messages/json-pointer/$',
@@ -215,7 +217,7 @@ urlpatterns += patterns('',
         login_required(json_pointer.Edit()), name=json_pointer.Edit.url_name),
     url(r'^zato/messages/json-pointer/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(json_pointer.Delete()), name=json_pointer.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
@@ -223,7 +225,7 @@ urlpatterns += patterns('',
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. API keys
 
@@ -239,11 +241,11 @@ urlpatterns += patterns('',
         login_required(apikey.change_password), name='security-apikey-change-password'),
     url(r'^zato/security/apikey/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(apikey.Delete()), name=apikey.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. AWS
 
@@ -259,11 +261,11 @@ urlpatterns += patterns('',
         login_required(aws.change_password), name='security-aws-change-password'),
     url(r'^zato/security/aws/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(aws.Delete()), name=aws.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. HTTP Basic Auth
 
@@ -279,11 +281,11 @@ urlpatterns += patterns('',
         login_required(basic_auth.change_password), name='security-basic-auth-change-password'),
     url(r'^zato/security/basic-auth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(basic_auth.Delete()), name=basic_auth.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. NTLM
 
@@ -299,11 +301,11 @@ urlpatterns += patterns('',
         login_required(ntlm.change_password), name='security-ntlm-change-password'),
     url(r'^zato/security/ntlm/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(ntlm.Delete()), name=ntlm.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. OAuth
 
@@ -319,11 +321,11 @@ urlpatterns += patterns('',
         login_required(oauth.change_secret), name='security-oauth-change-secret'),
     url(r'^zato/security/oauth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(oauth.Delete()), name=oauth.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. OpenStack security
 
@@ -339,11 +341,11 @@ urlpatterns += patterns('',
         login_required(openstack_security.change_password), name='security-openstack-change-password'),
     url(r'^zato/security/openstack_security/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(openstack_security.Delete()), name=openstack_security.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. RBAC - Roles
 
@@ -355,11 +357,11 @@ urlpatterns += patterns('',
         login_required(rbac.role.Edit()), name=rbac.role.Edit.url_name),
     url(r'^zato/security/rbac/role/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(rbac.role.Delete()), name=rbac.role.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. RBAC - Client roles
 
@@ -369,11 +371,11 @@ urlpatterns += patterns('',
         login_required(rbac.client_role.Create()), name=rbac.client_role.Create.url_name),
     url(r'^zato/security/rbac/client-role/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(rbac.client_role.Delete()), name=rbac.client_role.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. RBAC - Permissions
 
@@ -385,11 +387,11 @@ urlpatterns += patterns('',
         login_required(rbac.permission.Edit()), name=rbac.permission.Edit.url_name),
     url(r'^zato/security/rbac/permission/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(rbac.permission.Delete()), name=rbac.permission.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. RBAC - Role Permissions
 
@@ -399,11 +401,11 @@ urlpatterns += patterns('',
         login_required(rbac.role_permission.Create()), name=rbac.role_permission.Create.url_name),
     url(r'^zato/security/rbac/role-permission/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(rbac.role_permission.Delete()), name=rbac.role_permission.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. Technical accounts
 
@@ -419,11 +421,11 @@ urlpatterns += patterns('',
         login_required(tech_account.get_by_id), name='security-tech-account-get-by-id'),
     url(r'^zato/security/tech-account/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(tech_account.delete), name='security-tech-account-delete'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. TLS - channel security based on client certificates
 
@@ -458,11 +460,11 @@ urlpatterns += patterns('',
     url(r'^zato/security/tls/ca-cert/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(tls_ca_cert.Delete()), name='security-tls-ca-cert-delete'),
 
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. WS-Security
 
@@ -476,11 +478,11 @@ urlpatterns += patterns('',
         login_required(wss.change_password), name='security-wss-change-password'),
     url(r'^zato/security/wss/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(wss.Delete()), name=wss.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. XPath
 
@@ -496,11 +498,11 @@ urlpatterns += patterns('',
         login_required(xpath_sec.change_password), name='security-xpath-change-password'),
     url(r'^zato/security/xpath/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(xpath_sec.Delete()), name=xpath_sec.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # Scheduler
 
@@ -512,7 +514,7 @@ urlpatterns += patterns('',
     url(r'^zato/scheduler/get-definition/(?P<start_date>.*)/(?P<repeat>.*)/'
         '(?P<weeks>.*)/(?P<days>.*)/(?P<hours>.*)/(?P<minutes>.*)/(?P<seconds>.*)/$',
         login_required(scheduler.get_definition), name='scheduler-job-get-definition'),
-    )
+    ]
 
 # ################################################################################################################################
 
@@ -520,7 +522,7 @@ urlpatterns += patterns('',
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. AMQP
 
@@ -534,11 +536,11 @@ urlpatterns += patterns('',
         login_required(def_amqp.change_password), name='def-amqp-change-password'),
     url(r'^zato/definition/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(def_amqp.Delete()), name=def_amqp.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. Cassandra
 
@@ -552,11 +554,11 @@ urlpatterns += patterns('',
         login_required(def_cassandra.Delete()), name=def_cassandra.Delete.url_name),
     url(r'^zato/definition/cassandra/change-password/$',
         login_required(def_cassandra.change_password), name='definition-cassandra-change-password'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. JMS WebSphere MQ
 
@@ -568,7 +570,7 @@ urlpatterns += patterns('',
         login_required(def_jms_wmq.Edit()), name=def_jms_wmq.Edit.url_name),
     url(r'^zato/definition/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(def_jms_wmq.Delete()), name=def_jms_wmq.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
@@ -576,7 +578,7 @@ urlpatterns += patterns('',
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. AMQP
 
@@ -588,11 +590,11 @@ urlpatterns += patterns('',
         login_required(out_amqp.edit), name='out-amqp-edit'),
     url(r'^zato/outgoing/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_amqp.Delete()), name=out_amqp.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. FTP
 
@@ -606,11 +608,11 @@ urlpatterns += patterns('',
         login_required(out_ftp.Delete()), name=out_ftp.Delete.url_name),
     url(r'^zato/outgoing/ftp/change-password/$',
         login_required(out_ftp.change_password), name='out-ftp-change-password'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. JMS WebSphere MQ
 
@@ -622,11 +624,11 @@ urlpatterns += patterns('',
         login_required(out_jms_wmq.edit), name='out-jms-wmq-edit'),
     url(r'^zato/outgoing/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_jms_wmq.Delete()), name=out_jms_wmq.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. Odoo
 
@@ -642,11 +644,11 @@ urlpatterns += patterns('',
         login_required(out_odoo.change_password), name='out-odoo-change-password'),
     url(r'^zato/outgoing/odoo/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_odoo.ping), name='out-odoo-ping'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # SQL connection pools
 
@@ -662,11 +664,11 @@ urlpatterns += patterns('',
         login_required(out_sql.Delete()), name=out_sql.Delete.url_name),
     url(r'^zato/outgoing/sql/change-password/$',
         login_required(out_sql.change_password), name='out-sql-change-password'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. ZeroMQ
     url(r'^zato/outgoing/zmq/$',
@@ -677,11 +679,11 @@ urlpatterns += patterns('',
         login_required(out_zmq.Edit()), name=out_zmq.Edit.url_name),
     url(r'^zato/outgoing/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_zmq.Delete()), name=out_zmq.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. STOMP
     url(r'^zato/outgoing/stomp/$',
@@ -696,7 +698,7 @@ urlpatterns += patterns('',
         login_required(out_stomp.change_password), name='out-stomp-change-password'),
     url(r'^zato/outgoing/stomp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(out_stomp.ping), name='out-stomp-ping'),
-    )
+    ]
 
 # ################################################################################################################################
 
@@ -704,7 +706,7 @@ urlpatterns += patterns('',
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. AMQP
     url(r'^zato/channel/amqp/$',
@@ -715,11 +717,11 @@ urlpatterns += patterns('',
         login_required(channel_amqp.edit), name='channel-amqp-edit'),
     url(r'^zato/channel/amqp/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_amqp.Delete()), name=channel_amqp.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. JMS WebSphere MQ
     url(r'^zato/channel/jms-wmq/$',
@@ -730,11 +732,11 @@ urlpatterns += patterns('',
         login_required(channel_jms_wmq.edit), name='channel-jms-wmq-edit'),
     url(r'^zato/channel/jms-wmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_jms_wmq.Delete()), name=channel_jms_wmq.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. STOMP
     url(r'^zato/channel/stomp/$',
@@ -749,11 +751,11 @@ urlpatterns += patterns('',
         login_required(channel_stomp.change_password), name='channel-stomp-change-password'),
     url(r'^zato/channel/stomp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_stomp.ping), name='channel-stomp-ping'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. ZeroMQ
     url(r'^zato/channel/zmq/$',
@@ -764,11 +766,11 @@ urlpatterns += patterns('',
         login_required(channel_zmq.Edit()), name=channel_zmq.Edit.url_name),
     url(r'^zato/channel/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_zmq.Delete()), name=channel_zmq.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # HTTP/SOAP
 
@@ -784,11 +786,11 @@ urlpatterns += patterns('',
         login_required(http_soap.audit_log), name='http-soap-audit-log'),
     url(r'^zato/http-soap/audit/item/(?P<connection>.*)/(?P<transport>.*)/(?P<conn_id>.*)/(?P<conn_name>.*)/(?P<cluster_id>.*)/(?P<id>.*)/$',
         login_required(http_soap.audit_item), name='http-soap-audit-item'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     url(r'^zato/http-soap/create/$',
         login_required(http_soap.create), name='http-soap-create'),
@@ -800,11 +802,11 @@ urlpatterns += patterns('',
         login_required(http_soap.ping), name='http-soap-ping'),
     url(r'^zato/http-soap/reload-wsdl/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(http_soap.reload_wsdl), name='http-soap-reload-wsdl'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. ZeroMQ
 
@@ -816,7 +818,7 @@ urlpatterns += patterns('',
         login_required(channel_zmq.Edit()), name=channel_zmq.Edit.url_name),
     url(r'^zato/channel/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_zmq.Delete()), name=channel_zmq.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
@@ -824,7 +826,7 @@ urlpatterns += patterns('',
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. ElasticSearch
 
@@ -850,7 +852,7 @@ urlpatterns += patterns('',
     url(r'^zato/search/solr/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(solr.ping), name='search-solr-ping'),
 
-    )
+    ]
 
 # ################################################################################################################################
 
@@ -858,7 +860,7 @@ urlpatterns += patterns('',
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. OpenStack Swift
 
@@ -880,7 +882,7 @@ urlpatterns += patterns('',
     url(r'^zato/notif/sql/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(notif_sql.Delete()), name=notif_sql.Delete.url_name),
 
-    )
+    ]
 
 # ################################################################################################################################
 
@@ -888,7 +890,7 @@ urlpatterns += patterns('',
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. Cassandra
 
@@ -900,7 +902,7 @@ urlpatterns += patterns('',
         login_required(query_cassandra.Edit()), name=query_cassandra.Edit.url_name),
     url(r'^zato/query/cassandra/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(query_cassandra.Delete()), name=query_cassandra.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
@@ -908,7 +910,7 @@ urlpatterns += patterns('',
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. IMAP
 
@@ -940,7 +942,7 @@ urlpatterns += patterns('',
     url(r'^zato/email/smtp/change-password/$',
         login_required(email_smtp.change_password), name='email-smtp-change-password'),
 
-    )
+    ]
 
 # ################################################################################################################################
 
@@ -948,7 +950,7 @@ urlpatterns += patterns('',
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. OpenStack - S3
 
@@ -960,11 +962,11 @@ urlpatterns += patterns('',
         login_required(cloud_aws_s3.Edit()), name=cloud_aws_s3.Edit.url_name),
     url(r'^zato/cloud/aws/s3/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cloud_aws_s3.Delete()), name=cloud_aws_s3.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # .. OpenStack - Swift
 
@@ -976,11 +978,11 @@ urlpatterns += patterns('',
         login_required(cloud_openstack_swift.Edit()), name=cloud_openstack_swift.Edit.url_name),
     url(r'^zato/cloud/openstack/swift/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cloud_openstack_swift.Delete()), name=cloud_openstack_swift.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # Key/value DB
 
@@ -996,11 +998,11 @@ urlpatterns += patterns('',
         login_required(dictionary.Edit()), name=dictionary.Edit.url_name),
     url(r'^zato/kvdb/data-dict/dictionary/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(dictionary.Delete()), name=dictionary.Delete.url_name),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     url(r'^zato/kvdb/data-dict/translation/$',
         login_required(translation.Index()), name=translation.Index.url_name),
@@ -1016,11 +1018,11 @@ urlpatterns += patterns('',
         login_required(translation.get_value_list), name='kvdb-data-dict-translation-get-value-list'),
     url(r'^zato/kvdb/data-dict/translation/translate/$',
         login_required(translation.translate), name='kvdb-data-dict-translation-translate'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     url(r'^zato/kvdb/data-dict/impexp/$',
         login_required(impexp.index), name='kvdb-data-dict-impexp'),
@@ -1028,13 +1030,13 @@ urlpatterns += patterns('',
         login_required(impexp.import_), name='kvdb-data-dict-impexp-import'),
     url(r'^zato/kvdb/data-dict/impexp/cluster/(?P<cluster_id>.*)/export/$',
         login_required(impexp.export), name='kvdb-data-dict-impexp-export'),
-    )
+    ]
 
 # ################################################################################################################################
 
 #   Pub/sub
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     url(r'^zato/pubsub/consumers/cluster/(?P<cluster_id>.*)/topic/(?P<topic_name>.*)$',
         login_required(pubsub_consumers.Index()), name=pubsub_consumers.Index.url_name),
@@ -1097,18 +1099,19 @@ urlpatterns += patterns('',
         login_required(stats.maintenance), name='stats-maintenance'),
     url(r'^zato/stats/maintenance/delete/$',
         login_required(stats.maintenance_delete), name='stats-maintenance-delete'),
-    )
+    ]
 
 # ################################################################################################################################
 
-urlpatterns += patterns('',
+urlpatterns += [
 
     # OpenID
-    (r'^openid/', include('django_openid_auth.urls')),)
+    url('^openid/', include('django_openid_auth.urls')),
+    ]
 
 # ################################################################################################################################
 
 if settings.DEBUG:
-    urlpatterns += patterns('',
-        (r'^static/(?P<path>.*)$', 'django.views.static.serve', {'document_root': settings.MEDIA_ROOT}),
-    )
+    urlpatterns += [
+        url(r'^static/(?P<path>.*)$', django_static_serve, {'document_root': settings.MEDIA_ROOT}),
+    ]

@@ -23,7 +23,6 @@ from os import getuid
 from os.path import abspath, isabs, join
 from pprint import pprint as _pprint, PrettyPrinter
 from pwd import getpwuid
-from random import getrandbits
 from socket import gethostname, getfqdn
 from string import Template
 from subprocess import Popen, PIPE
@@ -212,8 +211,7 @@ class ColorFormatter(logging.Formatter):
 
     def __init__(self, fmt):
         self.use_color = True
-        msg = self.formatter_msg(fmt, self.use_color)
-        logging.Formatter.__init__(self, msg)
+        super(ColorFormatter, self).__init__(fmt)
 
     def formatter_msg(self, msg, use_color=True):
         if use_color:

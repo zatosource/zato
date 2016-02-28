@@ -27,14 +27,6 @@ class BasicSettingsForm(forms.Form):
     def __init__(self, initial, *args, **kwargs):
         super(BasicSettingsForm, self).__init__(initial, *args, **kwargs)
 
-        for field in self.fields:
-            self.fields[field].choices[:] = []
-
-        for tz in common_timezones:
-            self.fields['timezone'].choices.append([tz, tz])
-
-        for item in sorted(DATE_FORMATS):
-            self.fields['date_format'].choices.append([item, item])
-
-        for item in sorted(TIME_FORMATS):
-            self.fields['time_format'].choices.append([item, '{}-hour'.format(item)])
+        self.fields['timezone'].choices = ((item, item) for item in common_timezones)
+        self.fields['date_format'].choices = ((item, item) for item in sorted(DATE_FORMATS))
+        self.fields['time_format'].choices = ((item, '{}-hour'.format(item)) for item in sorted(TIME_FORMATS))

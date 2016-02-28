@@ -34,11 +34,7 @@ class CreateForm(forms.Form):
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-
-        self.fields['mode'].choices[:] = []
-
-        for name, value in EMAIL.IMAP.MODE.iteritems():
-            self.fields['mode'].choices.append([value.value, name])
+        self.fields['mode'].choices = ((value.value, key) for (key, value) in EMAIL.IMAP.MODE.iteritems())
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

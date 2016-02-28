@@ -136,7 +136,7 @@ def delete(req):
             'source_type': req.POST['source_type'],
         })
         if response.ok:
-            return HttpResponse(dumps(''), mimetype='application/javascript')
+            return HttpResponse(dumps(''), content_type='application/javascript')
         else:
             raise Exception(response.details)
     except Exception, e:

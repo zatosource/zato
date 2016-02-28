@@ -2,12 +2,12 @@
 
 {% block html_title %}{{ name }} - Details{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/fileuploader.css">
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     <script type="text/javascript" src="/static/js/common.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
@@ -17,15 +17,15 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
 <h2 class="zato">{{ name }} : Details</h2>
 
 <div class='page_prompt'>
-    <a href="{% url http-soap-details connection transport id name cluster_id %}" class="common current">Overview</a>
-    <a href="{% url http-soap-audit-log connection transport id name cluster_id %}" class="common">Audit log</a>
+    <a href="{% url "http-soap-details" connection transport id name cluster_id %}" class="common current">Overview</a>
+    <a href="{% url "http-soap-audit-log" connection transport id name cluster_id %}" class="common">Audit log</a>
 </div>
 
 <div id="markup">
@@ -42,7 +42,7 @@
                         </td>
                         <td>
                             <form id="audit-set-state" 
-                                action="{% url http-soap-audit-set-state connection transport id name cluster_id %}"
+                                action="{% url "http-soap-audit-set-state" connection transport id name cluster_id %}"
                                 method="post">
                                 <button class="qq-upload-button" style="width:160px; vertical-align:baseline" 
                                     id="audit-set-state-button">Click to {% if audit_enabled %}disable{% else %}enable{% endif %}</button>
@@ -55,7 +55,7 @@
                         <td class="inline_header" style="vertical-align:top; padding-top:9px">
 
                         <form id="audit-set-config"
-                            action="{% url http-soap-audit-set-config connection transport id name cluster_id %}" 
+                            action="{% url "http-soap-audit-set-config" connection transport id name cluster_id %}" 
                             method="post">
 
                             Max payload size

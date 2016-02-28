@@ -2,11 +2,11 @@
 
 {% block html_title %}KVDB translations{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
@@ -38,7 +38,7 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 <h2 class="zato">Data dictionaries : Translations</h2>
 
 {% if not zato_clusters %}
@@ -52,11 +52,11 @@
 
     {% if cluster_id %}
 <div class='page_prompt'>
-    <a href="{% url kvdb-data-dict-dictionary %}?cluster={{ cluster_id }}" class="common">Dictionaries</a>
-    <a href="{% url kvdb-data-dict-translation %}?cluster={{ cluster_id }}" class="common current">Translations</a>
-    <a href="{% url kvdb-data-dict-impexp %}?cluster={{ cluster_id }}" class="common">Import/export</a>
+    <a href="{% url "kvdb-data-dict-dictionary" %}?cluster={{ cluster_id }}" class="common">Dictionaries</a>
+    <a href="{% url "kvdb-data-dict-translation" %}?cluster={{ cluster_id }}" class="common current">Translations</a>
+    <a href="{% url "kvdb-data-dict-impexp" %}?cluster={{ cluster_id }}" class="common">Import/export</a>
     <br/>
-    <a href="{% url kvdb-data-dict-translation-translate %}?cluster={{ cluster_id }}" class="common">Translate</a>
+    <a href="{% url "kvdb-data-dict-translation-translate" %}?cluster={{ cluster_id }}" class="common">Translate</a>
     <a href="javascript:$.fn.zato.kvdb.data_dict.translation.create()" class="common">Create a new translation</a>
 </div>
 
@@ -106,7 +106,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url kvdb-data-dict-translation-create %}" method="post" id="create-form">
+                <form action="{% url "kvdb-data-dict-translation-create" %}" method="post" id="create-form">
                     <table class="form-data">
 
                         <tr>
@@ -150,7 +150,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url kvdb-data-dict-translation-edit %}" method="post" id="edit-form">
+                <form action="{% url "kvdb-data-dict-translation-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
 
                         <tr>

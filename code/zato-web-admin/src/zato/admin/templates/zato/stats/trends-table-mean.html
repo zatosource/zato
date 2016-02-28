@@ -22,7 +22,7 @@
                 <tr id="{{ side }}-tr-mean-{{ item.service_name|slugify }}">
                     <td style="width:10px">{% if item.mean > atttention_slow_threshold %}<img src="/static/gfx/stats-alert.png" alt=""/>{% endif %}</td>
                     <td style="width:10px">{{ forloop.counter }}</td>    
-                    <td style="width:200px"><a href="{% url service-overview item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                    <td style="width:200px"><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                     <td style="text-align:right;width:30px">{% if item.mean != 0 and item.mean < 1 %}&lt;1{% else %}{{ item.mean }}{% endif %}</td>
                     <td style="text-align:right;width:30px">{{ item.mean_all_services|floatformat:"0" }}</td>    
                     <td style="text-align:right;width:30px">{% if item.usage_perc_all_services < 0.1 %}&lt;0.1{% else %}{{ item.usage_perc_all_services|floatformat:"1" }}{% endif %}</td>

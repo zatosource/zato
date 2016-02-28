@@ -2,12 +2,12 @@
 
 {% block html_title %}Scheduler{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.ui.timepicker.addon.css">
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
@@ -59,7 +59,7 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 <h2 class="zato">Scheduler jobs</h2>
 
 {% if not zato_clusters %}
@@ -121,7 +121,7 @@
                         <td>{{ job.is_active|yesno:"Yes,No" }}</td>
                         <td>{{ job.job_type_friendly }}</td>
                         <td>{{ job.definition_text|safe }}</td>
-                        <td><a href="{% url service-overview job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
+                        <td><a href="{% url "service-overview" job.service_name %}?cluster={{ cluster_id }}">{{ job.service_name }}</a></td>
                         <td><a href="javascript:$.fn.zato.scheduler.execute({{ job.id }})">Execute</a></td>
                         <td><a href="javascript:$.fn.zato.scheduler.edit('{{ job.job_type }}', {{ job.id }})">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.scheduler.delete_({{ job.id }});">Delete</a></td>

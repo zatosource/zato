@@ -23,7 +23,7 @@ from bunch import Bunch
 from mock import patch
 
 # nose
-from nose.tools import eq_, ok_
+from nose.tools import eq_
 
 # pytz
 from pytz import UTC

@@ -2,10 +2,10 @@
 
 {% block html_title %}LB GUI{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
@@ -15,17 +15,17 @@
 
 {% endblock %}
 
-{% block content %}
-<h2 class="zato">Clusters : <a href='{% url cluster %}?highlight={{ cluster.id }}'>{{ cluster.name }}</a> : Load balancer : Config GUI view</h2>
+{% block "content" %}
+<h2 class="zato">Clusters : <a href='{% url "cluster" %}?highlight={{ cluster.id }}'>{{ cluster.name }}</a> : Load balancer : Config GUI view</h2>
 
 <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
 <div class='page_prompt'>
-    <a href="{% url lb-manage-source-code cluster.id %}" class="common current">Config GUI view</a>
-    <a href="{% url lb-manage-source-code cluster.id %}" class="common">Config source code view</a>
+    <a href="{% url "lb-manage-source-code" cluster.id %}" class="common current">Config GUI view</a>
+    <a href="{% url "lb-manage-source-code" cluster.id %}" class="common">Config source code view</a>
 
     {% if haproxy_alive.status %}
-        <a href="{% url lb-remote-command cluster.id %}" class="common">Remote commands</a>
+        <a href="{% url "lb-remote-command" cluster.id %}" class="common">Remote commands</a>
         {% if cluster.stats_uri %}
             <a href="http://{{ cluster.lb_host }}:{{ cluster.stats_port }}{{ cluster.stats_uri }}" class="common">Statistics</a>
         {% endif %}
@@ -34,7 +34,7 @@
 
 
 <div id="markup">
-    <form action="{% url lb-manage-validate-save cluster.id %}" method="post" id="lb-validate-save">
+    <form action="{% url "lb-manage-validate-save" cluster.id %}" method="post" id="lb-validate-save">
         <table id="data-table">
             <tr>
                 <td colspan="6" class='inline_header'>
