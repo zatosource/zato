@@ -2,11 +2,11 @@
 
 {% block html_title %}Pub/sub producers{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
@@ -36,8 +36,8 @@
 
 {% endblock %}
 
-{% block content %}
-<h2 class="zato">Pub/sub : <a href="{% url pubsub-topics %}?cluster={{ cluster_id }}" class="common">Topics</a> : Producers : {{ input.topic_name }}</h2>
+{% block "content" %}
+<h2 class="zato">Pub/sub : <a href="{% url "pubsub-topics" %}?cluster={{ cluster_id }}" class="common">Topics</a> : Producers : {{ input.topic_name }}</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -95,7 +95,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url pubsub-producers-create %}" method="post" id="create-form">
+                <form action="{% url "pubsub-producers-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Client</td>
@@ -120,7 +120,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url pubsub-producers-edit %}" method="post" id="edit-form">
+                <form action="{% url "pubsub-producers-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle;width:10%">Active</td>

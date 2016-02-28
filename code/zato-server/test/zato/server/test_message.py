@@ -40,21 +40,21 @@ class TestJSONPointerStore(TestCase):
         name3, expr3 = '3', config_value('/aaa/{}/{}'.format(*rand_string(2)))
         name4, expr4 = '2', config_value('/aaa/{}/{}'.format(*rand_string(2)))
 
-        jps.add(name1, expr1.value)
+        jps.add(name1, Bunch(value=expr1.value))
         self.assertIn(name1, jps.data)
         self.assertEquals(expr1.value, jps.data[name1].path)
 
-        jps.add(name2, expr2.value)
+        jps.add(name2, Bunch(value=expr2.value))
         self.assertIn(name2, jps.data)
         self.assertEquals(expr2.value, jps.data[name2].path)
 
-        jps.add(name3, expr3.value)
+        jps.add(name3, Bunch(value=expr3.value))
         self.assertIn(name3, jps.data)
         self.assertEquals(expr3.value, jps.data[name3].path)
 
         # name4's value is '2' so it overrides 2
 
-        jps.add(name4, expr4.value)
+        jps.add(name4, Bunch(value=expr4.value))
         self.assertIn(name4, jps.data)
 
         self.assertEquals(expr4.value, jps.data[name2].path)
@@ -91,39 +91,39 @@ class TestJSONPointerStore(TestCase):
         # This will not return None because 0 is not None even though it's False in boolean sense
         name8, expr8 = '8', config_value('/f')
 
-        jps.add(name1, expr1.value)
+        jps.add(name1, Bunch(value=expr1.value))
         value = jps.get(name1, doc)
         self.assertListEqual(value.keys(), ['b'])
 
-        jps.add(name2, expr2.value)
+        jps.add(name2, Bunch(value=expr2.value))
         value = jps.get(name2, doc)
         self.assertDictEqual(value[0], {'c':c_value})
         self.assertDictEqual(value[1], {'d':d_value})
 
-        jps.add(name3, expr3.value)
+        jps.add(name3, Bunch(value=expr3.value))
         value = jps.get(name3, doc)
         self.assertDictEqual(value, {'c':c_value})
 
-        jps.add(name4, expr4.value)
+        jps.add(name4, Bunch(value=expr4.value))
         value = jps.get(name4, doc)
         self.assertDictEqual(value, {'d':d_value})
 
-        jps.add(name5, expr5.value)
+        jps.add(name5, Bunch(value=expr5.value))
         value = jps.get(name5, doc)
         self.assertEquals(value, c_value)
 
         default1 = rand_string()
         default2 = rand_string()
 
-        jps.add(name6, expr6.value)
+        jps.add(name6, Bunch(value=expr6.value))
         value = jps.get(name6, doc, default1)
         self.assertEquals(value, default1)
 
-        jps.add(name7, expr7.value)
+        jps.add(name7, Bunch(value=expr7.value))
         value = jps.get(name7, doc, default2)
         self.assertEquals(value, default2)
 
-        jps.add(name8, expr8.value)
+        jps.add(name8, Bunch(value=expr8.value))
         value = jps.get(name8, doc)
         self.assertEquals(value, 0)
 
@@ -138,8 +138,8 @@ class TestJSONPointerStore(TestCase):
         name1, expr1 = '1', config_value('/a')
         name2, expr2 = '2', config_value('/a/b')
 
-        jps.add(name1, expr1.value)
-        jps.add(name2, expr2.value)
+        jps.add(name1, Bunch(value=expr1.value))
+        jps.add(name2, Bunch(value=expr2.value))
 
         jps.set(name1, doc, value1)
         value = jps.get(name1, doc)
@@ -157,7 +157,7 @@ class TestJSONPointerStore(TestCase):
 
         name1, expr1 = '1', config_value('/a')
 
-        jps.add(name1, expr1.value)
+        jps.add(name1, Bunch(value=expr1.value))
 
         # in_place is False so a new doc is created and the previous one should be retained
         new_doc = jps.set(name1, doc, value_random, True, in_place=False)
@@ -178,8 +178,8 @@ class TestJSONPointerStore(TestCase):
         value1, value2 = rand_string(2)
         default1, default2 = rand_string(2)
 
-        jps.add(name1, expr1.value)
-        jps.add(name2, expr2.value)
+        jps.add(name1, Bunch(value=expr1.value))
+        jps.add(name2, Bunch(value=expr2.value))
 
         # value is equal to default1 because it is never set by jps.set
         jps.set(name1, doc, value1, True)
@@ -200,9 +200,9 @@ class TestJSONPointerStore(TestCase):
         name2, expr2, value2 = '2', config_value('/a/b/c/dd'), rand_string()
         name3, expr3, value3 = '3', config_value('/a/b/cc/d'), rand_string()
 
-        jps.add(name1, expr1.value)
-        jps.add(name2, expr2.value)
-        jps.add(name3, expr3.value)
+        jps.add(name1, Bunch(value=expr1.value))
+        jps.add(name2, Bunch(value=expr2.value))
+        jps.add(name3, Bunch(value=expr3.value))
 
         # Creates all the missing path parts in the empty document
         jps.set(name1, doc, value1)

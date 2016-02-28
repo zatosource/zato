@@ -2,19 +2,18 @@
 
 {% block html_title %}Services{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
     <link rel="stylesheet" type="text/css" href="/static/css/fileuploader.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.sparkline.min.js"></script>
-    <script type="text/javascript" src="/static/jquery/jquery.textext.js"></script>
     <script type="text/javascript" src="/static/js/fileuploader.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
@@ -43,7 +42,7 @@
 
     var on_upload_complete = function(id, file_name, response){
         if(response.success) {
-            var html = '<a href="{% url service-wsdl-download service.name cluster_id %}" class="common">Click to download</a>';
+            var html = '<a href="{% url "service-wsdl-download" service.name cluster_id %}" class="common">Click to download</a>';
             html += '<br/>';
             html += '<div style="margin-top:7px">Direct address: {{ wsdl_public_url }}</div>';
             $('#td_wsdl').html(html);
@@ -73,7 +72,7 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 <h2 class="zato">Services</h2>
 
 {% if not zato_clusters %}
@@ -120,7 +119,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td><a href="{% url service-overview item.name %}?cluster={{ cluster_id }}">{{ item.name }}</a></td>
+                        <td><a href="{% url "service-overview" item.name %}?cluster={{ cluster_id }}">{{ item.name }}</a></td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.impl_name }}</td>
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
@@ -150,7 +149,7 @@
         
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url service-create %}" method="post" id="create-form">
+                <form action="{% url "service-create" %}" method="post" id="create-form">
                     <table class="form-data">
                     
                         <tr>
@@ -177,7 +176,7 @@
         
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url service-edit %}" method="post" id="edit-form">
+                <form action="{% url "service-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                     
                         <tr>

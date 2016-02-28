@@ -2,10 +2,10 @@
 
 {% block html_title %}KVDB translate{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
@@ -15,7 +15,7 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 
 <h2 class="zato">Data dictionaries : Translations : Translate</h2>
 
@@ -29,15 +29,16 @@
 
 {% if cluster_id %}
 <div class='page_prompt'>
-    <a href="{% url kvdb-data-dict-dictionary %}?cluster={{ cluster_id }}" class="common">Dictionaries</a>
-    <a href="{% url kvdb-data-dict-translation %}?cluster={{ cluster_id }}" class="common">Translations</a>
-    <a href="{% url kvdb-data-dict-impexp %}?cluster={{ cluster_id }}" class="common">Import/export</a>
+    <a href="{% url "kvdb-data-dict-dictionary" %}?cluster={{ cluster_id }}" class="common">Dictionaries</a>
+    <a href="{% url "kvdb-data-dict-translation" %}?cluster={{ cluster_id }}" class="common">Translations</a>
+    <a href="{% url "kvdb-data-dict-impexp" %}?cluster={{ cluster_id }}" class="common">Import/export</a>
     <br/>
-    <a href="{% url kvdb-data-dict-translation-translate %}?cluster={{ cluster_id }}" class="common current">Translate</a>
+    <a href="{% url "kvdb-data-dict-translation-translate" %}?cluster={{ cluster_id }}" class="common current">Translate</a>
 </div>
 
 <div id="markup">
 <form action=".?cluster={{ cluster_id }}" method="post" id="translate-form">
+{% csrf_token %}
     <table id="data-table">
 
         <tr>

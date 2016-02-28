@@ -53,7 +53,7 @@ def _edit_create_response(verb, id, name, engine, cluster_id):
                    'cluster_id': cluster_id,
                 }
 
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 @method_allowed('GET')
 def index(req):

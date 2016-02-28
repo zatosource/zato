@@ -24,7 +24,10 @@ class _WebAdminAuthCommand(ManageCommand):
         config = json.loads(open(os.path.join(base_dir, './config/repo/web-admin.conf')).read())
         config['config_dir'] = os.path.abspath(args.path)
         update_globals(config, base_dir)
+
         os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
+        import django
+        django.setup()
 
     def _ok(self, args):
         # Needed because Django took over our logging config
@@ -61,7 +64,6 @@ class CreateUser(_WebAdminAuthCommand):
 
     def before_execute(self, args):
         super(CreateUser, self).before_execute(args)
-
         self._prepare(args)
 
         username = getattr(args, 'username', None)
@@ -110,6 +112,10 @@ class UpdatePassword(_WebAdminAuthCommand):
         {'name': '--password', 'help': 'The new password'},
     ]
 
+    def before_execute(self, args):
+        super(UpdatePassword, self).before_execute(args)
+        self._prepare(args)
+
     def execute(self, args, called_from_wrapper=False):
         if not called_from_wrapper:
             self._prepare(args)
@@ -126,7 +132,7 @@ class UpdatePassword(_WebAdminAuthCommand):
         else:
             _Command = Command
 
-        _Command().handle(args.username)
+        _Command().handle(username=args.username)
 
         if not called_from_wrapper:
             self._ok(args)
@@ -140,6 +146,10 @@ class UpdateOpenID(_WebAdminAuthCommand):
         {'name': 'username', 'help': 'Username to change a claimed OpenID of'},
         {'name': 'claimed-id', 'help': 'Claimed OpenID to set of a user'},
     ]
+
+    def before_execute(self, args):
+        super(UpdateOpenID, self).before_execute(args)
+        self._prepare(args)
 
     def execute(self, args):
         self._prepare(args)
