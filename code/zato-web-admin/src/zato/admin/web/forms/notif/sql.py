@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import INITIAL_CHOICES
 from zato.common import NOTIF
 
 class CreateForm(forms.Form):
@@ -26,12 +25,7 @@ class CreateForm(forms.Form):
 
     def __init__(self, prefix=None, post_data=None, sql_defs=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-
-        self.fields['def_id'].choices[:] = []
-        self.fields['def_id'].choices.append(INITIAL_CHOICES)
-
-        for item in sql_defs:
-            self.fields['def_id'].choices.append([item.id, item.name])
+        self.fields['def_id'].choices = ((item.id, item.name) for item in sql_defs)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

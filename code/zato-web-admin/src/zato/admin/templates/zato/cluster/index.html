@@ -2,11 +2,11 @@
 
 {% block html_title %}Clusters{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
@@ -45,7 +45,7 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 <h2 class="zato">Clusters</h2>
 
 
@@ -117,12 +117,12 @@
                     </td>
                     <td>
                         {% if item.lb_config %}
-                            <a href="{% url lb-manage item.id %}">Load-balancer</a>
+                            <a href="{% url "lb-manage" item.id %}">Load-balancer</a>
                         {% endif %}
                     </td>
                     <td>
                         {% if item.lb_config %}
-                            <a href="{% url cluster-servers %}?cluster={{ item.id }}">Servers</a>
+                            <a href="{% url "cluster-servers" %}?cluster={{ item.id }}">Servers</a>
                         {% endif %}
                         
                     </td>
@@ -147,7 +147,7 @@
 
     <div id="edit-div" class='data-popup ignore'>
         <div class="bd">
-            <form action="{% url cluster-edit %}" method="post" id="edit-form">
+            <form action="{% url "cluster-edit" %}" method="post" id="edit-form">
                 <table class="form-data">
                     <tr>
                         <td style="vertical-align:middle;width:15%">Name</td>

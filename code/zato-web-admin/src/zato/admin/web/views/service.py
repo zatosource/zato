@@ -444,7 +444,7 @@ def last_stats(req, service_id, cluster_id):
         msg = 'Caught an exception while invoking zato.service.get-by-service, e:[{}]'.format(format_exc(e))
         logger.error(msg)
 
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 
 @method_allowed('GET')

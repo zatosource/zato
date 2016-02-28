@@ -157,19 +157,19 @@ class BaseStore(object):
             return compiled
 
     def on_broker_msg_create(self, msg, ns_map=None):
-        """ Creates a new XPath.
+        """ Creates a new XPath expression or JSON Pointer.
         """
         self.add(msg.name, msg, ns_map)
 
     def on_broker_msg_edit(self, msg, ns_map=None):
-        """ Updates an existing XPath.
+        """ Updates an existing XPath expression or JSON Pointer.
         """
         with self.update_lock:
             del self.data[msg.old_name]
             self.add(msg.name, msg, ns_map)
 
     def on_broker_msg_delete(self, msg, *args):
-        """ Deletes an XPath.
+        """ Deletes an XPath expression or JSON Pointer.
         """
         with self.update_lock:
             del self.data[msg.name]
@@ -274,11 +274,11 @@ class JSONPointerStore(BaseStore):
             dpath_util.new(doc, '/' + '/'.join(pointer.parts), value)
             return doc
 
-    def add(self, name, value, *ignored_args, **ignored_kwargs):
+    def add(self, name, config, *ignored_args, **ignored_kwargs):
         """ Adds a new JSON Pointer expression to the store.
         """
         # Make sure it's valid, no exception in 'resolve' means the expression was valid.
-        pointer = JsonPointer(value)
+        pointer = JsonPointer(config.value)
         pointer.resolve({}, None)
 
         with self.update_lock:

@@ -2,11 +2,11 @@
 
 {% block html_title %}{{ service.name }} - Slow resp details{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/pygments.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} jQuery {% endcomment %}
     <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
@@ -31,11 +31,11 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 <h2 class="zato">Services : <a href="{% url service %}?cluster={{ cluster_id }}&amp;highlight={{ service.id }}" class="common">{{ service.name }}</a> : Slow responses: Details : {{ item.cid|default:"(None)" }}</h2>
 
 <div class='page_prompt'>
-    <a href="{% url service-overview service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
+    <a href="{% url "service-overview" service.name %}?cluster={{ cluster_id }}" class="common">Overview</a>
     <a href="{% url service-invoker service.name %}?cluster={{ cluster_id }}" class="common">Invoker</a>
     <a href="{% url service-source-info service.name %}?cluster={{ cluster_id }}" class="common">Source code</a>
     <a href="{% url service-wsdl service.name %}?cluster={{ cluster_id }}" class="common">WSDL</a>

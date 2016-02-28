@@ -2,11 +2,11 @@
 
 {% block html_title %}KVDB import/export{% endblock %}
 
-{% block extra_css %}
+{% block "extra_css" %}
     <link rel="stylesheet" type="text/css" href="/static/css/fileuploader.css">
 {% endblock %}
 
-{% block extra_js %}
+{% block "extra_js" %}
 
     {% comment %} Common JS {% endcomment %}
     <script type="text/javascript" src="/static/js/common.js"></script>
@@ -48,7 +48,7 @@
 
 {% endblock %}
 
-{% block content %}
+{% block "content" %}
 
 <h2 class="zato">Data dictionaries : Import/export</h2>
 
@@ -62,9 +62,9 @@
 
 {% if cluster_id %}
 <div class='page_prompt'>
-    <a href="{% url kvdb-data-dict-dictionary %}?cluster={{ cluster_id }}" class="common">Dictionaries</a>
-    <a href="{% url kvdb-data-dict-translation %}?cluster={{ cluster_id }}" class="common">Translations</a>
-    <a href="{% url kvdb-data-dict-impexp %}?cluster={{ cluster_id }}" class="common current">Import/export</a>
+    <a href="{% url "kvdb-data-dict-dictionary" %}?cluster={{ cluster_id }}" class="common">Dictionaries</a>
+    <a href="{% url "kvdb-data-dict-translation" %}?cluster={{ cluster_id }}" class="common">Translations</a>
+    <a href="{% url "kvdb-data-dict-impexp" %}?cluster={{ cluster_id }}" class="common current">Import/export</a>
 </div>
 
 <div id="markup">
@@ -86,7 +86,7 @@
         </tr>
         <tr>
             <td id="td_import">
-                <a href="{% url kvdb-data-dict-impexp-export cluster_id %}" class="common">Click to export the data dictionaries</a>
+                <a href="{% url "kvdb-data-dict-impexp-export" cluster_id %}" class="common">Click to export the data dictionaries</a>
             </td>
         </tr>
     </table>

@@ -372,7 +372,7 @@ def _stats_data_csv(user_profile, req_input, client, ignored, stats_type, is_cus
     out = buff.getvalue()
     buff.close()
 
-    response = HttpResponse(out, mimetype='text/csv')
+    response = HttpResponse(out, content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename={}'.format('zato-stats.csv')
 
     return response
@@ -433,7 +433,7 @@ def _stats_data_html(user_profile, req_input, client, cluster, stats_type, is_cu
     for name in('user_start', 'user_stop'):
         return_data['{}_label'.format(name)] = return_data[name]
 
-    return HttpResponse(dumps(return_data), mimetype='application/javascript')
+    return HttpResponse(dumps(return_data), content_type='application/javascript')
 
 def _stats_data_test(*ignored_args, **ignored_kwargs):
     """ A fake stats-returning function which is actually mocked out in tests only.
@@ -652,8 +652,6 @@ def maintenance_delete(req):
     stop = from_user_to_utc(req.POST['stop'], req.zato.user_profile)
 
     req.zato.client.invoke('zato.stats.delete', {'start':start, 'stop':stop})
-
-    logger.warn('[{}]'.format(stop.isoformat() + '+00:00'))
 
     msg = 'Submitted a request to delete statistics from [{}] to [{}]. Check the server logs for details.'.format(
         from_utc_to_user(start.isoformat() + '+00:00', req.zato.user_profile),
