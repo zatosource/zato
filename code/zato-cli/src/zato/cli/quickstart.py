@@ -333,7 +333,6 @@ class Create(ZatoCommand):
         #
         # 7) Web admin
         #
-        self.reset_logger(args, True)
         web_admin_path = os.path.join(args_path, 'web-admin')
         os.mkdir(web_admin_path)
 
