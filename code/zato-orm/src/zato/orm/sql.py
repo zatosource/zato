@@ -21,18 +21,19 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship, sessionmaker
 
 # Zato
-from zato.common.odb.model import Cluster
+from zato.common.odb.model import Base
 
-ORMBase = declarative_base()
-make_class_dictable(ORMBase)
+# This is only so that this module can be imported by create_odb.py
+# In that manner Base registers all of the model classes defined here.
+import_marker = 'import_marker'
 
 # ################################################################################################################################
 
 class _CreatedLastUpdated(object):
-    created_ts = Column(DateTime, server_default=datetime.utcnow)
-    last_updated_ts = Column(DateTime, server_default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_ts = Column(DateTime, default=datetime.utcnow)
+    last_updated_ts = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-class Group(ORMBase, _CreatedLastUpdated):
+class Group(Base, _CreatedLastUpdated):
     """ Groups common items.
     """
     __tablename__ = 'data_group'
@@ -40,13 +41,13 @@ class Group(ORMBase, _CreatedLastUpdated):
 
     id = Column(Integer, Sequence('data_group_seq'), primary_key=True)
     name = Column(String(2048), unique=True, nullable=False)
-    is_internal = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False, default=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
 
 # ################################################################################################################################
 
-class SubGroup(ORMBase, _CreatedLastUpdated):
+class SubGroup(Base, _CreatedLastUpdated):
     """ A sub-group within a larger group of items.
     """
     __tablename__ = 'data_sub_group'
@@ -54,7 +55,7 @@ class SubGroup(ORMBase, _CreatedLastUpdated):
 
     id = Column(Integer, Sequence('data_sub_group_seq'), primary_key=True)
     name = Column(String(2048), unique=True, nullable=False)
-    is_internal = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False, default=False)
 
     group_id = Column(Integer, ForeignKey('data_group.id', ondelete='CASCADE'), nullable=False)
     group = relationship(Group, backref=backref('sub_groups', order_by=name, cascade='all, delete, delete-orphan'))
@@ -63,7 +64,7 @@ class SubGroup(ORMBase, _CreatedLastUpdated):
 
 # ################################################################################################################################
 
-class Item(ORMBase, _CreatedLastUpdated):
+class Item(Base, _CreatedLastUpdated):
     """ The fundamental building block to construct configuration or runtime user-owned objects.
     Belongs to a sub-group, group and is optionally described through one or more tags.
     Column 'value' is in JSON. Some attributes are redundant for convenience - for instance, an item's group could be
@@ -75,7 +76,7 @@ class Item(ORMBase, _CreatedLastUpdated):
 
     id = Column(Integer, Sequence('data_item_seq'), primary_key=True)
     parent_id = Column(Integer, ForeignKey('data_item.id', ondelete='CASCADE'), nullable=True)
-    is_internal = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False, default=False)
     is_active = Column(Boolean(), nullable=False, default=True)
 
     name = Column(String(2048), unique=True, nullable=False)
@@ -93,7 +94,7 @@ class Item(ORMBase, _CreatedLastUpdated):
 
 # ################################################################################################################################
 
-class Tag(ORMBase, _CreatedLastUpdated):
+class Tag(Base, _CreatedLastUpdated):
     """ A tag that can be attached to any object.
     """
     __tablename__ = 'data_tag'
@@ -101,14 +102,14 @@ class Tag(ORMBase, _CreatedLastUpdated):
 
     id = Column(Integer, Sequence('data_tag_seq'), primary_key=True)
     name = Column(String(2048), unique=True, nullable=False)
-    is_internal = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False, default=False)
     value = Column(Text, nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
 
 # ################################################################################################################################
 
-class GroupTag(ORMBase, _CreatedLastUpdated):
+class GroupTag(Base, _CreatedLastUpdated):
     """ An N:N association between groups and tags.
     """
     __tablename__ = 'data_group_tag'
@@ -124,7 +125,7 @@ class GroupTag(ORMBase, _CreatedLastUpdated):
 
 # ################################################################################################################################
 
-class SubGroupTag(ORMBase, _CreatedLastUpdated):
+class SubGroupTag(Base, _CreatedLastUpdated):
     """ An N:N association between sub-groups and tags.
     """
     __tablename__ = 'data_sub_group_tag'
@@ -140,7 +141,7 @@ class SubGroupTag(ORMBase, _CreatedLastUpdated):
 
 # ################################################################################################################################
 
-class ItemTag(ORMBase, _CreatedLastUpdated):
+class ItemTag(Base, _CreatedLastUpdated):
     """ An N:N association between items and tags.
     """
     __tablename__ = 'data_item_tag'

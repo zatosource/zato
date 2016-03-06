@@ -17,6 +17,10 @@ from socket import gethostname
 from zato.cli import ZatoCommand, common_odb_opts
 from zato.common.odb import VERSION
 from zato.common.odb.model import AlembicRevision, Base, ZatoInstallState
+from zato.orm.sql import import_marker
+
+# For pyflake8 - importing this object registers ORM models with model.Base through inheritance
+import_marker = import_marker
 
 LATEST_ALEMBIC_REVISION = '0028_ae3419a9'
 
@@ -53,6 +57,6 @@ class Create(ZatoCommand):
 
             if show_output:
                 if self.verbose:
-                    self.logger.debug('Successfully created the ODB')
+                    self.logger.debug('ODB created')
                 else:
                     self.logger.info('OK')
