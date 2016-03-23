@@ -73,7 +73,10 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                     try:
                         while self.keep_running:
                             for msg in self.client.listen():
-                                self.on_message(Bunch(msg))
+                                try:
+                                    self.on_message(Bunch(msg))
+                                except Exception, e:
+                                    logger.warn('Could not handle broker message `%s`, e:`%s`', msg, format_exc(e))
                     except redis.ConnectionError, e:
                         if e.message not in EXPECTED_CONNECTION_ERRORS:  # Hm, there's no error code, only the message
                             logger.info('Caught `%s`, will quit now', e.message)
