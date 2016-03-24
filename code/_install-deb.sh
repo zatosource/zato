@@ -16,7 +16,7 @@ bash $CURDIR/clean.sh
 # Default libumfpack version on Debian 8 and Ubuntu 14.04
 LIBUMFPACK_VERSION=5.6.2
 
-# Ubuntu 12.04 and Debian Wheezy require a different one
+# Ubuntu 12.04 and Debian Wheezy need a different one
 if command -v lsb_release > /dev/null; then
     release=$(lsb_release -c | cut -f2)
     if [[ "$release" == "precise" ]] || [[ "$release" == "wheezy" ]]; then
