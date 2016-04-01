@@ -37,6 +37,7 @@
     {% if cluster_id %}
         <div id="markup">
             <form action="./execute/?cluster_id={{ cluster.id }}" method="post" id="command-form">
+            {% csrf_token %}
                 <table id="data-table">
                     <tr>
                         <td class='inline_header'>
