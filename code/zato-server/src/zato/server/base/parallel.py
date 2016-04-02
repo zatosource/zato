@@ -328,10 +328,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.worker_store = WorkerStore(self.config, self)
         self.worker_store.invoke_matcher.read_config(self.fs_server_config.invoke_patterns_allowed)
         self.worker_store.target_matcher.read_config(self.fs_server_config.invoke_target_patterns_allowed)
+        
 
         # Patterns to match during deployment
         self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns_allowed)
 
+        '''
         # Static config files
         self.static_config = StaticConfig(os.path.join(self.repo_location, 'static'))
 
@@ -378,8 +380,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             else:
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
+                    '''
 
-        is_first, locally_deployed = self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
+        is_first, locally_deployed = False, []#self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
 
         if is_first:
 
@@ -411,6 +414,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         is_singleton = False
 
         # Which components are enabled
+        '''
         self.component_enabled.stats = asbool(self.fs_server_config.component_enabled.stats)
         self.component_enabled.slow_response = asbool(self.fs_server_config.component_enabled.slow_response)
 
@@ -684,12 +688,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # E-mail - IMAP
         query = self.odb.get_email_imap_list(server.cluster.id, True)
         self.config.email_imap = ConfigDict.from_query('email_imap', query)
+        '''
 
         # Assign config to worker
         self.worker_store.worker_config = self.config
-        self.worker_store.pubsub = self.pubsub
+        #self.worker_store.pubsub = self.pubsub
         self.worker_store.init()
 
+        '''
         if self.singleton_server:
 
             self.singleton_server.wait_for_worker()
@@ -782,6 +788,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                     logger.info('Not starting an inactive channel (ZeroMQ {})'.format(item.name))
         else:
             logger.info('No Zero MQ channels to start')
+            '''
 
     def _after_init_non_accepted(self, server):
         raise NotImplementedError("This Zato version doesn't support join states other than ACCEPTED")
@@ -887,6 +894,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
             parallel_server.singleton_server.init_scheduler()
             parallel_server.singleton_server.init_notifiers()
+
+        logger.info('Started `%s` in `%s`', server.name, server.cluster.name)
 
     def invoke_startup_services(self, is_first):
         _invoke_startup_services(
