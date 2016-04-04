@@ -20,7 +20,7 @@ from urlparse import urlparse
 from uuid import uuid4
 
 # Bunch
-from zato.bunch import Bunch
+from zato.bunch import Bunch, bunchify
 
 # dateutil
 from dateutil.parser import parse
@@ -49,6 +49,7 @@ from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_pa
      parse_extra_into_dict, parse_tls_channel_security_definition, store_tls
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
+from zato.server.connection.connector import ConnectorStore, connector_type, OutZMQ
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
@@ -103,7 +104,6 @@ class WorkerStore(BrokerMessageReceiver):
 
     def init(self):
 
-        '''
         # Statistics maintenance
         self.stats_maint = MaintenanceTool(self.kvdb.conn)
 
@@ -127,12 +127,10 @@ class WorkerStore(BrokerMessageReceiver):
         # E-mail
         self.email_smtp_api = SMTPAPI(SMTPConnStore())
         self.email_imap_api = IMAPAPI(IMAPConnStore())
-        '''
 
         # ZeroMQ
-        self.zmq_out_api = ZMQAPIOut(ZMQConnStoreOut())
+        self.zmq_out_api = ConnectorStore(connector_type.out.zmq, OutZMQ)
 
-        '''
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
         self.init_msg_ns_store()
@@ -158,12 +156,10 @@ class WorkerStore(BrokerMessageReceiver):
 
         # STOMP
         self.init_stomp()
-        '''
 
         # ZeroMQ
         self.init_zmq()
 
-        '''
         # Odoo
         self.init_odoo()
 
@@ -172,20 +168,18 @@ class WorkerStore(BrokerMessageReceiver):
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
-        '''
+
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
-        '''self.request_dispatcher.url_data = URLData(
+        self.request_dispatcher.url_data = URLData(
             deepcopy(self.worker_config.http_soap),
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.ntlm, self.worker_config.oauth, self.worker_config.tech_acc,
             self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws, self.worker_config.openstack_security,
             self.worker_config.xpath_sec, self.worker_config.tls_channel_sec, self.worker_config.tls_key_cert, self.kvdb,
             self.broker_client, self.server.odb, self.json_pointer_store, self.xpath_store)
-            '''
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
-        '''
         # Create all the expected connections and objects
         self.init_sql()
         self.init_ftp()
@@ -193,7 +187,6 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_cloud()
         self.init_pubsub()
         self.init_notifiers()
-        '''
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
@@ -474,7 +467,10 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def init_zmq(self):
-        self.init_simple(self.worker_config.out_zmq, self.zmq_out_api, 'a ZeroMQ')
+        for name, data in self.worker_config.out_zmq.items():
+            self.zmq_out_api.create(name, data.config)
+
+        self.zmq_out_api.start()
 
 # ################################################################################################################################
 
