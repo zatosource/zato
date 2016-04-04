@@ -1,5 +1,6 @@
 Feature: zato.security.wss.*
 
+    @security
     Scenario: Set up
 
         Given I store a random string under "url_path"
@@ -8,6 +9,7 @@ Feature: zato.security.wss.*
         Given I store a random string under "wss_password"
         Given I store a random string under "invalid_password"
 
+    @security
     Scenario: Invoke zato.security.wss.create
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -37,6 +39,7 @@ Feature: zato.security.wss.*
 
         And I sleep for "1"
 
+    @security
     Scenario: Invoke zato.security.wss.change-password
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -57,10 +60,12 @@ Feature: zato.security.wss.*
 
         And I sleep for "1"
 
+    @security
     Scenario: Prepare params for ping
         Given I store UTC now under "soap_created" "default"
         Given I store a format string "{soap_created}.000Z" under "soap_created_value" 
 
+    @security
     Scenario: Create HTTP channel for zato.ping service to be executed with the security definition created
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -91,6 +96,7 @@ Feature: zato.security.wss.*
 
         And I sleep for "1"
 
+    @security
     Scenario: Invoke to fail zato.ping over the previusly created http channel with invalid Created value 
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -115,6 +121,7 @@ Feature: zato.security.wss.*
 
         And I sleep for "1"
 
+    @security
     Scenario: Invoke zato.ping over the previusly created http channel with valid credentials
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -139,6 +146,7 @@ Feature: zato.security.wss.*
 
         And I sleep for "1"
 
+    @security
     Scenario: Invoke to fail zato.ping over the previusly created http channel with invalid credentials
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -163,6 +171,7 @@ Feature: zato.security.wss.*
 
         And I sleep for "1"
 
+    @security
     Scenario: Invoke to fail zato.ping over the previusly created http channel with empty created value
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -186,6 +195,7 @@ Feature: zato.security.wss.*
 
         And I sleep for "1"
 
+    @security
     Scenario: Invoke zato.security.wss.edit with random data to test that it cannot login
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -214,6 +224,7 @@ Feature: zato.security.wss.*
 
         And I sleep for "1"
 
+    @security
     Scenario: Invoke zato.ping over the previusly created http channel with empty nonce & created value and valid credentials 
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -237,6 +248,7 @@ Feature: zato.security.wss.*
 
         And I sleep for "1"
 
+    @security
     Scenario: Invoke zato.security.wss.get-list
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -255,6 +267,7 @@ Feature: zato.security.wss.*
 
         And I sleep for "1"
 
+    @security
     Scenario: Delete created HTTP channel for zato.ping
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -272,6 +285,7 @@ Feature: zato.security.wss.*
 
         And I sleep for "1"
 
+    @security
     Scenario: Invoke zato.security.wss.delete
 
         Given address "$ZATO_API_TEST_SERVER"
