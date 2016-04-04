@@ -1,6 +1,6 @@
 Feature: zato.kvdb.remote-command
 
-    @enabled
+    @kvdb
     Scenario: Set up
 
         Given I store a random string under "list_key"
@@ -28,7 +28,7 @@ Feature: zato.kvdb.remote-command
         Given I store a format string "DEL apitest:string:{string_key}" under "command_delete_string"
         Given I store a format string "EXISTS apitest:string:{string_key}" under "command_exists_string"
 
-    @enabled
+    @kvdb
     Scenario: Create a test list entry in a cluster's KVDB
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -49,7 +49,7 @@ Feature: zato.kvdb.remote-command
 
         And I sleep for "1"
 
-    @enabled
+    @kvdb
     Scenario: Read the test list in a cluster's KVDB
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -70,7 +70,7 @@ Feature: zato.kvdb.remote-command
 
         And I sleep for "1"
 
-    @enabled
+    @kvdb
     Scenario: Delete the test list entry in a cluster's KVDB
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -90,7 +90,7 @@ Feature: zato.kvdb.remote-command
 
         And I sleep for "1"
 
-    @enabled
+    @kvdb
     Scenario: Check that the test list doesn't exists in a cluster's KVDB
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -111,7 +111,7 @@ Feature: zato.kvdb.remote-command
 
         And I sleep for "1"
 
-    @enabled
+    @kvdb
     Scenario: Create a test hashmap entry for command_hash_a in a cluster's KVDB
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -131,7 +131,7 @@ Feature: zato.kvdb.remote-command
 
         And I sleep for "1"
 
-    @enabled
+    @kvdb
     Scenario: Read the test hash_map in a cluster's KVDB
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -152,7 +152,7 @@ Feature: zato.kvdb.remote-command
 
         And I sleep for "1"
 
-    @enabled
+    @kvdb
     Scenario: Delete the test hash_map entry in a cluster's KVDB
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -172,7 +172,7 @@ Feature: zato.kvdb.remote-command
 
         And I sleep for "1"
 
-    @enabled
+    @kvdb
     Scenario: Check that the test hash_map doesn't exists in a cluster's KVDB
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -193,7 +193,7 @@ Feature: zato.kvdb.remote-command
 
         And I sleep for "1"
 
-	@enabled
+    @kvdb
     Scenario: Create a test string entry in a cluster's KVDB
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -213,7 +213,7 @@ Feature: zato.kvdb.remote-command
 
         And I sleep for "1"
 
-    @enabled
+    @kvdb
     Scenario: Read a test string entry in a cluster's KVDB
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -234,7 +234,7 @@ Feature: zato.kvdb.remote-command
 
         And I sleep for "1"
 
-    @enabled
+    @kvdb
     Scenario: Delete a test string entry in a cluster's KVDB
 
         Given address "$ZATO_API_TEST_SERVER"
@@ -254,7 +254,7 @@ Feature: zato.kvdb.remote-command
 
         And I sleep for "1"
 
-    @enabled
+    @kvdb
     Scenario: Check that the test string entry doesn't exists in a cluster's KVDB
 
         Given address "$ZATO_API_TEST_SERVER"
