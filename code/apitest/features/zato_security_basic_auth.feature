@@ -6,6 +6,7 @@ Feature: zato.security.basic-auth.*
         Given I store a random string under "url_path"
         Given I store a random string under "basic_username"
         Given I store a random string under "basic_password"
+        Given I store a random string under "new_password"
 
     @security
     Scenario: Invoke zato.security.basic-auth.create
@@ -43,8 +44,8 @@ Feature: zato.security.basic-auth.*
         Given format "JSON"
         Given request is "{}"
         Given JSON Pointer "/id" in request is "#basic_id"
-        Given JSON Pointer "/password1" in request is "#basic_password"
-        Given JSON Pointer "/password2" in request is "#basic_password"
+        Given JSON Pointer "/password1" in request is "#new_password"
+        Given JSON Pointer "/password2" in request is "#new_password"
 
         When the URL is invoked
 
@@ -87,7 +88,7 @@ Feature: zato.security.basic-auth.*
     Scenario: Invoke zato.ping over the previusly created http channel with valid credentials
 
         Given address "$ZATO_API_TEST_SERVER"
-        Given Basic Auth "#basic_username" "#basic_password"
+        Given Basic Auth "#basic_username" "#new_password"
 
         Given URL path "/apitest/security/basic-auth/ping"
 
