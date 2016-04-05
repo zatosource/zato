@@ -1,4 +1,9 @@
+@basic-auth
 Feature: zato.security.basic-auth.*
+    Create a basic auth definition,
+    and check that it works against a new
+    ping endpoint
+    clean up after is done
 
     @security
     Scenario: Set up
@@ -6,6 +11,7 @@ Feature: zato.security.basic-auth.*
         Given I store a random string under "url_path"
         Given I store a random string under "basic_username"
         Given I store a random string under "basic_password"
+
 
     @security
     Scenario: Invoke zato.security.basic-auth.create
@@ -100,7 +106,7 @@ Feature: zato.security.basic-auth.*
 
         Then JSON Pointer "/zato_ping_response/pong" is "zato"
 
-        And I sleep for "1"
+
 
     @security
     Scenario: Invoke to fail zato.ping over the previusly created http channel with invalid credentials
@@ -118,7 +124,7 @@ Feature: zato.security.basic-auth.*
         Then status is "401"
         And JSON Pointer "/zato_env/result" is "ZATO_ERROR"
 
-        And I sleep for "1"
+
 
     @security
     Scenario: Invoke zato.security.basic-auth.edit with random data and is_active false to test that it cannot be used
@@ -142,7 +148,7 @@ Feature: zato.security.basic-auth.*
         Then status is "200"
         And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-        And I sleep for "1"
+
 
     @security
     Scenario: Delete created HTTP channel for zato.ping
@@ -160,7 +166,7 @@ Feature: zato.security.basic-auth.*
         Then status is "200"
         And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-        And I sleep for "1"
+
 
     @security
     Scenario: Invoke zato.security.basic-auth.delete
@@ -179,4 +185,4 @@ Feature: zato.security.basic-auth.*
         Then status is "200"
         And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-        And I sleep for "1"
+
