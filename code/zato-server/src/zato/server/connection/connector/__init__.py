@@ -30,6 +30,23 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
+class EventLogger(object):
+    def __init__(self, enter_verb, exit_verb, enter_func, exit_func):
+
+        self.enter_verb = enter_verb
+        self.exit_verb = exit_verb
+
+        self.enter_func = enter_func
+        self.exit_func = exit_func
+
+    def __enter__(self):
+        self.enter_func(self.enter_verb)
+
+    def __exit__(self, *args, **kwargs):
+        self.exit_func(self.exit_verb)
+
+# ################################################################################################################################
+
 class Connector(object):
 
     def __init__(self, name, type, config):
@@ -50,6 +67,8 @@ class Connector(object):
 
 # ################################################################################################################################
 
+# ################################################################################################################################
+
     def _start(self):
         raise NotImplementedError('Must be implemented in subclasses')
 
@@ -65,35 +84,55 @@ class Connector(object):
 
 # ################################################################################################################################
 
-    def start(self):
-        logger.debug('Starting %s connector `%s`', self.type, self.name)
-        self._start()
-        logger.info('Started %s connector `%s`%s', self.type, self.name, ' ({})'.format(
-                    self.log_details) if self.log_details else '')
+    def _start_stop_logger(self, enter_verb, exit_verb):
+        return EventLogger(enter_verb, exit_verb, self._debug_start_stop, self._info_start_stop)
+
+    def _debug_start_stop(self, verb):
+        logger.debug('%s %s connector `%s`', verb, self.type, self.name)
+
+    def _info_start_stop(self, verb):
+        logger.info('%s %s connector `%s`%s', verb, self.type, self.name, ' ({})'.format(
+            self.log_details) if self.log_details else '')
+
+# ################################################################################################################################
+
+    def start(self, needs_log=True):
+        with self._start_stop_logger('Starting',' Started'):
+            self._start()
 
 # ################################################################################################################################
 
     def stop(self):
-        self.keep_running = False
+        with self._start_stop_logger('Stopping',' Stopped'):
+            self.keep_running = False
+            self._stop()
 
 # ################################################################################################################################
 
-    def restart(self, lock=None):
-        with lock or self.lock:
-            self.stop()
-            self.start()
+    def restart(self):
+        """ Stops and starts the connector, must be called with self.lock held.
+        """
+        self.stop()
+        self.start()
 
 # ################################################################################################################################
 
-    def update(self, config):
-        with self.lock as lock:
-            self._update(config)
-            self.restart(lock)
+    def edit(self, old_name, config):
+        with self.lock:
+            self._edit(old_name, config)
+            self.restart()
 
 # ################################################################################################################################
 
-    def _update(self, config):
-        raise NotImplementedError()
+    def _edit(self, old_name, config):
+        self.name = config.name
+        self.config = config
+
+# ################################################################################################################################
+
+    def _stop(self):
+        """ Can be, but does not have to, overwritten by subclasses to customize the behaviour.
+        """
 
 # ################################################################################################################################
 
@@ -103,12 +142,15 @@ class OutZMQ(Connector):
     def _start(self):
         self.log_details = '{} {}'.format(self.config.socket_type, self.config.address)
         self.ctx = zmq.Context()
-        self.socket = self.ctx.socket(getattr(zmq, self.config.socket_type))
-        self.conn = self.socket
-        self.socket.bind(self.config.address)
+        self.impl = self.ctx.socket(getattr(zmq, self.config.socket_type))
+        self.conn = self
+        self.impl.bind(self.config.address)
 
     def _send(self, msg, *args, **kwargs):
-        self.socket.send(msg, *args, **kwargs)
+        self.impl.send(msg, *args, **kwargs)
+
+    def _stop(self):
+        self.impl.close(50) # TODO: Should be configurable
 
 # ################################################################################################################################
 
@@ -125,9 +167,9 @@ class ConnectorStore(object):
         with self.lock:
             self.connectors[name] = self.connector_class(name, self.type, config)
 
-    def update(self, old_name, config):
+    def edit(self, old_name, config):
         with self.lock:
-            self.connectors[old_name].update(config)
+            self.connectors[old_name].edit(old_name, config)
 
     def delete(self, name):
         with self.lock:
@@ -138,3 +180,5 @@ class ConnectorStore(object):
         with self.lock:
             for c in self.connectors.values():
                 c.start()
+
+# ################################################################################################################################
