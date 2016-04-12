@@ -1,0 +1,5 @@
+{
+   "cluster_id": 1,
+   "payload": "ZnJvbSBfX2Z1dHVyZV9fIGltcG9ydCBhYnNvbHV0ZV9pbXBvcnQsIGRpdmlzaW9uLCBwcmludF9mdW5jdGlvbiwgdW5pY29kZV9saXRlcmFscwoKIyB6YXRvCmZyb20gemF0by5zZXJ2ZXIuc2VydmljZSBpbXBvcnQgU2VydmljZQoKY2xhc3MgVGVzdFNlcnZpY2UoU2VydmljZSk6CgogICAgY2xhc3MgU2ltcGxlSU8oU2VydmljZSk6CiAgICAgICAgb3V0cHV0X3JlcXVpcmVkID0gKCdvdXQnLCkKCiAgICBkZWYgaGFuZGxlKHNlbGYpOgoKICAgICAgICBzZWxmLnJlc3BvbnNlLnBheWxvYWQub3V0ID0gJ3phdG8nCg==",
+   "payload_name": "test_service.py"
+}
