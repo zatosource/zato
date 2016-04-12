@@ -1,305 +1,313 @@
+@wss-auth
 Feature: zato.security.wss.*
 
-    @security
-    Scenario: Set up
+  @security
+  @wss-create
+  Scenario: Set up
 
-        Given I store a random string under "url_path"
-        Given I store a random string under "wss_name"
-        Given I store a random string under "wss_username"
-        Given I store a random string under "wss_password"
-        Given I store a random string under "invalid_password"
+    Given I store a random string under "url_path"
+    Given I store a random string under "wss_name"
+    Given I store a random string under "wss_username"
+    Given I store a random string under "wss_password"
+    Given I store a random string under "invalid_password"
 
-    @security
-    Scenario: Invoke zato.security.wss.create
 
-        Given address "$ZATO_API_TEST_SERVER"
-        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+  @security
+  @wss-create
+  Scenario: Invoke zato.security.wss.create
 
-        Given URL path "/zato/json/zato.security.wss.create"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-        Given format "JSON"
-        Given request is "{}"
-        Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
-        Given JSON Pointer "/name" in request is "#wss_name"
-        Given JSON Pointer "/is_active" in request is "true"
-        Given JSON Pointer "/username" in request is "#wss_username"
-        Given JSON Pointer "/password_type" in request is "clear_text"
-        Given JSON Pointer "/reject_empty_nonce_creat" in request is "true"
-        Given JSON Pointer "/reject_stale_tokens" in request is "true"
-        Given JSON Pointer "/reject_expiry_limit" in request is "15"
-        Given JSON Pointer "/nonce_freshness_time" in request is "15"
+    Given URL path "/zato/json/zato.security.wss.create"
 
-        When the URL is invoked
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
+    Given JSON Pointer "/name" in request is "#wss_name"
+    Given JSON Pointer "/is_active" in request is "true"
+    Given JSON Pointer "/username" in request is "#wss_username"
+    Given JSON Pointer "/password_type" in request is "clear_text"
+    Given JSON Pointer "/reject_empty_nonce_creat" in request is "true"
+    Given JSON Pointer "/reject_stale_tokens" in request is "true"
+    Given JSON Pointer "/reject_expiry_limit" in request is "15"
+    Given JSON Pointer "/nonce_freshness_time" in request is "15"
 
-        Then status is "200"
+    When the URL is invoked
 
-        And JSON Pointer "/zato_env/result" is "ZATO_OK"
-        And I store "/zato_security_wss_create_response/name" from response under "wss_name"
-        And I store "/zato_security_wss_create_response/id" from response under "wss_id"
+    Then status is "200"
 
-        And I sleep for "1"
+    And JSON Pointer "/zato_env/result" is "ZATO_OK"
+    And I store "/zato_security_wss_create_response/name" from response under "wss_name"
+    And I store "/zato_security_wss_create_response/id" from response under "wss_id"
 
-    @security
-    Scenario: Invoke zato.security.wss.change-password
 
-        Given address "$ZATO_API_TEST_SERVER"
-        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+  @security
+  @wss-create
+  Scenario: Invoke zato.security.wss.change-password
 
-        Given URL path "/zato/json/zato.security.wss.change-password"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-        Given format "JSON"
-        Given request is "{}"
-        Given JSON Pointer "/id" in request is "#wss_id"
-        Given JSON Pointer "/password1" in request is "#wss_password"
-        Given JSON Pointer "/password2" in request is "#wss_password"
+    Given URL path "/zato/json/zato.security.wss.change-password"
 
-        When the URL is invoked
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/id" in request is "#wss_id"
+    Given JSON Pointer "/password1" in request is "#wss_password"
+    Given JSON Pointer "/password2" in request is "#wss_password"
 
-        Then status is "200"
-        And JSON Pointer "/zato_env/result" is "ZATO_OK"
+    When the URL is invoked
 
-        And I sleep for "1"
+    Then status is "200"
+    And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-    @security
-    Scenario: Prepare params for ping
-        Given I store UTC now under "soap_created" "default"
-        Given I store a format string "{soap_created}.000Z" under "soap_created_value" 
 
-    @security
-    Scenario: Create HTTP channel for zato.ping service to be executed with the security definition created
 
-        Given address "$ZATO_API_TEST_SERVER"
-        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+  @security
+  @wss-create
+  Scenario: Prepare params for ping
+    Given I store UTC now under "soap_created" "default"
+    Given I store a format string "{soap_created}.000Z" under "soap_created_value"
 
-        
-        Given URL path "/zato/json/zato.http-soap.create"
+  @security
+  @wss-create
+  Scenario: Create HTTP channel for zato.ping service to be executed with the security definition created
 
-        Given format "JSON"
-        Given request is "{}"
-        Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
-        Given JSON Pointer "/name" in request is a random string
-        Given JSON Pointer "/is_active" in request is "true"
-        Given JSON Pointer "/connection" in request is "channel"
-        Given JSON Pointer "/transport" in request is "soap"
-        Given JSON Pointer "/is_internal" in request is "false"
-        Given JSON Pointer "/url_path" in request is "/apitest/security/wss/ping"
-        Given JSON Pointer "/service" in request is "zato.ping"
-        Given JSON Pointer "/data_format" in request is "xml"
-        Given JSON Pointer "/method" in request is "GET"
-        Given JSON Pointer "/security_id" in request is "#wss_id"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-        When the URL is invoked
 
-        Then status is "200"
-        And I store "/zato_http_soap_create_response/name" from response under "ping_channel_name"
-        And I store "/zato_http_soap_create_response/id" from response under "ping_channel_id"
+    Given URL path "/zato/json/zato.http-soap.create"
 
-        And I sleep for "1"
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
+    Given JSON Pointer "/name" in request is a random string
+    Given JSON Pointer "/is_active" in request is "true"
+    Given JSON Pointer "/connection" in request is "channel"
+    Given JSON Pointer "/transport" in request is "soap"
+    Given JSON Pointer "/is_internal" in request is "false"
+    Given JSON Pointer "/url_path" in request is "/apitest/security/wss/ping"
+    Given JSON Pointer "/service" in request is "zato.ping"
+    Given JSON Pointer "/data_format" in request is "xml"
+    Given JSON Pointer "/method" in request is "GET"
+    Given JSON Pointer "/security_id" in request is "#wss_id"
 
-    @security
-    Scenario: Invoke to fail zato.ping over the previusly created http channel with invalid Created value 
+    When the URL is invoked
 
-        Given address "$ZATO_API_TEST_SERVER"
+    Then status is "200"
+    And I store "/zato_http_soap_create_response/name" from response under "ping_channel_name"
+    And I store "/zato_http_soap_create_response/id" from response under "ping_channel_id"
 
-        Given URL path "/apitest/security/wss/ping"
 
-        Given format "XML"
-        Given request is "<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:zato="https://zato.io/ns/20130518" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"><soapenv:Body><zato:zato_ping_request></zato:zato_ping_request></soapenv:Body><soapenv:Header><wsse:Security><wsse:UsernameToken><wsse:Username></wsse:Username><wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"></wsse:Password><wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary"></wsse:Nonce><wsu:Created></wsu:Created></wsse:UsernameToken></wsse:Security></soapenv:Header></soapenv:Envelope>"
-        Given namespace prefix "soapenv" of "http://schemas.xmlsoap.org/soap/envelope/"
-        Given namespace prefix "zato" of "https://zato.io/ns/20130518"
-        Given namespace prefix "wsse" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
-        Given namespace prefix "wsu" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
 
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username" in request is "#wss_username"
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password" in request is "#wss_password"
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce" in request is "f8nUe3YupTU5ISdCy3X9Gg=="
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created" in request is "2011-05-04T19:01:40.981Z"
-        
-        When the URL is invoked
+  @security
+  @wss-chann
+  Scenario: Invoke to fail zato.ping over the previusly created http channel with invalid Created value
 
-        Then status is "401"
+    Given address "$ZATO_API_TEST_SERVER"
 
-        And I sleep for "1"
+    Given URL path "/apitest/security/wss/ping"
 
-    @security
-    Scenario: Invoke zato.ping over the previusly created http channel with valid credentials
+    Given format "XML"
+    Given request "security_wss_invoke_service.xml"
+    Given namespace prefix "soapenv" of "http://schemas.xmlsoap.org/soap/envelope/"
+    Given namespace prefix "zato" of "https://zato.io/ns/20130518"
+    Given namespace prefix "wsse" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+    Given namespace prefix "wsu" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
 
-        Given address "$ZATO_API_TEST_SERVER"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username" in request is "#wss_username"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password" in request is "#wss_password"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce" in request is "f8nUe3YupTU5ISdCy3X9Gg=="
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created" in request is "2011-05-04T19:01:40.981Z"
 
-        Given URL path "/apitest/security/wss/ping"
+    When the URL is invoked
 
-        Given format "XML"
-        Given request is "<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:zato="https://zato.io/ns/20130518" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"><soapenv:Body><zato:zato_ping_request></zato:zato_ping_request></soapenv:Body><soapenv:Header><wsse:Security><wsse:UsernameToken><wsse:Username></wsse:Username><wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"></wsse:Password><wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary"></wsse:Nonce><wsu:Created></wsu:Created></wsse:UsernameToken></wsse:Security></soapenv:Header></soapenv:Envelope>"
-        Given namespace prefix "soapenv" of "http://schemas.xmlsoap.org/soap/envelope/"
-        Given namespace prefix "zato" of "https://zato.io/ns/20130518"
-        Given namespace prefix "wsse" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
-        Given namespace prefix "wsu" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+    Then status is "401"
 
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username" in request is "#wss_username"
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password" in request is "#wss_password"
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce" in request is "f8nUe3YupTU5ISdCy3X9Gg=="
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created" in request is "#soap_created_value"
 
-        When the URL is invoked
+  @security
+  @wss-chann
+  Scenario: Invoke zato.ping over the previusly created http channel with valid credentials
 
-        Then status is "200"
+    Given address "$ZATO_API_TEST_SERVER"
 
-        And I sleep for "1"
+    Given URL path "/apitest/security/wss/ping"
 
-    @security
-    Scenario: Invoke to fail zato.ping over the previusly created http channel with invalid credentials
+    Given format "XML"
+    Given request "security_wss_invoke_service.xml"
+    Given namespace prefix "soapenv" of "http://schemas.xmlsoap.org/soap/envelope/"
+    Given namespace prefix "zato" of "https://zato.io/ns/20130518"
+    Given namespace prefix "wsse" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+    Given namespace prefix "wsu" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
 
-        Given address "$ZATO_API_TEST_SERVER"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username" in request is "#wss_username"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password" in request is "#wss_password"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce" in request is "f8nUe3YupTU5ISdCy3X9Gg=="
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created" in request is "#soap_created_value"
 
-        Given URL path "/apitest/security/wss/ping"
+    When the URL is invoked
 
-        Given format "XML"
-        Given request is "<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:zato="https://zato.io/ns/20130518" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"><soapenv:Body><zato:zato_ping_request></zato:zato_ping_request></soapenv:Body><soapenv:Header><wsse:Security><wsse:UsernameToken><wsse:Username></wsse:Username><wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"></wsse:Password><wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary"></wsse:Nonce><wsu:Created></wsu:Created></wsse:UsernameToken></wsse:Security></soapenv:Header></soapenv:Envelope>"
-        Given namespace prefix "soapenv" of "http://schemas.xmlsoap.org/soap/envelope/"
-        Given namespace prefix "zato" of "https://zato.io/ns/20130518"
-        Given namespace prefix "wsse" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
-        Given namespace prefix "wsu" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+    Then status is "200"
 
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username" in request is "#wss_username"
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password" in request is "#invalid_password"
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce" in request is "f8nUe3YupTU5ISdCy3X9Gg=="
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created" in request is "#soap_created_value"
 
-        When the URL is invoked
+  @security
+  @wss-chann
+  Scenario: Invoke to fail zato.ping over the previusly created http channel with invalid credentials
 
-        Then status is "401"
+    Given address "$ZATO_API_TEST_SERVER"
 
-        And I sleep for "1"
+    Given URL path "/apitest/security/wss/ping"
 
-    @security
-    Scenario: Invoke to fail zato.ping over the previusly created http channel with empty created value
+    Given format "XML"
+    Given request "security_wss_invoke_service.xml"
+    Given namespace prefix "soapenv" of "http://schemas.xmlsoap.org/soap/envelope/"
+    Given namespace prefix "zato" of "https://zato.io/ns/20130518"
+    Given namespace prefix "wsse" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+    Given namespace prefix "wsu" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
 
-        Given address "$ZATO_API_TEST_SERVER"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username" in request is "#wss_username"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password" in request is "#invalid_password"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce" in request is "f8nUe3YupTU5ISdCy3X9Gg=="
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created" in request is "#soap_created_value"
 
-        Given URL path "/apitest/security/wss/ping"
+    When the URL is invoked
 
-        Given format "XML"
-        Given request is "<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:zato="https://zato.io/ns/20130518" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"><soapenv:Body><zato:zato_ping_request></zato:zato_ping_request></soapenv:Body><soapenv:Header><wsse:Security><wsse:UsernameToken><wsse:Username></wsse:Username><wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"></wsse:Password><wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary"></wsse:Nonce><wsu:Created></wsu:Created></wsse:UsernameToken></wsse:Security></soapenv:Header></soapenv:Envelope>"
-        Given namespace prefix "soapenv" of "http://schemas.xmlsoap.org/soap/envelope/"
-        Given namespace prefix "zato" of "https://zato.io/ns/20130518"
-        Given namespace prefix "wsse" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
-        Given namespace prefix "wsu" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+    Then status is "401"
 
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username" in request is "#wss_username"
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password" in request is "#invalid_password"
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce" in request is "f8nUe3YupTU5ISdCy3X9Gg=="
 
-        When the URL is invoked
+  @security
+  @wss-chann
+  Scenario: Invoke to fail zato.ping over the previusly created http channel with empty created value
 
-        Then status is "401"
+    Given address "$ZATO_API_TEST_SERVER"
 
-        And I sleep for "1"
+    Given URL path "/apitest/security/wss/ping"
 
-    @security
-    Scenario: Invoke zato.security.wss.edit with random data to test that it cannot login
+    Given format "XML"
+    Given request "security_wss_invoke_service.xml"
+    Given namespace prefix "soapenv" of "http://schemas.xmlsoap.org/soap/envelope/"
+    Given namespace prefix "zato" of "https://zato.io/ns/20130518"
+    Given namespace prefix "wsse" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+    Given namespace prefix "wsu" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
 
-        Given address "$ZATO_API_TEST_SERVER"
-        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username" in request is "#wss_username"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password" in request is "#invalid_password"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Nonce" in request is "f8nUe3YupTU5ISdCy3X9Gg=="
 
-        Given URL path "/zato/json/zato.security.wss.edit"
+    When the URL is invoked
 
-        Given format "JSON"
-        Given request is "{}"
-        Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
-        Given JSON Pointer "/id" in request is "#wss_id"
-        Given JSON Pointer "/name" in request is "#wss_name"
-        Given JSON Pointer "/is_active" in request is "true"
-        Given JSON Pointer "/username" in request is "#wss_username"
-        Given JSON Pointer "/password_type" in request is "clear_text"
-        Given JSON Pointer "/reject_empty_nonce_creat" in request is "false"
-        Given JSON Pointer "/reject_stale_tokens" in request is "false"
-        Given JSON Pointer "/reject_expiry_limit" in request is "15"
-        Given JSON Pointer "/nonce_freshness_time" in request is "15"
+    Then status is "401"
 
-        When the URL is invoked
 
-        Then status is "200"
-        And JSON Pointer "/zato_env/result" is "ZATO_OK"
-        And I store "/zato_security_wss_edit_response/name" from response under "wss_edit_name"
+  @security
+  @wss-chann
+  Scenario: Invoke zato.security.wss.edit with random data to test that it cannot login
 
-        And I sleep for "1"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-    @security
-    Scenario: Invoke zato.ping over the previusly created http channel with empty nonce & created value and valid credentials 
+    Given URL path "/zato/json/zato.security.wss.edit"
 
-        Given address "$ZATO_API_TEST_SERVER"
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
+    Given JSON Pointer "/id" in request is "#wss_id"
+    Given JSON Pointer "/name" in request is "#wss_name"
+    Given JSON Pointer "/is_active" in request is "true"
+    Given JSON Pointer "/username" in request is "#wss_username"
+    Given JSON Pointer "/password_type" in request is "clear_text"
+    Given JSON Pointer "/reject_empty_nonce_creat" in request is "false"
+    Given JSON Pointer "/reject_stale_tokens" in request is "false"
+    Given JSON Pointer "/reject_expiry_limit" in request is "15"
+    Given JSON Pointer "/nonce_freshness_time" in request is "15"
 
-        Given URL path "/apitest/security/wss/ping"
+    When the URL is invoked
 
-        Given format "XML"
-        Given request is "<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:zato="https://zato.io/ns/20130518" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"><soapenv:Body><zato:zato_ping_request></zato:zato_ping_request></soapenv:Body><soapenv:Header><wsse:Security><wsse:UsernameToken><wsse:Username></wsse:Username><wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText"></wsse:Password><wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary"></wsse:Nonce><wsu:Created></wsu:Created></wsse:UsernameToken></wsse:Security></soapenv:Header></soapenv:Envelope>"
-        Given namespace prefix "soapenv" of "http://schemas.xmlsoap.org/soap/envelope/"
-        Given namespace prefix "zato" of "https://zato.io/ns/20130518"
-        Given namespace prefix "wsse" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
-        Given namespace prefix "wsu" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
+    Then status is "200"
+    And JSON Pointer "/zato_env/result" is "ZATO_OK"
+    And I store "/zato_security_wss_edit_response/name" from response under "wss_edit_name"
 
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username" in request is "#wss_username"
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password" in request is "#wss_password"
-        Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created" in request is "2011-05-04T19:01:40.981Z"
 
-        When the URL is invoked
+  @security
+  @wss-chann
+  Scenario: Invoke zato.ping over the previusly created http channel with empty nonce & created value and valid credentials
 
-        Then status is "200"
+    Given address "$ZATO_API_TEST_SERVER"
 
-        And I sleep for "1"
+    Given URL path "/apitest/security/wss/ping"
 
-    @security
-    Scenario: Invoke zato.security.wss.get-list
+    Given format "XML"
+    Given request "security_wss_invoke_service.xml"
+    Given namespace prefix "soapenv" of "http://schemas.xmlsoap.org/soap/envelope/"
+    Given namespace prefix "zato" of "https://zato.io/ns/20130518"
+    Given namespace prefix "wsse" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+    Given namespace prefix "wsu" of "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
 
-        Given address "$ZATO_API_TEST_SERVER"
-        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Username" in request is "#wss_username"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsse:Password" in request is "#wss_password"
+    Given XPath "/soapenv:Envelope/soapenv:Header/wsse:Security/wsse:UsernameToken/wsu:Created" in request is "2011-05-04T19:01:40.981Z"
 
-        Given URL path "/zato/json/zato.security.wss.get-list"
+    When the URL is invoked
 
-        Given format "JSON"
-        Given request is "{}"
-        Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
+    Then status is "200"
 
-        When the URL is invoked
 
-        Then status is "200"
-        And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-        And I sleep for "1"
+  @security
+  @wss-chann
+  Scenario: Invoke zato.security.wss.get-list
 
-    @security
-    Scenario: Delete created HTTP channel for zato.ping
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-        Given address "$ZATO_API_TEST_SERVER"
-        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+    Given URL path "/zato/json/zato.security.wss.get-list"
 
-        Given URL path "/zato/json/zato.http-soap.delete"
-        Given format "JSON"
-        Given request is "{}"
-        Given JSON Pointer "/id" in request is "#ping_channel_id"
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
 
-        When the URL is invoked
+    When the URL is invoked
 
-        Then status is "200"
-        And JSON Pointer "/zato_env/result" is "ZATO_OK"
+    Then status is "200"
+    And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-        And I sleep for "1"
 
-    @security
-    Scenario: Invoke zato.security.wss.delete
+  @security
+  @wss-delete
+  Scenario: Delete created HTTP channel for zato.ping
 
-        Given address "$ZATO_API_TEST_SERVER"
-        Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-        Given URL path "/zato/json/zato.security.wss.delete"
+    Given URL path "/zato/json/zato.http-soap.delete"
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/id" in request is "#ping_channel_id"
 
-        Given format "JSON"
-        Given request is "{}"
-        Given JSON Pointer "/id" in request is "#wss_id"
+    When the URL is invoked
 
-        When the URL is invoked
+    Then status is "200"
+    And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-        Then status is "200"
-        And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-        And I sleep for "1"
+
+  @security
+  @wss-delete
+  Scenario: Invoke zato.security.wss.delete
+
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+    Given URL path "/zato/json/zato.security.wss.delete"
+
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/id" in request is "#wss_id"
+
+    When the URL is invoked
+
+    Then status is "200"
+    And JSON Pointer "/zato_env/result" is "ZATO_OK"
+
