@@ -1,8 +1,9 @@
 @service
-Feature: zato.service.*
-  # This feature tests all the endpoints for the public api, regarding zato.service
+Feature: zato.service.upload-package
+  Upload a service, invoke it and delete service afterwards
 
-  Scenario: upload package
+  @service-getchannellist
+  Scenario: Upload package
 
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
@@ -16,9 +17,10 @@ Feature: zato.service.*
     When the URL is invoked
 
     Then status is "200"
+    And I sleep for "1"
 
-
-  Scenario: get service by name
+  @service-getchannellist
+  Scenario: Get service by name
 
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
@@ -36,7 +38,28 @@ Feature: zato.service.*
     And JSON Pointer "/zato_service_get_by_name_response/name" is "test-service.test-service"
     And I store "/zato_service_get_by_name_response/id" from response under "service_id"
 
+  @service-getchannellist
+  Scenario: Invoke service by name
 
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+    Given URL path "/zato/json/zato.service.invoke"
+
+    Given format "JSON"
+    Given request "service_upload.json"
+    Given JSON Pointer "/name" in request is "test-service.test-service"
+    # payload sent as base64 {"service_request": "hola"}
+    Given JSON Pointer "/payload" in request is "eyJzZXJ2aWNlX3JlcXVlc3QiOiAiaG9sYSJ9Cg=="
+    Given JSON Pointer "/data_format" in request is "json"
+    When the URL is invoked
+
+    Then status is "200"
+
+    And JSON Pointer "/zato_env/result" is "ZATO_OK"
+    And JSON Pointer "/zato_service_invoke_response/response" is base64 JSON which pointer "/response/echo_request" has "hola"
+
+  @service-getchannellist
   Scenario: Create HTTP channel for test-service.test-service
 
       Given address "$ZATO_API_TEST_SERVER"
@@ -55,7 +78,6 @@ Feature: zato.service.*
       Given JSON Pointer "/url_path" in request is "/apitest/service/test"
       Given JSON Pointer "/service" in request is "test-service.test-service"
       Given JSON Pointer "/data_format" in request is "json"
-      Given JSON Pointer "/method" in request is "GET"
 
       When the URL is invoked
 
@@ -63,7 +85,7 @@ Feature: zato.service.*
       And I store "/zato_http_soap_create_response/name" from response under "service_channel_name"
       And I store "/zato_http_soap_create_response/id" from response under "service_channel_id"
 
-
+  @service-getchannellist
   Scenario: get channel list
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
@@ -78,6 +100,7 @@ Feature: zato.service.*
 
     Then status is "200"
 
+  @service-getchannellist
   Scenario: Delete created HTTP channel
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -93,7 +116,7 @@ Feature: zato.service.*
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-
+  @service-getchannellist
   Scenario: Delete test service
 
     Given address "$ZATO_API_TEST_SERVER"
