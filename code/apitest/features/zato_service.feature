@@ -77,3 +77,34 @@ Feature: zato.service.*
     When the URL is invoked
 
     Then status is "200"
+
+  Scenario: Delete created HTTP channel
+
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+    Given URL path "/zato/json/zato.http-soap.delete"
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/id" in request is "#service_channel_id"
+
+    When the URL is invoked
+
+    Then status is "200"
+    And JSON Pointer "/zato_env/result" is "ZATO_OK"
+
+
+  Scenario: Delete test service
+
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+    Given URL path "/zato/json/zato.service.delete"
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/id" in request is "#service_id"
+
+    When the URL is invoked
+
+    Then status is "200"
+    And JSON Pointer "/zato_env/result" is "ZATO_OK"
