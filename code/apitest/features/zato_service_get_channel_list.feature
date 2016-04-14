@@ -1,6 +1,6 @@
 @service
-Feature: zato.service.upload-package
-  Upload a service, invoke it and delete service afterwards
+Feature: zato.service.get-channel-list
+  Returns a list of channels of a given type a service is exposed through.
 
   @service-getchannellist
   Scenario: Upload package

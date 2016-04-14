@@ -1,6 +1,6 @@
 @service
 Feature: zato.service.delete
-  Upload a service, invoke it and delete service afterwards
+  Deletes a service by its ID.
 
   @service-delete
   Scenario: Upload package
@@ -60,7 +60,7 @@ Feature: zato.service.delete
     And JSON Pointer "/zato_service_invoke_response/response" is base64 JSON which pointer "/response/echo_request" has "hola"
 
   @service-delete
-  Scenario: Delete test service
+  Scenario: Delete test service by ID
 
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
