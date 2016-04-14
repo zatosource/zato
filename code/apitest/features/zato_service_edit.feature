@@ -1,6 +1,6 @@
 @service
-Feature: zato.service.delete
-  Upload a service, invoke it and delete service afterwards
+Feature: zato.service.edit
+  Updates an already existing service.
 
   @service-edit
   Scenario: Upload package

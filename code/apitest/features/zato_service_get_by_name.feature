@@ -1,6 +1,6 @@
 @service
-Feature: zato.service.upload-package
-  Upload a service, invoke it and delete service afterwards
+Feature: zato.service.get-by-name
+  Returns a service by its name.
 
   @service-getbyname
   Scenario: Upload package

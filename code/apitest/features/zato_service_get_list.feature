@@ -1,6 +1,6 @@
 @service
-Feature: zato.service.upload-package
-  Upload a service, invoke it and delete service afterwards
+Feature: zato.service.get-list
+  Returns a list of services defined on a given server.
 
   @service-getlist
   Scenario: Upload package
