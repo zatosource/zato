@@ -1,6 +1,6 @@
 @service
-Feature: zato.service.upload-package
-  Upload a service, invoke it and delete service afterwards
+Feature: zato.service.get-deployment-info-list
+  Returns information regarding where, on what servers, a given service is deployed.
 
   @service-getdeployinfo
   Scenario: Get service by name

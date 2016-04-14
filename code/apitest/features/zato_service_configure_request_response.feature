@@ -1,6 +1,6 @@
 @service
-Feature: zato.service.upload-package
-  Upload a service, invoke it and delete service afterwards
+Feature: zato.service.configure-request-response
+  Configures one in how many request-response pairs should be stored in the KVDB.
 
   @service-confreqres
   Scenario: Get current request response frecuency for zato.ping service
