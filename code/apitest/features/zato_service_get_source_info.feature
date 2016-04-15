@@ -1,14 +1,14 @@
 @service
-Feature: zato.service.get-request-response
-  Returns a sample request-response pair along with its metadata for a zato.ping service
+Feature: zato.service.get-source-info
+  Returns information regarding how a particular service’s source code looks like.
 
-  @service-getreqresp
-  Scenario: Get current request response for zato.ping service
+  @service-getsourceinfo
+  Scenario: Get source info for zato.ping service
 
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-    Given URL path "/zato/json/zato.service.get-request-response"
+    Given URL path "/zato/json/zato.service.get-source-info"
 
     Given format "JSON"
     Given request is "{}"
@@ -19,4 +19,4 @@ Feature: zato.service.get-request-response
     Then status is "200"
 
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
-    And JSON Pointer "/zato_service_request_response_response" isn't empty
+    And JSON Pointer "/zato_service_get_source_info_response/source" isn't empty
