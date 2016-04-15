@@ -24,6 +24,7 @@ from datadiff.tools import assert_equals
 from zato.apitest import steps as default_steps
 from zato.apitest.steps.json import set_pointer
 from zato.apitest.util import obtain_values, utcnow
+from zato.apitest.steps.json import assert_value
 
 @given('I store a format string "{value}" under "{name}"')
 def given_i_store_format_string_value_under_name(ctx, value, name):
@@ -44,3 +45,8 @@ def then_json_pointer_is_a_base64_object(ctx, path, path2, value):
 
     return assert_equals(actual, value)
 
+@then('JSON Pointer "{path}" isn\'t an empty list')
+@obtain_values
+def then_json_pointer_isnt_an_empty_list(ctx, path):
+    actual = get_pointer(ctx.zato.response.data_impl, path)
+    assert actual is not False
