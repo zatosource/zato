@@ -1,6 +1,6 @@
 @service
-Feature: zato.service.set-wsdl
-  Attaches a WSDL document to a service.
+Feature: zato.service.has-wsdl
+  Returns a boolean flag indicating whether there is a WSDL document attached to a service.
 
   @service-haswsdl
   Scenario: Setup
