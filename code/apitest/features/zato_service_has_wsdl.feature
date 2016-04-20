@@ -2,12 +2,12 @@
 Feature: zato.service.has-wsdl
   Returns a boolean flag indicating whether there is a WSDL document attached to a service.
 
-  @service-haswsdl
+  @service.has-wsdl
   Scenario: Setup
     Given I store "test-service.test-service" under "service_name"
 
 
-  @service-haswsdl
+  @service.has-wsdl
   Scenario: Upload package
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -24,7 +24,7 @@ Feature: zato.service.has-wsdl
     Then status is "200"
     And I sleep for "1"
 
-  @service-haswsdl
+  @service.has-wsdl
   Scenario: Check that there is no wsdl attached to the service
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -45,7 +45,7 @@ Feature: zato.service.has-wsdl
     And JSON Pointer "/zato_service_has_wsdl_response/has_wsdl" is False
 
 
-  @service-haswsdl
+  @service.has-wsdl
   Scenario: Set WSDL to created service
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -64,7 +64,7 @@ Feature: zato.service.has-wsdl
 
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-  @service-haswsdl
+  @service.has-wsdl
   Scenario: Check that the wsdl is now attached to the service
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -84,7 +84,7 @@ Feature: zato.service.has-wsdl
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_service_has_wsdl_response/has_wsdl" is True
 
-  @service-haswsdl
+  @service.has-wsdl
   Scenario: Get service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -103,7 +103,7 @@ Feature: zato.service.has-wsdl
     And JSON Pointer "/zato_service_get_by_name_response/name" is "#service_name"
     And I store "/zato_service_get_by_name_response/id" from response under "service_id"
 
-  @service-haswsdl
+  @service.has-wsdl
   Scenario: Delete test service
 
     Given address "$ZATO_API_TEST_SERVER"

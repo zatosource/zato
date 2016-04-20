@@ -2,7 +2,7 @@
 Feature: zato.service.get-source-info
   Returns information regarding how a particular service’s source code looks like.
 
-  @service-getsourceinfo
+  @service.get-source-info
   Scenario: Get source info for zato.ping service
 
     Given address "$ZATO_API_TEST_SERVER"

@@ -2,7 +2,7 @@
 Feature: zato.service.get-channel-list
   Returns a list of channels of a given type a service is exposed through.
 
-  @service-getchannellist
+  @service.get-channel-list
   Scenario: Upload package
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -19,7 +19,7 @@ Feature: zato.service.get-channel-list
     Then status is "200"
     And I sleep for "1"
 
-  @service-getchannellist
+  @service.get-channel-list
   Scenario: Get service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -38,7 +38,7 @@ Feature: zato.service.get-channel-list
     And JSON Pointer "/zato_service_get_by_name_response/name" is "test-service.test-service"
     And I store "/zato_service_get_by_name_response/id" from response under "service_id"
 
-  @service-getchannellist
+  @service.get-channel-list
   Scenario: Invoke service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -59,7 +59,7 @@ Feature: zato.service.get-channel-list
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_service_invoke_response/response" is base64 JSON which pointer "/response/echo_request" has "hola"
 
-  @service-getchannellist
+  @service.get-channel-list
   Scenario: Create HTTP channel for test-service.test-service
 
       Given address "$ZATO_API_TEST_SERVER"
@@ -85,7 +85,7 @@ Feature: zato.service.get-channel-list
       And I store "/zato_http_soap_create_response/name" from response under "service_channel_name"
       And I store "/zato_http_soap_create_response/id" from response under "service_channel_id"
 
-  @service-getchannellist
+  @service.get-channel-list
   Scenario: get channel list
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
@@ -100,7 +100,7 @@ Feature: zato.service.get-channel-list
 
     Then status is "200"
 
-  @service-getchannellist
+  @service.get-channel-list
   Scenario: Delete created HTTP channel
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -116,7 +116,7 @@ Feature: zato.service.get-channel-list
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-  @service-getchannellist
+  @service.get-channel-list
   Scenario: Delete test service
 
     Given address "$ZATO_API_TEST_SERVER"

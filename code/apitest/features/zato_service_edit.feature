@@ -2,7 +2,7 @@
 Feature: zato.service.edit
   Updates an already existing service.
 
-  @service-edit
+  @service.edit
   Scenario: Upload package
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -19,7 +19,7 @@ Feature: zato.service.edit
     Then status is "200"
     And I sleep for "1"
 
-  @service-edit
+  @service.edit
   Scenario: Get service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -38,7 +38,7 @@ Feature: zato.service.edit
     And JSON Pointer "/zato_service_get_by_name_response/name" is "test-service.test-service"
     And I store "/zato_service_get_by_name_response/id" from response under "service_id"
 
-  @service-edit
+  @service.edit
   Scenario: Invoke service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -59,7 +59,7 @@ Feature: zato.service.edit
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_service_invoke_response/response" is base64 JSON which pointer "/response/echo_request" has "hola"
 
-  @service-edit
+  @service.edit
   Scenario: Create HTTP channel for test-service.test-service
 
       Given address "$ZATO_API_TEST_SERVER"
@@ -86,7 +86,7 @@ Feature: zato.service.edit
       And I store "/zato_http_soap_create_response/id" from response under "service_channel_id"
       And I sleep for "1"
 
-  @service-edit
+  @service.edit
   Scenario: Edit service setting the active flag to false
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -108,7 +108,7 @@ Feature: zato.service.edit
     And JSON Pointer "/zato_service_edit_response/name" is "test-service.test-service"
     And I sleep for "1"
 
-  @service-edit
+  @service.edit
   Scenario: Invoke service again to test that it was actually disabled
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -126,7 +126,7 @@ Feature: zato.service.edit
 
     Then status is "500"
 
-  @service-edit
+  @service.edit
   Scenario: Invoke service through http channel to test that it was actually disabled
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -142,7 +142,7 @@ Feature: zato.service.edit
     Then status is "500"
 
 
-  @service-edit
+  @service.edit
   Scenario: Delete created HTTP channel
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -159,7 +159,7 @@ Feature: zato.service.edit
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
 
-  @service-edit
+  @service.edit
   Scenario: Delete test service
 
     Given address "$ZATO_API_TEST_SERVER"

@@ -2,13 +2,13 @@
 Feature: zato.service.slow-response.get-list
   Returns a list of slow responses for a given service deployed on a cluster that is being invoked.
 
-  @service-slowrespgetlist
+  @service.slow-response.get-list
   Scenario: Setup
     Given I store "/apitest/service/testslow" under "test_url_path"
     Given I store "slow-service.slow-service" under "service_name"
     Given I store "100" under "slow_threshold"
 
-  @service-slowrespgetlist
+  @service.slow-response.get-list
   Scenario: Upload package
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -25,7 +25,7 @@ Feature: zato.service.slow-response.get-list
     Then status is "200"
     And I sleep for "1"
 
-  @service-slowrespgetlist
+  @service.slow-response.get-list
   Scenario: Get service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -44,7 +44,7 @@ Feature: zato.service.slow-response.get-list
     And JSON Pointer "/zato_service_get_by_name_response/name" is "#service_name"
     And I store "/zato_service_get_by_name_response/id" from response under "service_id"
 
-  @service-slowrespgetlist
+  @service.slow-response.get-list
   Scenario: Edit service to set the slow threshold to 100
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -66,7 +66,7 @@ Feature: zato.service.slow-response.get-list
     And JSON Pointer "/zato_service_edit_response/name" is "#service_name"
     And I sleep for "1"
 
-  @service-slowrespgetlist
+  @service.slow-response.get-list
   Scenario: Invoke slow service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -85,7 +85,7 @@ Feature: zato.service.slow-response.get-list
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And I store "/zato_env/cid" from response under "service_cid"
 
-  @service-slowrespgetlist
+  @service.slow-response.get-list
   Scenario: Check slow response of the request we just did
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -102,7 +102,7 @@ Feature: zato.service.slow-response.get-list
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_service_slow_response_get_list_response" isn't an empty list
     
-  @service-slowrespgetlist
+  @service.slow-response.get-list
   Scenario: Delete test service
 
     Given address "$ZATO_API_TEST_SERVER"
