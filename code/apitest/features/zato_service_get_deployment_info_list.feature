@@ -2,7 +2,7 @@
 Feature: zato.service.get-deployment-info-list
   Returns information regarding where, on what servers, a given service is deployed.
 
-  @service-getdeployinfo
+  @service.get-deployment-info-list
   Scenario: Get service by name
 
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
@@ -19,7 +19,7 @@ Feature: zato.service.get-deployment-info-list
     And I store "/zato_service_get_by_name_response/id" from response under "service_id"
 
 
-  @service-getdeployinfo
+  @service.get-deployment-info-list
   Scenario: Get deployment info list
 
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"

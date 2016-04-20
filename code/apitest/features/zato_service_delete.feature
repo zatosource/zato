@@ -2,7 +2,7 @@
 Feature: zato.service.delete
   Deletes a service by its ID.
 
-  @service-delete
+  @service.delete
   Scenario: Upload package
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -19,7 +19,7 @@ Feature: zato.service.delete
     Then status is "200"
     And I sleep for "1"
 
-  @service-delete
+  @service.delete
   Scenario: Get service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -38,7 +38,7 @@ Feature: zato.service.delete
     And JSON Pointer "/zato_service_get_by_name_response/name" is "test-service.test-service"
     And I store "/zato_service_get_by_name_response/id" from response under "service_id"
 
-  @service-delete
+  @service.delete
   Scenario: Invoke service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -59,7 +59,7 @@ Feature: zato.service.delete
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_service_invoke_response/response" is base64 JSON which pointer "/response/echo_request" has "hola"
 
-  @service-delete
+  @service.delete
   Scenario: Delete test service by ID
 
     Given address "$ZATO_API_TEST_SERVER"

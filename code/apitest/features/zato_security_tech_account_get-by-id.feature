@@ -2,7 +2,7 @@
 Feature: zato.security.tech-account.get-by-id
   Returns a technical account by its ID.
 
-  @security-tech-account.get-by-id
+  @security.tech-account.get-by-id
   Scenario: Set up
 
     Given I store a random string under "url_path"
@@ -10,7 +10,7 @@ Feature: zato.security.tech-account.get-by-id
     Given I store a random string under "tech_password"
     Given I store a random string under "invalid_password"
 
-  @security-tech-account.get-by-id
+  @security.tech-account.get-by-id
   Scenario: Create a new technichal account
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -34,7 +34,7 @@ Feature: zato.security.tech-account.get-by-id
     And I sleep for "1"
 
 
-  @security-tech-account.get-by-id
+  @security.tech-account.get-by-id
   Scenario: Invoke zato.security.tech-account.get-by-id
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -55,7 +55,7 @@ Feature: zato.security.tech-account.get-by-id
     And JSON Pointer "/zato_security_tech_account_get_by_id_response/name" is "#tech_name"
 
 
-  @security-tech-account.get-by-id
+  @security.tech-account.get-by-id
   Scenario: Delete the technical account we just used
 
     Given address "$ZATO_API_TEST_SERVER"

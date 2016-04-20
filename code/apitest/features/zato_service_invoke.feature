@@ -2,7 +2,7 @@
 Feature: zato.service.invoke
   Invokes a service by its ID and name.
 
-  @service-invoke
+  @service.invoke
   Scenario: Upload package
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -19,7 +19,7 @@ Feature: zato.service.invoke
     Then status is "200"
     And I sleep for "1"
 
-  @service-invoke
+  @service.invoke
   Scenario: Get service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -38,7 +38,7 @@ Feature: zato.service.invoke
     And JSON Pointer "/zato_service_get_by_name_response/name" is "test-service.test-service"
     And I store "/zato_service_get_by_name_response/id" from response under "service_id"
 
-  @service-invoke
+  @service.invoke
   Scenario: Invoke service by id
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -59,7 +59,7 @@ Feature: zato.service.invoke
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_service_invoke_response/response" is base64 JSON which pointer "/response/echo_request" has "hola"
 
-  @service-invoke
+  @service.invoke
   Scenario: Invoke service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -80,7 +80,7 @@ Feature: zato.service.invoke
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_service_invoke_response/response" is base64 JSON which pointer "/response/echo_request" has "hola"
 
-  @service-invoke
+  @service.invoke
   Scenario: Delete test service
 
     Given address "$ZATO_API_TEST_SERVER"

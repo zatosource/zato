@@ -2,12 +2,12 @@
 Feature: zato.service.set-wsdl
   Attaches a WSDL document to a service.
 
-  @service-setwsdl
+  @service.set-wsdl
   Scenario: Setup
     Given I store "test-service.test-service" under "service_name"
 
 
-  @service-setwsdl
+  @service.set-wsdl
   Scenario: Upload package
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -25,7 +25,7 @@ Feature: zato.service.set-wsdl
     And I sleep for "1"
 
 
-  @service-setwsdl
+  @service.set-wsdl
   Scenario: Set WSDL to created service
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -44,7 +44,7 @@ Feature: zato.service.set-wsdl
 
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-  @service-setwsdl
+  @service.set-wsdl
   Scenario: Get service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -63,7 +63,7 @@ Feature: zato.service.set-wsdl
     And JSON Pointer "/zato_service_get_by_name_response/name" is "#service_name"
     And I store "/zato_service_get_by_name_response/id" from response under "service_id"
 
-  @service-setwsdl
+  @service.set-wsdl
   Scenario: Delete test service
 
     Given address "$ZATO_API_TEST_SERVER"

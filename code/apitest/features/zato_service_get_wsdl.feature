@@ -2,12 +2,12 @@
 Feature: zato.service.get-wsdl
   Returns a WSDL document attached to a service.
 
-  @service-getwsdl
+  @service.get-wsdl
   Scenario: Setup
     Given I store "test-service.test-service" under "service_name"
 
 
-  @service-getwsdl
+  @service.get-wsdl
   Scenario: Upload package
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -25,7 +25,7 @@ Feature: zato.service.get-wsdl
     And I sleep for "1"
 
 
-  @service-getwsdl
+  @service.get-wsdl
   Scenario: Set WSDL to created service
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -44,7 +44,7 @@ Feature: zato.service.get-wsdl
 
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-  @service-getwsdl
+  @service.get-wsdl
   Scenario: Check that the wsdl is now attached to the service
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -64,7 +64,7 @@ Feature: zato.service.get-wsdl
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_service_has_wsdl_response/has_wsdl" is True
 
-  @service-getwsdl
+  @service.get-wsdl
   Scenario: Returns a WSDL document attached to a service.
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -86,7 +86,7 @@ Feature: zato.service.get-wsdl
     And JSON Pointer "/zato_service_get_wsdl_response/wsdl_name" is "test-service.wsdl"
 
 
-  @service-getwsdl
+  @service.get-wsdl
   Scenario: Get service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -105,7 +105,7 @@ Feature: zato.service.get-wsdl
     And JSON Pointer "/zato_service_get_by_name_response/name" is "#service_name"
     And I store "/zato_service_get_by_name_response/id" from response under "service_id"
 
-  @service-getwsdl
+  @service.get-wsdl
   Scenario: Delete test service
 
     Given address "$ZATO_API_TEST_SERVER"

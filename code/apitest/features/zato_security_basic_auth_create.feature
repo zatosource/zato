@@ -2,14 +2,14 @@
 Feature: zato.security.basic-auth.create
   Allows one to create an HTTP Basic Auth definition. Its default password will be a randomly generated UUID4, use zato.security.basic-auth.change-password to change it.
 
-  @security-basic-auth.create
+  @security.basic-auth.create
   Scenario: Set up
 
     Given I store a random string under "url_path"
     Given I store a random string under "basic_username"
     Given I store a random string under "basic_password"
 
-  @security-basic-auth.create
+  @security.basic-auth.create
   Scenario: Invoke zato.security.basic-auth.create
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -34,7 +34,7 @@ Feature: zato.security.basic-auth.create
 
     And I sleep for "1"
 
-  @security-basic-auth.create
+  @security.basic-auth.create
   Scenario: Invoke zato.security.basic-auth.change-password
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -54,7 +54,7 @@ Feature: zato.security.basic-auth.create
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
 
-  @security-basic-auth.create
+  @security.basic-auth.create
   Scenario: Create HTTP channel for zato.ping service to be executed with the security definition created
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -84,7 +84,7 @@ Feature: zato.security.basic-auth.create
 
     And I sleep for "1"
 
-  @security-basic-auth.create
+  @security.basic-auth.create
   Scenario: Invoke zato.ping over the previusly created http channel with valid credentials
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -101,7 +101,7 @@ Feature: zato.security.basic-auth.create
 
     Then JSON Pointer "/zato_ping_response/pong" is "zato"
 
-  @security-basic-auth.create
+  @security.basic-auth.create
   Scenario: Invoke to fail zato.ping over the previusly created http channel with invalid credentials
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -117,7 +117,7 @@ Feature: zato.security.basic-auth.create
     Then status is "401"
     And JSON Pointer "/zato_env/result" is "ZATO_ERROR"
 
-  @security-basic-auth.create
+  @security.basic-auth.create
   Scenario: Delete created HTTP channel for zato.ping
 
       Given address "$ZATO_API_TEST_SERVER"
@@ -133,7 +133,7 @@ Feature: zato.security.basic-auth.create
       Then status is "200"
       And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-  @security-basic-auth.create
+  @security.basic-auth.create
   Scenario: Delete created zato.security.basic-auth and http channel
 
     Given address "$ZATO_API_TEST_SERVER"
