@@ -2,7 +2,7 @@
 Feature: zato.service.configure-request-response
   Configures one in how many request-response pairs should be stored in the KVDB.
 
-  @service-confreqres
+  @service.configure-request-response
   Scenario: Get current request response frecuency for zato.ping service
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -21,7 +21,7 @@ Feature: zato.service.configure-request-response
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And I store "/zato_service_request_response_response/sample_req_resp_freq" from response under "sample_req_resp_freq"
 
-  @service-confreqres
+  @service.configure-request-response
   Scenario: Configure request response for zato.ping service to store 1 request every 3 calls
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -40,7 +40,7 @@ Feature: zato.service.configure-request-response
 
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-  @service-confreqres
+  @service.configure-request-response
   Scenario: Invoke ping service first time
 
       Given address "$ZATO_API_TEST_SERVER"
@@ -53,7 +53,7 @@ Feature: zato.service.configure-request-response
 
       Then JSON Pointer "/zato_ping_response/pong" is "zato"
 
-  @service-confreqres
+  @service.configure-request-response
   Scenario: Invoke ping service second time
 
       Given address "$ZATO_API_TEST_SERVER"
@@ -66,7 +66,7 @@ Feature: zato.service.configure-request-response
 
       Then JSON Pointer "/zato_ping_response/pong" is "zato"
 
-  @service-confreqres
+  @service.configure-request-response
   Scenario: Invoke ping service third time
 
       Given address "$ZATO_API_TEST_SERVER"
@@ -81,7 +81,7 @@ Feature: zato.service.configure-request-response
 
 
 
-  @service-confreqres
+  @service.configure-request-response
   Scenario: Get current request response frecuency and captured request
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -101,7 +101,7 @@ Feature: zato.service.configure-request-response
     And JSON Pointer "/zato_service_request_response_response/sample_req" is base64 JSON which pointer "/test" has "hola"
     And JSON Pointer "/zato_service_request_response_response/sample_resp" is base64 JSON which pointer "/zato_ping_response/pong" has "zato"
 
-  @service-confreqres
+  @service.configure-request-response
   Scenario: Restore original sample_req_resp_freq
 
     Given address "$ZATO_API_TEST_SERVER"

@@ -2,7 +2,7 @@
 Feature: zato.service.get-list
   Returns a list of services defined on a given server.
 
-  @service-getlist
+  @service.get-list
   Scenario: Upload package
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -19,7 +19,7 @@ Feature: zato.service.get-list
     Then status is "200"
     And I sleep for "1"
 
-  @service-getlist
+  @service.get-list
   Scenario: Get service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -38,7 +38,7 @@ Feature: zato.service.get-list
     And JSON Pointer "/zato_service_get_by_name_response/name" is "test-service.test-service"
     And I store "/zato_service_get_by_name_response/id" from response under "service_id"
 
-  @service-getlist
+  @service.get-list
   Scenario: Invoke service by name
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -59,7 +59,7 @@ Feature: zato.service.get-list
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_service_invoke_response/response" is base64 JSON which pointer "/response/echo_request" has "hola"
 
-  @service-getlist
+  @service.get-list
   Scenario: Get service list
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -76,7 +76,7 @@ Feature: zato.service.get-list
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_service_get_list_response" is a list "test-service.test-service"
     
-  @service-getlist
+  @service.get-list
   Scenario: Delete test service
 
     Given address "$ZATO_API_TEST_SERVER"

@@ -2,7 +2,7 @@
 Feature: zato.service.get-request-response
   Returns a sample request-response pair along with its metadata for a zato.ping service
 
-  @service-getreqresp
+  @service.get-request-response
   Scenario: Get current request response for zato.ping service
 
     Given address "$ZATO_API_TEST_SERVER"
