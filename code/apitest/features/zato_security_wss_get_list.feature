@@ -2,14 +2,14 @@
 Feature: zato.security.wss.get-list
   Returns a list of WS-Security definitions configured on a given cluster.
 
-  @security-wss.get-list
+  @security.wss.get-list
   Scenario: Set up
 
     Given I store a random string under "wss_name"
     Given I store a random string under "wss_username"
 
 
-  @security-wss.get-list
+  @security.wss.get-list
   Scenario: Create new wss security definition
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -38,7 +38,7 @@ Feature: zato.security.wss.get-list
     And I store "/zato_security_wss_create_response/id" from response under "wss_id"
 
 
-  @security-wss.get-list
+  @security.wss.get-list
   Scenario: Invoke zato.security.wss.get-list
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -56,7 +56,7 @@ Feature: zato.security.wss.get-list
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_security_wss_get_list_response" isn't an empty list
 
-  @security-wss.get-list
+  @security.wss.get-list
   Scenario: Delete wss security definition
 
     Given address "$ZATO_API_TEST_SERVER"
