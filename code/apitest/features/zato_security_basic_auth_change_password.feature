@@ -2,7 +2,7 @@
 Feature: zato.security.basic-auth.change-password
   Changes the password of an already existing HTTP Basic Auth security definition.
 
-  @security-basic-auth.change-password
+  @security.basic-auth.change-password
   Scenario: Set up
 
     Given I store a random string under "url_path"
@@ -10,7 +10,7 @@ Feature: zato.security.basic-auth.change-password
     Given I store a random string under "basic_password"
 
 
-  @security-basic-auth.change-password
+  @security.basic-auth.change-password
   Scenario: Invoke zato.security.basic-auth.create
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -35,7 +35,7 @@ Feature: zato.security.basic-auth.change-password
 
     And I sleep for "1"
 
-  @security-basic-auth.change-password
+  @security.basic-auth.change-password
   Scenario: Invoke zato.security.basic-auth.change-password
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -56,7 +56,7 @@ Feature: zato.security.basic-auth.change-password
 
     And I sleep for "1"
 
-  @security-basic-auth.change-password
+  @security.basic-auth.change-password
   Scenario: Create HTTP channel for zato.ping service to be executed with the security definition created
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -86,7 +86,7 @@ Feature: zato.security.basic-auth.change-password
 
     And I sleep for "1"
 
-  @security-basic-auth.change-password
+  @security.basic-auth.change-password
   Scenario: Invoke zato.ping over the previusly created http channel with valid credentials
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -103,7 +103,7 @@ Feature: zato.security.basic-auth.change-password
 
     Then JSON Pointer "/zato_ping_response/pong" is "zato"
 
-  @security-basic-auth.change-password
+  @security.basic-auth.change-password
   Scenario: Invoke to fail zato.ping over the previusly created http channel with invalid credentials
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -119,7 +119,7 @@ Feature: zato.security.basic-auth.change-password
     Then status is "401"
     And JSON Pointer "/zato_env/result" is "ZATO_ERROR"
 
-  @security-basic-auth.change-password
+  @security.basic-auth.change-password
   Scenario: Delete created HTTP channel for zato.ping
 
       Given address "$ZATO_API_TEST_SERVER"
@@ -135,7 +135,7 @@ Feature: zato.security.basic-auth.change-password
       Then status is "200"
       And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-  @security-basic-auth.change-password
+  @security.basic-auth.change-password
   Scenario: Delete created zato.security.basic-auth and http channel
 
     Given address "$ZATO_API_TEST_SERVER"

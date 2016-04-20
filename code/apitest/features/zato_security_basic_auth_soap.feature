@@ -1,18 +1,18 @@
 @basic-auth.soap
-Feature: zato.security.basic-auth.* soap
+Feature: zato.security.basic-auth.create
     Create a basic auth definition,
     and check that it works against a new
     ping endpoint
     clean up after is done
 
-    @security
+    @soap-security.basic-auth.create
     Scenario: Set up
 
         Given I store a random string under "url_path"
         Given I store a random string under "basic_username"
         Given I store a random string under "basic_password"
 
-    @security
+    @soap-security.basic-auth.create
     Scenario: Invoke zato.security.basic-auth.create
 
         Given address "$ZATO_API_TEST_SERVER"

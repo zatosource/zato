@@ -2,7 +2,7 @@
 Feature: zato.security.wss.create
   Allows one to create a WS-Security definition.
 
-  @security-wss.edit
+  @security.wss.create
   Scenario: Set up
 
     Given I store a random string under "url_path"
@@ -13,7 +13,7 @@ Feature: zato.security.wss.create
     Given I store UTC now under "soap_created" "default"
     Given I store a format string "{soap_created}.000Z" under "soap_created_value"
 
-  @security-wss.edit
+  @security.wss.create
   Scenario: Create new wss security definition
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -42,7 +42,7 @@ Feature: zato.security.wss.create
     And I store "/zato_security_wss_create_response/id" from response under "wss_id"
 
 
-  @security-wss.edit
+  @security.wss.create
   Scenario: Set password to created wss security definition
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -62,7 +62,7 @@ Feature: zato.security.wss.create
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
 
-  @security-wss.edit
+  @security.wss.create
   Scenario: Create HTTP channel for zato.ping service to be executed with the security definition created
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -92,7 +92,7 @@ Feature: zato.security.wss.create
     And I store "/zato_http_soap_create_response/id" from response under "ping_channel_id"
 
 
-  @security-wss.edit
+  @security.wss.create
   Scenario: Invoke zato.ping over the previously created http channel with valid credentials
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -118,7 +118,7 @@ Feature: zato.security.wss.create
     And XPath "//soap:Body/descendant::*[name()='result']" is "ZATO_OK"
     And XPath "//soap:Body/descendant::*[name()='pong']" is "zato"
 
-  @security-wss.edit
+  @security.wss.create
   Scenario: Invoke to fail zato.ping over the previusly created http channel with invalid credentials
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -141,7 +141,7 @@ Feature: zato.security.wss.create
 
     Then status is "401"
 
-  @security-wss.edit
+  @security.wss.create
   Scenario: Edit wss definition to reject requests with empty nonce
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -167,7 +167,7 @@ Feature: zato.security.wss.create
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-  @security-wss.edit
+  @security.wss.create
   Scenario: Invoke zato.ping with empty nonce and valid credentials to test rejection
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -189,7 +189,7 @@ Feature: zato.security.wss.create
 
     Then status is "401"
 
-  @security-wss.edit
+  @security.wss.create
   Scenario: Edit wss definition to  accept requests with empty nonce
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -215,7 +215,7 @@ Feature: zato.security.wss.create
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-  @security-wss.edit
+  @security.wss.create
   Scenario: Invoke zato.ping with empty nonce & valid credentials
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -237,7 +237,7 @@ Feature: zato.security.wss.create
 
     Then status is "200"
 
-  @security-wss.edit
+  @security.wss.create
   Scenario: Delete created HTTP channel for zato.ping
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -254,7 +254,7 @@ Feature: zato.security.wss.create
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
 
-  @security-wss.edit
+  @security.wss.create
   Scenario: Delete wss security definition
 
     Given address "$ZATO_API_TEST_SERVER"
