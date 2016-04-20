@@ -2,7 +2,7 @@
 Feature: zato.security.basic-auth.get-list
   Returns a list of HTTP Basic Auth security definitions configured on a given cluster.
 
-  @security-basic-auth.get-list
+  @security.basic-auth.get-list
   Scenario: Get basic auth definitions and test that is not empty
 
     Given address "$ZATO_API_TEST_SERVER"

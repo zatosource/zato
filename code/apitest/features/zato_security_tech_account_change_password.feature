@@ -2,7 +2,7 @@
 Feature: zato.security.tech-account.change-password
   Changes the password of an already existing technical account.
 
-  @security-tech-account.change-password
+  @security.tech-account.change-password
   Scenario: Set up
 
     Given I store a random string under "url_path"
@@ -10,7 +10,7 @@ Feature: zato.security.tech-account.change-password
     Given I store a random string under "tech_password"
     Given I store a random string under "invalid_password"
 
-  @security-tech-account.change-password
+  @security.tech-account.change-password
   Scenario: Create a new technichal account
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -33,7 +33,7 @@ Feature: zato.security.tech-account.change-password
 
     And I sleep for "1"
 
-  @security-tech-account.change-password
+  @security.tech-account.change-password
   Scenario: Set password for our tech account
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -54,7 +54,7 @@ Feature: zato.security.tech-account.change-password
 
     And I sleep for "1"
 
-  @security-tech-account.change-password
+  @security.tech-account.change-password
   Scenario: Create an HTTP channel for zato.ping service to be executed with the security definition created
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -84,7 +84,7 @@ Feature: zato.security.tech-account.change-password
 
     And I sleep for "1"
 
-  @security-tech-account.change-password
+  @security.tech-account.change-password
   Scenario: Test the channel with valid credentials
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -104,7 +104,7 @@ Feature: zato.security.tech-account.change-password
 
     And I sleep for "1"
 
-  @security-tech-account.change-password
+  @security.tech-account.change-password
   Scenario: Test the channel with invalid credentials
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -123,7 +123,7 @@ Feature: zato.security.tech-account.change-password
 
     And I sleep for "1"
 
-  @security-tech-account.change-password
+  @security.tech-account.change-password
   Scenario: Delete created HTTP channel
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -142,7 +142,7 @@ Feature: zato.security.tech-account.change-password
     And I sleep for "1"
 
 
-  @security-tech-account.change-password
+  @security.tech-account.change-password
   Scenario: Delete the technical account we just used
 
     Given address "$ZATO_API_TEST_SERVER"

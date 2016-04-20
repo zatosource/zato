@@ -2,13 +2,13 @@
 Feature: zato.security.basic-auth.get-list
   Returns a list of HTTP Basic Auth security definitions configured on a given cluster.
 
-  @security-tech-account.get-list
+  @security.basic-auth.get-list
   Scenario: Set up
 
     Given I store a random string under "url_path"
     Given I store a random string under "tech_name"
 
-  @security-tech-account.get-list
+  @security.basic-auth.get-list
   Scenario: Create a new technichal account
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -31,7 +31,7 @@ Feature: zato.security.basic-auth.get-list
 
     And I sleep for "1"
 
-  @security-tech-account.get-list
+  @security.basic-auth.get-list
   Scenario: Get basic auth definitions and test that is not empty
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -49,7 +49,7 @@ Feature: zato.security.basic-auth.get-list
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_security_tech_account_get_list_response" isn't an empty list
 
-  @security-tech-account.get-list
+  @security.basic-auth.get-list
   Scenario: Delete the technical account we just used
 
     Given address "$ZATO_API_TEST_SERVER"

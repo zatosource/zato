@@ -2,7 +2,7 @@
 Feature: zato.security.tech-account.edit
   Updates an already existing technical account.
 
-  @security-tech-account.edit
+  @security.tech-account.edit
   Scenario: Set up
 
     Given I store a random string under "url_path"
@@ -10,7 +10,7 @@ Feature: zato.security.tech-account.edit
     Given I store a random string under "tech_password"
     Given I store a random string under "invalid_password"
 
-  @security-tech-account.edit
+  @security.tech-account.edit
   Scenario: Create a new technichal account
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -33,7 +33,7 @@ Feature: zato.security.tech-account.edit
 
     And I sleep for "1"
 
-  @security-tech-account.edit
+  @security.tech-account.edit
   Scenario: Set password for our tech account
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -54,7 +54,7 @@ Feature: zato.security.tech-account.edit
 
 
 
-  @security-tech-account.edit
+  @security.tech-account.edit
   Scenario: Create an HTTP channel for zato.ping service to be executed with the security definition created
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -84,7 +84,7 @@ Feature: zato.security.tech-account.edit
 
     And I sleep for "1"
 
-  @security-tech-account.edit
+  @security.tech-account.edit
   Scenario: Test the channel with valid credentials
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -102,7 +102,7 @@ Feature: zato.security.tech-account.edit
     And JSON Pointer "/zato_ping_response/pong" is "zato"
 
 
-  @security-tech-account.edit
+  @security.tech-account.edit
   Scenario: Test the channel with invalid credentials
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -120,7 +120,7 @@ Feature: zato.security.tech-account.edit
     And JSON Pointer "/zato_env/result" is "ZATO_ERROR"
 
 
-  @security-tech-account.edit
+  @security.tech-account.edit
   Scenario: Edit tech auth definition and set is_active to false
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -142,7 +142,7 @@ Feature: zato.security.tech-account.edit
     And I store "/zato_security_tech_account_edit_response/name" from response under "tech_edit_name"
 
 
-  @security-tech-account.edit
+  @security.tech-account.edit
   Scenario: Test the channel with valid credentials to test that definition was deactivated by the edit
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -158,7 +158,7 @@ Feature: zato.security.tech-account.edit
 
     Then status is "401"
 
-  @security-tech-account.edit
+  @security.tech-account.edit
   Scenario: Delete created HTTP channel
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -175,7 +175,7 @@ Feature: zato.security.tech-account.edit
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
 
-  @security-tech-account.edit
+  @security.tech-account.edit
   Scenario: Delete the technical account we just used
 
     Given address "$ZATO_API_TEST_SERVER"
