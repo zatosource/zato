@@ -54,8 +54,6 @@ Feature: zato.security.basic-auth.delete
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-    And I sleep for "1"
-
   @security-basic-auth.delete
   Scenario: Create HTTP channel for zato.ping service to be executed with the security definition created
 
