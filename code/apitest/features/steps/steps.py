@@ -49,4 +49,4 @@ def then_json_pointer_is_a_base64_object(ctx, path, path2, value):
 @obtain_values
 def then_json_pointer_isnt_an_empty_list(ctx, path):
     actual = get_pointer(ctx.zato.response.data_impl, path)
-    assert actual is not False
+    assert actual != [], 'Value `{}`, is an empty list'.format(actual)
