@@ -3,8 +3,6 @@ Feature: zato.http-soap.edit
   Updates an already existing plain HTTP or SOAP object, which can be either channel or an outgoing connection, depending on the value of the ‘connection’ parameter.
 
 
-### Test Create HTTP Connections that accept JSON ###
-
   @http-soap.edit
   Scenario: Create JSON HTTP channel for zato.ping
 
@@ -31,7 +29,6 @@ Feature: zato.http-soap.edit
       And I store "/zato_http_soap_create_response/name" from response under "service_channel_name"
       And I store "/zato_http_soap_create_response/id" from response under "service_channel_id"
       And I sleep for "1"
-
 
   @http-soap.edit
   Scenario: Invoke zato.ping through created http channel using JSON
@@ -90,7 +87,6 @@ Feature: zato.http-soap.edit
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON pointer "/zato_ping_response/pong" is "zato"
-
 
   @http-soap.edit
   Scenario: Delete created HTTP channel
