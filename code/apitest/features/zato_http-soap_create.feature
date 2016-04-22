@@ -2,7 +2,7 @@
 Feature: zato.http-soap.create
   Creates a new plain HTTP or SOAP object, this can be either channel or an outgoing connection, depending on the value of the ‘connection’ parameter.
 
-  @wip
+
   @http-soap.create
   Scenario: Set up
     Given I store "apitest.outconn" under "outconn_name"
