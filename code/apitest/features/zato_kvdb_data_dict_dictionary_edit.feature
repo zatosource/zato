@@ -2,7 +2,7 @@
 Feature: kvdb.data.dict.dictionary.edit
 
 
-  @kvdb.data-dict.edit
+  @kvdb.data-dict.dictionary.edit
   Scenario: Set up
 
     Given I store a random string under "test_system"
@@ -13,7 +13,7 @@ Feature: kvdb.data.dict.dictionary.edit
     Given I store a random string under "edited_test_key"
     Given I store a random string under "edited_test_value"
 
-  @kvdb.data-dict.edit
+  @kvdb.data-dict.dictionary.edit
   Scenario: Create a test data dictionary entry in a cluster's KVDB
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -32,7 +32,7 @@ Feature: kvdb.data.dict.dictionary.edit
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And I store "/zato_kvdb_data_dict_dictionary_create_response/id" from response under "last_dictionary_entry_id"
 
-  @kvdb.data-dict.edit
+  @kvdb.data-dict.dictionary.edit
   Scenario: Check if test dictionary entry actually exists
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -47,7 +47,7 @@ Feature: kvdb.data.dict.dictionary.edit
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_kvdb_data_dict_dictionary_get_last_id_response/value" is "#last_dictionary_entry_id"
 
-  @kvdb.data-dict.edit
+  @kvdb.data-dict.dictionary.edit
   Scenario: Edit test entry
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -66,3 +66,19 @@ Feature: kvdb.data.dict.dictionary.edit
 
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_kvdb_data_dict_dictionary_edit_response/id" is an integer "#last_dictionary_entry_id"
+
+  @kvdb.data-dict.dictionary.edit
+  Scenario: Delete test dictionary entry
+
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+    Given URL path "/zato/json/zato.kvdb.data-dict.dictionary.delete"
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/id" in request is "#last_dictionary_entry_id"
+
+    When the URL is invoked
+
+    Then JSON Pointer "/zato_env/result" is "ZATO_OK"
+    And JSON Pointer "/zato_kvdb_data_dict_dictionary_delete_response/id" is an integer "#last_dictionary_entry_id"
