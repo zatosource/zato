@@ -3,14 +3,14 @@ Feature: kvdb.data.dict.dictionary.delete
   Deletes a data dictionary entry from a cluster’s KVDB by the entry’s ID along with any translations the entry may constitue a part of.
 
 
-  @kvdb.data-dict.delete
+  @kvdb.data-dict.dictionary.delete
   Scenario: Set up
 
     Given I store a random string under "test_system"
     Given I store a random string under "test_key"
     Given I store a random string under "test_value"
 
-  @kvdb.data-dict.delete
+  @kvdb.data-dict.dictionary.delete
   Scenario: Create data dictionary test entry in a cluster's KVDB
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -29,7 +29,7 @@ Feature: kvdb.data.dict.dictionary.delete
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And I store "/zato_kvdb_data_dict_dictionary_create_response/id" from response under "last_dictionary_entry_id"
 
-  @kvdb.data-dict.delete
+  @kvdb.data-dict.dictionary.delete
   Scenario: Invoke get-last-id to check if test dictionary entry actually exists
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -43,7 +43,7 @@ Feature: kvdb.data.dict.dictionary.delete
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_kvdb_data_dict_dictionary_get_last_id_response/value" is an integer "#last_dictionary_entry_id"
 
-  @kvdb.data-dict.delete
+  @kvdb.data-dict.dictionary.delete
   Scenario: Delete test dictionary entry
 
     Given address "$ZATO_API_TEST_SERVER"
