@@ -1,17 +1,17 @@
 @kvdb.data-dict
-Feature: kvdb.data.dict.dictionary.delete
-  Deletes a data dictionary entry from a cluster’s KVDB by the entry’s ID along with any translations the entry may constitue a part of.
+Feature: kvdb.data-dict.dictionary.get-last-id
+  Returns the value of the most recently assigned KVDB dictionary entry ID, that is, the value that the last invocation
+  of zato.kvdb.data-dict.dictionary.create returned.
 
-
-  @kvdb.data-dict.dictionary.delete
+  @kvdb.data-dict.dictionary.get-last-id
   Scenario: Set up
 
     Given I store a random string under "test_system"
     Given I store a random string under "test_key"
     Given I store a random string under "test_value"
 
-  @kvdb.data-dict.dictionary.delete
-  Scenario: Create data dictionary test entry in a cluster's KVDB
+  @kvdb.data-dict.dictionary.get-last-id
+  Scenario: Create a test data dictionary entry in a cluster's KVDB
 
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
@@ -29,11 +29,13 @@ Feature: kvdb.data.dict.dictionary.delete
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And I store "/zato_kvdb_data_dict_dictionary_create_response/id" from response under "last_dictionary_entry_id"
 
-  @kvdb.data-dict.dictionary.delete
+  @kvdb.data-dict.dictionary.get-last-id
   Scenario: Invoke get-last-id to check if test dictionary entry actually exists
 
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+    Given URL path "/zato/json/zato.kvdb.data-dict.dictionary.create"
 
     Given URL path "/zato/json/zato.kvdb.data-dict.dictionary.get-last-id"
     Given format "JSON"
@@ -43,7 +45,7 @@ Feature: kvdb.data.dict.dictionary.delete
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_kvdb_data_dict_dictionary_get_last_id_response/value" is an integer "#last_dictionary_entry_id"
 
-  @kvdb.data-dict.dictionary.delete
+  @kvdb.data-dict.dictionary.get-last-id
   Scenario: Delete test dictionary entry
 
     Given address "$ZATO_API_TEST_SERVER"
