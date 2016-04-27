@@ -35,8 +35,6 @@ Feature: kvdb.data.dict.dictionary.create
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-    Given URL path "/zato/json/zato.kvdb.data-dict.dictionary.create"
-
     Given URL path "/zato/json/zato.kvdb.data-dict.dictionary.get-last-id"
     Given format "JSON"
 
