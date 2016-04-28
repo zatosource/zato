@@ -60,7 +60,7 @@ Feature: zato.kvdb.data-dict.translation.create
     And I store "/zato_kvdb_data_dict_dictionary_create_response/id" from response under "second_dictionary_entry_id"
 
   @kvdb.data-dict.translation.create
-  Scenario: Invoke first translation create
+  Scenario: Invoke translation create
 
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
