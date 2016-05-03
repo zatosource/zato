@@ -1,4 +1,4 @@
-@security-basic-auth
+@security.basic-auth
 Feature: zato.security.basic-auth.create
   Allows one to create an HTTP Basic Auth definition. Its default password will be a randomly generated UUID4, use zato.security.basic-auth.change-password to change it.
 

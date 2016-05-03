@@ -1,4 +1,4 @@
-@security-tech-account
+@security.tech-account
 Feature: zato.security.tech-account.edit
   Updates an already existing technical account.
 

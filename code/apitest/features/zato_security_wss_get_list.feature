@@ -1,4 +1,4 @@
-@security-wss
+@security.wss
 Feature: zato.security.wss.get-list
   Returns a list of WS-Security definitions configured on a given cluster.
 

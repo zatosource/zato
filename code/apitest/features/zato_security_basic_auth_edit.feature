@@ -1,4 +1,4 @@
-@security-basic-auth
+@security.basic-auth
 Feature: zato.security.basic-auth.edit
   Updates an already existing HTTP Basic Auth security definition.
 

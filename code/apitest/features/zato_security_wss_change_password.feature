@@ -1,4 +1,4 @@
-@security-wss
+@security.wss
 Feature: zato.security.wss.change-password
   Changes the password of an already existing WS-Security definition.
 

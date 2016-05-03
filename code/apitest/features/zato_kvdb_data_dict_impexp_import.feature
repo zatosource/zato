@@ -1,4 +1,4 @@
-@kvdb
+@kvdb.data-dict.impexp
 Feature: kvdb.data.dict.dictionary.create
   Imports KVDB data previously exported using the web admin.
 
