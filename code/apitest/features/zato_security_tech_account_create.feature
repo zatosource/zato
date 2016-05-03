@@ -1,4 +1,4 @@
-@security-tech-account
+@security.tech-account
 Feature: zato.security.tech-account.create
   Allows one to create an HTTP Technical Auth definition
 

@@ -1,4 +1,4 @@
-@kvdb
+@kvdb.remote-command
 Feature: zato.kvdb.remote-command
   Execute a raw command against a cluster’s KVDB.
 
