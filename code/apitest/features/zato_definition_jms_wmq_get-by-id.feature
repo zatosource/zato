@@ -1,9 +1,9 @@
 @definition
-Feature: zato.definition.jms-wmq.get-by-id
-  Returns details regarding a particular JMS WebSphere MQ connection definition.
+Feature: zato.definition.jms-wmq.get-list
+  Returns a list of JMS WebSphere MQ connection definition on a given cluster.
 
 
-  @definition.jms-wmq.get-by-id
+  @definition.jms-wmq.get-list
   Scenario: Create jms-wmq definition
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
@@ -35,30 +35,26 @@ Feature: zato.definition.jms-wmq.get-by-id
     And I sleep for "2"
 
 
-  @definition.jms-wmq.get-by-id
-  Scenario: Get jms-wmq definition by id
+  @definition.jms-wmq.get-list
+  Scenario: Get jms-wmq definition list
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-    Given URL path "/zato/json/zato.definition.jms-wmq.get-by-id"
+    Given URL path "/zato/json/zato.definition.jms-wmq.get-list"
 
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/id" in request is "#def_id"
     Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
 
     When the URL is invoked
 
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
-
-    And JSON Pointer "/zato_definition_jms_wmq_get_by_id_response/id" is an integer "#def_id"
-    And JSON Pointer "/zato_definition_jms_wmq_get_by_id_response/host" is "localhost"
-    And JSON Pointer "/zato_definition_jms_wmq_get_by_id_response/queue_manager" is "QM01"
-    And JSON Pointer "/zato_definition_jms_wmq_get_by_id_response/port" is an integer "1414"
+    
+    And JSON Pointer "/zato_definition_jms_wmq_get_list_response" isn't an empty list
 
 
-  @definition.jms-wmq.get-by-id
+  @definition.jms-wmq.get-list
   Scenario: Delete amqp definition
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
