@@ -1,5 +1,5 @@
 @channel.jms-wmq
-Feature: zato.channel.amqp.delete
+Feature: zato.channel.jms-wmq.delete
   Deletes a JMS WebSphere MQ channel. The channel’s underlying MQ listener will be first stopped.
 
   @channel.jms-wmq.delete

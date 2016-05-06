@@ -1,5 +1,5 @@
 @channel.jms-wmq
-Feature: zato.channel.amqp.create
+Feature: zato.channel.jms-wmq.create
   Allows one to create an AMQP channel basing on an already existing AMQP connection definition.
 
   @channel.jms-wmq.create
