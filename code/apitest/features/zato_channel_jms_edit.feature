@@ -1,5 +1,5 @@
 @channel.jms-wmq
-Feature: zato.channel.amqp.edit
+Feature: zato.channel.jms-wmq.edit
  Updates an already existing JMS WebSphere MQ channel. The channel will be stopped. If ‘is_active’ flag is ‘true’,
  the underlying MQ listener will then be started.
 
