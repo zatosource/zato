@@ -201,6 +201,7 @@ class Broker(object):
         wd = WorkerData(const.worker_type.zmq, sender_id, service_name, now, expires_at)
 
         # Add to details of workers
+        print(9090, wd.id)
         self.workers[wd.id] = wd
 
         # Add to the list of workers for that service (but do not forget that the service may not have a client yet possibly)
@@ -215,8 +216,21 @@ class Broker(object):
         recipient, _, body = data
         self.socket.send_multipart(EventClientReply(body, recipient, b'dummy-for-now').serialize())
 
-    def on_event_heartbeat(self):
-        raise NotImplementedError()
+    def on_event_heartbeat(self, sender_id, _ignored):
+        """ Updates heartbeat data for a worker. Must be called with self.lock held.
+        """
+        wrapped_id = WorkerData.wrap_worker_id(const.worker_type.zmq, sender_id)
+        worker = self.workers.get(wrapped_id)
+
+        if not worker:
+            logger.warn('No worker found for HB `%s`', wrapped_id)
+            return
+
+        now = datetime.utcnow()
+        expires_at = now + timedelta(seconds=const.ttl)
+
+        worker.last_hb_received = now
+        worker.expires_at = expires_at
 
     def on_event_disconnect(self):
         raise NotImplementedError()
