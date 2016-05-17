@@ -74,4 +74,4 @@ if __name__ == '__main__':
     c = Client(log_details=True)
     c.connect()
     reply = c.send(b'My service', b'{"id":"123", "data":"mydata"}', True)
-    print(555, reply)
+    print(555, reply.body)

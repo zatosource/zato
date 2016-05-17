@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from datetime import datetime
 
 # ZeroMQ
 import zmq.green as zmq
@@ -26,7 +27,8 @@ logger = logging.getLogger(__name__)
 class Worker(BaseZMQConnection):
     """ Standalone implementation of a worker for ZeroMQ Majordomo Protocol 0.1 http://rfc.zeromq.org/spec:7
     """
-    def __init__(self, service_name, broker_address='tcp://localhost:47047', linger=0, poll_interval=100, log_details=False):
+    def __init__(self, service_name, broker_address='tcp://localhost:47047', linger=0, poll_interval=100, log_details=False,
+            heartbeat=3, heartbeat_mult=3):
         self.service_name = service_name
         super(Worker, self).__init__(broker_address, linger, poll_interval, log_details)
 
@@ -35,8 +37,19 @@ class Worker(BaseZMQConnection):
         self.worker_poller = zmq.Poller()
         self.worker_poller.register(self.worker_socket, zmq.POLLIN)
 
-        self.has_debug = logger.isEnabledFor(logging.DEBUG)
+        # How often, in seconds, to send a heartbeat to the broker
+        self.heartbeat = heartbeat
 
+        # If self.heartbeat * self.heartbeat_mult is exceeded, we assume the broker is down
+        self.heartbeat_mult = heartbeat_mult
+
+        # When did we last hear from the broker
+        self.broker_last_heartbeat = None
+
+        # When did we last send our own heartbeat to the broker
+        self.worker_last_heartbeat = None
+
+        self.has_debug = logger.isEnabledFor(logging.DEBUG)
 
         # Maps event IDs to methods that handle a given one
         self.handle_event_map = {
@@ -102,7 +115,7 @@ class Worker(BaseZMQConnection):
 
     def on_event_request_to_worker(self, msg):
         logger.info('In _handle %s', msg)
-        return b'my reply body'
+        return datetime.utcnow().isoformat()
 
 # ################################################################################################################################
 
