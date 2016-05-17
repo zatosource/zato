@@ -85,10 +85,11 @@ class WorkerData(object):
     """
     prefix = 'mdp.worker.'
 
-    def __init__(self, type, id, service_name, expires_at=None):
+    def __init__(self, type, id, service_name, last_hb_received=None, expires_at=None):
         self.type = type
         self.id = self.wrap_id(id)
         self.service_name = service_name
+        self.last_hb_received = last_hb_received
         self.expires_at = expires_at
 
     def wrap_id(self, id):

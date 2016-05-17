@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class Broker(object):
     """ Standalone implementation of a broker for ZeroMQ Majordomo Protocol 0.1 http://rfc.zeromq.org/spec:7
     """
-    def __init__(self, address='tcp://*:47047', linger=0, poll_interval=100, log_details=False):
+    def __init__(self, address='tcp://*:47047', linger=0, poll_interval=100, log_details=False, heartbeat=3, heartbeat_mult=3):
         self.address = address
         self.poll_interval = poll_interval
         self.keep_running = True
@@ -43,7 +43,14 @@ class Broker(object):
         # Details about each worker, mapped by worker_id:Worker object 
         self.workers = {}
 
+        # Held upon most operations on sockets
         self.lock = RLock()
+
+        # How often, in seconds, to send a heartbeat to the broker
+        self.heartbeat = heartbeat
+
+        # If self.heartbeat * self.heartbeat_mult is exceeded, we assume the broker is down
+        self.heartbeat_mult = heartbeat_mult
 
         self.ctx = zmq.Context()
         self.socket = self.ctx.socket(zmq.ROUTER)
@@ -129,15 +136,11 @@ class Broker(object):
 
 # ################################################################################################################################
 
-    def handle_client(self, sender_id, service_name, received_body):
-        """ Handles a single request from a client. This is the place where triggers the sending of all pending requests
-        to workers for a given service name. Must be called with self.lock held.
+    def dispatch_requests(self, service_name):
+        """ Sends all pending requests for that service, assuming there are workers available to handle them.
         """
-
-        # Create the service object if it does not exist - this may be the case
-        # if clients connect before workers.
-        service = self.services.setdefault(service_name, Service(service_name))
-        service.pending_requests.append(EventWorkerRequest(received_body, sender_id))
+        # Fetch the service object which at this point must exist
+        service = self.services[service_name]
 
         # Clean up expired workers before attempting to deliver any messages
         self.cleanup_workers()
@@ -148,6 +151,21 @@ class Broker(object):
 
             func = self.send_to_worker_zato if worker.type == const.worker_type.zato else self.send_to_worker_zmq
             func(req.serialize(worker.unwrap_id()))
+
+# ################################################################################################################################
+
+    def handle_client(self, sender_id, service_name, received_body):
+        """ Handles a single request from a client. This is the place where triggers the sending of all pending requests
+        to workers for a given service name. Must be called with self.lock held.
+        """
+
+        # Create the service object if it does not exist - this may be the case
+        # if clients connect before workers.
+        service = self.services.setdefault(service_name, Service(service_name))
+        service.pending_requests.append(EventWorkerRequest(received_body, sender_id))
+
+        # Ok, we can send the request now to a worker
+        self.dispatch_requests(service_name)
 
 # ################################################################################################################################
 
@@ -180,7 +198,7 @@ class Broker(object):
 
         now = datetime.utcnow()
         expires_at = now + timedelta(seconds=const.ttl)
-        wd = WorkerData(const.worker_type.zmq, sender_id, service_name, expires_at)
+        wd = WorkerData(const.worker_type.zmq, sender_id, service_name, now, expires_at)
 
         # Add to details of workers
         self.workers[wd.id] = wd
@@ -190,6 +208,8 @@ class Broker(object):
         service.workers.append(wd.id)
 
         logger.info('Added worker: %s', wd)
+
+        self.dispatch_requests(service_name)
 
     def on_event_reply(self, sender_id, data):
         recipient, _, body = data
