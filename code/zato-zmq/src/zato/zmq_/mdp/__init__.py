@@ -63,10 +63,27 @@ class BaseZMQConnection(object):
         self.log_details = log_details
 
         self.ctx = zmq.Context()
+        self.connect_client_socket()
+
+# ################################################################################################################################
+
+    def stop_client_socket(self):
+        self.client_poller.unregister(self.client_socket)
+        self.client_socket.close()
+
+# ################################################################################################################################
+
+    def connect_client_socket(self):
+
         self.client_socket = self.ctx.socket(zmq.DEALER)
-        self.client_socket.linger = linger
+        self.client_socket.linger = self.linger
         self.client_poller = zmq.Poller()
         self.client_poller.register(self.client_socket, zmq.POLLIN)
+
+# ################################################################################################################################
+
+    def reconnect_client_socket(self):
+        self.stop_client_socket()
 
 # ################################################################################################################################
 
@@ -92,8 +109,12 @@ class WorkerData(object):
         self.last_hb_received = last_hb_received
         self.expires_at = expires_at
 
+    @staticmethod
+    def wrap_worker_id(type, id):
+        return '{}{}.{}'.format(WorkerData.prefix, type, id.encode('hex'))
+
     def wrap_id(self, id):
-        return '{}{}.{}'.format(self.prefix, self.type, id.encode('hex'))
+        return WorkerData.wrap_worker_id(self.type, id)
 
     def unwrap_id(self):
         return self.id.replace(self.prefix, '').replace(self.type + '.', '').decode('hex')
@@ -114,6 +135,16 @@ class EventReady(object):
 
     def serialize(self):
         return ['', const.v01.worker, const.v01.ready, self.service_name]
+
+# ################################################################################################################################
+
+class EventHeartbeat(object):
+    """ A heartbeat sent from a worker to its broker or the other way around.
+    """
+    type = const.v01.heartbeat
+
+    def serialize(self):
+        return ['', const.v01.worker, const.v01.heartbeat]
 
 # ################################################################################################################################
 
