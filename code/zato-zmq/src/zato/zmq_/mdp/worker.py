@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 import zmq.green as zmq
 
 # Zato
-from zato.zmq_.mdp import BaseZMQConnection, const, EventWorkerHeartbeat, EventReady, EventWorkerReply
+from zato.zmq_.mdp import BaseZMQConnection, const, EventWorkerDisconnect, EventWorkerHeartbeat, EventReady, EventWorkerReply
 
 # ################################################################################################################################
 
@@ -137,6 +137,7 @@ class Worker(BaseZMQConnection):
             try:
                 items = self.worker_poller.poll(self.poll_interval)
             except KeyboardInterrupt:
+                self.notify_disconnect()
                 break
 
             if items:
@@ -170,9 +171,10 @@ class Worker(BaseZMQConnection):
 
 # ################################################################################################################################
 
-    def on_event_disconnect(self):
+    def on_event_disconnect(self, *ignored):
+        """ Our broker tells us to disconnect - according to the spec we now must re-open the connection.
         """
-        """
+        self.reconnect()
 
 # ################################################################################################################################
 
@@ -204,7 +206,7 @@ class Worker(BaseZMQConnection):
 
 # ################################################################################################################################
 
-    def send(self, data):
+    def send(self, data, needs_hb=True):
         """ Sends data to the broker and updates an internal timer of when the last time we send a heartbeat to the broker
         since sending anything in that direction should be construed by the broker as a heartbeat itself.
         """
@@ -213,7 +215,8 @@ class Worker(BaseZMQConnection):
         self.worker_socket.send_multipart(data)
 
         # Update the timer
-        self.worker_last_heartbeat = datetime.utcnow()
+        if needs_hb:
+            self.worker_last_heartbeat = datetime.utcnow()
 
 # ################################################################################################################################
 
@@ -228,6 +231,13 @@ class Worker(BaseZMQConnection):
         """ Notify the broker that we are still around.
         """
         self.send(EventWorkerHeartbeat().serialize())
+
+# ################################################################################################################################
+
+    def notify_disconnect(self):
+        """ Notify the broker that we are to disconnect from it.
+        """
+        self.send(EventWorkerDisconnect().serialize(), needs_hb=False)
 
 # ################################################################################################################################
 

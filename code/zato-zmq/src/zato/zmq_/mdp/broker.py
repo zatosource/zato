@@ -19,7 +19,8 @@ from gevent.lock import RLock
 import zmq.green as zmq
 
 # Zato
-from zato.zmq_.mdp import const, EventBrokerHeartbeat, EventClientReply, EventWorkerRequest, EventWorkerReply, Service, WorkerData
+from zato.zmq_.mdp import const, EventBrokerDisconnect, EventBrokerHeartbeat, EventClientReply, EventWorkerRequest, \
+     EventWorkerReply, Service, WorkerData
 
 # ################################################################################################################################
 
@@ -90,6 +91,7 @@ class Broker(object):
                 self.send_heartbeats()
 
             except KeyboardInterrupt:
+                self.send_disconnect_to_all()
                 break
 
             if items:
@@ -124,6 +126,19 @@ class Broker(object):
 
             for service in self.services.values():
                 service.workers.remove(item)
+
+# ################################################################################################################################
+
+    def send_disconnect_to_all(self):
+        """ Sends a disconnect event to all workers.
+        """
+        with self.lock:
+
+            # No point in connecting to invalid workers
+            self.cleanup_workers()
+
+            for worker in self.workers.values():
+                self.send_to_worker_zmq(EventBrokerDisconnect().serialize(worker.unwrap_id()))
 
 # ################################################################################################################################
 
@@ -209,16 +224,16 @@ class Broker(object):
 
 # ################################################################################################################################
 
-    def handle_worker(self, sender_id, *payload):
+    def handle_worker(self, worker_id, *payload):
         """ Handles a single request from a worker. Must be called with self.lock held.
         """
         event = payload[0]
         func = self.handle_event_map[event]
-        func(sender_id, payload[1:])
+        func(worker_id, payload[1:])
 
 # ################################################################################################################################
 
-    def on_event_ready(self, sender_id, service_name):
+    def on_event_ready(self, worker_id, service_name):
         """ A worker informs the broker that it is ready to handle messages destined for a given service.
         Must be called with self.lock held.
         """
@@ -226,7 +241,7 @@ class Broker(object):
 
         now = datetime.utcnow()
         expires_at = now + timedelta(seconds=const.ttl)
-        wd = WorkerData(const.worker_type.zmq, sender_id, service_name, now, None, expires_at)
+        wd = WorkerData(const.worker_type.zmq, worker_id, service_name, now, None, expires_at)
 
         # Add to details of workers
         self.workers[wd.id] = wd
@@ -239,14 +254,14 @@ class Broker(object):
 
         self.dispatch_requests(service_name)
 
-    def on_event_reply(self, sender_id, data):
+    def on_event_reply(self, worker_id, data):
         recipient, _, body = data
         self.socket.send_multipart(EventClientReply(body, recipient, b'dummy-for-now').serialize())
 
-    def on_event_heartbeat(self, sender_id, _ignored):
+    def on_event_heartbeat(self, worker_id, _ignored):
         """ Updates heartbeat data for a worker. Must be called with self.lock held.
         """
-        wrapped_id = WorkerData.wrap_worker_id(const.worker_type.zmq, sender_id)
+        wrapped_id = WorkerData.wrap_worker_id(const.worker_type.zmq, worker_id)
         worker = self.workers.get(wrapped_id)
 
         if not worker:
@@ -259,11 +274,26 @@ class Broker(object):
         worker.last_hb_received = now
         worker.expires_at = expires_at
 
-    def on_event_disconnect(self):
-        raise NotImplementedError()
+    def on_event_disconnect(self, worker_id, data):
+        """ A worker wishes to disconnect - we need to remove it from all the places that still reference it, if any.
+        """
+        print(self.workers)
+        with self.lock:
+            wrapped_id = WorkerData.wrap_worker_id(const.worker_type.zmq, worker_id)
+
+            # Need 'None' because the worker may not exist
+            self.workers.pop(wrapped_id, None)
+
+            for service in self.services.values():
+
+                # Likewise, this worker may not exist at all
+                if wrapped_id in service.workers:
+                    service.workers.remove(wrapped_id)
+
+            print(self.workers)
 
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    b = Broker(log_details=1)
+    b = Broker(log_details=True)
     b.serve_forever()

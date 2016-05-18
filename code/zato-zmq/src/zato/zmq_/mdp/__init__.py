@@ -228,3 +228,23 @@ class EventWorkerReply(object):
         return [b'', const.v01.worker, const.v01.reply_from_worker, self.recipient, b'', self.body]
 
 # ################################################################################################################################
+
+class EventWorkerDisconnect(object):
+    """ A disconnect event sent from a worker to its broker.
+    """
+    type = const.v01.disconnect
+
+    def serialize(self):
+        return ['', const.v01.worker, const.v01.disconnect]
+
+# ################################################################################################################################
+
+class EventBrokerDisconnect(object):
+    """ A disconnect event sent from a broker to a specific worker.
+    """
+    type = const.v01.disconnect
+
+    def serialize(self, worker_id):
+        return [worker_id, '', const.v01.worker, const.v01.disconnect]
+
+# ################################################################################################################################
