@@ -10,13 +10,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+import time
 from datetime import datetime, timedelta
 
 # ZeroMQ
 import zmq.green as zmq
 
 # Zato
-from zato.zmq_.mdp import BaseZMQConnection, const, EventHeartbeat, EventReady, EventWorkerReply
+from zato.zmq_.mdp import BaseZMQConnection, const, EventWorkerHeartbeat, EventReady, EventWorkerReply
 
 # ################################################################################################################################
 
@@ -27,8 +28,8 @@ logger = logging.getLogger(__name__)
 class Worker(BaseZMQConnection):
     """ Standalone implementation of a worker for ZeroMQ Majordomo Protocol 0.1 http://rfc.zeromq.org/spec:7
     """
-    def __init__(self, service_name, broker_address='tcp://localhost:47047', linger=0, poll_interval=500, log_details=False,
-            heartbeat=5, heartbeat_mult=3):
+    def __init__(self, service_name, broker_address='tcp://localhost:47047', linger=0, poll_interval=100, log_details=False,
+            heartbeat=3, heartbeat_mult=2, reconnect_sleep=2):
         self.service_name = service_name
         super(Worker, self).__init__(broker_address, linger, poll_interval, log_details)
 
@@ -37,6 +38,9 @@ class Worker(BaseZMQConnection):
 
         # If self.heartbeat * self.heartbeat_mult is exceeded, we assume the broker is down
         self.heartbeat_mult = heartbeat_mult
+
+        # How long, in seconds, to wait before attempting to reconnect to the broker
+        self.reconnect_sleep = reconnect_sleep
 
         # When did we last hear from the broker
         self.broker_last_heartbeat = None
@@ -60,6 +64,8 @@ class Worker(BaseZMQConnection):
 
     def connect(self):
 
+        logger.info('Connecting to broker %s', self.broker_address)
+
         # Open ZeroMQ sockets first
 
         # From worker to broker
@@ -77,8 +83,6 @@ class Worker(BaseZMQConnection):
 
         # We can assume that the broker received our message
         self.last_connected = datetime.utcnow()
-
-        logger.info('Connected to broker %s', self.broker_address)
 
 # ################################################################################################################################
 
@@ -101,8 +105,18 @@ class Worker(BaseZMQConnection):
 # ################################################################################################################################
 
     def reconnect(self):
+        last_hb = '{} (UTC)'.format(self.broker_last_heartbeat.isoformat()) if self.broker_last_heartbeat else 'never'
+        logger.info('Sleeping for %ss before reconnecting to broker %s, last HB from broker: %s',
+            self.reconnect_sleep, self.broker_address, last_hb)
+
+        time.sleep(self.reconnect_sleep)
+        logger.info('Reconnecting to broker %s', self.broker_address)
+
         self.stop()
         self.connect()
+
+        # Let's give the other side a moment to reply to our ready event
+        time.sleep(self.reconnect_sleep)
 
 # ################################################################################################################################
 
@@ -140,7 +154,6 @@ class Worker(BaseZMQConnection):
                     self.notify_heartbeat()
 
                 if self.needs_reconnect():
-                    logger.info('Reconnecting to broker %s', self.broker_address)
                     self.reconnect()
 
 # ################################################################################################################################
@@ -151,22 +164,33 @@ class Worker(BaseZMQConnection):
 
 # ################################################################################################################################
 
-    def on_event_heartbeat(self):
-        raise NotImplementedError()
+    def on_event_heartbeat(self, *ignored):
+        """ A no-op since self.handle already handles heartbeats from the broker.
+        """
 
 # ################################################################################################################################
 
     def on_event_disconnect(self):
-        raise NotImplementedError()
+        """
+        """
 
 # ################################################################################################################################
 
     def handle(self, msg):
         logger.info('Handling %s', msg)
 
+        # Since we received this message, it means the broker is up so the message,
+        # no matter what event it is, allows us to update the timestamp of the last HB from broker
+        self.broker_last_heartbeat = datetime.utcnow()
+
+        sender_id = None
+        body = None
+
         command = msg[2]
-        sender_id = msg[3]
-        body = msg[4]
+
+        if command == const.v01.request_to_worker:
+            sender_id = msg[3]
+            body = msg[4]
 
         # Hand over the message to an actual implementation and reply if told to
         response = self.handle_event_map[command](body)
@@ -174,8 +198,9 @@ class Worker(BaseZMQConnection):
         if response:
             self.send(EventWorkerReply(response, sender_id).serialize())
 
-        # Message handled, we are ready to handle a new one
-        self.notify_ready()
+        # Message handled, we are ready to handle a new one, assuming this one was a request
+        if command == const.v01.request_to_worker:
+            self.notify_ready()
 
 # ################################################################################################################################
 
@@ -202,7 +227,7 @@ class Worker(BaseZMQConnection):
     def notify_heartbeat(self):
         """ Notify the broker that we are still around.
         """
-        self.send(EventHeartbeat().serialize())
+        self.send(EventWorkerHeartbeat().serialize())
 
 # ################################################################################################################################
 
