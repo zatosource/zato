@@ -19,7 +19,7 @@ from gevent.lock import RLock
 import zmq.green as zmq
 
 # Zato
-from zato.zmq_.mdp import const, EventClientReply, EventWorkerRequest, EventWorkerReply, Service, WorkerData
+from zato.zmq_.mdp import const, EventBrokerHeartbeat, EventClientReply, EventWorkerRequest, EventWorkerReply, Service, WorkerData
 
 # ################################################################################################################################
 
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class Broker(object):
     """ Standalone implementation of a broker for ZeroMQ Majordomo Protocol 0.1 http://rfc.zeromq.org/spec:7
     """
-    def __init__(self, address='tcp://*:47047', linger=0, poll_interval=100, log_details=False, heartbeat=3, heartbeat_mult=3):
+    def __init__(self, address='tcp://*:47047', linger=0, poll_interval=100, log_details=False, heartbeat=3, heartbeat_mult=2):
         self.address = address
         self.poll_interval = poll_interval
         self.keep_running = True
@@ -85,6 +85,10 @@ class Broker(object):
 
             try:
                 items = self.poller.poll(self.poll_interval)
+
+                # Periodically send heartbeats to all known workers
+                self.send_heartbeats()
+
             except KeyboardInterrupt:
                 break
 
@@ -95,7 +99,7 @@ class Broker(object):
 
                 self.handle(msg)
 
-            elif has_debug:
+            if has_debug:
                 logger.debug('No items for broker at %s', self.address)
 
 # ################################################################################################################################
@@ -120,6 +124,30 @@ class Broker(object):
 
             for service in self.services.values():
                 service.workers.remove(item)
+
+# ################################################################################################################################
+
+    def send_heartbeats(self):
+        """ Cleans up expired workers and sends heartbeats to any remaining ones.
+        """
+        now = datetime.utcnow()
+
+        with self.lock:
+
+            # Make sure we send heartbeats only to workers that have not expired already
+            self.cleanup_workers()
+
+            for worker in self.workers.values():
+
+                # We have never sent a HB to this worker or we have sent a HB at least once so we do it again now
+                if not worker.last_hb_sent or now >= worker.last_hb_sent + timedelta(seconds=self.heartbeat):
+                    self._send_heartbeat(worker, now)
+
+# ################################################################################################################################
+
+    def _send_heartbeat(self, worker, now):
+        self.send_to_worker_zmq(EventBrokerHeartbeat(worker.unwrap_id()).serialize())
+        worker.last_hb_sent = now
 
 # ################################################################################################################################
 
@@ -198,10 +226,9 @@ class Broker(object):
 
         now = datetime.utcnow()
         expires_at = now + timedelta(seconds=const.ttl)
-        wd = WorkerData(const.worker_type.zmq, sender_id, service_name, now, expires_at)
+        wd = WorkerData(const.worker_type.zmq, sender_id, service_name, now, None, expires_at)
 
         # Add to details of workers
-        print(9090, wd.id)
         self.workers[wd.id] = wd
 
         # Add to the list of workers for that service (but do not forget that the service may not have a client yet possibly)

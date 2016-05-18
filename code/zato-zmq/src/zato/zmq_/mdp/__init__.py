@@ -49,6 +49,8 @@ class const:
         # Custom types used internally
         request_from_client = 'zato.request_from_client'
         reply_to_client = 'zato.reply_to_client'
+        heartbeat_worker_to_broker = 'zato.heartbeat_worker_to_broker'
+        heartbeat_broker_to_worker = 'zato.heartbeat_broker_to_worker'
 
 # ################################################################################################################################
 
@@ -102,11 +104,12 @@ class WorkerData(object):
     """
     prefix = 'mdp.worker.'
 
-    def __init__(self, type, id, service_name, last_hb_received=None, expires_at=None):
+    def __init__(self, type, id, service_name, last_hb_received=None, last_hb_sent=None, expires_at=None):
         self.type = type
         self.id = self.wrap_id(id)
         self.service_name = service_name
         self.last_hb_received = last_hb_received
+        self.last_hb_sent = last_hb_sent
         self.expires_at = expires_at
 
     @staticmethod
@@ -138,13 +141,26 @@ class EventReady(object):
 
 # ################################################################################################################################
 
-class EventHeartbeat(object):
-    """ A heartbeat sent from a worker to its broker or the other way around.
+class EventWorkerHeartbeat(object):
+    """ A heartbeat sent from a worker to its broker.
     """
-    type = const.v01.heartbeat
+    type = const.v01.heartbeat_worker_to_broker
 
     def serialize(self):
         return ['', const.v01.worker, const.v01.heartbeat]
+
+# ################################################################################################################################
+
+class EventBrokerHeartbeat(object):
+    """ A heartbeat sent from a broker to its worker.
+    """
+    type = const.v01.heartbeat_broker_to_worker
+
+    def __init__(self, worker_id):
+        self.worker_id = worker_id
+
+    def serialize(self):
+        return [self.worker_id, '', const.v01.worker, const.v01.heartbeat]
 
 # ################################################################################################################################
 
