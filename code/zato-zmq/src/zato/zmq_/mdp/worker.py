@@ -129,7 +129,6 @@ class Worker(BaseZMQConnection):
 
         # To speed up look-ups
         log_details = self.log_details
-        has_debug = self.has_debug
 
         # Main loop
         while self.keep_running:

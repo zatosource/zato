@@ -12,9 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 from datetime import datetime, timedelta
 
-# ZeroMQ
-import zmq.green as zmq
-
 # Zato
 from zato.zmq_.mdp import BaseZMQConnection, EventClientRequest
 
