@@ -9,14 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 # stdlib
 import logging
 
-# stdlib
-from datetime import datetime
-
 # ZeroMQ
 import zmq.green as zmq
-
-# Zato
-from zato.common.util import new_cid
 
 # ################################################################################################################################
 

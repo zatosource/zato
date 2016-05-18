@@ -20,7 +20,7 @@ import zmq.green as zmq
 
 # Zato
 from zato.zmq_.mdp import const, EventBrokerDisconnect, EventBrokerHeartbeat, EventClientReply, EventWorkerRequest, \
-     EventWorkerReply, Service, WorkerData
+     Service, WorkerData
 
 # ################################################################################################################################
 
@@ -78,7 +78,6 @@ class Broker(object):
         logger.info('Starting ZMQ MDP 0.1 broker at %s', self.address)
 
         # To speed up look-ups
-        log_details = self.log_details
         has_debug = self.has_debug
 
         # Main loop
