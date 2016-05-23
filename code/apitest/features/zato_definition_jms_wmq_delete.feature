@@ -35,7 +35,7 @@ Feature: zato.definition.jms-wmq.create
 
 
   @definition.jms-wmq.delete
-  Scenario: Delete amqp definition
+  Scenario: Delete jms-wmq definition
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
