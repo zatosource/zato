@@ -1,9 +1,8 @@
-@definition
-Feature: zato.definition.jms-wmq.get-list
-  Returns a list of JMS WebSphere MQ connection definition on a given cluster.
+@outgoing
+Feature: zato.outgoing.jms-wmq.create
+  Allows one to create a JMS WebSphere MQ outgoing connection basing on an already existing connection definition.
 
-
-  @definition.jms-wmq.get-list
+  @outgoing.jms-wmq.create
   Scenario: Create jms-wmq definition
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
@@ -35,26 +34,51 @@ Feature: zato.definition.jms-wmq.get-list
     And I sleep for "2"
 
 
-  @definition.jms-wmq.get-list
-  Scenario: Get jms-wmq definition list
+  @outgoing.jms-wmq.create
+  Scenario: Create outgoing jms-wmq connection
+
+      Given address "$ZATO_API_TEST_SERVER"
+      Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+      Given URL path "/zato/json/zato.outgoing.jms-wmq.create"
+
+      Given format "JSON"
+      Given request is "{}"
+      Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
+      Given JSON Pointer "/name" in request is a random string
+      Given JSON Pointer "/is_active" in request is "true"
+      Given JSON Pointer "/def_id" in request is "#def_id"
+      Given JSON Pointer "/delivery_mode" in request is "1"
+      Given JSON Pointer "/priority" in request is "6"
+      Given JSON Pointer "/expiration" in request is "3000"
+
+      When the URL is invoked
+
+      Then status is "200"
+      And I store "/zato_outgoing_jms_wmq_create_response/name" from response under "jms_wmq_conn_name"
+      And I store "/zato_outgoing_jms_wmq_create_response/id" from response under "jms_wmq_conn_id"
+      And I sleep for "1"
+
+  # todo add step to actually test the connection
+
+
+  @outgoing.jms-wmq.create
+  Scenario: Delete created jms-wmq outgoing connection
+
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-    Given URL path "/zato/json/zato.definition.jms-wmq.get-list"
-
+    Given URL path "/zato/json/zato.outgoing.jms-wmq.delete"
     Given format "JSON"
     Given request is "{}"
-    Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
+    Given JSON Pointer "/id" in request is "#jms_wmq_conn_id"
 
     When the URL is invoked
 
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
-    
-    And JSON Pointer "/zato_definition_jms_wmq_get_list_response" isn't an empty list
 
-
-  @definition.jms-wmq.get-list
+  @outgoing.jms-wmq.create
   Scenario: Delete jms-wmq definition
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
@@ -68,5 +92,3 @@ Feature: zato.definition.jms-wmq.get-list
 
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
-
-
