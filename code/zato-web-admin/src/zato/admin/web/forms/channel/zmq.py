@@ -13,24 +13,29 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_services, DataFormatForm
-from zato.common import ZMQ_CHANNEL_TYPES
+from zato.common import ZMQ
 
 class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     socket_type = forms.ChoiceField(widget=forms.Select())
+    socket_method = forms.ChoiceField(widget=forms.Select())
     service = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     sub_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
-        self.fields['socket_type'].choices = []
-        for name in sorted(ZMQ_CHANNEL_TYPES):
-            self.fields['socket_type'].choices.append([name, name])
+        self._add_field('socket_type', ZMQ.CHANNEL)
+        self._add_field('socket_method', ZMQ.METHOD)
 
         add_services(self, req)
+
+    def _add_field(self, field_name, source):
+        self.fields[field_name].choices = []
+        for code, name in source.items():
+            self.fields[field_name].choices.append([code, name])
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

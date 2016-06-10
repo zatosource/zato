@@ -36,7 +36,7 @@ def add_services(form, req):
 
         # Either must exist
         field = form.fields.get('service_name') or form.fields['service']
-        field.choices[:] = []
+        field.choices = []
         field.choices.append(INITIAL_CHOICES)
 
         for service in req.zato.client.invoke(

@@ -18,6 +18,10 @@ from gevent.lock import RLock
 import zmq.green as zmq
 
 class connector_type:
+
+    class channel:
+        zmq = 'channel ZeroMQ'
+
     class out:
         zmq = 'outgoing ZeroMQ'
 
@@ -64,8 +68,6 @@ class Connector(object):
         # Must be provided by subclasses
         self.conn = None
         self.log_details = ''
-
-# ################################################################################################################################
 
 # ################################################################################################################################
 
@@ -136,8 +138,8 @@ class Connector(object):
 
 # ################################################################################################################################
 
-class OutZMQ(Connector):
-    """ An outgoing ZeroMQ connection.
+class OutZMQSimple(Connector):
+    """ An outgoing ZeroMQ connection of a type other than Majordomo (MDP).
     """
     def _start(self):
         self.log_details = '{} {}'.format(self.config.socket_type, self.config.address)

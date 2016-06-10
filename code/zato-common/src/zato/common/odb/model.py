@@ -266,7 +266,7 @@ class TechnicalAccount(SecurityBase):
         return to_json(self)
 
 class OAuth(SecurityBase):
-    """ New in 2.0: Stores OAuth credentials.
+    """ Stores OAuth credentials.
     """
     __tablename__ = 'sec_oauth'
     __mapper_args__ = {'polymorphic_identity':'oauth'}
@@ -293,7 +293,7 @@ class OAuth(SecurityBase):
         return to_json(self)
 
 class NTLM(SecurityBase):
-    """ New in 2.0: Stores NTLM definitions.
+    """ Stores NTLM definitions.
     """
     __tablename__ = 'sec_ntlm'
     __mapper_args__ = {'polymorphic_identity': 'ntlm'}
@@ -311,7 +311,7 @@ class NTLM(SecurityBase):
         return to_json(self)
 
 class AWSSecurity(SecurityBase):
-    """ New in 2.0: Stores Amazon credentials.
+    """ Stores Amazon credentials.
     """
     __tablename__ = 'sec_aws'
     __mapper_args__ = {'polymorphic_identity': 'aws'}
@@ -330,7 +330,7 @@ class AWSSecurity(SecurityBase):
         return to_json(self)
 
 class OpenStackSecurity(SecurityBase):
-    """ New in 2.0: Stores OpenStack credentials..
+    """ Stores OpenStack credentials..
     """
     __tablename__ = 'sec_openstack'
     __mapper_args__ = {'polymorphic_identity': 'openstack'}
@@ -348,7 +348,7 @@ class OpenStackSecurity(SecurityBase):
         return to_json(self)
 
 class APIKeySecurity(SecurityBase):
-    """ New in 2.0: Stores API keys.
+    """ Stores API keys.
     """
     __tablename__ = 'sec_apikey'
     __mapper_args__ = {'polymorphic_identity': 'apikey'}
@@ -367,7 +367,7 @@ class APIKeySecurity(SecurityBase):
         return to_json(self)
 
 class XPathSecurity(SecurityBase):
-    """ New in 2.0: Stores XPath-based credentials.
+    """ Stores XPath-based credentials.
     """
     __tablename__ = 'sec_xpath'
     __mapper_args__ = {'polymorphic_identity':'xpath_sec'}
@@ -393,7 +393,7 @@ class XPathSecurity(SecurityBase):
 # ################################################################################################################################
 
 class TLSKeyCertSecurity(SecurityBase):
-    """ New in 2.0: Stores information regarding TLS key/cert pairs used in outgoing connections.
+    """ Stores information regarding TLS key/cert pairs used in outgoing connections.
     """
     __tablename__ = 'sec_tls_key_cert'
     __mapper_args__ = {'polymorphic_identity':'tls_key_cert'}
@@ -405,7 +405,7 @@ class TLSKeyCertSecurity(SecurityBase):
 # ################################################################################################################################
 
 class TLSChannelSecurity(SecurityBase):
-    """ New in 2.0: Stores information regarding TLS client certificate-based security definitions.
+    """ Stores information regarding TLS client certificate-based security definitions.
     """
     __tablename__ = 'sec_tls_channel'
     __mapper_args__ = {'polymorphic_identity':'tls_channel_sec'}
@@ -416,7 +416,7 @@ class TLSChannelSecurity(SecurityBase):
 # ################################################################################################################################
 
 class TLSCACert(Base):
-    """ New in 2.0: Stores information regarding CA certs.
+    """ Stores information regarding CA certs.
     """
     __tablename__ = 'sec_tls_ca_cert'
 
@@ -994,6 +994,7 @@ class OutgoingZMQ(Base):
 
     address = Column(String(200), nullable=False)
     socket_type = Column(String(20), nullable=False)
+    socket_method = Column(String(20), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_zmq', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1108,6 +1109,7 @@ class ChannelZMQ(Base):
     socket_type = Column(String(20), nullable=False)
     sub_key = Column(String(200), nullable=True)
     data_format = Column(String(20), nullable=True)
+    socket_method = Column(String(20), nullable=False)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('channels_zmq', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1115,13 +1117,14 @@ class ChannelZMQ(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('channels_zmq', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, name=None, is_active=None, address=None,
-                 socket_type=None, sub_key=None, service_name=None, data_format=None):
+    def __init__(self, id=None, name=None, is_active=None, address=None, socket_type=None, socket_type_text=None, sub_key=None,
+                 service_name=None, data_format=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.address = address
         self.socket_type = socket_type
+        self.socket_type_text = socket_type_text # Not used by the DB
         self.sub_key = sub_key
         self.service_name = service_name # Not used by the DB
         self.data_format = data_format
@@ -1630,7 +1633,7 @@ class Notification(Base):
 # ################################################################################################################################
 
 class NotificationOpenStackSwift(Notification):
-    """ New in 2.0: Stores OpenStack Swift notifications.
+    """ Stores OpenStack Swift notifications.
     """
     __tablename__ = 'notif_os_swift'
     __mapper_args__ = {'polymorphic_identity': 'openstack_swift'}
@@ -1648,7 +1651,7 @@ class NotificationOpenStackSwift(Notification):
 # ################################################################################################################################
 
 class NotificationSQL(Notification):
-    """ New in 2.0: Stores SQL notifications.
+    """ Stores SQL notifications.
     """
     __tablename__ = 'notif_sql'
     __mapper_args__ = {'polymorphic_identity': 'sql'}
