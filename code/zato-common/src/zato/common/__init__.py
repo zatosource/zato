@@ -196,13 +196,23 @@ ZATO_FIELD_OPERATORS = {
 }
 
 ZMQ_OUTGOING_TYPES = ('PUSH', 'PUB')
-ZMQ_CHANNEL_TYPES = ('PULL', 'SUB')
+
+class ZMQ:
+    CHANNEL = OrderedDict({
+        'PULL': 'Pull',
+        'SUB': 'Sub',
+        'MDP01': 'Majordomo 0.1 (MDP)'
+    })
+
+    METHOD = {
+        'bind': 'Bind',
+        'connect': 'Connect',
+    }
 
 ZATO_ODB_POOL_NAME = 'ZATO_ODB'
 
 SOAP_VERSIONS = ('1.1', '1.2')
 SOAP_CHANNEL_VERSIONS = ('1.1',)
-
 
 class SEARCH:
     class ES:

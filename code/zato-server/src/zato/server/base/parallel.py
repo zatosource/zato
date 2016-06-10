@@ -509,7 +509,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query)
 
         # SOAP
-        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'tym resoap', True)
+        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)
         self.config.out_soap = ConfigDict.from_query('out_soap', query)
 
         # SQL
@@ -520,7 +520,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_out_stomp_list(server.cluster.id, True)
         self.config.out_stomp = ConfigDict.from_query('out_stomp', query)
 
-        # ZMQtym re
+        # ZMQ channels
+        query = self.odb.get_channel_zmq_list(server.cluster.id, True)
+        self.config.channel_zmq = ConfigDict.from_query('channel_zmq', query)
+
+        # ZMQ outgoing
         query = self.odb.get_out_zmq_list(server.cluster.id, True)
         self.config.out_zmq = ConfigDict.from_query('out_zmq', query)
 
@@ -772,17 +776,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                     logger.info('Not starting an inactive outgoing connection (JMS WebSphere MQ {})'.format(item.name))
         else:
             logger.info('No JMS WebSphere MQ outgoing connections to start')
-
-        # ZMQ - channels
-        channel_zmq_list = self.odb.get_channel_zmq_list(self.cluster_id)
-        if channel_zmq_list:
-            for item in channel_zmq_list:
-                if item.is_active:
-                    zmq_channel_start_connector(self.repo_location, item.id)
-                else:
-                    logger.info('Not starting an inactive channel (ZeroMQ {})'.format(item.name))
-        else:
-            logger.info('No Zero MQ channels to start')
 
     def _after_init_non_accepted(self, server):
         raise NotImplementedError("This Zato version doesn't support join states other than ACCEPTED")

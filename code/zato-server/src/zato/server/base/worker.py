@@ -49,7 +49,7 @@ from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_pa
      parse_extra_into_dict, parse_tls_channel_security_definition, store_tls
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
-from zato.server.connection.connector import ConnectorStore, connector_type, OutZMQ
+from zato.server.connection.connector import ConnectorStore, connector_type, OutZMQSimple
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
@@ -116,7 +116,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.cassandra_query_store = CassandraQueryStore()
         self.cassandra_query_api = CassandraQueryAPI(self.cassandra_query_store)
 
-        # STOMPstomp_channel_api
+        # STOMP
         self.stomp_outconn_api = STOMPAPI(OutconnSTOMPConnStore())
         self.stomp_channel_api = STOMPAPI(ChannelSTOMPConnStore())
 
@@ -129,10 +129,12 @@ class WorkerStore(BrokerMessageReceiver):
         self.email_imap_api = IMAPAPI(IMAPConnStore())
 
         # ZeroMQ
-        self.zmq_out_api = ConnectorStore(connector_type.out.zmq, OutZMQ)
+        self.init_zmq_channels()
+        self.zmq_out_api = ConnectorStore(connector_type.out.zmq, OutZMQSimple)
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
+
         self.init_msg_ns_store()
         self.init_json_pointer_store()
         self.init_xpath_store()
@@ -183,7 +185,9 @@ class WorkerStore(BrokerMessageReceiver):
         # Create all the expected connections and objects
         self.init_sql()
         self.init_ftp()
+
         self.init_http_soap()
+
         self.init_cloud()
         self.init_pubsub()
         self.init_notifiers()
@@ -284,6 +288,12 @@ class WorkerStore(BrokerMessageReceiver):
             config_dict = getattr(self.worker_config, 'out_' + transport)
             for name in config_dict:
                 yield config_dict[name]
+
+# ################################################################################################################################
+
+    def init_zmq_channels(self):
+        """ Initializes all ZeroMQ channels that are not Majordomo (MDP).
+        """
 
 # ################################################################################################################################
 
