@@ -198,10 +198,15 @@ ZATO_FIELD_OPERATORS = {
 ZMQ_OUTGOING_TYPES = ('PUSH', 'PUB')
 
 class ZMQ:
+
+    PULL = 'PULL'
+    SUB = 'SUB'
+    MDP01 = 'MDP01'
+
     CHANNEL = OrderedDict({
-        'PULL': 'Pull',
-        'SUB': 'Sub',
-        'MDP01': 'Majordomo 0.1 (MDP)'
+        PULL: 'Pull',
+        SUB: 'Sub',
+        MDP01: 'Majordomo 0.1 (MDP)'
     })
 
     METHOD = {

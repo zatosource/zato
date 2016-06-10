@@ -16,7 +16,6 @@ from traceback import format_exc
 from zato.common.broker_message import MESSAGE_TYPE, CHANNEL
 from zato.common.odb.model import ChannelZMQ, Cluster, Service
 from zato.common.odb.query import channel_zmq_list
-from zato.server.connection.zmq_.channel import start_connector
 from zato.server.service.internal import AdminService, AdminSIO
 
 class GetList(AdminService):
@@ -68,12 +67,15 @@ class Create(AdminService):
                 raise Exception(msg)
 
             try:
+
+                sub_key = input.get('sub_key', b'')
+
                 item = ChannelZMQ()
                 item.name = input.name
                 item.is_active = input.is_active
                 item.address = input.address
                 item.socket_type = input.socket_type
-                item.sub_key = input.get('sub_key', b'')
+                item.sub_key = sub_key
                 item.socket_method = input.socket_method
                 item.cluster_id = input.cluster_id
                 item.service = service
@@ -82,8 +84,10 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
 
-                if item.is_active:
-                    start_connector(self.server.repo_location, item.id)
+                input.action = CHANNEL.ZMQ_CREATE.value
+                input.sub_key = sub_key
+                input.service = service.impl_name
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name

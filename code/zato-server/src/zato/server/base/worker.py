@@ -49,7 +49,7 @@ from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_pa
      parse_extra_into_dict, parse_tls_channel_security_definition, store_tls
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
-from zato.server.connection.connector import ConnectorStore, connector_type, OutZMQSimple
+from zato.server.connection.connector import ChannelZMQSimple, ConnectorStore, connector_type, OutZMQSimple
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
@@ -129,7 +129,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.email_imap_api = IMAPAPI(IMAPConnStore())
 
         # ZeroMQ
-        self.init_zmq_channels()
+        self.zmq_channel_api = ConnectorStore(connector_type.channel, ChannelZMQSimple)
         self.zmq_out_api = ConnectorStore(connector_type.out.zmq, OutZMQSimple)
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
@@ -477,9 +477,17 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def init_zmq(self):
+        """ Initializes all ZeroMQ connections.
+        """
+        # Channels
+        for name, data in self.worker_config.channel_zmq.items():
+            self.zmq_channel_api.create(name, data.config, self.on_message_invoke_service)
+
+        # Outgoing connections
         for name, data in self.worker_config.out_zmq.items():
             self.zmq_out_api.create(name, data.config)
 
+        self.zmq_channel_api.start()
         self.zmq_out_api.start()
 
 # ################################################################################################################################
@@ -1639,6 +1647,17 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_RBAC_ROLE_PERMISSION_DELETE(self, msg):
         self.rbac.delete_role_permission_allow(msg.role_id, msg.perm_id, msg.service_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_CHANNEL_ZMQ_CREATE(self, msg):
+        raise NotImplementedError(msg)
+
+    def on_broker_msg_CHANNEL_ZMQ_EDIT(self, msg):
+        raise NotImplementedError(msg)
+
+    def on_broker_msg_CHANNEL_ZMQ_DELETE(self, msg):
+        raise NotImplementedError(msg)
 
 # ################################################################################################################################
 
