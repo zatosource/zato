@@ -62,7 +62,6 @@ from zato.server.connection.amqp.outgoing import start_connector as amqp_out_sta
 from zato.server.connection.http_soap.url_data import Matcher
 from zato.server.connection.jms_wmq.channel import start_connector as jms_wmq_channel_start_connector
 from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_out_start_connector
-from zato.server.connection.zmq_.channel import start_connector as zmq_channel_start_connector
 from zato.server.pickup import get_pickup
 
 logger = logging.getLogger(__name__)
@@ -911,7 +910,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             # Close all the connector subprocesses this server has possibly started
             pairs = ((AMQP_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL),
                      (JMS_WMQ_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL),
-                     (ZMQ_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL),
                      )
 
             for action, msg_type in pairs:
