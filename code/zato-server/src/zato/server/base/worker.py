@@ -68,8 +68,8 @@ from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
-from zato.zmq_.channel import ChannelZMQSimple
-from zato.zmq_.outgoing import OutZMQSimple
+from zato.zmq_.channel import Simple as ChannelZMQSimple
+from zato.zmq_.outgoing import Simple as OutZMQSimple
 
 logger = logging.getLogger(__name__)
 

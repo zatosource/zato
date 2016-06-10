@@ -15,7 +15,7 @@ from zato.server.connection.connector import Connector
 
 # ################################################################################################################################
 
-class BaseZMQSimple(Connector):
+class Base(Connector):
     """ Base class for ZeroMQ connections, both channels and outgoing ones, other than Majordomo (MDP).
     """
     def _start(self):
