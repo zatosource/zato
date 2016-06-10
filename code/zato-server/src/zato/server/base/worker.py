@@ -49,7 +49,7 @@ from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_pa
      parse_extra_into_dict, parse_tls_channel_security_definition, store_tls
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
-from zato.server.connection.connector import ChannelZMQSimple, ConnectorStore, connector_type, OutZMQSimple
+from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
@@ -66,9 +66,10 @@ from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.connection.zmq_.outgoing import ZMQAPI as ZMQAPIOut, ZMQConnStore as ZMQConnStoreOut
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
-
 from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
+from zato.zmq_.channel import ChannelZMQSimple
+from zato.zmq_.outgoing import OutZMQSimple
 
 logger = logging.getLogger(__name__)
 
