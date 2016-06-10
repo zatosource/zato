@@ -10,11 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 
 # Zato
-from zato.zmq_ import BaseZMQSimple
+from zato.zmq_ import Base
 
 # ################################################################################################################################
 
-class OutZMQSimple(BaseZMQSimple):
+class Simple(Base):
     """ An outgoing ZeroMQ connection of a type other than Majordomo (MDP).
     """
     # Does not override or implement anything above what the parent already does

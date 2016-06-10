@@ -14,17 +14,17 @@ from gevent import spawn
 # Zato
 from zato.common import CHANNEL
 from zato.common.util import new_cid
-from zato.zmq_ import BaseZMQSimple
+from zato.zmq_ import Base
 
 # ################################################################################################################################
 
-class ChannelZMQSimple(BaseZMQSimple):
+class Simple(Base):
     """ A ZeroMQ channel other than Majordomo.
     """
     start_in_greenlet = True
 
     def _start(self):
-        super(ChannelZMQSimple, self)._start()
+        super(Simple, self)._start()
 
         # Micro-optimizations to make things faster
         _spawn = spawn
