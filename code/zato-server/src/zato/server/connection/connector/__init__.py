@@ -30,10 +30,13 @@ class connector_type:
     """ All types of ZeroMQ connections that we support.
     """
     class channel:
-        zmq = 'channel ZeroMQ'
+        zmq = 'ZeroMQ channel'
 
     class out:
-        zmq = 'outgoing ZeroMQ'
+        zmq = 'ZeroMQ outgoing'
+
+    class duplex:
+        zmq_v01 = 'ZeroMQ MDP v0.1'
 
 class Inactive(Exception):
     pass
@@ -78,7 +81,13 @@ class Connector(object):
 
         # Must be provided by subclasses
         self.conn = None
-        self.log_details = ''
+
+# ################################################################################################################################
+
+    def get_log_details(self):
+        """ Can be overridden in subclasses.
+        """
+        return ''
 
 # ################################################################################################################################
 
@@ -104,8 +113,8 @@ class Connector(object):
         logger.debug('%s %s connector `%s`', verb, self.type, self.name)
 
     def _info_start_stop(self, verb):
-        logger.info('%s %s connector `%s`%s', verb, self.type, self.name, ' ({})'.format(
-            self.log_details) if self.log_details else '')
+        log_details = self.get_log_details()
+        logger.info('%s %s connector `%s`%s', verb, self.type, self.name, ' ({})'.format(log_details) if log_details else '')
 
 # ################################################################################################################################
 

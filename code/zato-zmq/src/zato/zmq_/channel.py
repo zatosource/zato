@@ -26,6 +26,16 @@ class Simple(Base):
     def _start(self):
         super(Simple, self)._start()
 
+        # Open a ZMQ socket and set its options, if required
+        self.impl = self.ctx.socket(getattr(zmq, self.config.socket_type))
+
+        if self.config.socket_type == ZMQ.SUB and self.config.sub_key:
+            self.impl.setsockopt(zmq.SUBSCRIBE, self.config.sub_key)
+
+        # Whether to bind or connect?
+        socket_method = getattr(self.impl, self.config.socket_method)
+        socket_method(self.config.address)
+
         # Micro-optimizations to make things faster
         _spawn = spawn
         _callback = self.callback
@@ -45,5 +55,14 @@ class Simple(Base):
                 'payload': _impl_recv(), # This line is blocking waiting for requests
                 'zato_ctx': {'channel_config': _config}
             }, _channel_zmq, None)
+
+    def _send(self, msg, *args, **kwargs):
+        self.impl.send(msg, *args, **kwargs)
+
+# ################################################################################################################################
+
+class MDPv01(Base):
+    """ An MDP (Majordomo) v0.1 ZeroMQ channel.
+    """
 
 # ################################################################################################################################

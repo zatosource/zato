@@ -201,7 +201,8 @@ class ZMQ:
 
     PULL = 'PULL'
     SUB = 'SUB'
-    MDP01 = 'MDP01'
+    MDP = 'MDP'
+    MDP01 = MDP + '01'
 
     SINGLE = 'single'
     UNLIMITED = 'unlimited'
