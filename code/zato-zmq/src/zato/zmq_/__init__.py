@@ -19,22 +19,16 @@ class Base(Connector):
     """ Base class for ZeroMQ connections, both channels and outgoing ones, other than Majordomo (MDP).
     """
     def _start(self):
-        self.log_details = '{} {}'.format(self.config.socket_type, self.config.address)
-        self.ctx = zmq.Context()
-        self.impl = self.ctx.socket(getattr(zmq, self.config.socket_type))
         self.conn = self
-
-        if self.config.socket_type == ZMQ.SUB and self.config.sub_key:
-            self.impl.setsockopt(zmq.SUBSCRIBE, self.config.sub_key)
-
-        # Whether to bind or connect?
-        socket_method = getattr(self.impl, self.config.socket_method)
-        socket_method(self.config.address)
+        self.ctx = zmq.Context()
 
     def _send(self, msg, *args, **kwargs):
-        self.impl.send(msg, *args, **kwargs)
+        raise NotImplementedError('Should be defined in subclasses')
 
     def _stop(self):
         self.impl.close(50) # TODO: Should be configurable
+
+    def get_log_details(self):
+        return '{} {}'.format(self.config.socket_type, self.config.address)
 
 # ################################################################################################################################

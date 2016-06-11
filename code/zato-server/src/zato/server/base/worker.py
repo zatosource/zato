@@ -40,7 +40,7 @@ from retools.lock import Lock
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, \
      SEC_DEF_TYPE, SIMPLE_IO, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
-from zato.common import broker_message
+from zato.common import broker_message, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
@@ -68,7 +68,7 @@ from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
-from zato.zmq_.channel import Simple as ChannelZMQSimple
+from zato.zmq_.channel import MDPv01 as ChannelZMQMDPv01, Simple as ChannelZMQSimple
 from zato.zmq_.outgoing import Simple as OutZMQSimple
 
 logger = logging.getLogger(__name__)
@@ -130,7 +130,8 @@ class WorkerStore(BrokerMessageReceiver):
         self.email_imap_api = IMAPAPI(IMAPConnStore())
 
         # ZeroMQ
-        self.zmq_channel_api = ConnectorStore(connector_type.channel, ChannelZMQSimple)
+        self.zmq_mdp_v01_api = ConnectorStore(connector_type.duplex.zmq_v01, ChannelZMQMDPv01)
+        self.zmq_channel_api = ConnectorStore(connector_type.channel.zmq, ChannelZMQSimple)
         self.zmq_out_api = ConnectorStore(connector_type.out.zmq, OutZMQSimple)
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
@@ -480,14 +481,24 @@ class WorkerStore(BrokerMessageReceiver):
     def init_zmq(self):
         """ Initializes all ZeroMQ connections.
         """
+        # Iterate over channels and outgoing connections and populate their respetive connectors.
+        # Note that MDP are duplex and we create them in channels while in outgoing connections they are skipped.
+
         # Channels
         for name, data in self.worker_config.channel_zmq.items():
-            self.zmq_channel_api.create(name, data.config, self.on_message_invoke_service)
+            api = self.zmq_mdp_v01_api if data.config['socket_type'].startswith(ZMQ.MDP) else self.zmq_channel_api
+            api.create(name, data.config, self.on_message_invoke_service)
 
         # Outgoing connections
         for name, data in self.worker_config.out_zmq.items():
+
+            # MDP ones were already handled in channels above
+            if data.config['socket_type'].startswith(ZMQ.MDP):
+                continue
+
             self.zmq_out_api.create(name, data.config)
 
+        self.zmq_mdp_v01_api.start()
         self.zmq_channel_api.start()
         self.zmq_out_api.start()
 
