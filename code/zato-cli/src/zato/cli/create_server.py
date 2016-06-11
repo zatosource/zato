@@ -186,6 +186,11 @@ plain_xml = {PLAIN_XML}
 soap11 = {SOAP11}
 soap12 = {SOAP12}
 
+[zeromq_mdp]
+linger=0
+poll_interval=100
+heartbeat=3
+
 [os_environ]
 sample_key=sample_value
 """.format(**CONTENT_TYPE).encode('utf-8')

@@ -29,13 +29,12 @@ logger = logging.getLogger(__name__)
 # ################################################################################################################################
 
 class Broker(object):
-    """ Standalone implementation of a broker for ZeroMQ Majordomo Protocol 0.1 http://rfc.zeromq.org/spec:7
+    """ Implements a broker part of the ZeroMQ Majordomo Protocol 0.1 http://rfc.zeromq.org/spec:7
     """
-    def __init__(self, address='tcp://*:47047', linger=0, poll_interval=100, log_details=False, heartbeat=3, heartbeat_mult=2):
-        self.address = address
-        self.poll_interval = poll_interval
+    def __init__(self, config):
+        self.address = config.address
+        self.poll_interval = config.poll_interval
         self.keep_running = True
-        self.log_details = log_details
         self.has_debug = logger.isEnabledFor(logging.DEBUG)
 
         # Maps service names to workers registered to handle requests to that service
@@ -47,15 +46,12 @@ class Broker(object):
         # Held upon most operations on sockets
         self.lock = RLock()
 
-        # How often, in seconds, to send a heartbeat to the broker
-        self.heartbeat = heartbeat
-
-        # If self.heartbeat * self.heartbeat_mult is exceeded, we assume the broker is down
-        self.heartbeat_mult = heartbeat_mult
+        # How often, in seconds, to send a heartbeat to workers
+        self.heartbeat = config.heartbeat
 
         self.ctx = zmq.Context()
         self.socket = self.ctx.socket(zmq.ROUTER)
-        self.socket.linger = linger
+        self.socket.linger = config.linger
         self.poller = zmq.Poller()
         self.poller.register(self.socket, zmq.POLLIN)
 

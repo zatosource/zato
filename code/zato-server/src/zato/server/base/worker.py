@@ -486,7 +486,17 @@ class WorkerStore(BrokerMessageReceiver):
 
         # Channels
         for name, data in self.worker_config.channel_zmq.items():
-            api = self.zmq_mdp_v01_api if data.config['socket_type'].startswith(ZMQ.MDP) else self.zmq_channel_api
+
+            if data.config['socket_type'].startswith(ZMQ.MDP):
+                api = self.zmq_mdp_v01_api
+                data.config.update(self.server.fs_server_config.zeromq_mdp)
+
+                for name in ('linger', 'poll_interval', 'heartbeat'):
+                    data.config[name] = int(data.config[name])
+
+            else:
+                api = self.zmq_channel_api
+
             api.create(name, data.config, self.on_message_invoke_service)
 
         # Outgoing connections

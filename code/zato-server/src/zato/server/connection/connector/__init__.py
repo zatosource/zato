@@ -118,12 +118,17 @@ class Connector(object):
 
 # ################################################################################################################################
 
+    def _spawn_start(self):
+        spawn(self._start).get()
+
+# ################################################################################################################################
+
     def start(self, needs_log=True):
         with self._start_stop_logger('Starting',' Started'):
             self.keep_running = True
 
             try:
-                spawn(self._start) if self.start_in_greenlet else self._start()
+                spawn(self._spawn_start) if self.start_in_greenlet else self._start()
             except Exception, e:
                 logger.warn(format_exc(e))
 
