@@ -22,13 +22,15 @@ class CreateForm(DataFormatForm):
     socket_type = forms.ChoiceField(widget=forms.Select())
     socket_method = forms.ChoiceField(widget=forms.Select())
     service = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
-    sub_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    sub_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    pool_strategy = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:20%'}))
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
 
         self._add_field('socket_type', ZMQ.CHANNEL)
         self._add_field('socket_method', ZMQ.METHOD)
+        self._add_field('pool_strategy', ZMQ.POOL_STRATEGY)
 
         add_services(self, req)
 
