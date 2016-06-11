@@ -37,6 +37,7 @@
             'id',
             'is_active',
             'data_format',
+            'pool_strategy',
         ]
     }
     </script>
@@ -98,6 +99,7 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.data_format }}</td>
+                        <td class='ignore'>{{ item.pool_strategy }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -116,7 +118,7 @@
                 <form action="{% url "channel-zmq-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td style="vertical-align:middle;width:22%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
 
@@ -141,8 +143,13 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Subscription key <span class='form_hint'>(Ignored if not SUB)</span></td>
+                            <td style="vertical-align:middle">Subscription key<span class='form_hint'><br/>(SUB only)</span></td>
                             <td>{{ create_form.sub_key }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Pool strategy<span class='form_hint'><br/>(MDP only)</span></td>
+                            <td>{{ create_form.pool_strategy }}</td>
                         </tr>
 
                         <tr>
@@ -172,7 +179,7 @@
                 <form action="{% url "channel-zmq-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td style="vertical-align:middle;width:22%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
 
@@ -197,8 +204,13 @@
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle">Subscription key <span class='form_hint'>(Ignored if not SUB)</span></td>
+                            <td style="vertical-align:middle">Subscription key<span class='form_hint'><br/>(SUB only)</span></td>
                             <td>{{ edit_form.sub_key }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Pool strategy<span class='form_hint'><br/>(MDP only)</span></td>
+                            <td>{{ edit_form.pool_strategy }}</td>
                         </tr>
 
                         <tr>
