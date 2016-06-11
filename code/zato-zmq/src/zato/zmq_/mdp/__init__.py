@@ -33,8 +33,8 @@ class const:
     class v01:
         """ Constants for MDP 0.1.
         """
-        client = 'MDPC01'
-        worker = 'MDPW01'
+        client = b'MDPC01'
+        worker = b'MDPW01'
 
         ready = chr(1)
         request_to_worker = chr(2)
@@ -91,6 +91,7 @@ class Service(object):
     def __init__(self, name=None, workers=None):
         self.name = name
         self.workers = workers or []
+        self.has_workers = False # Will be set to True if there has been at least one worker assigned to that service
         self.pending_requests = [] # All requests currently queued up, i.e. received from clients but not delivered to workers yet
 
 # ################################################################################################################################
@@ -172,7 +173,7 @@ class EventClientRequest(object):
     def serialize(self):
         """ Serializes this message on behalf of a client sending it to a broker.
         """
-        return ['', const.v01.client, self.service_name, self.body]
+        return [b'', const.v01.client, self.service_name, self.body]
 
 # ################################################################################################################################
 

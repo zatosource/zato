@@ -13,7 +13,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # gevent
-from gevent import spawn
+from gevent import spawn, Timeout
 from gevent.lock import RLock
 
 # Zato
@@ -128,7 +128,15 @@ class Connector(object):
             self.keep_running = True
 
             try:
-                spawn(self._spawn_start) if self.start_in_greenlet else self._start()
+                if self.start_in_greenlet:
+                    try:
+                        spawn(self._spawn_start).get(timeout=0.1)
+                    except Timeout:
+                        # Timeout means that no exception was raised during the time we were waiting for it
+                        # which is just fine, this is what we want, no exceptions during initialization of that connector.
+                        pass 
+                else:
+                    self._start()
             except Exception, e:
                 logger.warn(format_exc(e))
 
