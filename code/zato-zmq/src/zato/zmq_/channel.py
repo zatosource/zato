@@ -50,7 +50,7 @@ class Simple(Base):
 
             # Spawn a new greenlet for the callback invoking a service with data received from the socket on input
             _spawn(_callback, {
-                'cid': _new_cid,
+                'cid': _new_cid(),
                 'service': _service,
                 'payload': _impl_recv(), # This line is blocking waiting for requests
                 'zato_ctx': {'channel_config': _config}
