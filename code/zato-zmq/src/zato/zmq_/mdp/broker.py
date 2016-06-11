@@ -233,10 +233,10 @@ class Broker(object):
         """
         self.socket.send_multipart(data)
 
-    def send_to_worker_zato(self, worker, msg_id, msg):
+    def send_to_worker_zato(self, *args):
         """ Sends a message to a Zato service rather than an actual ZeroMQ socket.
         """
-        raise NotImplementedError('send_to_worker_zato')
+        logger.warn(args)
 
 # ################################################################################################################################
 
@@ -252,7 +252,8 @@ class Broker(object):
     def _add_worker(self, worker_id, service_name, ttl, worker_type):
         """ Adds worker-related configuration, no matter if it is an internal or a ZeroMQ-based one.
         """
-        expires_at = datetime.utcnow() + timedelta(seconds=ttl)
+        now = datetime.utcnow()
+        expires_at = now + timedelta(seconds=ttl)
         wd = WorkerData(worker_type, worker_id, service_name, now, None, expires_at)
 
         # Add to details of workers
