@@ -8,13 +8,24 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from logging import getLogger
+
 # gevent
 from gevent import spawn
 
+# PyZMQ
+import zmq.green as zmq
+
 # Zato
-from zato.common import CHANNEL
+from zato.common import CHANNEL, ZMQ
 from zato.common.util import new_cid
 from zato.zmq_ import Base
+from zato.zmq_.mdp.broker import Broker
+
+# ################################################################################################################################
+
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 
@@ -64,5 +75,13 @@ class Simple(Base):
 class MDPv01(Base):
     """ An MDP (Majordomo) v0.1 ZeroMQ channel.
     """
+    start_in_greenlet = True
+
+    def _start(self):
+        super(MDPv01, self)._start()
+
+        # Run the MDP broker
+        b = Broker(self.config)
+        b.serve_forever()
 
 # ################################################################################################################################
