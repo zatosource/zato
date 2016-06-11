@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from datetime import datetime, timedelta
+from traceback import format_exc
 
 # gevent
 from gevent.lock import RLock
@@ -19,6 +20,8 @@ from gevent.lock import RLock
 import zmq.green as zmq
 
 # Zato
+from zato.common import ZMQ
+from zato.common.util import new_cid
 from zato.zmq_.mdp import const, EventBrokerDisconnect, EventBrokerHeartbeat, EventClientReply, EventWorkerRequest, \
      Service, WorkerData
 
@@ -34,8 +37,12 @@ class Broker(object):
     def __init__(self, config):
         self.address = config.address
         self.poll_interval = config.poll_interval
+        self.pool_strategy = config.pool_strategy
         self.keep_running = True
         self.has_debug = logger.isEnabledFor(logging.DEBUG)
+
+        # A hundred years in seconds, used when creating internal workers
+        self.y100 = 60 * 60 * 24 * 365 * 100
 
         # Maps service names to workers registered to handle requests to that service
         self.services = {}
@@ -67,37 +74,42 @@ class Broker(object):
 
     def serve_forever(self):
 
-        # Bind first to make sure we can actually start before logging the fact
-        self.socket.bind(self.address)
+        try:
 
-        # Ok, we are actually running now
-        logger.info('Starting ZMQ MDP 0.1 broker at %s', self.address)
+            # Bind first to make sure we can actually start before logging the fact
+            self.socket.bind(self.address)
 
-        # To speed up look-ups
-        has_debug = self.has_debug
+            # Ok, we are actually running now
+            logger.info('Starting ZMQ MDP 0.1 broker at %s', self.address)
 
-        # Main loop
-        while self.keep_running:
+            # To speed up look-ups
+            has_debug = self.has_debug
 
-            try:
-                items = self.poller.poll(self.poll_interval)
+            # Main loop
+            while self.keep_running:
 
-                # Periodically send heartbeats to all known workers
-                self.send_heartbeats()
+                try:
+                    items = self.poller.poll(self.poll_interval)
 
-            except KeyboardInterrupt:
-                self.send_disconnect_to_all()
-                break
+                    # Periodically send heartbeats to all known workers
+                    self.send_heartbeats()
 
-            if items:
-                msg = self.socket.recv_multipart()
+                except KeyboardInterrupt:
+                    self.send_disconnect_to_all()
+                    break
+
+                if items:
+                    msg = self.socket.recv_multipart()
+                    if has_debug:
+                        logger.info('Received msg at %s %s', self.address, msg)
+
+                    self.handle(msg)
+
                 if has_debug:
-                    logger.info('Received msg at %s %s', self.address, msg)
+                    logger.debug('No items for broker at %s', self.address)
 
-                self.handle(msg)
-
-            if has_debug:
-                logger.debug('No items for broker at %s', self.address)
+        except Exception, e:
+            logger.warn(format_exc(e))
 
 # ################################################################################################################################
 
@@ -169,19 +181,28 @@ class Broker(object):
         payload = msg[3:]
 
         with self.lock:
-            func = self.handle_client if originator == const.v01.client else self.handle_worker
+            func = self.handle_client_message if originator == const.v01.client else self.handle_worker_message
             func(sender_id, *payload)
 
 # ################################################################################################################################
 
     def dispatch_requests(self, service_name):
-        """ Sends all pending requests for that service, assuming there are workers available to handle them.
+        """ Sends all pending requests for that service, assuming there are workers available to handle them,
+        or, if pool_strategy is 'single', creates a worker for that service if it does not exist already.
         """
         # Fetch the service object which at this point must exist
         service = self.services[service_name]
 
         # Clean up expired workers before attempting to deliver any messages
         self.cleanup_workers()
+
+        if not service.has_workers:
+
+            if self.pool_strategy == ZMQ.POOL_STRATEGY_NAME.SINGLE:
+                self._add_worker('mdp.{}'.format(new_cid()), service.name, self.y100, const.worker_type.zato)
+                service.has_workers = True
+            else:
+                raise NotImplementedError()
 
         while service.pending_requests and service.workers:
             req = service.pending_requests.pop(0)
@@ -192,8 +213,8 @@ class Broker(object):
 
 # ################################################################################################################################
 
-    def handle_client(self, sender_id, service_name, received_body):
-        """ Handles a single request from a client. This is the place where triggers the sending of all pending requests
+    def handle_client_message(self, sender_id, service_name, received_body):
+        """ Handles a single message from a client. This is the place where triggers the sending of all pending requests
         to workers for a given service name. Must be called with self.lock held.
         """
 
@@ -219,8 +240,8 @@ class Broker(object):
 
 # ################################################################################################################################
 
-    def handle_worker(self, worker_id, *payload):
-        """ Handles a single request from a worker. Must be called with self.lock held.
+    def handle_worker_message(self, worker_id, *payload):
+        """ Handles a single message from a worker. Must be called with self.lock held.
         """
         event = payload[0]
         func = self.handle_event_map[event]
@@ -228,15 +249,11 @@ class Broker(object):
 
 # ################################################################################################################################
 
-    def on_event_ready(self, worker_id, service_name):
-        """ A worker informs the broker that it is ready to handle messages destined for a given service.
-        Must be called with self.lock held.
+    def _add_worker(self, worker_id, service_name, ttl, worker_type):
+        """ Adds worker-related configuration, no matter if it is an internal or a ZeroMQ-based one.
         """
-        service_name = service_name[0]
-
-        now = datetime.utcnow()
-        expires_at = now + timedelta(seconds=const.ttl)
-        wd = WorkerData(const.worker_type.zmq, worker_id, service_name, now, None, expires_at)
+        expires_at = datetime.utcnow() + timedelta(seconds=ttl)
+        wd = WorkerData(worker_type, worker_id, service_name, now, None, expires_at)
 
         # Add to details of workers
         self.workers[wd.id] = wd
@@ -247,6 +264,13 @@ class Broker(object):
 
         logger.info('Added worker: %s', wd)
 
+# ################################################################################################################################
+
+    def on_event_ready(self, worker_id, service_name):
+        """ A worker informs the broker that it is ready to handle messages destined for a given service.
+        Must be called with self.lock held.
+        """
+        self._add_worker(worker_id, service_name[0], const.ttl, const.worker_type.zmq)
         self.dispatch_requests(service_name)
 
     def on_event_reply(self, worker_id, data):

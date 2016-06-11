@@ -204,8 +204,9 @@ class ZMQ:
     MDP = 'MDP'
     MDP01 = MDP + '01'
 
-    SINGLE = 'single'
-    UNLIMITED = 'unlimited'
+    class POOL_STRATEGY_NAME:
+        SINGLE = 'single'
+        UNLIMITED = 'unlimited'
 
     CHANNEL = OrderedDict({
         PULL: 'Pull',
@@ -219,8 +220,8 @@ class ZMQ:
     }
 
     POOL_STRATEGY = OrderedDict({
-        SINGLE: 'Single',
-        UNLIMITED: 'Unlimited',
+        POOL_STRATEGY_NAME.SINGLE: 'Single',
+        POOL_STRATEGY_NAME.UNLIMITED: 'Unlimited',
     })
 
 ZATO_ODB_POOL_NAME = 'ZATO_ODB'

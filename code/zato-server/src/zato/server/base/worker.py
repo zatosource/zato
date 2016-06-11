@@ -491,9 +491,8 @@ class WorkerStore(BrokerMessageReceiver):
                 api = self.zmq_mdp_v01_api
                 data.config.update(self.server.fs_server_config.zeromq_mdp)
 
-                for name in ('linger', 'poll_interval', 'heartbeat'):
-                    data.config[name] = int(data.config[name])
-
+                for _name in ('linger', 'poll_interval', 'heartbeat'):
+                    data.config[_name] = int(data.config[_name])
             else:
                 api = self.zmq_channel_api
 
