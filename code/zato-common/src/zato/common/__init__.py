@@ -14,6 +14,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from cStringIO import StringIO
 from httplib import responses
+from numbers import Number
 from string import Template
 from sys import maxint
 from traceback import format_exc
@@ -160,6 +161,9 @@ HTTP_RESPONSES[TOO_MANY_REQUESTS] = 'Too Many Requests'
 # Pattern matching order
 TRUE_FALSE = 'true_false'
 FALSE_TRUE = 'false_true'
+
+# If self.response.payload 
+simple_types = (basestring, list, tuple, bool, Number)
 
 # Queries to use in pinging the databases.
 ping_queries = {
