@@ -161,9 +161,12 @@ class Broker(object):
 
             for worker in self.workers.values():
 
-                # We have never sent a HB to this worker or we have sent a HB at least once so we do it again now
-                if not worker.last_hb_sent or now >= worker.last_hb_sent + timedelta(seconds=self.heartbeat):
-                    self._send_heartbeat(worker, now)
+                # Do not send heart-beats to internal workers, only to actual wire-based ZeroMQ ones
+                if worker.type == const.worker_type.zmq:
+
+                    # We have never sent a HB to this worker or we have sent a HB at least once so we do it again now
+                    if not worker.last_hb_sent or now >= worker.last_hb_sent + timedelta(seconds=self.heartbeat):
+                        self._send_heartbeat(worker, now)
 
 # ################################################################################################################################
 
@@ -208,8 +211,10 @@ class Broker(object):
             req = service.pending_requests.pop(0)
             worker = self.workers.pop(service.workers.pop(0))
 
-            func = self.send_to_worker_zato if worker.type == const.worker_type.zato else self.send_to_worker_zmq
-            func(req.serialize(worker.unwrap_id()))
+            if worker.type == const.worker_type.zato:
+                self.send_to_worker_zato(req, worker)
+            else:
+                self.send_to_worker_zmq(req.serialize(worker.unwrap_id()))
 
 # ################################################################################################################################
 
@@ -233,10 +238,16 @@ class Broker(object):
         """
         self.socket.send_multipart(data)
 
-    def send_to_worker_zato(self, *args):
+    def send_to_worker_zato(self, request, worker):
         """ Sends a message to a Zato service rather than an actual ZeroMQ socket.
         """
-        logger.warn(args)
+        logger.warn('11 %r', request.client)
+        logger.warn('22 %r', request.body)
+        logger.warn('33 %r', worker.id)
+
+        # Having handled a request, the worker can be re-added
+        if self.pool_strategy == ZMQ.POOL_STRATEGY_NAME.SINGLE:
+            self._add_worker(worker.id, worker.service_name, self.y100, const.worker_type.zato, False)
 
 # ################################################################################################################################
 
@@ -249,7 +260,7 @@ class Broker(object):
 
 # ################################################################################################################################
 
-    def _add_worker(self, worker_id, service_name, ttl, worker_type):
+    def _add_worker(self, worker_id, service_name, ttl, worker_type, log_added=True):
         """ Adds worker-related configuration, no matter if it is an internal or a ZeroMQ-based one.
         """
         now = datetime.utcnow()
@@ -263,7 +274,9 @@ class Broker(object):
         service = self.services.setdefault(service_name, Service(service_name))
         service.workers.append(wd.id)
 
-        logger.info('Added worker: %s', wd)
+        # Will not be logged if this worker is re-added rather than being added the first time
+        if log_added:
+            logger.info('Added worker: %s', wd)
 
 # ################################################################################################################################
 
@@ -297,7 +310,6 @@ class Broker(object):
     def on_event_disconnect(self, worker_id, data):
         """ A worker wishes to disconnect - we need to remove it from all the places that still reference it, if any.
         """
-        print(self.workers)
         with self.lock:
             wrapped_id = WorkerData.wrap_worker_id(const.worker_type.zmq, worker_id)
 
@@ -309,8 +321,6 @@ class Broker(object):
                 # Likewise, this worker may not exist at all
                 if wrapped_id in service.workers:
                     service.workers.remove(wrapped_id)
-
-            print(self.workers)
 
 # ################################################################################################################################
 
