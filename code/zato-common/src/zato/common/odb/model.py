@@ -995,7 +995,6 @@ class OutgoingZMQ(Base):
     address = Column(String(200), nullable=False)
     socket_type = Column(String(20), nullable=False)
     socket_method = Column(String(20), nullable=False)
-    pool_strategy = Column(String(20), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_zmq', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1112,6 +1111,7 @@ class ChannelZMQ(Base):
     data_format = Column(String(20), nullable=True)
     socket_method = Column(String(20), nullable=False)
     pool_strategy = Column(String(20), nullable=False)
+    service_source = Column(String(20), nullable=False)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
     service = relationship(Service, backref=backref('channels_zmq', order_by=name, cascade='all, delete, delete-orphan'))
