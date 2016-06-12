@@ -49,7 +49,7 @@ class Simple(Base):
 
         # Micro-optimizations to make things faster
         _spawn = spawn
-        _callback = self.callback
+        _callback = self.on_message_callback
         _new_cid = new_cid
         _service = self.service
         _impl_recv = self.impl.recv
@@ -81,7 +81,7 @@ class MDPv01(Base):
         super(MDPv01, self)._start()
 
         # Run the MDP broker
-        b = Broker(self.config)
+        b = Broker(self.config, self.on_message_callback)
         b.serve_forever()
 
 # ################################################################################################################################

@@ -20,7 +20,7 @@ from gevent.lock import RLock
 import zmq.green as zmq
 
 # Zato
-from zato.common import ZMQ
+from zato.common import CHANNEL, ZMQ
 from zato.common.util import new_cid
 from zato.zmq_.mdp import const, EventBrokerDisconnect, EventBrokerHeartbeat, EventClientReply, EventWorkerRequest, \
      Service, WorkerData
@@ -34,15 +34,24 @@ logger = logging.getLogger(__name__)
 class Broker(object):
     """ Implements a broker part of the ZeroMQ Majordomo Protocol 0.1 http://rfc.zeromq.org/spec:7
     """
-    def __init__(self, config):
+    def __init__(self, config, on_message_callback):
+        self.config = config
+        self.on_message_callback = on_message_callback
         self.address = config.address
         self.poll_interval = config.poll_interval
         self.pool_strategy = config.pool_strategy
+        self.service_source = config.service_source
         self.keep_running = True
-        self.has_debug = logger.isEnabledFor(logging.DEBUG)
 
         # A hundred years in seconds, used when creating internal workers
         self.y100 = 60 * 60 * 24 * 365 * 100
+
+        # So they do not have to be looked up on each request
+        self.has_debug = logger.isEnabledFor(logging.DEBUG)
+        self.has_pool_strategy_simple = self.pool_strategy == ZMQ.POOL_STRATEGY_NAME.SINGLE
+        self.has_service_source_zato = self.service_source == ZMQ.SERVICE_SOURCE_NAME.ZATO
+        self.zato_service_name = config.service_name
+        self.zato_channel = CHANNEL.ZMQ
 
         # Maps service names to workers registered to handle requests to that service
         self.services = {}
@@ -241,12 +250,18 @@ class Broker(object):
     def send_to_worker_zato(self, request, worker):
         """ Sends a message to a Zato service rather than an actual ZeroMQ socket.
         """
-        logger.warn('11 %r', request.client)
-        logger.warn('22 %r', request.body)
-        logger.warn('33 %r', worker.id)
+        if self.has_service_source_zato:
+            response = self.on_message_callback({
+                'cid': new_cid(),
+                'service': self.zato_service_name,
+                'channel': self.zato_channel,
+                'payload': request
+            }, self.zato_channel, None, needs_response=True)
+
+            self._reply(request.client, response)
 
         # Having handled a request, the worker can be re-added
-        if self.pool_strategy == ZMQ.POOL_STRATEGY_NAME.SINGLE:
+        if self.has_pool_strategy_simple:
             self._add_worker(worker.id, worker.service_name, self.y100, const.worker_type.zato, False)
 
 # ################################################################################################################################
@@ -280,6 +295,11 @@ class Broker(object):
 
 # ################################################################################################################################
 
+    def _reply(self, recipient, body):
+        self.socket.send_multipart(EventClientReply(body, recipient, b'dummy-for-now').serialize())
+
+# ################################################################################################################################
+
     def on_event_ready(self, worker_id, service_name):
         """ A worker informs the broker that it is ready to handle messages destined for a given service.
         Must be called with self.lock held.
@@ -289,7 +309,7 @@ class Broker(object):
 
     def on_event_reply(self, worker_id, data):
         recipient, _, body = data
-        self.socket.send_multipart(EventClientReply(body, recipient, b'dummy-for-now').serialize())
+        self._reply(recipient, body)
 
     def on_event_heartbeat(self, worker_id, _ignored):
         """ Updates heartbeat data for a worker. Must be called with self.lock held.

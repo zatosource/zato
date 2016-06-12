@@ -34,7 +34,7 @@ class Reply(object):
 class Client(BaseZMQConnection):
     """ Standalone implementation of a client for ZeroMQ Majordomo Protocol 0.1 http://rfc.zeromq.org/spec:7
     """
-    def send(self, service, body, needs_reply=False, timeout=1):
+    def send(self, service, body, needs_reply=False, timeout=0.2):
         self.client_socket.send_multipart(EventClientRequest(body, service).serialize())
 
         if needs_reply:

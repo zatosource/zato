@@ -65,11 +65,11 @@ class Connector(object):
     # Whether that connector's start method should be called in its own greenlet
     start_in_greenlet = False
 
-    def __init__(self, name, type, config, callback=None):
+    def __init__(self, name, type, config, on_message_callback=None):
         self.name = name
         self.type = type
         self.config = config
-        self.callback = callback # Invoked by channels for each message received
+        self.on_message_callback = on_message_callback # Invoked by channels for each message received
         self.service = config.get('service_name') # Service to invoke by channels for each message received
 
         self.id = self.config.id
@@ -185,9 +185,9 @@ class ConnectorStore(object):
         self.connectors = {}
         self.lock = RLock()
 
-    def create(self, name, config, callback=None):
+    def create(self, name, config, on_message_callback=None):
         with self.lock:
-            self.connectors[name] = self.connector_class(name, self.type, config, callback)
+            self.connectors[name] = self.connector_class(name, self.type, config, on_message_callback)
 
     def edit(self, old_name, config):
         with self.lock:
