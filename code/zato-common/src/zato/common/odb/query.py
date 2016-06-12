@@ -500,7 +500,7 @@ def _channel_zmq(session, cluster_id):
     return session.query(
         ChannelZMQ.id, ChannelZMQ.name, ChannelZMQ.is_active,
         ChannelZMQ.address, ChannelZMQ.socket_type, ChannelZMQ.socket_method, ChannelZMQ.sub_key,
-        ChannelZMQ.pool_strategy, ChannelZMQ.data_format,
+        ChannelZMQ.pool_strategy, ChannelZMQ.service_source, ChannelZMQ.data_format,
         Service.name.label('service_name'), Service.impl_name.label('service_impl_name')).\
         filter(Service.id==ChannelZMQ.service_id).\
         filter(Cluster.id==ChannelZMQ.cluster_id).\

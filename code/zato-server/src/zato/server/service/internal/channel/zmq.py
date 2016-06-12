@@ -26,7 +26,7 @@ class GetList(AdminService):
         response_elem = 'zato_channel_zmq_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
-            'service_name', 'pool_strategy', 'data_format')
+            'service_name', 'pool_strategy', 'service_source', 'data_format')
         output_optional = ('sub_key',)
 
     def get_data(self, session):
@@ -43,7 +43,7 @@ class Create(AdminService):
         request_elem = 'zato_channel_zmq_create_request'
         response_elem = 'zato_channel_zmq_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
-            'pool_strategy', 'service')
+            'pool_strategy', 'service_source', 'service')
         input_optional = ('sub_key', 'data_format')
         output_required = ('id', 'name')
 
@@ -82,6 +82,7 @@ class Create(AdminService):
                 item.cluster_id = input.cluster_id
                 item.service = service
                 item.pool_strategy = input.pool_strategy
+                item.service_source = input.service_source
                 item.data_format = input.data_format
 
                 session.add(item)
@@ -109,7 +110,7 @@ class Edit(AdminService):
         request_elem = 'zato_channel_zmq_edit_request'
         response_elem = 'zato_channel_zmq_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
-            'pool_strategy', 'service')
+            'pool_strategy', 'service_source', 'service')
         input_optional = ('sub_key', 'data_format')
         output_required = ('id', 'name')
 
@@ -145,6 +146,7 @@ class Edit(AdminService):
                 item.sub_key = input.sub_key
                 item.service = service
                 item.pool_strategy = input.pool_strategy
+                item.service_source = input.service_source
                 item.data_format = input.data_format
 
                 session.add(item)

@@ -204,14 +204,20 @@ class ZMQ:
     MDP = 'MDP'
     MDP01 = MDP + '01'
 
+    MDP01_HUMAN = 'Majordomo 0.1 (MDP)'
+
     class POOL_STRATEGY_NAME:
         SINGLE = 'single'
         UNLIMITED = 'unlimited'
 
+    class SERVICE_SOURCE_NAME:
+        ZATO = 'zato'
+        MDP01 = 'mdp01'
+
     CHANNEL = OrderedDict({
         PULL: 'Pull',
         SUB: 'Sub',
-        MDP01: 'Majordomo 0.1 (MDP)',
+        MDP01: MDP01_HUMAN,
     })
 
     METHOD = {
@@ -222,6 +228,11 @@ class ZMQ:
     POOL_STRATEGY = OrderedDict({
         POOL_STRATEGY_NAME.SINGLE: 'Single',
         POOL_STRATEGY_NAME.UNLIMITED: 'Unlimited',
+    })
+
+    SERVICE_SOURCE = OrderedDict({
+        SERVICE_SOURCE_NAME.ZATO: 'Zato',
+        SERVICE_SOURCE_NAME.MDP01: MDP01_HUMAN,
     })
 
 ZATO_ODB_POOL_NAME = 'ZATO_ODB'
