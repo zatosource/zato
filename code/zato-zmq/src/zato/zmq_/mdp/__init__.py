@@ -103,7 +103,7 @@ class WorkerData(object):
 
     def __init__(self, type, id, service_name, last_hb_received=None, last_hb_sent=None, expires_at=None):
         self.type = type
-        self.id = self.wrap_id(id)
+        self.id = self.wrap_id(id) if type == const.worker_type.zmq else id
         self.service_name = service_name
         self.last_hb_received = last_hb_received
         self.last_hb_sent = last_hb_sent
