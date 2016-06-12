@@ -13,6 +13,7 @@ import logging
 from copy import deepcopy
 from httplib import OK
 from itertools import chain
+from numbers import Number
 from traceback import format_exc
 
 # anyjson
@@ -30,13 +31,15 @@ from lxml.objectify import deannotate, Element, ElementMaker, ObjectifiedElement
 from sqlalchemy.util import KeyedTuple
 
 # Zato
-from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, SIMPLE_IO, TRACE1, ZatoException, ZATO_OK
+from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, SIMPLE_IO, simple_types, TRACE1, ZatoException, ZATO_OK
 from zato.common.util import make_repr
 from zato.server.service.reqresp.sio import AsIs, convert_param, ForceType, ServiceInput, SIOConverter
 
 logger = logging.getLogger(__name__)
 
 NOT_GIVEN = 'ZATO_NOT_GIVEN'
+
+direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 
 # ################################################################################################################################
 
@@ -458,7 +461,7 @@ class Response(object):
         """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
         the dicts are matched and transformed according to the SIO definition.
         """
-        if isinstance(value, (basestring, list, tuple, EtreeElement, ObjectifiedElement)) and not isinstance(value, KeyedTuple):
+        if isinstance(value, direct_payload) and not isinstance(value, KeyedTuple):
             self._payload = value
         else:
             if isinstance(value, dict):

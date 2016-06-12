@@ -221,7 +221,7 @@ class Broker(object):
             worker = self.workers.pop(service.workers.pop(0))
 
             if worker.type == const.worker_type.zato:
-                self.send_to_worker_zato(req, worker)
+                self.send_to_worker_zato(req, worker, service_name)
             else:
                 self.send_to_worker_zmq(req.serialize(worker.unwrap_id()))
 
@@ -247,18 +247,37 @@ class Broker(object):
         """
         self.socket.send_multipart(data)
 
-    def send_to_worker_zato(self, request, worker):
-        """ Sends a message to a Zato service rather than an actual ZeroMQ socket.
-        """
-        if self.has_service_source_zato:
-            response = self.on_message_callback({
+    def _invoke_service(self, service, request):
+        return self.on_message_callback({
                 'cid': new_cid(),
-                'service': self.zato_service_name,
+                'service': service,
                 'channel': self.zato_channel,
                 'payload': request
             }, self.zato_channel, None, needs_response=True)
 
-            self._reply(request.client, response)
+    def send_to_worker_zato(self, request, worker, zmq_service_name):
+        """ Sends a message to a Zato service rather than an actual ZeroMQ socket.
+        """
+
+        # If the caller wants to invoke a pre-defined service then we let it in
+        # since the person who created this channel knows what they are doing.
+
+        if self.has_service_source_zato:
+            is_allowed = True
+            service = self.zato_service_name
+
+        # However, if the caller wants to invoke a service by its name then we first need
+        # to consult a user-defined authorization service and ask if the caller is allowed to do it.
+        else:
+            is_allowed = self._invoke_service(self.zato_service_name, request)
+            service = zmq_service_name
+
+        # Invoke the final service and return response to the caller - note however that if the caller
+        # is not allowed to invoke that service then no response is ever returned.
+        if is_allowed:
+            self._reply(request.client, self._invoke_service(service, request) or b'')
+        else:
+            logger.warn('Client `%r` is not allowed to invoke `%s` through `%s`', request.client, service, self.zato_service_name)
 
         # Having handled a request, the worker can be re-added
         if self.has_pool_strategy_simple:

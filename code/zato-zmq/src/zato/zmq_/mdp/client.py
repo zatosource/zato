@@ -70,5 +70,5 @@ class Client(BaseZMQConnection):
 if __name__ == '__main__':
     c = Client(log_details=True)
     c.connect()
-    reply = c.send(b'My service', b'{"id":"123", "data":"mydata"}', True)
+    reply = c.send(b'zato.helpers.input-logger', b'{"id":"123", "data":"mydata"}', True)
     print('Reply', reply.body)

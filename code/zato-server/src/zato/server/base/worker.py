@@ -39,7 +39,7 @@ from retools.lock import Lock
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, \
-     SEC_DEF_TYPE, SIMPLE_IO, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
+     SEC_DEF_TYPE, SIMPLE_IO, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common import broker_message, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
@@ -102,6 +102,9 @@ class WorkerStore(BrokerMessageReceiver):
 
         # Which targets this server supports
         self.target_matcher = Matcher()
+
+        # To speed up look-ups
+        self._simple_types = simple_types
 
     def init(self):
 
@@ -1004,7 +1007,7 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def _set_service_response_data(self, service, **ignored):
-        if not isinstance(service.response.payload, basestring):
+        if not isinstance(service.response.payload, self._simple_types):
             service.response.payload = service.response.payload.getvalue()
 
     def on_message_invoke_service(self, msg, channel, action, args=None, **kwargs):
