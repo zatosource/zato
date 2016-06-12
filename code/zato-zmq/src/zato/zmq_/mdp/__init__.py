@@ -134,7 +134,7 @@ class EventReady(object):
         self.service_name = service_name
 
     def serialize(self):
-        return ['', const.v01.worker, const.v01.ready, self.service_name]
+        return [b'', const.v01.worker, const.v01.ready, self.service_name]
 
 # ################################################################################################################################
 
@@ -144,7 +144,7 @@ class EventWorkerHeartbeat(object):
     type = const.v01.heartbeat_worker_to_broker
 
     def serialize(self):
-        return ['', const.v01.worker, const.v01.heartbeat]
+        return [b'', const.v01.worker, const.v01.heartbeat]
 
 # ################################################################################################################################
 
@@ -157,7 +157,7 @@ class EventBrokerHeartbeat(object):
         self.worker_id = worker_id
 
     def serialize(self):
-        return [self.worker_id, '', const.v01.worker, const.v01.heartbeat]
+        return [self.worker_id, b'', const.v01.worker, const.v01.heartbeat]
 
 # ################################################################################################################################
 
@@ -189,7 +189,7 @@ class EventWorkerRequest(object):
     def serialize(self, worker_id):
         """ Serializes this message on behalf of a broker sending it to a given worker by its worker_id.
         """
-        return [worker_id, '', const.v01.worker, const.v01.request_to_worker, self.client, '', self.body]
+        return [worker_id, b'', const.v01.worker, const.v01.request_to_worker, self.client, b'', self.body]
 
 # ################################################################################################################################
 
@@ -206,7 +206,7 @@ class EventClientReply(object):
     def serialize(self):
         """ Serializes this message on behalf of a worker sending it to a broker.
         """
-        return [self.recipient, '', const.v01.client, self.service, self.body]
+        return [self.recipient, b'', const.v01.client, self.service, self.body]
 
 # ################################################################################################################################
 
@@ -242,6 +242,6 @@ class EventBrokerDisconnect(object):
     type = const.v01.disconnect
 
     def serialize(self, worker_id):
-        return [worker_id, '', const.v01.worker, const.v01.disconnect]
+        return [worker_id, b'', const.v01.worker, const.v01.disconnect]
 
 # ################################################################################################################################

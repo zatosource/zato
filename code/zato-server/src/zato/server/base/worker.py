@@ -1007,7 +1007,7 @@ class WorkerStore(BrokerMessageReceiver):
         if not isinstance(service.response.payload, basestring):
             service.response.payload = service.response.payload.getvalue()
 
-    def on_message_invoke_service(self, msg, channel, action, args=None):
+    def on_message_invoke_service(self, msg, channel, action, args=None, **kwargs):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
         """
@@ -1083,6 +1083,9 @@ class WorkerStore(BrokerMessageReceiver):
             cb_msg['in_reply_to'] = cid
 
             self.broker_client.invoke_async(cb_msg)
+
+        if kwargs.get('needs_response'):
+            return service.response.payload
 
 # ################################################################################################################################
 
