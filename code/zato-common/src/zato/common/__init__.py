@@ -163,7 +163,7 @@ TRUE_FALSE = 'true_false'
 FALSE_TRUE = 'false_true'
 
 # If self.response.payload 
-simple_types = (basestring, list, tuple, bool, Number)
+simple_types = (basestring, dict, list, tuple, bool, Number)
 
 # Queries to use in pinging the databases.
 ping_queries = {

@@ -20,7 +20,7 @@ from gevent.lock import RLock
 import zmq.green as zmq
 
 # Zato
-from zato.common import CHANNEL, ZMQ
+from zato.common import CHANNEL, simple_types, ZMQ
 from zato.common.util import new_cid
 from zato.zmq_.mdp import const, EventBrokerDisconnect, EventBrokerHeartbeat, EventClientReply, EventWorkerRequest, \
      Service, WorkerData
@@ -94,18 +94,17 @@ class Broker(object):
             # To speed up look-ups
             has_debug = self.has_debug
 
-            # Main loop
-            while self.keep_running:
+        except Exception, e:
+            logger.warn(format_exc(e))
 
-                try:
-                    items = self.poller.poll(self.poll_interval)
+        # Main loop
+        while self.keep_running:
 
-                    # Periodically send heartbeats to all known workers
-                    self.send_heartbeats()
+            try:
+                items = self.poller.poll(self.poll_interval)
 
-                except KeyboardInterrupt:
-                    self.send_disconnect_to_all()
-                    break
+                # Periodically send heartbeats to all known workers
+                self.send_heartbeats()
 
                 if items:
                     msg = self.socket.recv_multipart()
@@ -115,10 +114,14 @@ class Broker(object):
                     self.handle(msg)
 
                 if has_debug:
-                    logger.debug('No items for broker at %s', self.address)
+                        logger.debug('No items for broker at %s', self.address)
 
-        except Exception, e:
-            logger.warn(format_exc(e))
+            except KeyboardInterrupt:
+                self.send_disconnect_to_all()
+                break
+
+            except Exception, e:
+                logger.warn(format_exc(e))
 
 # ################################################################################################################################
 
@@ -259,29 +262,44 @@ class Broker(object):
         """ Sends a message to a Zato service rather than an actual ZeroMQ socket.
         """
 
-        # If the caller wants to invoke a pre-defined service then we let it in
-        # since the person who created this channel knows what they are doing.
+        try:
 
-        if self.has_service_source_zato:
-            is_allowed = True
-            service = self.zato_service_name
+            # If the caller wants to invoke a pre-defined service then we let it in
+            # since the person who created this channel knows what they are doing.
 
-        # However, if the caller wants to invoke a service by its name then we first need
-        # to consult a user-defined authorization service and ask if the caller is allowed to do it.
-        else:
-            is_allowed = self._invoke_service(self.zato_service_name, request)
-            service = zmq_service_name
+            if self.has_service_source_zato:
+                is_allowed = True
+                service = self.zato_service_name
 
-        # Invoke the final service and return response to the caller - note however that if the caller
-        # is not allowed to invoke that service then no response is ever returned.
-        if is_allowed:
-            self._reply(request.client, self._invoke_service(service, request) or b'')
-        else:
-            logger.warn('Client `%r` is not allowed to invoke `%s` through `%s`', request.client, service, self.zato_service_name)
+            # However, if the caller wants to invoke a service by its name then we first need
+            # to consult a user-defined authorization service and ask if the caller is allowed to do it.
+            else:
+                is_allowed = self._invoke_service(self.zato_service_name, request)
+                service = zmq_service_name
 
-        # Having handled a request, the worker can be re-added
-        if self.has_pool_strategy_simple:
-            self._add_worker(worker.id, worker.service_name, self.y100, const.worker_type.zato, False)
+            # Invoke the final service and return response to the caller - note however that if the caller
+            # is not allowed to invoke that service then no response is ever returned.
+            if is_allowed:
+
+                # Always need to respond with bytes - this is what PyZMQ API requires
+                response = self._invoke_service(service, request)
+
+                if isinstance(response, basestring) and not isinstance(response, bytes):
+                    response = response.encode('utf-8')
+
+                else:
+                    response = (b'%s' % response) if response is not None else b''
+
+                self._reply(request.client, response)
+
+            else:
+                logger.warn('Client `%r` is not allowed to invoke `%s` through `%s`', request.client, service, self.zato_service_name)
+
+        finally:
+
+            # Having handled a request, the worker can be re-added
+            if self.has_pool_strategy_simple:
+                self._add_worker(worker.id, worker.service_name, self.y100, const.worker_type.zato, False)
 
 # ################################################################################################################################
 
