@@ -48,8 +48,7 @@ from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
 from zato.common import ACCESS_LOG_DT_FORMAT, KVDB, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS,\
      ZATO_ODB_POOL_NAME
-from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, TOPICS, \
-     ZMQ_CONNECTOR
+from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, TOPICS
 from zato.common.pubsub import PubSubAPI, RedisPubSub
 from zato.common.time_util import TimeUtil
 from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, hot_deploy, \

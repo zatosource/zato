@@ -13,7 +13,6 @@ import logging
 from copy import deepcopy
 from httplib import OK
 from itertools import chain
-from numbers import Number
 from traceback import format_exc
 
 # anyjson

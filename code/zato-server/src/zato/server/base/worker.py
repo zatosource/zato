@@ -20,7 +20,7 @@ from urlparse import urlparse
 from uuid import uuid4
 
 # Bunch
-from zato.bunch import Bunch, bunchify
+from zato.bunch import Bunch
 
 # dateutil
 from dateutil.parser import parse
@@ -63,7 +63,6 @@ from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
 from zato.server.connection.sql import PoolStore, SessionWrapper
-from zato.server.connection.zmq_.outgoing import ZMQAPI as ZMQAPIOut, ZMQConnStore as ZMQConnStoreOut
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC

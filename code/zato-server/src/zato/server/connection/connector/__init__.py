@@ -16,10 +16,6 @@ from traceback import format_exc
 from gevent import spawn, Timeout
 from gevent.lock import RLock
 
-# Zato
-from zato.common import CHANNEL, ZMQ
-from zato.common.util import new_cid
-
 # ################################################################################################################################
 
 logger = getLogger(__name__)
@@ -195,7 +191,7 @@ class ConnectorStore(object):
 
     def delete(self, name):
         with self.lock:
-            self.connectors[name].delete(config)
+            self.connectors[name].delete()
             del self.connectors[name]
 
     def start(self):
