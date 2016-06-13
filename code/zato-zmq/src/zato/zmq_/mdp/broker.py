@@ -21,7 +21,7 @@ from gevent.lock import RLock
 import zmq.green as zmq
 
 # Zato
-from zato.common import CHANNEL, simple_types, ZMQ
+from zato.common import CHANNEL, ZMQ
 from zato.common.util import new_cid
 from zato.zmq_.mdp import const, EventBrokerDisconnect, EventBrokerHeartbeat, EventClientReply, EventWorkerRequest, \
      Service, WorkerData
@@ -231,7 +231,6 @@ class Broker(object):
         means that the service has no workers available at this moment.
         """
         with self.lock:
-            len_service_workers = len(service.workers)
 
             # Ok, it's the first time around so we just assign the initial batch of workers
             if not service.has_initialized_workers:

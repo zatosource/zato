@@ -10,7 +10,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import zmq.green as zmq
 
 # Zato
-from zato.common import ZMQ
 from zato.server.connection.connector import Connector
 
 # ################################################################################################################################

@@ -11,12 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
-# gevent
-from gevent import sleep
-
-# ZeroMQ
-import zmq.green as zmq
-
 # Zato
 from zato.server.store import BaseAPI, BaseStore
 

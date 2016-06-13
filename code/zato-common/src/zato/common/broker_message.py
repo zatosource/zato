@@ -234,14 +234,20 @@ class CHANNEL(Constants):
     STOMP_CHANGE_PASSWORD = ValueConstant('')
 
 class AMQP_CONNECTOR(Constants):
+    """ Since 3.0, this is not used anymore.
+    """
     code_start = 101200
     CLOSE = ValueConstant('')
 
 class JMS_WMQ_CONNECTOR(Constants):
+    """ Since 3.0, this is not used anymore.
+    """
     code_start = 101400
     CLOSE = ValueConstant('')
 
 class ZMQ_CONNECTOR(Constants):
+    """ Since 3.0, this is not used anymore.
+    """
     code_start = 101600
     CLOSE = ValueConstant('')
 
