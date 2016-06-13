@@ -190,6 +190,9 @@ soap12 = {SOAP12}
 linger=0
 poll_interval=100
 heartbeat=3
+workers_pool_initial = 10
+workers_pool_mult = 2
+workers_pool_max = 250
 
 [os_environ]
 sample_key=sample_value

@@ -91,8 +91,18 @@ class Service(object):
     def __init__(self, name=None, workers=None):
         self.name = name
         self.workers = workers or []
-        self.has_workers = False # Will be set to True if there has been at least one worker assigned to that service
-        self.pending_requests = [] # All requests currently queued up, i.e. received from clients but not delivered to workers yet
+
+        # How many workers, busy or not, this service has
+        self.len_current_workers = 0
+
+        # Will be set to True if there has been at least one worker assigned to that service
+        self.has_initialized_workers = False
+
+        # Will be set to True if we cannot add more workers to that service
+        self.has_max_workers = False
+
+        # All requests currently queued up, i.e. received from clients but not delivered to workers yet
+        self.pending_requests = []
 
 # ################################################################################################################################
 

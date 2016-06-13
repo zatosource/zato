@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from traceback import format_exc
 
 # gevent
+from gevent import spawn
 from gevent.lock import RLock
 
 # ZeroMQ
@@ -52,6 +53,15 @@ class Broker(object):
         self.has_service_source_zato = self.service_source == ZMQ.SERVICE_SOURCE_NAME.ZATO
         self.zato_service_name = config.service_name
         self.zato_channel = CHANNEL.ZMQ
+
+        if self.has_pool_strategy_simple:
+            self.workers_pool_initial = 1
+            self.workers_pool_mult = 0
+            self.workers_pool_max = 1
+        else:
+            self.workers_pool_initial = config.workers_pool_initial
+            self.workers_pool_mult = config.workers_pool_mult
+            self.workers_pool_max = config.workers_pool_max
 
         # Maps service names to workers registered to handle requests to that service
         self.services = {}
@@ -108,10 +118,11 @@ class Broker(object):
 
                 if items:
                     msg = self.socket.recv_multipart()
+
                     if has_debug:
                         logger.info('Received msg at %s %s', self.address, msg)
 
-                    self.handle(msg)
+                    spawn(self.handle, msg)
 
                 if has_debug:
                         logger.debug('No items for broker at %s', self.address)
@@ -191,13 +202,56 @@ class Broker(object):
     def handle(self, msg):
         """ Handles a message received from the socket.
         """
-        sender_id = msg[0]
-        originator = msg[2]
-        payload = msg[3:]
+        try:
+            sender_id = msg[0]
+            originator = msg[2]
+            payload = msg[3:]
 
-        with self.lock:
             func = self.handle_client_message if originator == const.v01.client else self.handle_worker_message
             func(sender_id, *payload)
+
+        except Exception, e:
+            logger.warn(format_exc(e))
+
+# ################################################################################################################################
+
+    def _add_workers(self, service, n):
+        """ Adds n workers to a service
+        """
+        logger.info(
+            'ZeroMQ MDP channel `%s` adding %s worker{} for `%s`'.format('' if n==1 else 's'),
+            self.config.name, n, service.name)
+
+        for x in range(n):
+            self._add_worker('mdp.{}'.format(new_cid()), service.name, self.y100, const.worker_type.zato)
+
+    def add_workers(self, service):
+        """ Logic to add a pool of workers to the service - how many to add in each batch and what the limit is
+        has been already precomputed in __init__. This method assumes that the fact that it is being invoked
+        means that the service has no workers available at this moment.
+        """
+        with self.lock:
+            len_service_workers = len(service.workers)
+
+            # Ok, it's the first time around so we just assign the initial batch of workers
+            if not service.has_initialized_workers:
+                self._add_workers(service, self.workers_pool_initial)
+                service.has_initialized_workers = True
+                service.len_current_workers = self.workers_pool_initial
+
+            # Expand the worker pool with as many workers as possible but without exceeding the limit
+            else:
+                how_many_to_add = service.len_current_workers * self.workers_pool_mult
+
+                # Make sure we do not add workers beyond the limit
+                if service.len_current_workers + how_many_to_add > self.workers_pool_max:
+                    how_many_to_add = self.workers_pool_max - service.len_current_workers
+
+                self._add_workers(service, how_many_to_add)
+                service.len_current_workers += how_many_to_add
+
+            if service.len_current_workers >= self.workers_pool_max:
+                service.has_max_workers = True
 
 # ################################################################################################################################
 
@@ -211,13 +265,14 @@ class Broker(object):
         # Clean up expired workers before attempting to deliver any messages
         self.cleanup_workers()
 
-        if not service.has_workers:
+        if not service.workers:
 
-            if self.pool_strategy == ZMQ.POOL_STRATEGY_NAME.SINGLE:
-                self._add_worker('mdp.{}'.format(new_cid()), service.name, self.y100, const.worker_type.zato)
-                service.has_workers = True
-            else:
-                raise NotImplementedError()
+            if service.has_max_workers:
+                msg = 'ZeroMQ MDP channel `%s` cannot add more workers for service `%s` (reached max=%s)'
+                logger.warn(msg, self.config.name, service_name, self.workers_pool_max)
+                return
+
+            self.add_workers(service)
 
         while service.pending_requests and service.workers:
             req = service.pending_requests.pop(0)
@@ -232,13 +287,13 @@ class Broker(object):
 
     def handle_client_message(self, sender_id, service_name, received_body):
         """ Handles a single message from a client. This is the place where triggers the sending of all pending requests
-        to workers for a given service name. Must be called with self.lock held.
+        to workers for a given service name.
         """
-
         # Create the service object if it does not exist - this may be the case
         # if clients connect before workers.
-        service = self.services.setdefault(service_name, Service(service_name))
-        service.pending_requests.append(EventWorkerRequest(received_body, sender_id))
+        with self.lock:
+            service = self.services.setdefault(service_name, Service(service_name))
+            service.pending_requests.append(EventWorkerRequest(received_body, sender_id))
 
         # Ok, we can send the request now to a worker
         self.dispatch_requests(service_name)
@@ -261,7 +316,6 @@ class Broker(object):
     def send_to_worker_zato(self, request, worker, zmq_service_name):
         """ Sends a message to a Zato service rather than an actual ZeroMQ socket.
         """
-
         try:
 
             # If the caller wants to invoke a pre-defined service then we let it in
@@ -296,15 +350,15 @@ class Broker(object):
                 logger.warn('Client `%r` is not allowed to invoke `%s` through `%s`', request.client, service, self.zato_service_name)
 
         finally:
-
-            # Having handled a request, the worker can be re-added
-            if self.has_pool_strategy_simple:
-                self._add_worker(worker.id, worker.service_name, self.y100, const.worker_type.zato, False)
+            # The service returned so we need to add this worker back to the pool
+            # (we actually add a new one for the same service which amounts to the same thing)
+            with self.lock:
+                self._add_worker(worker.id, worker.service_name, self.y100, const.worker_type.zato)
 
 # ################################################################################################################################
 
     def handle_worker_message(self, worker_id, *payload):
-        """ Handles a single message from a worker. Must be called with self.lock held.
+        """ Handles a single message from a worker.
         """
         event = payload[0]
         func = self.handle_event_map[event]
@@ -326,10 +380,6 @@ class Broker(object):
         service = self.services.setdefault(service_name, Service(service_name))
         service.workers.append(wd.id)
 
-        # Will not be logged if this worker is re-added rather than being added the first time
-        if log_added:
-            logger.info('Added worker: %s', wd)
-
 # ################################################################################################################################
 
     def _reply(self, recipient, body):
@@ -341,7 +391,9 @@ class Broker(object):
         """ A worker informs the broker that it is ready to handle messages destined for a given service.
         Must be called with self.lock held.
         """
-        self._add_worker(worker_id, service_name[0], const.ttl, const.worker_type.zmq)
+        with self.lock:
+            self._add_worker(worker_id, service_name[0], const.ttl, const.worker_type.zmq)
+
         self.dispatch_requests(service_name)
 
     def on_event_reply(self, worker_id, data):
@@ -349,20 +401,21 @@ class Broker(object):
         self._reply(recipient, body)
 
     def on_event_heartbeat(self, worker_id, _ignored):
-        """ Updates heartbeat data for a worker. Must be called with self.lock held.
+        """ Updates heartbeat data for a worker.
         """
-        wrapped_id = WorkerData.wrap_worker_id(const.worker_type.zmq, worker_id)
-        worker = self.workers.get(wrapped_id)
+        with self.lock:
+            wrapped_id = WorkerData.wrap_worker_id(const.worker_type.zmq, worker_id)
+            worker = self.workers.get(wrapped_id)
 
-        if not worker:
-            logger.warn('No worker found for HB `%s`', wrapped_id)
-            return
+            if not worker:
+                logger.warn('No worker found for HB `%s`', wrapped_id)
+                return
 
-        now = datetime.utcnow()
-        expires_at = now + timedelta(seconds=const.ttl)
+            now = datetime.utcnow()
+            expires_at = now + timedelta(seconds=const.ttl)
 
-        worker.last_hb_received = now
-        worker.expires_at = expires_at
+            worker.last_hb_received = now
+            worker.expires_at = expires_at
 
     def on_event_disconnect(self, worker_id, data):
         """ A worker wishes to disconnect - we need to remove it from all the places that still reference it, if any.

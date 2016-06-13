@@ -70,5 +70,9 @@ class Client(BaseZMQConnection):
 if __name__ == '__main__':
     c = Client(log_details=True)
     c.connect()
-    reply = c.send(b'zmq2.my-service', b'{"id":"123", "data":"mydata"}', True)
-    print('Reply', repr(reply.body))
+    for x in range(6):
+        try:
+            reply = c.send(b'zmq2.my-service', b'{"id":"123", "data":"mydata"}', True)
+            print(x, 'Reply', repr(reply.body))
+        except Exception, e:
+            print(e)
