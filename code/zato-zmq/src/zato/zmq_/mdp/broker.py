@@ -125,7 +125,7 @@ class Broker(object):
                     spawn(self.handle, msg)
 
                 if has_debug:
-                        logger.debug('No items for broker at %s', self.address)
+                    logger.debug('No items for broker at %s', self.address)
 
             except KeyboardInterrupt:
                 self.send_disconnect_to_all()
@@ -349,8 +349,8 @@ class Broker(object):
                 logger.warn('Client `%r` is not allowed to invoke `%s` through `%s`', request.client, service, self.zato_service_name)
 
         finally:
-            # The service returned so we need to add this worker back to the pool
-            # (we actually add a new one for the same service which amounts to the same thing)
+            # Whether the service was invoked or not we need to add this worker back to the pool
+            # (we actually add a new one for the same service but it amounts to the same thing).
             with self.lock:
                 self._add_worker(worker.id, worker.service_name, self.y100, const.worker_type.zato)
 
