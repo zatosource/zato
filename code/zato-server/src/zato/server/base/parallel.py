@@ -48,8 +48,7 @@ from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
 from zato.common import ACCESS_LOG_DT_FORMAT, KVDB, MISC, SERVER_JOIN_STATUS, SERVER_UP_STATUS,\
      ZATO_ODB_POOL_NAME
-from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, TOPICS, \
-     ZMQ_CONNECTOR
+from zato.common.broker_message import AMQP_CONNECTOR, code_to_name, HOT_DEPLOY, JMS_WMQ_CONNECTOR, MESSAGE_TYPE, TOPICS
 from zato.common.pubsub import PubSubAPI, RedisPubSub
 from zato.common.time_util import TimeUtil
 from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, hot_deploy, \
@@ -62,7 +61,6 @@ from zato.server.connection.amqp.outgoing import start_connector as amqp_out_sta
 from zato.server.connection.http_soap.url_data import Matcher
 from zato.server.connection.jms_wmq.channel import start_connector as jms_wmq_channel_start_connector
 from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_out_start_connector
-from zato.server.connection.zmq_.channel import start_connector as zmq_channel_start_connector
 from zato.server.pickup import get_pickup
 
 logger = logging.getLogger(__name__)
@@ -328,6 +326,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.worker_store = WorkerStore(self.config, self)
         self.worker_store.invoke_matcher.read_config(self.fs_server_config.invoke_patterns_allowed)
         self.worker_store.target_matcher.read_config(self.fs_server_config.invoke_target_patterns_allowed)
+        
 
         # Patterns to match during deployment
         self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns_allowed)
@@ -508,7 +507,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.config.out_plain_http = ConfigDict.from_query('out_plain_http', query)
 
         # SOAP
-        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'tym resoap', True)
+        query = self.odb.get_http_soap_list(server.cluster.id, 'outgoing', 'soap', True)
         self.config.out_soap = ConfigDict.from_query('out_soap', query)
 
         # SQL
@@ -519,7 +518,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         query = self.odb.get_out_stomp_list(server.cluster.id, True)
         self.config.out_stomp = ConfigDict.from_query('out_stomp', query)
 
-        # ZMQtym re
+        # ZMQ channels
+        query = self.odb.get_channel_zmq_list(server.cluster.id, True)
+        self.config.channel_zmq = ConfigDict.from_query('channel_zmq', query)
+
+        # ZMQ outgoing
         query = self.odb.get_out_zmq_list(server.cluster.id, True)
         self.config.out_zmq = ConfigDict.from_query('out_zmq', query)
 
@@ -772,17 +775,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         else:
             logger.info('No JMS WebSphere MQ outgoing connections to start')
 
-        # ZMQ - channels
-        channel_zmq_list = self.odb.get_channel_zmq_list(self.cluster_id)
-        if channel_zmq_list:
-            for item in channel_zmq_list:
-                if item.is_active:
-                    zmq_channel_start_connector(self.repo_location, item.id)
-                else:
-                    logger.info('Not starting an inactive channel (ZeroMQ {})'.format(item.name))
-        else:
-            logger.info('No Zero MQ channels to start')
-
     def _after_init_non_accepted(self, server):
         raise NotImplementedError("This Zato version doesn't support join states other than ACCEPTED")
 
@@ -888,6 +880,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             parallel_server.singleton_server.init_scheduler()
             parallel_server.singleton_server.init_notifiers()
 
+        logger.info('Started `%s` in `%s`', server.name, server.cluster.name)
+
     def invoke_startup_services(self, is_first):
         _invoke_startup_services(
             'Parallel', 'startup_services_first_worker' if is_first else 'startup_services_any_worker',
@@ -915,7 +909,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             # Close all the connector subprocesses this server has possibly started
             pairs = ((AMQP_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL),
                      (JMS_WMQ_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL),
-                     (ZMQ_CONNECTOR.CLOSE.value, MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL),
                      )
 
             for action, msg_type in pairs:

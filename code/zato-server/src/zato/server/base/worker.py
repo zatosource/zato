@@ -39,8 +39,8 @@ from retools.lock import Lock
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, \
-     SEC_DEF_TYPE, SIMPLE_IO, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
-from zato.common import broker_message
+     SEC_DEF_TYPE, SIMPLE_IO, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
+from zato.common import broker_message, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
@@ -49,6 +49,7 @@ from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_pa
      parse_extra_into_dict, parse_tls_channel_security_definition, store_tls
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
+from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
 from zato.server.connection.cloud.openstack.swift import SwiftWrapper
 from zato.server.connection.email import IMAPAPI, IMAPConnStore, SMTPAPI, SMTPConnStore
@@ -62,12 +63,12 @@ from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
 from zato.server.connection.sql import PoolStore, SessionWrapper
-from zato.server.connection.zmq_.outgoing import ZMQAPI as ZMQAPIOut, ZMQConnStore as ZMQConnStoreOut
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
-
 from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
+from zato.zmq_.channel import MDPv01 as ChannelZMQMDPv01, Simple as ChannelZMQSimple
+from zato.zmq_.outgoing import Simple as OutZMQSimple
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,9 @@ class WorkerStore(BrokerMessageReceiver):
         # Which targets this server supports
         self.target_matcher = Matcher()
 
+        # To speed up look-ups
+        self._simple_types = simple_types
+
     def init(self):
 
         # Statistics maintenance
@@ -115,7 +119,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.cassandra_query_store = CassandraQueryStore()
         self.cassandra_query_api = CassandraQueryAPI(self.cassandra_query_store)
 
-        # STOMPstomp_channel_api
+        # STOMP
         self.stomp_outconn_api = STOMPAPI(OutconnSTOMPConnStore())
         self.stomp_channel_api = STOMPAPI(ChannelSTOMPConnStore())
 
@@ -128,10 +132,13 @@ class WorkerStore(BrokerMessageReceiver):
         self.email_imap_api = IMAPAPI(IMAPConnStore())
 
         # ZeroMQ
-        self.zmq_out_api = ZMQAPIOut(ZMQConnStoreOut())
+        self.zmq_mdp_v01_api = ConnectorStore(connector_type.duplex.zmq_v01, ChannelZMQMDPv01)
+        self.zmq_channel_api = ConnectorStore(connector_type.channel.zmq, ChannelZMQSimple)
+        self.zmq_out_api = ConnectorStore(connector_type.out.zmq, OutZMQSimple)
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
+
         self.init_msg_ns_store()
         self.init_json_pointer_store()
         self.init_xpath_store()
@@ -167,6 +174,7 @@ class WorkerStore(BrokerMessageReceiver):
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
+
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
         self.request_dispatcher.url_data = URLData(
             deepcopy(self.worker_config.http_soap),
@@ -181,7 +189,9 @@ class WorkerStore(BrokerMessageReceiver):
         # Create all the expected connections and objects
         self.init_sql()
         self.init_ftp()
+
         self.init_http_soap()
+
         self.init_cloud()
         self.init_pubsub()
         self.init_notifiers()
@@ -191,7 +201,7 @@ class WorkerStore(BrokerMessageReceiver):
 
     def set_broker_client(self, broker_client):
         self.broker_client = broker_client
-        self.request_dispatcher.url_data.broker_client = broker_client
+        #self.request_dispatcher.url_data.broker_client = broker_client
 
     def filter(self, msg):
         # TODO: Fix it, worker doesn't need to accept all the messages
@@ -282,6 +292,12 @@ class WorkerStore(BrokerMessageReceiver):
             config_dict = getattr(self.worker_config, 'out_' + transport)
             for name in config_dict:
                 yield config_dict[name]
+
+# ################################################################################################################################
+
+    def init_zmq_channels(self):
+        """ Initializes all ZeroMQ channels that are not Majordomo (MDP).
+        """
 
 # ################################################################################################################################
 
@@ -465,7 +481,38 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def init_zmq(self):
-        self.init_simple(self.worker_config.out_zmq, self.zmq_out_api, 'a ZeroMQ')
+        """ Initializes all ZeroMQ connections.
+        """
+        # Iterate over channels and outgoing connections and populate their respetive connectors.
+        # Note that MDP are duplex and we create them in channels while in outgoing connections they are skipped.
+
+        # Channels
+        for name, data in self.worker_config.channel_zmq.items():
+
+            if data.config['socket_type'].startswith(ZMQ.MDP):
+                api = self.zmq_mdp_v01_api
+
+                zeromq_mdp_config = self.server.fs_server_config.zeromq_mdp
+                zeromq_mdp_config = {k:int(v) for k, v in zeromq_mdp_config.items()}
+
+                data.config.update(zeromq_mdp_config)
+            else:
+                api = self.zmq_channel_api
+
+            api.create(name, data.config, self.on_message_invoke_service)
+
+        # Outgoing connections
+        for name, data in self.worker_config.out_zmq.items():
+
+            # MDP ones were already handled in channels above
+            if data.config['socket_type'].startswith(ZMQ.MDP):
+                continue
+
+            self.zmq_out_api.create(name, data.config)
+
+        self.zmq_mdp_v01_api.start()
+        self.zmq_channel_api.start()
+        self.zmq_out_api.start()
 
 # ################################################################################################################################
 
@@ -960,10 +1007,10 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def _set_service_response_data(self, service, **ignored):
-        if not isinstance(service.response.payload, basestring):
+        if not isinstance(service.response.payload, self._simple_types):
             service.response.payload = service.response.payload.getvalue()
 
-    def on_message_invoke_service(self, msg, channel, action, args=None):
+    def on_message_invoke_service(self, msg, channel, action, args=None, **kwargs):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
         """
@@ -1039,6 +1086,9 @@ class WorkerStore(BrokerMessageReceiver):
             cb_msg['in_reply_to'] = cid
 
             self.broker_client.invoke_async(cb_msg)
+
+        if kwargs.get('needs_response'):
+            return service.response.payload
 
 # ################################################################################################################################
 
@@ -1624,6 +1674,17 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_RBAC_ROLE_PERMISSION_DELETE(self, msg):
         self.rbac.delete_role_permission_allow(msg.role_id, msg.perm_id, msg.service_id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_CHANNEL_ZMQ_CREATE(self, msg):
+        raise NotImplementedError(msg)
+
+    def on_broker_msg_CHANNEL_ZMQ_EDIT(self, msg):
+        raise NotImplementedError(msg)
+
+    def on_broker_msg_CHANNEL_ZMQ_DELETE(self, msg):
+        raise NotImplementedError(msg)
 
 # ################################################################################################################################
 

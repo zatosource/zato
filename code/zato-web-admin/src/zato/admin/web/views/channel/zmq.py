@@ -27,7 +27,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'sub_key', 'service_name', 'data_format')
+        output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'socket_method', 'sub_key',
+            'service_name', 'pool_strategy', 'service_source', 'data_format')
         output_repeated = True
 
     def handle(self):
@@ -40,11 +41,12 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'address', 'socket_type', 'sub_key', 'service', 'data_format')
+        input_required = ('name', 'is_active', 'address', 'socket_type', 'socket_method', 'sub_key',
+            'service', 'pool_strategy', 'service_source', 'data_format')
         output_required = ('id', 'name')
 
     def success_message(self, item):
-        return 'Successfully {0} the Zero MQ channel [{1}]'.format(self.verb, item.name)
+        return 'ZeroMQ channel `{}` successfully {}'.format(item.name, self.verb)
 
 class Create(_CreateEdit):
     url_name = 'channel-zmq-create'

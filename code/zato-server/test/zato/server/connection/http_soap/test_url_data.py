@@ -229,7 +229,6 @@ class URLDataTestCase(TestCase):
     def test_check_security(self):
 
         match_target1 = uuid4().hex
-        match_target2 = uuid4().hex
 
         class DummyMatch(object):
             def __init__(self, match_target):

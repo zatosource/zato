@@ -44,6 +44,7 @@ $.fn.zato.channel.zmq.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.address);
     row += String.format('<td>{0}</td>', item.socket_type);
+    row += String.format('<td>{0}</td>', item.socket_method);
     row += String.format('<td>{0}</td>', item.sub_key);
     row += String.format('<td>{0}</td>', $.fn.zato.data_table.service_text(item.service, cluster_id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.zmq.edit('{0}')\">Edit</a>", item.id));

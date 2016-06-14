@@ -14,6 +14,7 @@ from collections import OrderedDict
 from copy import deepcopy
 from cStringIO import StringIO
 from httplib import responses
+from numbers import Number
 from string import Template
 from sys import maxint
 from traceback import format_exc
@@ -161,6 +162,9 @@ HTTP_RESPONSES[TOO_MANY_REQUESTS] = 'Too Many Requests'
 TRUE_FALSE = 'true_false'
 FALSE_TRUE = 'false_true'
 
+# If self.response.payload 
+simple_types = (basestring, dict, list, tuple, bool, Number)
+
 # Queries to use in pinging the databases.
 ping_queries = {
     'access': 'SELECT 1',
@@ -196,13 +200,49 @@ ZATO_FIELD_OPERATORS = {
 }
 
 ZMQ_OUTGOING_TYPES = ('PUSH', 'PUB')
-ZMQ_CHANNEL_TYPES = ('PULL', 'SUB')
+
+class ZMQ:
+
+    PULL = 'PULL'
+    SUB = 'SUB'
+    MDP = 'MDP'
+    MDP01 = MDP + '01'
+
+    MDP01_HUMAN = 'Majordomo 0.1 (MDP)'
+
+    class POOL_STRATEGY_NAME:
+        SINGLE = 'single'
+        UNLIMITED = 'unlimited'
+
+    class SERVICE_SOURCE_NAME:
+        ZATO = 'zato'
+        MDP01 = 'mdp01'
+
+    CHANNEL = OrderedDict({
+        PULL: 'Pull',
+        SUB: 'Sub',
+        MDP01: MDP01_HUMAN,
+    })
+
+    METHOD = {
+        'bind': 'Bind',
+        'connect': 'Connect',
+    }
+
+    POOL_STRATEGY = OrderedDict({
+        POOL_STRATEGY_NAME.SINGLE: 'Single',
+        POOL_STRATEGY_NAME.UNLIMITED: 'Unlimited',
+    })
+
+    SERVICE_SOURCE = OrderedDict({
+        SERVICE_SOURCE_NAME.ZATO: 'Zato',
+        SERVICE_SOURCE_NAME.MDP01: MDP01_HUMAN,
+    })
 
 ZATO_ODB_POOL_NAME = 'ZATO_ODB'
 
 SOAP_VERSIONS = ('1.1', '1.2')
 SOAP_CHANNEL_VERSIONS = ('1.1',)
-
 
 class SEARCH:
     class ES:
