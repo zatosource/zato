@@ -202,6 +202,11 @@ class Service(object):
 
         # Regular outconns
         out_ftp, out_odoo, out_plain_http, out_soap = self.worker_store.worker_config.outgoing_connections()
+
+        self.outgoing = Outgoing(
+            out_amqp, out_ftp, out_jms_wmq, out_odoo, out_plain_http, out_soap, None,
+            None, out_zmq)
+
         self.outgoing = Outgoing(
             out_amqp, out_ftp, out_jms_wmq, out_odoo, out_plain_http, out_soap, out_sql,
             self.worker_store.stomp_outconn_api, out_zmq)

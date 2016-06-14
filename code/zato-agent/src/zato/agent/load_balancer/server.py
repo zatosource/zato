@@ -165,6 +165,11 @@ class LoadBalancerAgent(SSLServer):
 
             if haproxy_name.startswith('bck') and not haproxy_type_or_name == 'BACKEND':
                 backend_name, state = line[1], line[17]
+
+                # Do not count in backends other than Zato, e.g. perhaps someone added their own
+                if not 'http_plain' in backend_name:
+                    continue
+
                 access_type, server_name = backend_name.split('--')
 
                 yield access_type, server_name, state

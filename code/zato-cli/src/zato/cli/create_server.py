@@ -33,6 +33,7 @@ gunicorn_user=
 gunicorn_group=
 gunicorn_proc_name=
 gunicorn_logger_class=
+gunicorn_graceful_timeout=1
 
 deployment_lock_expires=1073741824 # 2 ** 30 seconds ≅ 34 years
 deployment_lock_timeout=180
@@ -184,6 +185,14 @@ json = {JSON}
 plain_xml = {PLAIN_XML}
 soap11 = {SOAP11}
 soap12 = {SOAP12}
+
+[zeromq_mdp]
+linger=0
+poll_interval=100
+heartbeat=3
+workers_pool_initial = 10
+workers_pool_mult = 2
+workers_pool_max = 250
 
 [os_environ]
 sample_key=sample_value
