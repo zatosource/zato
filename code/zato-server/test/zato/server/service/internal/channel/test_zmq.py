@@ -38,7 +38,8 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.request_elem, 'zato_channel_zmq_get_list_request')
         self.assertEquals(self.sio.response_elem, 'zato_channel_zmq_get_list_response')
         self.assertEquals(self.sio.input_required, ('cluster_id',))
-        self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'address', 'socket_type', 'service_name', 'data_format'))
+        self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
+            'service_name', 'pool_strategy', 'service_source', 'data_format'))
         self.assertEquals(self.sio.output_optional, ('sub_key',))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
@@ -66,7 +67,8 @@ class CreateTestCase(ServiceTestCase):
 
         self.assertEquals(self.sio.request_elem, 'zato_channel_zmq_create_request')
         self.assertEquals(self.sio.response_elem, 'zato_channel_zmq_create_response')
-        self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service'))
+        self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
+            'pool_strategy', 'service_source', 'service'))
         self.assertEquals(self.sio.input_optional, ('sub_key', 'data_format',))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
@@ -94,7 +96,8 @@ class EditTestCase(ServiceTestCase):
     def test_sio(self):
         self.assertEquals(self.sio.request_elem, 'zato_channel_zmq_edit_request')
         self.assertEquals(self.sio.response_elem, 'zato_channel_zmq_edit_response')
-        self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'service'))
+        self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type',
+            'socket_method', 'pool_strategy', 'service_source', 'service'))
         self.assertEquals(self.sio.input_optional, ('sub_key', 'data_format',))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)

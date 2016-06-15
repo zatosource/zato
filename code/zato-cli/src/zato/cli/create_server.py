@@ -138,6 +138,7 @@ zato.pubsub.move-to-target-queues=
 zato.pubsub.delete-expired=
 zato.pubsub.invoke-callbacks=
 zato.kvdb.log-connection-info=
+zato.updates.check-updates=
 
 [startup_services_any_worker]
 zato.helpers.input-logger=Sample payload for a startup service (any worker)
@@ -193,6 +194,11 @@ heartbeat=3
 workers_pool_initial = 10
 workers_pool_mult = 2
 workers_pool_max = 250
+
+[updates]
+notify_major_versions=True
+notify_minor_versions=True
+notify_if_from_source=True
 
 [os_environ]
 sample_key=sample_value

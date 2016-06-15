@@ -95,6 +95,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.connector_server_grace_time = None
         self.id = None
         self.name = None
+        self.cluster = None
         self.cluster_id = None
         self.kvdb = None
         self.startup_jobs = None
@@ -834,6 +835,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.id = server.id
         parallel_server.name = server.name
         parallel_server.cluster_id = server.cluster_id
+        parallel_server.cluster = parallel_server.odb.cluster
 
         is_first, locally_deployed = parallel_server._after_init_common(server, zato_deployment_key)
 
