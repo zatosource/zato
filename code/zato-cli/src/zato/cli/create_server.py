@@ -138,6 +138,7 @@ zato.pubsub.move-to-target-queues=
 zato.pubsub.delete-expired=
 zato.pubsub.invoke-callbacks=
 zato.kvdb.log-connection-info=
+zato.updates.check-updates=
 
 [startup_services_any_worker]
 zato.helpers.input-logger=Sample payload for a startup service (any worker)
