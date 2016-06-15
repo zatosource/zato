@@ -114,6 +114,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.stats',
             'zato.server.service.internal.stats.summary',
             'zato.server.service.internal.stats.trends',
+            'zato.server.service.internal.updates',
         ]
 
     @Object
