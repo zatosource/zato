@@ -13,13 +13,21 @@ function symlink_py {
 
 bash $CURDIR/clean.sh
 
-# Ubuntu 12.04 and Debian Wheezy need a different version
-# of libumfpack package than Ubuntu 14.04 and Debian Jessie
+# Ubuntus and Debians require different versions
+# of libumfpack package
 if command -v lsb_release > /dev/null; then
     release=$(lsb_release -c | cut -f2)
-    if [[ "$release" == "precise" ]] || [[ "$release" == "wheezy" ]]; then
+    if [[ "$release" == "precise"  ]] || [[ "$release" == "wheezy"  ]]; then
         LIBUMFPACK_VERSION=5.4.0
+    elif [[ "$release" == "xenial"  ]]; then
+        LIBATLAS3BASE=libatlas3-base
+        LIBBLAS3=libblas3
+        LIBLAPACK3=liblapack3
+        LIBUMFPACK_VERSION=5.7.1
     else
+        LIBATLAS3BASE=libatlas3gf-base
+        LIBBLAS3=libblas3gf
+        LIBLAPACK3=liblapack3gf
         LIBUMFPACK_VERSION=5.6.2
     fi
 fi
@@ -29,9 +37,9 @@ fi
 sudo apt-get update
 
 sudo apt-get install -y git bzr gfortran haproxy  \
-    libatlas-dev libatlas3gf-base libblas3gf \
+    libatlas-dev $LIBATLAS3BASE $LIBBLAS3 \
     libbz2-dev libev4 libev-dev \
-    libevent-dev libgfortran3 liblapack-dev liblapack3gf \
+    libevent-dev libgfortran3 liblapack-dev $LIBLAPACK3 \
     libpq-dev libyaml-dev libxml2-dev libxslt1-dev libumfpack$LIBUMFPACK_VERSION \
     openssl python2.7-dev python-numpy python-pip \
     python-scipy python-zdaemon swig uuid-dev uuid-runtime libffi-dev
