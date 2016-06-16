@@ -25,7 +25,7 @@ RUN=0
 # What OS are we on
 #
 
-apt-get > /dev/null 2>&1
+apt-get -v > /dev/null 2>&1
 if (($? == 0)) ; then IS_DEB=1 ; fi
 
 yum --help > /dev/null 2>&1
