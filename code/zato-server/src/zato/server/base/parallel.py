@@ -61,6 +61,7 @@ from zato.server.connection.amqp.outgoing import start_connector as amqp_out_sta
 from zato.server.connection.http_soap.url_data import Matcher
 from zato.server.connection.jms_wmq.channel import start_connector as jms_wmq_channel_start_connector
 from zato.server.connection.jms_wmq.outgoing import start_connector as jms_wmq_out_start_connector
+from zato.server.connection.server import Servers
 from zato.server.pickup import get_pickup
 
 logger = logging.getLogger(__name__)
@@ -110,6 +111,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
         self.broker_client = None
         self.time_util = None
+        self.preferred_address = None
+        self.crypto_use_tls = None
+        self.servers = None
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -815,6 +819,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # Will be set to True if this process is a singleton
         is_singleton = False
 
+        # Used later on
+        use_tls = asbool(parallel_server.fs_server_config.crypto.use_tls)
+
         # Will be None if we are not running in background.
         if not zato_deployment_key:
             zato_deployment_key = uuid4().hex
@@ -836,6 +843,14 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.name = server.name
         parallel_server.cluster_id = server.cluster_id
         parallel_server.cluster = parallel_server.odb.cluster
+
+        # For server-server communication
+        logger.info('Preferred address of `%s:%s` is `http%s://%s:%s`', parallel_server.cluster.name, parallel_server.name,
+            's' if use_tls else '', parallel_server.preferred_address, parallel_server.port)
+
+        parallel_server.servers = Servers(parallel_server.odb, parallel_server.cluster.name)
+        parallel_server.servers['server1'].invoke('zxc')
+        zz
 
         is_first, locally_deployed = parallel_server._after_init_common(server, zato_deployment_key)
 
@@ -866,8 +881,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             kwargs = {'broker_client':parallel_server.broker_client}
             Thread(target=parallel_server.singleton_server.run, kwargs=kwargs).start()
 
-        parallel_server.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True,
-                                           parallel_server.host, parallel_server.port)
+        parallel_server.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, parallel_server.host,
+            parallel_server.port, parallel_server.preferred_address, use_tls)
 
         if is_first:
             parallel_server.invoke_startup_services(is_first)

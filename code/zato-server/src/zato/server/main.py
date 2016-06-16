@@ -38,6 +38,7 @@ import yaml
 # Zato
 from zato.common import TRACE1
 from zato.common.repo import RepoManager
+from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.util import absolutize_path, clear_locks, get_app_context, get_config, get_crypto_manager, \
      get_kvdb_config_for_log, register_diag_handlers, store_pidfile
 
@@ -136,6 +137,17 @@ def run(base_dir, start_gunicorn_app=True):
 
     config = get_config(repo_location, 'server.conf')
 
+    # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
+    preferred_address = config.preferred_address.get('address')
+
+    if not preferred_address:
+        preferred_address = get_preferred_ip(config.main.gunicorn_bind, config.preferred_address)
+
+    if not preferred_address and not config.server_to_server.boot_if_preferred_not_found:
+        msg = 'Unable to start the server. Could not obtain a preferred address, please configure [bind_options] in server.conf'
+        logger.warn(msg)
+        raise Exception(msg)
+
     # New in 2.0 - Start monitoring as soon as possible
     if config.get('newrelic', {}).get('config'):
         import newrelic.agent
@@ -186,6 +198,7 @@ def run(base_dir, start_gunicorn_app=True):
     parallel_server.user_config.update(config.user_config_items)
     parallel_server.startup_jobs = app_context.get_object('startup_jobs')
     parallel_server.app_context = app_context
+    parallel_server.preferred_address = preferred_address
 
     # Remove all locks possibly left over by previous server instances
     kvdb = app_context.get_object('kvdb')
