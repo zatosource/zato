@@ -25,7 +25,7 @@ from zato.common.odb.model import Cluster, Server
 from zato.common.util import encrypt
 
 server_conf_template = """[main]
-gunicorn_bind=localhost:{{port}}
+gunicorn_bind=0.0.0.0:{{port}}
 gunicorn_worker_class=gevent
 gunicorn_workers={{gunicorn_workers}}
 gunicorn_timeout=240
@@ -199,6 +199,12 @@ workers_pool_max = 250
 notify_major_versions=True
 notify_minor_versions=True
 notify_if_from_source=True
+
+[preferred_address]
+address=
+ip=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, eth0
+boot_if_preferred_not_found=False
+allow_loopback=False
 
 [os_environ]
 sample_key=sample_value

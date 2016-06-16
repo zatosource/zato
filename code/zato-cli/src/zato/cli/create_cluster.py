@@ -367,6 +367,7 @@ zato_services = {
     'zato.server.delete':'zato.server.service.internal.server.Delete',
     'zato.server.edit':'zato.server.service.internal.server.Edit',
     'zato.server.get-by-id':'zato.server.service.internal.server.GetByID',
+    'zato.server.invoke':'zato.server.service.internal.server.Invoke',
 
     # Services
     'zato.service.configure-request-response':'zato.server.service.internal.service.ConfigureRequestResponse',
@@ -436,7 +437,11 @@ class Create(ZatoCommand):
         pubapi_sec = HTTPBasicAuth(None, 'pubapi', True, 'pubapi', 'Zato public API', uuid4().hex, cluster)
         session.add(pubapi_sec)
 
-        self.add_soap_services(session, cluster, admin_invoke_sec, pubapi_sec)
+        internal_invoke_sec = HTTPBasicAuth(None, 'zato.internal.invoke', True, 'zato.internal.invoke.user',
+            'Zato internal invoker', uuid4().hex, cluster)
+        session.add(internal_invoke_sec)
+
+        self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec)
         self.add_ping_services(session, cluster)
         self.add_default_pubsub_accounts(session, cluster)
         self.add_default_rbac_permissions(session, cluster)
@@ -461,7 +466,7 @@ class Create(ZatoCommand):
             else:
                 self.logger.info('OK')
 
-    def add_soap_services(self, session, cluster, admin_invoke_sec, pubapi_sec):
+    def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec):
         """ Adds these Zato internal services that can be accessed through SOAP requests.
         """
 
@@ -486,6 +491,9 @@ class Create(ZatoCommand):
 
             elif name == 'zato.pubsub.rest-handler':
                 self.add_pubsub_rest_handler(session, cluster, service)
+
+            elif name == 'zato.server.invoke':
+                self.add_internal_invoke(session, cluster, service, internal_invoke_sec)
 
             session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))
             session.add(get_http_json_channel(name, service, cluster, pubapi_sec))
@@ -572,6 +580,15 @@ class Create(ZatoCommand):
             None, 'admin.invoke.json', True, True, 'channel', 'plain_http',
             None, '/zato/admin/invoke', None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
             security=admin_invoke_sec)
+        session.add(channel)
+
+    def add_internal_invoke(self, session, cluster, service, internal_invoke_sec):
+        """ Adds an internal channel for invoking services from other servers.
+        """
+        channel = HTTPSOAP(
+            None, 'zato.internal.invoke', True, True, 'channel', 'plain_http',
+            None, '/zato/internal/invoke', None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
+            security=internal_invoke_sec)
         session.add(channel)
 
     def add_default_pubsub_accounts(self, session, cluster):

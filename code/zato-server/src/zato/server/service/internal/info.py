@@ -32,7 +32,7 @@ class GetInfo(Service):
         out = {}
 
         with closing(self.odb.session()) as session:
-            for item in server_list(session, self.server.cluster_id, False):
+            for item in server_list(session, self.server.cluster_id, None, False):
                 server_info = out.setdefault(item.name, {})
                 server_info['cluster_name'] = item.cluster_name
 
