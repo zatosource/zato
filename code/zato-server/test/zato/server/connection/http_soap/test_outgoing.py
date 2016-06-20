@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import sys
 import httplib, ssl
 from logging import getLogger
 from tempfile import NamedTemporaryFile
@@ -328,7 +329,10 @@ class TLSPingTestCase(TestCase, Base):
                 wrapper.ping(rand_string())
             except Exception, e:
                 details = e.message[0][1][0][0]
-                self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
+                if sys.version_info >= (2, 7, 11):
+                    self.assertEquals(details, ('SSL routines', 'ssl3_get_server_certificate', 'certificate verify failed'))
+                else:
+                    self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
             else:
                 self.fail('Excepted a TLS error here because the CA is invalid')
 
@@ -358,7 +362,10 @@ class TLSPingTestCase(TestCase, Base):
                 wrapper.ping(rand_string())
             except Exception, e:
                 details = e.message[0][1][0][0]
-                self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
+                if sys.version_info >= (2, 7, 11):
+                    self.assertEquals(details, ('SSL routines', 'ssl3_read_bytes', 'sslv3 alert handshake failure'))
+                else:
+                    self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
             else:
                 self.fail('Excepted a TLS error here because no TLS cert has been provided by client')
 
@@ -445,7 +452,10 @@ class TLSHTTPTestCase(TestCase, Base):
                 wrapper.get('123')
             except Exception, e:
                 details = e.message[0][1][0][0]
-                self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
+                if sys.version_info >= (2, 7, 11):
+                    self.assertEquals(details, ('SSL routines', 'ssl3_get_server_certificate', 'certificate verify failed'))
+                else:
+                    self.assertEquals(details, ('SSL routines', 'SSL3_GET_SERVER_CERTIFICATE', 'certificate verify failed'))
             else:
                 self.fail('Excepted a TLS error here because the CA is invalid')
 
@@ -476,7 +486,10 @@ class TLSHTTPTestCase(TestCase, Base):
                 wrapper.get('123')
             except Exception, e:
                 details = e.message[0][1][0][0]
-                self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
+                if sys.version_info >= (2, 7, 11):
+                    self.assertEquals(details, ('SSL routines', 'ssl3_read_bytes', 'sslv3 alert handshake failure'))
+                else:
+                    self.assertEquals(details, ('SSL routines', 'SSL3_READ_BYTES', 'sslv3 alert handshake failure'))
             else:
                 self.fail('Excepted a TLS error here because no TLS cert has been provided by client')
 
