@@ -568,7 +568,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.config.aws = ConfigDict.from_query('aws', query)
 
         # HTTP Basic Auth
-        query = self.odb.get_basic_auth_list(server.cluster.id, True)
+        query = self.odb.get_basic_auth_list(server.cluster.id, None, True)
         self.config.basic_auth = ConfigDict.from_query('basic_auth', query)
 
         # NTLM
