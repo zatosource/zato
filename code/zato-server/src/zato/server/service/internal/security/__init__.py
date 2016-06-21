@@ -63,7 +63,7 @@ class GetList(AdminService):
                 if func is query.basic_auth_list:
                     args = session, self.request.input.cluster_id, None, False
                 else:
-                    result = session, self.request.input.cluster_id, None, False
+                    args = session, self.request.input.cluster_id, False
 
                 for definition in func(*args):
 

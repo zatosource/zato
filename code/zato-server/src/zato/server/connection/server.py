@@ -12,10 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from logging import getLogger
 
-# requests
-import requests
-
 # Zato
+from zato.client import AnyServiceInvoker
 from zato.common.util import make_repr
 from zato.common.odb.query import server_list
 
@@ -41,21 +39,19 @@ class _Server(object):
         self.port = port
         self.crypto_use_tls = crypto_use_tls
         self.api_password = api_password
-        self.credentials = (api_user, self.api_password)
-        self.address = 'http{}://{}:{}/zato/internal/invoke'.format(
+        self.address = 'http{}://{}:{}'.format(
             's' if self.crypto_use_tls else '', self.preferred_address, self.port)
 
-        self._req_session = requests.Session()
-        self._req
+        self.invoker = AnyServiceInvoker(self.address, '/zato/internal/invoke', (api_user, self.api_password))
 
     def __repr__(self):
         return make_repr(self)
 
     def invoke(self, service, request=None, *args, **kwargs):
-        logger.warn('eee %r', self)
+        return self.invoker.invoke(service, request, *args, **kwargs)
 
     def invoke_async(self, service, request=None, *args, **kwargs):
-        raise NotImplementedError()
+        return self.invoker.invoke_async(service, request, *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -71,7 +67,7 @@ class Servers(object):
         return self._servers.setdefault(address, self._add_server(address))
 
     def get(self, name):
-        return self._servers.get(address)
+        return self._servers.get(name)
 
     def _add_server(self, address):
 
@@ -83,13 +79,19 @@ class Servers(object):
             cluster_name = self.cluster_name
 
         with closing(self.odb.session()) as session:
+
             for item in server_list(session, None, cluster_name, False):
                 if item.name == server_name and item.cluster_name == cluster_name:
 
                     for sec_item in self.odb.get_basic_auth_list(None, cluster_name):
-                        if sec_item.name == api_user:
+                        if sec_item.name == sec_def_name:
                             return _Server(
                                 item.cluster_id, self.cluster_name, item.name, item.preferred_address, item.bind_port,
                                 item.crypto_use_tls, sec_item.password)
+
+            else:
+                msg = 'No such server or cluster {}@{}'.format(server_name, cluster_name)
+                logger.warn(msg)
+                raise ValueError(msg)
 
 # ################################################################################################################################
