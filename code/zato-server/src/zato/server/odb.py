@@ -593,11 +593,11 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.aws_security_list(session, cluster_id, needs_columns)
 
-    def get_basic_auth_list(self, cluster_id, needs_columns=False):
+    def get_basic_auth_list(self, cluster_id, cluster_name, needs_columns=False):
         """ Returns a list of HTTP Basic Auth definitions existing on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.basic_auth_list(session, cluster_id, needs_columns)
+            return query.basic_auth_list(session, cluster_id, cluster_name, needs_columns)
 
     def get_ntlm_list(self, cluster_id, needs_columns=False):
         """ Returns a list of NTLM definitions existing on the given cluster.

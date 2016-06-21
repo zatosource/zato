@@ -124,19 +124,27 @@ def aws_security_list(session, cluster_id, needs_columns=False):
         order_by('sec_base.name')
 
 @needs_columns
-def basic_auth_list(session, cluster_id, needs_columns=False):
+def basic_auth_list(session, cluster_id, cluster_name, needs_columns=False):
     """ All the HTTP Basic Auth definitions.
     """
-    return session.query(
+    q = session.query(
         HTTPBasicAuth.id, HTTPBasicAuth.name,
         HTTPBasicAuth.is_active,
         HTTPBasicAuth.username, HTTPBasicAuth.realm,
         HTTPBasicAuth.password, HTTPBasicAuth.sec_type,
-        HTTPBasicAuth.password_type).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==HTTPBasicAuth.cluster_id).\
-        filter(SecurityBase.id==HTTPBasicAuth.id).\
+        HTTPBasicAuth.password_type,
+        Cluster.id.label('cluster_id'), Cluster.name.label('cluster_name')).\
+        filter(Cluster.id==HTTPBasicAuth.cluster_id)
+
+    if cluster_id:
+        q = q.filter(Cluster.id==cluster_id)
+    else:
+        q = q.filter(Cluster.name==cluster_name)
+
+    q = q.filter(SecurityBase.id==HTTPBasicAuth.id).\
         order_by('sec_base.name')
+
+    return q
 
 @needs_columns
 def ntlm_list(session, cluster_id, needs_columns=False):

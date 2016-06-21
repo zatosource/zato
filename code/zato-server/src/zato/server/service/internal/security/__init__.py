@@ -60,7 +60,12 @@ class GetList(AdminService):
                 if filter_by and def_type not in filter_by:
                     continue
 
-                for definition in func(session, self.request.input.cluster_id, False):
+                if func is query.basic_auth_list:
+                    args = session, self.request.input.cluster_id, None, False
+                else:
+                    result = session, self.request.input.cluster_id, None, False
+
+                for definition in func(*args):
 
                     if definition.name.startswith('zato') or definition.name in('admin.invoke', 'pubapi'):
                         if not needs_internal:
