@@ -367,7 +367,6 @@ zato_services = {
     'zato.server.delete':'zato.server.service.internal.server.Delete',
     'zato.server.edit':'zato.server.service.internal.server.Edit',
     'zato.server.get-by-id':'zato.server.service.internal.server.GetByID',
-    'zato.server.invoke':'zato.server.service.internal.server.Invoke',
 
     # Services
     'zato.service.configure-request-response':'zato.server.service.internal.service.ConfigureRequestResponse',
@@ -488,12 +487,10 @@ class Create(ZatoCommand):
 
             elif name == 'zato.service.invoke':
                 self.add_admin_invoke(session, cluster, service, admin_invoke_sec)
+                self.add_internal_invoke(session, cluster, service, internal_invoke_sec)
 
             elif name == 'zato.pubsub.rest-handler':
                 self.add_pubsub_rest_handler(session, cluster, service)
-
-            elif name == 'zato.server.invoke':
-                self.add_internal_invoke(session, cluster, service, internal_invoke_sec)
 
             session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))
             session.add(get_http_json_channel(name, service, cluster, pubapi_sec))

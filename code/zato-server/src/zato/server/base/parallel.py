@@ -845,12 +845,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         parallel_server.cluster = parallel_server.odb.cluster
 
         # For server-server communication
-        logger.info('Preferred address of `%s:%s` is `http%s://%s:%s`', parallel_server.cluster.name, parallel_server.name,
+        logger.info('Preferred address of `%s@%s` is `http%s://%s:%s`', parallel_server.name, parallel_server.cluster.name,
             's' if use_tls else '', parallel_server.preferred_address, parallel_server.port)
 
         parallel_server.servers = Servers(parallel_server.odb, parallel_server.cluster.name)
-        parallel_server.servers['server1'].invoke('zxc')
-        zz
 
         is_first, locally_deployed = parallel_server._after_init_common(server, zato_deployment_key)
 
@@ -897,7 +895,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             parallel_server.singleton_server.init_scheduler()
             parallel_server.singleton_server.init_notifiers()
 
-        logger.info('Started `%s` in `%s`', server.name, server.cluster.name)
+        logger.info('Started `%s@%s`', server.name, server.cluster.name)
 
     def invoke_startup_services(self, is_first):
         _invoke_startup_services(
