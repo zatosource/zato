@@ -30,7 +30,7 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active', 'username', 'realm')
 
     def get_data(self, session):
-        return basic_auth_list(session, self.request.input.cluster_id, False)
+        return basic_auth_list(session, self.request.input.cluster_id, None, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
