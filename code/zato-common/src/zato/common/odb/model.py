@@ -140,6 +140,8 @@ class Server(Base):
 
     bind_host = Column(String(400), nullable=True)
     bind_port = Column(Integer(), nullable=True)
+    preferred_address = Column(String(400), nullable=True)
+    crypto_use_tls = Column(Boolean(), nullable=True)
 
     # If the server's request to join a cluster has been accepted, and for now
     # it will always be.

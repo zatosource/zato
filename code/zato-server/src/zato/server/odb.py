@@ -45,8 +45,8 @@ class _Server(object):
 class ODBManager(SessionWrapper):
     """ Manages connections to the server's Operational Database.
     """
-    def __init__(self, well_known_data=None, token=None, crypto_manager=None,
-                 server_id=None, server_name=None, cluster_id=None, pool=None):
+    def __init__(self, well_known_data=None, token=None, crypto_manager=None, server_id=None, server_name=None, cluster_id=None,
+            pool=None):
         super(ODBManager, self).__init__()
         self.well_known_data = well_known_data
         self.token = token
@@ -120,7 +120,8 @@ class ODBManager(SessionWrapper):
 
         return missing
 
-    def server_up_down(self, token, status, update_host=False, bind_host=None, bind_port=None):
+    def server_up_down(self, token, status, update_host=False, bind_host=None, bind_port=None, preferred_address=None,
+        crypto_use_tls=None):
         """ Updates the information regarding the server is RUNNING or CLEAN_DOWN etc.
         and what host it's running on.
         """
@@ -136,6 +137,8 @@ class ODBManager(SessionWrapper):
                 server.host = current_host()
                 server.bind_host = bind_host
                 server.bind_port = bind_port
+                server.preferred_address = preferred_address
+                server.crypto_use_tls = crypto_use_tls
 
             session.add(server)
             session.commit()
@@ -590,11 +593,11 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.aws_security_list(session, cluster_id, needs_columns)
 
-    def get_basic_auth_list(self, cluster_id, needs_columns=False):
+    def get_basic_auth_list(self, cluster_id, cluster_name, needs_columns=False):
         """ Returns a list of HTTP Basic Auth definitions existing on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.basic_auth_list(session, cluster_id, needs_columns)
+            return query.basic_auth_list(session, cluster_id, cluster_name, needs_columns)
 
     def get_ntlm_list(self, cluster_id, needs_columns=False):
         """ Returns a list of NTLM definitions existing on the given cluster.

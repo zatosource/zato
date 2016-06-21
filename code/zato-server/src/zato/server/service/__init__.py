@@ -189,6 +189,9 @@ class Service(object):
 
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
 
+        # For invoking other servers directly
+        self.servers = self.server.servers
+
         # Queues
         out_amqp = PublisherFacade(self.broker_client)
         out_jms_wmq = WMQFacade(self.broker_client)
