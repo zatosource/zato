@@ -22,7 +22,7 @@ import zmq.green as zmq
 
 # Zato
 from zato.common import CHANNEL, ZMQ
-from zato.common.util import new_cid
+from zato.common.util import new_cid, wait_until_port_free
 from zato.zmq_.mdp import const, EventBrokerDisconnect, EventBrokerHeartbeat, EventClientReply, EventWorkerRequest, \
      Service, WorkerData
 
@@ -43,6 +43,7 @@ class Broker(object):
         self.pool_strategy = config.pool_strategy
         self.service_source = config.service_source
         self.keep_running = True
+        self.tcp_port = int(self.address.split(':')[-1])
 
         # A hundred years in seconds, used when creating internal workers
         self.y100 = 60 * 60 * 24 * 365 * 100
@@ -91,7 +92,20 @@ class Broker(object):
 
 # ################################################################################################################################
 
+    def close(self, linger):
+        self.keep_running = False
+        self.socket.close(linger)
+
+        # Wait at most 10 seconds until the port is released
+        if not wait_until_port_free(self.tcp_port, 10):
+            logger.warn('Port `%s` was not released within 10s', self.tcp_port)
+
+# ################################################################################################################################
+
     def serve_forever(self):
+
+        # To speed up look-ups
+        has_debug = self.has_debug
 
         try:
 
@@ -101,11 +115,8 @@ class Broker(object):
             # Ok, we are actually running now
             logger.info('Starting ZMQ MDP 0.1 broker at %s', self.address)
 
-            # To speed up look-ups
-            has_debug = self.has_debug
-
         except Exception, e:
-            logger.warn(format_exc(e))
+            logger.warn('Could not bind to `%s`, e:`%s`', self.address, format_exc(e))
 
         # Main loop
         while self.keep_running:

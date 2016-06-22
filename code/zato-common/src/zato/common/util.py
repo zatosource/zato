@@ -13,7 +13,7 @@ import copy, errno, gc, inspect, json, linecache, logging, os, random, re, signa
 from ast import literal_eval
 from contextlib import closing
 from cStringIO import StringIO
-from datetime import datetime
+from datetime import datetime, timedelta
 from glob import glob
 from hashlib import sha256
 from importlib import import_module
@@ -886,6 +886,37 @@ def is_port_taken(port):
         if conn.laddr[1] == port and conn.status == psutil.CONN_LISTEN:
             return True
     return False
+
+# ################################################################################################################################
+
+def _is_port_ready(port, needs_taken):
+    taken = is_port_taken(port)
+    return taken if needs_taken else not taken
+
+def _wait_for_port(port, timeout, interval, needs_taken):
+    port_ready = _is_port_ready(port, needs_taken)
+
+    if not port_ready:
+        start = datetime.utcnow()
+        wait_until = start + timedelta(seconds=timeout)
+
+        while not port_ready:
+            sleep(interval)
+            port_ready = _is_port_ready(port, needs_taken)
+            if datetime.utcnow() > wait_until:
+                break
+
+    return port_ready
+
+def wait_until_port_taken(port, timeout=2, interval=0.1):
+    """ Waits until a given TCP port becomes taken, i.e. a process binds to a TCP socket.
+    """
+    return _wait_for_port(port, timeout, interval, True)
+
+def wait_until_port_free(port, timeout=2, interval=0.1):
+    """ Waits until a given TCP port becomes free, i.e. a process releases a TCP socket.
+    """
+    return _wait_for_port(port, timeout, interval, False)
 
 # ################################################################################################################################
 

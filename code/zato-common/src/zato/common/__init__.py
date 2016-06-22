@@ -301,6 +301,9 @@ class BATCH_DEFAULTS:
     SIZE = 25
     MAX_SIZE = 1000
 
+class MSG_SOURCE:
+    DUPLEX = 'duplex'
+
 class NameId(object):
     """ Wraps both an attribute's name and its ID.
     """

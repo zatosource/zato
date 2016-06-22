@@ -13,7 +13,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common.broker_message import MESSAGE_TYPE, CHANNEL
+from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelZMQ, Cluster, Service
 from zato.common.odb.query import channel_zmq_list
 from zato.server.service.internal import AdminService, AdminSIO
@@ -25,6 +25,7 @@ class GetList(AdminService):
         request_elem = 'zato_channel_zmq_get_list_request'
         response_elem = 'zato_channel_zmq_get_list_response'
         input_required = ('cluster_id',)
+        input_optional = ('msg_source',)
         output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
             'service_name', 'pool_strategy', 'service_source', 'data_format')
         output_optional = ('sub_key',)
@@ -44,7 +45,7 @@ class Create(AdminService):
         response_elem = 'zato_channel_zmq_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
             'pool_strategy', 'service_source', 'service')
-        input_optional = ('sub_key', 'data_format')
+        input_optional = ('sub_key', 'data_format', 'msg_source')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -115,7 +116,7 @@ class Edit(AdminService):
         response_elem = 'zato_channel_zmq_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
             'pool_strategy', 'service_source', 'service')
-        input_optional = ('sub_key', 'data_format')
+        input_optional = ('sub_key', 'data_format', 'msg_source')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -142,6 +143,13 @@ class Edit(AdminService):
 
             try:
                 item = session.query(ChannelZMQ).filter_by(id=input.id).one()
+
+                if item.socket_type != input.socket_type:
+                    raise ValueError('Cannot change a ZeroMQ channel\'s socket type')
+
+                old_socket_type = item.socket_type
+                old_name = item.name
+
                 item.name = input.name
                 item.is_active = input.is_active
                 item.address = input.address
@@ -162,8 +170,10 @@ class Edit(AdminService):
                 input.source_server = self.server.get_full_name()
                 input.id = item.id
                 input.config_cid = 'channel.zmq.edit.{}.{}'.format(input.source_server, self.cid)
+                input.old_socket_type = old_socket_type
+                input.old_name = old_name
 
-                self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL)
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
@@ -182,6 +192,7 @@ class Delete(AdminService):
         request_elem = 'zato_channel_zmq_delete_request'
         response_elem = 'zato_channel_zmq_delete_response'
         input_required = ('id',)
+        input_optional = ('msg_source',)
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -193,8 +204,17 @@ class Delete(AdminService):
                 session.delete(item)
                 session.commit()
 
-                msg = {'action': CHANNEL.ZMQ_DELETE.value, 'name': item.name, 'id':item.id}
-                self.broker_client.publish(msg, MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL)
+                source_server = self.server.get_full_name()
+
+                msg = {
+                    'action': CHANNEL.ZMQ_DELETE.value,
+                    'name': item.name,
+                    'id':item.id,
+                    'source_server': source_server,
+                    'socket_type': item.socket_type,
+                    'config_cid': 'channel.zmq.delete.{}.{}'.format(source_server, self.cid)
+                }
+                self.broker_client.publish(msg)
 
             except Exception, e:
                 session.rollback()
