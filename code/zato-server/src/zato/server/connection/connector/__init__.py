@@ -185,13 +185,14 @@ class ConnectorStore(object):
         with self.lock:
             self.connectors[name] = self.connector_class(name, self.type, config, on_message_callback)
 
-    def edit(self, old_name, config):
+    def edit(self, old_name, config, *ignored_args):
         with self.lock:
             self.connectors[old_name].edit(old_name, config)
+            self.connectors[config.name] =  self.connectors.pop(old_name)
 
     def delete(self, name):
         with self.lock:
-            self.connectors[name].delete()
+            self.connectors[name].stop()
             del self.connectors[name]
 
     def start(self, name=None):

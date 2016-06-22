@@ -21,7 +21,7 @@ from urlparse import urlparse
 from uuid import uuid4
 
 # Bunch
-from zato.bunch import Bunch
+from bunch import bunchify
 
 # dateutil
 from dateutil.parser import parse
@@ -35,7 +35,11 @@ import gevent
 from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
+# retools
+from retools.lock import Lock
+
 # Zato
+from zato.bunch import Bunch
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, \
      SEC_DEF_TYPE, SIMPLE_IO, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common import broker_message, ZMQ
@@ -473,10 +477,16 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _set_up_zmq_channel(self, name, config, func, start=False):
+    def _set_up_zmq_channel(self, name, config, action, start=False):
         """ Actually initializes a ZeroMQ channel, taking into account dissimilarities between MDP ones and PULL/SUB.
         """
-        if config['socket_type'].startswith(ZMQ.MDP):
+        # We need to consult old_socket_type because it may very well be the case that someone
+        # not only (say) renamed a channel but also changed its socket type as well.
+
+        if config.get('old_socket_type') and config.socket_type != config.old_socket_type:
+            raise ValueError('Cannot change a ZeroMQ channel\'s socket type')
+
+        if config.socket_type.startswith(ZMQ.MDP):
             api = self.zmq_mdp_v01_api
 
             zeromq_mdp_config = self.server.fs_server_config.zeromq_mdp
@@ -486,8 +496,13 @@ class WorkerStore(BrokerMessageReceiver):
         else:
             api = self.zmq_channel_api
 
-        api_func = getattr(api, func)
-        api_func(name, config, self.on_message_invoke_service)
+        # If this is an edit and we do not have this connector, that is OK.
+        # It only means that it was not we but some other worker of this server start the connector.
+        if action == 'edit' and name not in api.connectors:
+            return
+
+        getattr(api, action)(name, config, self.on_message_invoke_service)
+
         if start:
             api.start(name)
 
@@ -497,7 +512,7 @@ class WorkerStore(BrokerMessageReceiver):
         """ Initializes ZeroMQ channels and MDP connections.
         """
         lock_name = 'startup.init_zmq.{}'.format(self.server.get_full_name())
-        with get_lock(KVDB.LOCK_CONFIG_PREFIX, lock_name, 20, 0, self.server.kvdb.conn) as lock:
+        with get_lock(KVDB.LOCK_CONFIG_PREFIX, lock_name, 20, 0, self.server.kvdb.conn):
 
             cache_key = KVDB.ZMQ_CONFIG_READY_PREFIX.format(self.server.deployment_key)
 
@@ -507,7 +522,7 @@ class WorkerStore(BrokerMessageReceiver):
 
             # Channels
             for name, data in self.worker_config.channel_zmq.items():
-                self._set_up_zmq_channel(name, data.config, 'create')
+                self._set_up_zmq_channel(name, bunchify(data.config), 'create')
 
                 self.zmq_mdp_v01_api.start()
                 self.zmq_channel_api.start()
@@ -1705,19 +1720,21 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _on_broker_msg_channel_zmq_create_edit(self, msg, action):
-        with get_lock(KVDB.LOCK_CONFIG_PREFIX, msg.config_cid, 20, 0, self.server.kvdb.conn):
-            logger.warn('Calling action `%s`', action)
-            self._set_up_zmq_channel(msg.name, msg, True, action)
+    def _on_broker_msg_channel_zmq_create_edit(self, name, msg, action, lock_timeout, start):
+        with get_lock(KVDB.LOCK_CONFIG_PREFIX, msg.config_cid, 10, lock_timeout, self.server.kvdb.conn):
+            self._set_up_zmq_channel(name, msg, action, start)
 
     def on_broker_msg_CHANNEL_ZMQ_CREATE(self, msg):
-        self._on_broker_msg_channel_zmq_create_edit(msg, 'create')
+        self._on_broker_msg_channel_zmq_create_edit(msg.name, msg, 'create', 0, True)
 
     def on_broker_msg_CHANNEL_ZMQ_EDIT(self, msg):
-        self._on_broker_msg_channel_zmq_create_edit(msg, 'edit')
+        self._on_broker_msg_channel_zmq_create_edit(msg.old_name, msg, 'edit', 5, False)
 
     def on_broker_msg_CHANNEL_ZMQ_DELETE(self, msg):
-        raise NotImplementedError(msg)
+        with get_lock(KVDB.LOCK_CONFIG_PREFIX, msg.config_cid, 10, 5, self.server.kvdb.conn):
+            api = self.zmq_mdp_v01_api if msg.socket_type.startswith(ZMQ.MDP) else self.zmq_channel_api
+            if msg.name in api.connectors:
+                api.delete(msg.name)
 
 # ################################################################################################################################
 
