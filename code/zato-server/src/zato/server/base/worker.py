@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging, inspect, os, sys
 from copy import deepcopy
+from datetime import datetime
 from errno import ENOENT
 from json import loads
 from threading import RLock
@@ -34,15 +35,13 @@ import gevent
 from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
-# retools
-from retools.lock import Lock
-
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, \
      SEC_DEF_TYPE, SIMPLE_IO, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
 from zato.common import broker_message, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
+from zato.common.locking import get_lock
 from zato.common.match import Matcher
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
@@ -74,12 +73,12 @@ logger = logging.getLogger(__name__)
 
 class GeventWorker(GunicornGeventWorker):
     def __init__(self, *args, **kwargs):
-        self.deployment_key = uuid4().hex
+        self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
         super(GunicornGeventWorker, self).__init__(*args, **kwargs)
 
 class SyncWorker(GunicornSyncWorker):
     def __init__(self, *args, **kwargs):
-        self.deployment_key = uuid4().hex
+        self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
         super(GunicornSyncWorker, self).__init__(*args, **kwargs)
 
 class WorkerStore(BrokerMessageReceiver):
@@ -295,12 +294,6 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def init_zmq_channels(self):
-        """ Initializes all ZeroMQ channels that are not Majordomo (MDP).
-        """
-
-# ################################################################################################################################
-
     def init_sql(self):
         """ Initializes SQL connections, first to ODB and then any user-defined ones.
         """
@@ -480,28 +473,54 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def init_zmq(self):
-        """ Initializes all ZeroMQ connections.
+    def _set_up_zmq_channel(self, name, config, func, start=False):
+        """ Actually initializes a ZeroMQ channel, taking into account dissimilarities between MDP ones and PULL/SUB.
         """
-        # Iterate over channels and outgoing connections and populate their respetive connectors.
-        # Note that MDP are duplex and we create them in channels while in outgoing connections they are skipped.
+        if config['socket_type'].startswith(ZMQ.MDP):
+            api = self.zmq_mdp_v01_api
 
-        # Channels
-        for name, data in self.worker_config.channel_zmq.items():
+            zeromq_mdp_config = self.server.fs_server_config.zeromq_mdp
+            zeromq_mdp_config = {k:int(v) for k, v in zeromq_mdp_config.items()}
+            config.update(zeromq_mdp_config)
 
-            if data.config['socket_type'].startswith(ZMQ.MDP):
-                api = self.zmq_mdp_v01_api
+        else:
+            api = self.zmq_channel_api
 
-                zeromq_mdp_config = self.server.fs_server_config.zeromq_mdp
-                zeromq_mdp_config = {k:int(v) for k, v in zeromq_mdp_config.items()}
+        api_func = getattr(api, func)
+        api_func(name, config, self.on_message_invoke_service)
+        if start:
+            api.start(name)
 
-                data.config.update(zeromq_mdp_config)
-            else:
-                api = self.zmq_channel_api
+# ################################################################################################################################
 
-            api.create(name, data.config, self.on_message_invoke_service)
+    def init_zmq_channels(self):
+        """ Initializes ZeroMQ channels and MDP connections.
+        """
+        lock_name = 'startup.init_zmq.{}'.format(self.server.get_full_name())
+        with get_lock(KVDB.LOCK_CONFIG_PREFIX, lock_name, 20, 0, self.server.kvdb.conn) as lock:
 
-        # Outgoing connections
+            cache_key = KVDB.ZMQ_CONFIG_READY_PREFIX.format(self.server.deployment_key)
+
+            # There must have been another worker before us
+            if self.kvdb.conn.get(cache_key):
+                return
+
+            # Channels
+            for name, data in self.worker_config.channel_zmq.items():
+                self._set_up_zmq_channel(name, data.config, 'create')
+
+                self.zmq_mdp_v01_api.start()
+                self.zmq_channel_api.start()
+
+            # Having configured and start ZeroMQ channels we need to set a flag in cache
+            # so that other workers of the same server do not try to start them too,
+            # which would be impossible because they would have to bind to the same socket.
+            self.kvdb.conn.set(cache_key, '1')
+            self.kvdb.conn.expire(cache_key, 600) # 10 minutes is aplenty for other workers to boot up
+
+    def init_zmq_outconns(self):
+        """ Initializes ZeroMQ outgoing connections (but not MDP that are initialized along with channels).
+        """
         for name, data in self.worker_config.out_zmq.items():
 
             # MDP ones were already handled in channels above
@@ -510,9 +529,18 @@ class WorkerStore(BrokerMessageReceiver):
 
             self.zmq_out_api.create(name, data.config)
 
-        self.zmq_mdp_v01_api.start()
-        self.zmq_channel_api.start()
         self.zmq_out_api.start()
+
+# ################################################################################################################################
+
+    def init_zmq(self):
+        """ Initializes all ZeroMQ connections.
+        """
+        # Iterate over channels and outgoing connections and populate their respetive connectors.
+        # Note that MDP are duplex and we create them in channels while in outgoing connections they are skipped.
+
+        self.init_zmq_channels()
+        self.init_zmq_outconns()
 
 # ################################################################################################################################
 
@@ -1677,11 +1705,16 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def _on_broker_msg_channel_zmq_create_edit(self, msg, action):
+        with get_lock(KVDB.LOCK_CONFIG_PREFIX, msg.config_cid, 20, 0, self.server.kvdb.conn):
+            logger.warn('Calling action `%s`', action)
+            self._set_up_zmq_channel(msg.name, msg, True, action)
+
     def on_broker_msg_CHANNEL_ZMQ_CREATE(self, msg):
-        raise NotImplementedError(msg)
+        self._on_broker_msg_channel_zmq_create_edit(msg, 'create')
 
     def on_broker_msg_CHANNEL_ZMQ_EDIT(self, msg):
-        raise NotImplementedError(msg)
+        self._on_broker_msg_channel_zmq_create_edit(msg, 'edit')
 
     def on_broker_msg_CHANNEL_ZMQ_DELETE(self, msg):
         raise NotImplementedError(msg)

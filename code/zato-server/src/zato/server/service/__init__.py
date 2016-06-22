@@ -25,9 +25,6 @@ from bunch import bunchify
 from lxml.etree import _Element as EtreeElement
 from lxml.objectify import ObjectifiedElement
 
-# retools
-from retools.lock import Lock
-
 # gevent
 from gevent import Timeout, spawn
 
@@ -35,6 +32,7 @@ from gevent import Timeout, spawn
 from zato.bunch import Bunch
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException
 from zato.common.broker_message import SERVICE
+from zato.common.locking import get_lock
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl
 from zato.server.connection import request_response, slow_response
@@ -599,9 +597,12 @@ class Service(object):
         timeout - how long (in seconds) we will wait to acquire the lock before giving up and raising LockTimeout
         backend - a Redis connection object, defaults to self.kvdb.conn
         """
+        return get_lock(KVDB.LOCK_SERVICE_PREFIX, name or self.name, expires, timeout, backend or self.kvdb.conn)
+        '''
         name = '{}{}'.format(KVDB.LOCK_SERVICE_PREFIX, name or self.name)
         backend = backend or self.kvdb.conn
         return Lock(name, expires, timeout, backend)
+        '''
 
 # ################################################################################################################################
 

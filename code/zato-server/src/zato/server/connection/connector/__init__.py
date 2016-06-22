@@ -194,9 +194,14 @@ class ConnectorStore(object):
             self.connectors[name].delete()
             del self.connectors[name]
 
-    def start(self):
+    def start(self, name=None):
         with self.lock:
             for c in self.connectors.values():
+
+                # Perhaps we want to start a single connector so we need to filter out the other ones
+                if name and name != c.name:
+                    continue
+
                 c.start()
 
 # ################################################################################################################################
