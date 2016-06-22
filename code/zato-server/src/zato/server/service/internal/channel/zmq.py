@@ -90,7 +90,11 @@ class Create(AdminService):
 
                 input.action = CHANNEL.ZMQ_CREATE.value
                 input.sub_key = sub_key
-                input.service = service.impl_name
+                input.service_name = service.name
+                input.source_server = self.server.get_full_name()
+                input.id = item.id
+                input.config_cid = 'channel.zmq.create.{}.{}'.format(input.source_server, self.cid)
+
                 self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
@@ -154,7 +158,11 @@ class Edit(AdminService):
 
                 input.action = CHANNEL.ZMQ_EDIT.value
                 input.sub_key = input.get('sub_key', b'')
-                input.service = service.impl_name
+                input.service_name = service.name
+                input.source_server = self.server.get_full_name()
+                input.id = item.id
+                input.config_cid = 'channel.zmq.edit.{}.{}'.format(input.source_server, self.cid)
+
                 self.broker_client.publish(input, msg_type=MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL)
 
                 self.response.payload.id = item.id
