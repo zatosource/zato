@@ -41,6 +41,7 @@ class Create(AdminService):
         request_elem = 'zato_outgoing_zmq_create_request'
         response_elem = 'zato_outgoing_zmq_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type')
+        input_optional = ('msg_source',)
         output_required = ('id', 'name')
 
     def handle(self):
@@ -60,6 +61,7 @@ class Create(AdminService):
                 item.is_active = input.is_active
                 item.address = input.address
                 item.socket_type = input.socket_type
+                item.socket_method = input.socket_method
                 item.cluster_id = input.cluster_id
 
                 session.add(item)
@@ -84,7 +86,8 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_zmq_edit_request'
         response_elem = 'zato_outgoing_zmq_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method')
+        input_optional = ('msg_source',)
         output_required = ('id', 'name')
 
     def handle(self):
@@ -101,11 +104,15 @@ class Edit(AdminService):
 
             try:
                 item = session.query(OutgoingZMQ).filter_by(id=input.id).one()
+
+                self.logger.warn('111 %s', input)
+
                 old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
                 item.address = input.address
                 item.socket_type = input.socket_type
+                item.socket_method = input.socket_method
 
                 session.add(item)
                 session.commit()

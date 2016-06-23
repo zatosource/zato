@@ -301,6 +301,9 @@ class BATCH_DEFAULTS:
     SIZE = 25
     MAX_SIZE = 1000
 
+class MSG_SOURCE:
+    DUPLEX = 'duplex'
+
 class NameId(object):
     """ Wraps both an attribute's name and its ID.
     """
@@ -385,6 +388,7 @@ class KVDB(Attrs):
     LOCK_DELIVERY_AUTO_RESUBMIT = '{}auto-resubmit:'.format(LOCK_DELIVERY)
 
     LOCK_SERVICE_PREFIX = '{}service:'.format(LOCK_PREFIX)
+    LOCK_CONFIG_PREFIX = '{}config:'.format(LOCK_PREFIX)
 
     LOCK_FANOUT_PATTERN = '{}fanout:{{}}'.format(LOCK_PREFIX)
     LOCK_PARALLEL_EXEC_PATTERN = '{}parallel-exec:{{}}'.format(LOCK_PREFIX)
@@ -409,6 +413,8 @@ class KVDB(Attrs):
     SERVICE_SUMMARY_BY_WEEK = 'zato:stats:service:summary:by-week:'
     SERVICE_SUMMARY_BY_MONTH = 'zato:stats:service:summary:by-month:'
     SERVICE_SUMMARY_BY_YEAR = 'zato:stats:service:summary:by-year:'
+
+    ZMQ_CONFIG_READY_PREFIX = 'zato:zmq.config.ready.{}'
 
     REQ_RESP_SAMPLE = 'zato:req-resp:sample:'
     RESP_SLOW = 'zato:resp:slow:'

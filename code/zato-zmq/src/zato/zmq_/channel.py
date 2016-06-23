@@ -81,7 +81,7 @@ class MDPv01(Base):
         super(MDPv01, self)._start()
 
         # Run the MDP broker
-        b = Broker(self.config, self.on_message_callback)
-        b.serve_forever()
+        self.impl = Broker(self.config, self.on_message_callback)
+        self.impl.serve_forever()
 
 # ################################################################################################################################
