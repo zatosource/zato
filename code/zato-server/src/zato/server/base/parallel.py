@@ -103,6 +103,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.worker_store = None
         self.deployment_lock_expires = None
         self.deployment_lock_timeout = None
+        self.deployment_key = ''
         self.app_context = None
         self.has_gevent = None
         self.delivery_store = None
@@ -242,7 +243,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
                     logger.info('Deployed an extra service found: %s (%s)', name, service_id)
 
-    def maybe_on_first_worker(self, server, redis_conn, deployment_key):
+    def maybe_on_first_worker(self, server, redis_conn):
         """ This method will execute code with a Redis lock held. We need a lock
         because we can have multiple worker processes fighting over the right to
         redeploy services. The first worker to grab the lock will actually perform
@@ -269,9 +270,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
             return set(locally_deployed)
 
-        lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, deployment_key)
+        lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, self.deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
-                                                 self.fs_server_config.main.token, deployment_key)
+                                                 self.fs_server_config.main.token, self.deployment_key)
 
         logger.debug('Will use the lock_name: [{}]'.format(lock_name))
 
@@ -324,7 +325,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
                 yield [name, program]
 
-    def _after_init_common(self, server, deployment_key):
+    def get_full_name(self):
+        """ Returns this server's full name in the form of server@cluster.
+        """
+        return '{}@{}'.format(self.name, self.cluster.name)
+
+    def _after_init_common(self, server):
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
         """
@@ -383,7 +389,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
-        is_first, locally_deployed = self.maybe_on_first_worker(server, self.kvdb.conn, deployment_key)
+        is_first, locally_deployed = self.maybe_on_first_worker(server, self.kvdb.conn)
 
         if is_first:
 
@@ -409,7 +415,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         return is_first, locally_deployed
 
-    def _after_init_accepted(self, server, deployment_key, locally_deployed):
+    def _after_init_accepted(self, server, locally_deployed):
 
         # Flag set to True if this worker is the cluster-wide singleton
         is_singleton = False
@@ -824,7 +830,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         # Will be None if we are not running in background.
         if not zato_deployment_key:
-            zato_deployment_key = uuid4().hex
+            zato_deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
+
+        parallel_server.deployment_key = zato_deployment_key
 
         register_diag_handlers()
 
@@ -850,12 +858,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         parallel_server.servers = Servers(parallel_server.odb, parallel_server.cluster.name)
 
-        is_first, locally_deployed = parallel_server._after_init_common(server, zato_deployment_key)
+        is_first, locally_deployed = parallel_server._after_init_common(server)
 
         # For now, all the servers are always ACCEPTED but future versions
         # might introduce more join states
         if server.last_join_status in(SERVER_JOIN_STATUS.ACCEPTED):
-            is_singleton = parallel_server._after_init_accepted(server, zato_deployment_key, locally_deployed)
+            is_singleton = parallel_server._after_init_accepted(server, locally_deployed)
         else:
             msg = 'Server has not been accepted, last_join_status:[{0}]'
             logger.warn(msg.format(server.last_join_status))
@@ -914,7 +922,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         set of server processes. It needs to be added to the arbiter because
         we want for each worker to be (re-)started to see the same key.
         """
-        setattr(arbiter, 'zato_deployment_key', uuid4().hex)
+        setattr(arbiter, 'zato_deployment_key', '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex))
 
     def destroy(self):
         """ A Spring Python hook for closing down all the resources held.

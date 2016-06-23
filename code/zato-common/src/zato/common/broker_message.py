@@ -43,10 +43,6 @@ class MESSAGE_TYPE:
     TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL = b'0007'
     TO_JMS_WMQ_CONNECTOR_ALL = b'0008'
 
-    TO_ZMQ_PUBLISHING_CONNECTOR_ALL = b'0009'
-    TO_ZMQ_CONSUMING_CONNECTOR_ALL = b'0010'
-    TO_ZMQ_CONNECTOR_ALL = b'0011'
-
     USER_DEFINED_START = b'5000'
 
 TOPICS = {
@@ -63,9 +59,6 @@ TOPICS = {
     MESSAGE_TYPE.TO_JMS_WMQ_CONSUMING_CONNECTOR_ALL: b'/zato/connector/jms-wmq/consuming/all',
     MESSAGE_TYPE.TO_JMS_WMQ_CONNECTOR_ALL: b'/zato/connector/jms-wmq/all',
 
-    MESSAGE_TYPE.TO_ZMQ_PUBLISHING_CONNECTOR_ALL: b'/zato/connector/zmq/publishing/all',
-    MESSAGE_TYPE.TO_ZMQ_CONSUMING_CONNECTOR_ALL: b'/zato/connector/zmq/consuming/all',
-    MESSAGE_TYPE.TO_ZMQ_CONNECTOR_ALL: b'/zato/connector/zmq/all',
 }
 
 KEYS = {k:v.replace('/zato','').replace('/',':') for k,v in TOPICS.items()}

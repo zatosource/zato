@@ -42,7 +42,7 @@ class GetListTestCase(ServiceTestCase):
             'service_name', 'pool_strategy', 'service_source', 'data_format'))
         self.assertEquals(self.sio.output_optional, ('sub_key',))
         self.assertEquals(self.sio.namespace, zato_namespace)
-        self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
+        self.assertEquals(self.sio.input_optional, ('msg_source',))
 
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.channel.zmq.get-list')
@@ -69,7 +69,7 @@ class CreateTestCase(ServiceTestCase):
         self.assertEquals(self.sio.response_elem, 'zato_channel_zmq_create_response')
         self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
             'pool_strategy', 'service_source', 'service'))
-        self.assertEquals(self.sio.input_optional, ('sub_key', 'data_format',))
+        self.assertEquals(self.sio.input_optional, ('sub_key', 'data_format', 'msg_source'))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
@@ -98,7 +98,7 @@ class EditTestCase(ServiceTestCase):
         self.assertEquals(self.sio.response_elem, 'zato_channel_zmq_edit_response')
         self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type',
             'socket_method', 'pool_strategy', 'service_source', 'service'))
-        self.assertEquals(self.sio.input_optional, ('sub_key', 'data_format',))
+        self.assertEquals(self.sio.input_optional, ('sub_key', 'data_format', 'msg_source'))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
@@ -126,7 +126,7 @@ class DeleteTestCase(ServiceTestCase):
         self.assertEquals(self.sio.response_elem, 'zato_channel_zmq_delete_response')
         self.assertEquals(self.sio.input_required, ('id',))
         self.assertEquals(self.sio.namespace, zato_namespace)
-        self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
+        self.assertEquals(self.sio.input_optional, ('msg_source',))
         self.assertRaises(AttributeError, getattr, self.sio, 'output_required')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
