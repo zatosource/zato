@@ -13,6 +13,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
+from zato.common import MSG_SOURCE, ZMQ
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelZMQ, Cluster, Service
 from zato.common.odb.query import channel_zmq_list
@@ -78,8 +79,8 @@ class Create(AdminService):
                 item.is_active = input.is_active
                 item.address = input.address
                 item.socket_type = input.socket_type
-                item.sub_key = sub_key
                 item.socket_method = input.socket_method
+                item.sub_key = sub_key
                 item.cluster_id = input.cluster_id
                 item.service = service
                 item.pool_strategy = input.pool_strategy
@@ -97,6 +98,10 @@ class Create(AdminService):
                 input.config_cid = 'channel.zmq.create.{}.{}'.format(input.source_server, self.cid)
 
                 self.broker_client.publish(input)
+
+                # We are not being invoked from an outgoing connection so we need to notify it
+                if input.socket_type.startswith(ZMQ.MDP) and input.get('msg_source') != MSG_SOURCE.DUPLEX:
+                    self.invoke('zato.outgoing.zmq.create', input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
