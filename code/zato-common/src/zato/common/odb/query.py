@@ -13,41 +13,76 @@ import logging
 from functools import wraps
 
 # SQLAlchemy
-from sqlalchemy import func, not_
+from sqlalchemy import func, inspect, not_
 from sqlalchemy.orm import aliased
+from sqlalchemy.sql.elements import Label
 from sqlalchemy.sql.expression import case
 
 # Zato
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
      URL_PARAMS_PRIORITY
-from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, CassandraQuery, ChannelAMQP, ChannelSTOMP, \
-     ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, \
-     DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, \
-     MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
-     OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, \
-     PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, \
-     SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WSSDefinition, XPath, \
-     XPathSecurity
+from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Base, CassandraConn, CassandraQuery, ChannelAMQP, \
+     ChannelSTOMP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, \
+     DeliveryHistory, DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, \
+     IntervalBasedJob, Job, MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, \
+     OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, \
+     PubSubConsumer, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, \
+     Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, \
+     WSSDefinition, XPath, XPathSecurity
 
 logger = logging.getLogger(__name__)
 
-def needs_columns(func):
-    """ A decorator for queries which works out whether a given query function
-    should return the result only or a column list retrieved in addition
-    to the result. This is useful because some callers prefer the former and
-    some need the latter.
+default_page_size = 50
+paginate_threshold = default_page_size + 1
+
+class SearchTool(object):
+    """ Wraps results in pagination and/or filters out objects by their name or other attributes.
+    """
+    def __init__(self, q, **config):
+
+        # Find models to apply WHERE criteria to
+        models = {}
+        for col_desc in q.column_descriptions:
+            expr = col_desc['expr']
+            if isinstance(expr, Label):
+                model = expr.element._annotations['parententity'].class_
+            else:
+                model = expr.parent.class_
+
+            if issubclass(model, Base):
+                models[model] = model
+
+        # Apply WHERE conditions
+        for fb_attr, fb_value in config.get('filter_by', {}).items():
+            q = q.filter(fb_attr.contains(fb_value))
+
+        # Total number of results
+        total_q = q.statement.with_only_columns([func.count()])
+        self.total = q.session.execute(total_q).scalar()
+
+        # Pagination
+        self.q = q.slice(config['cur_page'], config['max_per_page'])
+
+    def __iter__(self):
+        return iter(self.q)
+
+def query_wrapper(func):
+    """ A decorator for queries which works out whether a given query function should return the result only
+    or a column list retrieved in addition to the result. This is useful because some callers prefer the former
+    and some need the latter. Also, paginages the results if requested to by the caller.
     """
     @wraps(func)
-    def inner(*args):
+    def inner(*args, **kwargs):
         # needs_columns is always the last argument so we don't have to look
         # it up using the 'inspect' module or anything like that.
         needs_columns = args[-1]
 
-        q = func(*args)
+        q = SearchTool(func(*args), **kwargs)
 
         if needs_columns:
-            return q.all(), q.statement.columns
-        return q.all()
+            return q, q.statement.columns
+
+        return q
 
     return inner
 
@@ -80,7 +115,7 @@ def _job(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by('job.name')
 
-@needs_columns
+@query_wrapper
 def job_list(session, cluster_id, needs_columns=False):
     """ All the scheduler's jobs defined in the ODB.
     """
@@ -95,7 +130,7 @@ def job_by_name(session, cluster_id, name):
 
 # ################################################################################################################################
 
-@needs_columns
+@query_wrapper
 def apikey_security_list(session, cluster_id, needs_columns=False):
     """ All the API keys.
     """
@@ -109,7 +144,7 @@ def apikey_security_list(session, cluster_id, needs_columns=False):
         filter(SecurityBase.id==APIKeySecurity.id).\
         order_by('sec_base.name')
 
-@needs_columns
+@query_wrapper
 def aws_security_list(session, cluster_id, needs_columns=False):
     """ All the Amazon security definitions.
     """
@@ -123,7 +158,7 @@ def aws_security_list(session, cluster_id, needs_columns=False):
         filter(SecurityBase.id==AWSSecurity.id).\
         order_by('sec_base.name')
 
-@needs_columns
+@query_wrapper
 def basic_auth_list(session, cluster_id, cluster_name, needs_columns=False):
     """ All the HTTP Basic Auth definitions.
     """
@@ -146,7 +181,7 @@ def basic_auth_list(session, cluster_id, cluster_name, needs_columns=False):
 
     return q
 
-@needs_columns
+@query_wrapper
 def ntlm_list(session, cluster_id, needs_columns=False):
     """ All the NTLM definitions.
     """
@@ -161,7 +196,7 @@ def ntlm_list(session, cluster_id, needs_columns=False):
         filter(SecurityBase.id==NTLM.id).\
         order_by('sec_base.name')
 
-@needs_columns
+@query_wrapper
 def oauth_list(session, cluster_id, needs_columns=False):
     """ All the OAuth definitions.
     """
@@ -176,7 +211,7 @@ def oauth_list(session, cluster_id, needs_columns=False):
         filter(SecurityBase.id==OAuth.id).\
         order_by('sec_base.name')
 
-@needs_columns
+@query_wrapper
 def openstack_security_list(session, cluster_id, needs_columns=False):
     """ All the OpenStackSecurity definitions.
     """
@@ -188,7 +223,7 @@ def openstack_security_list(session, cluster_id, needs_columns=False):
         filter(SecurityBase.id==OpenStackSecurity.id).\
         order_by('sec_base.name')
 
-@needs_columns
+@query_wrapper
 def tech_acc_list(session, cluster_id, needs_columns=False):
     """ All the technical accounts.
     """
@@ -203,7 +238,7 @@ def tech_acc_list(session, cluster_id, needs_columns=False):
         filter(SecurityBase.id==TechnicalAccount.id).\
         order_by('sec_base.name')
 
-@needs_columns
+@query_wrapper
 def tls_ca_cert_list(session, cluster_id, needs_columns=False):
     """ TLS CA certs.
     """
@@ -212,7 +247,7 @@ def tls_ca_cert_list(session, cluster_id, needs_columns=False):
         filter(Cluster.id==TLSCACert.cluster_id).\
         order_by('sec_tls_ca_cert.name')
 
-@needs_columns
+@query_wrapper
 def tls_channel_sec_list(session, cluster_id, needs_columns=False):
     """ TLS-based channel security.
     """
@@ -225,7 +260,7 @@ def tls_channel_sec_list(session, cluster_id, needs_columns=False):
         filter(SecurityBase.id==TLSChannelSecurity.id).\
         order_by('sec_base.name')
 
-@needs_columns
+@query_wrapper
 def tls_key_cert_list(session, cluster_id, needs_columns=False):
     """ TLS key/cert pairs.
     """
@@ -238,7 +273,7 @@ def tls_key_cert_list(session, cluster_id, needs_columns=False):
         filter(SecurityBase.id==TLSKeyCertSecurity.id).\
         order_by('sec_base.name')
 
-@needs_columns
+@query_wrapper
 def wss_list(session, cluster_id, needs_columns=False):
     """ All the WS-Security definitions.
     """
@@ -253,7 +288,7 @@ def wss_list(session, cluster_id, needs_columns=False):
         filter(SecurityBase.id==WSSDefinition.id).\
         order_by('sec_base.name')
 
-@needs_columns
+@query_wrapper
 def xpath_sec_list(session, cluster_id, needs_columns=False):
     """ All the XPath security definitions.
     """
@@ -284,7 +319,7 @@ def def_amqp(session, cluster_id, id):
         filter(ConnDefAMQP.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def def_amqp_list(session, cluster_id, needs_columns=False):
     """ AMQP connection definitions.
     """
@@ -310,7 +345,7 @@ def def_jms_wmq(session, cluster_id, id):
         filter(ConnDefWMQ.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def def_jms_wmq_list(session, cluster_id, needs_columns=False):
     """ JMS WebSphere MQ connection definitions.
     """
@@ -337,7 +372,7 @@ def out_amqp(session, cluster_id, id):
         filter(OutgoingAMQP.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def out_amqp_list(session, cluster_id, needs_columns=False):
     """ Outgoing AMQP connections.
     """
@@ -370,7 +405,7 @@ def out_jms_wmq_by_name(session, cluster_id, name):
         filter(OutgoingWMQ.name==name).\
         first()
 
-@needs_columns
+@query_wrapper
 def out_jms_wmq_list(session, cluster_id, needs_columns=False):
     """ Outgoing JMS WebSphere MQ connections.
     """
@@ -399,7 +434,7 @@ def channel_amqp(session, cluster_id, id):
         filter(ChannelAMQP.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def channel_amqp_list(session, cluster_id, needs_columns=False):
     """ AMQP channels.
     """
@@ -425,7 +460,7 @@ def channel_stomp(session, cluster_id, id):
         filter(ChannelSTOMP.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def channel_stomp_list(session, cluster_id, needs_columns=False):
     """ A list of STOMP channels.
     """
@@ -452,7 +487,7 @@ def channel_jms_wmq(session, cluster_id, id):
         filter(ChannelWMQ.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def channel_jms_wmq_list(session, cluster_id, needs_columns=False):
     """ JMS WebSphere MQ channels.
     """
@@ -473,7 +508,7 @@ def out_stomp(session, cluster_id, id):
         filter(OutgoingSTOMP.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def out_stomp_list(session, cluster_id, needs_columns=False):
     """ Outgoing STOMP connections.
     """
@@ -496,7 +531,7 @@ def out_zmq(session, cluster_id, id):
         filter(OutgoingZMQ.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def out_zmq_list(session, cluster_id, needs_columns=False):
     """ Outgoing ZeroMQ connections.
     """
@@ -522,7 +557,7 @@ def channel_zmq(session, cluster_id, id):
         filter(ChannelZMQ.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def channel_zmq_list(session, cluster_id, needs_columns=False):
     """ Incoming ZeroMQ connections.
     """
@@ -563,10 +598,10 @@ def _http_soap(session, cluster_id):
         SecurityBase.password_type.label('password_type'),).\
         outerjoin(Service, Service.id==HTTPSOAP.service_id).\
         outerjoin(TLSCACert, TLSCACert.id==HTTPSOAP.sec_tls_ca_cert_id).\
-        outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id).\
-        filter(Cluster.id==HTTPSOAP.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(HTTPSOAP.name)
+        outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id)#.\
+        #filter(Cluster.id==HTTPSOAP.cluster_id).\
+        #filter(Cluster.id==cluster_id).\
+        #order_by(HTTPSOAP.name)
 
 def http_soap_security_list(session, cluster_id, connection=None):
     """ HTTP/SOAP security definitions.
@@ -585,8 +620,8 @@ def http_soap(session, cluster_id, id):
         filter(HTTPSOAP.id==id).\
         one()
 
-@needs_columns
-def http_soap_list(session, cluster_id, connection=None, transport=None, return_internal=True, needs_columns=False):
+@query_wrapper
+def http_soap_list(session, cluster_id, connection=None, transport=None, return_internal=True, needs_columns=False, **kwargs):
     """ HTTP/SOAP connections, both channels and outgoing ones.
     """
     q = _http_soap(session, cluster_id)
@@ -617,7 +652,7 @@ def out_sql(session, cluster_id, id):
         filter(SQLConnectionPool.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def out_sql_list(session, cluster_id, needs_columns=False):
     """ Outgoing SQL connections.
     """
@@ -641,7 +676,7 @@ def out_ftp(session, cluster_id, id):
         filter(OutgoingFTP.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def out_ftp_list(session, cluster_id, needs_columns=False):
     """ Outgoing FTP connections.
     """
@@ -664,7 +699,7 @@ def service(session, cluster_id, id):
         filter(Service.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def service_list(session, cluster_id, return_internal=True, needs_columns=False):
     """ All services.
     """
@@ -760,7 +795,7 @@ def delivery(session, task_id, target_def_class):
         filter(Delivery.task_id==task_id).\
         filter(DeliveryPayload.task_id==Delivery.task_id)
 
-@needs_columns
+@query_wrapper
 def delivery_history_list(session, task_id, needs_columns=True):
     return session.query(
         DeliveryHistory.entry_type,
@@ -782,23 +817,23 @@ def _msg_list(class_, order_by, session, cluster_id, needs_columns=False):
         filter(Cluster.id==class_.cluster_id).\
         order_by(order_by)
 
-@needs_columns
+@query_wrapper
 def namespace_list(session, cluster_id, needs_columns=False):
     """ All the namespaces.
     """
-    return _msg_list(MsgNamespace, 'msg_ns.name', session, cluster_id, needs_columns)
+    return _msg_list(MsgNamespace, 'msg_ns.name', session, cluster_id, query_wrapper)
 
-@needs_columns
+@query_wrapper
 def xpath_list(session, cluster_id, needs_columns=False):
     """ All the XPaths.
     """
-    return _msg_list(XPath, 'msg_xpath.name', session, cluster_id, needs_columns)
+    return _msg_list(XPath, 'msg_xpath.name', session, cluster_id, query_wrapper)
 
-@needs_columns
+@query_wrapper
 def json_pointer_list(session, cluster_id, needs_columns=False):
     """ All the JSON Pointers.
     """
-    return _msg_list(JSONPointer, 'msg_json_pointer.name', session, cluster_id, needs_columns)
+    return _msg_list(JSONPointer, 'msg_json_pointer.name', session, cluster_id, query_wrapper)
 
 # ################################################################################################################################
 
@@ -869,7 +904,7 @@ def cloud_openstack_swift(session, cluster_id, id):
         filter(OpenStackSwift.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def cloud_openstack_swift_list(session, cluster_id, needs_columns=False):
     """ OpenStack Swift connections.
     """
@@ -893,7 +928,7 @@ def cloud_aws_s3(session, cluster_id, id):
         filter(AWSS3.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def cloud_aws_s3_list(session, cluster_id, needs_columns=False):
     """ AWS S3 connections.
     """
@@ -914,7 +949,7 @@ def pubsub_topic(session, cluster_id, id):
         filter(PubSubTopic.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def pubsub_topic_list(session, cluster_id, needs_columns=False):
     """ All pub/sub topics.
     """
@@ -945,11 +980,11 @@ def _pubsub_producer(session, cluster_id, needs_columns=False):
         filter(PubSubProducer.sec_def_id==SecurityBase.id).\
         order_by(SecurityBase.sec_type, SecurityBase.name)
 
-@needs_columns
+@query_wrapper
 def pubsub_producer_list(session, cluster_id, topic_name, needs_columns=False):
     """ All pub/sub producers.
     """
-    response = _pubsub_producer(session, cluster_id, needs_columns)
+    response = _pubsub_producer(session, cluster_id, query_wrapper)
     if topic_name:
         response = response.filter(PubSubTopic.name==topic_name)
     return response
@@ -978,11 +1013,11 @@ def _pubsub_consumer(session, cluster_id, needs_columns=False):
         filter(PubSubConsumer.sec_def_id==SecurityBase.id).\
         order_by(SecurityBase.sec_type, SecurityBase.name)
 
-@needs_columns
+@query_wrapper
 def pubsub_consumer_list(session, cluster_id, topic_name, needs_columns=False):
     """ All pub/sub consumers.
     """
-    response = _pubsub_consumer(session, cluster_id, needs_columns)
+    response = _pubsub_consumer(session, cluster_id, query_wrapper)
     if topic_name:
         response = response.filter(PubSubTopic.name==topic_name)
     return response
@@ -1011,7 +1046,7 @@ def notif_cloud_openstack_swift(session, cluster_id, id, needs_password=False):
         filter(NotifOSS.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def notif_cloud_openstack_swift_list(session, cluster_id, needs_password=False, needs_columns=False):
     """ OpenStack Swift connection definitions.
     """
@@ -1035,7 +1070,7 @@ def _notif_sql(session, cluster_id, needs_password):
         filter(Service.id==NotifSQL.service_id).\
         filter(Cluster.id==cluster_id)
 
-@needs_columns
+@query_wrapper
 def notif_sql_list(session, cluster_id, needs_password=False, needs_columns=False):
     """ All the SQL notifications.
     """
@@ -1051,7 +1086,7 @@ def _search_es(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(ElasticSearch.name)
 
-@needs_columns
+@query_wrapper
 def search_es_list(session, cluster_id, needs_columns=False):
     """ All the ElasticSearch connections.
     """
@@ -1067,7 +1102,7 @@ def _search_solr(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(Solr.name)
 
-@needs_columns
+@query_wrapper
 def search_solr_list(session, cluster_id, needs_columns=False):
     """ All the Solr connections.
     """
@@ -1092,7 +1127,7 @@ def _server(session, cluster_id, cluster_name):
 
     return q
 
-@needs_columns
+@query_wrapper
 def server_list(session, cluster_id, cluster_name, needs_columns=False):
     """ All the servers defined on a cluster.
     """
@@ -1113,7 +1148,7 @@ def cassandra_conn(session, cluster_id, id):
         filter(CassandraConn.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def cassandra_conn_list(session, cluster_id, needs_columns=False):
     """ A list of Cassandra connection definitions.
     """
@@ -1140,7 +1175,7 @@ def cassandra_query(session, cluster_id, id):
         filter(CassandraQuery.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def cassandra_query_list(session, cluster_id, needs_columns=False):
     """ A list of Cassandra prepared statements.
     """
@@ -1161,7 +1196,7 @@ def email_smtp(session, cluster_id, id):
         filter(SMTP.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def email_smtp_list(session, cluster_id, needs_columns=False):
     """ A list of SMTP connections.
     """
@@ -1182,7 +1217,7 @@ def email_imap(session, cluster_id, id):
         filter(IMAP.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def email_imap_list(session, cluster_id, needs_columns=False):
     """ A list of IMAP connections.
     """
@@ -1203,7 +1238,7 @@ def rbac_permission(session, cluster_id, id):
         filter(RBACPermission.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def rbac_permission_list(session, cluster_id, needs_columns=False):
     """ A list of RBAC permissions.
     """
@@ -1226,7 +1261,7 @@ def rbac_role(session, cluster_id, id):
         filter(RBACRole.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def rbac_role_list(session, cluster_id, needs_columns=False):
     """ A list of RBAC roles.
     """
@@ -1247,7 +1282,7 @@ def rbac_client_role(session, cluster_id, id):
         filter(RBACClientRole.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def rbac_client_role_list(session, cluster_id, needs_columns=False):
     """ A list of mappings between clients and roles.
     """
@@ -1268,7 +1303,7 @@ def rbac_role_permission(session, cluster_id, id):
         filter(RBACRolePermission.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def rbac_role_permission_list(session, cluster_id, needs_columns=False):
     """ A list of permissions for roles against services.
     """
@@ -1289,7 +1324,7 @@ def out_odoo(session, cluster_id, id):
         filter(OutgoingOdoo.id==id).\
         one()
 
-@needs_columns
+@query_wrapper
 def out_odoo_list(session, cluster_id, needs_columns=False):
     """ A list of Odoo connections.
     """
