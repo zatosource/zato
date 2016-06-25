@@ -208,6 +208,7 @@ class SimpleIOPayload(SIOConverter):
         self.zato_required = [(True, name) for name in required_list]
         self.zato_optional = [(False, name) for name in optional_list]
         self.zato_output_repeated = output_repeated
+        self.zato_meta = {'_meta':{}}
         self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
         self.int_parameters = simple_io_config.get('int_parameters', [])
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
@@ -366,7 +367,10 @@ class SimpleIOPayload(SIOConverter):
             top = getattr(em, self.response_elem)(zato_env)
             top.append(value)
         else:
-            top = {self.response_elem: value}
+            top = {
+                self.response_elem: value,
+                '_meta': self.zato_meta
+            }
 
         if serialize:
             if self.zato_is_xml:
