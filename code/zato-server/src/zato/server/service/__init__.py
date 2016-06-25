@@ -91,6 +91,7 @@ class Service(object):
     the transport and protocol, be it plain HTTP, SOAP, WebSphere MQ or any other,
     regardless whether they're built-in or user-defined ones.
     """
+    _filter_by = None
     http_method_handlers = {}
 
     def __init__(self, *ignored_args, **ignored_kwargs):
@@ -349,7 +350,7 @@ class Service(object):
                 try:
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
-                    # If this is was fan-out/fan-in we need to always notify our callbacks no matter the result
+                    # If this was fan-out/fan-in we need to always notify our callbacks no matter the result
                     if channel in (CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL):
                         func = self.patterns.fanout.on_call_finished if channel == CHANNEL.FANOUT_CALL else \
                             self.patterns.parallel.on_call_finished
@@ -398,7 +399,7 @@ class Service(object):
             raise ZatoException(self.cid, msg)
 
         service = self.server.service_store.new_instance(impl_name)
-        set_response_func = kwargs.pop('set_response_func', self.set_response_data)
+        set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
                         self.broker_client, self.worker_store, kwargs.pop('cid', self.cid), self.request.simple_io_config)
@@ -424,11 +425,6 @@ class Service(object):
     def invoke(self, name, *args, **kwargs):
         """ Invokes a service synchronously by its name.
         """
-        if kwargs.get('debug_invoke'):
-            self.logger.info('*' * 30)
-            for k, v in sorted(locals().items()):
-                self.logger.info('%r=%r', k, v)
-
         name, target = self.extract_target(name)
         kwargs['target'] = target
 
@@ -598,11 +594,6 @@ class Service(object):
         backend - a Redis connection object, defaults to self.kvdb.conn
         """
         return get_lock(KVDB.LOCK_SERVICE_PREFIX, name or self.name, expires, timeout, backend or self.kvdb.conn)
-        '''
-        name = '{}{}'.format(KVDB.LOCK_SERVICE_PREFIX, name or self.name)
-        backend = backend or self.kvdb.conn
-        return Lock(name, expires, timeout, backend)
-        '''
 
 # ################################################################################################################################
 
@@ -629,7 +620,7 @@ class Service(object):
         try:
             getattr(self, '{}_handle'.format(prefix))()
         except Exception, e:
-            self.logger.error("Can't run {}_handle, e:[{}]".format(prefix, format_exc(e)))
+            self.logger.error('Can\'t run %s_handle of `%s`, e:`%s`', prefix, self, format_exc(e))
 
     def call_hooks(self, prefix):
         if prefix == 'before':

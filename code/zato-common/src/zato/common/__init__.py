@@ -259,7 +259,7 @@ class SEARCH:
 
     class ZATO:
         class DEFAULTS(Constants):
-            PAGE_SIZE = ValueConstant(50)
+            PAGE_SIZE = ValueConstant(2)
             PAGINATE_THRESHOLD = ValueConstant(PAGE_SIZE.value + 1)
 
 class SEC_DEF_TYPE:

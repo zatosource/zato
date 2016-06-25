@@ -26,8 +26,7 @@ from validate import is_boolean
 # Zato
 from zato.common import BROKER, KVDB, ZatoException
 from zato.common.broker_message import SERVICE
-from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, \
-     DeployedService, HTTPSOAP, Server, Service
+from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.util import hot_deploy, payload_from_request
 from zato.server.service import Boolean, Integer
@@ -38,6 +37,8 @@ _no_such_service_name = uuid4().hex
 class GetList(AdminService):
     """ Returns a list of services.
     """
+    _filter_by = Service.name, Service.impl_name
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
@@ -53,7 +54,7 @@ class GetList(AdminService):
         internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
 
         out = []
-        sl = service_list(session, self.request.input.cluster_id, return_internal, False)
+        sl = self._search(service_list, session, self.request.input.cluster_id, return_internal, False)
 
         name_filter = self.request.input.get('name_filter')
         if name_filter:

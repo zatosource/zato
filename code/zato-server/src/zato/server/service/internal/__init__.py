@@ -14,21 +14,64 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
+from zato.common import SEARCH, SECRET_SHADOW, zato_namespace, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
 from zato.common.util import replace_private_key
 from zato.server.service import Service
 
+# ################################################################################################################################
+
+logger = logging.getLogger('zato_admin')
+
+# ################################################################################################################################
+
 success_code = 0
 success = '<error_code>{}</error_code>'.format(success_code)
 
-logger = logging.getLogger('zato_admin')
+# ################################################################################################################################
+
+_default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
+
+# ################################################################################################################################
+
+class SearchTool(object):
+    """ Optionally attached to each internal service returning a list of results responsible for extraction
+    and serialization of search criteria.
+    """
+    _search_attrs = 'num_pages', 'cur_page', 'prev_page', 'next_page', 'has_prev_page', 'has_next_page'
+
+    def __init__(self, *criteria):
+        self.criteria = criteria
+        self.output_meta = {'search':{}}
+
+    def __nonzero__(self):
+        return self.output_meta['search'].get('num_pages')
+
+    def set_output_meta(self, result):
+        meta = self.output_meta['search']
+
+        for name in self._search_attrs:
+            meta[name] = getattr(result, name)
+
+# ################################################################################################################################
 
 class AdminService(Service):
     """ A Zato admin service, part of the API.
     """
+    output_optional = ('_meta',)
+
     def __init__(self):
         super(AdminService, self).__init__()
+
+# ################################################################################################################################
+
+    def _init(self):
+        if self._filter_by:
+            self._search_tool = SearchTool(self._filter_by)
+
+        super(AdminService, self)._init()
+
+# ################################################################################################################################
 
     def before_handle(self):
         if logger.isEnabledFor(logging.INFO):
@@ -42,20 +85,74 @@ class AdminService(Service):
 
             logger.info('cid:[%s], name:[%s], SIO request:[%s]', self.cid, self.name, request)
 
+# ################################################################################################################################
+
     def handle(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
 
+# ################################################################################################################################
+
     def after_handle(self):
         payload = self.response.payload
-        response = replace_private_key(payload if isinstance(payload, basestring) else payload.getvalue())
+        is_basestring = isinstance(payload, basestring)
 
-        logger.info('cid:[{}], name:[{}], response:[{}]'.format(self.cid, self.name, response))
+        if hasattr(self, '_search_tool') and not is_basestring:
+            payload.zato_meta = self._search_tool.output_meta
+
+        response = replace_private_key(payload if is_basestring else payload.getvalue())
+
+        logger.info('cid:`{}`, name:`{}`, response:`{}`'.format(self.cid, self.name, response))
+
+# ################################################################################################################################
 
     def get_data(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
 
+# ################################################################################################################################
+
+    def _search(self, search_func, session, cluster_id, *args, **kwargs):
+        """ Adds search criteria to an SQLAlchemy based on the service's (self) search configuration.
+        """
+        meta = self.request.input.get('_meta', {'search':{}})
+
+        cur_page = meta.get('cur_page', 1)
+        page_size = meta.get('page_size', _default_page_size)
+
+        # We need to substract 1 because externally our API exposes human-readable numbers,
+        # i.e. starting from 1, not 0, but internally the database needs 0-based slices.
+        if cur_page > 0:
+            cur_page -= 1
+
+        kwargs = {
+            'cur_page': cur_page,
+            'page_size': page_size,
+        }
+
+        result = search_func(session, cluster_id, *args, **kwargs)
+
+        num_pages, rest = divmod(result.total, page_size)
+
+        # Apparently there are some results in rest that did not fit a full page
+        if rest:
+            num_pages += 1
+
+        result.num_pages = num_pages
+        result.cur_page = cur_page + 1 # Adding 1 because, again, the external API is 1-indexed
+        result.prev_page = result.cur_page - 1 if result.cur_page > 1 else None
+        result.next_page = result.cur_page + 1 if result.cur_page <= result.total else None
+        result.has_prev_page = result.prev_page > 1
+        result.has_next_page = result.next_page < result.num_pages
+
+        self._search_tool.set_output_meta(result)
+
+        return result
+
+# ################################################################################################################################
+
 class AdminSIO(object):
     namespace = zato_namespace
+
+# ################################################################################################################################
 
 class Ping(AdminService):
     class SimpleIO(AdminSIO):
@@ -65,9 +162,13 @@ class Ping(AdminService):
     def handle(self):
         self.response.payload.pong = 'zato'
 
+# ################################################################################################################################
+
 class Ping2(Ping):
     class SimpleIO(Ping.SimpleIO):
         response_elem = 'zato_ping2_response'
+
+# ################################################################################################################################
 
 class ChangePasswordBase(AdminService):
     """ A base class for handling the changing of any of the ODB passwords.
@@ -124,3 +225,5 @@ class ChangePasswordBase(AdminService):
                 session.rollback()
 
                 raise
+
+# ################################################################################################################################

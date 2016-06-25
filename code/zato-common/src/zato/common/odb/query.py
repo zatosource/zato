@@ -13,15 +13,14 @@ import logging
 from functools import wraps
 
 # SQLAlchemy
-from sqlalchemy import func, inspect, not_
+from sqlalchemy import func, not_
 from sqlalchemy.orm import aliased
-from sqlalchemy.sql.elements import Label
 from sqlalchemy.sql.expression import case
 
 # Zato
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
-     SEARCH, URL_PARAMS_PRIORITY
-from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Base, CassandraConn, CassandraQuery, ChannelAMQP, \
+     URL_PARAMS_PRIORITY
+from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, CassandraQuery, ChannelAMQP, \
      ChannelSTOMP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, \
      DeliveryHistory, DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, \
      IntervalBasedJob, Job, MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, \
@@ -36,10 +35,35 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-class SearchTool(object):
+_no_page_limit = 2 ** 24 # ~16.7 million results, tops
+
+# ################################################################################################################################
+
+class _SearchResult(object):
+    def __init__(self, q, result, columns, total):
+        self.q = q
+        self.result = result
+        self.total = total
+        self.columns = columns
+        self.num_pages = 0
+        self.cur_page = 0
+        self.prev_page = 0
+        self.next_page = 0
+        self.has_prev_page = False
+        self.has_next_page = False
+
+    def __iter__(self):
+        return iter(self.result)
+
+    def __repr__(self):
+        # To avoice circular imports - this is OK because we very rarely repr(self) anyway
+        from zato.common.util import make_repr
+        return make_repr(self)
+
+class _SearchWrapper(object):
     """ Wraps results in pagination and/or filters out objects by their name or other attributes.
     """
-    def __init__(self, q, default_page_size=SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value, **config):
+    def __init__(self, q, default_page_size=_no_page_limit, **config):
 
         # Apply WHERE conditions
         for fb_attr, fb_value in config.get('filter_by', {}).items():
@@ -66,20 +90,15 @@ def query_wrapper(func):
         # so we don't have to look it up using the 'inspect' module or anything like that.
         needs_columns = args[-1]
 
-        st = SearchTool(func(*args), **kwargs)
+        tool = _SearchWrapper(func(*args), **kwargs)
+        result = _SearchResult(tool.q, tool.q.all(), tool.q.statement.columns, tool.total)
 
         if needs_columns:
-            return st.q.all(), st.q.statement.columns
+            return result, result.columns
 
-        return st.q.all()
+        return result
 
     return inner
-
-# ################################################################################################################################
-
-def add_search_criteria(self, q):
-    """ Adds search criteria to an SQLAlchemy based on the service's (self) search configuration.
-    """
 
 # ################################################################################################################################
 
