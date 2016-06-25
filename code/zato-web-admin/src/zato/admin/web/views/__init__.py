@@ -294,6 +294,8 @@ class Index(_BaseView):
             return_data = {'cluster_id':self.cluster_id}
             output_repeated = getattr(self.SimpleIO, 'output_repeated', False)
 
+            response = None
+
             if self.can_invoke_admin_service():
                 self.before_invoke_admin_service()
                 response = self.invoke_admin_service()
@@ -315,6 +317,7 @@ class Index(_BaseView):
             return_data['user_message_class'] = self.user_message_class
             return_data['zato_clusters'] = req.zato.clusters
             return_data['choose_cluster_form'] = req.zato.choose_cluster_form
+            return_data['meta'] = response.meta if response else {}
 
             view_specific = self.handle()
             if view_specific:
