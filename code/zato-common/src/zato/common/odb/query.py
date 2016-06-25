@@ -20,7 +20,7 @@ from sqlalchemy.sql.expression import case
 
 # Zato
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
-     URL_PARAMS_PRIORITY
+     SEARCH, URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Base, CassandraConn, CassandraQuery, ChannelAMQP, \
      ChannelSTOMP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, \
      DeliveryHistory, DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, \
@@ -30,27 +30,16 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Base, Cass
      Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, \
      WSSDefinition, XPath, XPathSecurity
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
 
-default_page_size = 50
-paginate_threshold = default_page_size + 1
+# ################################################################################################################################
 
 class SearchTool(object):
     """ Wraps results in pagination and/or filters out objects by their name or other attributes.
     """
-    def __init__(self, q, **config):
-
-        # Find models to apply WHERE criteria to
-        models = {}
-        for col_desc in q.column_descriptions:
-            expr = col_desc['expr']
-            if isinstance(expr, Label):
-                model = expr.element._annotations['parententity'].class_
-            else:
-                model = expr.parent.class_
-
-            if issubclass(model, Base):
-                models[model] = model
+    def __init__(self, q, default_page_size=SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value, **config):
 
         # Apply WHERE conditions
         for fb_attr, fb_value in config.get('filter_by', {}).items():
@@ -61,10 +50,9 @@ class SearchTool(object):
         self.total = q.session.execute(total_q).scalar()
 
         # Pagination
-        self.q = q.slice(config['cur_page'], config['max_per_page'])
+        self.q = q.slice(config.get('cur_page', 0), config.get('page_size', default_page_size))
 
-    def __iter__(self):
-        return iter(self.q)
+# ################################################################################################################################
 
 def query_wrapper(func):
     """ A decorator for queries which works out whether a given query function should return the result only
@@ -73,18 +61,25 @@ def query_wrapper(func):
     """
     @wraps(func)
     def inner(*args, **kwargs):
-        # needs_columns is always the last argument so we don't have to look
-        # it up using the 'inspect' module or anything like that.
+
+        # needs_columns is always the last argument
+        # so we don't have to look it up using the 'inspect' module or anything like that.
         needs_columns = args[-1]
 
-        q = SearchTool(func(*args), **kwargs)
+        st = SearchTool(func(*args), **kwargs)
 
         if needs_columns:
-            return q, q.statement.columns
+            return st.q.all(), st.q.statement.columns
 
-        return q
+        return st.q.all()
 
     return inner
+
+# ################################################################################################################################
+
+def add_search_criteria(self, q):
+    """ Adds search criteria to an SQLAlchemy based on the service's (self) search configuration.
+    """
 
 # ################################################################################################################################
 
@@ -598,10 +593,10 @@ def _http_soap(session, cluster_id):
         SecurityBase.password_type.label('password_type'),).\
         outerjoin(Service, Service.id==HTTPSOAP.service_id).\
         outerjoin(TLSCACert, TLSCACert.id==HTTPSOAP.sec_tls_ca_cert_id).\
-        outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id)#.\
-        #filter(Cluster.id==HTTPSOAP.cluster_id).\
-        #filter(Cluster.id==cluster_id).\
-        #order_by(HTTPSOAP.name)
+        outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id).\
+        filter(Cluster.id==HTTPSOAP.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(HTTPSOAP.name)
 
 def http_soap_security_list(session, cluster_id, connection=None):
     """ HTTP/SOAP security definitions.
@@ -883,10 +878,12 @@ def _http_soap_audit(session, cluster_id, conn_id=None, start=None, stop=None, q
 
     return q
 
-def http_soap_audit_item_list(session, cluster_id, conn_id, start, stop, query, needs_req_payload):
+@query_wrapper
+def http_soap_audit_item_list(session, cluster_id, conn_id, start, stop, query, needs_req_payload, needs_columns=False):
     return _http_soap_audit(session, cluster_id, conn_id, start, stop, query)
 
-def http_soap_audit_item(session, cluster_id, id):
+@query_wrapper
+def http_soap_audit_item(session, cluster_id, id, needs_columns=False):
     return _http_soap_audit(session, cluster_id, id=id, needs_req_payload=True)
 
 # ################################################################################################################################
