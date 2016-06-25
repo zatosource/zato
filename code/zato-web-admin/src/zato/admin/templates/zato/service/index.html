@@ -83,6 +83,8 @@
 
 {% include "zato/choose-cluster.html" with page_prompt="Show services" pattern_hint="Type a service name" %}
 
+{{ meta }}
+
 
     {% if cluster_id %}
         <div class='page_prompt'>

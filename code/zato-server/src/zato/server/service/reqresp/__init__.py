@@ -208,7 +208,7 @@ class SimpleIOPayload(SIOConverter):
         self.zato_required = [(True, name) for name in required_list]
         self.zato_optional = [(False, name) for name in optional_list]
         self.zato_output_repeated = output_repeated
-        self.zato_meta = {'_meta':{}}
+        self.zato_meta = {}
         self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
         self.int_parameters = simple_io_config.get('int_parameters', [])
         self.int_parameter_suffixes = simple_io_config.get('int_parameter_suffixes', [])
@@ -369,7 +369,7 @@ class SimpleIOPayload(SIOConverter):
         else:
             top = {
                 self.response_elem: value,
-                '_meta': self.zato_meta
+                '_meta': self.zato_meta.get('search', {})
             }
 
         if serialize:
