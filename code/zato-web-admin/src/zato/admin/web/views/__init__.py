@@ -230,16 +230,19 @@ class _BaseView(object):
         self.cluster_id = None
         self.fetch_cluster_id()
 
-    def set_input(self, req=None):
+    def set_input(self, req=None, default_attrs=('cur_page', 'query')):
         req = req or self.req
         self.input.update({
             'cluster_id':self.cluster_id,
             'paginate': getattr(self, 'paginate', False),
         })
-        for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
+        for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional, default_attrs):
             if name != 'cluster_id':
-                value = req.GET.get(self.form_prefix + name) or \
-                    req.POST.get(self.form_prefix + name) or req.zato.args.get(self.form_prefix + name)
+                value = \
+                    req.GET.get(name) or \
+                    req.GET.get(self.form_prefix + name) or \
+                    req.POST.get(self.form_prefix + name) or \
+                    req.zato.args.get(self.form_prefix + name)
                 self.input[name] = value
 
         self.on_after_set_input()

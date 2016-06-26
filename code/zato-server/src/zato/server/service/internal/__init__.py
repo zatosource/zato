@@ -31,6 +31,7 @@ success = '<error_code>{}</error_code>'.format(success_code)
 # ################################################################################################################################
 
 _default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
+_max_page_size = _default_page_size * 5
 
 # ################################################################################################################################
 
@@ -114,15 +115,21 @@ class AdminService(Service):
     def _search(self, search_func, session, cluster_id, *args, **kwargs):
         """ Adds search criteria to an SQLAlchemy based on the service's (self) search configuration.
         """
+        _input = self.request.input
 
         # No pagination requested at all
-        if not self.request.input.get('paginate'):
+        if not _input.get('paginate'):
             return search_func(session, cluster_id, *args).all()
 
-        meta = self.request.input.get('_meta', {'search':{}})
+        try:
+            cur_page = int(_input.get('cur_page', 1))
+        except(ValueError, TypeError):
+            cur_page = 1
 
-        cur_page = meta.get('cur_page', 1)
-        page_size = meta.get('page_size', _default_page_size)
+        try:
+            page_size = min(int(_input.get('page_size', _default_page_size)), _max_page_size)
+        except(ValueError, TypeError):
+            page_size = _default_page_size
 
         # We need to substract 1 because externally our API exposes human-readable numbers,
         # i.e. starting from 1, not 0, but internally the database needs 0-based slices.
@@ -153,8 +160,8 @@ class AdminService(Service):
         result.cur_page = cur_page + 1 # Adding 1 because, again, the external API is 1-indexed
         result.prev_page = result.cur_page - 1 if result.cur_page > 1 else None
         result.next_page = result.cur_page + 1 if result.cur_page <= result.total else None
-        result.has_prev_page = result.prev_page > 1
-        result.has_next_page = result.next_page < result.num_pages
+        result.has_prev_page = result.prev_page >= 1
+        result.has_next_page = result.next_page <= result.num_pages
         result.page_size = page_size
 
         self._search_tool.set_output_meta(result)
@@ -165,7 +172,7 @@ class AdminService(Service):
 
 class AdminSIO(object):
     namespace = zato_namespace
-    input_optional = ('paginate',)
+    input_optional = ('paginate', 'cur_page', 'query')
 
 # ################################################################################################################################
 
