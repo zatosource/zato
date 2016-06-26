@@ -152,6 +152,7 @@ class Index(_Index):
     template = 'zato/service/index.html'
     service_name = 'zato.service.get-list'
     output_class = Service
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

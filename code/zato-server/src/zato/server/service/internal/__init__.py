@@ -38,7 +38,7 @@ class SearchTool(object):
     """ Optionally attached to each internal service returning a list of results responsible for extraction
     and serialization of search criteria.
     """
-    _search_attrs = 'num_pages', 'cur_page', 'prev_page', 'next_page', 'has_prev_page', 'has_next_page'
+    _search_attrs = 'num_pages', 'cur_page', 'prev_page', 'next_page', 'has_prev_page', 'has_next_page', 'page_size', 'total'
 
     def __init__(self, *criteria):
         self.criteria = criteria
@@ -95,8 +95,9 @@ class AdminService(Service):
     def after_handle(self):
         payload = self.response.payload
         is_basestring = isinstance(payload, basestring)
+        needs_meta = self.request.input.get('needs_meta', True)
 
-        if hasattr(self, '_search_tool') and not is_basestring:
+        if needs_meta and hasattr(self, '_search_tool') and not is_basestring:
             payload.zato_meta = self._search_tool.output_meta
 
         response = replace_private_key(payload if is_basestring else payload.getvalue())
@@ -113,6 +114,11 @@ class AdminService(Service):
     def _search(self, search_func, session, cluster_id, *args, **kwargs):
         """ Adds search criteria to an SQLAlchemy based on the service's (self) search configuration.
         """
+
+        # No pagination requested at all
+        if not self.request.input.get('paginate'):
+            return search_func(session, cluster_id, *args)
+
         meta = self.request.input.get('_meta', {'search':{}})
 
         cur_page = meta.get('cur_page', 1)
@@ -142,6 +148,7 @@ class AdminService(Service):
         result.next_page = result.cur_page + 1 if result.cur_page <= result.total else None
         result.has_prev_page = result.prev_page > 1
         result.has_next_page = result.next_page < result.num_pages
+        result.page_size = page_size
 
         self._search_tool.set_output_meta(result)
 
@@ -151,6 +158,7 @@ class AdminService(Service):
 
 class AdminSIO(object):
     namespace = zato_namespace
+    input_optional = ('paginate',)
 
 # ################################################################################################################################
 

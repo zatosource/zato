@@ -367,10 +367,10 @@ class SimpleIOPayload(SIOConverter):
             top = getattr(em, self.response_elem)(zato_env)
             top.append(value)
         else:
-            top = {
-                self.response_elem: value,
-                '_meta': self.zato_meta.get('search', {})
-            }
+            top = {self.response_elem: value}
+            search = self.zato_meta.get('search')
+            if search:
+                top['_meta'] = search
 
         if serialize:
             if self.zato_is_xml:
