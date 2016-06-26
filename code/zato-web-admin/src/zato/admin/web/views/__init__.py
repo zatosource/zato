@@ -205,7 +205,10 @@ class _BaseView(object):
 
     def set_input(self, req=None):
         req = req or self.req
-        self.input.update({'cluster_id':self.cluster_id})
+        self.input.update({
+            'cluster_id':self.cluster_id,
+            'paginate': getattr(self, 'paginate', False),
+        })
         for name in chain(self.SimpleIO.input_required, self.SimpleIO.input_optional):
             if name != 'cluster_id':
                 value = req.GET.get(self.form_prefix + name) or \
@@ -301,7 +304,12 @@ class Index(_BaseView):
                 response = self.invoke_admin_service()
                 if response.ok:
                     if output_repeated:
-                        self._handle_item_list(response.data)
+                        if isinstance(response.data, dict):
+                            response.data.pop('_meta', None)
+                            data = response.data[response.data.keys()[0]]
+                        else:
+                            data = response.data
+                        self._handle_item_list(data)
                     else:
                         self._handle_item(response.data)
                 else:

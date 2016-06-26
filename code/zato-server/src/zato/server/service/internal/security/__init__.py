@@ -24,7 +24,7 @@ class GetList(AdminService):
         request_elem = 'zato_security_get_list_request'
         response_elem = 'zato_security_get_list_response'
         input_required = ('cluster_id',)
-        input_optional = (List('sec_type'), Boolean('needs_internal', default=True))
+        input_optional = AdminSIO.input_optional + (List('sec_type'), Boolean('needs_internal', default=True))
         output_required = ('id', 'name', 'is_active', 'sec_type')
         output_optional = ('username', 'realm', 'password_type',
             Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'), Integer('reject_expiry_limit'),
