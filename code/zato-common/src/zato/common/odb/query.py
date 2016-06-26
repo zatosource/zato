@@ -66,8 +66,9 @@ class _SearchWrapper(object):
     def __init__(self, q, default_page_size=_no_page_limit, **config):
 
         # Apply WHERE conditions
-        for fb_attr, fb_value in config.get('filter_by', {}).items():
-            q = q.filter(fb_attr.contains(fb_value))
+        for filter_by in config.get('filter_by', []):
+            for criterion in config.get('query', []):
+                q = q.filter(filter_by.contains(criterion))
 
         # Total number of results
         total_q = q.statement.with_only_columns([func.count()])

@@ -117,7 +117,7 @@ class AdminService(Service):
 
         # No pagination requested at all
         if not self.request.input.get('paginate'):
-            return search_func(session, cluster_id, *args)
+            return search_func(session, cluster_id, *args).all()
 
         meta = self.request.input.get('_meta', {'search':{}})
 
@@ -132,7 +132,14 @@ class AdminService(Service):
         kwargs = {
             'cur_page': cur_page,
             'page_size': page_size,
+            'filter_by': self._filter_by,
         }
+
+        query = self.request.input.get('query')
+        if query:
+            query = query.strip().split()
+            if query:
+                kwargs['query'] = query
 
         result = search_func(session, cluster_id, *args, **kwargs)
 
