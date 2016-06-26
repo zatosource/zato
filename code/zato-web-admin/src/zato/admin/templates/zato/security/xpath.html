@@ -48,10 +48,9 @@
 
 {% include "zato/search-form.html" with page_prompt="Show definitions"%}
 
-
     {% if cluster_id %}
 
-        <div class='page_prompt'>
+        <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.security.xpath.create()">Create a new XPath security definition</a>
         </div>
         

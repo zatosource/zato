@@ -53,6 +53,7 @@ class Index(_Index):
     template = 'zato/channel/jms_wmq.html'
     service_name = 'zato.channel.jms-wmq.get-list'
     output_class = ChannelWMQ
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

@@ -27,6 +27,8 @@ class _AMQPService(AdminService):
 class GetList(AdminService):
     """ Returns a list of AMQP channels.
     """
+    _filter_by = ChannelAMQP.name, ChannelAMQP.queue, ChannelAMQP.consumer_tag_prefix
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_amqp_get_list_request'
         response_elem = 'zato_channel_amqp_get_list_response'
@@ -36,7 +38,7 @@ class GetList(AdminService):
         output_optional = ('data_format',)
 
     def get_data(self, session):
-        return channel_amqp_list(session, self.request.input.cluster_id, False)
+        return self._search(channel_amqp_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

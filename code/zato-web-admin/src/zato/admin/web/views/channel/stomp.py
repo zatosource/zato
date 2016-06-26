@@ -29,6 +29,7 @@ class Index(_Index):
     template = 'zato/channel/stomp.html'
     service_name = 'zato.channel.stomp.get-list'
     output_class = ChannelSTOMP
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

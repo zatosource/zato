@@ -112,21 +112,12 @@
         Choose a cluster to manage {{ transport_label }} {{ connection_label_plural }}
     {% endif %}
 
-    <form action="." method="get" id="main_page_form">
-        {{ search_form.cluster }}
-        {{ search_form.connection }}
-        {{ search_form.transport }}
-        <input type="submit" value="Show {{ connection_label_plural }}" />
-    </form>
-    </div>
-
-    {% include "zato/auto-submit.html" %}
+{% include "zato/search-form.html" with page_prompt="Show definitions" %}
 
     {% if cluster_id %}
-        <div class='page_prompt'>
+        <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.http_soap.create()">Create a new {{ transport_label }} {{ connection_label }}</a>
         </div>
-
 
         <div id="markup">
             <table id="data-table">

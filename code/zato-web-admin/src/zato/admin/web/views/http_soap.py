@@ -142,6 +142,7 @@ def index(req):
             'connection': connection,
             'transport': transport,
             'paginate': True,
+            'cur_page': req.GET.get('cur_page', 1)
         }
 
         data, meta = parse_response_data(req.zato.client.invoke('zato.http-soap.get-list', input_dict))
@@ -184,6 +185,9 @@ def index(req):
         'default_http_ping_method':DEFAULT_HTTP_PING_METHOD,
         'default_http_pool_size':DEFAULT_HTTP_POOL_SIZE,
         'default_http_timeout':MISC.DEFAULT_HTTP_TIMEOUT,
+        'paginate':True,
+        'meta': meta,
+        'req':req
         }
 
     return TemplateResponse(req, 'zato/http_soap/index.html', return_data)

@@ -28,7 +28,7 @@
 {% include "zato/search-form.html" with page_prompt="Show the form"%}
 
 {% if cluster_id %}
-<div class='page_prompt'>
+<div class='page_prompt' style="clear:left">
     <a href="{% url "kvdb-data-dict-dictionary" %}?cluster={{ cluster_id }}" class="common">Dictionaries</a>
     <a href="{% url "kvdb-data-dict-translation" %}?cluster={{ cluster_id }}" class="common">Translations</a>
     <a href="{% url "kvdb-data-dict-impexp" %}?cluster={{ cluster_id }}" class="common">Import/export</a>
