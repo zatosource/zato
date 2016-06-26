@@ -1,11 +1,8 @@
 
-    <div class="prompt" style="float:left">
+    <div class="prompt" style="float:left; width:60%">
     <form action="." method="get" id="main_page_form">
         {{ search_form.cluster }}
-
-        {% if pattern_hint %}
-            {{ search_form.query }}
-        {% endif %}
+        {{ search_form.query }}
         <input type="submit"  style="vertical-align:top" value="{{ page_prompt }}" />
     </form>
     </div>

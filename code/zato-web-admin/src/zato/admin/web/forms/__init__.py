@@ -49,7 +49,7 @@ class SearchForm(forms.Form):
 
     cluster = forms.ChoiceField(widget=forms.Select())
     query = forms.CharField(widget=forms.TextInput(
-        attrs={'style':'width:30%', 'class':'required', 'placeholder':'Enter search terms or *'}))
+        attrs={'style':'width:40%', 'class':'required', 'placeholder':'Enter search terms'}))
 
     def __init__(self, clusters, data=None):
 
