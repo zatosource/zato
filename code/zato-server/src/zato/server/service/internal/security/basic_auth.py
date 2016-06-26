@@ -23,6 +23,8 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class GetList(AdminService):
     """ Returns a list of HTTP Basic Auth definitions available.
     """
+    _filter_by = HTTPBasicAuth.name, HTTPBasicAuth.username
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_basic_auth_get_list_request'
         response_elem = 'zato_security_basic_auth_get_list_response'
@@ -30,7 +32,7 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active', 'username', 'realm')
 
     def get_data(self, session):
-        return basic_auth_list(session, self.request.input.cluster_id, None, False)
+        return self._search(basic_auth_list, session, self.request.input.cluster_id, None, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

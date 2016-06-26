@@ -27,6 +27,7 @@ class Index(_Index):
     template = 'zato/security/oauth.html'
     service_name = 'zato.security.oauth.get-list'
     output_class = OAuth
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

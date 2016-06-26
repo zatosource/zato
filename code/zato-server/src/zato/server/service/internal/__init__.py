@@ -30,7 +30,7 @@ success = '<error_code>{}</error_code>'.format(success_code)
 
 # ################################################################################################################################
 
-_default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
+_default_page_size = 2#SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
 _max_page_size = _default_page_size * 5
 
 # ################################################################################################################################
@@ -119,7 +119,7 @@ class AdminService(Service):
 
         # No pagination requested at all
         if not _input.get('paginate'):
-            return search_func(session, cluster_id, *args).all()
+            return search_func(session, cluster_id, *args)
 
         try:
             cur_page = int(_input.get('cur_page', 1))

@@ -356,6 +356,7 @@ class Index(_BaseView):
             return_data['zato_clusters'] = req.zato.clusters
             return_data['search_form'] = req.zato.search_form
             return_data['meta'] = response.meta if response else {}
+            return_data['paginate'] = getattr(self, 'paginate', False)
 
             view_specific = self.handle()
             if view_specific:

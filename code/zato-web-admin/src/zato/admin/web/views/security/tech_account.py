@@ -48,9 +48,9 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'security-tech-account'
     template = 'zato/security/tech-account.html'
-
     service_name = 'zato.security.tech-account.get-list'
     output_class = TechnicalAccount
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

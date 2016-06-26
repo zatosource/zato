@@ -75,7 +75,13 @@ class _SearchWrapper(object):
         self.total = q.session.execute(total_q).scalar()
 
         # Pagination
-        self.q = q.slice(config.get('cur_page', 0), config.get('page_size', default_page_size))
+        page_size = config.get('page_size', default_page_size)
+        cur_page = config.get('cur_page', 0)
+
+        slice_from = cur_page * page_size
+        slice_to = slice_from + page_size
+
+        self.q = q.slice(slice_from, slice_to)
 
 # ################################################################################################################################
 

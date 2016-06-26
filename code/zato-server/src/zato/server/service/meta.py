@@ -206,7 +206,7 @@ class GetListMeta(AdminServiceMeta):
     @staticmethod
     def get_data(get_data_func):
         def get_data_impl(self, session):
-            return get_data_func(session, self.request.input.cluster_id, False)
+            return self._search(get_data_func, session, self.request.input.cluster_id, False)
         return get_data_impl
 
     @staticmethod

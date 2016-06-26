@@ -24,6 +24,7 @@ class Index(_Index):
     template = 'zato/channel/zmq.html'
     service_name = 'zato.channel.zmq.get-list'
     output_class = ChannelZMQ
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
