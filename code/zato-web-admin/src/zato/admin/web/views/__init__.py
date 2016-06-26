@@ -42,6 +42,15 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+def parse_response_data(response):
+    """ Parses out data and metadata out an internal API call response.
+    """
+    meta = response.data.pop('_meta', None)
+    data = response.data[response.data.keys()[0]]
+    return data, meta
+
+# ################################################################################################################################
+
 def _get_list(client, cluster, service):
 
     out = {}
@@ -50,21 +59,29 @@ def _get_list(client, cluster, service):
 
     return out
 
+# ################################################################################################################################
+
 def get_definition_list(client, cluster, def_type):
     """ Returns all definitions of a given type existing on a given cluster.
     """
     return _get_list(client, cluster, 'zato.definition.{}.get-list'.format(def_type))
+
+# ################################################################################################################################
 
 def get_tls_ca_cert_list(client, cluster):
     """ Returns all TLS CA certs on a given cluster.
     """
     return _get_list(client, cluster, 'zato.security.tls.ca-cert.get-list')
 
+# ################################################################################################################################
+
 def get_sample_dt(user_profile):
     """ A sample date and time an hour in the future serving as a hint as to what
     format to use when entering date and time manually in the user-provided format.
     """
     return from_utc_to_user((datetime.utcnow() + timedelta(hours=1)).replace(tzinfo=UTC), user_profile)
+
+# ################################################################################################################################
 
 def get_js_dt_format(user_profile):
     """ Converts the user-given datetime format to the one that JavaScript's date time picker is to use.
@@ -75,6 +92,8 @@ def get_js_dt_format(user_profile):
         'js_ampm':user_profile.time_format == '12',
     }
 
+# ################################################################################################################################
+
 def get_lb_client(cluster):
     """ A convenience wrapper over the function for creating a load-balancer client
     which may use web admin's SSL material (the client from zato.common can't use
@@ -82,6 +101,8 @@ def get_lb_client(cluster):
     """
     return _get_lb_client(cluster.lb_host, cluster.lb_agent_port, ssl_ca_certs,
                           ssl_key_file, ssl_cert_file, LB_AGENT_CONNECT_TIMEOUT)
+
+# ################################################################################################################################
 
 def method_allowed(*meths):
     """ Accepts a list (possibly one-element long) of HTTP methods allowed
@@ -102,6 +123,8 @@ def method_allowed(*meths):
             return view(*args, **kwargs)
         return inner_view
     return inner_method_allowed
+
+# ################################################################################################################################
 
 def set_servers_state(cluster, client):
     """ Assignes 3 flags to the cluster indicating whether load-balancer
@@ -133,6 +156,8 @@ def set_servers_state(cluster, client):
             if maint:
                 cluster.some_maint = True
 
+# ################################################################################################################################
+
 def change_password(req, service_name, field1='password1', field2='password2', success_msg='Password updated'):
     try:
         input_dict = {
@@ -148,6 +173,8 @@ def change_password(req, service_name, field1='password1', field2='password2', s
         return HttpResponseServerError(msg)
     else:
         return HttpResponse(dumps({'message':success_msg}))
+
+# ################################################################################################################################
 
 def get_security_id_from_select(params, prefix, field_name='security'):
     security = params[prefix + field_name]
@@ -324,7 +351,7 @@ class Index(_BaseView):
             return_data['user_message'] = self.user_message
             return_data['user_message_class'] = self.user_message_class
             return_data['zato_clusters'] = req.zato.clusters
-            return_data['choose_cluster_form'] = req.zato.choose_cluster_form
+            return_data['search_form'] = req.zato.search_form
             return_data['meta'] = response.meta if response else {}
 
             view_specific = self.handle()

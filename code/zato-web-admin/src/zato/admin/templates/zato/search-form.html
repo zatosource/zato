@@ -1,13 +1,14 @@
-    <div class="prompt">
+
+    <div class="prompt" style="float:left">
     <form action="." method="get" id="main_page_form">
-        {{ choose_cluster_form.cluster }}
+        {{ search_form.cluster }}
 
         {% if pattern_hint %}
-            {{ choose_cluster_form.name_filter }}
+            {{ search_form.query }}
         {% endif %}
-
         <input type="submit"  style="vertical-align:top" value="{{ page_prompt }}" />
     </form>
     </div>
 
+    {% include "zato/paginate/action-panel.html" %}
     {% include "zato/auto-submit.html" %}

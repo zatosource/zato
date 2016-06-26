@@ -397,7 +397,7 @@ def index(req):
 
         return_data = {'zato_clusters':req.zato.clusters,
             'cluster_id':req.zato.cluster_id,
-            'choose_cluster_form':req.zato.choose_cluster_form,
+            'search_form':req.zato.search_form,
             'jobs':jobs,
             'friendly_names':job_type_friendly_names.items(),
             'create_one_time_form':OneTimeSchedulerJobForm(create_one_time_prefix, req),

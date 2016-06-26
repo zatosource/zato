@@ -19,7 +19,7 @@ from django.template.response import TemplateResponse
 from anyjson import dumps
 
 # Zato
-from zato.admin.web.forms import ChooseClusterForm
+from zato.admin.web.forms import SearchForm
 from zato.admin.web.forms.kvdb import RemoteCommandForm
 from zato.admin.web.views import method_allowed
 from zato.common import ZatoException
@@ -29,7 +29,7 @@ def remote_command(req):
 
     return_data = {'form':RemoteCommandForm(),
                    'cluster':req.zato.get('cluster'),
-                   'choose_cluster_form':ChooseClusterForm(req.zato.clusters, req.GET),
+                   'search_form':SearchForm(req.zato.clusters, req.GET),
                    'zato_clusters':req.zato.clusters,
                    'cluster_id':req.zato.cluster_id,
                    }
