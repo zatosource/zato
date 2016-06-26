@@ -26,9 +26,9 @@ from paste.util.converters import asbool
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.admin.web.forms.http_soap import AuditLogEntryList, ChooseClusterForm, CreateForm, EditForm, ReplacePatternsForm
-from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, get_tls_ca_cert_list, method_allowed, \
-     id_only_service, SecurityList
+from zato.admin.web.forms.http_soap import AuditLogEntryList, SearchForm, CreateForm, EditForm, ReplacePatternsForm
+from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, get_tls_ca_cert_list, id_only_service, \
+     method_allowed, parse_response_data, SecurityList
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
      MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, \
      ZatoException, ZATO_NONE
@@ -141,9 +141,12 @@ def index(req):
             'cluster_id': req.zato.cluster_id,
             'connection': connection,
             'transport': transport,
+            'paginate': True,
         }
 
-        for item in req.zato.client.invoke('zato.http-soap.get-list', input_dict):
+        data, meta = parse_response_data(req.zato.client.invoke('zato.http-soap.get-list', input_dict))
+
+        for item in data:
 
             _security_name = item.security_name
             if _security_name:
@@ -168,7 +171,7 @@ def index(req):
 
     return_data = {'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
-        'choose_cluster_form':ChooseClusterForm(req.zato.clusters, req.GET),
+        'search_form':SearchForm(req.zato.clusters, req.GET),
         'items':items,
         'create_form':create_form,
         'edit_form':edit_form,

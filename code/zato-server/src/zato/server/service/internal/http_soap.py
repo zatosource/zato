@@ -80,10 +80,13 @@ class _HTTPSOAPService(object):
 class GetList(AdminService):
     """ Returns a list of HTTP/SOAP connections.
     """
+    _filter_by = HTTPSOAP.name
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_http_soap_get_list_request'
         response_elem = 'zato_http_soap_get_list_response'
         input_required = ('cluster_id', 'connection', 'transport')
+        input_optional = AdminSIO.input_optional
         output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
@@ -92,7 +95,7 @@ class GetList(AdminService):
         output_repeated = True
 
     def get_data(self, session):
-        return http_soap_list(session, self.request.input.cluster_id,
+        return self._search(http_soap_list, session, self.request.input.cluster_id,
             self.request.input.connection, self.request.input.transport,
             asbool(self.server.fs_server_config.misc.return_internal_objects), False)
 

@@ -1,0 +1,36 @@
+
+{% if meta.total %}
+
+<div style="text-align:center;padding:10px;padding-top:14px;padding-right:20px;font-size:small;float:right">
+
+  <form action="." method="get" style="display:inline-block;">
+    <span class="form_hint">{{ meta.total }}</span>
+    <span class="form_hint">results</span>
+    |
+    <span class="form_hint">Page {{ meta.cur_page }} of {{ meta.num_pages }}</span>
+    |
+    <span class="form_hint">Max on page: </span> {{ form.page_size }}
+    <button id="show_list" name="show_list" type="submit">Go</button>
+  </form>
+
+  |
+
+  <span style="vertical-align:middle">
+
+  {% if meta.has_prev_page%}
+    {% include "zato/paginate/prev-page.html" %}
+  {% else %}
+    <span style="color:#666;font-size:12px" class="form_hint" >Previous</span>
+  {% endif %}
+
+  {% if meta.has_next_page %}
+    {% include "zato/paginate/next-page.html" %}
+  {% else %}
+    <span style="color:#666;font-size:12px" class="form_hint">Next</span>
+  {% endif %}
+
+  </span>
+
+</div>
+
+{% endif %}

@@ -45,11 +45,11 @@ def add_services(form, req):
 
 # ################################################################################################################################
 
-class ChooseClusterForm(forms.Form):
+class SearchForm(forms.Form):
 
     cluster = forms.ChoiceField(widget=forms.Select())
-    name_filter = forms.CharField(widget=forms.TextInput(
-        attrs={'style':'width:30%', 'class':'required', 'placeholder':"Enter * or part of a service's name, e.g. http json"}))
+    query = forms.CharField(widget=forms.TextInput(
+        attrs={'style':'width:30%', 'class':'required', 'placeholder':'Enter search terms or *'}))
 
     def __init__(self, clusters, data=None):
 
@@ -58,7 +58,7 @@ class ChooseClusterForm(forms.Form):
         #
         # https://github.com/zatosource/zato/issues/361
         #
-        # If the length is 1 it we have a single cluster only defined in ODB.
+        # If the length is 1 it we have only one cluster defined in ODB.
         # This means we can make use that only one straightaway to display anything that is needed.
         #
 
@@ -70,7 +70,7 @@ class ChooseClusterForm(forms.Form):
             initial = None
             self.zato_auto_submit = False
 
-        super(ChooseClusterForm, self).__init__(initial)
+        super(SearchForm, self).__init__(initial)
 
         self.fields['cluster'].choices = [INITIAL_CHOICES]
         for cluster in clusters:
