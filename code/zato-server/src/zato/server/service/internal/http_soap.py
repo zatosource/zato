@@ -609,7 +609,7 @@ class _BaseAuditService(AdminService):
         batch_size = self.request.input.get('batch_size', BATCH_DEFAULTS.SIZE)
         batch_size = min(batch_size, BATCH_DEFAULTS.MAX_SIZE)
 
-        q = http_soap_audit_item_list(session, self.server.cluster_id, self.request.input.conn_id,
+        return http_soap_audit_item_list(session, self.server.cluster_id, self.request.input.conn_id,
             self.request.input.get('start'), self.request.input.get('stop'), self.request.input.get('query'), False)
 
         return Page(q, page=current_batch, items_per_page=batch_size)
@@ -642,19 +642,21 @@ class GetAuditBatchInfo(_BaseAuditService):
         response_elem = 'zato_http_soap_get_batch_info_response'
         input_required = ('conn_id',)
         input_optional = ('start', 'stop', Integer('current_batch'), Integer('batch_size'), 'query')
-        output_required = ('total_results', 'num_batches', 'has_previous', 'has_next', 'next_batch_number', 'previous_batch_number')
+        #output_required = ('num_pages', 'num_batches', 'has_previous', 'has_next', 'next_batch_number', 'previous_batch_number')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            page = self.get_page(session)
-            self.response.payload = {
-                'total_results': page.item_count,
-                'num_batches': page.page_count,
-                'has_previous': page.previous_page is not None,
-                'has_next': page.next_page is not None,
-                'next_batch_number': page.next_page,
-                'previous_batch_number': page.previous_page,
+            result = self.get_page(session)
+            self.response.payload = {}
+            '''
+                'num_pages': result.num_pages,
+                'num_batches': result.page_count,
+                'has_previous': result.previous_page is not None,
+                'has_next': result.next_page is not None,
+                'next_batch_number': result.next_page,
+                'previous_batch_number': result.previous_page,
             }
+            '''
 
 class GetAuditItem(_BaseAuditService):
     """ Returns a particular audit item by its ID.

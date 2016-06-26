@@ -325,7 +325,7 @@ def audit_log(req, **kwargs):
             item.resp_time = from_utc_to_user(item.resp_time_utc+'+00:00', req.zato.user_profile) if item.resp_time_utc else '(None)'
             out['items'].append(item)
 
-    out.update(**req.zato.client.invoke('zato.http-soap.get-audit-batch-info', request).data)
+    #out.update(**req.zato.client.invoke('zato.http-soap.get-audit-batch-info', request).data)
 
     return TemplateResponse(req, 'zato/http_soap/audit/log.html', out)
 
