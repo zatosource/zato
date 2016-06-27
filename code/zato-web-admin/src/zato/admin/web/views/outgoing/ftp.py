@@ -25,6 +25,7 @@ class Index(_Index):
     template = 'zato/outgoing/ftp.html'
     service_name = 'zato.outgoing.ftp.get-list'
     output_class = OutgoingFTP
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

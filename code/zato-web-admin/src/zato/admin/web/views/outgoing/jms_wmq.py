@@ -22,7 +22,7 @@ from anyjson import dumps
 # Zato
 from zato.admin.settings import delivery_friendly_name
 from zato.admin.web.forms.outgoing.jms_wmq import CreateForm, EditForm
-from zato.admin.web.views import Delete as _Delete, get_definition_list, method_allowed
+from zato.admin.web.views import Delete as _Delete, get_definition_list, method_allowed, parse_response_data
 from zato.common.odb.model import OutgoingWMQ
 
 logger = logging.getLogger(__name__)
@@ -62,7 +62,15 @@ def index(req):
         create_form.set_def_id(def_ids)
         edit_form.set_def_id(def_ids)
 
-        for item in req.zato.client.invoke('zato.outgoing.jms-wmq.get-list', {'cluster_id': req.zato.cluster_id}):
+        request = {
+            'cluster_id': req.zato.cluster_id,
+            'paginate': True,
+            'cur_page': req.GET.get('cur_page', 1)
+        }
+
+        data, meta = parse_response_data(req.zato.client.invoke('zato.outgoing.jms-wmq.get-list', request))
+
+        for item in data:
             _item = OutgoingWMQ(item.id, item.name, item.is_active, item.delivery_mode,
                 item.priority, item.expiration, item.def_id, delivery_friendly_name[item.delivery_mode],
                 item.def_name)
@@ -74,6 +82,9 @@ def index(req):
         'items':items,
         'create_form':create_form,
         'edit_form':edit_form,
+        'paginate':True,
+        'meta': meta,
+        'req': req,
         }
 
     return TemplateResponse(req, 'zato/outgoing/jms_wmq.html', return_data)

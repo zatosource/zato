@@ -26,6 +26,7 @@ class Index(_Index):
     template = 'zato/definition/amqp.html'
     service_name = 'zato.definition.amqp.get-list'
     output_class = ConnDefAMQP
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

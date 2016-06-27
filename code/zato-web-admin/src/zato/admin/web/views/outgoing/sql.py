@@ -65,7 +65,16 @@ def index(req):
     change_password_form = ChangePasswordForm()
 
     if req.zato.cluster_id and req.method == 'GET':
-        for item in req.zato.client.invoke('zato.outgoing.sql.get-list', {'cluster_id': req.zato.cluster_id}):
+
+        request = {
+            'cluster_id': req.zato.cluster_id,
+            'paginate': True,
+            'cur_page': req.GET.get('cur_page', 1)
+        }
+
+        data, meta = parse_response_data(req.zato.client.invoke('zato.outgoing.sql.get-list', request))
+
+        for item in data:
 
             _item = SQLConnectionPool()
 
@@ -83,7 +92,10 @@ def index(req):
         'items':items,
         'create_form':create_form,
         'edit_form':edit_form,
-        'change_password_form': change_password_form
+        'change_password_form': change_password_form,
+        'paginate':True,
+        'meta': meta,
+        'req': req,
         }
 
     return TemplateResponse(req, 'zato/outgoing/sql.html', return_data)

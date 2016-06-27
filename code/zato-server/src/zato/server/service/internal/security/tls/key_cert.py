@@ -49,6 +49,7 @@ def delete_hook(service, input, instance, attrs):
     delete_tls_material_from_fs(service.server, instance.info, get_tls_ca_cert_full_path)
 
 class GetList(AdminService):
+    _filter_by = TLSKeyCertSecurity.name, TLSKeyCertSecurity.value
     __metaclass__ = GetListMeta
 
 class Delete(AdminService):
