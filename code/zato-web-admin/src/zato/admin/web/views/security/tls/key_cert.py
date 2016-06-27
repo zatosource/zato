@@ -23,6 +23,7 @@ class Index(_Index):
     url_name = 'security-tls-key-cert'
     template = 'zato/security/tls/key-cert.html'
     service_name = 'zato.security.tls.key-cert.get-list'
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

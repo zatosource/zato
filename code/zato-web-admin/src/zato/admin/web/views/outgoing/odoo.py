@@ -30,6 +30,7 @@ class Index(_Index):
     template = 'zato/outgoing/odoo.html'
     service_name = 'zato.outgoing.odoo.get-list'
     output_class = OutgoingOdoo
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

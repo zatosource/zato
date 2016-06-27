@@ -28,6 +28,7 @@ class Index(_Index):
     template = 'zato/search/es.html'
     service_name = 'zato.search.es.get-list'
     output_class = ElasticSearch
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

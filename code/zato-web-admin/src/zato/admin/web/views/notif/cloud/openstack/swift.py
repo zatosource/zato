@@ -29,6 +29,7 @@ class Index(_Index):
     template = 'zato/notif/cloud/openstack/swift.html'
     service_name = 'zato.notif.cloud.openstack.swift.get-list'
     output_class = NotifOSS
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
