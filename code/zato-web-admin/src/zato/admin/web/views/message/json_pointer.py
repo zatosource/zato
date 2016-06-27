@@ -24,6 +24,7 @@ class Index(_Index):
     template = 'zato/message/json_pointer.html'
     service_name = 'zato.message.json-pointer.get-list'
     output_class = JSONPointer
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

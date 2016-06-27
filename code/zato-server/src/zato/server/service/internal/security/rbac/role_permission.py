@@ -89,6 +89,7 @@ def response_hook(self, input, instance, attrs, service_type):
         self.response.payload.perm_name = perm.name
 
 class GetList(AdminService):
+    _filter_by = RBACRole.name,
     __metaclass__ = GetListMeta
 
 class Create(AdminService):

@@ -22,6 +22,8 @@ from zato.server.service.internal import AdminService, AdminSIO
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ definitions available.
     """
+    _filter_by = ConnDefWMQ.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_definition_jms_wmq_get_list_request'
         response_elem = 'zato_definition_jms_wmq_get_list_response'
@@ -33,7 +35,7 @@ class GetList(AdminService):
         output_optional = ('ssl_cipher_spec', 'ssl_key_repository')
 
     def get_data(self, session):
-        return def_jms_wmq_list(session, self.request.input.cluster_id, False)
+        return self._search(def_jms_wmq_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

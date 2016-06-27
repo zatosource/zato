@@ -27,6 +27,7 @@ def broker_message_hook(service, input, instance, attrs, service_type):
         input.id = instance.id
 
 class GetList(AdminService):
+    _filter_by = RBACPermission.name,
     __metaclass__ = GetListMeta
 
 class Create(AdminService):

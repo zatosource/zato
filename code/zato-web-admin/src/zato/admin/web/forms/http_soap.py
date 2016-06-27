@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_security_select, add_services, ChooseClusterForm as _ChooseClusterForm, DataFormatForm, \
+from zato.admin.web.forms import add_security_select, add_services, SearchForm as _ChooseClusterForm, DataFormatForm, \
      INITIAL_CHOICES
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
      MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
@@ -88,7 +88,7 @@ class EditForm(CreateForm):
     merge_url_params_req = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     has_rbac = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
-class ChooseClusterForm(_ChooseClusterForm):
+class SearchForm(_ChooseClusterForm):
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
 

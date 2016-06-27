@@ -32,10 +32,9 @@ from pytz import UTC
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user
-from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed, Delete as _Delete
+from zato.admin.web.views import get_js_dt_format, get_sample_dt, method_allowed, Delete as _Delete, parse_response_data
 from zato.admin.settings import job_type_friendly_names
-from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, \
-     IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
+from zato.admin.web.forms.scheduler import CronStyleSchedulerJobForm, IntervalBasedSchedulerJobForm, OneTimeSchedulerJobForm
 from zato.common import SCHEDULER, TRACE1, ZatoException
 from zato.common.odb.model import CronStyleJob, IntervalBasedJob, Job
 from zato.common.util import pprint
@@ -292,62 +291,67 @@ def index(req):
         # Build a list of schedulers for a given Zato cluster.
         if req.zato.cluster_id and req.method == 'GET':
 
-            # We have a server to pick the schedulers from, try to invoke it now.
-            response = req.zato.client.invoke('zato.scheduler.job.get-list', {'cluster_id': req.zato.cluster_id})
+            # We have a cluster to pick the schedulers from, try to invoke it now.
 
-            if response.has_data:
-                for job_elem in response.data:
+            request = {
+                'cluster_id': req.zato.cluster_id,
+                'paginate': True,
+                'cur_page': req.GET.get('cur_page', 1),
+                'query': req.GET.get('query', '')
+            }
 
-                    id = job_elem.id
-                    name = job_elem.name
-                    is_active = job_elem.is_active
-                    job_type = job_elem.job_type
-                    start_date = job_elem.start_date
-                    service_name = job_elem.service_name
-                    extra = job_elem.extra
-                    job_type_friendly = job_type_friendly_names[job_type]
+            data, meta = parse_response_data(req.zato.client.invoke('zato.scheduler.job.get-list', request))
 
-                    job = Job(id, name, is_active, job_type,
-                              from_utc_to_user(start_date+'+00:00', req.zato.user_profile),
-                              extra, service_name=service_name,
-                              job_type_friendly=job_type_friendly)
+            for job_elem in data:
 
-                    if job_type == SCHEDULER.JOB_TYPE.ONE_TIME:
-                        definition_text=_one_time_job_def(req.zato.user_profile, start_date)
+                id = job_elem.id
+                name = job_elem.name
+                is_active = job_elem.is_active
+                job_type = job_elem.job_type
+                start_date = job_elem.start_date
+                service_name = job_elem.service_name
+                extra = job_elem.extra
+                job_type_friendly = job_type_friendly_names[job_type]
 
-                    elif job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
-                        definition_text = _interval_based_job_def(req.zato.user_profile,
-                            _get_start_date(job_elem.start_date),
-                            job_elem.repeats, job_elem.weeks, job_elem.days,
-                            job_elem.hours, job_elem.minutes, job_elem.seconds)
+                job = Job(id, name, is_active, job_type,
+                          from_utc_to_user(start_date+'+00:00', req.zato.user_profile),
+                          extra, service_name=service_name,
+                          job_type_friendly=job_type_friendly)
 
-                        weeks = job_elem.weeks or ''
-                        days = job_elem.days or ''
-                        hours = job_elem.hours or ''
-                        minutes = job_elem.minutes or ''
-                        seconds = job_elem.seconds or ''
-                        repeats = job_elem.repeats or ''
+                if job_type == SCHEDULER.JOB_TYPE.ONE_TIME:
+                    definition_text=_one_time_job_def(req.zato.user_profile, start_date)
 
-                        ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes,
-                                            seconds, repeats)
-                        job.interval_based = ib_job
+                elif job_type == SCHEDULER.JOB_TYPE.INTERVAL_BASED:
+                    definition_text = _interval_based_job_def(req.zato.user_profile,
+                        _get_start_date(job_elem.start_date),
+                        job_elem.repeats, job_elem.weeks, job_elem.days,
+                        job_elem.hours, job_elem.minutes, job_elem.seconds)
 
-                    elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
-                        cron_definition = job_elem.cron_definition or ''
-                        definition_text=_cron_style_job_def(req.zato.user_profile, start_date, cron_definition)
+                    weeks = job_elem.weeks or ''
+                    days = job_elem.days or ''
+                    hours = job_elem.hours or ''
+                    minutes = job_elem.minutes or ''
+                    seconds = job_elem.seconds or ''
+                    repeats = job_elem.repeats or ''
 
-                        cs_job = CronStyleJob(None, None, cron_definition)
-                        job.cron_style = cs_job
+                    ib_job = IntervalBasedJob(None, None, weeks, days, hours, minutes,
+                                        seconds, repeats)
+                    job.interval_based = ib_job
 
-                    else:
-                        msg = 'Unrecognized job type, name:[{0}], type:[{1}]'.format(name, job_type)
-                        logger.error(msg)
-                        raise ZatoException(msg)
+                elif job_type == SCHEDULER.JOB_TYPE.CRON_STYLE:
+                    cron_definition = job_elem.cron_definition or ''
+                    definition_text=_cron_style_job_def(req.zato.user_profile, start_date, cron_definition)
 
-                    job.definition_text = definition_text
-                    jobs.append(job)
-            else:
-                logger.info('No jobs found, response:[{}]'.format(response))
+                    cs_job = CronStyleJob(None, None, cron_definition)
+                    job.cron_style = cs_job
+
+                else:
+                    msg = 'Unrecognized job type, name:[{0}], type:[{1}]'.format(name, job_type)
+                    logger.error(msg)
+                    raise ZatoException(msg)
+
+                job.definition_text = definition_text
+                jobs.append(job)
 
         if req.method == 'POST':
 
@@ -397,7 +401,7 @@ def index(req):
 
         return_data = {'zato_clusters':req.zato.clusters,
             'cluster_id':req.zato.cluster_id,
-            'choose_cluster_form':req.zato.choose_cluster_form,
+            'search_form':req.zato.search_form,
             'jobs':jobs,
             'friendly_names':job_type_friendly_names.items(),
             'create_one_time_form':OneTimeSchedulerJobForm(create_one_time_prefix, req),
@@ -407,6 +411,9 @@ def index(req):
             'edit_interval_based_form':IntervalBasedSchedulerJobForm(edit_interval_based_prefix, req),
             'edit_cron_style_form':CronStyleSchedulerJobForm(edit_cron_style_prefix, req),
             'sample_dt': get_sample_dt(req.zato.user_profile),
+            'paginate':True,
+            'meta': meta,
+            'req': req,
             }
 
         return_data.update(get_js_dt_format(req.zato.user_profile))

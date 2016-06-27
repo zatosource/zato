@@ -51,12 +51,12 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-{% include "zato/choose-cluster.html" with page_prompt="Show connections"%}
+{% include "zato/search-form.html" with page_prompt="Show connections"%}
 
 
     {% if cluster_id %}
 
-        <div class='page_prompt'>
+        <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.email.imap.create()">Create a new IMAP connection</a>
         </div>
 
@@ -116,6 +116,8 @@
                 </tbody>
             </table>
         </div>
+
+{% include "zato/paginate/action-panel.html" %}
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">

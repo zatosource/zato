@@ -25,6 +25,8 @@ class GetList(AdminService):
     """ Returns a list of technical accounts defined in the ODB. The items are
     sorted by the 'name' attribute.
     """
+    _filter_by = TechnicalAccount.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_tech_account_get_list_request'
         response_elem = 'zato_security_tech_account_get_list_response'
@@ -32,7 +34,7 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active')
 
     def get_data(self, session):
-        return tech_acc_list(session, self.request.input.cluster_id, False)
+        return self._search(tech_acc_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

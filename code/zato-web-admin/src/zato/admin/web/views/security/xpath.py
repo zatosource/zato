@@ -25,6 +25,7 @@ class Index(_Index):
     template = 'zato/security/xpath.html'
     service_name = 'zato.security.xpath.get-list'
     output_class = XPathSecurity
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

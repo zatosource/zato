@@ -24,6 +24,8 @@ from zato.server.service.internal import AdminService, AdminSIO
 class GetList(AdminService):
     """ Returns a list of XPaths available.
     """
+    _filter_by = XPath.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_message_xpath_get_list_request'
         response_elem = 'zato_message_xpath_get_list_response'
@@ -31,7 +33,7 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'value')
 
     def get_data(self, session):
-        return xpath_list(session, self.request.input.cluster_id, False)
+        return self._search(xpath_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

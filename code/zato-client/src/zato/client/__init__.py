@@ -78,6 +78,7 @@ class _Response(object):
         self.has_data = False
         self.output_repeated = output_repeated
         self.data = [] if self.output_repeated else None
+        self.meta = {}
         self.cid = self.inner.headers.get('x-zato-cid', '(None)')
         self.details = None
         self.init()
@@ -173,7 +174,7 @@ class SOAPResponse(XMLResponse):
 class JSONSIOResponse(_Response):
     """ Stores responses from JSON SIO services.
     """
-    def init(self):
+    def init(self, _non_data=('zato_env', '_meta')):
         try:
             json = loads(self.inner.text)
         except ValueError:
@@ -195,7 +196,7 @@ class JSONSIOResponse(_Response):
             if has_zato_env:
                 # There will be two keys, zato_env and the actual payload
                 for key, _value in json.items():
-                    if key != 'zato_env':
+                    if key not in _non_data:
                         value = _value
                         break
             else:
@@ -254,6 +255,7 @@ class ServiceInvokeResponse(JSONSIOResponse):
                     # Not a JSON response
                     self.data = self.inner_service_response
                 else:
+                    self.meta = data.get('_meta')
                     if isinstance(data, dict):
                         data_keys = data.keys()
                         if len(data_keys) == 1:

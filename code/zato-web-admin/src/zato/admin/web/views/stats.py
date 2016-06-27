@@ -529,7 +529,7 @@ def trends_summary(req, choice, stats_title, is_summary):
         'compare_to': _compare_to,
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
-        'choose_cluster_form':req.zato.choose_cluster_form,
+        'search_form':req.zato.search_form,
         'sample_dt': get_sample_dt(req.zato.user_profile),
         'stats_title': stats_title,
         'step': info.step,
@@ -584,7 +584,7 @@ def settings(req):
     return_data = {
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
-        'choose_cluster_form':req.zato.choose_cluster_form,
+        'search_form':req.zato.search_form,
         'form': SettingsForm(initial=_settings),
         'defaults':defaults,
     }
@@ -638,7 +638,7 @@ def maintenance(req):
     return_data = {
         'zato_clusters': req.zato.clusters,
         'cluster_id': req.zato.cluster_id,
-        'choose_cluster_form':req.zato.choose_cluster_form,
+        'search_form':req.zato.search_form,
         'form': MaintenanceForm()
     }
 

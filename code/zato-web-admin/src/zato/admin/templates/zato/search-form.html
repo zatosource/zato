@@ -1,0 +1,21 @@
+
+    <div class="prompt" style="float:left; width:60%">
+    <form action="." method="get" id="main_page_form">
+        {{ search_form.cluster }}
+
+        {% if meta %} {% comment %} Statistics and other pages will not need the search box {% endcomment %}
+        {{ search_form.query }}
+        {% endif %}
+
+        {% comment %}
+        Note that connection and transport exist only with HTTP channels.
+        {% endcomment %}
+        {{ search_form.connection }}
+        {{ search_form.transport }}
+
+        <input type="submit"  style="vertical-align:top" value="{{ page_prompt }}" />
+    </form>
+    </div>
+
+    {% include "zato/paginate/action-panel.html" %}
+    {% include "zato/auto-submit.html" %}

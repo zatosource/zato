@@ -24,6 +24,7 @@ broker_message_prefix = 'SOLR_'
 list_func = search_solr_list
 
 class GetList(AdminService):
+    _filter_by = Solr.name,
     __metaclass__ = GetListMeta
 
 class Create(AdminService):

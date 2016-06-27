@@ -55,6 +55,7 @@ class Index(_Index):
     template = 'zato/channel/amqp.html'
     service_name = 'zato.channel.amqp.get-list'
     output_class = ChannelAMQP
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

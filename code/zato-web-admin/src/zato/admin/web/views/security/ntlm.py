@@ -25,6 +25,7 @@ class Index(_Index):
     template = 'zato/security/ntlm.html'
     service_name = 'zato.security.ntlm.get-list'
     output_class = NTLM
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

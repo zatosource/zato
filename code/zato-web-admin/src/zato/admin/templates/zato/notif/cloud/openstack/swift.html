@@ -65,11 +65,11 @@
         Choose a cluster to manage OpenStack Swift notification definitions
     {% endif %}
 
-{% include "zato/choose-cluster.html" with page_prompt="Show definitions"%}
+{% include "zato/search-form.html" with page_prompt="Show definitions"%}
 
 
     {% if cluster_id %}
-        <div class='page_prompt'>
+        <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.notif.cloud.openstack.swift.create()">Create a new OpenStack Swift notification definition</a>
         </div>
 
@@ -147,6 +147,8 @@
                 </tbody>
             </table>
         </div>
+
+{% include "zato/paginate/action-panel.html" %}
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">

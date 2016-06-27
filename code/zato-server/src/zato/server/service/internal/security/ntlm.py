@@ -23,6 +23,8 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class GetList(AdminService):
     """ Returns a list of NTLM definitions available.
     """
+    _filter_by = NTLM.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_ntlm_get_list_request'
         response_elem = 'zato_security_ntlm_get_list_response'
@@ -30,7 +32,7 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active', 'username')
 
     def get_data(self, session):
-        return ntlm_list(session, self.request.input.cluster_id, False)
+        return self._search(ntlm_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

@@ -265,7 +265,7 @@ def servers(req):
 
     return_data = {
         'items':items,
-        'choose_cluster_form':req.zato.choose_cluster_form,
+        'search_form':req.zato.search_form,
         'zato_clusters':req.zato.clusters,
         'cluster':req.zato.get('cluster'),
         'edit_form':EditServerForm(prefix='edit')

@@ -26,8 +26,7 @@ from validate import is_boolean
 # Zato
 from zato.common import BROKER, KVDB, ZatoException
 from zato.common.broker_message import SERVICE
-from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, \
-     DeployedService, HTTPSOAP, Server, Service
+from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, DeployedService, HTTPSOAP, Server, Service
 from zato.common.odb.query import service_list
 from zato.common.util import hot_deploy, payload_from_request
 from zato.server.service import Boolean, Integer
@@ -38,12 +37,14 @@ _no_such_service_name = uuid4().hex
 class GetList(AdminService):
     """ Returns a list of services.
     """
+    _filter_by = Service.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
-        input_required = ('cluster_id', 'name_filter')
-        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'),
-                           Integer('usage'), Integer('slow_threshold'))
+        input_required = ('cluster_id', 'query')
+        output_required = ('id', 'name', 'is_active', 'impl_name', 'is_internal', Boolean('may_be_deleted'), Integer('usage'),
+            Integer('slow_threshold'))
         output_repeated = True
         default_value = ''
 
@@ -53,24 +54,7 @@ class GetList(AdminService):
         internal_del = is_boolean(self.server.fs_server_config.misc.internal_services_may_be_deleted)
 
         out = []
-        sl = service_list(session, self.request.input.cluster_id, return_internal, False)
-
-        name_filter = self.request.input.get('name_filter')
-        if name_filter:
-            name_filter = [elem.strip().lower() for elem in name_filter.strip().split() if elem]
-        else:
-            name_filter = [_no_such_service_name] # So it matches nothing
-
-        for item in sl:
-            if self.request.input.name_filter != '*':
-                skip_item = False
-                for filter in name_filter:
-                    if not filter in item.name.lower():
-                        skip_item = True
-
-                if skip_item:
-                    continue
-
+        for item in self._search(service_list, session, self.request.input.cluster_id, return_internal, False):
             item.may_be_deleted = internal_del if item.is_internal else True
             item.usage = self.server.kvdb.conn.get('{}{}'.format(KVDB.SERVICE_USAGE, item.name)) or 0
 

@@ -53,11 +53,11 @@
         Choose a cluster to manage outgoing ZeroMQ connections
     {% endif %}
 
-{% include "zato/choose-cluster.html" with page_prompt="Show outgoing connections"%}
+{% include "zato/search-form.html" with page_prompt="Show definitions"%}
 
 
     {% if cluster_id %}
-        <div class='page_prompt'>
+        <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.outgoing.zmq.create()">Create a new outgoing ZeroMQ connection</a>
         </div>
 
@@ -103,6 +103,7 @@
             </table>
         </div>
 
+{% include "zato/paginate/action-panel.html" %}
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">

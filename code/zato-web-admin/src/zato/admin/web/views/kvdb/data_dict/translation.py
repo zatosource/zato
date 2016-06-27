@@ -122,7 +122,7 @@ def translate(req):
     return_data = {
         'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
-        'choose_cluster_form':req.zato.choose_cluster_form,
+        'search_form':req.zato.search_form,
         'translate_form':translate_form,
         'postback':post_data,
         'translation_result': _translate() if req.method == 'POST' else None,

@@ -25,6 +25,7 @@ class Index(_Index):
     template = 'zato/security/apikey.html'
     service_name = 'zato.security.apikey.get-list'
     output_class = APIKeySecurity
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

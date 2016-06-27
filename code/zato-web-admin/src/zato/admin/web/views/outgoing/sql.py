@@ -19,7 +19,7 @@ from anyjson import dumps
 
 # Zato
 from zato.admin.settings import engine_friendly_name
-from zato.admin.web.views import change_password as _change_password
+from zato.admin.web.views import change_password as _change_password, parse_response_data
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, method_allowed
@@ -65,7 +65,16 @@ def index(req):
     change_password_form = ChangePasswordForm()
 
     if req.zato.cluster_id and req.method == 'GET':
-        for item in req.zato.client.invoke('zato.outgoing.sql.get-list', {'cluster_id': req.zato.cluster_id}):
+
+        request = {
+            'cluster_id': req.zato.cluster_id,
+            'paginate': True,
+            'cur_page': req.GET.get('cur_page', 1)
+        }
+
+        data, meta = parse_response_data(req.zato.client.invoke('zato.outgoing.sql.get-list', request))
+
+        for item in data:
 
             _item = SQLConnectionPool()
 
@@ -79,11 +88,14 @@ def index(req):
 
     return_data = {'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
-        'choose_cluster_form':req.zato.choose_cluster_form,
+        'search_form':req.zato.search_form,
         'items':items,
         'create_form':create_form,
         'edit_form':edit_form,
-        'change_password_form': change_password_form
+        'change_password_form': change_password_form,
+        'paginate':True,
+        'meta': meta,
+        'req': req,
         }
 
     return TemplateResponse(req, 'zato/outgoing/sql.html', return_data)

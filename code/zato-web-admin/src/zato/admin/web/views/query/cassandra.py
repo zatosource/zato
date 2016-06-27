@@ -24,6 +24,7 @@ class Index(_Index):
     template = 'zato/query/cassandra.html'
     service_name = 'zato.query.cassandra.get-list'
     output_class = CassandraQuery
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

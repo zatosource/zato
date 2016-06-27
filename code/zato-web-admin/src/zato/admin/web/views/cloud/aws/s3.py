@@ -24,6 +24,7 @@ class Index(_Index):
     template = 'zato/cloud/aws/s3.html'
     service_name = 'zato.cloud.aws.s3.get-list'
     output_class = AWSS3
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

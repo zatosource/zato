@@ -22,17 +22,19 @@ from zato.server.service.internal import AdminService, AdminSIO
 class GetList(AdminService):
     """ Returns a list of ZeroMQ channels.
     """
+    _filter_by = ChannelZMQ.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_zmq_get_list_request'
         response_elem = 'zato_channel_zmq_get_list_response'
         input_required = ('cluster_id',)
-        input_optional = ('msg_source',)
+        input_optional = AdminSIO.input_optional + ('msg_source',)
         output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
             'service_name', 'pool_strategy', 'service_source', 'data_format')
         output_optional = ('sub_key',)
 
     def get_data(self, session):
-        return channel_zmq_list(session, self.request.input.cluster_id, False)
+        return self._search(channel_zmq_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

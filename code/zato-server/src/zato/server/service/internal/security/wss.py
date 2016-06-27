@@ -24,6 +24,8 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.
     """
+    _filter_by = WSSDefinition.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_wss_get_list_request'
         response_elem = 'zato_security_wss_get_list_response'
@@ -33,7 +35,7 @@ class GetList(AdminService):
             Integer('nonce_freshness_time'))
 
     def get_data(self, session):
-        return wss_list(session, self.request.input.cluster_id, False)
+        return self._search(wss_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

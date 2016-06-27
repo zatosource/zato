@@ -29,7 +29,7 @@ def index(req):
     return_data = {
         'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
-        'choose_cluster_form':req.zato.choose_cluster_form,
+        'search_form':req.zato.search_form,
     }
 
     return TemplateResponse(req, 'zato/kvdb/data_dict/impexp.html', return_data)

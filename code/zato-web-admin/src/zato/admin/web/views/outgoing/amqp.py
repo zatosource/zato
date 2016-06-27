@@ -58,9 +58,9 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'out-amqp'
     template = 'zato/outgoing/amqp.html'
-
     service_name = 'zato.outgoing.amqp.get-list'
     output_class = OutgoingAMQP
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

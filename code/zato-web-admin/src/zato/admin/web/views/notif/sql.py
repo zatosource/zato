@@ -25,6 +25,7 @@ class Index(_Index):
     url_name = 'notif-sql'
     template = 'zato/notif/sql.html'
     service_name = 'zato.notif.sql.get-list'
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

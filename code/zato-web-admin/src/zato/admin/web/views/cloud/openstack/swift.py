@@ -24,6 +24,7 @@ class Index(_Index):
     template = 'zato/cloud/openstack/swift.html'
     service_name = 'zato.cloud.openstack.swift.get-list'
     output_class = OpenStackSwift
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

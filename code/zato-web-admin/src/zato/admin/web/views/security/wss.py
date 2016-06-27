@@ -20,7 +20,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.security.wss import CreateForm, EditForm
-from zato.admin.web.views import change_password as _change_password, Delete as _Delete, method_allowed
+from zato.admin.web.views import change_password as _change_password, Delete as _Delete, method_allowed, parse_response_data
 from zato.common import ZATO_WSS_PASSWORD_TYPES
 from zato.common.odb.model import WSSDefinition
 
@@ -59,7 +59,15 @@ def index(req):
 
     if req.zato.cluster_id and req.method == 'GET':
 
-        for item in req.zato.client.invoke('zato.security.wss.get-list', {'cluster_id':req.zato.cluster_id}):
+        request = {
+            'cluster_id':req.zato.cluster_id,
+            'paginate': True,
+            'cur_page': req.GET.get('cur_page', 1)
+        }
+
+        data, meta = parse_response_data(req.zato.client.invoke('zato.security.wss.get-list', request))
+
+        for item in data:
             wss = WSSDefinition(item.id, item.name, item.is_active, item.username, None,
                     ZATO_WSS_PASSWORD_TYPES[item.password_type], item.reject_empty_nonce_creat,
                     item.reject_stale_tokens, item.reject_expiry_limit, item.nonce_freshness_time,
@@ -69,11 +77,14 @@ def index(req):
 
     return_data = {'zato_clusters':req.zato.clusters,
         'cluster_id':req.zato.cluster_id,
-        'choose_cluster_form':req.zato.choose_cluster_form,
+        'search_form':req.zato.search_form,
         'items':items,
         'create_form': create_form,
         'edit_form': edit_form,
-        'change_password_form': change_password_form
+        'change_password_form': change_password_form,
+        'paginate':True,
+        'meta': meta,
+        'req': req,
         }
 
     return TemplateResponse(req, 'zato/security/wss.html', return_data)

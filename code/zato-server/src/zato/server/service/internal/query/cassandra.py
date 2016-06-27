@@ -25,6 +25,7 @@ list_func = cassandra_query_list
 def_needed = CassandraConn
 
 class GetList(AdminService):
+    _filter_by = CassandraQuery.name,
     __metaclass__ = GetListMeta
 
 class Create(AdminService):
