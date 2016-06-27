@@ -56,6 +56,7 @@ def index(req):
     create_form = CreateForm()
     edit_form = EditForm(prefix='edit')
     change_password_form = ChangePasswordForm()
+    meta = None
 
     if req.zato.cluster_id and req.method == 'GET':
 
