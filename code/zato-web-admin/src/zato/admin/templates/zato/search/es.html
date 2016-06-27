@@ -97,6 +97,8 @@
             </table>
         </div>
 
+{% include "zato/paginate/action-panel.html" %}
+
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url "search-es-create" %}" method="post" id="create-form">

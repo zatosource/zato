@@ -33,6 +33,7 @@ def instance_hook(service, input, instance, attrs):
     instance.password = input.password or ''
 
 class GetList(AdminService):
+    _filter_by = OutgoingSTOMP.name,
     __metaclass__ = GetListMeta
 
 class Create(AdminService):

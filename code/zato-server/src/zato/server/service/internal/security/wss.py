@@ -24,7 +24,7 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class GetList(AdminService):
     """ Returns a list of WS-Security definitions available.
     """
-    _filter_by = WSSDefinition.name, WSSDefinition.username
+    _filter_by = WSSDefinition.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_wss_get_list_request'

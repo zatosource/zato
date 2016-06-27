@@ -37,6 +37,8 @@ class _SQLService(object):
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
     """
+    _filter_by = SQLConnectionPool.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_sql_get_list_request'
         response_elem = 'zato_outgoing_sql_get_list_response'
@@ -45,7 +47,7 @@ class GetList(AdminService):
         output_optional = ('extra',)
 
     def get_data(self, session):
-        return out_sql_list(session, self.request.input.cluster_id, False)
+        return self._search(out_sql_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

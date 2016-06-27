@@ -21,6 +21,8 @@ from zato.server.service.internal import AdminService, AdminSIO
 class GetList(AdminService):
     """ Returns a list of outgoing ZeroMQ connections.
     """
+    _filter_by = OutgoingZMQ.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_zmq_get_list_request'
         response_elem = 'zato_outgoing_zmq_get_list_response'
@@ -28,7 +30,7 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'is_active', 'address', 'socket_type')
 
     def get_data(self, session):
-        return out_zmq_list(session, self.request.input.cluster_id, False)
+        return self._search(out_zmq_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

@@ -23,6 +23,7 @@ broker_message_prefix = 'CASSANDRA_'
 list_func = cassandra_conn_list
 
 class GetList(AdminService):
+    _filter_by = CassandraConn.name,
     __metaclass__ = GetListMeta
 
 class Create(AdminService):

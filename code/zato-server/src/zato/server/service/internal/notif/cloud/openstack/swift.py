@@ -39,6 +39,8 @@ common_optional = ('get_data_patt',)
 class GetList(AdminService):
     """ Returns a list of OpenStack Swift notification definitions.
     """
+    _filter_by = NotificationOpenStackSwift.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_notif_cloud_openstack_swift_get_list_request'
         response_elem = 'zato_notif_cloud_openstack_swift_get_list_response'
@@ -47,7 +49,7 @@ class GetList(AdminService):
         output_optional = common_optional
 
     def get_data(self, session):
-        return notif_cloud_openstack_swift_list(session, self.request.input.cluster_id, False)
+        return self._search(notif_cloud_openstack_swift_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

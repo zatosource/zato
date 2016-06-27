@@ -31,7 +31,7 @@ success = '<error_code>{}</error_code>'.format(success_code)
 
 # ################################################################################################################################
 
-_default_page_size = 2#SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
+_default_page_size = SEARCH.ZATO.DEFAULTS.PAGE_SIZE.value
 _max_page_size = _default_page_size * 5
 
 # ################################################################################################################################

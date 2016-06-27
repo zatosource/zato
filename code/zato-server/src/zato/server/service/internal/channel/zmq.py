@@ -22,7 +22,7 @@ from zato.server.service.internal import AdminService, AdminSIO
 class GetList(AdminService):
     """ Returns a list of ZeroMQ channels.
     """
-    _filter_by = ChannelZMQ.name, ChannelZMQ.address
+    _filter_by = ChannelZMQ.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_zmq_get_list_request'

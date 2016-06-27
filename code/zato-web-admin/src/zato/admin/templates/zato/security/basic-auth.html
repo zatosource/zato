@@ -98,7 +98,9 @@
                 </tbody>
             </table>
         </div>
-        
+
+{% include "zato/paginate/action-panel.html" %}
+
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url "security-basic-auth-create" %}" method="post" id="create-form">

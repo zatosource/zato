@@ -27,7 +27,7 @@ class _AMQPService(AdminService):
 class GetList(AdminService):
     """ Returns a list of AMQP channels.
     """
-    _filter_by = ChannelAMQP.name, ChannelAMQP.queue, ChannelAMQP.consumer_tag_prefix
+    _filter_by = ChannelAMQP.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_amqp_get_list_request'

@@ -23,7 +23,7 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class GetList(AdminService):
     """ Returns a list of AWS definitions available.
     """
-    _filter_by = AWSSecurity.name, AWSSecurity.username
+    _filter_by = AWSSecurity.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_aws_get_list_request'

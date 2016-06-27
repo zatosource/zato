@@ -37,7 +37,7 @@ _no_such_service_name = uuid4().hex
 class GetList(AdminService):
     """ Returns a list of services.
     """
-    _filter_by = Service.name, Service.impl_name
+    _filter_by = Service.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_get_list_request'

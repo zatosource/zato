@@ -149,6 +149,8 @@
             </table>
         </div>
 
+{% include "zato/paginate/action-panel.html" %}
+
         <div id="create-one_time" class='data-popup ignore'>
             <div>
                 <form action=".?cluster={{ cluster_id }}" method="post" id="create-form-one_time">

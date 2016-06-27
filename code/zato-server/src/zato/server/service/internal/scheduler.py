@@ -197,7 +197,7 @@ class _Get(AdminService):
 class GetList(_Get):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
-    _filter_by = Job.name, Job.extra
+    _filter_by = Job.name,
     name = _service_name_prefix + 'get-list'
 
     class SimpleIO(_Get.SimpleIO):

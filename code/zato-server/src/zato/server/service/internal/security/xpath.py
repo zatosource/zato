@@ -24,7 +24,7 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class GetList(AdminService):
     """ Returns a list of XPath security definitions available.
     """
-    _filter_by = XPathSecurity.name, XPathSecurity.username
+    _filter_by = XPathSecurity.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_xpath_get_list_request'

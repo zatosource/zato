@@ -24,7 +24,7 @@ from zato.server.service.internal import AdminService, AdminSIO
 class GetList(AdminService):
     """ Returns a list of XPaths available.
     """
-    _filter_by = XPath.name, XPath.value
+    _filter_by = XPath.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_message_xpath_get_list_request'
