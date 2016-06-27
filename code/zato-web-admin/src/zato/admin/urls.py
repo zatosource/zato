@@ -1099,14 +1099,6 @@ urlpatterns += [
 
 # ################################################################################################################################
 
-urlpatterns += [
-
-    # OpenID
-    url('^openid/', include('django_openid_auth.urls')),
-    ]
-
-# ################################################################################################################################
-
 if settings.DEBUG:
     urlpatterns += [
         url(r'^static/(?P<path>.*)$', django_static_serve, {'document_root': settings.MEDIA_ROOT}),
