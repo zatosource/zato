@@ -609,7 +609,6 @@ class Create(ZatoCommand):
         """ Adds default roles used by RBAC.
         """
         item = RBACRole()
-        item.id = 0
         item.name = 'Root'
         item.parent_id = None
         item.cluster = cluster
