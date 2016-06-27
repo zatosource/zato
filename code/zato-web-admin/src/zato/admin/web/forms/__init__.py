@@ -77,6 +77,8 @@ class SearchForm(forms.Form):
             server_info = '{0} - http://{1}:{2}'.format(cluster.name, cluster.lb_host, cluster.lb_port)
             self.fields['cluster'].choices.append([cluster.id, server_info])
 
+        self.initial['cluster'] = (data.get('cluster') or [''])[0]
+
 # ################################################################################################################################
 
 class ChangePasswordForm(forms.Form):
