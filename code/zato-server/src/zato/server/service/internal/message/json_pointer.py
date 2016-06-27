@@ -28,6 +28,8 @@ from zato.server.service.internal import AdminService, AdminSIO
 class GetList(AdminService):
     """ Returns a list of JSON Pointers available.
     """
+    _filter_by = JSONPointer.name, JSONPointer.value
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_message_json_pointer_get_list_request'
         response_elem = 'zato_message_json_pointer_get_list_response'
@@ -35,7 +37,7 @@ class GetList(AdminService):
         output_required = ('id', 'name', 'value')
 
     def get_data(self, session):
-        return json_pointer_list(session, self.request.input.cluster_id, False)
+        return self._search(json_pointer_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

@@ -24,6 +24,7 @@ class Index(_Index):
     template = 'zato/message/namespace.html'
     service_name = 'zato.message.namespace.get-list'
     output_class = MsgNamespace
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
