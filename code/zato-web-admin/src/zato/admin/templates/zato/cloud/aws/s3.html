@@ -58,11 +58,6 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    <div class="prompt">
-    {% if not cluster_id %}
-        Choose a cluster to manage AWS S3 connections
-    {% endif %}
-
 {% include "zato/search-form.html" with page_prompt="Show connections"%}
 
 
