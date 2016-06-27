@@ -41,6 +41,7 @@ def instance_hook(self, input, instance, attrs):
             one().id
 
 class GetList(AdminService):
+    _filter_by = ChannelSTOMP.name,
     __metaclass__ = GetListMeta
 
 class Create(AdminService):

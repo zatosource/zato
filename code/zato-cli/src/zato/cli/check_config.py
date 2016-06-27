@@ -28,7 +28,7 @@ from zato.common.odb import create_pool, ping_queries
 from zato.common.util import is_port_taken
 
 class CheckConfig(ManageCommand):
-    """ Checks config of a Zato component (currently limited to servers only)
+    """ Checks config of a Zato component.
     """
     def get_json_conf(self, conf_name, repo_dir=None):
         repo_dir = repo_dir or join(self.config_dir, 'repo')

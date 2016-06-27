@@ -30,6 +30,7 @@ class Index(_Index):
     template = 'zato/email/smtp.html'
     service_name = 'zato.email.smtp.get-list'
     output_class = SMTP
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

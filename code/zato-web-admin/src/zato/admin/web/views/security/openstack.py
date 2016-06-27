@@ -25,6 +25,7 @@ class Index(_Index):
     template = 'zato/security/openstack.html'
     service_name = 'zato.security.openstack.get-list'
     output_class = OpenStackSecurity
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

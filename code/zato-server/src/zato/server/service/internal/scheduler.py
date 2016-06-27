@@ -197,6 +197,7 @@ class _Get(AdminService):
 class GetList(_Get):
     """ Returns a list of all jobs defined in the SingletonServer's scheduler.
     """
+    _filter_by = Job.name,
     name = _service_name_prefix + 'get-list'
 
     class SimpleIO(_Get.SimpleIO):
@@ -204,7 +205,7 @@ class GetList(_Get):
         response_elem = 'zato_scheduler_job_get_list_response'
 
     def get_data(self, session):
-        return job_list(session, self.request.input.cluster_id, False)
+        return self._search(job_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

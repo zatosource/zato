@@ -58,11 +58,11 @@
         Choose a cluster to manage outgoing STOMP connections
     {% endif %}
 
-{% include "zato/choose-cluster.html" with page_prompt="Show outgoing connections"%}
+{% include "zato/search-form.html" with page_prompt="Show outgoing connections"%}
 
 
     {% if cluster_id %}
-        <div class='page_prompt'>
+        <div class='page_prompt' style="clear:left">
             <a href="javascript:$.fn.zato.outgoing.stomp.create()">Create a new outgoing STOMP connection</a>
         </div>
 
@@ -119,10 +119,11 @@
             </table>
         </div>
 
+{% include "zato/paginate/action-panel.html" %}
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url out-stomp-create %}" method="post" id="create-form">
+                <form action="{% url "out-stomp-create" %}" method="post" id="create-form">
                     <table class="form-data">
 
                         <tr>
@@ -171,7 +172,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url out-stomp-edit %}" method="post" id="edit-form">
+                <form action="{% url "out-stomp-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
 
                         <tr>
@@ -222,7 +223,7 @@
 
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url out-stomp-change-password %}" method="post" id="change_password-form">
+                <form action="{% url "out-stomp-change-password" %}" method="post" id="change_password-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle">Name</td>

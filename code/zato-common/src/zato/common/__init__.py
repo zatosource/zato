@@ -257,6 +257,11 @@ class SEARCH:
             TIMEOUT = ValueConstant('10')
             POOL_SIZE = ValueConstant('5')
 
+    class ZATO:
+        class DEFAULTS(Constants):
+            PAGE_SIZE = ValueConstant(50)
+            PAGINATE_THRESHOLD = ValueConstant(PAGE_SIZE.value + 1)
+
 class SEC_DEF_TYPE:
     APIKEY = 'apikey'
     AWS = 'aws'

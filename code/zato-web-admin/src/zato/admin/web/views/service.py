@@ -152,12 +152,12 @@ class Index(_Index):
     template = 'zato/service/index.html'
     service_name = 'zato.service.get-list'
     output_class = Service
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        input_optional = ('name_filter',)
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name',
-            'may_be_deleted', 'usage', 'slow_threshold')
+        input_optional = ('query',)
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'impl_name', 'may_be_deleted', 'usage', 'slow_threshold')
         output_repeated = True
 
     def handle(self):
@@ -246,7 +246,7 @@ def overview(req, service_name):
     return_data = {'zato_clusters':req.zato.clusters,
         'service': service,
         'cluster_id':cluster_id,
-        'choose_cluster_form':req.zato.choose_cluster_form,
+        'search_form':req.zato.search_form,
         'create_form':create_form,
         'edit_form':edit_form,
         }

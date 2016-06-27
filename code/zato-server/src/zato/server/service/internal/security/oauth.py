@@ -24,6 +24,8 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class GetList(AdminService):
     """ Returns a list of OAuth definitions available.
     """
+    _filter_by = OAuth.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_oauth_get_list_request'
         response_elem = 'zato_security_oauth_get_list_response'
@@ -32,7 +34,7 @@ class GetList(AdminService):
             'sig_method', Integer('max_nonce_log'))
 
     def get_data(self, session):
-        return oauth_list(session, self.request.input.cluster_id, False)
+        return self._search(oauth_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

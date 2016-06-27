@@ -40,6 +40,7 @@ def broker_message_hook(self, input, instance, attrs, service_type):
     input.sec_type = SEC_DEF_TYPE.TLS_CHANNEL_SEC
 
 class GetList(AdminService):
+    _filter_by = TLSChannelSecurity.name,
     __metaclass__ = GetListMeta
 
 class Delete(AdminService):

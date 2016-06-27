@@ -24,6 +24,7 @@ class Index(_Index):
     url_name = 'security-rbac-role-permission'
     template = 'zato/security/rbac/role-permission.html'
     service_name = 'zato.security.rbac.role-permission.get-list'
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

@@ -21,7 +21,7 @@ from bunch import Bunch
 # Zato
 from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, \
     ADMIN_INVOKE_PATH,SASession
-from zato.admin.web.forms import ChooseClusterForm
+from zato.admin.web.forms import SearchForm
 from zato.admin.web.models import ClusterColorMarker, UserProfile
 from zato.client import AnyServiceInvoker
 from zato.common import version
@@ -101,7 +101,7 @@ class ZatoMiddleware(object):
                 req.zato.client = Client(req, url, ADMIN_INVOKE_PATH, auth, to_bunch=True)
 
             req.zato.clusters = req.zato.odb.query(Cluster).order_by('name').all()
-            req.zato.choose_cluster_form = ChooseClusterForm(req.zato.clusters, req.GET)
+            req.zato.search_form = SearchForm(req.zato.clusters, req.GET)
 
             if not req.user.is_anonymous():
                 try:

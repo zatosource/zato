@@ -25,6 +25,7 @@ class Index(_Index):
     template = 'zato/security/aws.html'
     service_name = 'zato.security.aws.get-list'
     output_class = AWSSecurity
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)

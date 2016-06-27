@@ -55,6 +55,7 @@ def response_hook(service, input, instance, attrs, service_type):
         service.response.payload.role_name = role.name
 
 class GetList(AdminService):
+    _filter_by = RBACClientRole.name,
     __metaclass__ = GetListMeta
 
 class Create(AdminService):

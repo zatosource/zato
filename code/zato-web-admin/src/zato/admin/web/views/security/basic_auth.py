@@ -25,6 +25,7 @@ class Index(_Index):
     template = 'zato/security/basic-auth.html'
     service_name = 'zato.security.basic-auth.get-list'
     output_class = HTTPBasicAuth
+    paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
