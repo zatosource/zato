@@ -71,7 +71,7 @@ class _SearchWrapper(object):
                 q = q.filter(filter_by.contains(criterion))
 
         # Total number of results
-        total_q = q.statement.with_only_columns([func.count()])
+        total_q = q.statement.with_only_columns([func.count()]).order_by(None)
         self.total = q.session.execute(total_q).scalar()
 
         # Pagination
