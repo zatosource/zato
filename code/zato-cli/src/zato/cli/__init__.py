@@ -257,7 +257,6 @@ def run_command(args):
         ('stop', 'zato.cli.stop.Stop'),
         ('update_crypto', 'zato.cli.crypto.UpdateCrypto'),
         ('update_password', 'zato.cli.web_admin_auth.UpdatePassword'),
-        ('update_openid', 'zato.cli.web_admin_auth.UpdateOpenID'),
     )
     for k, v in command_imports:
         command_class[k] = importString(v)
