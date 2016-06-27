@@ -287,6 +287,7 @@ def _edit_cron_style(client, user_profile, cluster, params):
 def index(req):
     try:
         jobs = []
+        meta = None
 
         # Build a list of schedulers for a given Zato cluster.
         if req.zato.cluster_id and req.method == 'GET':

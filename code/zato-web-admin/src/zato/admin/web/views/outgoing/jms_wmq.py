@@ -56,6 +56,7 @@ def index(req):
     items = []
     create_form = CreateForm()
     edit_form = EditForm(prefix='edit')
+    meta = None
 
     if req.zato.cluster_id and req.method == 'GET':
         def_ids = get_definition_list(req.zato.client, req.zato.cluster, 'jms-wmq')
