@@ -159,12 +159,12 @@ class AdminServiceMeta(type):
             request_elem = 'zato_{}_{}_request'.format(attrs.elem, req_resp[name])
             response_elem = 'zato_{}_{}_response'.format(attrs.elem, req_resp[name])
             input_required = sio['input_required'] + attrs['input_required_extra']
+            input_optional = list(AdminSIO.input_optional)
 
             for param in attrs['skip_input_params']:
                 if param in input_required:
                     input_required.remove(param)
 
-            input_optional = []
             output_required = sio['output_required'] + attrs['output_required_extra']
             output_optional = attrs['output_optional_extra']
             default_value = attrs.default_value
@@ -178,7 +178,8 @@ class AdminServiceMeta(type):
                 is_get_list = name=='GetList'
 
                 sio_elem = getattr(SimpleIO, _name)
-                sio_elem.extend(get_io(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, 'cluster_id' in sio_elem))
+                sio_elem.extend(
+                    get_io(attrs, _name, attrs.get('is_edit'), is_required, is_output, is_get_list, 'cluster_id' in sio_elem))
 
                 if attrs.is_create_edit and is_required:
                     sio_elem.extend(attrs.create_edit_input_required_extra)

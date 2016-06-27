@@ -22,6 +22,7 @@ from zato.server.service import Service
 # ################################################################################################################################
 
 logger = logging.getLogger('zato_admin')
+has_info = logger.isEnabledFor(logging.INFO)
 
 # ################################################################################################################################
 
@@ -74,8 +75,8 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def before_handle(self):
-        if logger.isEnabledFor(logging.INFO):
+    def before_handle(self, has_info=has_info):
+        if has_info:
             request = dict(self.request.input)
             for k, v in request.items():
 
