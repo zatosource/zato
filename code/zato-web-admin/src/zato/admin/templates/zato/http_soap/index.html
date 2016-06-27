@@ -107,11 +107,6 @@
 
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
-    <div class="prompt">
-    {% if not cluster_id %}
-        Choose a cluster to manage {{ transport_label }} {{ connection_label_plural }}
-    {% endif %}
-
 {% include "zato/search-form.html" with page_prompt="Show definitions" %}
 
     {% if cluster_id %}

@@ -113,6 +113,7 @@ def index(req):
 
     create_form = None
     edit_form = None
+    meta = None
 
     colspan = 17
 
