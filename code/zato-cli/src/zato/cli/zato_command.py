@@ -249,13 +249,6 @@ def get_parser():
     update_password.set_defaults(command='update_password')
     add_opts(update_password, web_admin_auth_mod.UpdatePassword.opts)
 
-    # .. update password
-
-    update_open_id = update_subs.add_parser('openid', description=web_admin_auth_mod.UpdateOpenID.__doc__, parents=[base_parser])
-    update_open_id.add_argument('path', help='Path to a web admin directory')
-    update_open_id.set_defaults(command='update_openid')
-    add_opts(update_open_id, web_admin_auth_mod.UpdateOpenID.opts)
-
     return parser
 
 def main():

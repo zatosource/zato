@@ -102,16 +102,10 @@ INSTALLED_APPS = (
 )
 
 AUTHENTICATION_BACKENDS = (
-    'django_openid_auth.auth.OpenIDBackend',
     'django.contrib.auth.backends.ModelBackend',
 )
 
-# Its value is injected from web-admin.conf zato.admin.zato_settings.update_globals
-if globals().get('OPENID_SSO_SERVER_URL'):
-    LOGIN_URL = '/openid/login/'
-else:
-    LOGIN_URL = '/accounts/login/'
-
+LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 
 # Some values below, e.g. db_type, DATABASE_USER and others are magically injected
