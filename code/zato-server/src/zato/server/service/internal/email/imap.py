@@ -30,6 +30,7 @@ def instance_hook(service, input, instance, attrs):
     instance.username = input.username or '' # So it's not stored as None/NULL
 
 class GetList(AdminService):
+    _filter_by = IMAP.name,
     __metaclass__ = GetListMeta
 
 class Create(AdminService):

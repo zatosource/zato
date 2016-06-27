@@ -23,6 +23,7 @@ broker_message_prefix = 'ES_'
 list_func = search_es_list
 
 class GetList(AdminService):
+    _filter_by = ElasticSearch.name,
     __metaclass__ = GetListMeta
 
 class Create(AdminService):

@@ -25,7 +25,7 @@ class GetList(AdminService):
     """ Returns a list of technical accounts defined in the ODB. The items are
     sorted by the 'name' attribute.
     """
-    _filter_by = TechnicalAccount.name, TechnicalAccount.username
+    _filter_by = TechnicalAccount.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_tech_account_get_list_request'

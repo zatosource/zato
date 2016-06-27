@@ -21,7 +21,7 @@ from zato.server.service.internal import AdminService, AdminSIO
 class GetList(AdminService):
     """ Returns a list of namespaces available.
     """
-    _filter_by = MsgNamespace.name, MsgNamespace.value
+    _filter_by = MsgNamespace.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_message_namespace_get_list_request'

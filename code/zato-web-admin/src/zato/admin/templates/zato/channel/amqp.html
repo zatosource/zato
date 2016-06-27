@@ -109,8 +109,9 @@
                 </tbody>
             </table>
         </div>
-        
-        
+
+{% include "zato/paginate/action-panel.html" %}
+
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url "channel-amqp-create" %}" method="post" id="create-form">

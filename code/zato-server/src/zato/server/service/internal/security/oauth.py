@@ -24,7 +24,7 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class GetList(AdminService):
     """ Returns a list of OAuth definitions available.
     """
-    _filter_by = OAuth.name, OAuth.username
+    _filter_by = OAuth.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_oauth_get_list_request'

@@ -28,7 +28,7 @@ from zato.server.service.internal import AdminService, AdminSIO
 class GetList(AdminService):
     """ Returns a list of JSON Pointers available.
     """
-    _filter_by = JSONPointer.name, JSONPointer.value
+    _filter_by = JSONPointer.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_message_json_pointer_get_list_request'

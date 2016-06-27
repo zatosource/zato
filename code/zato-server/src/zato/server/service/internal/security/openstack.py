@@ -23,7 +23,7 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class GetList(AdminService):
     """ Returns a list of OpenStack definitions available.
     """
-    _filter_by = OpenStackSecurity.name, OpenStackSecurity.username
+    _filter_by = OpenStackSecurity.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_openstack_get_list_request'

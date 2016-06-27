@@ -21,6 +21,8 @@ from zato.server.service.internal import AdminService, AdminSIO
 class GetList(AdminService):
     """ Returns a list of OpenStack Swift connections.
     """
+    _filter_by = OpenStackSwift.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_cloud_openstack_swift_get_list_request'
         response_elem = 'zato_cloud_openstack_swift_get_list_response'
@@ -32,7 +34,7 @@ class GetList(AdminService):
             'custom_options')
 
     def get_data(self, session):
-        return cloud_openstack_swift_list(session, self.request.input.cluster_id, False)
+        return self._search(cloud_openstack_swift_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

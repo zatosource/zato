@@ -23,7 +23,7 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class GetList(AdminService):
     """ Returns a list of NTLM definitions available.
     """
-    _filter_by = NTLM.name, NTLM.username
+    _filter_by = NTLM.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_ntlm_get_list_request'

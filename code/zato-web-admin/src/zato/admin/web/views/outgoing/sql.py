@@ -19,7 +19,7 @@ from anyjson import dumps
 
 # Zato
 from zato.admin.settings import engine_friendly_name
-from zato.admin.web.views import change_password as _change_password
+from zato.admin.web.views import change_password as _change_password, parse_response_data
 from zato.admin.web.forms import ChangePasswordForm
 from zato.admin.web.forms.outgoing.sql import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, method_allowed

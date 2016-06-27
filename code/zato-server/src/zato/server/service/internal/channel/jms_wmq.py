@@ -22,7 +22,7 @@ from zato.server.service.internal import AdminService, AdminSIO
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ channels.
     """
-    _filter_by = ChannelWMQ.name, ChannelWMQ.queue
+    _filter_by = ChannelWMQ.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_jms_wmq_get_list_request'

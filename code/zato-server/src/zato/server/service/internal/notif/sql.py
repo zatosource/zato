@@ -50,6 +50,7 @@ def broker_message_hook(service, input, instance, attrs, service_type):
         input.notif_type = COMMON_NOTIF.TYPE.SQL
 
 class GetList(AdminService):
+    _filter_by = NotificationSQL.name,
     __metaclass__ = GetListMeta
 
 class Create(AdminService):

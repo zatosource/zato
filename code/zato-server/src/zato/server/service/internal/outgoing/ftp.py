@@ -31,6 +31,8 @@ class _FTPService(AdminService):
 class GetList(AdminService):
     """ Returns a list of outgoing FTP connections.
     """
+    _filter_by = OutgoingFTP.name,
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_ftp_get_list_request'
         response_elem = 'zato_outgoing_ftp_get_list_response'
@@ -39,7 +41,7 @@ class GetList(AdminService):
         output_optional = ('user', 'acct', 'timeout', Boolean('dircache'))
 
     def get_data(self, session):
-        return out_ftp_list(session, self.request.input.cluster_id, False)
+        return self._search(out_ftp_list, session, self.request.input.cluster_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

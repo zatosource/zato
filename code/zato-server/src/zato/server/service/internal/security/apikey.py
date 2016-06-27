@@ -23,7 +23,7 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class GetList(AdminService):
     """ Returns a list of API keys available.
     """
-    _filter_by = APIKeySecurity.name, APIKeySecurity.username
+    _filter_by = APIKeySecurity.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_apikey_get_list_request'

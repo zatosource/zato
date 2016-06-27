@@ -23,7 +23,7 @@ from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordB
 class GetList(AdminService):
     """ Returns a list of HTTP Basic Auth definitions available.
     """
-    _filter_by = HTTPBasicAuth.name, HTTPBasicAuth.username
+    _filter_by = HTTPBasicAuth.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_basic_auth_get_list_request'

@@ -80,7 +80,7 @@ class _HTTPSOAPService(object):
 class GetList(AdminService):
     """ Returns a list of HTTP/SOAP connections.
     """
-    _filter_by = HTTPSOAP.name
+    _filter_by = HTTPSOAP.name,
 
     class SimpleIO(AdminSIO):
         request_elem = 'zato_http_soap_get_list_request'
