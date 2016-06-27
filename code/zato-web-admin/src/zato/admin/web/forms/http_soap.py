@@ -92,6 +92,12 @@ class SearchForm(_ChooseClusterForm):
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
 
+    def __init__(self, clusters, data=None):
+        super(SearchForm, self).__init__(clusters, data)
+
+        self.initial['connection'] = data.get('connection') or ''
+        self.initial['transport'] = data.get('transport') or ''
+
 class ReplacePatternsForm(forms.Form):
     audit_repl_patt_type = forms.ChoiceField(widget=forms.Select())
     pattern_list = forms.CharField(widget=forms.Textarea(attrs={'rows':13, 'cols':70}), required=False)
