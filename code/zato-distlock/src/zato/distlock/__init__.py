@@ -9,8 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from contextlib import closing
-from ctypes import c_size_t
 from datetime import datetime, timedelta
 from hashlib import sha256
 import logging
@@ -74,6 +72,9 @@ class Lock(object):
         self.released = False
         self.block = block
         self.block_interval = block_interval
+
+    def _acquire_impl(self, *args, **kwargs):
+        raise NotImplementedError('Must be implemented in subclasses')
 
 # ################################################################################################################################
 
@@ -145,20 +146,20 @@ class Lock(object):
         """ Spawns a greenlet that will sustain the lock for at least self.ttl,
         possibly less if self.__exit__ is called earlier.
         """
-        result = spawn(self._wait_in_greenlet, _utcnow() + _timedelta(seconds=self.ttl))
+        spawn(self._wait_in_greenlet, _utcnow() + _timedelta(seconds=self.ttl))
 
 # ################################################################################################################################
 
     def _release(self, _has_debug=has_debug):
         """ Releases the lock if it has not been released already assuming we managed to acquire the lock at all.
         """
-        if self.acquired and self.released:
+        if self.acquired and not self.released:
 
-            self.session.execute(func.pg_advisory_unlock(self.priv_id))
+            self.session.execute(self._release_func(self.priv_id))
             self.released = True
 
             if _has_debug:
-                logger.info('Released %s', self.priv_id)
+                logger.debug('Released %s', self.priv_id)
 
         self.session.close()
 
@@ -166,11 +167,6 @@ class Lock(object):
 
     def __exit__(self, type, value, traceback):
         self._release()
-
-# ################################################################################################################################
-
-class MySQLLock(Lock):
-    pass
 
 # ################################################################################################################################
 
@@ -184,11 +180,23 @@ class FCNTLLock(Lock):
 
 # ################################################################################################################################
 
+class MySQLLock(Lock):
+    _acquire_func = func.get_lock
+    _release_func = func.release_lock
+
+    def _acquire_impl(self, lock_id):
+        return self.session.execute(self._acquire_func(lock_id, 0)).scalar()
+
+# ################################################################################################################################
+
 class PostgresSQLLock(Lock):
     """ Distributed locks based on PostgreSQL.
     """
+    _acquire_func = func.pg_try_advisory_lock
+    _release_func = func.pg_advisory_unlock
+
     def _acquire_impl(self, lock_id):
-        return self.session.execute(func.pg_try_advisory_lock(lock_id)).scalar()
+        return self.session.execute(self._acquire_func(lock_id)).scalar()
 
 # ################################################################################################################################
 
@@ -198,7 +206,7 @@ class LockManager(object):
     _lock_impl = {
         'postgresql+pg8000': PostgresSQLLock,
         'oracle': OracleLock,
-        'mysql': MySQLLock,
+        'mysql+pymysql': MySQLLock,
         'fcntl': FCNTLLock,
         }
 
