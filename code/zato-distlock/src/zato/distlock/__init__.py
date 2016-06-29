@@ -75,31 +75,7 @@ class Lock(object):
         self.block = block
         self.block_interval = block_interval
 
-    def acquire(self, name):
-        raise NotImplementedError('Must be implemented in subclasses')
-
-    release = acquire
-
 # ################################################################################################################################
-
-class MySQLLock(Lock):
-    pass
-
-# ################################################################################################################################
-
-class OracleLock(Lock):
-    pass
-
-# ################################################################################################################################
-
-class FCNTLLock(Lock):
-    pass
-
-# ################################################################################################################################
-
-class PostgresSQLLock(Lock):
-    """ Distributed locks based on PostgreSQL.
-    """
 
     def __enter__(self, pub_hash_func=sha256, _permanent=LOCK_TYPE.permanent):
 
@@ -119,14 +95,13 @@ class PostgresSQLLock(Lock):
             self.namespace, self.name, self.priv_id, pub_hash_func(self.priv_id).hexdigest(), self.ttl,
             self.acquired, self.lock_type, self.block, self.block_interval)
 
-    def _acquire_impl(self, lock_id):
-        return self.session.execute(func.pg_try_advisory_lock(lock_id)).scalar()
+# ################################################################################################################################
 
     def _acquire(self, _utcnow=datetime.utcnow, _has_debug=has_debug):
         """ Try to acquire a lock by its ID. If not possible and block is not False
         sleep for that many seconds as block points to.
         """
-        acquired = self.session.execute(func.pg_try_advisory_lock(self.priv_id)).scalar()
+        acquired = self._acquire_impl(self.priv_id)
 
         # Ok, we do not have the lock. If configured to, let's wait until we can obtain one or we time out.
 
@@ -149,6 +124,8 @@ class PostgresSQLLock(Lock):
 
         return acquired
 
+# ################################################################################################################################
+
     def _wait_in_greenlet(self, until, _utcnow=datetime.utcnow):
         """ Sleeps until `until` or until the lock is released and then releases the lock if it is still held.
         """
@@ -162,11 +139,15 @@ class PostgresSQLLock(Lock):
         if not self.released:
             self._release()
 
+# ################################################################################################################################
+
     def _sustain(self, _utcnow=datetime.utcnow, _timedelta=timedelta):
         """ Spawns a greenlet that will sustain the lock for at least self.ttl,
         possibly less if self.__exit__ is called earlier.
         """
         result = spawn(self._wait_in_greenlet, _utcnow() + _timedelta(seconds=self.ttl))
+
+# ################################################################################################################################
 
     def _release(self, _has_debug=has_debug):
         """ Releases the lock if it has not been released already assuming we managed to acquire the lock at all.
@@ -181,8 +162,33 @@ class PostgresSQLLock(Lock):
 
         self.session.close()
 
+# ################################################################################################################################
+
     def __exit__(self, type, value, traceback):
         self._release()
+
+# ################################################################################################################################
+
+class MySQLLock(Lock):
+    pass
+
+# ################################################################################################################################
+
+class OracleLock(Lock):
+    pass
+
+# ################################################################################################################################
+
+class FCNTLLock(Lock):
+    pass
+
+# ################################################################################################################################
+
+class PostgresSQLLock(Lock):
+    """ Distributed locks based on PostgreSQL.
+    """
+    def _acquire_impl(self, lock_id):
+        return self.session.execute(func.pg_try_advisory_lock(lock_id)).scalar()
 
 # ################################################################################################################################
 
