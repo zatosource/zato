@@ -10,7 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
+from fcntl import flock, LOCK_EX, LOCK_NB, LOCK_UN
 from hashlib import sha256
+from tempfile import NamedTemporaryFile
 import logging
 
 # gevent
@@ -62,7 +64,7 @@ class Lock(object):
     """
     def __init__(self, session, namespace, name, ttl, block, block_interval, _permanent=LOCK_TYPE.permanent,
             _transient=LOCK_TYPE.transient):
-        self.session = session()
+        self.session = session() if session else None
         self.namespace = namespace
         self.name = name
         self.ttl = ttl
@@ -75,6 +77,8 @@ class Lock(object):
 
     def _acquire_impl(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented in subclasses')
+
+    _release = _acquire_impl
 
 # ################################################################################################################################
 
@@ -150,6 +154,15 @@ class Lock(object):
 
 # ################################################################################################################################
 
+    def __exit__(self, type, value, traceback):
+        self._release()
+
+# ################################################################################################################################
+
+class SQLLock(object):
+    """ Base class for all SQL-backed locks.
+    """
+
     def _release(self, _has_debug=has_debug):
         """ Releases the lock if it has not been released already assuming we managed to acquire the lock at all.
         """
@@ -165,22 +178,12 @@ class Lock(object):
 
 # ################################################################################################################################
 
-    def __exit__(self, type, value, traceback):
-        self._release()
-
-# ################################################################################################################################
-
-class OracleLock(Lock):
+class OracleLock(SQLLock):
     pass
 
 # ################################################################################################################################
 
-class FCNTLLock(Lock):
-    pass
-
-# ################################################################################################################################
-
-class MySQLLock(Lock):
+class MySQLLock(SQLLock):
     _acquire_func = func.get_lock
     _release_func = func.release_lock
 
@@ -189,7 +192,7 @@ class MySQLLock(Lock):
 
 # ################################################################################################################################
 
-class PostgresSQLLock(Lock):
+class PostgresSQLLock(SQLLock):
     """ Distributed locks based on PostgreSQL.
     """
     _acquire_func = func.pg_try_advisory_lock
@@ -197,6 +200,17 @@ class PostgresSQLLock(Lock):
 
     def _acquire_impl(self, lock_id):
         return self.session.execute(self._acquire_func(lock_id)).scalar()
+
+# ################################################################################################################################
+
+class FCNTLLock(Lock):
+    """ Distributed (IPC-only, i.e. within the same OS) lock based on Linux fcntl system calls.
+    """
+    def _acquire_impl(self, lock_id):
+        print(333, lock_id)
+
+    def _release(self, _has_debug=has_debug):
+        print(444, self)
 
 # ################################################################################################################################
 
@@ -210,7 +224,7 @@ class LockManager(object):
         'fcntl': FCNTLLock,
         }
 
-    def __init__(self, backend_type, session):
+    def __init__(self, backend_type, session=None):
         self.backend_type = backend_type
         self.session = session
         self._lock_class = self._lock_impl[backend_type]
