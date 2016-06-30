@@ -10,13 +10,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
-from fcntl import flock, LOCK_EX, LOCK_NB, LOCK_UN
 from hashlib import sha256
-from tempfile import NamedTemporaryFile
+from pwd import getpwuid
+from tempfile import gettempdir
+from threading import current_thread
 import logging
+import os
 
 # gevent
 from gevent import sleep, spawn
+
+# portalocket
+from portalocker import lock, LockException, LOCK_NB, LOCK_EX, unlock
 
 # SQLAlchemy
 from sqlalchemy import func
@@ -62,13 +67,15 @@ class LockInfo(object):
 class Lock(object):
     """ Base class for all backend-specific locks.
     """
-    def __init__(self, session, namespace, name, ttl, block, block_interval, _permanent=LOCK_TYPE.permanent,
+    def __init__(self, os_user_name, session, namespace, name, ttl, block, block_interval, _permanent=LOCK_TYPE.permanent,
             _transient=LOCK_TYPE.transient):
+        self.os_user_name = os_user_name
         self.session = session() if session else None
         self.namespace = namespace
         self.name = name
         self.ttl = ttl
         self.priv_id = ''
+        self.pub_id = ''
         self.lock_type = _permanent if ttl else _transient
         self.acquired = False
         self.released = False
@@ -86,6 +93,7 @@ class Lock(object):
 
         # Compute lock_id in PostgreSQL's internal format which is a 64-bit integer (bigint)
         self.priv_id = str(hash('{}{}'.format(self.namespace, self.name)))
+        self.pub_id = pub_hash_func(self.priv_id).hexdigest()
 
         # Try to acquire the lock
         self.acquired = self._acquire()
@@ -96,9 +104,8 @@ class Lock(object):
         if self.acquired and self.lock_type == _permanent:
             self._sustain()
 
-        return LockInfo(
-            self.namespace, self.name, self.priv_id, pub_hash_func(self.priv_id).hexdigest(), self.ttl,
-            self.acquired, self.lock_type, self.block, self.block_interval)
+        return LockInfo(self.namespace, self.name, self.priv_id, self.pub_id, self.ttl, self.acquired, self.lock_type,
+            self.block, self.block_interval)
 
 # ################################################################################################################################
 
@@ -106,7 +113,7 @@ class Lock(object):
         """ Try to acquire a lock by its ID. If not possible and block is not False
         sleep for that many seconds as block points to.
         """
-        acquired = self._acquire_impl(self.priv_id)
+        acquired = self._acquire_impl()
 
         # Ok, we do not have the lock. If configured to, let's wait until we can obtain one or we time out.
 
@@ -120,7 +127,7 @@ class Lock(object):
 
             while now < until:
                 sleep(_block_interval)
-                if self._acquire_impl(self.priv_id):
+                if self._acquire_impl():
                     break
                 now = _utcnow()
 
@@ -159,7 +166,7 @@ class Lock(object):
 
 # ################################################################################################################################
 
-class SQLLock(object):
+class SQLLock(Lock):
     """ Base class for all SQL-backed locks.
     """
 
@@ -187,8 +194,8 @@ class MySQLLock(SQLLock):
     _acquire_func = func.get_lock
     _release_func = func.release_lock
 
-    def _acquire_impl(self, lock_id):
-        return self.session.execute(self._acquire_func(lock_id, 0)).scalar()
+    def _acquire_impl(self):
+        return self.session.execute(self._acquire_func(self.priv_id, 0)).scalar()
 
 # ################################################################################################################################
 
@@ -198,19 +205,50 @@ class PostgresSQLLock(SQLLock):
     _acquire_func = func.pg_try_advisory_lock
     _release_func = func.pg_advisory_unlock
 
-    def _acquire_impl(self, lock_id):
-        return self.session.execute(self._acquire_func(lock_id)).scalar()
+    def _acquire_impl(self):
+        return self.session.execute(self._acquire_func(self.priv_id)).scalar()
 
 # ################################################################################################################################
 
 class FCNTLLock(Lock):
-    """ Distributed (IPC-only, i.e. within the same OS) lock based on Linux fcntl system calls.
+    """ IPC-only lock based on Linux fcntl system calls.
     """
-    def _acquire_impl(self, lock_id):
-        print(333, lock_id)
+    lock_template = """
+pid={}
+greenlet_name={}
+greenlet_id={}
+creation_time_utc={}
+user={}
+""".lstrip()
+
+    def __init__(self, *args, **kwargs):
+        super(FCNTLLock, self).__init__(*args, **kwargs)
+        self.tmp_file = None
+
+    def _acquire_impl(self, _flags=LOCK_EX | LOCK_NB):
+
+        current = current_thread()
+
+        self.tmp_file = open(os.path.join(gettempdir(), 'zato-lock-{}'.format(self.pub_id)), 'w+b')
+        self.tmp_file.write(
+            self.lock_template.format(
+                os.getpid(), current.name, current.ident, datetime.utcnow().isoformat(), self.os_user_name,
+            ))
+        self.tmp_file.flush()
+
+        try:
+            lock(self.tmp_file, _flags)
+        except LockException:
+            return False
+        else:
+            return True
 
     def _release(self, _has_debug=has_debug):
-        print(444, self)
+        unlock(self.tmp_file)
+        self.tmp_file.close()
+
+        if _has_debug:
+            logger.debug('Unlocked `%s`', self.tmp_file)
 
 # ################################################################################################################################
 
@@ -228,6 +266,7 @@ class LockManager(object):
         self.backend_type = backend_type
         self.session = session
         self._lock_class = self._lock_impl[backend_type]
+        self.user_name = getpwuid(os.getuid()).pw_name
 
     def __call__(self, namespace, name, ttl=None, block=None, block_interval=1, max_len_ns=MAX_LEN_NS, max_len_name=MAX_LEN_NAME):
 
@@ -241,6 +280,6 @@ class LockManager(object):
             logger.warn(msg)
             raise ValueError(msg)
 
-        return self._lock_class(self.session, namespace, name, ttl, block, block_interval)
+        return self._lock_class(self.user_name, self.session, namespace, name, ttl, block, block_interval)
 
 # ################################################################################################################################
