@@ -22,9 +22,6 @@ from anyjson import dumps
 # pip
 from pip.download import is_archive_file
 
-# retools
-from retools.lock import Lock
-
 # Zato
 from zato.common import DEPLOYMENT_STATUS, KVDB
 from zato.common.broker_message import HOT_DEPLOY
@@ -186,7 +183,8 @@ class Create(AdminService):
             # This shouldn't really happen at all because the pickup notifier is to
             # filter such things out but life is full of surprises
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
-            self.logger.warn('Ignoring package id:[{}], payload_name:[{}], not a Python file nor an archive'.format(dp.id, dp.payload_name))
+            self.logger.warn(
+                'Ignoring package id:[{}], payload_name:[{}], not a Python file nor an archive'.format(dp.id, dp.payload_name))
 
     def get_package(self, package_id, session):
         return session.query(DeploymentPackage).\
@@ -204,9 +202,11 @@ class Create(AdminService):
         # to DEPLOYMENT_STATUS.DEPLOYED but what we really want is per-worker
         # reporting of whether the deployment succeeded or not.
 
-        with Lock(lock_name, self.server.deployment_lock_expires, self.server.deployment_lock_timeout, self.server.kvdb.conn):
-            with closing(self.odb.session()) as session:
+        ttl = self.server.deployment_lock_expires
+        block = self.server.deployment_lock_timeout
 
+        with self.lock(lock_name, ttl, block):
+            with closing(self.odb.session()) as session:
                 try:
                     # Only the first worker will get here ..
                     if not self.server.kvdb.conn.get(already_deployed_flag):

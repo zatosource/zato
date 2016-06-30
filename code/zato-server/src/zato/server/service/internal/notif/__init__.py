@@ -14,9 +14,6 @@ from bunch import bunchify
 # gevent
 from gevent import sleep, spawn
 
-# retools
-from retools.lock import LockTimeout
-
 # Zato
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
@@ -85,15 +82,9 @@ class NotifierService(AdminService):
 
         self.environ['notif_sleep_interval'] = config.interval
 
-        try:
-
-            # Grab a distributed lock so we are sure it is only us who connects to pull newest data.
-            with self.lock('zato:lock:{}:{}'.format(self.notif_type, config.name)):
-                self.run_notifier_impl(config)
-
-        except LockTimeout:
-            # It's OK, another greenlet must have beaten us to it.
-            pass
+        # Grab a distributed lock so we are sure it is only us who connects to pull newest data.
+        with self.lock('zato:lock:{}:{}'.format(self.notif_type, config.name)):
+            self.run_notifier_impl(config)
 
     def handle(self):
         self.keep_running = True
