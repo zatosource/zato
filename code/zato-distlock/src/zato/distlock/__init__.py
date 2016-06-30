@@ -37,11 +37,17 @@ has_debug = logger.isEnabledFor(logging.DEBUG)
 # ################################################################################################################################
 
 MAX_LEN_NS = 8
-MAX_LEN_NAME = 48
+MAX_LEN_NAME = 128
 
 class LOCK_TYPE:
     permanent = 'permanent'
     transient = 'transient'
+
+# ################################################################################################################################
+
+class LockTimeout(Exception):
+    """ Raised if a lock could not be obtained within the expected time.
+    """
 
 # ################################################################################################################################
 
@@ -131,8 +137,13 @@ class Lock(object):
                     break
                 now = _utcnow()
 
+            if not acquired:
+                msg = 'Could not obtain lock for `{}` `{}` within {}s'.format(self.namespace, self.name, _block)
+                logger.warn(msg)
+                raise LockTimeout(msg)
+
         if _has_debug:
-            logger.debug('Acquired status for %s is %s', self.priv_id, self.acquired)
+            logger.debug('Acquired status for %s (%s %s) is %s', self.priv_id, self.namespace, self.name, acquired)
 
         return acquired
 
@@ -147,6 +158,7 @@ class Lock(object):
             if self.released:
                 break
             now = _utcnow()
+            sleep(0.3)
 
         if not self.released:
             self._release()
@@ -246,6 +258,7 @@ user={}
     def _release(self, _has_debug=has_debug):
         unlock(self.tmp_file)
         self.tmp_file.close()
+        os.remove(self.tmp_file.name)
 
         if _has_debug:
             logger.debug('Unlocked `%s`', self.tmp_file)
@@ -262,13 +275,15 @@ class LockManager(object):
         'fcntl': FCNTLLock,
         }
 
-    def __init__(self, backend_type, session=None):
+    def __init__(self, backend_type, default_namespace, session=None):
         self.backend_type = backend_type
+        self.default_namespace = default_namespace
         self.session = session
         self._lock_class = self._lock_impl[backend_type]
         self.user_name = getpwuid(os.getuid()).pw_name
 
-    def __call__(self, namespace, name, ttl=None, block=None, block_interval=1, max_len_ns=MAX_LEN_NS, max_len_name=MAX_LEN_NAME):
+    def __call__(self, name, namespace='', ttl=60, block=10, block_interval=1,
+            max_len_ns=MAX_LEN_NS, max_len_name=MAX_LEN_NAME):
 
         if len(namespace) > max_len_ns:
             msg = 'Namespace `{}` exceeds the limit of {} characters'.format(namespace, max_len_ns)
@@ -276,10 +291,11 @@ class LockManager(object):
             raise ValueError(msg)
 
         if len(name) > max_len_name:
-            msg = 'Name `{}` exceeds the limit of {} characters'.format(namespace, max_len_name)
+            msg = 'Name `{}` exceeds the limit of {} characters'.format(name, max_len_name)
             logger.warn(msg)
             raise ValueError(msg)
 
-        return self._lock_class(self.user_name, self.session, namespace, name, ttl, block, block_interval)
+        return self._lock_class(
+            self.user_name, self.session, namespace or self.default_namespace, name, ttl, block, block_interval)
 
 # ################################################################################################################################
