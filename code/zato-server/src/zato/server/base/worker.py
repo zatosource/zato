@@ -35,9 +35,6 @@ import gevent
 from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
-# retools
-from retools.lock import Lock
-
 # Zato
 from zato.bunch import Bunch
 from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, \
@@ -45,7 +42,6 @@ from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB
 from zato.common import broker_message, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
-from zato.common.locking import get_lock
 from zato.common.match import Matcher
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
@@ -512,8 +508,8 @@ class WorkerStore(BrokerMessageReceiver):
         """ Initializes ZeroMQ channels and MDP connections.
         """
         lock_name = 'startup.init_zmq.{}'.format(self.server.get_full_name())
-        with get_lock(KVDB.LOCK_CONFIG_PREFIX, lock_name, 20, 0, self.server.kvdb.conn):
 
+        with self.server.zato_lock_manager(lock_name, ttl=20, block=None):
             cache_key = KVDB.ZMQ_CONFIG_READY_PREFIX.format(self.server.deployment_key)
 
             # There must have been another worker before us
@@ -1077,7 +1073,7 @@ class WorkerStore(BrokerMessageReceiver):
                 lock = KVDB.LOCK_ASYNC_INVOKE_WITH_TARGET_PATTERN.format(self.server.fs_server_config.main.token, cid)
                 processed_key = KVDB.ASYNC_INVOKE_PROCESSED_FLAG_PATTERN.format(self.server.fs_server_config.main.token, cid)
 
-                with Lock(lock, redis=self.server.kvdb.conn):
+                with self.server.zato_lock_manager(lock):
                     processed = self.server.kvdb.conn.get(processed_key)
 
                     # Ok, already processed
@@ -1721,7 +1717,7 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def _on_broker_msg_channel_zmq_create_edit(self, name, msg, action, lock_timeout, start):
-        with get_lock(KVDB.LOCK_CONFIG_PREFIX, msg.config_cid, 10, lock_timeout, self.server.kvdb.conn):
+        with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
             self._set_up_zmq_channel(name, msg, action, start)
 
     def on_broker_msg_CHANNEL_ZMQ_CREATE(self, msg):
@@ -1731,7 +1727,7 @@ class WorkerStore(BrokerMessageReceiver):
         self._on_broker_msg_channel_zmq_create_edit(msg.old_name, msg, 'edit', 5, False)
 
     def on_broker_msg_CHANNEL_ZMQ_DELETE(self, msg):
-        with get_lock(KVDB.LOCK_CONFIG_PREFIX, msg.config_cid, 10, 5, self.server.kvdb.conn):
+        with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=5):
             api = self.zmq_mdp_v01_api if msg.socket_type.startswith(ZMQ.MDP) else self.zmq_channel_api
             if msg.name in api.connectors:
                 api.delete(msg.name)

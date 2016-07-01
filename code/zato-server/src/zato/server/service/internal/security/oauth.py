@@ -19,14 +19,14 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, OAuth
 from zato.common.odb.query import oauth_list
 from zato.server.service import Integer
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 class GetList(AdminService):
     """ Returns a list of OAuth definitions available.
     """
     _filter_by = OAuth.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_security_oauth_get_list_request'
         response_elem = 'zato_security_oauth_get_list_response'
         input_required = ('cluster_id',)

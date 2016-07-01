@@ -17,18 +17,18 @@ from zato.common import MSG_SOURCE, ZMQ
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelZMQ, Cluster, Service
 from zato.common.odb.query import channel_zmq_list
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 class GetList(AdminService):
     """ Returns a list of ZeroMQ channels.
     """
     _filter_by = ChannelZMQ.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_channel_zmq_get_list_request'
         response_elem = 'zato_channel_zmq_get_list_response'
         input_required = ('cluster_id',)
-        input_optional = AdminSIO.input_optional + ('msg_source',)
+        input_optional = GetListAdminSIO.input_optional + ('msg_source',)
         output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
             'service_name', 'pool_strategy', 'service_source', 'data_format')
         output_optional = ('sub_key',)

@@ -17,7 +17,7 @@ from zato.common import MSG_PATTERN_TYPE
 from zato.common.broker_message import MSG_XPATH
 from zato.common.odb.model import Cluster, XPath
 from zato.common.odb.query import xpath_list
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ##############################################################################
 
@@ -26,7 +26,7 @@ class GetList(AdminService):
     """
     _filter_by = XPath.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_message_xpath_get_list_request'
         response_elem = 'zato_message_xpath_get_list_response'
         input_required = ('cluster_id',)

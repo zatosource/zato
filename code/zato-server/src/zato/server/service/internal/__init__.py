@@ -173,6 +173,11 @@ class AdminService(Service):
 
 class AdminSIO(object):
     namespace = zato_namespace
+
+# ################################################################################################################################
+
+class GetListAdminSIO(object):
+    namespace = zato_namespace
     input_optional = ('paginate', 'cur_page', 'query')
 
 # ################################################################################################################################

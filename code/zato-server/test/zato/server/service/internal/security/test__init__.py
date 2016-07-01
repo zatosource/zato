@@ -15,6 +15,7 @@ from bunch import Bunch
 from zato.common import zato_namespace
 from zato.common.test import rand_int, rand_string, rand_bool, ServiceTestCase
 from zato.server.service import Boolean, Integer
+from zato.server.service.internal import GetListAdminSIO
 from zato.server.service.internal.security import GetList
 
 ##############################################################################
@@ -50,9 +51,10 @@ class GetListTestCase(ServiceTestCase):
             ))
         self.assertEquals(self.sio.namespace, zato_namespace)
 
-        self.assertEquals(len(self.sio.input_optional), 2)
-        self.assertEquals(self.sio.input_optional[0].name, 'sec_type')
-        self.assertEquals(self.sio.input_optional[1].name, 'needs_internal')
+        self.assertEquals(len(self.sio.input_optional), 5)
+        self.assertEquals(self.sio.input_optional[0:3], GetListAdminSIO.input_optional)
+        self.assertEquals(self.sio.input_optional[3].name, 'sec_type')
+        self.assertEquals(self.sio.input_optional[4].name, 'needs_internal')
 
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.security.get-list')

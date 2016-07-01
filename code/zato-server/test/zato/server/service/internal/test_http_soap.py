@@ -15,6 +15,7 @@ from bunch import Bunch
 from zato.common import zato_namespace
 from zato.common.test import ForceTypeWrapper, rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service import Bool
+from zato.server.service.internal import GetListAdminSIO
 from zato.server.service.internal.http_soap import GetList, Create, Edit, Delete, Ping
 
 ################################################################################
@@ -40,13 +41,13 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.request_elem, 'zato_http_soap_get_list_request')
         self.assertEquals(self.sio.response_elem, 'zato_http_soap_get_list_response')
         self.assertEquals(self.sio.input_required, ('cluster_id', 'connection', 'transport'))
+        self.assertEquals(self.sio.input_optional, GetListAdminSIO.input_optional)
         self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'is_internal', 'url_path'))
         self.assertEquals(self.sio.output_optional, ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
             'method', 'soap_action', 'soap_version', 'data_format', 'host',
             'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type', 'timeout',
             'sec_tls_ca_cert_id', Bool('has_rbac'), 'content_type'))
         self.assertEquals(self.sio.namespace, zato_namespace)
-        self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
 
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.http-soap.get-list')

@@ -15,7 +15,7 @@ from hashlib import sha1, sha256
 from zato.common import KVDB, ZatoException
 from zato.common.util import hexlify, multikeysort
 from zato.server.service import Int
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
 class _DeletingService(DataDictService):
@@ -30,7 +30,7 @@ class _DeletingService(DataDictService):
 class GetList(DataDictService):
     """ Returns a list of translations.
     """
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_kvdb_data_dict_translation_get_list_request'
         response_elem = 'zato_kvdb_data_dict_translation_get_list_response'
         output_required = ('id', 'system1', 'key1', 'value1', 'system2', 'key2', 'value2', 'id1', 'id2')

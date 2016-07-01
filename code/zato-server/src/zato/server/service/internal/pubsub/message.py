@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.common import PUB_SUB
 from zato.server.service import AsIs, Int, UTC
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
@@ -35,7 +35,7 @@ class _SourceTypeAware(AdminService):
 class GetList(_SourceTypeAware):
     """ Returns a list of mesages from a topic or consumer queue.
     """
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_pubsub_message_get_list_request'
         response_elem = 'zato_pubsub_message_get_list_response'
         input_required = ('cluster_id', 'source_type', 'source_name')

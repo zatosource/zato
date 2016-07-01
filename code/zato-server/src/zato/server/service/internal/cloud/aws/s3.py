@@ -17,14 +17,14 @@ from zato.common.broker_message import CLOUD
 from zato.common.odb.model import AWSS3
 from zato.common.odb.query import cloud_aws_s3_list
 from zato.server.service import Bool, ForceType, Int
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 class GetList(AdminService):
     """ Returns a list of AWS S3 connections.
     """
     _filter_by = AWSS3.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_cloud_aws_s3_get_list_request'
         response_elem = 'zato_cloud_aws_s3_get_list_response'
         input_required = ('cluster_id',)
