@@ -591,7 +591,7 @@ class Service(object):
         ttl - defaults to 20 seconds and is the max time the lock will be held
         block - how long (in seconds) we will wait to acquire the lock before giving up
         """
-        return self.server.lock_manager(name, ttl=ttl, block=block)
+        return self.server.zato_lock_manager(name, ttl=ttl, block=block)
 
 # ################################################################################################################################
 

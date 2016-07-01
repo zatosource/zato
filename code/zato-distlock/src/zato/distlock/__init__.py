@@ -36,12 +36,18 @@ has_debug = logger.isEnabledFor(logging.DEBUG)
 
 # ################################################################################################################################
 
-MAX_LEN_NS = 8
-MAX_LEN_NAME = 128
+class MAX:
+    LEN_NS = 8
+    LEN_NAME = 128
+
+class DEFAULT:
+    TTL = 60
+    BLOCK = 10
+    BLOCK_INTERVAL = 1
 
 class LOCK_TYPE:
-    permanent = 'permanent'
-    transient = 'transient'
+    PERMANENT = 'permanent'
+    TRANSIENT = 'transient'
 
 # ################################################################################################################################
 
@@ -52,9 +58,11 @@ class LockTimeout(Exception):
 # ################################################################################################################################
 
 class LockInfo(object):
-    __slots__ = ('namespace', 'name', 'priv_id', 'pub_id', 'ttl', 'acquired', 'lock_type', 'block', 'block_interval')
+    __slots__ = ('lock', 'namespace', 'name', 'priv_id', 'pub_id', 'ttl', 'acquired', 'lock_type', 'block', 'block_interval',
+        'release')
 
-    def __init__(self, namespace, name, priv_id, pub_id, ttl, acquired, lock_type, block, block_interval):
+    def __init__(self, lock, namespace, name, priv_id, pub_id, ttl, acquired, lock_type, block, block_interval):
+        self.lock = lock
         self.namespace = namespace
         self.name = name
         self.priv_id = priv_id
@@ -64,6 +72,7 @@ class LockInfo(object):
         self.lock_type = lock_type
         self.block = block
         self.block_interval = block_interval
+        self.release = self.lock.release
 
     def __repr__(self):
         return make_repr(self)
@@ -73,8 +82,8 @@ class LockInfo(object):
 class Lock(object):
     """ Base class for all backend-specific locks.
     """
-    def __init__(self, os_user_name, session, namespace, name, ttl, block, block_interval, _permanent=LOCK_TYPE.permanent,
-            _transient=LOCK_TYPE.transient):
+    def __init__(self, os_user_name, session, namespace, name, ttl, block, block_interval, _permanent=LOCK_TYPE.PERMANENT,
+            _transient=LOCK_TYPE.TRANSIENT):
         self.os_user_name = os_user_name
         self.session = session() if session else None
         self.namespace = namespace
@@ -91,11 +100,9 @@ class Lock(object):
     def _acquire_impl(self, *args, **kwargs):
         raise NotImplementedError('Must be implemented in subclasses')
 
-    _release = _acquire_impl
-
 # ################################################################################################################################
 
-    def __enter__(self, pub_hash_func=sha256, _permanent=LOCK_TYPE.permanent):
+    def __enter__(self, pub_hash_func=sha256, _permanent=LOCK_TYPE.PERMANENT):
 
         # Compute lock_id in PostgreSQL's internal format which is a 64-bit integer (bigint)
         self.priv_id = str(hash('{}{}'.format(self.namespace, self.name)))
@@ -110,8 +117,10 @@ class Lock(object):
         if self.acquired and self.lock_type == _permanent:
             self._sustain()
 
-        return LockInfo(self.namespace, self.name, self.priv_id, self.pub_id, self.ttl, self.acquired, self.lock_type,
+        return LockInfo(self, self.namespace, self.name, self.priv_id, self.pub_id, self.ttl, self.acquired, self.lock_type,
             self.block, self.block_interval)
+
+    acquire = __enter__
 
 # ################################################################################################################################
 
@@ -149,32 +158,33 @@ class Lock(object):
 
 # ################################################################################################################################
 
-    def _wait_in_greenlet(self, until, _utcnow=datetime.utcnow):
-        """ Sleeps until `until` or until the lock is released and then releases the lock if it is still held.
+    def _wait_in_greenlet(self, _utcnow=datetime.utcnow, _timedelta=timedelta):
+        """ Sleeps until self.ttl is reached or until the lock is released and then releases the lock if it is still held.
         """
         now = _utcnow()
+        until = now + _timedelta(seconds=self.ttl)
 
         while now < until:
             if self.released:
                 break
             now = _utcnow()
-            sleep(0.3)
+            sleep(0.1)
 
         if not self.released:
-            self._release()
+            self.release()
 
 # ################################################################################################################################
 
-    def _sustain(self, _utcnow=datetime.utcnow, _timedelta=timedelta):
+    def _sustain(self):
         """ Spawns a greenlet that will sustain the lock for at least self.ttl,
         possibly less if self.__exit__ is called earlier.
         """
-        spawn(self._wait_in_greenlet, _utcnow() + _timedelta(seconds=self.ttl))
+        spawn(self._wait_in_greenlet)
 
 # ################################################################################################################################
 
     def __exit__(self, type, value, traceback):
-        self._release()
+        self.release()
 
 # ################################################################################################################################
 
@@ -182,7 +192,7 @@ class SQLLock(Lock):
     """ Base class for all SQL-backed locks.
     """
 
-    def _release(self, _has_debug=has_debug):
+    def release(self, _has_debug=has_debug):
         """ Releases the lock if it has not been released already assuming we managed to acquire the lock at all.
         """
         if self.acquired and not self.released:
@@ -255,7 +265,7 @@ user={}
         else:
             return True
 
-    def _release(self, _has_debug=has_debug):
+    def release(self, _has_debug=has_debug):
         unlock(self.tmp_file)
         self.tmp_file.close()
         os.remove(self.tmp_file.name)
@@ -282,8 +292,8 @@ class LockManager(object):
         self._lock_class = self._lock_impl[backend_type]
         self.user_name = getpwuid(os.getuid()).pw_name
 
-    def __call__(self, name, namespace='', ttl=60, block=10, block_interval=1,
-            max_len_ns=MAX_LEN_NS, max_len_name=MAX_LEN_NAME):
+    def __call__(self, name, namespace='', ttl=DEFAULT.TTL, block=DEFAULT.BLOCK, block_interval=DEFAULT.BLOCK_INTERVAL,
+            max_len_ns=MAX.LEN_NS, max_len_name=MAX.LEN_NAME):
 
         if len(namespace) > max_len_ns:
             msg = 'Namespace `{}` exceeds the limit of {} characters'.format(namespace, max_len_ns)
@@ -297,5 +307,8 @@ class LockManager(object):
 
         return self._lock_class(
             self.user_name, self.session, namespace or self.default_namespace, name, ttl, block, block_interval)
+
+    def acquire(self, *args, **kwargs):
+        return self(*args, **kwargs).acquire()
 
 # ################################################################################################################################
