@@ -17,7 +17,7 @@ from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.odb.model import ChannelAMQP, Cluster, ConnDefAMQP, Service
 from zato.common.odb.query import channel_amqp_list
 from zato.server.connection.amqp.channel import start_connector
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 class _AMQPService(AdminService):
     def delete_channel(self, channel):
@@ -29,7 +29,7 @@ class GetList(AdminService):
     """
     _filter_by = ChannelAMQP.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_channel_amqp_get_list_request'
         response_elem = 'zato_channel_amqp_get_list_response'
         input_required = ('cluster_id',)

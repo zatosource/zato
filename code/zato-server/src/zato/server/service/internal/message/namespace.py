@@ -16,14 +16,14 @@ from traceback import format_exc
 from zato.common.broker_message import MSG_NS
 from zato.common.odb.model import Cluster, MsgNamespace
 from zato.common.odb.query import namespace_list
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 class GetList(AdminService):
     """ Returns a list of namespaces available.
     """
     _filter_by = MsgNamespace.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_message_namespace_get_list_request'
         response_elem = 'zato_message_namespace_get_list_response'
         input_required = ('cluster_id',)

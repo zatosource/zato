@@ -21,7 +21,7 @@ from zato.common import MSG_PATTERN_TYPE
 from zato.common.broker_message import MSG_JSON_POINTER
 from zato.common.odb.model import Cluster, JSONPointer
 from zato.common.odb.query import json_pointer_list
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ##############################################################################
 
@@ -30,7 +30,7 @@ class GetList(AdminService):
     """
     _filter_by = JSONPointer.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_message_json_pointer_get_list_request'
         response_elem = 'zato_message_json_pointer_get_list_response'
         input_required = ('cluster_id',)

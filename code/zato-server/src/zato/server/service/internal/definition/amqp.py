@@ -17,14 +17,14 @@ from uuid import uuid4
 from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefAMQP
 from zato.common.odb.query import def_amqp, def_amqp_list
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 class GetList(AdminService):
     """ Returns a list of AMQP definitions available.
     """
     _filter_by = ConnDefAMQP.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_definition_amqp_get_list_request'
         response_elem = 'zato_definition_amqp_get_list_response'
         input_required = ('cluster_id',)

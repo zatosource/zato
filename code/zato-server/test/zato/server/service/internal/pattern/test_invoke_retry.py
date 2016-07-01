@@ -64,6 +64,9 @@ class InvokeRetryTestCase(ServiceTestCase):
                     if not is_ok:
                         raise Exception()
 
+                def set_response_data(self, *ignored_args, **ignored_kwargs):
+                    return expected_response
+
                 post_handle = validate_output = handle = validate_input = call_hooks = pre_handle = update
 
             callback = rand_string()

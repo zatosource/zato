@@ -14,6 +14,7 @@ from bunch import Bunch
 # Zato
 from zato.common import zato_namespace
 from zato.common.test import rand_int, rand_string, ServiceTestCase
+from zato.server.service.internal import GetListAdminSIO
 from zato.server.service.internal.kvdb.data_dict.dictionary import GetList, Create, Edit, GetSystemList, GetKeyList, GetValueList, GetLastID, Delete
 
 ################################################################################
@@ -35,7 +36,7 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.response_elem, 'zato_kvdb_data_dict_dictionary_get_list_response')
         self.assertEquals(self.sio.output_required, ('id', 'system', 'key', 'value'))
         self.assertEquals(self.sio.namespace, zato_namespace)
-        self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
+        self.assertEquals(self.sio.input_optional, GetListAdminSIO.input_optional)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
 
     def test_impl(self):

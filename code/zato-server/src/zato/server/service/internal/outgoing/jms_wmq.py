@@ -18,14 +18,14 @@ from zato.common.odb.model import ConnDefWMQ, OutgoingWMQ
 from zato.common.odb.query import out_jms_wmq_list
 from zato.server.connection.jms_wmq.outgoing import start_connector
 from zato.server.service import Integer
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 class GetList(AdminService):
     """ Returns a list of outgoing JMS WebSphere MQ connections.
     """
     _filter_by = OutgoingWMQ.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_outgoing_jms_wmq_get_list_request'
         response_elem = 'zato_outgoing_jms_wmq_get_list_response'
         input_required = ('cluster_id',)

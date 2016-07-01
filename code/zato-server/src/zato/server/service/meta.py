@@ -26,7 +26,7 @@ from sqlalchemy import Boolean, Integer
 from zato.common import NO_DEFAULT_VALUE, ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
 from zato.server.service import Bool as BoolSIO, Int as IntSIO
-from zato.server.service.internal import AdminSIO
+from zato.server.service.internal import AdminSIO, GetListAdminSIO
 
 logger = getLogger(__name__)
 
@@ -148,18 +148,20 @@ def update_attrs(cls, name, attrs):
 class AdminServiceMeta(type):
 
     @staticmethod
-    def get_sio(attrs, name, input_required=None, output_required=None):
+    def get_sio(attrs, name, input_required=None, output_required=None, is_list=True):
 
         sio = {
             'input_required': input_required or ['cluster_id'],
             'output_required': output_required if output_required is not None else ['id', 'name']
         }
 
-        class SimpleIO(AdminSIO):
+        _BaseClass = GetListAdminSIO if is_list else AdminSIO
+
+        class SimpleIO(_BaseClass):
             request_elem = 'zato_{}_{}_request'.format(attrs.elem, req_resp[name])
             response_elem = 'zato_{}_{}_response'.format(attrs.elem, req_resp[name])
             input_required = sio['input_required'] + attrs['input_required_extra']
-            input_optional = list(AdminSIO.input_optional)
+            input_optional = list(_BaseClass.input_optional) if hasattr(_BaseClass, 'input_optional') else []
 
             for param in attrs['skip_input_params']:
                 if param in input_required:
@@ -199,7 +201,7 @@ class GetListMeta(AdminServiceMeta):
     """
     def __init__(cls, name, bases, attrs):
         attrs = update_attrs(cls, name, attrs)
-        cls.SimpleIO = GetListMeta.get_sio(attrs, name)
+        cls.SimpleIO = GetListMeta.get_sio(attrs, name, is_list=True)
         cls.handle = GetListMeta.handle(attrs)
         cls.get_data = GetListMeta.get_data(attrs.get_data_func)
         return super(GetListMeta, cls).__init__(cls)
