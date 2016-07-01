@@ -37,9 +37,6 @@ from pytz import UTC
 # Spring Python
 from springpython.context import DisposableObject
 
-# retools
-from retools.lock import Lock
-
 # tzlocal
 from tzlocal import get_localzone
 
@@ -53,6 +50,7 @@ from zato.common.pubsub import PubSubAPI, RedisPubSub
 from zato.common.time_util import TimeUtil
 from zato.common.util import add_startup_jobs, get_kvdb_config_for_log, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, StaticConfig, register_diag_handlers
+from zato.distlock import LockManager
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigDict, ConfigStore
@@ -115,6 +113,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.preferred_address = None
         self.crypto_use_tls = None
         self.servers = None
+        self.zato_lock_manager = None
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -276,12 +275,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
         logger.debug('Will use the lock_name: [{}]'.format(lock_name))
 
-        with Lock(lock_name, self.deployment_lock_expires, self.deployment_lock_timeout, redis_conn):
+        with self.zato_lock_manager(lock_name, ttl=self.deployment_lock_expires, block=self.deployment_lock_timeout):
             if redis_conn.get(already_deployed_flag):
                 # There has been already the first worker who's done everything
                 # there is to be done so we may just return.
-                msg = 'Not attempting to grab the lock_name:[{}]'.format(lock_name)
-                logger.debug(msg)
+                logger.debug('Not attempting to grab the lock_name:`%s`', lock_name)
 
                 # Simply deploy services, including any missing ones, the first worker has already cleared out the ODB
                 locally_deployed = import_initial_services_jobs()
@@ -291,9 +289,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             else:
                 # We are this server's first worker so we need to re-populate
                 # the database and create the flag indicating we're done.
-                msg = 'Got Redis lock_name:[{}], expires:[{}], timeout:[{}]'.format(
-                    lock_name, self.deployment_lock_expires, self.deployment_lock_timeout)
-                logger.debug(msg)
+                logger.debug('Got lock_name:`%s`, ttl:`%s`', lock_name, self.deployment_lock_expires)
 
                 # .. Remove all the deployed services from the DB ..
                 self.odb.drop_deployed_services(server.id)
@@ -847,6 +843,16 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         if not server:
             raise Exception('Server does not exist in the ODB')
 
+        # Set up the server-wide default lock manager
+        odb_data = parallel_server.config.odb_data
+        backend_type = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
+        parallel_server.zato_lock_manager = LockManager(backend_type, 'zato', parallel_server.odb.session)
+
+        # Just to make sure distributed locking is configured correctly
+        with parallel_server.zato_lock_manager(uuid4().hex):
+            pass
+
+        # Basic metadata
         parallel_server.id = server.id
         parallel_server.name = server.name
         parallel_server.cluster_id = server.cluster_id

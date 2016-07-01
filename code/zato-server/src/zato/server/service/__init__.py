@@ -32,7 +32,6 @@ from gevent import Timeout, spawn
 from zato.bunch import Bunch
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException
 from zato.common.broker_message import SERVICE
-from zato.common.locking import get_lock
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl
 from zato.server.connection import request_response, slow_response
@@ -585,15 +584,14 @@ class Service(object):
         """
         raise NotImplementedError('Should be overridden by subclasses')
 
-    def lock(self, name=None, expires=20, timeout=10, backend=None):
-        """ Creates a Redis-backed distributed lock.
+    def lock(self, name=None, ttl=20, block=10):
+        """ Creates a distributed lock.
 
         name - defaults to self.name effectively making access to this service serialized
-        expires - defaults to 20 seconds and is the max time the lock will be held
-        timeout - how long (in seconds) we will wait to acquire the lock before giving up and raising LockTimeout
-        backend - a Redis connection object, defaults to self.kvdb.conn
+        ttl - defaults to 20 seconds and is the max time the lock will be held
+        block - how long (in seconds) we will wait to acquire the lock before giving up
         """
-        return get_lock(KVDB.LOCK_SERVICE_PREFIX, name or self.name, expires, timeout, backend or self.kvdb.conn)
+        return self.server.zato_lock_manager(name, ttl=ttl, block=block)
 
 # ################################################################################################################################
 

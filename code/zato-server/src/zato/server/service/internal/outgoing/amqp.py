@@ -18,7 +18,7 @@ from zato.common.odb.model import ConnDefAMQP, OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
 from zato.server.connection.amqp.outgoing import start_connector
 from zato.server.service import AsIs, Integer
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 class _AMQPService(AdminService):
     def delete_outgoing(self, outgoing):
@@ -30,7 +30,7 @@ class GetList(AdminService):
     """
     _filter_by = OutgoingAMQP.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_outgoing_amqp_get_list_request'
         response_elem = 'zato_outgoing_amqp_get_list_response'
         input_required = ('cluster_id',)

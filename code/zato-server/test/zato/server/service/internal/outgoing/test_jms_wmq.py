@@ -15,6 +15,7 @@ from bunch import Bunch
 from zato.common import zato_namespace
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service import Integer
+from zato.server.service.internal import GetListAdminSIO
 from zato.server.service.internal.outgoing.jms_wmq import Create, Edit, Delete, GetList
 
 ##############################################################################
@@ -39,12 +40,12 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.request_elem, 'zato_outgoing_jms_wmq_get_list_request')
         self.assertEquals(self.sio.response_elem, 'zato_outgoing_jms_wmq_get_list_response')
         self.assertEquals(self.sio.input_required, ('cluster_id',))
+        self.assertEquals(self.sio.input_optional, GetListAdminSIO.input_optional)
         self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'def_id',
-                                                     self.wrap_force_type(Integer('delivery_mode')),
-                                                     self.wrap_force_type(Integer('priority')), 'def_name'))
+            self.wrap_force_type(Integer('delivery_mode')),
+            self.wrap_force_type(Integer('priority')), 'def_name'))
         self.assertEquals(self.sio.output_optional, ('expiration',))
         self.assertEquals(self.sio.namespace, zato_namespace)
-        self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
 
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.outgoing.jms-wmq.get-list')

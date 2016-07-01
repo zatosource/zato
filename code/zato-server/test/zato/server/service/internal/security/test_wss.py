@@ -15,6 +15,7 @@ from bunch import Bunch
 from zato.common import zato_namespace
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service import Boolean, Integer
+from zato.server.service.internal import GetListAdminSIO
 from zato.server.service.internal.security.wss import GetList, Create, Edit, ChangePassword, Delete
 
 ################################################################################
@@ -38,13 +39,13 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.request_elem, 'zato_security_wss_get_list_request')
         self.assertEquals(self.sio.response_elem, 'zato_security_wss_get_list_response')
         self.assertEquals(self.sio.input_required, ('cluster_id',))
+        self.assertEquals(self.sio.input_optional, GetListAdminSIO.input_optional)
         self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'password_type', 'username',
-                                                     self.wrap_force_type(Boolean('reject_empty_nonce_creat')),
-                                                     self.wrap_force_type(Boolean('reject_stale_tokens')),
-                                                     self.wrap_force_type(Integer('reject_expiry_limit')),
-                                                     self.wrap_force_type(Integer('nonce_freshness_time'))))
+            self.wrap_force_type(Boolean('reject_empty_nonce_creat')),
+            self.wrap_force_type(Boolean('reject_stale_tokens')),
+            self.wrap_force_type(Integer('reject_expiry_limit')),
+            self.wrap_force_type(Integer('nonce_freshness_time'))))
         self.assertEquals(self.sio.namespace, zato_namespace)
-        self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
 

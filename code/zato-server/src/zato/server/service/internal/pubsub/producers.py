@@ -20,14 +20,14 @@ from zato.common.broker_message import PUB_SUB_PRODUCER
 from zato.common.odb.model import PubSubProducer, PubSubTopic
 from zato.common.odb.query import pubsub_producer_list
 from zato.server.service import UTC
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns a list of pub/sub producers available.
     """
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_pubsub_producers_get_list_request'
         response_elem = 'zato_pubsub_producers_get_list_response'
         input_required = ('cluster_id', 'topic_name')

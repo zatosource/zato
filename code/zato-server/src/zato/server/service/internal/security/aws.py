@@ -18,14 +18,14 @@ from zato.common import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, AWSSecurity
 from zato.common.odb.query import aws_security_list
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 class GetList(AdminService):
     """ Returns a list of AWS definitions available.
     """
     _filter_by = AWSSecurity.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_security_aws_get_list_request'
         response_elem = 'zato_security_aws_get_list_response'
         input_required = ('cluster_id',)

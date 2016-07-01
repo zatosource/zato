@@ -19,7 +19,7 @@ from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import SQLConnectionPool
 from zato.common.odb.query import out_sql_list
 from zato.server.service import Integer
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 class _SQLService(object):
     """ A common class for various SQL-related services.
@@ -39,7 +39,7 @@ class GetList(AdminService):
     """
     _filter_by = SQLConnectionPool.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_outgoing_sql_get_list_request'
         response_elem = 'zato_outgoing_sql_get_list_response'
         input_required = ('cluster_id',)

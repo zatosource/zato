@@ -15,6 +15,7 @@ from bunch import Bunch
 from zato.common import zato_namespace
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service import Boolean, Integer
+from zato.server.service.internal import GetListAdminSIO
 from zato.server.service.internal.definition.jms_wmq import Create, GetByID, Edit, Delete, GetList
 
 ################################################################################
@@ -42,15 +43,15 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.request_elem, 'zato_definition_jms_wmq_get_list_request')
         self.assertEquals(self.sio.response_elem, 'zato_definition_jms_wmq_get_list_response')
         self.assertEquals(self.sio.input_required, ('cluster_id',))
+        self.assertEquals(self.sio.input_optional, GetListAdminSIO.input_optional)
         self.assertEquals(self.sio.output_required, ('id', 'name', 'host', 'port', 'queue_manager', 'channel',
-                                                     self.wrap_force_type(Boolean('cache_open_send_queues')),
-                                                     self.wrap_force_type(Boolean('cache_open_receive_queues')),
-                                                     self.wrap_force_type(Boolean('use_shared_connections')),
-                                                     self.wrap_force_type(Boolean('ssl')), 'needs_mcd',
-                                                     self.wrap_force_type(Integer('max_chars_printed'))))
+                self.wrap_force_type(Boolean('cache_open_send_queues')),
+                self.wrap_force_type(Boolean('cache_open_receive_queues')),
+                self.wrap_force_type(Boolean('use_shared_connections')),
+                self.wrap_force_type(Boolean('ssl')), 'needs_mcd',
+                self.wrap_force_type(Integer('max_chars_printed'))))
         self.assertEquals(self.sio.output_optional,('ssl_cipher_spec', 'ssl_key_repository'))
         self.assertEquals(self.sio.namespace, zato_namespace)
-        self.assertRaises(AttributeError, getattr, self.sio, 'input_optional')
 
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.definition.jms-wmq.get-list')

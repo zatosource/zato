@@ -30,7 +30,7 @@ from zato.common.odb.model import Cluster, JSONPointer, HTTPSOAP, HTTSOAPAudit, 
      HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, TLSCACert, to_json, XPath
 from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap_list
 from zato.server.service import Boolean, Integer, List
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 class _HTTPSOAPService(object):
     """ A common class for various HTTP/SOAP-related services.
@@ -82,11 +82,10 @@ class GetList(AdminService):
     """
     _filter_by = HTTPSOAP.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_http_soap_get_list_request'
         response_elem = 'zato_http_soap_get_list_response'
         input_required = ('cluster_id', 'connection', 'transport')
-        input_optional = AdminSIO.input_optional
         output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
@@ -612,7 +611,7 @@ class _BaseAuditService(AdminService):
         batch_size = self.request.input.get('batch_size', BATCH_DEFAULTS.SIZE)
         batch_size = min(batch_size, BATCH_DEFAULTS.MAX_SIZE)
 
-        return http_soap_audit_item_list(session, self.server.cluster_id, self.request.input.conn_id,
+        q = http_soap_audit_item_list(session, self.server.cluster_id, self.request.input.conn_id,
             self.request.input.get('start'), self.request.input.get('stop'), self.request.input.get('query'), False)
 
         return Page(q, page=current_batch, items_per_page=batch_size)
@@ -645,21 +644,19 @@ class GetAuditBatchInfo(_BaseAuditService):
         response_elem = 'zato_http_soap_get_batch_info_response'
         input_required = ('conn_id',)
         input_optional = ('start', 'stop', Integer('current_batch'), Integer('batch_size'), 'query')
-        #output_required = ('num_pages', 'num_batches', 'has_previous', 'has_next', 'next_batch_number', 'previous_batch_number')
+        output_required = ('total_results', 'num_batches', 'has_previous', 'has_next', 'next_batch_number', 'previous_batch_number')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            result = self.get_page(session)
-            self.response.payload = {}
-            '''
-                'num_pages': result.num_pages,
-                'num_batches': result.page_count,
-                'has_previous': result.previous_page is not None,
-                'has_next': result.next_page is not None,
-                'next_batch_number': result.next_page,
-                'previous_batch_number': result.previous_page,
+            page = self.get_page(session)
+            self.response.payload = {
+                'total_results': page.item_count,
+                'num_batches': page.page_count,
+                'has_previous': page.previous_page is not None,
+                'has_next': page.next_page is not None,
+                'next_batch_number': page.next_page,
+                'previous_batch_number': page.previous_page,
             }
-            '''
 
 class GetAuditItem(_BaseAuditService):
     """ Returns a particular audit item by its ID.
