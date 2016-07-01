@@ -15,16 +15,16 @@ from contextlib import closing
 from zato.common import SEC_DEF_TYPE
 from zato.common.odb import query
 from zato.server.service import Boolean, Integer, List
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, GetListAdminSIO
 
 class GetList(AdminService):
     """ Returns a list of all security definitions available.
     """
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_security_get_list_request'
         response_elem = 'zato_security_get_list_response'
         input_required = ('cluster_id',)
-        input_optional = AdminSIO.input_optional + (List('sec_type'), Boolean('needs_internal', default=True))
+        input_optional = GetListAdminSIO.input_optional + (List('sec_type'), Boolean('needs_internal', default=True))
         output_required = ('id', 'name', 'is_active', 'sec_type')
         output_optional = ('username', 'realm', 'password_type',
             Boolean('reject_empty_nonce_creat'), Boolean('reject_stale_tokens'), Integer('reject_expiry_limit'),

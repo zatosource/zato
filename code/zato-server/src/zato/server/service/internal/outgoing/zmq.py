@@ -16,14 +16,14 @@ from traceback import format_exc
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingZMQ
 from zato.common.odb.query import out_zmq_list
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 class GetList(AdminService):
     """ Returns a list of outgoing ZeroMQ connections.
     """
     _filter_by = OutgoingZMQ.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_outgoing_zmq_get_list_request'
         response_elem = 'zato_outgoing_zmq_get_list_response'
         input_required = ('cluster_id',)

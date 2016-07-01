@@ -24,7 +24,7 @@ from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG
 from zato.common.odb.model import Cluster, Job, CronStyleJob, IntervalBasedJob,\
      Service
 from zato.common.odb.query import job_by_name, job_list
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 _service_name_prefix = 'zato.scheduler.job.'
 
@@ -203,6 +203,7 @@ class GetList(_Get):
     class SimpleIO(_Get.SimpleIO):
         request_elem = 'zato_scheduler_job_get_list_request'
         response_elem = 'zato_scheduler_job_get_list_response'
+        input_optional = GetListAdminSIO.input_optional
 
     def get_data(self, session):
         return self._search(job_list, session, self.request.input.cluster_id, False)

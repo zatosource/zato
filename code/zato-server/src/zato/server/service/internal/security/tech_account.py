@@ -19,7 +19,7 @@ from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, TechnicalAccount
 from zato.common.odb.query import tech_acc_list
 from zato.common.util import tech_account_password
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 class GetList(AdminService):
     """ Returns a list of technical accounts defined in the ODB. The items are
@@ -27,7 +27,7 @@ class GetList(AdminService):
     """
     _filter_by = TechnicalAccount.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_security_tech_account_get_list_request'
         response_elem = 'zato_security_tech_account_get_list_response'
         input_required = ('cluster_id',)

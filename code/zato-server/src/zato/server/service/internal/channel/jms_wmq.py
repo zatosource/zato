@@ -17,14 +17,14 @@ from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.odb.model import ChannelWMQ, Cluster, ConnDefWMQ, Service
 from zato.common.odb.query import channel_jms_wmq_list
 from zato.server.connection.jms_wmq.channel import start_connector
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ channels.
     """
     _filter_by = ChannelWMQ.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_channel_jms_wmq_get_list_request'
         response_elem = 'zato_channel_jms_wmq_get_list_response'
         input_required = ('cluster_id',)

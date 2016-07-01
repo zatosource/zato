@@ -14,6 +14,7 @@ from bunch import Bunch
 # Zato
 from zato.common import zato_namespace
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
+from zato.server.service.internal import GetListAdminSIO
 from zato.server.service.internal.channel.zmq import Create, Edit, Delete, GetList
 
 ################################################################################
@@ -38,11 +39,11 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.request_elem, 'zato_channel_zmq_get_list_request')
         self.assertEquals(self.sio.response_elem, 'zato_channel_zmq_get_list_response')
         self.assertEquals(self.sio.input_required, ('cluster_id',))
+        self.assertEquals(self.sio.input_optional, GetListAdminSIO.input_optional + ('msg_source',))
         self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
             'service_name', 'pool_strategy', 'service_source', 'data_format'))
         self.assertEquals(self.sio.output_optional, ('sub_key',))
         self.assertEquals(self.sio.namespace, zato_namespace)
-        self.assertEquals(self.sio.input_optional, ('msg_source',))
 
     def test_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.channel.zmq.get-list')

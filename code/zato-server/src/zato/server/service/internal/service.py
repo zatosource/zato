@@ -30,7 +30,7 @@ from zato.common.odb.model import Cluster, ChannelAMQP, ChannelWMQ, ChannelZMQ, 
 from zato.common.odb.query import service_list
 from zato.common.util import hot_deploy, payload_from_request
 from zato.server.service import Boolean, Integer
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 _no_such_service_name = uuid4().hex
 
@@ -39,7 +39,7 @@ class GetList(AdminService):
     """
     _filter_by = Service.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_service_get_list_request'
         response_elem = 'zato_service_get_list_response'
         input_required = ('cluster_id', 'query')

@@ -20,14 +20,14 @@ from zato.common.broker_message import PUB_SUB_TOPIC
 from zato.common.odb.model import Cluster, PubSubTopic
 from zato.common.odb.query import pubsub_topic_list
 from zato.server.service import AsIs, Int, UTC
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns a list of topics available.
     """
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_pubsub_topics_get_list_request'
         response_elem = 'zato_pubsub_topics_get_list_response'
         input_required = ('cluster_id',)

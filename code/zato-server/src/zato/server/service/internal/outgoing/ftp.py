@@ -17,7 +17,7 @@ from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import OutgoingFTP
 from zato.common.odb.query import out_ftp_list
 from zato.server.service import Boolean
-from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 class _FTPService(AdminService):
     """ A common class for various FTP-related services.
@@ -33,7 +33,7 @@ class GetList(AdminService):
     """
     _filter_by = OutgoingFTP.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_outgoing_ftp_get_list_request'
         response_elem = 'zato_outgoing_ftp_get_list_response'
         input_required = ('cluster_id',)

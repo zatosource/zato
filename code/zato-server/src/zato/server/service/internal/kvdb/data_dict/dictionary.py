@@ -15,13 +15,13 @@ import re
 from zato.common import KVDB, ZatoException
 from zato.common.util import dict_item_name
 from zato.server.service import Int
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.internal.kvdb.data_dict import DataDictService
 
 class GetList(DataDictService):
     """ Returns a list of dictionary items.
     """
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_kvdb_data_dict_dictionary_get_list_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_get_list_response'
         output_required = ('id', 'system', 'key', 'value')

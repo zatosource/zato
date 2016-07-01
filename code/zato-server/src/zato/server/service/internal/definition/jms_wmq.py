@@ -17,14 +17,14 @@ from zato.common.broker_message import MESSAGE_TYPE, DEFINITION
 from zato.common.odb.model import Cluster, ConnDefWMQ
 from zato.common.odb.query import def_jms_wmq, def_jms_wmq_list
 from zato.server.service import Boolean, Integer
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 class GetList(AdminService):
     """ Returns a list of JMS WebSphere MQ definitions available.
     """
     _filter_by = ConnDefWMQ.name,
 
-    class SimpleIO(AdminSIO):
+    class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_definition_jms_wmq_get_list_request'
         response_elem = 'zato_definition_jms_wmq_get_list_response'
         input_required = ('cluster_id',)
