@@ -16,12 +16,10 @@ from copy import deepcopy
 from cStringIO import StringIO
 from logging import DEBUG, getLogger
 from threading import RLock
-from traceback import format_exc
 from time import time
 
 # SQLAlchemy
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import NullPool
 
 # Spring Python
@@ -30,40 +28,10 @@ from springpython.context import DisposableObject
 # Zato
 from zato.common import Inactive, SECRET_SHADOW
 from zato.common.odb import ping_queries
+from zato.common.odb.api import SessionWrapper
 from zato.common.util import get_component_name, get_engine_url, parse_extra_into_dict
 
-class SessionWrapper(object):
-    """ Wraps an SQLAlchemy session.
-    """
-    def __init__(self):
-        self.session_initialized = False
-        self.pool = None
-        self.config = None
-        self.logger = getLogger(self.__class__.__name__)
-
-    def init_session(self, name, config, pool, use_scoped_session=True, warn_on_ping_fail=False):
-        self.config = config
-        self.pool = pool
-
-        try:
-            self.pool.ping()
-        except Exception, e:
-            msg = 'Could not ping:[{}], session will be left uninitialized, e:[{}]'.format(name, format_exc(e))
-            self.logger.warn(msg)
-        else:
-            if use_scoped_session:
-                self._Session = scoped_session(sessionmaker(bind=self.pool.engine))
-            else:
-                self._Session = sessionmaker(bind=self.pool.engine)
-
-            self._session = self._Session()
-            self.session_initialized = True
-
-    def session(self):
-        return self._Session()
-
-    def close(self):
-        self._session.close()
+# ################################################################################################################################
 
 class SQLConnectionPool(object):
     """ A pool of SQL connections wrapping an SQLAlchemy engine.

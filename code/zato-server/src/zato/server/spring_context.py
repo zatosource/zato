@@ -21,7 +21,7 @@ from zato.common.kvdb import KVDB
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
 from zato.server.connection.sql import PoolStore
-from zato.server.odb import ODBManager
+from zato.common.odb.api import ODBManager
 from zato.server.service.store import ServiceStore
 
 class ZatoContext(PythonConfig):

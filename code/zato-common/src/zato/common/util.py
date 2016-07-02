@@ -127,8 +127,8 @@ TLS_KEY_TYPE = {
 # ################################################################################################################################
 
 def absolutize_path(base, path):
-    """ Turns a path into an absolute path if it's relative to the base
-    location. If the path is already an absolute path, it is returned as-is.
+    """ Turns a path into an absolute path if it's relative to the base location.
+    If the path is already an absolute path, it is returned as-is.
     """
     if isabs(path):
         return path

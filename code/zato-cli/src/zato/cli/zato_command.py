@@ -20,10 +20,11 @@ cloghandler = cloghandler # For pyflakes
 from zato.cli import ca_create_ca as ca_create_ca_mod, ca_create_lb_agent as ca_create_lb_agent_mod, \
      ca_create_server as ca_create_server_mod, ca_create_web_admin as ca_create_web_admin_mod, \
      check_config as check_config_mod, component_version as component_version_mod, create_cluster as create_cluster_mod, \
-     create_lb as create_lb_mod, create_odb as create_odb_mod, create_server as create_server_mod, \
-     create_web_admin as create_web_admin_mod, crypto as crypto_mod, delete_odb as delete_odb_mod, \
-     enmasse as enmasse_mod, FromConfig, info as info_mod, migrate as migrate_mod, quickstart as quickstart_mod, run_command, \
-     service as service_mod, start as start_mod, stop as stop_mod, web_admin_auth as web_admin_auth_mod
+     create_lb as create_lb_mod, create_odb as create_odb_mod, create_scheduler as create_scheduler_mod, \
+     create_server as create_server_mod, create_web_admin as create_web_admin_mod, crypto as crypto_mod, \
+     delete_odb as delete_odb_mod, enmasse as enmasse_mod, FromConfig, info as info_mod, migrate as migrate_mod, \
+     quickstart as quickstart_mod, run_command, service as service_mod, start as start_mod, stop as stop_mod, \
+     web_admin_auth as web_admin_auth_mod
 from zato.common import version
 
 def add_opts(parser, opts):
@@ -121,6 +122,11 @@ def get_parser():
     create_odb = create_subs.add_parser('odb', description=create_odb_mod.Create.__doc__, parents=[base_parser])
     create_odb.set_defaults(command='create_odb')
     add_opts(create_odb, create_odb_mod.Create.opts)
+
+    create_scheduler = create_subs.add_parser('scheduler', description=create_scheduler_mod.Create.__doc__, parents=[base_parser])
+    create_scheduler.add_argument('path', help='Path to an empty directory to install the scheduler in')
+    create_scheduler.set_defaults(command='create_scheduler')
+    add_opts(create_scheduler, create_scheduler_mod.Create.opts)
 
     create_server = create_subs.add_parser('server', description=create_server_mod.Create.__doc__, parents=[base_parser])
     create_server.add_argument('path', help='Path to an empty directory to install the server in')
