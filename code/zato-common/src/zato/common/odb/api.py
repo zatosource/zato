@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -16,6 +16,7 @@ from traceback import format_exc
 
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError, ProgrammingError
+from sqlalchemy.orm import sessionmaker, scoped_session
 
 # Bunch
 from bunch import Bunch
@@ -26,9 +27,47 @@ from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, Depl
      HTTPSOAP, HTTSOAPAudit, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition
 from zato.common.odb import query
 from zato.common.util import current_host, get_http_json_channel, get_http_soap_channel, parse_tls_channel_security_definition
-from zato.server.connection.sql import SessionWrapper
+
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+class SessionWrapper(object):
+    """ Wraps an SQLAlchemy session.
+    """
+    def __init__(self):
+        self.session_initialized = False
+        self.pool = None
+        self.config = None
+        self.logger = logging.getLogger(self.__class__.__name__)
+
+    def init_session(self, name, config, pool, use_scoped_session=True, warn_on_ping_fail=False):
+        self.config = config
+        self.pool = pool
+
+        try:
+            self.pool.ping()
+        except Exception, e:
+            msg = 'Could not ping:[{}], session will be left uninitialized, e:[{}]'.format(name, format_exc(e))
+            self.logger.warn(msg)
+        else:
+            if use_scoped_session:
+                self._Session = scoped_session(sessionmaker(bind=self.pool.engine))
+            else:
+                self._Session = sessionmaker(bind=self.pool.engine)
+
+            self._session = self._Session()
+            self.session_initialized = True
+
+    def session(self):
+        return self._Session()
+
+    def close(self):
+        self._session.close()
+
+# ################################################################################################################################
 
 class _Server(object):
     """ A plain Python object which is used instead of an SQLAlchemy model so the latter is not tied to a session
@@ -42,8 +81,10 @@ class _Server(object):
         self.cluster_id = odb_cluster.id
         self.cluster = odb_cluster
 
+# ################################################################################################################################
+
 class ODBManager(SessionWrapper):
-    """ Manages connections to the server's Operational Database.
+    """ Manages connections to a given component's Operational Database.
     """
     def __init__(self, well_known_data=None, token=None, crypto_manager=None, server_id=None, server_name=None, cluster_id=None,
             pool=None):

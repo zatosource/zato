@@ -52,3 +52,6 @@ class Stop(ManageCommand):
 
     def _on_web_admin(self, *ignored):
         self.signal('Web admin', 'SIGTERM', signal.SIGTERM)
+
+    def _on_scheduler(self, *ignored):
+        self.signal('Scheduler', 'SIGTERM', signal.SIGTERM)

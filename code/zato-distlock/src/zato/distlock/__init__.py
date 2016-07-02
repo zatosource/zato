@@ -9,13 +9,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import logging
+import os
 from datetime import datetime, timedelta
 from hashlib import sha256
 from pwd import getpwuid
 from tempfile import gettempdir
 from threading import current_thread
-import logging
-import os
 
 # gevent
 from gevent import sleep, spawn

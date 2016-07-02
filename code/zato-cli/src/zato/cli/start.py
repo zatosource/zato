@@ -86,9 +86,7 @@ Examples:
         stderr_redirect = '2> {}'.format(tmp_path)
         program = '{} -m {} {} {} {}'.format(get_executable(), py_path, program_dir, stdout_redirect, stderr_redirect)
         try:
-            _stderr = _StdErr(
-                tmp_path, stderr_sleep_fg if self.args.fg else stderr_sleep_bg)
-
+            _stderr = _StdErr(tmp_path, stderr_sleep_fg if self.args.fg else stderr_sleep_bg)
             run(program, async=False if self.args.fg else True)
 
             # Wait a moment for any potential errors
@@ -130,3 +128,8 @@ Examples:
     def _on_web_admin(self, *ignored):
         self.run_check_config()
         self.start_component('zato.admin.main', 'web admin', '', self.delete_pidfile)
+
+    def _on_scheduler(self, *ignored):
+        self.run_check_config()
+        self.check_pidfile()
+        self.start_component('zato.scheduler.main', 'web scheduler', '', self.delete_pidfile)
