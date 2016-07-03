@@ -20,64 +20,7 @@ from bunch import Bunch
 # Zato
 from zato.common import ZatoException
 from zato.common.odb.model import Cluster, Server
-from zato.common.util import add_scheduler_jobs
 from zato.server.service.internal import AdminService, AdminSIO
-
-logger = getLogger('zato_singleton')
-
-class ClusterWideSingletonKeepAlive(AdminService):
-    """ Makes all the other servers know that this particular singleton, the one that
-    manages the connectors and scheduler jobs, is indeed still alive.
-    """
-    def handle(self):
-        s1, s2 = self.request.payload.split(';')
-        server_id = int(s1.split(':')[1])
-        cluster_id = int(s2.split(':')[1])
-
-        with closing(self.odb.session()) as session:
-            cluster = session.query(Cluster).\
-                with_lockmode('update').\
-                filter(Cluster.id == cluster_id).\
-                one()
-
-            server = session.query(Server).\
-                filter(Server.id == server_id).\
-                one()
-
-            cluster.cw_srv_keep_alive_dt = datetime.utcnow()
-            session.add(cluster)
-            session.commit()
-
-            msg = 'Cluster-wide singleton keep-alive OK, server id:[{}], name:[{}] '.format(server.id, server.name)
-            logger.info(msg)
-
-class EnsureClusterWideSingleton(AdminService):
-    """ Initializes connectors and scheduler jobs.
-    """
-    def handle(self):
-        if self.server.singleton_server:
-            if self.server.singleton_server.is_cluster_wide:
-                msg = 'Ignoring event, cid:[{}], server id:[{}], name:[{}], singleton is already cluster-wide'.format(
-                    self.cid, self.server.id, self.server.name)
-                logger.debug(msg)
-            else:
-                if self.server.singleton_server.become_cluster_wide(
-                    self.server.connector_server_keep_alive_job_time, self.server.connector_server_grace_time,
-                        self.server.id, self.server.cluster_id, False):
-
-                    self.server.singleton_server.scheduler.delete(Bunch(name='zato.server.ensure-cluster-wide-singleton'))
-                    self.server.init_connectors()
-                    add_scheduler_jobs(self.server)
-                    self.server.singleton_server.init_notifiers()
-
-                else:
-                    msg = 'Not becoming a cluster-wide singleton, cid:[{}], server id:[{}], name:[{}]'.format(
-                        self.cid, self.server.id, self.server.name)
-                    logger.info(msg)
-        else:
-            msg = 'Ignoring event, cid:[{}], server id:[{}], name:[{}] has no singleton attached'.format(self.cid, self.server.id, self.server.name)
-            logger.debug(msg)
-
 
 class Edit(AdminService):
     """ Updates a server.

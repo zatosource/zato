@@ -20,7 +20,6 @@ from zato.common.crypto import CryptoManager
 from zato.common.kvdb import KVDB
 from zato.common.odb.api import ODBManager, PoolStore
 from zato.server.base.parallel import ParallelServer
-from zato.server.base.singleton import SingletonServer
 from zato.server.service.store import ServiceStore
 
 class ZatoContext(PythonConfig):
@@ -167,12 +166,6 @@ class ZatoContext(PythonConfig):
         server.service_modules = self.service_modules()
         server.kvdb = self.kvdb()
         server.user_config = Bunch()
-
-        return server
-
-    @Object
-    def singleton_server(self):
-        server = SingletonServer()
 
         return server
 
