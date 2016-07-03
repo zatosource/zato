@@ -33,9 +33,6 @@ from django.shortcuts import redirect
 from django.template import loader
 from django.template.response import TemplateResponse
 
-# django-settings
-from django_settings.models import PositiveInteger, Setting
-
 # pytz
 from pytz import timezone, utc
 
@@ -411,7 +408,7 @@ def _stats_data_html(user_profile, req_input, client, cluster, stats_type, is_cu
 
     if req_input.n:
         for name in('atttention_slow_threshold', 'atttention_top_threshold'):
-            settings[name] = int(Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name]))
+            settings[name] = req.zato.settings_db.get(name, default=DEFAULT_STATS_SETTINGS[name])
 
     for name in('mean', 'usage'):
         d = {'cluster_id':cluster.id, 'side':req_input.side, 'needs_trends': is_trends}
@@ -577,7 +574,7 @@ def settings(req):
 
         for name in DEFAULT_STATS_SETTINGS:
             if not name.startswith('scheduler'):
-                _settings[name] = Setting.objects.get_value(name, default=DEFAULT_STATS_SETTINGS[name])
+                _settings[name] = req.zato.settings_db.get(name, default=DEFAULT_STATS_SETTINGS[name])
     else:
         defaults, _settings = None, {}
 
@@ -597,7 +594,7 @@ def settings_save(req):
     for name in DEFAULT_STATS_SETTINGS:
         if not name.startswith('scheduler'):
             value = req.POST[name]
-            Setting.objects.set_value(name, PositiveInteger, value)
+            req.zato.settings_db.set(name, value)
 
     for mapping in job_mappings:
 

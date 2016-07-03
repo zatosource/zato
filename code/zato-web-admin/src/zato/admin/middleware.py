@@ -19,8 +19,7 @@ from django.core.urlresolvers import resolve
 from bunch import Bunch
 
 # Zato
-from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, \
-    ADMIN_INVOKE_PATH,SASession
+from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, SASession, settings_db
 from zato.admin.web.forms import SearchForm
 from zato.admin.web.models import ClusterColorMarker, UserProfile
 from zato.client import AnyServiceInvoker
@@ -80,11 +79,11 @@ class ZatoMiddleware(object):
 
     def process_request(self, req):
 
-        # Makes each Django view have an access to a 'zato.odb' attribute of the
-        # request object. The attribute is an SQLAlchemy session to the database
-        # defined in app's settings.py
+        # Makes each Django view have an access to 'zato.odb' and 'zato.setttings_db' attributes
+        # of the request object. The attributes are SQLAlchemy sessions tied databases defined in app's settings.py
         req.zato = Bunch()
         req.zato.odb = SASession()
+        req.zato.settings_db = settings_db
         req.zato.args = Bunch() # Arguments read from URL
 
         try:
