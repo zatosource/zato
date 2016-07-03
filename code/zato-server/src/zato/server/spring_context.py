@@ -18,10 +18,9 @@ from springpython.config import Object, PythonConfig
 from zato.common import DEFAULT_STATS_SETTINGS, SIMPLE_IO, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto import CryptoManager
 from zato.common.kvdb import KVDB
+from zato.common.odb.api import ODBManager, PoolStore
 from zato.server.base.parallel import ParallelServer
 from zato.server.base.singleton import SingletonServer
-from zato.server.connection.sql import PoolStore
-from zato.common.odb.api import ODBManager
 from zato.server.service.store import ServiceStore
 
 class ZatoContext(PythonConfig):

@@ -13,12 +13,24 @@ import logging
 from traceback import format_exc
 
 # gevent
+from gevent import spawn
 from gevent.pywsgi import WSGIServer
+
+# Zato
+from zato.common import ZATO_ODB_POOL_NAME
+from zato.common.odb.api import ODBManager
+from zato.scheduler.api import Scheduler
+
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
+# ################################################################################################################################
+
 ok = b'200 OK'
 headers = [(b'Content-Type', b'application/json')]
+
+# ################################################################################################################################
 
 class SchedulerServer(object):
     """ Main class spawning scheduler-related tasks and listening for HTTP API requests.
@@ -32,9 +44,17 @@ class SchedulerServer(object):
             priv_key, cert = None, None
 
         self.api_server = WSGIServer((config.bind.host, int(config.bind.port)), self, keyfile=priv_key, certfile=cert)
+        self.scheduler = Scheduler()
+        self.odb = ODBManager()
+
+# ################################################################################################################################
 
     def serve_forever(self):
+        self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb, self.odb.pool, False)
+        self.scheduler.serve_forever()
         self.api_server.serve_forever()
+
+# ################################################################################################################################
 
     def __call__(self, env, start_response):
         try:
@@ -43,12 +63,4 @@ class SchedulerServer(object):
         except Exception, e:
             logger.warn(format_exc(e))
 
-'''
-def hello_world(env, start_response):
-    if env['PATH_INFO'] == '/':
-        start_response('200 OK', [('Content-Type', 'text/html')])
-        return [b"<b>hello world</b>"]
-    else:
-        start_response('404 Not Found', [('Content-Type', 'text/html')])
-        return [b'<h1>Not Found</h1>']
-'''
+# ################################################################################################################################
