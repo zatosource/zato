@@ -40,7 +40,7 @@ from zato.common import TRACE1
 from zato.common.repo import RepoManager
 from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.util import absolutize_path, clear_locks, get_app_context, get_config, get_crypto_manager, \
-     get_kvdb_config_for_log, register_diag_handlers, store_pidfile
+     get_kvdb_config_for_log, parse_extra_into_dict, register_diag_handlers, store_pidfile
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
@@ -93,7 +93,8 @@ class ZatoGunicornApplication(Application):
     def load(self):
         return self.zato_wsgi_app.on_wsgi_request
 
-def run(base_dir, start_gunicorn_app=True):
+def run(base_dir, start_gunicorn_app=True, options=None):
+    options = options or {}
 
     # Store a pidfile before doing anything else
     store_pidfile(base_dir)
@@ -199,6 +200,7 @@ def run(base_dir, start_gunicorn_app=True):
     parallel_server.startup_jobs = app_context.get_object('startup_jobs')
     parallel_server.app_context = app_context
     parallel_server.preferred_address = preferred_address
+    parallel_server.sync_internal = options['sync_internal']
 
     # Remove all locks possibly left over by previous server instances
     kvdb = app_context.get_object('kvdb')
@@ -256,14 +258,13 @@ def run(base_dir, start_gunicorn_app=True):
     else:
         return zato_gunicorn_app.zato_wsgi_app
 
-def run_in_foreground(base_dir):
-    server = run(base_dir, False)
-    server.start_server(server)
-
-    return server
-
 if __name__ == '__main__':
     base_dir = sys.argv[1]
     if not os.path.isabs(base_dir):
         base_dir = os.path.abspath(os.path.join(os.getcwd(), base_dir))
-    run(base_dir)
+
+    options = sys.argv[2].split(';')
+    options = '\n'.join(options)
+    options = parse_extra_into_dict(options)
+
+    run(base_dir, options=options)

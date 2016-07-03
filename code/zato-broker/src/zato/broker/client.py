@@ -129,8 +129,8 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
             self.ready = False
 
         def run(self):
-            logger.info('Starting broker client, host:[{}], port:[{}], name:[{}], topics:[{}]'.format(
-                self.kvdb.config.host, self.kvdb.config.port, self.name, sorted(self.topic_callbacks)))
+            logger.debug('Starting broker client, host:`%s`, port:`%s`, name:`%s`, topics:`%s`',
+                self.kvdb.config.host, self.kvdb.config.port, self.name, sorted(self.topic_callbacks))
 
             self.pub_client = _ClientThread(self.kvdb.copy(), 'pub', self.name)
             self.sub_client = _ClientThread(self.kvdb.copy(), 'sub', self.name, self.topic_callbacks, self.on_message)
