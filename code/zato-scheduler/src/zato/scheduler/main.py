@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging
 import os
 from logging.config import dictConfig
+from traceback import format_exc
 
 # ConcurrentLogHandler - updates stlidb's logging config on import so this needs to stay
 import cloghandler
@@ -46,12 +47,15 @@ def main():
         conf.crypto.priv_key_location = absolutize_path(repo_location, conf.crypto.priv_key_location)
         conf.crypto.cert_location = absolutize_path(repo_location, conf.crypto.cert_location)
 
-    logger = logging.getLogger('zato_scheduler')
-    logger.info('Scheduler starting on http{}://{}:{}'.format(
+    logger = logging.getLogger(__name__)
+    logger.info('Scheduler starting (http{}://{}:{})'.format(
         's' if conf.crypto.use_tls else '', conf.bind.host, conf.bind.port))
 
     # Run the scheduler server
-    SchedulerServer(conf).serve_forever()
+    try:
+        SchedulerServer(conf).serve_forever()
+    except Exception, e:
+        logger.warn(format_exc(e))
 
 if __name__ == '__main__':
     main()

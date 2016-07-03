@@ -72,7 +72,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.crypto_manager = None
         self.odb = None
         self.odb_data = None
-        self.singleton_server = None
         self.config = None
         self.repo_location = None
         self.sql_pool_store = None
@@ -261,9 +260,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
                 self.internal_service_modules + self.service_modules +
                 self.service_sources, self.base_dir)
 
-            # Add the statistics-related scheduler jobs to the ODB
-            add_startup_jobs(self.cluster_id, self.odb, self.startup_jobs, asbool(self.fs_server_config.component_enabled.stats))
-
             # Migrations
             self.odb.add_channels_2_0()
 
@@ -412,9 +408,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         return is_first, locally_deployed
 
     def _after_init_accepted(self, server, locally_deployed):
-
-        # Flag set to True if this worker is the cluster-wide singleton
-        is_singleton = False
 
         # Which components are enabled
         self.component_enabled.stats = asbool(self.fs_server_config.component_enabled.stats)
@@ -700,23 +693,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.worker_store.pubsub = self.pubsub
         self.worker_store.init()
 
-        if self.singleton_server:
-
-            self.singleton_server.wait_for_worker()
-
-            # Let's see if we can become a connector server, the one to start all
-            # the connectors, and start the connectors only once throughout the whole cluster.
-            self.connector_server_keep_alive_job_time = int(
-                self.fs_server_config.singleton.connector_server_keep_alive_job_time)
-            self.connector_server_grace_time = int(
-                self.fs_server_config.singleton.grace_time_multiplier) * self.connector_server_keep_alive_job_time
-
-            if self.singleton_server.become_cluster_wide(
-                self.connector_server_keep_alive_job_time, self.connector_server_grace_time,
-                server.id, server.cluster_id, True):
-                self.init_connectors()
-                is_singleton = True
-
         # Deployed missing services found on other servers
         if locally_deployed:
             self.deploy_missing_services(locally_deployed)
@@ -729,8 +705,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.plain_xml_content_type = self.fs_server_config.content_type.plain_xml
         self.soap11_content_type = self.fs_server_config.content_type.soap11
         self.soap12_content_type = self.fs_server_config.content_type.soap12
-
-        return is_singleton
 
     def init_connectors(self):
         """ Starts all the connector subprocesses.
@@ -869,7 +843,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         # For now, all the servers are always ACCEPTED but future versions
         # might introduce more join states
         if server.last_join_status in(SERVER_JOIN_STATUS.ACCEPTED):
-            is_singleton = parallel_server._after_init_accepted(server, locally_deployed)
+            parallel_server._after_init_accepted(server, locally_deployed)
         else:
             msg = 'Server has not been accepted, last_join_status:[{0}]'
             logger.warn(msg.format(server.last_join_status))
@@ -900,13 +874,12 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             parallel_server.invoke_startup_services(is_first)
 
         # We cannot do it earlier because we need the broker client and everything be ready
-        if is_singleton:
+        if parallel_server.singleton_server:
 
             # Let's wait for the broker client to connect before continuing with anything
             while not parallel_server.singleton_server.broker_client and parallel_server.singleton_server.broker_client.ready:
                 time.sleep(0.01)
 
-            parallel_server.singleton_server.init_scheduler()
             parallel_server.singleton_server.init_notifiers()
 
         logger.info('Started `%s@%s`', server.name, server.cluster.name)
@@ -949,9 +922,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
 
             # Broker client
             self.broker_client.close()
-
-            # Scheduler
-            self.singleton_server.scheduler.stop()
 
             # Pick-up processor
             self.singleton_server.pickup.stop()

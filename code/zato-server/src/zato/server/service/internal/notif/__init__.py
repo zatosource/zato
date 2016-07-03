@@ -83,7 +83,7 @@ class NotifierService(AdminService):
         self.environ['notif_sleep_interval'] = config.interval
 
         # Grab a distributed lock so we are sure it is only us who connects to pull newest data.
-        with self.lock('zato:lock:{}:{}'.format(self.notif_type, config.name)):
+        with self.lock('zato:lock:{}:{}'.format(self.notif_type, config.name), block=None):
             self.run_notifier_impl(config)
 
     def handle(self):

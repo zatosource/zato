@@ -24,41 +24,49 @@ from gevent import sleep, spawn
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, ENSURE_SINGLETON_JOB, SCHEDULER, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG, SERVICE
-from zato.common.scheduler import Interval, Job, Scheduler as _Scheduler
 from zato.common.util import new_cid
+from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
+
+# ################################################################################################################################
 
 logger = logging.getLogger('zato_scheduler')
+
+# ################################################################################################################################
 
 def _start_date(job_data):
     if isinstance(job_data.start_date, basestring):
         return parse(job_data.start_date)
     return job_data.start_date
 
+# ################################################################################################################################
+
 class Scheduler(object):
-    """ The Zato's job scheduler. All of the operations assume the data's being
-    first validated and sanitized by relevant Zato public API services.
+    """ The Zato's job scheduler. All of the operations assume the data was already validated and sanitized
+    by relevant Zato public API services.
     """
-    def __init__(self, singleton=None, init=False):
-        self.singleton = singleton
+    def __init__(self, broker_client=None, run=False, job_log_level='info'):
+        self.broker_client = broker_client
         self.broker_token = None
         self.client_push_broker_pull = None
-        self.sched = _Scheduler(self.on_job_executed)
+        self.sched = _Scheduler(self.on_job_executed, job_log_level)
 
-        if init:
-            self.init()
+        if run:
+            self.serve_forever()
 
-    def init(self):
-        spawn(self.sched.run)
+    def serve_forever(self):
+        try:
+            spawn(self.sched.run)
 
-        while not self.sched.ready:
-            sleep(0.1)
+            while not self.sched.ready:
+                sleep(0.1)
+        except Exception, e:
+            logger.warn(format_exc(e))
 
 # ################################################################################################################################
 
     def on_job_executed(self, ctx, extra_data_format=ZATO_NONE):
-        """ Invoked by the underlying scheduler when a job is executed. Sends
-        the actual execution request to the broker so it can be picked up by
-        one of the parallel server's broker clients.
+        """ Invoked by the underlying scheduler when a job is executed. Sends the actual execution request to the broker
+        so it can be picked up by one of the parallel server's broker clients.
         """
         name = ctx['name']
 
@@ -77,9 +85,9 @@ class Scheduler(object):
         # Special case an internal job that needs to be delivered to all parallel
         # servers.
         if name == ENSURE_SINGLETON_JOB:
-            self.singleton.broker_client.publish(msg)
+            self.broker_client.publish(msg)
         else:
-            self.singleton.broker_client.invoke_async(msg)
+            self.broker_client.invoke_async(msg)
 
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Sent a job execution request, name [{}], service [{}], extra [{}]'.format(
@@ -96,7 +104,7 @@ class Scheduler(object):
                 'channel': CHANNEL.SCHEDULER_AFTER_ONE_TIME,
                 'data_format': DATA_FORMAT.JSON,
             }
-            self.singleton.broker_client.publish(msg)
+            self.broker_client.publish(msg)
 
 # ################################################################################################################################
 

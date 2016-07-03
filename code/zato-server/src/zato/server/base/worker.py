@@ -37,12 +37,12 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, \
-     SEC_DEF_TYPE, SIMPLE_IO, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
-from zato.common import broker_message, ZMQ
+from zato.common import broker_message, CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, \
+     PUB_SUB, SEC_DEF_TYPE, SIMPLE_IO, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
+from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
      parse_extra_into_dict, parse_tls_channel_security_definition, store_tls
@@ -61,7 +61,6 @@ from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConn
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
-from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC

@@ -27,7 +27,7 @@ from paodate import Delta
 from zato.common import SCHEDULER
 from zato.common.util import make_repr, new_cid
 
-logger = getLogger('zato_scheduler')
+logger = getLogger(__name__)
 
 # ################################################################################################################################
 
@@ -253,7 +253,7 @@ class Job(object):
 # ################################################################################################################################
 
 class Scheduler(object):
-    def __init__(self, on_job_executed_cb=None):
+    def __init__(self, on_job_executed_cb=None, job_log_level='info'):
         self.on_job_executed_cb = on_job_executed_cb
         self.jobs = set()
         self.job_greenlets = {}
@@ -263,6 +263,8 @@ class Scheduler(object):
         self.iter_cb = None
         self.iter_cb_args = ()
         self.ready = False
+        self.job_log = getattr(logger, job_log_level)
+        self._has_debug = logger.isEnabledFor(DEBUG)
 
     def on_max_repeats_reached(self, job):
         with self.lock:
@@ -277,10 +279,10 @@ class Scheduler(object):
             if spawn:
                 self.spawn_job(job)
 
-                if logger.isEnabledFor(DEBUG):
+                if self._has_debug:
                     logger.debug('Job scheduled `%s`', job)
                 else:
-                    logger.info('Job scheduled `%s` (%s, start: %s UTC)', job.name, job.type, job.start_time)
+                    self.job_log('Job scheduled `%s` (%s, start: %s UTC)', job.name, job.type, job.start_time)
 
         else:
             logger.warn('Skipping inactive job `%s`', job)
@@ -379,7 +381,9 @@ class Scheduler(object):
     def on_job_executed(self, ctx, unschedule_one_time=True):
         logger.debug('Executing `%s`, `%s`', ctx['name'], ctx)
         self.on_job_executed_cb(ctx)
-        logger.info('Job executed `%s`, `%s`', ctx['name'], ctx)
+        self.job_log('Job executed `%s`, `%s`', ctx['name'], ctx)
+
+        #logger.info(
 
         if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME and unschedule_one_time:
             self.unschedule_by_name(ctx['name'])
@@ -392,21 +396,31 @@ class Scheduler(object):
         self.job_greenlets[job.name] = gevent.spawn(job.run)
 
     def run(self):
-        _sleep = self.sleep
-        _sleep_time = self.sleep_time
 
-        with self.lock:
-            for job in sorted(self.jobs):
-                if job.max_repeats_reached:
-                    logger.info('Job `%s` already reached max runs count (%s UTC)', job.name, job.max_repeats_reached_at)
-                else:
-                    self.spawn_job(job)
+        # Add the statistics-related scheduler jobs to the ODB
+        add_startup_jobs(self.cluster_id, self.odb, self.startup_jobs, asbool(self.fs_server_config.component_enabled.stats))
 
-        # Ok, we're good now.
-        self.ready = True
+        try:
+            _sleep = self.sleep
+            _sleep_time = self.sleep_time
 
-        while self.keep_running:
-            _sleep(_sleep_time)
+            with self.lock:
+                for job in sorted(self.jobs):
+                    if job.max_repeats_reached:
+                        logger.info('Job `%s` already reached max runs count (%s UTC)', job.name, job.max_repeats_reached_at)
+                    else:
+                        self.spawn_job(job)
 
-            if self.iter_cb:
-                self.iter_cb(*self.iter_cb_args)
+            # Ok, we're good now.
+            self.ready = True
+
+            logger.info('Scheduler started')
+
+            while self.keep_running:
+                _sleep(_sleep_time)
+
+                if self.iter_cb:
+                    self.iter_cb(*self.iter_cb_args)
+
+        except Exception, e:
+            logger.warn(format_exc(e))
