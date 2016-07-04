@@ -39,7 +39,7 @@ import yaml
 from zato.common import TRACE1
 from zato.common.repo import RepoManager
 from zato.common.ipaddress_ import get_preferred_ip
-from zato.common.util import absolutize_path, clear_locks, get_app_context, get_config, get_crypto_manager, \
+from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_crypto_manager, \
      get_kvdb_config_for_log, parse_extra_into_dict, register_diag_handlers, store_pidfile
 
 class ZatoGunicornApplication(Application):
@@ -83,9 +83,9 @@ class ZatoGunicornApplication(Application):
             self.cfg.set('ssl_version', getattr(ssl, 'PROTOCOL_{}'.format(self.crypto_config.tls_protocol)))
             self.cfg.set('ciphers', self.crypto_config.tls_ciphers)
             self.cfg.set('cert_reqs', getattr(ssl, 'CERT_{}'.format(self.crypto_config.tls_client_certs.upper())))
-            self.cfg.set('ca_certs', absolutize_path(self.repo_location, self.crypto_config.ca_certs_location))
-            self.cfg.set('keyfile', absolutize_path(self.repo_location, self.crypto_config.priv_key_location))
-            self.cfg.set('certfile', absolutize_path(self.repo_location, self.crypto_config.cert_location))
+            self.cfg.set('ca_certs', absjoin(self.repo_location, self.crypto_config.ca_certs_location))
+            self.cfg.set('keyfile', absjoin(self.repo_location, self.crypto_config.priv_key_location))
+            self.cfg.set('certfile', absjoin(self.repo_location, self.crypto_config.cert_location))
             self.cfg.set('do_handshake_on_connect', True)
 
         self.zato_wsgi_app.has_gevent = 'gevent' in self.cfg.settings['worker_class'].value
@@ -137,6 +137,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     kvdb_logger = logging.getLogger('zato_kvdb')
 
     config = get_config(repo_location, 'server.conf')
+    pickup_config = get_config(repo_location, 'pickup.conf')
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
     preferred_address = config.preferred_address.get('address')
@@ -184,23 +185,24 @@ def run(base_dir, start_gunicorn_app=True, options=None):
         os.environ['http_proxy'] = http_proxy
 
     crypto_manager = get_crypto_manager(repo_location, app_context, config)
-    parallel_server = app_context.get_object('parallel_server')
+    server = app_context.get_object('server')
 
-    zato_gunicorn_app = ZatoGunicornApplication(parallel_server, repo_location, config.main, config.crypto)
+    zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, config.main, config.crypto)
 
-    parallel_server.crypto_manager = crypto_manager
-    parallel_server.odb_data = config.odb
-    parallel_server.host = zato_gunicorn_app.zato_host
-    parallel_server.port = zato_gunicorn_app.zato_port
-    parallel_server.repo_location = repo_location
-    parallel_server.base_dir = base_dir
-    parallel_server.tls_dir = os.path.join(parallel_server.base_dir, 'config', 'repo', 'tls')
-    parallel_server.fs_server_config = config
-    parallel_server.user_config.update(config.user_config_items)
-    parallel_server.startup_jobs = app_context.get_object('startup_jobs')
-    parallel_server.app_context = app_context
-    parallel_server.preferred_address = preferred_address
-    parallel_server.sync_internal = options['sync_internal']
+    server.crypto_manager = crypto_manager
+    server.odb_data = config.odb
+    server.host = zato_gunicorn_app.zato_host
+    server.port = zato_gunicorn_app.zato_port
+    server.repo_location = repo_location
+    server.base_dir = base_dir
+    server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
+    server.fs_server_config = config
+    server.pickup_config = pickup_config
+    server.user_config.update(config.user_config_items)
+    server.startup_jobs = app_context.get_object('startup_jobs')
+    server.app_context = app_context
+    server.preferred_address = preferred_address
+    server.sync_internal = options['sync_internal']
 
     # Remove all locks possibly left over by previous server instances
     kvdb = app_context.get_object('kvdb')
@@ -238,8 +240,8 @@ def run(base_dir, start_gunicorn_app=True, options=None):
 
     if asbool(profiler_enabled):
         profiler_dir = os.path.abspath(os.path.join(base_dir, config.profiler.profiler_dir))
-        parallel_server.on_wsgi_request = ProfileMiddleware(
-            parallel_server.on_wsgi_request,
+        server.on_wsgi_request = ProfileMiddleware(
+            server.on_wsgi_request,
             log_filename = os.path.join(profiler_dir, config.profiler.log_filename),
             cachegrind_filename = os.path.join(profiler_dir, config.profiler.cachegrind_filename),
             discard_first_request = config.profiler.discard_first_request,
