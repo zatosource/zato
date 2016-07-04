@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import copy, errno, gc, inspect, json, linecache, logging, os, random, re, signal, string, threading, traceback, sys
+import copy, errno, gc, inspect, json, linecache, logging, os, re, signal, string, threading, traceback, sys
 from ast import literal_eval
 from contextlib import closing
 from cStringIO import StringIO
@@ -48,6 +48,7 @@ from configobj import ConfigObj
 from dateutil.parser import parse
 
 # gevent
+from gevent import spawn, Timeout
 from gevent.greenlet import Greenlet
 from gevent.hub import Hub
 
@@ -55,7 +56,7 @@ from gevent.hub import Hub
 from lxml import etree, objectify
 
 # numpy
-from numpy.random import bytes as random_bytes
+from numpy.random import bytes as random_bytes, seed as numpy_seed
 
 # OpenSSL
 from OpenSSL import crypto
@@ -115,7 +116,7 @@ cid_symbols = '0123456789abcdefghjkmnpqrstvwxyz'
 encode_cid_symbols = {idx: elem for (idx, elem) in enumerate(cid_symbols)}
 cid_base = len(cid_symbols)
 
-random.seed()
+numpy_seed()
 
 # ################################################################################################################################
 
@@ -126,14 +127,25 @@ TLS_KEY_TYPE = {
 
 # ################################################################################################################################
 
-def absolutize_path(base, path):
-    """ Turns a path into an absolute path if it's relative to the base location.
-    If the path is already an absolute path, it is returned as-is.
+def absjoin(base, path):
+    """ Turns a path into an absolute path if it's relative to the base location. If the path is already an absolute path,
+    it is returned as-is.
     """
     if isabs(path):
         return path
 
     return abspath(join(base, path))
+
+def absolutize(path, base=''):
+    """ Turns a relative path to an absolute one or returns it as is if it's already absolute.
+    """
+    if not isabs(path):
+        path = os.path.expanduser(path)
+
+    if not isabs(path):
+        path = os.path.normpath(os.path.join(base, path))
+
+    return path
 
 def current_host():
     return gethostname() + '/' + getfqdn()
@@ -317,14 +329,10 @@ def get_config(repo_location, config_name, bunchified=True):
     conf = bunchify(conf) if bunchified else conf
     conf.user_config_items = {}
 
-    # user_config is new in 2.0
     user_config = conf.get('user_config')
     if user_config:
         for name, path in user_config.items():
-            if not isabs(path):
-                path = os.path.expanduser(path)
-            if not isabs(path):
-                path = os.path.normpath(os.path.join(repo_location, path))
+            path = absolutize(path, repo_location)
             if not os.path.exists(path):
                 logger.warn('User config not found `%s`, name:`%s`', path, name)
             else:
@@ -335,8 +343,7 @@ def get_config(repo_location, config_name, bunchified=True):
     return conf
 
 def _get_ioc_config(location, config_class):
-    """ Instantiates an Inversion of Control container from the given location
-    if the location exists at all.
+    """ Instantiates an Inversion of Control container from the given location if the location exists at all.
     """
     stat = os.stat(location)
     if stat.st_size:
@@ -365,9 +372,9 @@ def get_crypto_manager(repo_location, app_context, config, load_keys=True):
     cert_location = config['crypto']['cert_location']
     ca_certs_location = config['crypto']['ca_certs_location']
 
-    priv_key_location = absolutize_path(repo_location, priv_key_location)
-    cert_location = absolutize_path(repo_location, cert_location)
-    ca_certs_location = absolutize_path(repo_location, ca_certs_location)
+    priv_key_location = absjoin(repo_location, priv_key_location)
+    cert_location = absjoin(repo_location, cert_location)
+    ca_certs_location = absjoin(repo_location, ca_certs_location)
 
     crypto_manager.priv_key_location = priv_key_location
     crypto_manager.cert_location = cert_location
@@ -1346,3 +1353,14 @@ def timeouting_popen(command, timeout, timeout_msg, rc_non_zero_msg, common_msg=
             raise Exception(msg)
 
     return p.returncode
+
+# ################################################################################################################################
+
+def spawn_greenlet(callable, timeout=0.2, *args, **kwargs):
+    """ Spawns a new greenlet and wait up to timeout seconds for its response. It is expected that the response never arrives
+    because that means that there were no errors.
+    """
+    try:
+        spawn(callable, *args, **kwargs).get(timeout=timeout)
+    except Timeout:
+        pass # Timeout = good = no errors

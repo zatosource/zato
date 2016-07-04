@@ -34,8 +34,8 @@ from zato.bunch import Bunch
 from zato.common import KVDB, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.time_util import TimeUtil
-from zato.common.util import get_kvdb_config_for_log, hot_deploy, invoke_startup_services as _invoke_startup_services, \
-     StaticConfig, register_diag_handlers
+from zato.common.util import absolutize, get_kvdb_config_for_log, hot_deploy, \
+     invoke_startup_services as _invoke_startup_services, spawn_greenlet, StaticConfig, register_diag_handlers
 from zato.distlock import LockManager
 from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
@@ -43,6 +43,7 @@ from zato.server.config import ConfigStore
 from zato.server.connection.server import Servers
 from zato.server.base.parallel.config import ConfigLoader
 from zato.server.base.parallel.http import HTTPHandler
+from zato.server.pickup import PickupManager
 
 # ################################################################################################################################
 
@@ -78,6 +79,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.hot_deploy_config = None
         self.pickup = None
         self.fs_server_config = None
+        self.pickup_config = None
         self.connector_server_grace_time = None
         self.id = None
         self.name = None
@@ -307,83 +309,115 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     @staticmethod
     def start_server(parallel_server, zato_deployment_key=None):
 
+        # Easier to type
+        self = parallel_server
+
         # This cannot be done in __init__ because each sub-process obviously has its own PID
-        parallel_server.pid = os.getpid()
+        self.pid = os.getpid()
 
         # Used later on
-        use_tls = asbool(parallel_server.fs_server_config.crypto.use_tls)
+        use_tls = asbool(self.fs_server_config.crypto.use_tls)
 
         # Will be None if we are not running in background.
         if not zato_deployment_key:
             zato_deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
 
-        parallel_server.deployment_key = zato_deployment_key
+        self.deployment_key = zato_deployment_key
 
         register_diag_handlers()
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
-        parallel_server.config.odb_data = parallel_server.get_config_odb_data(parallel_server)
-        parallel_server.set_odb_pool()
+        self.config.odb_data = self.get_config_odb_data(self)
+        self.set_odb_pool()
 
         # Now try grabbing the basic server's data from the ODB. No point
         # in doing anything else if we can't get past this point.
-        server = parallel_server.odb.fetch_server(parallel_server.config.odb_data)
+        server = self.odb.fetch_server(self.config.odb_data)
 
         if not server:
             raise Exception('Server does not exist in the ODB')
 
         # Set up the server-wide default lock manager
-        odb_data = parallel_server.config.odb_data
+        odb_data = self.config.odb_data
         backend_type = 'fcntl' if odb_data.engine == 'sqlite' else odb_data.engine
-        parallel_server.zato_lock_manager = LockManager(backend_type, 'zato', parallel_server.odb.session)
+        self.zato_lock_manager = LockManager(backend_type, 'zato', self.odb.session)
 
         # Just to make sure distributed locking is configured correctly
-        with parallel_server.zato_lock_manager(uuid4().hex):
+        with self.zato_lock_manager(uuid4().hex):
             pass
 
         # Basic metadata
-        parallel_server.id = server.id
-        parallel_server.name = server.name
-        parallel_server.cluster_id = server.cluster_id
-        parallel_server.cluster = parallel_server.odb.cluster
+        self.id = server.id
+        self.name = server.name
+        self.cluster_id = server.cluster_id
+        self.cluster = self.odb.cluster
 
         # For server-server communication
-        logger.info('Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`', parallel_server.name,
-            parallel_server.cluster.name, parallel_server.pid, 's' if use_tls else '', parallel_server.preferred_address,
-            parallel_server.port)
+        logger.info('Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`', self.name,
+            self.cluster.name, self.pid, 's' if use_tls else '', self.preferred_address,
+            self.port)
 
-        parallel_server.servers = Servers(parallel_server.odb, parallel_server.cluster.name)
+        self.servers = Servers(self.odb, self.cluster.name)
 
         start = datetime.utcnow()
 
-        is_first, locally_deployed = parallel_server._after_init_common(server)
+        is_first, locally_deployed = self._after_init_common(server)
 
-        parallel_server._after_init_accepted(server, locally_deployed)
+        self._after_init_accepted(server, locally_deployed)
 
         broker_callbacks = {
-            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: parallel_server.worker_store.on_broker_msg,
-            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: parallel_server.worker_store.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: self.worker_store.on_broker_msg,
         }
 
-        parallel_server.broker_client = BrokerClient(
-            parallel_server.kvdb, 'parallel', broker_callbacks, parallel_server.get_lua_programs())
+        self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks, self.get_lua_programs())
+        self.worker_store.set_broker_client(self.broker_client)
 
-        parallel_server.worker_store.set_broker_client(parallel_server.broker_client)
-
-        parallel_server.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, parallel_server.host,
-            parallel_server.port, parallel_server.preferred_address, use_tls)
+        self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host,
+            self.port, self.preferred_address, use_tls)
 
         if is_first:
-            parallel_server.invoke_startup_services(is_first)
+            self.invoke_startup_services(is_first)
+            spawn_greenlet(self.set_up_pickup)
 
-        logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, parallel_server.pid)
+        logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
 
 # ################################################################################################################################
+
 
     def invoke_startup_services(self, is_first):
         _invoke_startup_services(
             'Parallel', 'startup_services_first_worker' if is_first else 'startup_services_any_worker',
             self.fs_server_config, self.repo_location, self.broker_client, 'zato.notif.init-notifiers')
+
+# ################################################################################################################################
+
+    def set_up_pickup(self):
+
+        empty = []
+
+        # Fix up booleans and paths
+        for stanza, section_config in self.pickup_config.items():
+
+            # user_config_items is empty by default
+            if not section_config:
+                empty.append(stanza)
+                continue
+
+            if 'parse_on_read' in section_config:
+                section_config.parse_on_read = asbool(section_config.parse_on_read)
+
+            section_config.delete_after_pickup = asbool(section_config.delete_after_pickup)
+            section_config.pickup_from = absolutize(section_config.pickup_from, self.base_dir)
+
+            if not os.path.exists(section_config.pickup_from):
+                logger.warn('Pickup dir `%s` does not exist (%s)', section_config.pickup_from, stanza)
+
+        for item in empty:
+            del self.pickup_config[item]
+
+        self.pickup = PickupManager(self.pickup_config)
+        spawn_greenlet(self.pickup.run)
 
 # ################################################################################################################################
 

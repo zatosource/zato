@@ -80,6 +80,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.outgoing.stomp',
             'zato.server.service.internal.outgoing.zmq',
             'zato.server.service.internal.pattern',
+            'zato.server.service.internal.pickup',
             'zato.server.service.internal.pattern.invoke_retry',
             'zato.server.service.internal.pubsub',
             'zato.server.service.internal.pubsub.consumers',
@@ -153,7 +154,7 @@ class ZatoContext(PythonConfig):
     # Servers
 
     @Object
-    def parallel_server(self):
+    def server(self):
 
         server = ParallelServer()
         server.odb = self.odb_manager()

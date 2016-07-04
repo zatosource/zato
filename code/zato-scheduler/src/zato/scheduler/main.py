@@ -22,7 +22,7 @@ cloghandler = cloghandler # For pyflakes
 import yaml
 
 # Zato
-from zato.common.util import absolutize_path, get_config, store_pidfile
+from zato.common.util import absjoin, get_config, store_pidfile
 from zato.scheduler.server import SchedulerServer
 
 def main():
@@ -43,9 +43,9 @@ def main():
     conf = get_config(repo_location, 'scheduler.conf')
 
     if conf.crypto.use_tls:
-        conf.crypto.ca_certs_location = absolutize_path(repo_location, conf.crypto.ca_certs_location)
-        conf.crypto.priv_key_location = absolutize_path(repo_location, conf.crypto.priv_key_location)
-        conf.crypto.cert_location = absolutize_path(repo_location, conf.crypto.cert_location)
+        conf.crypto.ca_certs_location = absjoin(repo_location, conf.crypto.ca_certs_location)
+        conf.crypto.priv_key_location = absjoin(repo_location, conf.crypto.priv_key_location)
+        conf.crypto.cert_location = absjoin(repo_location, conf.crypto.cert_location)
 
     logger = logging.getLogger(__name__)
     logger.info('Scheduler starting (http{}://{}:{})'.format(

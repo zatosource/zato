@@ -355,15 +355,17 @@ class ZatoCommand(object):
         keep_running = True
         self.logger.info('')
 
+        secret_name_cap = secret_name.capitalize()
+
         while keep_running:
-            secret1 = getpass(template + ' (will not be echoed): ')
+            secret1 = getpass(template + ' (will not echo): ')
             if not needs_confirm:
                 return secret1.strip('\n')
 
-            secret2 = getpass('Enter the {} again (will not be echoed): '.format(secret_name))
+            secret2 = getpass('{} again (will not echoe): '.format(secret_name_cap))
 
             if secret1 != secret2:
-                self.logger.info('{}s do not match'.format(secret_name.capitalize()))
+                self.logger.info('{}s do not match'.format(secret_name_cap))
             else:
                 if not secret1 and not allow_empty:
                     self.logger.info('No {} entered'.format(secret_name))

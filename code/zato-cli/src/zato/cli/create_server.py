@@ -63,7 +63,7 @@ username={{odb_user}}
 use_async_driver=True
 
 [hot_deploy]
-pickup_dir=../../pickup-dir
+pickup_dir=../../pickup/services
 work_dir=../../work
 backup_history=100
 backup_format=bztar
@@ -210,6 +210,49 @@ allow_loopback=False
 sample_key=sample_value
 """.format(**CONTENT_TYPE).encode('utf-8')
 
+pickup_conf = """[conf]
+pickup_from=.
+pattern=./config/repo/*.conf
+callback=zato.pickup.conf
+delete_after_pickup=False
+read_on_pickup=True
+
+[static]
+pickup_from=./pickup/incoming/static
+move_processed_to=./pickup/processed/
+pattern=*
+callback=zato.pickup.static
+delete_after_pickup=False
+read_on_pickup=True
+
+[json]
+pickup_from=./pickup/incoming/json
+move_processed_to=./pickup/processed/
+pattern=*.json
+callback=zato.pickup.json
+delete_after_pickup=True
+read_on_pickup=True
+parse_on_pickup=True
+
+[xml]
+pickup_from=./pickup/incoming/xml
+move_processed_to=./pickup/processed/
+pattern=*.xml
+callback=zato.pickup.xml
+delete_after_pickup=True
+read_on_pickup=True
+parse_on_pickup=True
+
+[csv]
+pickup_from=./pickup/incoming/csv
+move_processed_to=./pickup/processed/
+pattern=*.csv
+callback=zato.pickup.csv
+delete_after_pickup=True
+read_on_pickup=True
+parse_on_pickup=True
+"""
+
 service_sources_contents = """# Visit https://zato.io/docs for more information.
 
 # All paths are relative to server root so that, for instance,
@@ -255,7 +298,19 @@ directories = (
     'config',
     'config/repo',
     'logs',
-    'pickup-dir',
+    'pickup',
+    'pickup/errors',
+    'pickup/incoming',
+    'pickup/processed',
+    'pickup/services',
+    'pickup/incoming/static',
+    'pickup/incoming/json',
+    'pickup/incoming/xml',
+    'pickup/incoming/csv',
+    'pickup/processed/static',
+    'pickup/processed/json',
+    'pickup/processed/xml',
+    'pickup/processed/csv',
     'profiler',
     'work',
     'work/hot-deploy',
@@ -392,6 +447,11 @@ class Create(ZatoCommand):
                     initial_server_name=args.server_name,
                 ))
             server_conf.close()
+
+            pickup_conf_loc = os.path.join(self.target_dir, 'config/repo/pickup.conf')
+            pickup_conf_file = open(pickup_conf_loc, 'w')
+            pickup_conf_file.write(pickup_conf)
+            pickup_conf_file.close()
 
             user_conf_loc = os.path.join(self.target_dir, 'config/repo/user.conf')
             user_conf = open(user_conf_loc, 'w')
