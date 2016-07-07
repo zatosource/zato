@@ -191,6 +191,7 @@ class PickupManager(object):
 
                             spawn(self.invoke_callbacks, {
                                 'base_dir': base_dir,
+                                'file_name': event.name,
                                 'full_path': full_path,
                                 'stanza': config.stanza,
                                 'ts_utc': now.isoformat(),

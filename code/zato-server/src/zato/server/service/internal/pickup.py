@@ -10,8 +10,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import csv
+import os
+
+# Bunch
+from bunch import Bunch
 
 # Zato
+from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -24,9 +29,36 @@ class _Logger(Service):
 
 # ################################################################################################################################
 
-class Static(Service):
-    """ Picks up static files.
+class OnUpdateStatic(Service):
+    """ Updates a static resource in memory and file system.
     """
+    class SimpleIO(object):
+        input_required = ('data', 'file_name')
+
+    def handle(self):
+
+        input = self.request.input
+        static_config = self.server.static_config
+
+        with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.data)):
+            with open(os.path.join(static_config.base_dir, input.file_name), 'wb') as f:
+                f.write(input.data)
+
+        static_config.read_file(input.file_name)
+
+# ################################################################################################################################
+
+class UpdateStatic(Service):
+    """ Picks up static files and distributes them to all server processes.
+    """
+    def handle(self):
+        with open(self.request.raw_request['full_path'], 'rb') as f:
+            self.broker_client.publish({
+                'action': HOT_DEPLOY.CREATE_STATIC.value,
+                'msg_type': MESSAGE_TYPE.TO_PARALLEL_ALL,
+                'file_name': self.request.raw_request['file_name'],
+                'data': f.read(),
+            })
 
 # ################################################################################################################################
 
