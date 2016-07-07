@@ -156,7 +156,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
                     # Create a deployment package in ODB out of which all the services will be picked up ..
                     msg = Bunch()
-                    msg.action = HOT_DEPLOY.CREATE.value
+                    msg.action = HOT_DEPLOY.CREATE_SERVICE.value
                     msg.msg_type = MESSAGE_TYPE.TO_PARALLEL_ALL
                     msg.package_id = hot_deploy(self, file_name, full_path, notify=False)
 
@@ -490,7 +490,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         """ Publishes a message on the broker so all the servers (this one including
         can deploy a new package).
         """
-        msg = {'action': HOT_DEPLOY.CREATE.value, 'package_id': package_id}
+        msg = {'action': HOT_DEPLOY.CREATE_SERVICE.value, 'package_id': package_id}
         self.broker_client.publish(msg)
 
 # ################################################################################################################################

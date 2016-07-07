@@ -1049,16 +1049,32 @@ def ping_odoo(conn):
 # ################################################################################################################################
 
 class StaticConfig(Bunch):
-    def __init__(self, path):
+    def __init__(self, base_dir):
         super(StaticConfig, self).__init__()
-        self.read(path)
+        self.base_dir = base_dir
+        #self.read()
 
-    def read(self, path):
-        for item in os.listdir(path):
-            f = open(os.path.join(path, item))
-            value = f.read()
-            f.close()
-            self[item] = value
+    def read_file(self, name):
+        f = open(os.path.join(self.base_dir, name))
+        value = f.read()
+        f.close()
+
+        name = name.split('.')
+        _bunch = self
+
+        while name:
+
+            if len(name) == 1:
+                break
+
+            elem = name.pop(0)
+            _bunch = _bunch.setdefault(elem, Bunch())
+
+        _bunch[name[0]] = value
+
+    def read(self):
+        for item in os.listdir(self.base_dir):
+            self.read_file(item)
 
 # ################################################################################################################################
 

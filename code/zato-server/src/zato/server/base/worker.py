@@ -1304,7 +1304,7 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def on_broker_msg_HOT_DEPLOY_CREATE(self, msg, *args):
+    def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, msg, *args):
         msg.cid = new_cid()
         msg.service = 'zato.hot-deploy.create'
         msg.payload = {'package_id': msg.package_id}
@@ -1313,6 +1313,14 @@ class WorkerStore(BrokerMessageReceiver):
 
     def on_broker_msg_HOT_DEPLOY_AFTER_DEPLOY(self, msg, *args):
         self.rbac.create_resource(msg.id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_HOT_DEPLOY_CREATE_STATIC(self, msg, *args):
+        msg.cid = new_cid()
+        msg.service = 'zato.pickup.on-update-static'
+        msg.payload = {'data': msg.data, 'file_name': msg.file_name}
+        return self.on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE_STATIC', args)
 
 # ################################################################################################################################
 
