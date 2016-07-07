@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging, os, signal
 from datetime import datetime
 from logging import INFO
+from re import IGNORECASE
 from tempfile import mkstemp
 from uuid import uuid4
 
@@ -21,6 +22,9 @@ from anyjson import dumps
 # gevent
 import gevent
 import gevent.monkey # Needed for Cassandra
+
+# globre
+import globre
 
 # Paste
 from paste.util.converters import asbool
@@ -404,11 +408,26 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
                 empty.append(stanza)
                 continue
 
-            if 'parse_on_read' in section_config:
-                section_config.parse_on_read = asbool(section_config.parse_on_read)
-
-            section_config.delete_after_pickup = asbool(section_config.delete_after_pickup)
+            section_config.read_on_pickup = asbool(section_config.get('read_on_pickup', True))
+            section_config.parse_on_pickup = asbool(section_config.get('parse_on_pickup', True))
+            section_config.delete_after_pickup = asbool(section_config.get('delete_after_pickup', True))
+            section_config.case_insensitive = asbool(section_config.get('case_insensitive', True))
             section_config.pickup_from = absolutize(section_config.pickup_from, self.base_dir)
+
+            mpt = section_config.get('move_processed_to')
+            section_config.move_processed_to = absolutize(mpt, self.base_dir) if mpt else None
+
+            recipients = section_config.recipients
+            section_config.recipients = [recipients] if not isinstance(recipients, list) else recipients
+
+            flags = globre.EXACT
+
+            if section_config.case_insensitive:
+                flags |= IGNORECASE
+
+            patterns = section_config.patterns
+            section_config.patterns = [patterns] if not isinstance(patterns, list) else patterns
+            section_config.patterns = [globre.compile(elem, flags) for elem in section_config.patterns]
 
             if not os.path.exists(section_config.pickup_from):
                 logger.warn('Pickup dir `%s` does not exist (%s)', section_config.pickup_from, stanza)
@@ -416,8 +435,13 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         for item in empty:
             del self.pickup_config[item]
 
-        self.pickup = PickupManager(self.pickup_config)
+        self.pickup = PickupManager(self, self.pickup_config)
         spawn_greenlet(self.pickup.run)
+
+# ################################################################################################################################
+
+    def invoke(self, service, payload, *args, **kwargs):
+        return self.worker_store.invoke(service, payload, *args, **kwargs)
 
 # ################################################################################################################################
 

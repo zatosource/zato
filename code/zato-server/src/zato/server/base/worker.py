@@ -1048,6 +1048,21 @@ class WorkerStore(BrokerMessageReceiver):
         if not isinstance(service.response.payload, self._simple_types):
             service.response.payload = service.response.payload.getvalue()
 
+# ################################################################################################################################
+
+    def invoke(self, service, payload, **kwargs):
+        """ Invokes a service by its name with request on input.
+        """
+        return self.on_message_invoke_service({
+            'channel': CHANNEL.WORKER,
+            'payload': payload,
+            'data_format': kwargs.get('data_format'),
+            'service': service,
+            'cid': new_cid()
+        }, CHANNEL.WORKER, None, needs_response=True)
+
+# ################################################################################################################################
+
     def on_message_invoke_service(self, msg, channel, action, args=None, **kwargs):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
