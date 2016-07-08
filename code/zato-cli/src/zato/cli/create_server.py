@@ -295,7 +295,7 @@ directories = (
     'pickup',
     'pickup/incoming',
     'pickup/processed',
-    'pickup/services',
+    'pickup/incoming/services',
     'pickup/incoming/static',
     'pickup/incoming/json',
     'pickup/incoming/xml',

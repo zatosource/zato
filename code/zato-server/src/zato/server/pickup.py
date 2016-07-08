@@ -59,47 +59,6 @@ class PickupEvent(object):
 
 # ################################################################################################################################
 
-class BasePickupEventProcessor(object):
-    def __init__(self, pickup_dir=None, server=None, *args, **kwargs):
-        self.pickup_dir = pickup_dir
-        self.server = server
-        super(BasePickupEventProcessor, self).__init__(*args, **kwargs)
-
-    def _should_process(self, event_name):
-        """ By default we always let an event in.
-        """
-        return True
-
-# ################################################################################################################################
-
-class ServiceHotDeploy(BasePickupEventProcessor):
-    """ Hot-deploys Zato services.
-    """
-    def _should_process(self, event_name):
-        """ Returns True if the file name's is either a Python source code file
-        we can handle or an archive that can be uncompressed.
-        """
-        return is_python_file(event_name) or is_archive_file(event_name)
-
-    def hot_deploy(self, full_path, file_name):
-        return hot_deploy(
-            self.server.parallel_server, file_name, full_path,
-            self.server.parallel_server.hot_deploy_config.delete_after_pick_up)
-
-    def process(self, full_path, event):
-        logger.debug('IN_MODIFY full_path:`%s`', full_path)
-        try:
-            self.hot_deploy(full_path, event.name)
-        except(IOError, OSError), e:
-            if e.errno == errno.ENOENT:
-                # It's OK, probably there is more than gunicorn worker and the other has already deleted
-                # the deployment package before we had a chance to do the same.
-                logger.debug('Caught ENOENT `%s`, e:`%s`', full_path, format_exc(e))
-            else:
-                raise
-
-# ################################################################################################################################
-
 class PickupManager(object):
     """ Manages inotify listeners and callbacks.
     """
@@ -159,7 +118,6 @@ class PickupManager(object):
 
     def invoke_callbacks(self, pickup_event, recipients):
 
-
         request = {
             'base_dir': pickup_event.base_dir,
             'file_name': pickup_event.file_name,
@@ -187,7 +145,7 @@ class PickupManager(object):
         if config.move_processed_to:
             shutil_copy(full_path, config.move_processed_to)
 
-        if config.delete_after_pickup:
+        if config.delete_after_pick_up:
             os.remove(full_path)
 
 # ################################################################################################################################
@@ -207,7 +165,6 @@ class PickupManager(object):
                     events = infx.get_events(self.infx_fd, 1.0)
 
                     for event in events:
-
                         pe = PickupEvent()
 
                         try:
@@ -221,6 +178,11 @@ class PickupManager(object):
                             pe.file_name = event.name
                             pe.stanza = config.stanza
                             pe.full_path = os.path.join(pe.base_dir, event.name)
+
+                            # If we are deploying services, the path is different than for other resources
+                            if config.is_service_hot_deploy:
+                                spawn_greenlet(hot_deploy, self.server, pe.file_name, pe.full_path, config.delete_after_pick_up)
+                                continue
 
                             if config.read_on_pickup:
 
