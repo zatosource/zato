@@ -39,6 +39,26 @@ _singleton = object()
 
 # ################################################################################################################################
 
+class PickupEvent(object):
+    """ Encapsulates information about a file picked up from file system.
+    """
+    __slots__ = ('base_dir', 'file_name', 'full_path', 'stanza', 'ts_utc', 'raw_data', 'data', 'has_raw_data', 'has_data', 
+        'parse_error')
+
+    def __init__(self):
+        self.base_dir = None
+        self.file_name = None
+        self.full_path = None
+        self.stanza = None
+        self.ts_utc = None
+        self.raw_data = ''
+        self.data = _singleton
+        self.has_raw_data = False
+        self.has_data = False
+        self.parse_error = None
+
+# ################################################################################################################################
+
 class BasePickupEventProcessor(object):
     def __init__(self, pickup_dir=None, server=None, *args, **kwargs):
         self.pickup_dir = pickup_dir
@@ -137,7 +157,22 @@ class PickupManager(object):
 
 # ################################################################################################################################
 
-    def invoke_callbacks(self, request, recipients):
+    def invoke_callbacks(self, pickup_event, recipients):
+
+
+        request = {
+            'base_dir': pickup_event.base_dir,
+            'file_name': pickup_event.file_name,
+            'full_path': pickup_event.full_path,
+            'stanza': pickup_event.stanza,
+            'ts_utc': datetime.utcnow().isoformat(),
+            'raw_data': pickup_event.raw_data,
+            'data': pickup_event.data if pickup_event.data is not _singleton else None,
+            'has_raw_data': pickup_event.has_raw_data,
+            'has_data': pickup_event.has_data,
+            'parse_error': pickup_event.parse_error,
+        }
+
         try:
             for recipient in recipients:
                 spawn_greenlet(self.server.invoke, recipient, request)
@@ -146,67 +181,67 @@ class PickupManager(object):
 
 # ################################################################################################################################
 
+    def post_handle(self, full_path, config):
+        """ Runs after callback services have been already invoked, performs clean up if configured to.
+        """
+        if config.move_processed_to:
+            shutil_copy(full_path, config.move_processed_to)
+
+        if config.delete_after_pickup:
+            os.remove(full_path)
+
+# ################################################################################################################################
+
     def run(self):
 
-        for path in self.callback_config:
-            self.wd_to_path[infx.add_watch(self.infx_fd, path, infx.IN_CLOSE_WRITE | infx.IN_MOVE)] = path
-
         try:
+
+            for path in self.callback_config:
+                if not os.path.exists(path):
+                    raise Exception('Path does not exist `{}`'.format(path))
+
+                self.wd_to_path[infx.add_watch(self.infx_fd, path, infx.IN_CLOSE_WRITE | infx.IN_MOVE)] = path
+
             while self.keep_running:
                 try:
                     events = infx.get_events(self.infx_fd, 1.0)
-                    now = datetime.utcnow()
 
                     for event in events:
 
+                        pe = PickupEvent()
+
                         try:
 
-                            has_raw_data, has_data = False, False
-                            raw_data, data = '', _singleton
-                            parse_error = None
-
-                            base_dir = self.wd_to_path[event.wd]
-                            config = self.callback_config[base_dir]
+                            pe.base_dir = self.wd_to_path[event.wd]
+                            config = self.callback_config[pe.base_dir]
 
                             if not self.should_pick_up(event.name, config.patterns):
                                 continue
 
-                            full_path = os.path.join(base_dir, event.name)
-                            full_path_lower = full_path.lower()
+                            pe.file_name = event.name
+                            pe.stanza = config.stanza
+                            pe.full_path = os.path.join(pe.base_dir, event.name)
 
                             if config.read_on_pickup:
 
-                                f = open(full_path, 'rb')
-                                raw_data = f.read()
-                                has_raw_data = True
+                                f = open(pe.full_path, 'rb')
+                                pe.raw_data = f.read()
+                                pe.has_raw_data = True
                                 f.close()
 
                                 if config.parse_on_pickup:
 
                                     try:
-                                        data = self.get_parser(config.parse_with)(raw_data)
-                                        has_data = True
+                                        pe.data = self.get_parser(config.parse_with)(pe.raw_data)
+                                        pe.has_data = True
                                     except Exception, e:
-                                        parse_error = e
+                                        pe.parse_error = e
 
-                            spawn(self.invoke_callbacks, {
-                                'base_dir': base_dir,
-                                'file_name': event.name,
-                                'full_path': full_path,
-                                'stanza': config.stanza,
-                                'ts_utc': now.isoformat(),
-                                'raw_data': raw_data,
-                                'data': data if data is not _singleton else None,
-                                'has_raw_data': has_raw_data,
-                                'has_data': has_data,
-                                'parse_error': parse_error,
-                            }, config.recipients)
+                                else:
+                                    pe.data = pe.raw_data
 
-                            if config.move_processed_to:
-                                shutil_copy(full_path, config.move_processed_to)
-
-                            if config.delete_after_pickup:
-                                os.remove(full_path)
+                            spawn_greenlet(self.invoke_callbacks, pe, config.recipients)
+                            self.post_handle(pe.full_path, config)
 
                         except Exception, e:
                             logger.warn(format_exc(e))

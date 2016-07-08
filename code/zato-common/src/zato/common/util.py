@@ -321,6 +321,9 @@ def new_cid(random_bytes=random_bytes):
     """
     return random_bytes(12).encode('hex')
 
+def get_user_config_name(file_name):
+    return file_name.split('.')[0]
+
 def get_config(repo_location, config_name, bunchified=True):
     """ Returns the configuration object. Will load additional user-defined config files,
     if any are available at all.

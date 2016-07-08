@@ -17,6 +17,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE
+from zato.common.util import get_config, get_user_config_name
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -26,6 +27,20 @@ class _Logger(Service):
 
     def handle(self):
         self.logger.info('%s data received: `%s`', self.pickup_data_type, self.request.raw_request)
+
+# ################################################################################################################################
+
+class _Updater(Service):
+    pickup_action = None
+
+    def handle(self):
+
+        self.broker_client.publish({
+            'action': self.pickup_action.value,
+            'msg_type': MESSAGE_TYPE.TO_PARALLEL_ALL,
+            'file_name': self.request.raw_request['file_name'],
+            'data': self.request.raw_request['data'],
+        })
 
 # ################################################################################################################################
 
@@ -48,23 +63,38 @@ class OnUpdateStatic(Service):
 
 # ################################################################################################################################
 
-class UpdateStatic(Service):
+class UpdateStatic(_Updater):
     """ Picks up static files and distributes them to all server processes.
     """
-    def handle(self):
-        with open(self.request.raw_request['full_path'], 'rb') as f:
-            self.broker_client.publish({
-                'action': HOT_DEPLOY.CREATE_STATIC.value,
-                'msg_type': MESSAGE_TYPE.TO_PARALLEL_ALL,
-                'file_name': self.request.raw_request['file_name'],
-                'data': f.read(),
-            })
+    pickup_action = HOT_DEPLOY.CREATE_STATIC
 
 # ################################################################################################################################
 
-class Conf(Service):
-    """ Picks up configuration files.
+class OnUpdateUserConf(Service):
+    """ Updates user configuration in memory and file system.
     """
+    class SimpleIO(object):
+        input_required = ('data', 'file_name')
+
+    def handle(self):
+        input = self.request.input
+        repo_location = self.server.repo_location
+
+        with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.data)):
+            with open(os.path.join(self.server.user_conf_location, input.file_name), 'wb') as f:
+                f.write(input.data)
+
+            conf = get_config(self.server.user_conf_location, input.file_name)
+            entry = self.server.user_config.setdefault(get_user_config_name(input.file_name), Bunch())
+            entry.clear()
+            entry.update(conf)
+
+# ################################################################################################################################
+
+class UpdateUserConf(_Updater):
+    """ Picks up user-defined config files and distributes them to all server processes.
+    """
+    pickup_action = HOT_DEPLOY.CREATE_USER_CONF
 
 # ################################################################################################################################
 

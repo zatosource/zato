@@ -234,11 +234,10 @@ parse_on_pickup=False
 delete_after_pickup=False
 
 [user_conf]
-pickup_from=./config/repo/
-patterns=user-*.conf
+pickup_from=./config/repo/user-conf
+patterns=*.conf
 recipients=zato.pickup.update-user-conf
 parse_on_pickup=False
-delete_after_pickup=False
 
 [static]
 pickup_from=./pickup/incoming/static
@@ -291,6 +290,7 @@ default_odb_pool_size = 1
 directories = (
     'config',
     'config/repo',
+    'config/repo/user-conf',
     'logs',
     'pickup',
     'pickup/incoming',

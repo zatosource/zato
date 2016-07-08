@@ -1304,23 +1304,34 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, msg, *args):
+    def on_broker_msg_hot_deploy(self, msg, service, payload, action, *args):
         msg.cid = new_cid()
-        msg.service = 'zato.hot-deploy.create'
-        msg.payload = {'package_id': msg.package_id}
-        msg.data_format = SIMPLE_IO.FORMAT.JSON
-        return self.on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)
+        msg.service = service
+        msg.payload = payload
+        return self.on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_{}'.format(action), args)
 
-    def on_broker_msg_HOT_DEPLOY_AFTER_DEPLOY(self, msg, *args):
-        self.rbac.create_resource(msg.id)
+# ################################################################################################################################
+
+    def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, msg, *args):
+        return self.on_broker_msg_hot_deploy(msg, 'zato.hot-deploy.create', {'package_id': msg.package_id}, 'CREATE_SERVICE',
+            *args)
 
 # ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_CREATE_STATIC(self, msg, *args):
-        msg.cid = new_cid()
-        msg.service = 'zato.pickup.on-update-static'
-        msg.payload = {'data': msg.data, 'file_name': msg.file_name}
-        return self.on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE_STATIC', args)
+        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-static', {'data': msg.data, 'file_name': msg.file_name},
+            'CREATE_STATIC', *args)
+
+# ################################################################################################################################
+
+    def on_broker_msg_HOT_DEPLOY_CREATE_USER_CONF(self, msg, *args):
+        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-user-conf',
+            {'data': msg.data, 'file_name': msg.file_name}, 'CREATE_USER_CONF', *args)
+
+# ################################################################################################################################
+
+    def on_broker_msg_HOT_DEPLOY_AFTER_DEPLOY(self, msg, *args):
+        self.rbac.create_resource(msg.id)
 
 # ################################################################################################################################
 
