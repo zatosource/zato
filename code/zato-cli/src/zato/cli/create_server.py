@@ -63,7 +63,7 @@ username={{odb_user}}
 use_async_driver=True
 
 [hot_deploy]
-pickup_dir=../../pickup/services
+pickup_dir=../../pickup/incoming/services
 work_dir=../../work
 backup_history=100
 backup_format=bztar

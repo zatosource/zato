@@ -13,7 +13,6 @@ import logging
 from traceback import format_exc
 
 # gevent
-from gevent import spawn
 from gevent.pywsgi import WSGIServer
 
 # Zato

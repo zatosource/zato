@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import errno
 import logging
 import os
 from datetime import datetime
@@ -20,14 +19,11 @@ from traceback import format_exc
 # Bunch
 from bunch import Bunch
 
-# gevent
-from gevent import sleep, spawn
-
 # gevent_inotifyx
 import gevent_inotifyx as infx
 
 # Zato
-from zato.common.util import hot_deploy, is_archive_file, is_python_file, spawn_greenlet
+from zato.common.util import hot_deploy, spawn_greenlet
 
 # ################################################################################################################################
 

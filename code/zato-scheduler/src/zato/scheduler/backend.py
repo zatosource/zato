@@ -23,9 +23,12 @@ from gevent import lock
 # paodate
 from paodate import Delta
 
+# Paste
+from paste.util.converters import asbool
+
 # Zato
 from zato.common import SCHEDULER
-from zato.common.util import make_repr, new_cid
+from zato.common.util import add_startup_jobs, make_repr, new_cid
 
 logger = getLogger(__name__)
 

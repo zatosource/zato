@@ -78,7 +78,6 @@ class OnUpdateUserConf(Service):
 
     def handle(self):
         input = self.request.input
-        repo_location = self.server.repo_location
 
         with self.lock('{}-{}-{}'.format(self.name, self.server.name, input.data)):
             with open(os.path.join(self.server.user_conf_location, input.file_name), 'wb') as f:

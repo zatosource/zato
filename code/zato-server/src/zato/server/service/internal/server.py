@@ -10,16 +10,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from datetime import datetime
-from logging import getLogger
 from traceback import format_exc
-
-# Bunch
-from bunch import Bunch
 
 # Zato
 from zato.common import ZatoException
-from zato.common.odb.model import Cluster, Server
+from zato.common.odb.model import Server
 from zato.server.service.internal import AdminService, AdminSIO
 
 class Edit(AdminService):
