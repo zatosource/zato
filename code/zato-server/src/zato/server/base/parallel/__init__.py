@@ -38,7 +38,7 @@ from zato.bunch import Bunch
 from zato.common import KVDB, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.time_util import TimeUtil
-from zato.common.util import absolutize, get_kvdb_config_for_log, hot_deploy, \
+from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, spawn_greenlet, StaticConfig, register_diag_handlers
 from zato.distlock import LockManager
 from zato.server.base import BrokerMessageReceiver
@@ -67,6 +67,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.odb_data = None
         self.config = None
         self.repo_location = None
+        self.user_conf_location = None
         self.sql_pool_store = None
         self.int_parameters = None
         self.int_parameter_suffixes = None
@@ -286,6 +287,15 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
         self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
 
+        # User-config from ./config/repo/user-config
+        for file_name in os.listdir(self.user_conf_location):
+            conf = get_config(self.user_conf_location, file_name)
+
+            # Not used at all in this type of configuration
+            conf.pop('user_config_items', None)
+
+            self.user_config[get_user_config_name(file_name)] = conf
+
         for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pick_up'):
 
             # New in 2.0
@@ -401,36 +411,36 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         empty = []
 
         # Fix up booleans and paths
-        for stanza, section_config in self.pickup_config.items():
+        for stanza, stanza_config in self.pickup_config.items():
 
             # user_config_items is empty by default
-            if not section_config:
+            if not stanza_config:
                 empty.append(stanza)
                 continue
 
-            section_config.read_on_pickup = asbool(section_config.get('read_on_pickup', True))
-            section_config.parse_on_pickup = asbool(section_config.get('parse_on_pickup', True))
-            section_config.delete_after_pickup = asbool(section_config.get('delete_after_pickup', True))
-            section_config.case_insensitive = asbool(section_config.get('case_insensitive', True))
-            section_config.pickup_from = absolutize(section_config.pickup_from, self.base_dir)
+            stanza_config.read_on_pickup = asbool(stanza_config.get('read_on_pickup', True))
+            stanza_config.parse_on_pickup = asbool(stanza_config.get('parse_on_pickup', True))
+            stanza_config.delete_after_pickup = asbool(stanza_config.get('delete_after_pickup', True))
+            stanza_config.case_insensitive = asbool(stanza_config.get('case_insensitive', True))
+            stanza_config.pickup_from = absolutize(stanza_config.pickup_from, self.base_dir)
 
-            mpt = section_config.get('move_processed_to')
-            section_config.move_processed_to = absolutize(mpt, self.base_dir) if mpt else None
+            mpt = stanza_config.get('move_processed_to')
+            stanza_config.move_processed_to = absolutize(mpt, self.base_dir) if mpt else None
 
-            recipients = section_config.recipients
-            section_config.recipients = [recipients] if not isinstance(recipients, list) else recipients
+            recipients = stanza_config.recipients
+            stanza_config.recipients = [recipients] if not isinstance(recipients, list) else recipients
 
             flags = globre.EXACT
 
-            if section_config.case_insensitive:
+            if stanza_config.case_insensitive:
                 flags |= IGNORECASE
 
-            patterns = section_config.patterns
-            section_config.patterns = [patterns] if not isinstance(patterns, list) else patterns
-            section_config.patterns = [globre.compile(elem, flags) for elem in section_config.patterns]
+            patterns = stanza_config.patterns
+            stanza_config.patterns = [patterns] if not isinstance(patterns, list) else patterns
+            stanza_config.patterns = [globre.compile(elem, flags) for elem in stanza_config.patterns]
 
-            if not os.path.exists(section_config.pickup_from):
-                logger.warn('Pickup dir `%s` does not exist (%s)', section_config.pickup_from, stanza)
+            if not os.path.exists(stanza_config.pickup_from):
+                logger.warn('Pickup dir `%s` does not exist (%s)', stanza_config.pickup_from, stanza)
 
         for item in empty:
             del self.pickup_config[item]

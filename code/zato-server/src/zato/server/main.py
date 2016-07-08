@@ -194,6 +194,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.host = zato_gunicorn_app.zato_host
     server.port = zato_gunicorn_app.zato_port
     server.repo_location = repo_location
+    server.user_conf_location = os.path.join(server.repo_location, 'user-conf')
     server.base_dir = base_dir
     server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
     server.fs_server_config = config
