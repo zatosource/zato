@@ -764,6 +764,7 @@ class Service(object):
         service.job_type = job_type
         service.translate = server.kvdb.translate
         service.user_config = server.user_config
+        service.static_config = server.static_config
         service.time = server.time_util
 
         if channel_params:
