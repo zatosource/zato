@@ -278,15 +278,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             if name and not name.startswith('#'):
                 self.service_sources.append(name)
 
-        # Normalize hot-deploy configuration
-        self.hot_deploy_config = Bunch()
-
-        self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(
-            self.repo_location, self.fs_server_config.hot_deploy.work_dir))
-
-        self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
-        self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
-
         # User-config from ./config/repo/user-config
         for file_name in os.listdir(self.user_conf_location):
             conf = get_config(self.user_conf_location, file_name)
@@ -295,16 +286,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             conf.pop('user_config_items', None)
 
             self.user_config[get_user_config_name(file_name)] = conf
-
-        for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pick_up'):
-
-            # New in 2.0
-            if name == 'delete_after_pick_up':
-                value = asbool(self.fs_server_config.hot_deploy.get(name, True))
-                self.hot_deploy_config[name] = value
-            else:
-                self.hot_deploy_config[name] = os.path.normpath(os.path.join(
-                    self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
         is_first, locally_deployed = self.maybe_on_first_worker(server, self.kvdb.conn)
 
@@ -420,9 +401,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
             stanza_config.read_on_pickup = asbool(stanza_config.get('read_on_pickup', True))
             stanza_config.parse_on_pickup = asbool(stanza_config.get('parse_on_pickup', True))
-            stanza_config.delete_after_pickup = asbool(stanza_config.get('delete_after_pickup', True))
+            stanza_config.delete_after_pick_up = asbool(stanza_config.get('delete_after_pick_up', True))
             stanza_config.case_insensitive = asbool(stanza_config.get('case_insensitive', True))
             stanza_config.pickup_from = absolutize(stanza_config.pickup_from, self.base_dir)
+            stanza_config.is_service_hot_deploy = False
 
             mpt = stanza_config.get('move_processed_to')
             stanza_config.move_processed_to = absolutize(mpt, self.base_dir) if mpt else None
@@ -445,7 +427,43 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         for item in empty:
             del self.pickup_config[item]
 
+        # Ok, now that we have configured everything that pickup.conf had
+        # we still need to make it aware of services and how to pick them up from FS.
+
+        # Normalize hot-deploy configuration
+        self.hot_deploy_config = Bunch()
+
+        self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(
+            self.repo_location, self.fs_server_config.hot_deploy.work_dir))
+
+        self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
+        self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
+
+        for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pick_up'):
+
+            # New in 2.0
+            if name == 'delete_after_pick_up':
+                value = asbool(self.fs_server_config.hot_deploy.get(name, True))
+                self.hot_deploy_config[name] = value
+            else:
+                self.hot_deploy_config[name] = os.path.normpath(os.path.join(
+                    self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
+
+        stanza = 'zato_internal_service_hot_deploy'
+        stanza_config = Bunch({
+            'pickup_from': absolutize(self.fs_server_config.hot_deploy.pickup_dir, self.repo_location),
+            'patterns': [globre.compile('*.py', globre.EXACT | IGNORECASE)],
+            'read_on_pickup': False,
+            'parse_on_pickup': False,
+            'delete_after_pick_up': self.hot_deploy_config.delete_after_pick_up,
+            'is_service_hot_deploy': True,
+        })
+
+        self.pickup_config[stanza] = stanza_config
         self.pickup = PickupManager(self, self.pickup_config)
+
+        logger.warn('666 %r', self.pickup)
+
         spawn_greenlet(self.pickup.run)
 
 # ################################################################################################################################

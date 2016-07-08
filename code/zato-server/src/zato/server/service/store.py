@@ -349,7 +349,7 @@ class ServiceStore(InitializingObject):
             service_id, is_active, slow_threshold = self.odb.add_service(
                 name, impl_name, is_internal, timestamp, dumps(str(depl_info)), si)
 
-        deployed.append(class_)
+        deployed.append(name)
 
         self.services[impl_name]['is_active'] = is_active
         self.services[impl_name]['slow_threshold'] = slow_threshold

@@ -499,27 +499,23 @@ def _os_remove(path):
 def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True):
     """ Hot-deploys a package if it looks like a Python module or archive.
     """
-    if is_python_file(file_name) or is_archive_file(file_name):
+    logger.warn('About to hot-deploy `%s`', path)
+    now = datetime.utcnow()
+    di = dumps(deployment_info('hot-deploy', file_name, now.isoformat(), path))
 
-        logger.debug('About to hot-deploy [{}]'.format(path))
-        now = datetime.utcnow()
-        di = dumps(deployment_info('hot-deploy', file_name, now.isoformat(), path))
+    # Insert the package into the DB ..
+    package_id = parallel_server.odb.hot_deploy(
+        now, di, file_name, open(path, 'rb').read(), parallel_server.id)
 
-        # Insert the package into the DB ..
-        package_id = parallel_server.odb.hot_deploy(
-            now, di, file_name, open(path, 'rb').read(), parallel_server.id)
+    # .. and optionally notify all the servers they're to pick up a delivery
+    if notify:
+        parallel_server.notify_new_package(package_id)
 
-        # .. and optionally notify all the servers they're to pick up a delivery
-        if notify:
-            parallel_server.notify_new_package(package_id)
+    if delete_path:
+        _os_remove(path)
 
-        if delete_path:
-            _os_remove(path)
+    return package_id
 
-        return package_id
-
-    else:
-        logger.warn('Ignoring {}'.format(path))
 
 # As taken from http://wiki.python.org/moin/SortingListsOfDictionaries
 def multikeysort(items, columns):
