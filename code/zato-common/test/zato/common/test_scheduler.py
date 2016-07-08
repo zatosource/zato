@@ -27,8 +27,8 @@ from mock import patch
 
 # Zato
 from zato.common import SCHEDULER
-from zato.common.scheduler import Interval, Job, Scheduler
 from zato.common.test import is_like_cid, rand_bool, rand_date_utc, rand_int, rand_string
+from zato.scheduler.backend import Interval, Job, Scheduler
 
 seed()
 
@@ -270,10 +270,10 @@ class JobTestCase(TestCase):
 
         with patch('gevent.sleep', sleep):
             with patch('gevent.spawn', spawn):
-                with patch('zato.common.scheduler.Job.get_sleep_time', get_sleep_time):
+                with patch('zato.scheduler.backend.Job.get_sleep_time', get_sleep_time):
                     for now in now_values:
                         self.now = now
-                        with patch('zato.common.scheduler.datetime', self._datetime):
+                        with patch('zato.scheduler.backend.datetime', self._datetime):
                             for job_type in SCHEDULER.JOB_TYPE.CRON_STYLE, SCHEDULER.JOB_TYPE.INTERVAL_BASED:
 
                                 max_repeats = choice(range(2, 5))
@@ -393,7 +393,7 @@ class JobStartTimeTestCase(TestCase):
             data['start_time'].append(start_time)
             data['now'].append(now)
 
-        with patch('zato.common.scheduler.datetime', self._datetime):
+        with patch('zato.scheduler.backend.datetime', self._datetime):
 
             interval = Interval(days=interval)
             job = Job(rand_int(), rand_string(), SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_time=start_time, interval=interval)
@@ -431,7 +431,7 @@ class JobStartTimeTestCase(TestCase):
         self.now = parse('2019-05-13 05:19:37')
         expected = parse('2017-04-04 19:11:23')
 
-        with patch('zato.common.scheduler.datetime', self._datetime):
+        with patch('zato.scheduler.backend.datetime', self._datetime):
 
             interval = Interval(days=3)
             job = Job(rand_int(), rand_string(), SCHEDULER.JOB_TYPE.INTERVAL_BASED, start_time=start_time, interval=interval, max_repeats=5)
@@ -457,7 +457,7 @@ class SchedulerTestCase(TestCase):
             self.assertIs(func, job_run)
             data['spawned_jobs'] += 1
 
-        scheduler = Scheduler(dummy_callback)
+        scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
         scheduler.on_job_executed = on_job_executed
         scheduler.lock = RLock()
 
@@ -529,7 +529,7 @@ class SchedulerTestCase(TestCase):
         job3.run = job_run
         job4.run = job_run
 
-        scheduler = Scheduler(dummy_callback)
+        scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
         scheduler.spawn_job = spawn_job
         scheduler.lock = RLock()
         scheduler.sleep = _sleep
@@ -569,7 +569,7 @@ class SchedulerTestCase(TestCase):
         # Just to make sure it's inactive by default.
         self.assertTrue(job.is_active)
 
-        scheduler = Scheduler(dummy_callback)
+        scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
         data['old_on_max_repeats_reached'] = scheduler.on_max_repeats_reached
 
         def on_max_repeats_reached(job):
@@ -608,7 +608,7 @@ class SchedulerTestCase(TestCase):
         job2 = Job(rand_int(), 'b', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=0.1), max_repeats=job_max_repeats)
         job2.wait_sleep_time = job_sleep_time
 
-        scheduler = Scheduler(dummy_callback)
+        scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
         scheduler.lock = RLock()
         scheduler.iter_cb = iter_cb
         scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
@@ -658,7 +658,7 @@ class SchedulerTestCase(TestCase):
             job2 = Job(rand_int(), 'b', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=0.1), max_repeats=job_max_repeats)
             job2.wait_sleep_time = job_sleep_time
 
-            scheduler = Scheduler(dummy_callback)
+            scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
             scheduler.lock = RLock()
             scheduler.iter_cb = iter_cb
             scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
@@ -701,7 +701,7 @@ class SchedulerTestCase(TestCase):
         job_sleep_time = 10
         job_max_repeats1, job_max_repeats2 = 20, 30
 
-        scheduler = Scheduler(dummy_callback)
+        scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
         scheduler.lock = RLock()
         scheduler.iter_cb = iter_cb
         scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
@@ -782,7 +782,7 @@ class SchedulerTestCase(TestCase):
         job.wait_sleep_time = job_sleep_time
         job.get_context = get_context
 
-        scheduler = Scheduler(dummy_callback)
+        scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
         scheduler.lock = RLock()
         scheduler.iter_cb = iter_cb
         scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))

@@ -256,7 +256,7 @@ class Job(object):
 # ################################################################################################################################
 
 class Scheduler(object):
-    def __init__(self, on_job_executed_cb=None, job_log_level='info'):
+    def __init__(self, on_job_executed_cb=None, job_log_level='info', _add_startup_jobs=True):
         self.on_job_executed_cb = on_job_executed_cb
         self.jobs = set()
         self.job_greenlets = {}
@@ -266,6 +266,7 @@ class Scheduler(object):
         self.iter_cb = None
         self.iter_cb_args = ()
         self.ready = False
+        self._add_startup_jobs = _add_startup_jobs
         self.job_log = getattr(logger, job_log_level)
         self._has_debug = logger.isEnabledFor(DEBUG)
 
@@ -401,7 +402,8 @@ class Scheduler(object):
     def run(self):
 
         # Add the statistics-related scheduler jobs to the ODB
-        add_startup_jobs(self.cluster_id, self.odb, self.startup_jobs, asbool(self.fs_server_config.component_enabled.stats))
+        if self._add_startup_jobs:
+            add_startup_jobs(self.cluster_id, self.odb, self.startup_jobs, asbool(self.fs_server_config.component_enabled.stats))
 
         try:
             _sleep = self.sleep
