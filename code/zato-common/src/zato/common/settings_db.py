@@ -17,11 +17,8 @@ import os
 from logging import getLogger
 
 # SQLAlchemy
-from sqlalchemy import Column, create_engine, Integer, Integer, Sequence, String, Text, UniqueConstraint
+from sqlalchemy import Column, create_engine, Integer, Sequence, String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
-
-# Zato
-from zato.common.util import get_session
 
 # ################################################################################################################################
 

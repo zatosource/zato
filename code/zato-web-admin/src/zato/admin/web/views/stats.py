@@ -347,7 +347,7 @@ def _get_stats(client, start, stop, n, n_type, stats_type=None):
 
 # ##############################################################################
 
-def _stats_data_csv(user_profile, req_input, client, ignored, stats_type, is_custom):
+def _stats_data_csv(user_profile, req_input, client, ignored, stats_type, is_custom, req):
 
     n_type_keys = {
         'mean': ['start', 'stop', 'service_name', 'mean', 'mean_all_services',
@@ -374,7 +374,7 @@ def _stats_data_csv(user_profile, req_input, client, ignored, stats_type, is_cus
 
     return response
 
-def _stats_data_html(user_profile, req_input, client, cluster, stats_type, is_custom):
+def _stats_data_html(user_profile, req_input, client, cluster, stats_type, is_custom, req):
 
     is_trends = stats_type == 'trends'
     if is_trends:
@@ -487,7 +487,7 @@ def stats_data(req, stats_type):
         req_input['user_stop'] = req_input.user_stop
 
     return globals()['_stats_data_{}'.format(req_input.format)](req.zato.user_profile,
-        req_input, req.zato.client, req.zato.cluster, stats_type, is_custom)
+        req_input, req.zato.client, req.zato.cluster, stats_type, is_custom, req)
 
 @method_allowed('GET', 'POST')
 def stats_trends_data(req):

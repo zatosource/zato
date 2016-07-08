@@ -15,7 +15,7 @@ except ImportError:
     pass
 
 # stdlib
-import os, json, uuid
+import os
 from copy import deepcopy
 
 from zato.cli import common_logging_conf_contents, common_odb_opts, ZatoCommand

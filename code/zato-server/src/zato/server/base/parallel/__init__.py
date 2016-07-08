@@ -35,7 +35,7 @@ from springpython.context import DisposableObject
 # Zato
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common import KVDB, SERVER_JOIN_STATUS, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common import KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.time_util import TimeUtil
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
@@ -354,8 +354,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         self.servers = Servers(self.odb, self.cluster.name)
 
-        start = datetime.utcnow()
-
         is_first, locally_deployed = self._after_init_common(server)
 
         self._after_init_accepted(server, locally_deployed)
@@ -461,8 +459,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         self.pickup_config[stanza] = stanza_config
         self.pickup = PickupManager(self, self.pickup_config)
-
-        logger.warn('666 %r', self.pickup)
 
         spawn_greenlet(self.pickup.run)
 

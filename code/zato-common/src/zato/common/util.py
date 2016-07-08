@@ -65,7 +65,7 @@ from OpenSSL import crypto
 from paste.util.converters import asbool
 
 # pip
-from pip.download import is_archive_file, unpack_file_url
+from pip.download import unpack_file_url
 
 # portalocker
 import portalocker
@@ -499,7 +499,7 @@ def _os_remove(path):
 def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True):
     """ Hot-deploys a package if it looks like a Python module or archive.
     """
-    logger.warn('About to hot-deploy `%s`', path)
+    logger.debug('About to hot-deploy `%s`', path)
     now = datetime.utcnow()
     di = dumps(deployment_info('hot-deploy', file_name, now.isoformat(), path))
 
