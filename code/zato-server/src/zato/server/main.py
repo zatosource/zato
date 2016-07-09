@@ -200,7 +200,6 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.fs_server_config = config
     server.pickup_config = pickup_config
     server.user_config.update(config.user_config_items)
-    server.startup_jobs = app_context.get_object('startup_jobs')
     server.app_context = app_context
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']

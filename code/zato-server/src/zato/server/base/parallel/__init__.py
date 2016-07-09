@@ -33,6 +33,7 @@ from paste.util.converters import asbool
 from springpython.context import DisposableObject
 
 # Zato
+from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
 from zato.common import KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
@@ -41,7 +42,6 @@ from zato.common.time_util import TimeUtil
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, spawn_greenlet, StaticConfig, register_diag_handlers
 from zato.distlock import LockManager
-from zato.server.base import BrokerMessageReceiver
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
 from zato.server.connection.server import Servers

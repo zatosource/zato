@@ -26,6 +26,10 @@ config_template = """[bind]
 host=0.0.0.0
 port=31530
 
+[cluster]
+id={cluster_id}
+stats_enabled=True
+
 [odb]
 engine={odb_engine}
 db_name={odb_db_name}
@@ -36,6 +40,7 @@ password={odb_password}
 pool_size=1
 extra=
 use_async_driver=True
+is_active=True
 
 [broker]
 host={broker_host}
@@ -57,6 +62,48 @@ ca_certs_location=zato-scheduler-ca-certs.pem
 user1={user1_password}
 """
 
+startup_jobs="""[zato.stats.process-raw-times]
+seconds=1
+service=zato.stats.process-raw-times
+extra=max_batch_size=99999
+
+[zato.stats.aggregate-by-minute]
+seconds=60
+service=zato.stats.aggregate-by-minute
+
+[zato.stats.aggregate-by-hour]
+minutes=10
+service=zato.stats.aggregate-by-hour
+
+[zato.stats.aggregate-by-day]
+minutes=60
+service=zato.stats.aggregate-by-day
+
+[zato.stats.aggregate-by-month]
+minutes=60
+service=zato.stats.aggregate-by-month
+
+[zato.stats.summary.create-summary-by-day]
+minutes=10
+service=zato.stats.summary.create-summary-by-day
+
+[zato.stats.summary.create-summary-by-week]
+minutes=10
+service=zato.stats.summary.create-summary-by-week
+
+[zato.stats.summary.create-summary-by-month]
+minutes=60
+service=zato.stats.summary.create-summary-by-month
+
+[zato.stats.summary.create-summary-by-year]
+minutes=60
+service=zato.stats.summary.create-summary-by-year
+
+[zato.outgoing.sql.auto-ping]
+minutes=3
+service=zato.outgoing.sql.auto-ping
+"""
+
 class Create(ZatoCommand):
     """ Creates a new scheduler instance.
     """
@@ -69,6 +116,7 @@ class Create(ZatoCommand):
     opts.append({'name':'priv_key_path', 'help':"Path to scheduler's private key in PEM"})
     opts.append({'name':'cert_path', 'help':"Path to the admin's certificate in PEM"})
     opts.append({'name':'ca_certs_path', 'help':"Path to a bundle of CA certificates to be trusted"})
+    opts.append({'name':'cluster_id', 'help':"ID of the cluster this scheduler will belong to"})
 
     def __init__(self, args):
         self.target_dir = os.path.abspath(args.path)
@@ -79,6 +127,7 @@ class Create(ZatoCommand):
 
         repo_dir = os.path.join(self.target_dir, 'config', 'repo')
         conf_path = os.path.join(repo_dir, 'scheduler.conf')
+        startup_jobs_conf_path = os.path.join(repo_dir, 'startup_jobs.conf')
 
         os.mkdir(os.path.join(self.target_dir, 'logs'))
         os.mkdir(os.path.join(self.target_dir, 'config'))
@@ -97,13 +146,14 @@ class Create(ZatoCommand):
             'broker_host': args.kvdb_host,
             'broker_port': args.kvdb_port,
             'broker_password': encrypt(args.kvdb_password, priv_key) if args.kvdb_password else '',
-            'user1_password': generate_password()
-
+            'user1_password': generate_password(),
+            'cluster_id': args.cluster_id,
         }
 
         open(os.path.join(repo_dir, 'logging.conf'), 'w').write(
             common_logging_conf_contents.format(log_path='./logs/scheduler.log'))
         open(conf_path, 'w').write(config_template.format(**config))
+        open(startup_jobs_conf_path, 'w').write(startup_jobs)
 
         # Initial info
         self.store_initial_info(self.target_dir, self.COMPONENTS.SCHEDULER.code)

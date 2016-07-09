@@ -31,7 +31,7 @@ class MESSAGE:
     NULL_TOKEN = '0' * TOKEN_LENGTH
 
 class MESSAGE_TYPE:
-    TO_SINGLETON = b'0000'
+    TO_SCHEDULER = b'0000'
     TO_PARALLEL_ANY = b'0001'
     TO_PARALLEL_ALL = b'0002'
 
@@ -46,7 +46,7 @@ class MESSAGE_TYPE:
     USER_DEFINED_START = b'5000'
 
 TOPICS = {
-    MESSAGE_TYPE.TO_SINGLETON: b'/zato/to-singleton',
+    MESSAGE_TYPE.TO_SCHEDULER: b'/zato/to-scheduler',
 
     MESSAGE_TYPE.TO_PARALLEL_ANY: b'/zato/to-parallel/any',
     MESSAGE_TYPE.TO_PARALLEL_ALL: b'/zato/to-parallel/all',
