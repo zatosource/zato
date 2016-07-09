@@ -48,7 +48,7 @@ from configobj import ConfigObj
 from dateutil.parser import parse
 
 # gevent
-from gevent import spawn, Timeout
+from gevent import sleep as gevent_sleep, spawn, Timeout
 from gevent.greenlet import Greenlet
 from gevent.hub import Hub
 
@@ -96,8 +96,8 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, SECRET_SHADOW, SIMPLE_IO, soap_body_path, \
-     soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN
+from zato.common import CHANNEL, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, SECRET_SHADOW, SIMPLE_IO, \
+     soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
@@ -324,24 +324,26 @@ def new_cid(random_bytes=random_bytes):
 def get_user_config_name(file_name):
     return file_name.split('.')[0]
 
-def get_config(repo_location, config_name, bunchified=True):
+def get_config(repo_location, config_name, bunchified=True, needs_user_config=True):
     """ Returns the configuration object. Will load additional user-defined config files,
     if any are available at all.
     """
     conf = ConfigObj(os.path.join(repo_location, config_name))
     conf = bunchify(conf) if bunchified else conf
-    conf.user_config_items = {}
 
-    user_config = conf.get('user_config')
-    if user_config:
-        for name, path in user_config.items():
-            path = absolutize(path, repo_location)
-            if not os.path.exists(path):
-                logger.warn('User config not found `%s`, name:`%s`', path, name)
-            else:
-                user_conf = ConfigObj(path)
-                user_conf = bunchify(user_conf) if bunchified else user_conf
-                conf.user_config_items[name] = user_conf
+    if needs_user_config:
+        conf.user_config_items = {}
+
+        user_config = conf.get('user_config')
+        if user_config:
+            for name, path in user_config.items():
+                path = absolutize(path, repo_location)
+                if not os.path.exists(path):
+                    logger.warn('User config not found `%s`, name:`%s`', path, name)
+                else:
+                    user_conf = ConfigObj(path)
+                    user_conf = bunchify(user_conf) if bunchified else user_conf
+                    conf.user_config_items[name] = user_conf
 
     return conf
 
@@ -639,7 +641,7 @@ def dotted_getattr(o, path):
 
 
 def get_service_by_name(session, cluster_id, name):
-    logger.debug('Looking for name:[{}] in cluster_id:[{}]'.format(name, cluster_id))
+    logger.debug('Looking for name:`%s` in cluster_id:`%s`'.format(name, cluster_id))
     return _service(session, cluster_id).\
            filter(Service.name==name).\
            one()
@@ -675,7 +677,7 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
                 session.commit()
             except(IntegrityError, ProgrammingError), e:
                 session.rollback()
-                logger.debug('Caught an expected error, carrying on anyway, e:[%s]', format_exc(e).decode('utf-8'))
+                logger.debug('Caught an expected error, carrying on anyway, e:`%s`', format_exc(e).decode('utf-8'))
 
 def hexlify(item):
     """ Returns a nice hex version of a string given on input.
@@ -706,17 +708,14 @@ class SafePrettyPrinter(PrettyPrinter, object):
         except Exception:
             return object.__repr__(obj)[:-1] + ' (bad repr)>', True, False
 
-
 def spformat(obj, depth=None):
     return SafePrettyPrinter(indent=1, width=76, depth=depth).pformat(obj)
-
 
 def formatvalue(v):
     s = spformat(v, depth=1).replace('\n', '')
     if len(s) > 12500:
         s = object.__repr__(v)[:-1] + ' (really long repr)>'
     return '=' + s
-
 
 def get_stack(f, with_locals=False):
     limit = getattr(sys, 'tracebacklimit', None)
@@ -1077,10 +1076,10 @@ class StaticConfig(Bunch):
 
 # ################################################################################################################################
 
-def add_scheduler_jobs(server, spawn=True):
+def add_scheduler_jobs(api, odb, cluster_id, spawn=True):
     for(id, name, is_active, job_type, start_date, extra, service_name, _,
         _, weeks, days, hours, minutes, seconds, repeats, cron_definition)\
-            in server.odb.get_job_list(server.cluster_id):
+            in odb.get_job_list(cluster_id):
 
         if is_active:
             job_data = Bunch({'id':id, 'name':name, 'is_active':is_active,
@@ -1089,7 +1088,7 @@ def add_scheduler_jobs(server, spawn=True):
                 'days':days, 'hours':hours, 'minutes':minutes,
                 'seconds':seconds, 'repeats':repeats,
                 'cron_definition':cron_definition})
-            server.singleton_server.scheduler.create_edit('create', job_data, spawn=spawn)
+            api.create_edit('create', job_data, spawn=spawn)
 
 # ################################################################################################################################
 
@@ -1376,6 +1375,15 @@ def spawn_greenlet(callable, *args, **kwargs):
     because that means that there were no errors.
     """
     try:
-        spawn(callable, *args, **kwargs).get(timeout=kwargs.get('timeout', 0.2))
+        g = spawn(callable, *args, **kwargs)
+        gevent_sleep(0)
+        g.join(kwargs.get('timeout', 0.2))
+
+        if g.exception:
+            type_, value, traceback = g.exc_info
+            raise type_(value), None, traceback
+
     except Timeout:
         pass # Timeout = good = no errors
+    else:
+        return g

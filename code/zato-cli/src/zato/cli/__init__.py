@@ -130,7 +130,7 @@ loggers:
         propagate: false
     zato_scheduler:
         level: INFO
-        handlers: [scheduler]
+        handlers: [stdout, scheduler]
         qualname: zato_scheduler
         propagate: false
     zato_singleton:

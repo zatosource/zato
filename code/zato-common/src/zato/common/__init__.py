@@ -366,6 +366,9 @@ class DEPLOYMENT_STATUS(Attrs):
     AWAITING_DEPLOYMENT = 'awaiting-deployment'
     IGNORED = 'ignored'
 
+class SERVER_JOIN_STATUS(Attrs):
+    ACCEPTED = 'accepted'
+
 class SERVER_UP_STATUS(Attrs):
     RUNNING = 'running'
     CLEAN_DOWN = 'clean-down'

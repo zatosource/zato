@@ -19,12 +19,15 @@ from crontab import CronTab
 from dateutil.parser import parse
 
 # gevent
-from gevent import sleep, spawn
+from gevent import sleep
 
 # Zato
+from zato.broker import BrokerMessageReceiver
+from zato.broker.client import BrokerClient
 from zato.common import CHANNEL, DATA_FORMAT, ENSURE_SINGLETON_JOB, SCHEDULER, ZATO_NONE
-from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG, SERVICE
-from zato.common.util import new_cid
+from zato.common.broker_message import MESSAGE_TYPE, SCHEDULER as SCHEDULER_MSG, SERVICE, TOPICS
+from zato.common.kvdb import KVDB
+from zato.common.util import new_cid, spawn_greenlet
 from zato.scheduler.backend import Interval, Job, Scheduler as _Scheduler
 
 # ################################################################################################################################
@@ -40,25 +43,40 @@ def _start_date(job_data):
 
 # ################################################################################################################################
 
-class Scheduler(object):
+class Scheduler(BrokerMessageReceiver):
     """ The Zato's job scheduler. All of the operations assume the data was already validated and sanitized
     by relevant Zato public API services.
     """
-    def __init__(self, broker_client=None, run=False, job_log_level='info'):
-        self.broker_client = broker_client
-        self.broker_token = None
-        self.client_push_broker_pull = None
-        self.sched = _Scheduler(self.on_job_executed, job_log_level)
+    def __init__(self, config=None, run=False):
+        self.config = config
+        self.broker_client = None
+        self.config.on_job_executed_cb = self.on_job_executed
+        self.sched = _Scheduler(self.config, self)
+
+        # Broker connection
+        self.broker_conn = KVDB(config=self.config.main.broker)
+        self.broker_conn.init()
+
+        # Broker client
+        self.broker_callbacks = {
+            TOPICS[MESSAGE_TYPE.TO_SCHEDULER]: self.on_broker_msg,
+        }
+
+        self.broker_client = BrokerClient(self.broker_conn, 'scheduler', self.broker_callbacks, [])
 
         if run:
             self.serve_forever()
 
     def serve_forever(self):
         try:
-            spawn(self.sched.run)
+            try:
+                spawn_greenlet(self.sched.run)
+            except Exception, e:
+                logger.warn(format_exc(e))
 
             while not self.sched.ready:
                 sleep(0.1)
+
         except Exception, e:
             logger.warn(format_exc(e))
 
@@ -82,12 +100,7 @@ class Scheduler(object):
         if extra_data_format != ZATO_NONE:
             msg['data_format'] = extra_data_format
 
-        # Special case an internal job that needs to be delivered to all parallel
-        # servers.
-        if name == ENSURE_SINGLETON_JOB:
-            self.broker_client.publish(msg)
-        else:
-            self.broker_client.invoke_async(msg)
+        self.broker_client.invoke_async(msg)
 
         if logger.isEnabledFor(logging.DEBUG):
             msg = 'Sent a job execution request, name [{}], service [{}], extra [{}]'.format(
@@ -115,8 +128,7 @@ class Scheduler(object):
             logger.debug(job_data)
 
         if not job_data.is_active:
-            msg = 'Job [{0}] is not active, not scheduling it'.format(job_data.name)
-            logger.info(msg)
+            logger.info('Cannot schedule inactive job `%s`', job_data.name)
             return
 
         handler = '{0}_{1}'.format(action, job_data.job_type)
@@ -125,8 +137,7 @@ class Scheduler(object):
         try:
             handler(job_data, broker_msg_type, **kwargs)
         except Exception, e:
-            msg = 'Caught exception [{0}]'.format(format_exc(e))
-            logger.error(msg)
+            logger.error('Caught exception `%s`', format_exc(e))
 
 # ################################################################################################################################
 
@@ -232,5 +243,38 @@ class Scheduler(object):
 
     def stop(self):
         self.sched.stop()
+
+# ################################################################################################################################
+
+    def filter(self, *ignored):
+        """ Accept broker messages destined to our client.
+        """
+        return True
+
+# ################################################################################################################################
+
+    def on_broker_msg_SCHEDULER_CREATE(self, msg, *ignored_args):
+        self.create_edit('create', msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SCHEDULER_EDIT(self, msg, *ignored_args):
+        self.create_edit('edit', msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SCHEDULER_DELETE(self, msg, *ignored_args):
+        self.delete(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SCHEDULER_EXECUTE(self, msg, *ignored_args):
+        self.execute(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_SCHEDULER_CLOSE(self, msg, *ignored_args):
+        self.broker_client.close()
+        self.stop()
 
 # ################################################################################################################################

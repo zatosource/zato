@@ -28,7 +28,7 @@ from paste.util.converters import asbool
 
 # Zato
 from zato.common import SCHEDULER
-from zato.common.util import add_startup_jobs, make_repr, new_cid
+from zato.common.util import add_scheduler_jobs, add_startup_jobs, make_repr, new_cid, spawn_greenlet
 
 logger = getLogger(__name__)
 
@@ -165,7 +165,9 @@ class Job(object):
                 self.max_repeats_reached_at = next_run_time
                 self.keep_running = False
 
-                logger.warn('Job `%s` max repeats reached at `%s`', self.name, self.max_repeats_reached_at)
+                logger.warn(
+                    'Cannot compute start_time. Job `%s` max repeats reached at `%s` (UTC)',
+                    self.name, self.max_repeats_reached_at)
 
     def get_context(self):
         ctx = {
@@ -202,62 +204,83 @@ class Job(object):
             logger.debug('Job entering main loop `%s`', self)
 
         _sleep = gevent.sleep
-        _spawn = gevent.spawn
+        _spawn = spawn_greenlet
 
-        while self.keep_running:
-            try:
-                self.current_run += 1
+        try:
+            while self.keep_running:
+                try:
+                    self.current_run += 1
 
-                # Perhaps we've already been executed enough times
-                if self.max_repeats and self.current_run == self.max_repeats:
-                    self.keep_running = False
-                    self.max_repeats_reached = True
-                    self.max_repeats_reached_at = datetime.datetime.utcnow()
+                    # Perhaps we've already been executed enough times
+                    if self.max_repeats and self.current_run == self.max_repeats:
+                        self.keep_running = False
+                        self.max_repeats_reached = True
+                        self.max_repeats_reached_at = datetime.datetime.utcnow()
 
-                    if self.on_max_repeats_reached_cb:
-                        self.on_max_repeats_reached_cb(self)
+                        if self.on_max_repeats_reached_cb:
+                            self.on_max_repeats_reached_cb(self)
 
-                # Invoke callback in a new greenlet so it doesn't block the current one.
-                _spawn(self.callback, **{'ctx':self.get_context()})
+                    # Invoke callback in a new greenlet so it doesn't block the current one.
+                    _spawn(self.callback, **{'ctx':self.get_context()})
 
-            except Exception, e:
-                logger.warn(format_exc(e))
+                except Exception, e:
+                    logger.warn(format_exc(e))
 
-            finally:
-                # Pause the greenlet for however long is needed
-                _sleep(self.get_sleep_time(datetime.datetime.utcnow()))
+                finally:
+                    # Pause the greenlet for however long is needed if it is not a one-off job
+                    if self.type == SCHEDULER.JOB_TYPE.ONE_TIME:
+                        return True
+                    else:
+                        _sleep(self.get_sleep_time(datetime.datetime.utcnow()))
 
-        if logger.isEnabledFor(DEBUG):
-            logger.debug('Job leaving main loop `%s` after %d iterations', self, self.current_run)
+            if logger.isEnabledFor(DEBUG):
+                logger.debug('Job leaving main loop `%s` after %d iterations', self, self.current_run)
+
+        except Exception, e:
+            logger.warn(format_exc(e))
 
         return True
 
     def run(self):
-        if logger.isEnabledFor(DEBUG):
-            logger.debug('Job starting `%s`', self)
-
-        _utcnow = datetime.datetime.utcnow
-        _sleep = gevent.sleep
-
-        # If the job has a start time in the future, sleep until it's ready to go.
-        now = _utcnow()
-
-        while self.start_time > now:
-            _sleep(self.wait_sleep_time)
-
-            if self.wait_iter_cb:
-                self.wait_iter_cb(self.start_time, now, *self.wait_iter_cb_args)
-
-            now = _utcnow()
 
         # OK, we're ready
-        self.main_loop()
+        try:
+
+            if not self.start_time:
+                logger.warn('Job `%s` cannot start without start_time set', self.name)
+                return
+
+            if logger.isEnabledFor(DEBUG):
+                logger.debug('Job starting `%s`', self)
+
+            _utcnow = datetime.datetime.utcnow
+            _sleep = gevent.sleep
+
+            # If the job has a start time in the future, sleep until it's ready to go.
+            now = _utcnow()
+
+            while self.start_time > now:
+                _sleep(self.wait_sleep_time)
+
+                if self.wait_iter_cb:
+                    self.wait_iter_cb(self.start_time, now, *self.wait_iter_cb_args)
+
+                now = _utcnow()
+
+            self.main_loop()
+
+        except Exception, e:
+            logger.warn(format_exc(e))
 
 # ################################################################################################################################
 
 class Scheduler(object):
-    def __init__(self, on_job_executed_cb=None, job_log_level='info', _add_startup_jobs=True):
-        self.on_job_executed_cb = on_job_executed_cb
+    def __init__(self, config, api):
+        self.config = config
+        self.api = api
+        self.on_job_executed_cb = config.on_job_executed_cb
+        self.startup_jobs = config.startup_jobs
+        self.odb = config.odb
         self.jobs = set()
         self.job_greenlets = {}
         self.keep_running = True
@@ -266,8 +289,8 @@ class Scheduler(object):
         self.iter_cb = None
         self.iter_cb_args = ()
         self.ready = False
-        self._add_startup_jobs = _add_startup_jobs
-        self.job_log = getattr(logger, job_log_level)
+        self._add_startup_jobs = config._add_startup_jobs
+        self.job_log = getattr(logger, config.job_log_level)
         self._has_debug = logger.isEnabledFor(DEBUG)
 
     def on_max_repeats_reached(self, job):
@@ -314,7 +337,8 @@ class Scheduler(object):
             found = True
 
         if job.name in self.job_greenlets:
-            self.job_greenlets[job.name].kill(timeout=2.0)
+            g = self.job_greenlets[job.name]
+            self.job_greenlets[job.name].kill(block=False, timeout=2.0)
             del self.job_greenlets[job.name]
             found = True
 
@@ -387,25 +411,33 @@ class Scheduler(object):
         self.on_job_executed_cb(ctx)
         self.job_log('Job executed `%s`, `%s`', ctx['name'], ctx)
 
-        #logger.info(
-
         if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME and unschedule_one_time:
             self.unschedule_by_name(ctx['name'])
+
+    def on_error(self, *args, **kwargs):
+        eee
 
     def spawn_job(self, job):
         """ Spawns a job's greenlet. Must be called with self.lock held.
         """
         job.callback = self.on_job_executed
         job.on_max_repeats_reached_cb = self.on_max_repeats_reached
-        self.job_greenlets[job.name] = gevent.spawn(job.run)
+        greenlet = spawn_greenlet(job.run)
+        greenlet.link_exception(self.on_error)
+        self.job_greenlets[job.name] = greenlet
 
     def run(self):
 
-        # Add the statistics-related scheduler jobs to the ODB
-        if self._add_startup_jobs:
-            add_startup_jobs(self.cluster_id, self.odb, self.startup_jobs, asbool(self.fs_server_config.component_enabled.stats))
-
         try:
+
+            # Add the statistics-related scheduler jobs to the ODB
+            if self._add_startup_jobs:
+                cluster_conf = self.config.main.cluster
+                add_startup_jobs(cluster_conf.id, self.odb, self.startup_jobs, asbool(cluster_conf.stats_enabled))
+
+            # All other jobs
+            add_scheduler_jobs(self.api, self.odb, self.config.main.cluster.id, spawn=False)
+
             _sleep = self.sleep
             _sleep_time = self.sleep_time
 

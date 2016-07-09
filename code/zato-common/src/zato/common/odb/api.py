@@ -55,15 +55,15 @@ class SessionWrapper(object):
         self.config = None
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def init_session(self, name, config, pool, use_scoped_session=True, warn_on_ping_fail=False):
+    def init_session(self, name, config, pool, use_scoped_session=True):
         self.config = config
         self.pool = pool
 
         try:
             self.pool.ping()
         except Exception, e:
-            msg = 'Could not ping:`{}`, session will be left uninitialized, e:`{}`'.format(name, format_exc(e))
-            self.logger.warn(msg)
+            msg = 'Could not ping:`%s`, session will be left uninitialized, e:`%s`'
+            self.logger.warn(msg, name, format_exc(e))
         else:
             if use_scoped_session:
                 self._Session = scoped_session(sessionmaker(bind=self.pool.engine))

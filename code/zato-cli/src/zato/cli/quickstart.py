@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os, random, stat
 from collections import OrderedDict
+from contextlib import closing
 from copy import deepcopy
 from itertools import count
 from uuid import uuid4
@@ -24,6 +25,7 @@ from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agen
      ZatoCommand
 from zato.common.defaults import http_plain_server_port
 from zato.common.markov_passwords import generate_password
+from zato.common.odb.model import Cluster
 from zato.common.util import make_repr
 
 random.seed()
@@ -157,6 +159,7 @@ $BASE_DIR/zato-qs-stop.sh
 $BASE_DIR/zato-qs-start.sh
 """
 
+# ################################################################################################################################
 
 class CryptoMaterialLocation(object):
     """ Locates and remembers location of various crypto material for Zato components.
@@ -181,7 +184,7 @@ class CryptoMaterialLocation(object):
                 if '{}-{}'.format(self.component_pattern, crypto_name) in full_path:
                     setattr(self, '{}_path'.format(crypto_name), full_path)
 
-################################################################################
+# ################################################################################################################################
 
 class Create(ZatoCommand):
     """ Quickly creates a working cluster
@@ -214,6 +217,8 @@ class Create(ZatoCommand):
 
         return bunch
 
+# ################################################################################################################################
+
     def execute(self, args):
         """ Quickly creates Zato components
         1) CA and crypto material
@@ -228,6 +233,18 @@ class Create(ZatoCommand):
 
         if args.odb_type == 'sqlite':
             args.sqlite_path = os.path.abspath(os.path.join(args.path, 'zato.db'))
+
+        '''
+        cluster_id_args = Bunch()
+        cluster_id_args.odb_db_name = args.odb_db_name
+        cluster_id_args.odb_host = args.odb_host
+        cluster_id_args.odb_password = args.odb_password
+        cluster_id_args.odb_port = args.odb_port
+        cluster_id_args.odb_type = args.odb_type
+        cluster_id_args.odb_user = args.odb_user
+        cluster_id_args.postgresql_schema = args.postgresql_schema
+        cluster_id_args.sqlite_path = args.sqlite_path
+        '''
 
         next_step = count(1)
         next_port = count(http_plain_server_port)
@@ -252,6 +269,8 @@ class Create(ZatoCommand):
         # to unset it so that individual commands quickstart invokes don't attempt
         # to store their own configs.
         args.store_config = False
+
+# ################################################################################################################################
 
         #
         # 1) CA
@@ -281,6 +300,8 @@ class Create(ZatoCommand):
 
         self.logger.info('[{}/{}] Certificate authority created'.format(next_step.next(), total_steps))
 
+# ################################################################################################################################
+
         #
         # 2) ODB
         #
@@ -288,6 +309,8 @@ class Create(ZatoCommand):
             self.logger.info('[{}/{}] ODB schema already exists'.format(next_step.next(), total_steps))
         else:
             self.logger.info('[{}/{}] ODB schema created'.format(next_step.next(), total_steps))
+
+# ################################################################################################################################
 
         #
         # 3) ODB initial data
@@ -302,6 +325,8 @@ class Create(ZatoCommand):
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False)
 
         self.logger.info('[{}/{}] ODB initial data created'.format(next_step.next(), total_steps))
+
+# ################################################################################################################################
 
         #
         # 4) servers
@@ -322,6 +347,8 @@ class Create(ZatoCommand):
 
             self.logger.info('[{}/{}] server{} created'.format(next_step.next(), total_steps, name))
 
+# ################################################################################################################################
+
         #
         # 5) load-balancer
         #
@@ -341,6 +368,8 @@ class Create(ZatoCommand):
 
         create_lb.Create(create_lb_args).execute(create_lb_args, True, servers_port, False)
         self.logger.info('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps))
+
+# ################################################################################################################################
 
         #
         # 6) Web admin
@@ -365,11 +394,21 @@ class Create(ZatoCommand):
         self.reset_logger(args, True)
         self.logger.info('[{}/{}] Web admin created'.format(next_step.next(), total_steps))
 
+# ################################################################################################################################
+
         #
-        # 7) Web admin
+        # 7) Scheduler
         #
         scheduler_path = os.path.join(args_path, 'scheduler')
         os.mkdir(scheduler_path)
+
+        from zato.common.util import get_engine, get_engine_url, get_session
+        session = get_session(get_engine(args))
+
+        with closing(session) as s:
+            cluster_id = session.query(Cluster.id).\
+                filter(Cluster.name==cluster_name).\
+                one()[0]
 
         create_scheduler_args = self._bunch_from_args(args, cluster_name)
         create_scheduler_args.path = scheduler_path
@@ -377,12 +416,15 @@ class Create(ZatoCommand):
         create_scheduler_args.pub_key_path = scheduler_crypto_loc.pub_path
         create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path
         create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
+        create_scheduler_args.cluster_id = cluster_id
 
         password = generate_password()
         admin_created = create_scheduler.Create(create_scheduler_args).execute(
             create_scheduler_args, False, password, True)
 
         self.logger.info('[{}/{}] Scheduler created'.format(next_step.next(), total_steps))
+
+# ################################################################################################################################
 
         #
         # 8) Scripts
@@ -436,3 +478,5 @@ class Create(ZatoCommand):
         start_command = os.path.join(args_path, 'zato-qs-start.sh')
         self.logger.info('Start the cluster by issuing the {} command'.format(start_command))
         self.logger.info('Visit https://zato.io/support for more information and support options')
+
+# ################################################################################################################################
