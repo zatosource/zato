@@ -345,7 +345,6 @@ class Scheduler(object):
             found = True
 
         if job.name in self.job_greenlets:
-            g = self.job_greenlets[job.name]
             self.job_greenlets[job.name].kill(block=False, timeout=2.0)
             del self.job_greenlets[job.name]
             found = True

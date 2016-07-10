@@ -26,7 +26,7 @@ from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agen
 from zato.common.defaults import http_plain_server_port
 from zato.common.markov_passwords import generate_password
 from zato.common.odb.model import Cluster
-from zato.common.util import make_repr
+from zato.common.util import get_engine, get_session, make_repr
 
 random.seed()
 
@@ -402,10 +402,9 @@ class Create(ZatoCommand):
         scheduler_path = os.path.join(args_path, 'scheduler')
         os.mkdir(scheduler_path)
 
-        from zato.common.util import get_engine, get_engine_url, get_session
         session = get_session(get_engine(args))
 
-        with closing(session) as s:
+        with closing(session):
             cluster_id = session.query(Cluster.id).\
                 filter(Cluster.name==cluster_name).\
                 one()[0]
