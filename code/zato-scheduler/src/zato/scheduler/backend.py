@@ -198,13 +198,17 @@ class Job(object):
         else:
             raise ValueError('Unsupported job type `{}` ({})'.format(self.type, self.name))
 
+    def _spawn(self, *args, **kwargs):
+        """ A thin wrapper so that it is easier to mock this method out in unit-tests.
+        """
+        return spawn_greenlet(*args, **kwargs)
+
     def main_loop(self):
 
         if logger.isEnabledFor(DEBUG):
             logger.debug('Job entering main loop `%s`', self)
 
         _sleep = gevent.sleep
-        _spawn = spawn_greenlet
 
         try:
             while self.keep_running:
@@ -221,7 +225,7 @@ class Job(object):
                             self.on_max_repeats_reached_cb(self)
 
                     # Invoke callback in a new greenlet so it doesn't block the current one.
-                    _spawn(self.callback, **{'ctx':self.get_context()})
+                    self._spawn(self.callback, **{'ctx':self.get_context()})
 
                 except Exception, e:
                     logger.warn(format_exc(e))
@@ -290,6 +294,7 @@ class Scheduler(object):
         self.iter_cb_args = ()
         self.ready = False
         self._add_startup_jobs = config._add_startup_jobs
+        self._add_scheduler_jobs = config._add_scheduler_jobs
         self.job_log = getattr(logger, config.job_log_level)
         self._has_debug = logger.isEnabledFor(DEBUG)
 
@@ -300,19 +305,22 @@ class Scheduler(object):
     def _create(self, job, spawn=True):
         """ Actually creates a job. Must be called with self.lock held.
         """
-        self.jobs.add(job)
+        try:
+            self.jobs.add(job)
 
-        if job.is_active:
-            if spawn:
-                self.spawn_job(job)
+            if job.is_active:
+                if spawn:
+                    self.spawn_job(job)
 
-                if self._has_debug:
-                    logger.debug('Job scheduled `%s`', job)
-                else:
-                    self.job_log('Job scheduled `%s` (%s, start: %s UTC)', job.name, job.type, job.start_time)
+                    if self._has_debug:
+                        logger.debug('Job scheduled `%s`', job)
+                    else:
+                        self.job_log('Job scheduled `%s` (%s, start: %s UTC)', job.name, job.type, job.start_time)
 
-        else:
-            logger.warn('Skipping inactive job `%s`', job)
+            else:
+                logger.warn('Skipping inactive job `%s`', job)
+        except Exception, e:
+            logger.warn(format_exc(e))
 
     def create(self, *args, **kwargs):
         with self.lock:
@@ -414,17 +422,17 @@ class Scheduler(object):
         if ctx['type'] == SCHEDULER.JOB_TYPE.ONE_TIME and unschedule_one_time:
             self.unschedule_by_name(ctx['name'])
 
-    def on_error(self, *args, **kwargs):
-        eee
+    def _spawn(self, *args, **kwargs):
+        """ As in the Job class, this is a thin wrapper so that it is easier to mock this method out in unit-tests.
+        """
+        return spawn_greenlet(*args, **kwargs)
 
     def spawn_job(self, job):
         """ Spawns a job's greenlet. Must be called with self.lock held.
         """
         job.callback = self.on_job_executed
         job.on_max_repeats_reached_cb = self.on_max_repeats_reached
-        greenlet = spawn_greenlet(job.run)
-        greenlet.link_exception(self.on_error)
-        self.job_greenlets[job.name] = greenlet
+        self.job_greenlets[job.name] = self._spawn(job.run)
 
     def run(self):
 
@@ -436,7 +444,8 @@ class Scheduler(object):
                 add_startup_jobs(cluster_conf.id, self.odb, self.startup_jobs, asbool(cluster_conf.stats_enabled))
 
             # All other jobs
-            add_scheduler_jobs(self.api, self.odb, self.config.main.cluster.id, spawn=False)
+            if self._add_scheduler_jobs:
+                add_scheduler_jobs(self.api, self.odb, self.config.main.cluster.id, spawn=False)
 
             _sleep = self.sleep
             _sleep_time = self.sleep_time
