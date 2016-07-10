@@ -9,9 +9,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import time
 from datetime import datetime, timedelta
 from random import choice, seed
 from unittest import TestCase
+
+# Bunch
+from bunch import Bunch
 
 # crontab
 from crontab import CronTab
@@ -47,8 +51,8 @@ class RLock(object):
 def dummy_callback(*args, **kwargs):
     pass
 
-def get_job(name=None, interval_in_seconds=None, start_time=None, max_repeats=None, callback=None):
-    name = name or rand_string()
+def get_job(name=None, interval_in_seconds=None, start_time=None, max_repeats=None, callback=None, prefix='job'):
+    name = name or '{}-{}'.format(prefix, rand_string())
     interval_in_seconds = interval_in_seconds or rand_int()
     start_time = start_time or rand_date_utc()
     callback = callback or dummy_callback
@@ -62,6 +66,17 @@ def iter_cb(scheduler, stop_time):
     """
     if datetime.utcnow() >= stop_time:
         scheduler.keep_running = False
+
+def get_scheduler_config():
+    config = Bunch()
+    config.on_job_executed_cb = dummy_callback
+    config._add_startup_jobs = False
+    config._add_scheduler_jobs = False
+    config.startup_jobs = []
+    config.odb = None
+    config.job_log_level = 'info'
+
+    return config
 
 class IntervalTestCase(TestCase):
 
@@ -269,7 +284,7 @@ class JobTestCase(TestCase):
             return sleep_time
 
         with patch('gevent.sleep', sleep):
-            with patch('gevent.spawn', spawn):
+            with patch('zato.scheduler.backend.Job._spawn', spawn):
                 with patch('zato.scheduler.backend.Job.get_sleep_time', get_sleep_time):
                     for now in now_values:
                         self.now = now
@@ -296,7 +311,7 @@ class JobTestCase(TestCase):
                                 job.callback = dummy_callback
 
                                 self.assertTrue(job.main_loop())
-                                sleep(0.2)
+                                time.sleep(0.5)
 
                                 self.assertEquals(max_repeats, len(sleep_history))
                                 self.assertEquals(max_repeats, len(spawn_history))
@@ -305,8 +320,8 @@ class JobTestCase(TestCase):
                                     self.assertEquals(sleep_time, item)
 
                                 for idx, (callback, ctx_dict) in enumerate(spawn_history, 1):
-                                    self.assertEquals(1, len(callback))
-                                    callback = callback[0]
+                                    self.assertEquals(2, len(callback))
+                                    callback = callback[1]
                                     self.check_ctx(
                                         ctx_dict['ctx'], job, sleep_time, max_repeats, idx, cb_kwargs, len(spawn_history), job_type)
                                     self.assertIs(callback, dummy_callback)
@@ -453,30 +468,31 @@ class SchedulerTestCase(TestCase):
         def job_run(*ignored):
             pass
 
-        def spawn(func):
+        def spawn(scheduler_instance, func):
             self.assertIs(func, job_run)
             data['spawned_jobs'] += 1
 
-        scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
-        scheduler.on_job_executed = on_job_executed
-        scheduler.lock = RLock()
+        with patch('zato.scheduler.backend.Scheduler._spawn', spawn):
 
-        job1 = get_job()
-        job1.run = job_run
+            scheduler = Scheduler(get_scheduler_config(), None)
+            scheduler.lock = RLock()
+            scheduler.on_job_executed = on_job_executed
 
-        job2 = get_job()
-        job2.run = job_run
+            job1 = get_job()
+            job1.run = job_run
 
-        job3 = get_job(name=job2.name)
-        job3.run = job_run
+            job2 = get_job()
+            job2.run = job_run
 
-        job4 = get_job()
-        job5 = get_job()
+            job3 = get_job(name=job2.name)
+            job3.run = job_run
 
-        job6 = get_job()
-        job6.is_active = False
+            job4 = get_job()
+            job5 = get_job()
 
-        with patch('gevent.spawn', spawn):
+            job6 = get_job(prefix='inactive')
+            job6.is_active = False
+
             scheduler.create(job1)
             scheduler.create(job2)
 
@@ -529,7 +545,15 @@ class SchedulerTestCase(TestCase):
         job3.run = job_run
         job4.run = job_run
 
-        scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
+        config = Bunch()
+        config.on_job_executed_cb = dummy_callback
+        config._add_startup_jobs = False
+        config._add_scheduler_jobs = False
+        config.startup_jobs = []
+        config.odb = None
+        config.job_log_level = 'info'
+
+        scheduler = Scheduler(get_scheduler_config(), None)
         scheduler.spawn_job = spawn_job
         scheduler.lock = RLock()
         scheduler.sleep = _sleep
@@ -569,7 +593,7 @@ class SchedulerTestCase(TestCase):
         # Just to make sure it's inactive by default.
         self.assertTrue(job.is_active)
 
-        scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
+        scheduler = Scheduler(get_scheduler_config(), None)
         data['old_on_max_repeats_reached'] = scheduler.on_max_repeats_reached
 
         def on_max_repeats_reached(job):
@@ -608,7 +632,7 @@ class SchedulerTestCase(TestCase):
         job2 = Job(rand_int(), 'b', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=0.1), max_repeats=job_max_repeats)
         job2.wait_sleep_time = job_sleep_time
 
-        scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
+        scheduler = Scheduler(get_scheduler_config(), None)
         scheduler.lock = RLock()
         scheduler.iter_cb = iter_cb
         scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
@@ -635,18 +659,18 @@ class SchedulerTestCase(TestCase):
         data = {'spawned':[], 'stopped': []}
 
         class FakeGreenlet(object):
-            def __init__(self, run):
-                self.run = self._run = run
+            def __init__(_self, run):
+                _self.run = _self._run = run
 
-            def kill(self, *args, **kwargs):
-                data['stopped'].append([self, args, kwargs])
+            def kill(_self, *args, **kwargs):
+                data['stopped'].append([_self, args, kwargs])
 
-        def spawn(job):
+        def spawn(scheduler_instance, job, *args, **kwargs):
             g = FakeGreenlet(job)
             data['spawned'].append(g)
             return g
 
-        with patch('gevent.spawn', spawn):
+        with patch('zato.scheduler.backend.Scheduler._spawn', spawn):
 
             test_wait_time = 0.5
             job_sleep_time = 10
@@ -658,13 +682,13 @@ class SchedulerTestCase(TestCase):
             job2 = Job(rand_int(), 'b', SCHEDULER.JOB_TYPE.INTERVAL_BASED, Interval(seconds=0.1), max_repeats=job_max_repeats)
             job2.wait_sleep_time = job_sleep_time
 
-            scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
+            scheduler = Scheduler(get_scheduler_config(), None)
             scheduler.lock = RLock()
             scheduler.iter_cb = iter_cb
             scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
 
-            scheduler.create(job1, spawn=False)
-            scheduler.create(job2, spawn=False)
+            scheduler.create(job1)
+            scheduler.create(job2)
             scheduler.run()
 
             self.assertEquals(scheduler.job_greenlets[job1.name]._run, job1.run)
@@ -685,7 +709,7 @@ class SchedulerTestCase(TestCase):
             g, args, kwargs = data['stopped'][0]
             self.assertIs(g.run.im_func, job1.run.im_func) # That's how we know it was job1 deleted not job2
             self.assertIs(args, ())
-            self.assertDictEqual(kwargs, {'timeout':2.0})
+            self.assertDictEqual(kwargs, {'timeout':2.0, 'block':False})
 
     def test_edit(self):
 
@@ -701,7 +725,7 @@ class SchedulerTestCase(TestCase):
         job_sleep_time = 10
         job_max_repeats1, job_max_repeats2 = 20, 30
 
-        scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
+        scheduler = Scheduler(get_scheduler_config(), None)
         scheduler.lock = RLock()
         scheduler.iter_cb = iter_cb
         scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
@@ -782,7 +806,7 @@ class SchedulerTestCase(TestCase):
         job.wait_sleep_time = job_sleep_time
         job.get_context = get_context
 
-        scheduler = Scheduler(dummy_callback, _add_startup_jobs=False)
+        scheduler = Scheduler(get_scheduler_config(), None)
         scheduler.lock = RLock()
         scheduler.iter_cb = iter_cb
         scheduler.iter_cb_args = (scheduler, datetime.utcnow() + timedelta(seconds=test_wait_time))
