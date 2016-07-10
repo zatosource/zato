@@ -289,10 +289,6 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.XPATH_SEC: 'XPath',
 }
 
-# Name of the scheduler's job that will ensure a singleton server is always
-# available in a cluster.
-ENSURE_SINGLETON_JOB = 'zato.server.ensure-cluster-wide-singleton'
-
 DEFAULT_STATS_SETTINGS = {
     'scheduler_per_minute_aggr_interval':60,
     'scheduler_raw_times_interval':90,

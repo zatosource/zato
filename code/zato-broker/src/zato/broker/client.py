@@ -15,9 +15,6 @@ from traceback import format_exc
 # anyjson
 from anyjson import dumps, loads
 
-# gevent
-from gevent import spawn
-
 # Bunch
 from bunch import Bunch
 
