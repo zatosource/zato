@@ -14,13 +14,14 @@ monkey.patch_all()
 # stdlib
 import logging
 import os
+from datetime import datetime
 from tempfile import gettempdir
 
 # ZeroMQ
 import zmq.green as zmq
 
 # Zato
-from zato.common.util import make_repr
+from zato.common.util import make_repr, new_cid
 
 # ################################################################################################################################
 
@@ -28,40 +29,69 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # ################################################################################################################################
 
-class IPCBase(object):
-    """ Base class for core IPC objects.
-    """
-    socket_method = None
-    socket_type = None
-
-    def __init__(self, address, pid):
-        self.address = self.get_address(address)
-        self.pid = pid
-        self.ctx = zmq.Context()
-        self.set_up_socket()
-        self.keep_running = True
-        self.logger = logging.getLogger(self.__class__.__name__)
-
-        self.logger.info('Connected %s/%s to %s', self.socket_type, self.socket_method, self.address)
-
-# ################################################################################################################################
-
-    def set_up_socket(self):
-        self.socket = self.ctx.socket(self.socket_type)
-        self.socket.setsockopt(zmq.LINGER, 0)
-        getattr(self.socket, self.socket_method)(self.address)
-
-# ################################################################################################################################
-
-    def get_address(self, address):
-        return 'ipc://{}'.format(os.path.join(gettempdir(), 'zato-ipc-{}'.format(address)))
-
-# ################################################################################################################################
+class Request(object):
+    def __init__(self, publisher_tag, publisher_pid, payload='', cid=None):
+        self.publisher_tag = publisher_tag
+        self.publisher_pid = publisher_pid
+        self.payload = payload
+        self.request_id = cid or 'ipc.{}'.format(new_cid())
+        self.reply_to_tag = ''
+        self.reply_to_pid = ''
+        self.in_reply_to = ''
+        self.creation_time_utc = datetime.utcnow()
 
     def __repr__(self):
         return make_repr(self)
 
 # ################################################################################################################################
+
+class IPCBase(object):
+    """ Base class for core IPC objects.
+    """
+    def __init__(self, name, pid):
+        self.name = name
+        self.pid = pid
+        self.ctx = zmq.Context()
+        self.set_up_sockets()
+        self.keep_running = True
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.log_connected()
+
+    def __repr__(self):
+        return make_repr(self)
+
+    def set_up_sockets(self):
+        raise NotImplementedError('Needs to be implemented in subclasses')
+
+    def log_connected(self):
+        raise NotImplementedError('Needs to be implemented in subclasses')
+
+    def close(self):
+        raise NotImplementedError('Needs to be implemented in subclasses')
+
+# ################################################################################################################################
+
+class IPCEndpoint(IPCBase):
+    """ A participant in IPC conversations, i.e. either publisher or subscriber.
+    """
+    socket_method = None
+    socket_type = None
+
+    def __init__(self, name, pid):
+        self.address = self.get_address(name)
+        super(IPCEndpoint, self).__init__(name, pid)
+
+    def get_address(self, address):
+        ipc_socket_type = 'pub' if self.socket_type == 'sub' else 'sub'
+        return 'ipc://{}'.format(os.path.join(gettempdir(), 'zato-ipc-{}-{}'.format(address, ipc_socket_type)))
+
+    def set_up_sockets(self):
+        self.socket = self.ctx.socket(getattr(zmq, self.socket_type.upper()))
+        self.socket.setsockopt(zmq.LINGER, 0)
+        getattr(self.socket, self.socket_method)(self.address)
+
+    def log_connected(self):
+        self.logger.info('Connected %s/%s to %s', self.socket_type, self.socket_method, self.address)
 
     def close(self):
         self.keep_running = False
