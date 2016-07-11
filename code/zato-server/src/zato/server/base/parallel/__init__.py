@@ -38,6 +38,7 @@ from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
 from zato.common import KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
+from zato.common.ipc.api import IPCAPI
 from zato.common.time_util import TimeUtil
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, spawn_greenlet, StaticConfig, register_diag_handlers
@@ -110,6 +111,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.zato_lock_manager = None
         self.pid = None
         self.sync_internal = None
+        self.ipc_api = IPCAPI(False)
+        self.ipc_forwarder = IPCAPI(True)
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -369,9 +372,22 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host,
             self.port, self.preferred_address, use_tls)
 
+        # Startup services
         if is_first:
             self.invoke_startup_services(is_first)
             spawn_greenlet(self.set_up_pickup)
+
+        # IPC
+        if is_first:
+            self.ipc_forwarder.name = self.name
+            self.ipc_forwarder.pid = self.pid
+            spawn_greenlet(self.ipc_forwarder.run)
+
+        # IPC
+        self.ipc_api.name = self.name
+        self.ipc_api.pid = self.pid
+        self.ipc_api.on_message_callback = self.worker_store.on_ipc_message
+        spawn_greenlet(self.ipc_api.run)
 
         logger.info('Started `%s@%s` (pid: %s)', server.name, server.cluster.name, self.pid)
 
