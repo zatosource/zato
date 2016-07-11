@@ -9,7 +9,20 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import copy, errno, gc, inspect, json, linecache, logging, os, re, signal, string, threading, traceback, sys
+import copy
+import errno
+import gc
+import inspect
+import json
+import linecache
+import logging
+import os
+import re
+import signal
+import string
+import threading
+import traceback
+import sys
 from ast import literal_eval
 from contextlib import closing
 from cStringIO import StringIO
@@ -1377,7 +1390,7 @@ def spawn_greenlet(callable, *args, **kwargs):
     try:
         g = spawn(callable, *args, **kwargs)
         gevent_sleep(0)
-        g.join(kwargs.get('timeout', 0.1))
+        g.join(kwargs.pop('timeout', 0.2))
 
         if g.exception:
             type_, value, traceback = g.exc_info
@@ -1387,3 +1400,10 @@ def spawn_greenlet(callable, *args, **kwargs):
         pass # Timeout = good = no errors
     else:
         return g
+
+# ################################################################################################################################
+
+def get_logger_for_class(class_):
+    return logging.getLogger('{}.{}'.format(inspect.getmodule(class_).__name__, class_.__name__))
+
+# ################################################################################################################################

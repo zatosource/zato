@@ -8,10 +8,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from gevent import monkey
-monkey.patch_all()
-
 # stdlib
+import inspect
 import logging
 import os
 from datetime import datetime
@@ -21,11 +19,7 @@ from tempfile import gettempdir
 import zmq.green as zmq
 
 # Zato
-from zato.common.util import make_repr, new_cid
-
-# ################################################################################################################################
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from zato.common.util import get_logger_for_class, make_repr, new_cid, spawn_greenlet
 
 # ################################################################################################################################
 
@@ -52,9 +46,9 @@ class IPCBase(object):
         self.name = name
         self.pid = pid
         self.ctx = zmq.Context()
-        self.set_up_sockets()
+        spawn_greenlet(self.set_up_sockets)
         self.keep_running = True
-        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger = get_logger_for_class(self.__class__)
         self.log_connected()
 
     def __repr__(self):
@@ -64,6 +58,7 @@ class IPCBase(object):
         raise NotImplementedError('Needs to be implemented in subclasses')
 
     def log_connected(self):
+        zzz
         raise NotImplementedError('Needs to be implemented in subclasses')
 
     def close(self):
@@ -91,7 +86,7 @@ class IPCEndpoint(IPCBase):
         getattr(self.socket, self.socket_method)(self.address)
 
     def log_connected(self):
-        self.logger.info('Connected %s/%s to %s', self.socket_type, self.socket_method, self.address)
+        self.logger.info('Established %s/%s to %s (pid: %s)', self.socket_type, self.socket_method, self.address, self.pid)
 
     def close(self):
         self.keep_running = False

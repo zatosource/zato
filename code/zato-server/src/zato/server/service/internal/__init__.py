@@ -71,6 +71,8 @@ class AdminService(Service):
         if self._filter_by:
             self._search_tool = SearchTool(self._filter_by)
 
+        self.ipc_api = self.server.ipc_api
+
         super(AdminService, self)._init()
 
 # ################################################################################################################################
@@ -188,6 +190,8 @@ class Ping(AdminService):
         response_elem = 'zato_ping_response'
 
     def handle(self):
+        from datetime import datetime
+        self.ipc_api.publish(datetime.utcnow().isoformat())
         self.response.payload.pong = 'zato'
 
 # ################################################################################################################################
