@@ -8,43 +8,31 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# gevent
-from gevent import sleep, spawn, spawn_later
-
 # ZeroMQ
 import zmq.green as zmq
 
 # Zato
-from zato.common.ipc import IPCBase
+from zato.common.ipc import IPCEndpoint, Request
+
+# This is needed so that unpickling of requests works
+Request = Request
 
 # ################################################################################################################################
 
-class Subscriber(IPCBase):
+class Subscriber(IPCEndpoint):
     """ Listens for incoming IPC messages and invokes callbacks for each one received.
     """
-    socket_method = 'bind'
-    socket_type = zmq.SUB
+    socket_method = 'connect'
+    socket_type = 'sub'
+
+    def __init__(self, on_message_callback, *args, **kwargs):
+        self.on_message_callback = on_message_callback
+        super(Subscriber, self).__init__(*args, **kwargs)
 
     def serve_forever(self):
         self.socket.setsockopt(zmq.SUBSCRIBE, b'')
 
         while self.keep_running:
-            data = self.socket.recv_pyobj()
-            self.logger.warn('Got data %s in pid %s', data, self.pid)
+            self.on_message_callback(self.socket.recv_pyobj())
 
 # ################################################################################################################################
-
-if __name__ == '__main__':
-
-    name = 'server1-sub'
-
-    s1 = Subscriber(name, '1')
-    s2 = Subscriber(name, '2')
-
-    spawn(s1.serve_forever)
-    spawn(s2.serve_forever)
-
-    sleep(1)
-
-    while True:
-        sleep(0.1)

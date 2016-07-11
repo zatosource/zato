@@ -8,36 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-import zmq
-
-def main():
-
-    try:
-        context = zmq.Context(1)
-        # Socket facing clients
-        frontend = context.socket(zmq.SUB)
-        frontend.bind("ipc:///tmp/zato-ipc-server1-sub")
-        
-        frontend.setsockopt(zmq.SUBSCRIBE, b"")
-        
-        # Socket facing services
-        backend = context.socket(zmq.PUB)
-        backend.bind("ipc:///tmp/zato-ipc-server1-pub")
-
-        zmq.device(zmq.FORWARDER, frontend, backend)
-    except Exception, e:
-        print("bringing down zmq device", e)
-    finally:
-        frontend.close()
-        backend.close()
-        context.term()
-
-if __name__ == "__main__":
-    main()
-
-'''
-# gevent
-from gevent import sleep, spawn, spawn_later
+# stdlib
+import os
+from tempfile import gettempdir
 
 # ZeroMQ
 import zmq.green as zmq
@@ -48,24 +21,24 @@ from zato.common.ipc import IPCBase
 # ################################################################################################################################
 
 class Forwarder(IPCBase):
-    """ Sends outgoing IPC messages to any party listening for them.
+    """ An IPC broker forwarding requests across pub/sub processes. Required to achieve an i
     """
-    socket_method = 'bind'
-    socket_type = zmq.PUB
+    def __init__(self, base_address, pid):
+        self.base_address = self.get_address(base_address)
+        super(Forwarder, self).__init__(base_address, pid)
 
-    def send(self):
-        self.socket.send_pyobj(str(self.pid) * 5)
+    def get_address(self, address):
+        return 'ipc://{}'.format(os.path.join(gettempdir(), 'zato-ipc-{}'.format(address)))
 
-    def send_forever(self):
-        while True:
-            sleep(0.1)
-            self.send()
+    def set_up_sockets(self):
+        self.socket_for_publishers = self.ctx.socket(zmq.SUB)
+        self.socket_for_publishers.bind(self.base_address + '-sub')
+
+        self.socket_for_publishers.setsockopt(zmq.SUBSCRIBE, b'')
+
+        self.socket_for_subscribers = self.ctx.socket(zmq.PUB)
+        self.socket_for_subscribers.bind(self.base_address + '-pub')
+
+        zmq.device(zmq.FORWARDER, self.socket_for_publishers, self.socket_for_subscribers)
 
 # ################################################################################################################################
-
-if __name__ == '__main__':
-
-    name = 'server1'
-    p = Publisher(name, 1)
-    p.send_forever()
-    '''
