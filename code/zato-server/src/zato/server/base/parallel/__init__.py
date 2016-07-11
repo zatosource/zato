@@ -480,8 +480,13 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
-    def invoke(self, service, payload, *args, **kwargs):
-        return self.worker_store.invoke(service, payload, *args, **kwargs)
+    def invoke(self, service, request, *args, **kwargs):
+        return self.worker_store.invoke(service, request, *args, **kwargs)
+
+# ################################################################################################################################
+
+    def invoke_async(self, service, request, callback, *args, **kwargs):
+        return self.worker_store.invoke(service, request, is_async=True, callback=callback, *args, **kwargs)
 
 # ################################################################################################################################
 
