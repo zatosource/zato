@@ -46,6 +46,7 @@ class Config(object):
         self.job_log_level = 'info'
         self.broker_client = None
         self._add_startup_jobs = True
+        self._add_scheduler_jobs = True
 
 # ################################################################################################################################
 
