@@ -1377,7 +1377,7 @@ def spawn_greenlet(callable, *args, **kwargs):
     try:
         g = spawn(callable, *args, **kwargs)
         gevent_sleep(0)
-        g.join(kwargs.get('timeout', 0.2))
+        g.join(kwargs.get('timeout', 0.1))
 
         if g.exception:
             type_, value, traceback = g.exc_info

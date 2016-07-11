@@ -103,7 +103,7 @@ class CheckConfig(ManageCommand):
             raise Exception('Cannot proceed, found pidfile `{}`'.format(pidfile))
 
         if self.show_output:
-            self.logger.info('No such pidfile `{}`, OK'.format(pidfile))
+            self.logger.info('No such pidfile `%s`, OK', pidfile)
 
     def on_server_check_port_available(self, server_conf):
         address = server_conf['main']['gunicorn_bind']
