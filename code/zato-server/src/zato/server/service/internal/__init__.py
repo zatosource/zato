@@ -190,8 +190,7 @@ class Ping(AdminService):
         response_elem = 'zato_ping_response'
 
     def handle(self):
-        from datetime import datetime
-        self.ipc_api.publish(datetime.utcnow().isoformat())
+        self.servers[self].invoke('zato.ping3')
         self.response.payload.pong = 'zato'
 
 # ################################################################################################################################

@@ -1058,7 +1058,9 @@ class WorkerStore(BrokerMessageReceiver):
             'payload': payload,
             'data_format': kwargs.get('data_format'),
             'service': service,
-            'cid': new_cid()
+            'cid': new_cid(),
+            'is_async': kwargs.get('is_async'),
+            'callback': kwargs.get('callback'),
         }, CHANNEL.WORKER, None, needs_response=True)
 
 # ################################################################################################################################

@@ -44,7 +44,7 @@ class Forwarder(IPCBase):
         zmq.device(zmq.FORWARDER, self.socket_for_publishers, self.socket_for_subscribers)
 
     def log_connected(self):
-        self.logger.warn('Forwarded running sub:`%s`, pub:`%s`',
+        self.logger.info('Forwarder running sub:`%s`, pub:`%s`',
             self.socket_for_publishers_address, self.socket_for_subscribers_address)
 
 # ################################################################################################################################

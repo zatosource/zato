@@ -24,11 +24,12 @@ from zato.common.util import get_logger_for_class, make_repr, new_cid, spawn_gre
 # ################################################################################################################################
 
 class Request(object):
-    def __init__(self, publisher_tag, publisher_pid, payload='', cid=None):
+    def __init__(self, publisher_tag, publisher_pid, payload='', request_id=None):
         self.publisher_tag = publisher_tag
         self.publisher_pid = publisher_pid
         self.payload = payload
-        self.request_id = cid or 'ipc.{}'.format(new_cid())
+        self.request_id = request_id or 'ipc.{}'.format(new_cid())
+        self.target_pid = None
         self.reply_to_tag = ''
         self.reply_to_pid = ''
         self.in_reply_to = ''
@@ -58,7 +59,6 @@ class IPCBase(object):
         raise NotImplementedError('Needs to be implemented in subclasses')
 
     def log_connected(self):
-        zzz
         raise NotImplementedError('Needs to be implemented in subclasses')
 
     def close(self):
