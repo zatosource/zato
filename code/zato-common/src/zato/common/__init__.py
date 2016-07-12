@@ -771,6 +771,10 @@ CONTENT_TYPE = Bunch(
     SOAP12 = 'application/soap+xml; charset=utf-8',
 )
 
+class IPC_ACTION:
+    INVOKE_SERVICE = 'invoke-service'
+    INVOKE_WORKER_STORE = 'invoke-worker-store'
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'

@@ -112,6 +112,7 @@ http_server_header=Zato
 zeromq_connect_sleep=0.1
 aws_host=
 use_soap_envelope=True
+fifo_response_buffer_size=0.2 # In MB
 
 [stats]
 expire_after=168 # In hours, 168 = 7 days = 1 week
