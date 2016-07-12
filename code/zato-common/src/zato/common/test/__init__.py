@@ -206,6 +206,7 @@ class FakeServer(object):
         self.static_config = Bunch()
         self.time_util = Bunch()
         self.servers = []
+        self.ipc_api = None
 
 class ForceTypeWrapper(object):
     """ Makes comparison between two ForceType elements use their names.
