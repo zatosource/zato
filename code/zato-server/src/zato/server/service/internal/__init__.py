@@ -190,7 +190,6 @@ class Ping(AdminService):
         response_elem = 'zato_ping_response'
 
     def handle(self):
-        self.servers[self].invoke('zato.ping3')
         self.response.payload.pong = 'zato'
 
 # ################################################################################################################################

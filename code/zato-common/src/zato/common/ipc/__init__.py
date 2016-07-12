@@ -19,6 +19,7 @@ from tempfile import gettempdir
 import zmq.green as zmq
 
 # Zato
+from zato.common import DATA_FORMAT, NO_DEFAULT_VALUE
 from zato.common.util import get_logger_for_class, make_repr, new_cid, spawn_greenlet
 
 # ################################################################################################################################
@@ -27,7 +28,10 @@ class Request(object):
     def __init__(self, publisher_tag, publisher_pid, payload='', request_id=None):
         self.publisher_tag = publisher_tag
         self.publisher_pid = publisher_pid
+        self.action = NO_DEFAULT_VALUE
+        self.service = ''
         self.payload = payload
+        self.data_format = DATA_FORMAT.DICT
         self.request_id = request_id or 'ipc.{}'.format(new_cid())
         self.target_pid = None
         self.reply_to_tag = ''

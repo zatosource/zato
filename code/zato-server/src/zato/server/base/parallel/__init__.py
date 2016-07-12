@@ -55,6 +55,8 @@ from zato.server.pickup import PickupManager
 logger = logging.getLogger(__name__)
 kvdb_logger = logging.getLogger('zato_kvdb')
 
+megabyte = 10**6
+
 # ################################################################################################################################
 
 class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTPHandler):
@@ -113,6 +115,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.sync_internal = None
         self.ipc_api = IPCAPI(False)
         self.ipc_forwarder = IPCAPI(True)
+        self.fifo_response_buffer_size = 0.1 # In megabytes
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -290,6 +293,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
             self.user_config[get_user_config_name(file_name)] = conf
 
+        # Convert size of FIFO response buffers to megabytes
+        self.fifo_response_buffer_size = int(float(self.fs_server_config.misc.fifo_response_buffer_size) * megabyte)
+
         is_first, locally_deployed = self.maybe_on_first_worker(server, self.kvdb.conn)
 
         return is_first, locally_deployed
@@ -372,6 +378,25 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host,
             self.port, self.preferred_address, use_tls)
 
+        # Normalize hot-deploy configuration
+        self.hot_deploy_config = Bunch()
+
+        self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(
+            self.repo_location, self.fs_server_config.hot_deploy.work_dir))
+
+        self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
+        self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
+
+        for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pick_up'):
+
+            # New in 2.0
+            if name == 'delete_after_pick_up':
+                value = asbool(self.fs_server_config.hot_deploy.get(name, True))
+                self.hot_deploy_config[name] = value
+            else:
+                self.hot_deploy_config[name] = os.path.normpath(os.path.join(
+                    self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
+
         # Startup services
         if is_first:
             self.invoke_startup_services(is_first)
@@ -444,25 +469,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         # Ok, now that we have configured everything that pickup.conf had
         # we still need to make it aware of services and how to pick them up from FS.
 
-        # Normalize hot-deploy configuration
-        self.hot_deploy_config = Bunch()
-
-        self.hot_deploy_config.work_dir = os.path.normpath(os.path.join(
-            self.repo_location, self.fs_server_config.hot_deploy.work_dir))
-
-        self.hot_deploy_config.backup_history = int(self.fs_server_config.hot_deploy.backup_history)
-        self.hot_deploy_config.backup_format = self.fs_server_config.hot_deploy.backup_format
-
-        for name in('current_work_dir', 'backup_work_dir', 'last_backup_work_dir', 'delete_after_pick_up'):
-
-            # New in 2.0
-            if name == 'delete_after_pick_up':
-                value = asbool(self.fs_server_config.hot_deploy.get(name, True))
-                self.hot_deploy_config[name] = value
-            else:
-                self.hot_deploy_config[name] = os.path.normpath(os.path.join(
-                    self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
-
         stanza = 'zato_internal_service_hot_deploy'
         stanza_config = Bunch({
             'pickup_from': absolutize(self.fs_server_config.hot_deploy.pickup_dir, self.repo_location),
@@ -480,12 +486,28 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def invoke_by_pid(self, service, request, target_pid, *args, **kwargs):
+        """ Invokes a service in a worker process by the latter's PID.
+        """
+        self.ipc_api.publish(request)
+
+# ################################################################################################################################
+
     def invoke(self, service, request, *args, **kwargs):
-        return self.worker_store.invoke(service, request, *args, **kwargs)
+        """ Invokes a service either in our own worker or, if PID is given on input, in another process of this server.
+        """
+        target_pid = kwargs.pop('pid', None)
+
+        if target_pid and target_pid != self.pid:
+            return self.ipc_api.invoke_by_pid(service, request, target_pid, self.fifo_response_buffer_size)
+        else:
+            return self.worker_store.invoke(service, request, *args, **kwargs)
 
 # ################################################################################################################################
 
     def invoke_async(self, service, request, callback, *args, **kwargs):
+        """ Invokes a service in background.
+        """
         return self.worker_store.invoke(service, request, is_async=True, callback=callback, *args, **kwargs)
 
 # ################################################################################################################################
