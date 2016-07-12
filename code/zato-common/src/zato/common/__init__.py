@@ -455,6 +455,7 @@ class CHANNEL(Attrs):
     INVOKE = 'invoke'
     INVOKE_ASYNC = 'invoke-async'
     INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'
+    IPC = 'ipc'
     JMS_WMQ = 'jms-wmq'
     NOTIFIER_RUN = 'notifier-run'
     NOTIFIER_TARGET = 'notifier-target'

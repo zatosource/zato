@@ -20,13 +20,14 @@ class Publisher(IPCEndpoint):
     socket_method = 'connect'
     socket_type = 'pub'
 
-    def publish(self, payload, service='', target_pid=None, action=IPC_ACTION.INVOKE_SERVICE):
+    def publish(self, payload, service='', target_pid=None, action=IPC_ACTION.INVOKE_SERVICE, reply_to_fifo=None):
         request = Request(self.name, self.pid)
 
         request.payload = payload
         request.service = service
         request.action = action
         request.target_pid = target_pid
+        request.reply_to_fifo = reply_to_fifo
 
         self.socket.send_pyobj(request)
 
