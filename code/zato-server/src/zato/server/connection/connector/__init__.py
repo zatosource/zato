@@ -13,7 +13,7 @@ from logging import getLogger
 from traceback import format_exc
 
 # gevent
-from gevent import spawn, Timeout
+from gevent import spawn
 from gevent.lock import RLock
 
 # Zato

@@ -35,9 +35,6 @@ import gevent
 from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
-# pyrapidjson
-from rapidjson import dumps
-
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
