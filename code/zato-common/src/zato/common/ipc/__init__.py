@@ -30,14 +30,24 @@ class Request(object):
         self.publisher_pid = publisher_pid
         self.action = NO_DEFAULT_VALUE
         self.service = ''
-        self.payload = payload
+        self._payload = payload
+        self.payload_type = type(payload).__name__
         self.data_format = DATA_FORMAT.DICT
         self.request_id = request_id or 'ipc.{}'.format(new_cid())
         self.target_pid = None
         self.reply_to_tag = ''
-        self.reply_to_pid = ''
+        self.reply_to_fifo = ''
         self.in_reply_to = ''
         self.creation_time_utc = datetime.utcnow()
+
+    @property
+    def payload(self):
+        return self._payload
+
+    @payload.setter
+    def payload(self, value):
+        self._payload = value
+        self.payload_type = type(self._payload)
 
     def __repr__(self):
         return make_repr(self)

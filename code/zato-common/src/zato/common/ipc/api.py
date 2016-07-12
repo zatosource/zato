@@ -20,6 +20,9 @@ from uuid import uuid4
 # gevent
 from gevent import sleep
 
+# pyrapidjson
+from rapidjson import loads
+
 # Zato
 from zato.common.ipc.forwarder import Forwarder
 from zato.common.ipc.publisher import Publisher
@@ -62,6 +65,8 @@ class IPCAPI(object):
         """ Synchronously invokes a service through IPC. If target_pid is an exact PID then this one worker process
         will be invoked if it exists at all.
         """
+        target_pid = self.pid
+
         # Create a FIFO pipe to receive replies to come through
         fifo_path = os.path.join(tempfile.tempdir, 'zato-ipc-fifo-{}'.format(uuid4().hex))
         os.mkfifo(fifo_path, fifo_create_mode)
@@ -70,27 +75,29 @@ class IPCAPI(object):
 
         try:
             response = None
-            self.publisher.publish(payload, service, target_pid)
+            self.publisher.publish(payload, service, target_pid, reply_to_fifo=fifo_path)
 
             try:
                 # Open the pipe for reading ..
                 fifo = os.open(fifo_path, os.O_RDONLY|os.O_NONBLOCK)
 
                 # .. wait for response ..
-                sleep(timeout)
+                sleep(0.2)
 
                 # .. and obtain it.
                 response = os.read(fifo, fifo_response_buffer_size)
+
+                if response is not None:
+                    response = loads(response)
 
             except OSError, e:
                 if e.errno not in fifo_ignore_err:
                     logger.warn('zzz %s', e)
                     raise
-
             finally:
                 os.close(fifo)
 
-            logger.warn('aaaa %s', response)
+            logger.warn('aaaa `%s`', response)
 
             return response
 

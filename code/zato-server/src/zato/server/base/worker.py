@@ -35,6 +35,9 @@ import gevent
 from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
+# pyrapidjson
+from rapidjson import dumps
+
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
@@ -1054,7 +1057,7 @@ class WorkerStore(BrokerMessageReceiver):
         """ Invokes a service by its name with request on input.
         """
         return self.on_message_invoke_service({
-            'channel': CHANNEL.WORKER,
+            'channel': kwargs.get('channel', CHANNEL.WORKER),
             'payload': payload,
             'data_format': kwargs.get('data_format'),
             'service': service,
@@ -1822,6 +1825,16 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_ipc_message(self, msg):
-        self.logger.warn('IPC message %r', msg)
+
+        # If there is target_pid we cannot continue if we are not the recipient.
+        if msg.target_pid and msg.target_pid != self.server.pid:
+            return
+
+        # We get here if there is no target_pid or if there is one and it matched that of ours.
+
+        response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=msg.data_format)
+
+        with open(msg.reply_to_fifo, 'wb') as fifo:
+            fifo.write(response)
 
 # ################################################################################################################################
