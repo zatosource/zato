@@ -14,6 +14,7 @@ import logging
 import os
 import stat
 import tempfile
+from datetime import datetime, timedelta
 from traceback import format_exc
 from uuid import uuid4
 
@@ -61,43 +62,57 @@ class IPCAPI(object):
     def publish(self, payload):
         self.publisher.publish(payload)
 
-    def invoke_by_pid(self, service, payload, target_pid, fifo_response_buffer_size, timeout=5, fifo_ignore_err=fifo_ignore_err):
-        """ Synchronously invokes a service through IPC. If target_pid is an exact PID then this one worker process
-        will be invoked if it exists at all.
+    def _get_response(self, fifo, buffer_size, fifo_ignore_err=fifo_ignore_err):
+
+        try:
+            response = os.read(fifo, buffer_size)
+
+            if response is not None:
+                return loads(response)
+
+        except OSError, e:
+            if e.errno not in fifo_ignore_err:
+                logger.warn('zzz %s', e)
+                raise
+
+    def invoke_by_pid(self, service, payload, target_pid, fifo_response_buffer_size, timeout=5, is_async=False):
+        """ Invokes a service through IPC, synchronously or in background. If target_pid is an exact PID then this one worker
+        process will be invoked if it exists at all.
         """
-        target_pid = self.pid
 
         # Create a FIFO pipe to receive replies to come through
         fifo_path = os.path.join(tempfile.tempdir, 'zato-ipc-fifo-{}'.format(uuid4().hex))
         os.mkfifo(fifo_path, fifo_create_mode)
 
-        logger.warn('4433 %s', fifo_path)
-
         try:
-            response = None
             self.publisher.publish(payload, service, target_pid, reply_to_fifo=fifo_path)
 
+            # Async = we do not need to wait for any response
+            if is_async:
+                return
+
+            response = None
+
             try:
+
                 # Open the pipe for reading ..
                 fifo = os.open(fifo_path, os.O_RDONLY|os.O_NONBLOCK)
 
-                # .. wait for response ..
-                sleep(0.2)
+                # .. and wait for response ..
 
-                # .. and obtain it.
-                response = os.read(fifo, fifo_response_buffer_size)
+                now = datetime.utcnow()
+                until = now + timedelta(seconds=timeout)
 
-                if response is not None:
-                    response = loads(response)
+                while now < until:
+                    sleep(0.05)
+                    response = self._get_response(fifo, fifo_response_buffer_size)
+                    if response:
+                        break
+                    else:
+                        now = datetime.utcnow()
 
-            except OSError, e:
-                if e.errno not in fifo_ignore_err:
-                    logger.warn('zzz %s', e)
-                    raise
             finally:
                 os.close(fifo)
-
-            logger.warn('aaaa `%s`', response)
 
             return response
 
