@@ -13,8 +13,8 @@ function symlink_py {
 
 bash $CURDIR/clean.sh
 
-FOX_HOME=/home/foxway
-MIRROR_OS=http://mirror.centos.org/centos/6/os/x86_64/Packages
+export FOX_HOME=/home/foxway
+export MIRROR_OS=http://mirror.centos.org/centos/6/os/x86_64/Packages
 
 mkdir $FOX_HOME/rpms
 wget -P $FOX_HOME/rpms \
@@ -57,31 +57,38 @@ wget -P $FOX_HOME/rpms \
     $MIRROR_OS/libgpg-error-devel-1.7-4.el6.x86_64.rpm \
     $MIRROR_OS/python-crypto-2.0.1-22.el6.x86_64.rpm
 
-for file in $(ls $FOX_HOME/rpms/)
+for file in $(ls /home/foxway/rpms/)
 do
-    rpm2cpio $FOX_HOME/rpms/$file > $FOX_HOME/rpms/$file.cpio
+    rpm2cpio /home/foxway/rpms/$file > /home/foxway/rpms/$file.cpio
 done
 
-for cpio in $(ls $FOX_HOME/rpms/ | grep .cpio)
+cd /home/foxway
+for cpio in $(ls /home/foxway/rpms/ | grep .cpio)
 do
-    cpio -idv < $FOX_HOME/rpms/$cpio
+    cpio -idv < /home/foxway/rpms/$cpio
 done
 
 export PATH=$PATH:$FOX_HOME/usr/bin/
 
-#mkdir $CURDIR/zato_extra_paths
+mkdir $CURDIR/zato_extra_paths
 
-#export CYTHON=$CURDIR/bin/cython
+export CYTHON=$CURDIR/bin/cython
 
+wget -P $FOX_HOME https://bootstrap.pypa.io/get-pip.py
+python $FOX_HOME/get-pip.py --user
+
+/home/foxway/.local/bin/pip install --upgrade pip --user
+/home/foxway/.local/bin/pip install virtualenv --user
 #sudo pip-python install --upgrade pip
+# distribute package is deprecated https://pythonhosted.org/distribute/
 #sudo pip-python install distribute==0.6.49
 #sudo pip-python install virtualenv==1.9.1
 #sudo pip-python install zato-apitest
 
-#virtualenv .
+/home/foxway/.local/bin/virtualenv /home/foxway/
 
-#$CURDIR/bin/python bootstrap.py -v 1.7.0
-#$CURDIR/bin/buildout
+$CURDIR/bin/python bootstrap.py -v 1.7.0
+$CURDIR/bin/buildout
 
 echo
 echo OK
