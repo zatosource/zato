@@ -1857,3 +1857,42 @@ class RBACRolePermission(Base):
         return '{}/{}/{}/{}'.format(self.id, self.role_id, self.perm_id, self.service_id)
 
 # ################################################################################################################################
+
+class JWT(SecurityBase):
+    """ JWT set of credentials.
+    """
+    __tablename__ = 'sec_jwt'
+    __mapper_args__ = {'polymorphic_identity': 'jwt'}
+
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None,
+                 password=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.password = password
+        self.cluster = cluster
+
+# ################################################################################################################################
+
+class KVCache(SecurityBase):
+    """ Key Value Cache table.
+    """
+    __tablename__ = 'kvcache'
+    __table_args__ = (UniqueConstraint('key'), {})
+
+    id = Column(Integer, Sequence('server_id_seq'), primary_key=True)
+    key = Column(LongBinary(), nullable=False)
+    value = Column(LongBinary(), nullable=True)
+    insert_time = Column(DateTime(), nullable=False)
+    expire_time = Column(DateTime(), nullable=True)
+
+    def __init__(self, id=None, key=None, type=None, value=None,
+                 insert_time=None, expirte_time=None):
+        self.id = id
+        self.key = key
+        self.value = value
+        self.insert_time = insert_time
+        self.expire_time = expire_time
