@@ -88,4 +88,4 @@ class JWT(object):
 
             return Bunch(valid=True, token=token_data)
         else:
-            return Bunch(valid=False, message='Token Invalid')
+            return Bunch(valid=False, message='Invalid Token')

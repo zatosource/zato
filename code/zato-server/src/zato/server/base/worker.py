@@ -178,10 +178,11 @@ class WorkerStore(BrokerMessageReceiver):
         self.request_dispatcher.url_data = URLData(
             deepcopy(self.worker_config.http_soap),
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
-            self.worker_config.basic_auth, self.worker_config.ntlm, self.worker_config.oauth, self.worker_config.tech_acc,
-            self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws, self.worker_config.openstack_security,
-            self.worker_config.xpath_sec, self.worker_config.tls_channel_sec, self.worker_config.tls_key_cert, self.kvdb,
-            self.broker_client, self.server.odb, self.json_pointer_store, self.xpath_store)
+            self.worker_config.basic_auth, self.worker_config.jwt, self.worker_config.ntlm, self.worker_config.oauth,
+            self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws,
+            self.worker_config.openstack_security, self.worker_config.xpath_sec, self.worker_config.tls_channel_sec,
+            self.worker_config.tls_key_cert, self.kvdb, self.broker_client, self.server.odb, self.json_pointer_store,
+            self.xpath_store)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
@@ -837,6 +838,37 @@ class WorkerStore(BrokerMessageReceiver):
         """ Changes password of an HTTP Basic Auth security definition.
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
+                self._visit_wrapper_change_password)
+
+# ################################################################################################################################
+
+    def jwt_get(self, name):
+        """ Returns the configuration of the JWT security definition
+        of the given name.
+        """
+        return self.request_dispatcher.url_data.jwt_get(name)
+
+    def on_broker_msg_SECURITY_JWT_CREATE(self, msg, *args):
+        """ Creates a new JWT security definition
+        """
+        dispatcher.notify(broker_message.SECURITY.JWT_CREATE.value, msg)
+
+    def on_broker_msg_SECURITY_JWT_EDIT(self, msg, *args):
+        """ Updates an existing JWT security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
+                self._visit_wrapper_edit, keys=('is_active', 'username', 'name'))
+
+    def on_broker_msg_SECURITY_JWT_DELETE(self, msg, *args):
+        """ Deletes a JWT security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
+                self._visit_wrapper_delete)
+
+    def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of a JWT security definition.
+        """
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.JWT,
                 self._visit_wrapper_change_password)
 
 # ################################################################################################################################
