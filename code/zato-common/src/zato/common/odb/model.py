@@ -1867,12 +1867,13 @@ class JWT(SecurityBase):
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
 
     def __init__(self, id=None, name=None, is_active=None, username=None,
-                 password=None, cluster=None):
+                 password=None, secret=None, cluster=None):
         self.id = id
         self.name = name
         self.is_active = is_active
         self.username = username
         self.password = password
+        self.secret = secret
         self.cluster = cluster
 
 # ################################################################################################################################

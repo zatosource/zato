@@ -38,6 +38,7 @@ from zato.common.broker_message import code_to_name, CHANNEL, SECURITY
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition
 from zato.server.connection.http_soap import Forbidden, Unauthorized
+from zato.server.jwt import JWT
 
 logger = logging.getLogger(__name__)
 
@@ -91,13 +92,14 @@ class OAuthStore(object):
 class URLData(OAuthDataStore):
     """ Performs URL matching and all the HTTP/SOAP-related security checks.
     """
-    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, oauth_config=None,
+    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, jwt=None, ntlm_config=None, oauth_config=None,
                  tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, openstack_config=None,
                  xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, kvdb=None, broker_client=None,
                  odb=None, json_pointer_store=None, xpath_store=None):
         self.channel_data = SortedListWithKey(channel_data, key=attrgetter('name'))
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
+        self.jwt = jwt
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
         self.tech_acc_config = tech_acc_config
@@ -206,6 +208,28 @@ class URLData(OAuthDataStore):
                 path_info, cid, result.code, result.description)
             logger.error(msg)
             raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
+
+    def _handle_security_jwt(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
+        """ Performs the authentication using a JWT token.
+        """
+        authorization = wsgi_environ.get('Authorization')
+        if not authorization:
+            msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}` - No Authorization header'.format(path_info, cid)
+            logger.error(msg)
+            raise Unauthorized(cid, msg, 'JWT')
+
+        if not authorization.startswith('Bearer '):
+            msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}` - Wrong Authorization header format'.format(path_info, cid)
+            logger.error(msg)
+            raise Unauthorized(cid, msg, 'JWT')
+
+        token = authorization.split('Bearer ', 1)[1]
+        result = JWT(self.kvdb, self.odb, sec_def.secret).validate(token)
+
+        if not result.valid:
+            msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}` - {}'.format(path_info, cid, result.message)
+            logger.error(msg)
+            raise Unauthorized(cid, msg, 'JWT')
 
     def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
         """ Performs the authentication using WS-Security.
@@ -580,6 +604,48 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             self.basic_auth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
+
+# ################################################################################################################################
+
+    def _update_jwt(self, name, config):
+        self.jwt_config[name] = Bunch()
+        self.jwt_config[name].config = config
+
+    def jwt_get(self, name):
+        """ Returns the configuration of the JWT security definition
+        of the given name.
+        """
+        with self.url_sec_lock:
+            return self.jwt_config.get(name)
+
+    def on_broker_msg_SECURITY_JWT_CREATE(self, msg, *args):
+        """ Creates a new JWT security definition.
+        """
+        with self.url_sec_lock:
+            self._update_jwt(msg.name, msg)
+
+    def on_broker_msg_SECURITY_JWT_EDIT(self, msg, *args):
+        """ Updates an existing JWT security definition.
+        """
+        with self.url_sec_lock:
+            del self.jwt_config[msg.old_name]
+            self._update_jwt(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.JWT)
+
+    def on_broker_msg_SECURITY_JWT_DELETE(self, msg, *args):
+        """ Deletes a JWT security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('jwt', msg.name)
+            del self.jwt_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.JWT, True)
+
+    def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of a JWT security definition.
+        """
+        with self.url_sec_lock:
+            self.jwt_config[msg.name]['config']['password'] = msg.password
+            self._update_url_sec(msg, SEC_DEF_TYPE.JWT)
 
 # ################################################################################################################################
 
