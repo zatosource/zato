@@ -62,17 +62,16 @@ class IPCAPI(object):
     def publish(self, payload):
         self.publisher.publish(payload)
 
-    def _get_response(self, fifo, buffer_size, fifo_ignore_err=fifo_ignore_err):
+    def _get_response(self, fifo, buffer_size, fifo_ignore_err=fifo_ignore_err, empty=('', None)):
 
         try:
             response = os.read(fifo, buffer_size)
 
-            if response is not None:
+            if response not in empty:
                 return loads(response)
 
         except OSError, e:
             if e.errno not in fifo_ignore_err:
-                logger.warn('zzz %s', e)
                 raise
 
     def invoke_by_pid(self, service, payload, target_pid, fifo_response_buffer_size, timeout=5, is_async=False):
