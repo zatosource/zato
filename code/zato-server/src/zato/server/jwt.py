@@ -59,10 +59,12 @@ class JWT(object):
     def authenticate(self, username, password, ttl):
         """Validate cretentials and generate a new token if valid.
 
-        1. Validate cretentials
-        2. Create new token
-        3. Cache tokent
-        4. return token
+        1. Validate cretentials against ODB
+        2.a: If not valid, return nothing
+        2.b: If valid:
+            3. create a new token
+            4. Cache the new token synchronously (we wait for it to be truly stored).
+            5. Return the token
         """
         if self._lookup_jwt(username, password):
             token = self._create_token(username=username, ttl=ttl)
@@ -74,10 +76,13 @@ class JWT(object):
     def validate(self, token):
         """Check if the given token is (still) valid.
 
-        1. Decrypt
-        2. Check TTL
-        3. Lookup in Cache
-        4. return true/false
+        1. Look for the token in Cache without decrypting/decoding it.
+        2.a If not found, return "Invalid"
+        2.b If found:
+            3. decrypt
+            4. decode
+            5. renew the cache expiration asyncronouysly (do not wait for the update confirmation).
+            5. return "valid" + the token contents
         """
         if self.cache.get(token):
             decrypted = self.fernet.decrypt(token)
