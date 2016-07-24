@@ -24,7 +24,8 @@ from lxml.objectify import Element
 from paste.util.converters import asbool
 
 # Zato
-from zato.common import DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, path, ZatoException, ZATO_NONE
+from zato.common import DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, path, ZatoException, ZATO_NONE, \
+     ZATO_SEC_USE_RBAC
 
 logger = logging.getLogger(__name__)
 
@@ -319,7 +320,8 @@ COMPLEX_VALUE = (Dict, List, ListOfDicts, Nested)
 # ################################################################################################################################
 
 def convert_sio(param, param_name, value, has_simple_io_config, is_xml, bool_parameter_prefixes, int_parameters,
-                int_parameter_suffixes, date_time_format=None, data_format=ZATO_NONE, from_sio_to_external=False):
+                int_parameter_suffixes, date_time_format=None, data_format=ZATO_NONE, from_sio_to_external=False,
+                special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC)):
     try:
         if any(param_name.startswith(prefix) for prefix in bool_parameter_prefixes) or isinstance(param, Boolean):
             value = asbool(value or None) # value can be an empty string and asbool chokes on that
@@ -328,7 +330,7 @@ def convert_sio(param, param_name, value, has_simple_io_config, is_xml, bool_par
             if isinstance(param, ForceType):
                 value = param.convert(value, param_name, data_format, from_sio_to_external)
             else:
-                if value and value != ZATO_NONE and has_simple_io_config:
+                if value and (value not in special_values) and has_simple_io_config:
                     if any(param_name==elem for elem in int_parameters) or \
                        any(param_name.endswith(suffix) for suffix in int_parameter_suffixes):
                         value = int(value)
