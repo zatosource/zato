@@ -269,6 +269,7 @@ class SEC_DEF_TYPE:
     APIKEY = 'apikey'
     AWS = 'aws'
     BASIC_AUTH = 'basic_auth'
+    JWT = 'jwt'
     NTLM = 'ntlm'
     OAUTH = 'oauth'
     OPENSTACK = 'openstack'

@@ -84,6 +84,11 @@ class SECURITY(Constants):
     BASIC_AUTH_DELETE = ValueConstant('')
     BASIC_AUTH_CHANGE_PASSWORD = ValueConstant('')
 
+    JWT_CREATE = ValueConstant('')
+    JWT_EDIT = ValueConstant('')
+    JWT_DELETE = ValueConstant('')
+    JWT_CHANGE_PASSWORD = ValueConstant('')
+
     TECH_ACC_CREATE = ValueConstant('')
     TECH_ACC_EDIT = ValueConstant('')
     TECH_ACC_DELETE = ValueConstant('')
