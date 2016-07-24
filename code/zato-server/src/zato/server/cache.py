@@ -13,14 +13,13 @@ import datetime
 from contextlib import closing
 from logging import getLogger
 
+# gevent
 import gevent
 
 # Zato
 from zato.common.odb.model import KVCache
 
-
-logger = getLogger('zato_singleton')
-
+logger = getLogger(__name__)
 
 class RobustCache(object):
     """Robust Cache that uses KVDB as a first option but keeps ODB as a failsafe alternative."""
@@ -37,7 +36,7 @@ class RobustCache(object):
                 self.kvdb.conn.expire(key, ttl)
 
         except Exception:
-            logger.exception("KVDB Exception while putting %s.", key)
+            logger.exception('KVDB Exception while putting %s.', key)
 
     def _odb_put(self, key, value, ttl):
         with closing(self.odb.session()) as session:
@@ -58,7 +57,7 @@ class RobustCache(object):
                 session.commit()
 
             except Exception:
-                logger.exception("Unable to put key %s into ODB", key)
+                logger.exception('Unable to put key %s into ODB', key)
                 session.rollback()
 
                 raise
@@ -86,9 +85,9 @@ class RobustCache(object):
             return self.kvdb.conn.get(key)
 
         except Exception:
-            logger.exception("KVDB Exception while getting key %s. Falling back to ODB.", key)
+            logger.exception('KVDB Exception while getting key %s. Falling back to ODB.', key)
             return self._odb_get(key)
 
         if self.miss_fallback:
-            logger.warning("Key %s not found in KVDB. Falling back to ODB.", key)
+            logger.warning('Key %s not found in KVDB. Falling back to ODB.', key)
             return self._odb_get(key)

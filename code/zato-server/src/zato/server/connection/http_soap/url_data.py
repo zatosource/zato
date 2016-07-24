@@ -227,27 +227,36 @@ class URLData(OAuthDataStore):
 
         return True
 
-    def _handle_security_jwt(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
-        """ Performs the authentication using a JWT token.
+    def _handle_security_jwt(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
+        """ Performs the authentication using a JavaScript Web Token (JWT).
         """
         authorization = wsgi_environ.get('Authorization')
         if not authorization:
-            msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}` - No Authorization header'.format(path_info, cid)
-            logger.error(msg)
-            raise Unauthorized(cid, msg, 'JWT')
+            if enforce_auth:
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}` - No Authorization header'.format(path_info, cid)
+                logger.error(msg)
+                raise Unauthorized(cid, msg, 'JWT')
+            else:
+                return False
 
         if not authorization.startswith('Bearer '):
-            msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}` - Wrong Authorization header format'.format(path_info, cid)
-            logger.error(msg)
-            raise Unauthorized(cid, msg, 'JWT')
+            if enforce_auth:
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}` - Wrong Authorization header format'.format(path_info, cid)
+                logger.error(msg)
+                raise Unauthorized(cid, msg, 'JWT')
+            else:
+                return False
 
         token = authorization.split('Bearer ', 1)[1]
         result = JWT(self.kvdb, self.odb, sec_def.secret).validate(token)
 
         if not result.valid:
-            msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}` - {}'.format(path_info, cid, result.message)
-            logger.error(msg)
-            raise Unauthorized(cid, msg, 'JWT')
+            if enforce_auth:
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}` - {}'.format(path_info, cid, result.message)
+                logger.error(msg)
+                raise Unauthorized(cid, msg, 'JWT')
+            else:
+                return False
 
     def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
         """ Performs the authentication using WS-Security.

@@ -14,20 +14,23 @@ import uuid
 from contextlib import closing
 from logging import getLogger
 
-import jwt
-from anyjson import dumps
-from cryptography.fernet import Fernet
-
 # Bunch
 from bunch import bunchify, Bunch
+
+# Cryptography
+from cryptography.fernet import Fernet
+
+# JWT
+import jwt
+
+# pyrapidjson
+from rapidjson import dumps
 
 # Zato
 from zato.common.odb.model import JWT as JWT_
 from zato.server.cache import RobustCache
 
-
-logger = getLogger('zato_singleton')
-
+logger = getLogger(__name__)
 
 class JWT(object):
     """JWT authentication."""
@@ -48,8 +51,8 @@ class JWT(object):
     def _create_token(self, **data):
         session_id = str(uuid.uuid4())
         token_data = {
-            "session_id": session_id,
-            "creation_time": time.time()
+            'session_id': session_id,
+            'creation_time': time.time()
         }
         token_data.update(data)
 
@@ -69,7 +72,7 @@ class JWT(object):
         if self._lookup_jwt(username, password):
             token = self._create_token(username=username, ttl=ttl)
             self.cache.put(token, token, ttl, async=False)
-            logger.info("New token generated for user %s with %is TTL", username, ttl)
+            logger.info('New token generated for user %s with %is TTL', username, ttl)
 
             return token
 
