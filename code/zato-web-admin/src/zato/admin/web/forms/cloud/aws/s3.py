@@ -35,7 +35,7 @@ class CreateForm(forms.Form):
 
     def __init__(self, security_list=None, storage_class_list=None, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        add_security_select(self, security_list, False, 'security_id')
+        add_security_select(self, security_list, False, 'security_id', False)
 
         self.fields['storage_class'].choices = []
         for name in CLOUD.AWS.S3.STORAGE_CLASS:

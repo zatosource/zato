@@ -29,7 +29,7 @@ from pytz import UTC
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.common import SEC_DEF_TYPE_NAME, ZatoException, ZATO_NONE
+from zato.common import SEC_DEF_TYPE_NAME, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
 
 logger = logging.getLogger(__name__)
 
@@ -178,11 +178,15 @@ def change_password(req, service_name, field1='password1', field2='password2', s
 
 def get_security_id_from_select(params, prefix, field_name='security'):
     security = params[prefix + field_name]
-    if security != ZATO_NONE:
-        _, security_id = security.split('/')
+
+    if security == ZATO_NONE:
+        security_id = ZATO_NONE
+
+    elif security == ZATO_SEC_USE_RBAC:
+        security_id = ZATO_SEC_USE_RBAC
+
     else:
-        _, security_id = ZATO_NONE, ZATO_NONE
-        _ = _ # So pyflakes doesn't complain
+        _, security_id = security.split('/')
 
     return security_id
 

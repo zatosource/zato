@@ -142,7 +142,8 @@ class Lock(object):
 
             while now < until:
                 sleep(_block_interval)
-                if self._acquire_impl():
+                acquired = self._acquire_impl()
+                if acquired:
                     break
                 now = _utcnow()
 
