@@ -14,7 +14,7 @@ from gevent import sleep
 
 # Zato
 from zato.common.test import rand_int, rand_string
-from zato.distlock import DEFAULT, FCNTLLock, LockManager, LockTimeout, LOCK_TYPE, MAX, MySQLLock, PostgresSQLLock
+from zato.distlock import DEFAULT, LockManager, LockTimeout, LOCK_TYPE
 
 # ################################################################################################################################
 
@@ -155,7 +155,7 @@ class _Base(TestCase):
 
         # This raises LockTimeout because we wait for 1 second only and the lock above has ttl of 2 seconds.
         try:
-            lock2 = lock_manager.acquire(name, block=1)
+            lock_manager.acquire(name, block=1)
         except LockTimeout, e:
             expected = 'Could not obtain lock for `{}` `{}` within 1s'.format(default_ns, name)
             self.assertEquals(e.args[0], expected)

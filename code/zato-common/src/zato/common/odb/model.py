@@ -217,6 +217,23 @@ class HTTPBasicAuth(SecurityBase):
         self.password = password
         self.cluster = cluster
 
+class JWT(SecurityBase):
+    """ A set of JavaScript Web Token (JWT) credentials.
+    """
+    __tablename__ = 'sec_jwt'
+    __mapper_args__ = {'polymorphic_identity': 'jwt'}
+
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, secret=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.password = password
+        self.secret = secret
+        self.cluster = cluster
+
 class WSSDefinition(SecurityBase):
     """ A WS-Security definition.
     """
@@ -1859,42 +1876,18 @@ class RBACRolePermission(Base):
 
 # ################################################################################################################################
 
-class JWT(SecurityBase):
-    """ JWT set of credentials.
+class KVData(SecurityBase):
+    """ Key/value data table.
     """
-    __tablename__ = 'sec_jwt'
-    __mapper_args__ = {'polymorphic_identity': 'jwt'}
+    __tablename__ = 'kv_data'
+    __table_args__ = (UniqueConstraint('key', 'cluster_id'), {})
 
-    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+    id = Column(Integer, Sequence('kv_data_id_seq'), primary_key=True)
+    key = Column(LargeBinary(), nullable=False)
+    value = Column(LargeBinary(), nullable=True)
+    data_type = Column(String(), nullable=False, default='text')
+    creation_time = Column(DateTime(), nullable=False)
+    expiry_time = Column(DateTime(), nullable=True)
 
-    def __init__(self, id=None, name=None, is_active=None, username=None,
-                 password=None, secret=None, cluster=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.username = username
-        self.password = password
-        self.secret = secret
-        self.cluster = cluster
-
-# ################################################################################################################################
-
-class KVCache(SecurityBase):
-    """ Key Value Cache table.
-    """
-    __tablename__ = 'kvcache'
-    __table_args__ = (UniqueConstraint('key'), {})
-
-    id = Column(Integer, Sequence('server_id_seq'), primary_key=True)
-    key = Column(LongBinary(), nullable=False)
-    value = Column(LongBinary(), nullable=True)
-    insert_time = Column(DateTime(), nullable=False)
-    expire_time = Column(DateTime(), nullable=True)
-
-    def __init__(self, id=None, key=None, type=None, value=None,
-                 insert_time=None, expirte_time=None):
-        self.id = id
-        self.key = key
-        self.value = value
-        self.insert_time = insert_time
-        self.expire_time = expire_time
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('kv_data', order_by=key, cascade='all, delete, delete-orphan'))
