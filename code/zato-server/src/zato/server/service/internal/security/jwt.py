@@ -32,7 +32,7 @@ class GetList(AdminService):
         request_elem = 'zato_security_jwt_get_list_request'
         response_elem = 'zato_security_jwt_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'username')
+        output_required = ('id', 'name', 'is_active', 'username', 'ttl')
 
     def get_data(self, session):
         return self._search(jwt_list, session, self.request.input.cluster_id, None, False)
@@ -41,14 +41,13 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
-
 class Create(AdminService):
     """ Creates a new JWT definition.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_jwt_create_request'
         response_elem = 'zato_security_jwt_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'username')
+        input_required = ('cluster_id', 'name', 'is_active', 'username', 'ttl')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -67,28 +66,33 @@ class Create(AdminService):
                     filter(JWT.name==input.name).first()
 
                 if existing_one:
-                    raise Exception('JWT definition [{0}] already exists on this cluster'.format(input.name))
+                    raise Exception('JWT definition `{}` already exists on this cluster'.format(input.name))
 
-                auth = JWT(None, input.name, input.is_active, input.username, input.password, input.secret, cluster)
+                item = JWT()
+                item.name = input.name
+                item.is_active = input.is_active
+                item.username = input.username
+                item.password = input.password
+                item.secret = input.secret
+                item.ttl = input.ttl
+                item.cluster_id = input.cluster_id
 
-                session.add(auth)
+                session.add(item)
                 session.commit()
 
             except Exception, e:
-                msg = 'Could not create a JWT definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not create a JWT definition, e:`%s`', format_exc(e))
                 session.rollback()
 
                 raise
             else:
                 input.action = SECURITY.JWT_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.JWT
-                input.id = auth.id
+                input.id = item.id
                 self.broker_client.publish(input)
 
-            self.response.payload.id = auth.id
-            self.response.payload.name = auth.name
-
+            self.response.payload.id = item.id
+            self.response.payload.name = item.name
 
 class Edit(AdminService):
     """ Updates a JWT definition.
@@ -96,7 +100,7 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_jwt_edit_request'
         response_elem = 'zato_security_jwt_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', 'ttl')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -110,21 +114,20 @@ class Edit(AdminService):
                     first()
 
                 if existing_one:
-                    raise Exception('JWT definition [{0}] already exists on this cluster'.format(input.name))
+                    raise Exception('JWT definition `{}` already exists on this cluster'.format(input.name))
 
-                definition = session.query(JWT).filter_by(id=input.id).one()
-                old_name = definition.name
+                item = session.query(JWT).filter_by(id=input.id).one()
+                old_name = item.name
 
-                definition.name = input.name
-                definition.is_active = input.is_active
-                definition.username = input.username
+                item.name = input.name
+                item.is_active = input.is_active
+                item.username = input.username
 
-                session.add(definition)
+                session.add(item)
                 session.commit()
 
             except Exception, e:
-                msg = 'Could not update the JWT definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not update the JWT definition, e:`%s`', format_exc(e))
                 session.rollback()
 
                 raise
@@ -134,9 +137,8 @@ class Edit(AdminService):
                 input.sec_type = SEC_DEF_TYPE.JWT
                 self.broker_client.publish(input)
 
-                self.response.payload.id = definition.id
-                self.response.payload.name = definition.name
-
+                self.response.payload.id = item.id
+                self.response.payload.name = item.name
 
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a JWT definition.
@@ -152,7 +154,6 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
 
         return self._handle(JWT, _auth, SECURITY.JWT_CHANGE_PASSWORD.value)
-
 
 class Delete(AdminService):
     """ Deletes a JWT definition.
@@ -172,8 +173,7 @@ class Delete(AdminService):
                 session.delete(auth)
                 session.commit()
             except Exception, e:
-                msg = 'Could not delete the JWT definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not delete the JWT definition, e:`%s`', format_exc(e))
                 session.rollback()
 
                 raise

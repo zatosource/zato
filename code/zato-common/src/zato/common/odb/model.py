@@ -207,8 +207,7 @@ class HTTPBasicAuth(SecurityBase):
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
     realm = Column(String(200), nullable=False)
 
-    def __init__(self, id=None, name=None, is_active=None, username=None,
-                 realm=None, password=None, cluster=None):
+    def __init__(self, id=None, name=None, is_active=None, username=None, realm=None, password=None, cluster=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -224,15 +223,8 @@ class JWT(SecurityBase):
     __mapper_args__ = {'polymorphic_identity': 'jwt'}
 
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-
-    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, secret=None, cluster=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.username = username
-        self.password = password
-        self.secret = secret
-        self.cluster = cluster
+    secret = Column(Text, nullable=False)
+    ttl = Column(Integer, nullable=False)
 
 class WSSDefinition(SecurityBase):
     """ A WS-Security definition.
@@ -1876,7 +1868,7 @@ class RBACRolePermission(Base):
 
 # ################################################################################################################################
 
-class KVData(SecurityBase):
+class KVData(Base):
     """ Key/value data table.
     """
     __tablename__ = 'kv_data'

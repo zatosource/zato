@@ -17,7 +17,7 @@ from logging import getLogger
 import gevent
 
 # Zato
-from zato.common.odb.model import KVCache
+from zato.common.odb.model import KVData
 
 logger = getLogger(__name__)
 
@@ -41,10 +41,10 @@ class RobustCache(object):
     def _odb_put(self, key, value, ttl):
         with closing(self.odb.session()) as session:
             try:
-                kvcache = session.query(KVCache).filter_by(key=key).first()
+                kvcache = session.query(KVData).filter_by(key=key).first()
 
                 if not kvcache:
-                    kvcache = KVCache()
+                    kvcache = KVData()
 
                 now = datetime.datetime.utcnow()
 
@@ -64,7 +64,7 @@ class RobustCache(object):
 
     def _odb_get(self, key):
         with closing(self.odb.session()) as session:
-            return session.query(KVCache).filter_by(key=key).first()
+            return session.query(KVData).filter_by(key=key).first()
 
     def put(self, key, value, ttl=None, async=True):
         """Put key/value into both KVDB and ODB, in parallel.
