@@ -608,6 +608,7 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.audit_repl_patt_type,
         HTTPSOAP.timeout,
         HTTPSOAP.sec_tls_ca_cert_id,
+        HTTPSOAP.sec_use_rbac,
         TLSCACert.name.label('sec_tls_ca_cert_name'),
         SecurityBase.sec_type,
         Service.name.label('service_name'),

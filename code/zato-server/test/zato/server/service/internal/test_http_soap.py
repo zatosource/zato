@@ -46,7 +46,7 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.output_optional, ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
             'method', 'soap_action', 'soap_version', 'data_format', 'host',
             'ping_method', 'pool_size', 'merge_url_params_req', 'url_params_pri', 'params_pri', 'serialization_type', 'timeout',
-            'sec_tls_ca_cert_id', Bool('has_rbac'), 'content_type'))
+            'sec_tls_ca_cert_id', Bool('has_rbac'), 'content_type', Bool('sec_use_rbac')))
         self.assertEquals(self.sio.namespace, zato_namespace)
 
     def test_impl(self):

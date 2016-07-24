@@ -29,9 +29,9 @@ from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.http_soap import AuditLogEntryList, SearchForm, CreateForm, EditForm, ReplacePatternsForm
 from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, get_tls_ca_cert_list, id_only_service, \
      method_allowed, parse_response_data, SecurityList
-from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, URL_PARAMS_PRIORITY, URL_TYPE, \
-     ZatoException, ZATO_NONE
+from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
+     HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, \
+     URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common import MISC, SEC_DEF_TYPE
 from zato.common.odb.model import HTTPSOAP
 
@@ -154,13 +154,19 @@ def index(req):
             if _security_name:
                 security_name = '{0}<br/>{1}'.format(SEC_DEF_TYPE_NAME[item.sec_type], _security_name)
             else:
-                security_name = 'No security definition'
+                if item.sec_use_rbac:
+                    security_name = DELEGATED_TO_RBAC
+                else:
+                    security_name = 'No security definition'
 
             _security_id = item.security_id
             if _security_id:
                 security_id = '{0}/{1}'.format(item.sec_type, _security_id)
             else:
-                security_id = ZATO_NONE
+                if item.sec_use_rbac:
+                    security_id = ZATO_SEC_USE_RBAC
+                else:
+                    security_id = ZATO_NONE
 
             item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection,
                     transport, item.host, item.url_path, item.method, item.soap_action,
