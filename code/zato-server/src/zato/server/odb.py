@@ -22,7 +22,7 @@ from bunch import Bunch
 
 # Zato
 from zato.common import DEPLOYMENT_STATUS, MISC, SEC_DEF_TYPE, SERVER_UP_STATUS, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
-from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
+from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, JWT, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition
 from zato.common.odb import query
 from zato.common.util import current_host, get_http_json_channel, get_http_soap_channel, parse_tls_channel_security_definition
@@ -151,6 +151,7 @@ class ODBManager(SessionWrapper):
             sec_type_db_class = {
                 SEC_DEF_TYPE.APIKEY: APIKeySecurity,
                 SEC_DEF_TYPE.BASIC_AUTH: HTTPBasicAuth,
+                SEC_DEF_TYPE.JWT: JWT,
                 SEC_DEF_TYPE.OAUTH: OAuth,
                 SEC_DEF_TYPE.TECH_ACCOUNT: TechnicalAccount,
                 SEC_DEF_TYPE.WSS: WSSDefinition,
@@ -199,6 +200,11 @@ class ODBManager(SessionWrapper):
                         result[target].sec_def.username = sec_def.username
                         result[target].sec_def.password = sec_def.password
                         result[target].sec_def.realm = sec_def.realm
+
+                    elif item.sec_type == SEC_DEF_TYPE.JWT:
+                        result[target].sec_def.username = sec_def.username
+                        result[target].sec_def.password = sec_def.password
+                        result[target].sec_def.secret = sec_def.secret
 
                     elif item.sec_type == SEC_DEF_TYPE.APIKEY:
                         result[target].sec_def.username = 'HTTP_{}'.format(sec_def.username.upper().replace('-', '_'))
@@ -599,6 +605,12 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.basic_auth_list(session, cluster_id, cluster_name, needs_columns)
+
+    def get_jwt_list(self, cluster_id, cluster_name, needs_columns=False):
+        """ Returns a list of JWT definitions existing on the given cluster.
+        """
+        with closing(self.session()) as session:
+            return query.jwt_list(session, cluster_id, cluster_name, needs_columns)
 
     def get_ntlm_list(self, cluster_id, needs_columns=False):
         """ Returns a list of NTLM definitions existing on the given cluster.
