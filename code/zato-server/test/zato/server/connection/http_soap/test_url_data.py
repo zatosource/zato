@@ -243,9 +243,13 @@ class URLDataTestCase(TestCase):
         class DummySecWrapper(object):
             def __init__(self, sec_def):
                 self.sec_def = sec_def
+                self.sec_use_rbac = False
 
         class DummySecDef(object):
             sec_type = 'basic_auth'
+
+            def __getitem__(self, key):
+                return object.__getattribute__(self, key)
 
         class DummyBasicAuth:
             def __init__(self):
@@ -255,13 +259,14 @@ class URLDataTestCase(TestCase):
                 self.payload = ZATO_NONE
                 self.wsgi_environ = ZATO_NONE
 
-            def __call__(self, cid, sec_def, path_info, payload, wsgi_environ, post_data):
+            def __call__(self, cid, sec_def, path_info, payload, wsgi_environ, post_data, enforce_auth):
                 self.cid = cid
                 self.sec_def = sec_def
                 self.path_info = path_info
                 self.payload = payload
                 self.wsgi_environ = wsgi_environ
                 self.post_data = post_data
+                self.enforce_auth = enforce_auth
 
         dummy_basic_auth = DummyBasicAuth()
 

@@ -180,15 +180,18 @@ class RequestDispatcher(object):
                 post_data = {}
                 sec = self.url_data.url_sec[channel_item['match_target']]
 
-                if sec.sec_def != ZATO_NONE:
-                    if sec.sec_def.sec_type == SEC_DEF_TYPE.OAUTH:
-                        post_data.update(QueryDict(payload, encoding='utf-8'))
+                if sec.sec_def != ZATO_NONE or sec.sec_use_rbac is True:
 
-                    # Eagerly parse the request but only if we expect XPath-based credentials. The request will be re-used
-                    # in later steps, it won't be parsed twice or more.
-                    elif sec.sec_def.sec_type == SEC_DEF_TYPE.XPATH_SEC:
-                        wsgi_environ['zato.request.payload'] = payload_from_request(
-                            cid, payload, channel_item.data_format, channel_item.transport)
+                    if sec.sec_def != ZATO_NONE:
+
+                        if sec.sec_def.sec_type == SEC_DEF_TYPE.OAUTH:
+                            post_data.update(QueryDict(payload, encoding='utf-8'))
+
+                        # Eagerly parse the request but only if we expect XPath-based credentials. The request will be re-used
+                        # in later steps, it won't be parsed twice or more.
+                        elif sec.sec_def.sec_type == SEC_DEF_TYPE.XPATH_SEC:
+                            wsgi_environ['zato.request.payload'] = payload_from_request(
+                                cid, payload, channel_item.data_format, channel_item.transport)
 
                     # Will raise an exception on any security violation
                     self.url_data.check_security(

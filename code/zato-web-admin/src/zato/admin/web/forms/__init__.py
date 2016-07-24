@@ -12,19 +12,22 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common import SIMPLE_IO, ZATO_NONE
+from zato.common import DELEGATED_TO_RBAC, SIMPLE_IO, ZATO_NONE, ZATO_SEC_USE_RBAC
 
 INITIAL_CHOICES_DICT = {'': '----------'}
 INITIAL_CHOICES = INITIAL_CHOICES_DICT.items()[0]
 
 # ################################################################################################################################
 
-def add_security_select(form, security_list, needs_no_security=True, field_name='security'):
+def add_security_select(form, security_list, needs_no_security=True, field_name='security', needs_rbac=True):
     form.fields[field_name].choices = []
     form.fields[field_name].choices.append(INITIAL_CHOICES)
 
     if needs_no_security:
         form.fields[field_name].choices.append([ZATO_NONE, 'No security definition'])
+
+    if needs_rbac:
+        form.fields[field_name].choices.append([ZATO_SEC_USE_RBAC, DELEGATED_TO_RBAC])
 
     for value, label in security_list:
         form.fields[field_name].choices.append([value, label])
