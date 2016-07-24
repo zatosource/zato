@@ -46,7 +46,7 @@ from zato.admin.web.views.pubsub import producers as pubsub_producers
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
-from zato.admin.web.views.security import apikey, aws, basic_auth, ntlm, oauth, openstack as openstack_security, rbac, \
+from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oauth, openstack as openstack_security, rbac, \
      tech_account, wss, xpath as xpath_sec
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
 
@@ -277,6 +277,26 @@ urlpatterns += [
         login_required(basic_auth.change_password), name='security-basic-auth-change-password'),
     url(r'^zato/security/basic-auth/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(basic_auth.Delete()), name=basic_auth.Delete.url_name),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. JWT
+
+    url(r'^zato/security/jwt/$',
+        login_required(jwt.Index()), name=jwt.Index.url_name),
+    url(r'^zato/security/jwt/$',
+        login_required(jwt.Index()), name=jwt.Index.url_name),
+    url(r'^zato/security/jwt/create/$',
+        login_required(jwt.Create()), name=jwt.Create.url_name),
+    url(r'^zato/security/jwt/edit/$',
+        login_required(jwt.Edit()), name=jwt.Edit.url_name),
+    url(r'^zato/security/jwt/change-password/$',
+        login_required(jwt.change_password), name='security-jwt-change-password'),
+    url(r'^zato/security/jwt/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(jwt.Delete()), name=jwt.Delete.url_name),
     ]
 
 # ################################################################################################################################
