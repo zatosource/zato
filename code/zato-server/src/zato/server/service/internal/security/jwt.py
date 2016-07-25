@@ -13,6 +13,7 @@ from contextlib import closing
 from traceback import format_exc
 from uuid import uuid4
 
+# Cryptography
 from cryptography.fernet import Fernet
 
 # Zato
@@ -20,8 +21,11 @@ from zato.common import SEC_DEF_TYPE
 from zato.common.broker_message import SECURITY
 from zato.common.odb.model import Cluster, JWT
 from zato.common.odb.query import jwt_list
+from zato.server.connection.http_soap import Unauthorized
+from zato.server.jwt import JWT as JWTBackend
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
+# ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns the list of JWT definitions available.
@@ -40,6 +44,8 @@ class GetList(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
+
+# ################################################################################################################################
 
 class Create(AdminService):
     """ Creates a new JWT definition.
@@ -94,6 +100,8 @@ class Create(AdminService):
             self.response.payload.id = item.id
             self.response.payload.name = item.name
 
+# ################################################################################################################################
+
 class Edit(AdminService):
     """ Updates a JWT definition.
     """
@@ -122,6 +130,8 @@ class Edit(AdminService):
                 item.name = input.name
                 item.is_active = input.is_active
                 item.username = input.username
+                item.ttl = input.ttl
+                item.cluster_id = input.cluster_id
 
                 session.add(item)
                 session.commit()
@@ -140,6 +150,8 @@ class Edit(AdminService):
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
+# ################################################################################################################################
+
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of a JWT definition.
     """
@@ -154,6 +166,8 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
 
         return self._handle(JWT, _auth, SECURITY.JWT_CHANGE_PASSWORD.value)
+
+# ################################################################################################################################
 
 class Delete(AdminService):
     """ Deletes a JWT definition.
@@ -181,3 +195,35 @@ class Delete(AdminService):
                 self.request.input.action = SECURITY.JWT_DELETE.value
                 self.request.input.name = auth.name
                 self.broker_client.publish(self.request.input)
+
+# ################################################################################################################################
+
+class LogIn(AdminService):
+    """ Logs user into using JWT-backed credentials and returns a new token if credentials were correct.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('username', 'password')
+        response_elem = 'zato_security_jwt_delete_response'
+        output_optional = ('token',)
+
+    def handle(self):
+        token = JWTBackend(self.kvdb, self.odb, self.server.fs_server_config.misc.jwt_secret).authenticate(
+            self.request.input.username, self.request.input.password)
+
+        if token:
+            self.response.payload.token = token
+            self.response.headers['Authorization'] = token
+
+        else:
+            raise Unauthorized(self.cid, 'Invalid username or password', 'jwt')
+
+# ################################################################################################################################
+
+
+class LogOut(AdminService):
+    """ Logs a user out of an existing JWT token.
+    """
+    class SimpleIO(AdminSIO):
+        output_required = ('result',)
+
+# ################################################################################################################################

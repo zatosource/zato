@@ -9,9 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import time
 import uuid
 from contextlib import closing
+from datetime import datetime
 from logging import getLogger
 
 # Bunch
@@ -33,8 +33,8 @@ from zato.server.cache import RobustCache
 logger = getLogger(__name__)
 
 class JWT(object):
-    """JWT authentication."""
-
+    """ JWT authentication backend.
+    """
     ALGORITHM = 'HS256'
 
     def __init__(self, kvdb, odb, secret):
@@ -49,30 +49,32 @@ class JWT(object):
             return session.query(JWT_).filter_by(username=username, password=password).first()
 
     def _create_token(self, **data):
-        session_id = str(uuid.uuid4())
         token_data = {
-            'session_id': session_id,
-            'creation_time': time.time()
+            'session_id': uuid.uuid4().hex,
+            'creation_time': datetime.utcnow().isoformat()
         }
         token_data.update(data)
 
-        token = jwt.encode(dumps(token_data), self.secret, algorithm=self.ALGORITHM)
+        logger.warn(token_data)
+
+        token = jwt.encode(token_data, self.secret, algorithm=self.ALGORITHM)
         return self.fernet.encrypt(token.encode('utf-8'))
 
-    def authenticate(self, username, password, ttl):
+    def authenticate(self, username, password):
         """Validate cretentials and generate a new token if valid.
 
         1. Validate cretentials against ODB
         2.a: If not valid, return nothing
         2.b: If valid:
-            3. create a new token
+            3. Create a new token
             4. Cache the new token synchronously (we wait for it to be truly stored).
             5. Return the token
         """
-        if self._lookup_jwt(username, password):
-            token = self._create_token(username=username, ttl=ttl)
-            self.cache.put(token, token, ttl, async=False)
-            logger.info('New token generated for user %s with %is TTL', username, ttl)
+        sec_def = self._lookup_jwt(username, password)
+        if sec_def:
+            token = self._create_token(username=username, ttl=sec_def.ttl)
+            self.cache.put(token, token, sec_def.ttl, async=False)
+            logger.info('New token generated for user %s with TTL of %i s', username, sec_def.ttl)
 
             return token
 

@@ -286,6 +286,15 @@ zato_services = {
     'zato.security.basic-auth.edit':'zato.server.service.internal.security.basic_auth.Edit',
     'zato.security.basic-auth.get-list':'zato.server.service.internal.security.basic_auth.GetList',
 
+    # Security - JWT
+    'zato.security.jwt.change-password':'zato.server.service.internal.security.jwt.ChangePassword',
+    'zato.security.jwt.create':'zato.server.service.internal.security.jwt.Create',
+    'zato.security.jwt.delete':'zato.server.service.internal.security.jwt.Delete',
+    'zato.security.jwt.edit':'zato.server.service.internal.security.jwt.Edit',
+    'zato.security.jwt.get-list':'zato.server.service.internal.security.jwt.GetList',
+    'zato.security.jwt.log-in':'zato.server.service.internal.security.jwt.LogIn',
+    'zato.security.jwt.log-out':'zato.server.service.internal.security.jwt.LogOut',
+
     # Security - NTLM
     'zato.security.tls.ca_cert.change-password':'zato.server.service.internal.security.tls.ca_cert.ChangePassword',
     'zato.security.tls.ca_cert.create':'zato.server.service.internal.security.tls.ca_cert.Create',
@@ -492,6 +501,12 @@ class Create(ZatoCommand):
             elif name == 'zato.pubsub.rest-handler':
                 self.add_pubsub_rest_handler(session, cluster, service)
 
+            elif name == 'zato.security.jwt.log-in':
+                self.add_jwt_log_in(session, cluster, service)
+
+            elif name == 'zato.security.jwt.log-out':
+                self.add_jwt_log_out(session, cluster, service)
+
             session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))
             session.add(get_http_json_channel(name, service, cluster, pubapi_sec))
 
@@ -617,4 +632,14 @@ class Create(ZatoCommand):
     def add_pubsub_rest_handler(self, session, cluster, service):
         channel = HTTPSOAP(None, 'zato.pubsub.rest', True, True, 'channel', 'plain_http',
             None, '/zato/pubsub/{item_type}/{item}/', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
+        session.add(channel)
+
+    def add_jwt_log_in(self, session, cluster, service):
+        channel = HTTPSOAP(None, 'zato.security.jwt.log-in', True, True, 'channel', 'plain_http',
+            None, '/zato/jwt/log-in', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
+        session.add(channel)
+
+    def add_jwt_log_out(self, session, cluster, service):
+        channel = HTTPSOAP(None, 'zato.security.jwt.log-out', True, True, 'channel', 'plain_http',
+            None, '/zato/jwt/log-out', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
         session.add(channel)

@@ -18,6 +18,9 @@ from uuid import uuid4
 # Bunch
 from bunch import Bunch
 
+# Cryptography
+from cryptography.fernet import Fernet
+
 # Zato
 from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agent, ca_create_server, \
      ca_create_web_admin, create_cluster, create_lb, create_odb, create_server, create_web_admin, ZatoCommand
@@ -292,6 +295,10 @@ class Create(ZatoCommand):
         #
         # 4) servers
         #
+
+        # Must be shared by all servers
+        jwt_secret = Fernet.generate_key()
+
         for name in server_names:
             server_path = os.path.join(args_path, server_names[name])
             os.mkdir(server_path)
@@ -303,6 +310,7 @@ class Create(ZatoCommand):
             create_server_args.pub_key_path = server_crypto_loc[name].pub_path
             create_server_args.priv_key_path = server_crypto_loc[name].priv_path
             create_server_args.ca_certs_path = server_crypto_loc[name].ca_certs_path
+            create_server_args.jwt_secret = jwt_secret
 
             create_server.Create(create_server_args).execute(create_server_args, next_port.next(), False)
 

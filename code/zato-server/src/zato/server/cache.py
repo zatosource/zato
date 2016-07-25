@@ -22,12 +22,17 @@ from zato.common.odb.model import KVData
 logger = getLogger(__name__)
 
 class RobustCache(object):
-    """Robust Cache that uses KVDB as a first option but keeps ODB as a failsafe alternative."""
+    """ Robust Cache that uses KVDB as a first option but keeps ODB as a fail-safe alternative.
+    """
 
-    def __init__(self, kvdb, odb, miss_fallback=False):
+    def __init__(self, kvdb, odb, miss_fallback=False, cluster_id=None):
         self.kvdb = kvdb
         self.odb = odb
         self.miss_fallback = miss_fallback
+        self.cluster_id = cluster_id
+
+    def _get_odb_key(self, key):
+        return 'cluster_id:{}/{}'.format(self.cluster_id, key) if self.cluster_id else key
 
     def _kvdb_put(self, key, value, ttl):
         try:
@@ -39,21 +44,23 @@ class RobustCache(object):
             logger.exception('KVDB Exception while putting %s.', key)
 
     def _odb_put(self, key, value, ttl):
+        key = self._get_odb_key(key)
+
         with closing(self.odb.session()) as session:
             try:
-                kvcache = session.query(KVData).filter_by(key=key).first()
+                item = session.query(KVData).filter_by(key=key).first()
 
-                if not kvcache:
-                    kvcache = KVData()
+                if not item:
+                    item = KVData()
 
                 now = datetime.datetime.utcnow()
 
-                kvcache.key = key
-                kvcache.value = value
-                kvcache.insert_time = now
-                kvcache.expire_time = now + datetime.timedelta(seconds=ttl)
+                item.key = key
+                item.value = value
+                item.creation_time = now
+                item.expire_time = now + datetime.timedelta(seconds=ttl)
 
-                session.add(kvcache)
+                session.add(item)
                 session.commit()
 
             except Exception:
@@ -64,7 +71,7 @@ class RobustCache(object):
 
     def _odb_get(self, key):
         with closing(self.odb.session()) as session:
-            return session.query(KVData).filter_by(key=key).first()
+            return session.query(KVData).filter_by(key=self._get_odb_key(key)).first()
 
     def put(self, key, value, ttl=None, async=True):
         """Put key/value into both KVDB and ODB, in parallel.
@@ -78,7 +85,7 @@ class RobustCache(object):
         ]
 
         if not async:
-            gevent.join(greenlets)
+            gevent.joinall(greenlets)
 
     def get(self, key):
         try:

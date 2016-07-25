@@ -208,7 +208,7 @@ def jwt_list(session, cluster_id, cluster_name, needs_columns=False):
     """
     q = session.query(
         JWT.id, JWT.name, JWT.is_active, JWT.username, JWT.password,
-        JWT.secret, JWT.ttl, JWT.sec_type, JWT.password_type,
+        JWT.ttl, JWT.sec_type, JWT.password_type,
         Cluster.id.label('cluster_id'),
         Cluster.name.label('cluster_name')).\
         filter(Cluster.id==JWT.cluster_id)

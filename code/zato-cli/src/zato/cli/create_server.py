@@ -14,6 +14,9 @@ from copy import deepcopy
 from datetime import datetime
 from traceback import format_exc
 
+# Cryptography
+from cryptography.fernet import Fernet
+
 # SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
@@ -112,6 +115,7 @@ http_server_header=Zato
 zeromq_connect_sleep=0.1
 aws_host=
 use_soap_envelope=True
+jwt_secret={{jwt_secret}}
 
 [stats]
 expire_after=168 # In hours, 168 = 7 days = 1 week
@@ -295,6 +299,7 @@ class Create(ZatoCommand):
     opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
     opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
     opts.append({'name':'server_name', 'help':"Server's name"})
+    opts.append({'name':'jwt_secret', 'help':"Server's JWT secret (must be the same for all servers in a cluster)"})
 
     def __init__(self, args):
         super(Create, self).__init__(args)
@@ -390,6 +395,7 @@ class Create(ZatoCommand):
                     kvdb_password=encrypt(args.kvdb_password, priv_key) if args.kvdb_password else '',
                     initial_cluster_name=args.cluster_name,
                     initial_server_name=args.server_name,
+                    jwt_secret=getattr(args, 'jwt_secret', Fernet.generate_key()),
                 ))
             server_conf.close()
 
