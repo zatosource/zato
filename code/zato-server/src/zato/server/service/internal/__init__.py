@@ -58,7 +58,7 @@ class SearchTool(object):
 # ################################################################################################################################
 
 class AdminService(Service):
-    """ A Zato admin service, part of the API.
+    """ A Zato admin service, part of the Zato public API.
     """
     output_optional = ('_meta',)
 

@@ -223,7 +223,6 @@ class JWT(SecurityBase):
     __mapper_args__ = {'polymorphic_identity': 'jwt'}
 
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
-    secret = Column(Text, nullable=False)
     ttl = Column(Integer, nullable=False)
 
 class WSSDefinition(SecurityBase):
@@ -1881,5 +1880,5 @@ class KVData(Base):
     creation_time = Column(DateTime(), nullable=False)
     expiry_time = Column(DateTime(), nullable=True)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
     cluster = relationship(Cluster, backref=backref('kv_data', order_by=key, cascade='all, delete, delete-orphan'))

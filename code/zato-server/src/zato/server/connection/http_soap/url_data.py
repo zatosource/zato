@@ -92,14 +92,14 @@ class OAuthStore(object):
 class URLData(OAuthDataStore):
     """ Performs URL matching and all the HTTP/SOAP-related security checks.
     """
-    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, jwt=None, ntlm_config=None, oauth_config=None,
-                 tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, openstack_config=None,
-                 xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, kvdb=None, broker_client=None,
-                 odb=None, json_pointer_store=None, xpath_store=None):
+    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
+                 oauth_config=None, tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, \
+                 openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
+                 kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None):
         self.channel_data = SortedListWithKey(channel_data, key=attrgetter('name'))
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
-        self.jwt = jwt
+        self.jwt_config = jwt_config
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
         self.tech_acc_config = tech_acc_config
@@ -257,6 +257,8 @@ class URLData(OAuthDataStore):
                 raise Unauthorized(cid, msg, 'JWT')
             else:
                 return False
+
+        return True
 
     def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
         """ Performs the authentication using WS-Security.
