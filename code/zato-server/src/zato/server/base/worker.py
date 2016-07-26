@@ -182,7 +182,7 @@ class WorkerStore(BrokerMessageReceiver):
             self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws,
             self.worker_config.openstack_security, self.worker_config.xpath_sec, self.worker_config.tls_channel_sec,
             self.worker_config.tls_key_cert, self.kvdb, self.broker_client, self.server.odb, self.json_pointer_store,
-            self.xpath_store)
+            self.xpath_store, self.server.jwt_secret)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 

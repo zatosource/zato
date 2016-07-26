@@ -183,22 +183,23 @@ def run(base_dir, start_gunicorn_app=True):
         os.environ['http_proxy'] = http_proxy
 
     crypto_manager = get_crypto_manager(repo_location, app_context, config)
-    parallel_server = app_context.get_object('parallel_server')
+    server = app_context.get_object('server')
 
-    zato_gunicorn_app = ZatoGunicornApplication(parallel_server, repo_location, config.main, config.crypto)
+    zato_gunicorn_app = ZatoGunicornApplication(server, repo_location, config.main, config.crypto)
 
-    parallel_server.crypto_manager = crypto_manager
-    parallel_server.odb_data = config.odb
-    parallel_server.host = zato_gunicorn_app.zato_host
-    parallel_server.port = zato_gunicorn_app.zato_port
-    parallel_server.repo_location = repo_location
-    parallel_server.base_dir = base_dir
-    parallel_server.tls_dir = os.path.join(parallel_server.base_dir, 'config', 'repo', 'tls')
-    parallel_server.fs_server_config = config
-    parallel_server.user_config.update(config.user_config_items)
-    parallel_server.startup_jobs = app_context.get_object('startup_jobs')
-    parallel_server.app_context = app_context
-    parallel_server.preferred_address = preferred_address
+    server.crypto_manager = crypto_manager
+    server.odb_data = config.odb
+    server.host = zato_gunicorn_app.zato_host
+    server.port = zato_gunicorn_app.zato_port
+    server.repo_location = repo_location
+    server.base_dir = base_dir
+    server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
+    server.fs_server_config = config
+    server.user_config.update(config.user_config_items)
+    server.startup_jobs = app_context.get_object('startup_jobs')
+    server.app_context = app_context
+    server.preferred_address = preferred_address
+    server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
 
     # Remove all locks possibly left over by previous server instances
     kvdb = app_context.get_object('kvdb')
@@ -236,8 +237,8 @@ def run(base_dir, start_gunicorn_app=True):
 
     if asbool(profiler_enabled):
         profiler_dir = os.path.abspath(os.path.join(base_dir, config.profiler.profiler_dir))
-        parallel_server.on_wsgi_request = ProfileMiddleware(
-            parallel_server.on_wsgi_request,
+        server.on_wsgi_request = ProfileMiddleware(
+            server.on_wsgi_request,
             log_filename = os.path.join(profiler_dir, config.profiler.log_filename),
             cachegrind_filename = os.path.join(profiler_dir, config.profiler.cachegrind_filename),
             discard_first_request = config.profiler.discard_first_request,

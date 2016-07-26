@@ -114,6 +114,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.crypto_use_tls = None
         self.servers = None
         self.zato_lock_manager = None
+        self.jwt_secret = b'<none>'
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()

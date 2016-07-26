@@ -95,7 +95,7 @@ class URLData(OAuthDataStore):
     def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
                  oauth_config=None, tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, \
                  openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
-                 kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None):
+                 kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None, jwt_secret=None):
         self.channel_data = SortedListWithKey(channel_data, key=attrgetter('name'))
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -113,6 +113,7 @@ class URLData(OAuthDataStore):
         self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
+        self.jwt_secret = jwt_secret
 
         self.sec_config_getter = Bunch()
         self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
@@ -230,10 +231,10 @@ class URLData(OAuthDataStore):
     def _handle_security_jwt(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
         """ Performs the authentication using a JavaScript Web Token (JWT).
         """
-        authorization = wsgi_environ.get('Authorization')
+        authorization = wsgi_environ.get('HTTP_AUTHORIZATION')
         if not authorization:
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}` - No Authorization header'.format(path_info, cid)
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 logger.error(msg)
                 raise Unauthorized(cid, msg, 'JWT')
             else:
@@ -241,18 +242,18 @@ class URLData(OAuthDataStore):
 
         if not authorization.startswith('Bearer '):
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}` - Wrong Authorization header format'.format(path_info, cid)
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 logger.error(msg)
                 raise Unauthorized(cid, msg, 'JWT')
             else:
                 return False
 
         token = authorization.split('Bearer ', 1)[1]
-        result = JWT(self.kvdb, self.odb, sec_def.secret).validate(token)
+        result = JWT(self.kvdb, self.odb, self.jwt_secret).validate(token.encode('utf8'))
 
         if not result.valid:
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}` - {}'.format(path_info, cid, result.message)
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
                 logger.error(msg)
                 raise Unauthorized(cid, msg, 'JWT')
             else:
@@ -1055,7 +1056,7 @@ class URLData(OAuthDataStore):
         channel_item = Bunch()
         for name in('connection', 'content_type', 'data_format', 'host', 'id', 'has_rbac', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
-            'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path',):
+            'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac'):
 
             channel_item[name] = msg[name]
 

@@ -42,7 +42,7 @@ class JWT(object):
         self.cache = RobustCache(kvdb, odb)
 
         self.secret = secret
-        self.fernet = Fernet(secret)
+        self.fernet = Fernet(self.secret)
 
     def _lookup_jwt(self, username, password):
         with closing(self.odb.session()) as session:
@@ -54,8 +54,6 @@ class JWT(object):
             'creation_time': datetime.utcnow().isoformat()
         }
         token_data.update(data)
-
-        logger.warn(token_data)
 
         token = jwt.encode(token_data, self.secret, algorithm=self.ALGORITHM)
         return self.fernet.encrypt(token.encode('utf-8'))
@@ -74,7 +72,8 @@ class JWT(object):
         if sec_def:
             token = self._create_token(username=username, ttl=sec_def.ttl)
             self.cache.put(token, token, sec_def.ttl, async=False)
-            logger.info('New token generated for user %s with TTL of %i s', username, sec_def.ttl)
+            suffix = 's' if sec_def.ttl > 1 else ''
+            logger.info('New token generated for user `%s` with a TTL of `%i` second{}'.format(suffix), username, sec_def.ttl)
 
             return token
 
