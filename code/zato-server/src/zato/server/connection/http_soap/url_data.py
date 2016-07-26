@@ -118,6 +118,7 @@ class URLData(OAuthDataStore):
         self.sec_config_getter = Bunch()
         self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
         self.sec_config_getter[SEC_DEF_TYPE.APIKEY] = self.apikey_get
+        self.sec_config_getter[SEC_DEF_TYPE.JWT] = self.jwt_get
 
         self.json_pointer_store = json_pointer_store
         self.xpath_store = xpath_store
@@ -1085,6 +1086,7 @@ class URLData(OAuthDataStore):
         sec_info.is_active = msg.is_active
         sec_info.data_format = msg.data_format
         sec_info.transport = msg.transport
+        sec_info.sec_use_rbac = msg.sec_use_rbac
 
         if msg.get('security_name'):
             sec_info.sec_def = Bunch()
