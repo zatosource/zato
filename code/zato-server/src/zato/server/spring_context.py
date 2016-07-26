@@ -156,7 +156,7 @@ class ZatoContext(PythonConfig):
     # Servers
 
     @Object
-    def parallel_server(self):
+    def server(self):
 
         server = ParallelServer()
         server.odb = self.odb_manager()

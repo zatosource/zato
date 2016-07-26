@@ -28,7 +28,7 @@ from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_P
      ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, JSONPointer, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsJSONPointer, \
-     HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, TLSCACert, to_json, XPath
+     HTTSOAPAuditReplacePatternsXPath, JWT, SecurityBase, Service, TLSCACert, to_json, XPath
 from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap_list
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -75,7 +75,6 @@ class _HTTPSOAPService(object):
 
             info['security_name'] = sec_def.name
             info['sec_type'] = sec_def.sec_type
-            info['sec_use_rbac'] = sec_def.sec_use_rbac
 
         return info
 

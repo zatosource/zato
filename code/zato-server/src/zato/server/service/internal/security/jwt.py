@@ -23,6 +23,7 @@ from zato.common.odb.model import Cluster, JWT
 from zato.common.odb.query import jwt_list
 from zato.server.connection.http_soap import Unauthorized
 from zato.server.jwt import JWT as JWTBackend
+from zato.server.service import Integer
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 # ################################################################################################################################
@@ -36,7 +37,7 @@ class GetList(AdminService):
         request_elem = 'zato_security_jwt_get_list_request'
         response_elem = 'zato_security_jwt_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'username', 'ttl')
+        output_required = ('id', 'name', 'is_active', 'username', Integer('ttl'))
 
     def get_data(self, session):
         return self._search(jwt_list, session, self.request.input.cluster_id, None, False)
@@ -53,7 +54,7 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_jwt_create_request'
         response_elem = 'zato_security_jwt_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'username', 'ttl')
+        input_required = ('cluster_id', 'name', 'is_active', 'username', Integer('ttl'))
         output_required = ('id', 'name')
 
     def handle(self):
@@ -108,7 +109,7 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_security_jwt_edit_request'
         response_elem = 'zato_security_jwt_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', 'ttl')
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'username', Integer('ttl'))
         output_required = ('id', 'name')
 
     def handle(self):

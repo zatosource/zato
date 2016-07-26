@@ -204,7 +204,6 @@ class ODBManager(SessionWrapper):
                     elif item.sec_type == SEC_DEF_TYPE.JWT:
                         result[target].sec_def.username = sec_def.username
                         result[target].sec_def.password = sec_def.password
-                        result[target].sec_def.secret = sec_def.secret
 
                     elif item.sec_type == SEC_DEF_TYPE.APIKEY:
                         result[target].sec_def.username = 'HTTP_{}'.format(sec_def.username.upper().replace('-', '_'))
