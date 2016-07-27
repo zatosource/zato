@@ -215,4 +215,7 @@ class ZatoContext(PythonConfig):
             {'name': 'zato.outgoing.sql.auto-ping', 'minutes':3,
              'service':'zato.outgoing.sql.auto-ping'},
 
+            {'name': 'zato.security.jwt.auto-clean-up', 'seconds':3,
+             'service':'zato.security.jwt.auto-clean-up'},
+
         ]
