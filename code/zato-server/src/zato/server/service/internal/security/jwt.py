@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from httplib import BAD_REQUEST
 from traceback import format_exc
 from uuid import uuid4
 
@@ -64,7 +65,6 @@ class Create(AdminService):
 
         with closing(self.odb.session()) as session:
             try:
-                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
 
                 # Let's see if we already have a definition of that name before committing
                 # any stuff into the database.
@@ -204,7 +204,7 @@ class LogIn(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('username', 'password')
-        response_elem = 'zato_security_jwt_delete_response'
+        response_elem = 'zato_security_jwt_log_in_response'
         output_optional = ('token',)
 
     def handle(self):
@@ -220,11 +220,33 @@ class LogIn(AdminService):
 
 # ################################################################################################################################
 
-
 class LogOut(AdminService):
     """ Logs a user out of an existing JWT token.
     """
     class SimpleIO(AdminSIO):
-        output_required = ('result',)
+        response_elem = 'zato_security_jwt_log_out_response'
+        output_optional = ('result',)
+
+    def handle(self):
+        token = self.wsgi_environ.get('HTTP_AUTHORIZATION', '').replace('Bearer ', '')
+
+        if not token:
+            self.response.status_code = BAD_REQUEST
+            self.response.payload.result = 'No JWT found'
+
+        try:
+            JWTBackend(self.kvdb, self.odb, self.server.fs_server_config.misc.jwt_secret).delete(token)
+        except Exception, e:
+            self.logger.warn(format_exc(e))
+            self.response.status_code = BAD_REQUEST
+            self.response.payload.result = 'Token could not be deleted'
+
+# ################################################################################################################################
+
+class AutoCleanUp(AdminService):
+    """ Cleans up ODB from expired tokens (KVDB expires them up automatically so it's not needed here).
+    """
+    def handle(self):
+        self.logger.warn('333 AutoCleanUp')
 
 # ################################################################################################################################

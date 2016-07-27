@@ -23,19 +23,22 @@ from cryptography.fernet import Fernet
 # JWT
 import jwt
 
-# pyrapidjson
-from rapidjson import dumps
-
 # Zato
 from zato.common.odb.model import JWT as JWT_
 from zato.server.cache import RobustCache
 
+# ################################################################################################################################
+
 logger = getLogger(__name__)
+
+# ################################################################################################################################
 
 class JWT(object):
     """ JWT authentication backend.
     """
     ALGORITHM = 'HS256'
+
+# ################################################################################################################################
 
     def __init__(self, kvdb, odb, secret):
         self.odb = odb
@@ -44,9 +47,13 @@ class JWT(object):
         self.secret = secret
         self.fernet = Fernet(self.secret)
 
+# ################################################################################################################################
+
     def _lookup_jwt(self, username, password):
         with closing(self.odb.session()) as session:
             return session.query(JWT_).filter_by(username=username, password=password).first()
+
+# ################################################################################################################################
 
     def _create_token(self, **data):
         token_data = {
@@ -58,8 +65,10 @@ class JWT(object):
         token = jwt.encode(token_data, self.secret, algorithm=self.ALGORITHM)
         return self.fernet.encrypt(token.encode('utf-8'))
 
+# ################################################################################################################################
+
     def authenticate(self, username, password):
-        """Validate cretentials and generate a new token if valid.
+        """ Validate cretentials and generate a new token if valid.
 
         1. Validate cretentials against ODB
         2.a: If not valid, return nothing
@@ -77,8 +86,10 @@ class JWT(object):
 
             return token
 
+# ################################################################################################################################
+
     def validate(self, token):
-        """Check if the given token is (still) valid.
+        """ Check if the given token is (still) valid.
 
         1. Look for the token in Cache without decrypting/decoding it.
         2.a If not found, return "Invalid"
@@ -98,3 +109,12 @@ class JWT(object):
             return Bunch(valid=True, token=token_data)
         else:
             return Bunch(valid=False, message='Invalid Token')
+
+# ################################################################################################################################
+
+    def delete(self, token):
+        """ Deletes a token in both KVDB and ODB.
+        """
+        self.cache.delete(token)
+
+# ################################################################################################################################

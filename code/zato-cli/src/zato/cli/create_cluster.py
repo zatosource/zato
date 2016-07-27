@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import SIMPLE_IO
+from zato.common import DATA_FORMAT, SIMPLE_IO
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, RBACPermission, RBACRole, Service, WSSDefinition
 from zato.common.util import get_http_json_channel, get_http_soap_channel
 
@@ -287,6 +287,7 @@ zato_services = {
     'zato.security.basic-auth.get-list':'zato.server.service.internal.security.basic_auth.GetList',
 
     # Security - JWT
+    'zato.security.jwt.auto-clean-up':'zato.server.service.internal.security.jwt.AutoCleanUp',
     'zato.security.jwt.change-password':'zato.server.service.internal.security.jwt.ChangePassword',
     'zato.security.jwt.create':'zato.server.service.internal.security.jwt.Create',
     'zato.security.jwt.delete':'zato.server.service.internal.security.jwt.Delete',
@@ -636,10 +637,12 @@ class Create(ZatoCommand):
 
     def add_jwt_log_in(self, session, cluster, service):
         channel = HTTPSOAP(None, 'zato.security.jwt.log-in', True, True, 'channel', 'plain_http',
-            None, '/zato/jwt/log-in', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
+            None, '/zato/jwt/log-in', None, '', None, DATA_FORMAT.JSON, merge_url_params_req=True, service=service,
+            cluster=cluster)
         session.add(channel)
 
     def add_jwt_log_out(self, session, cluster, service):
         channel = HTTPSOAP(None, 'zato.security.jwt.log-out', True, True, 'channel', 'plain_http',
-            None, '/zato/jwt/log-out', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
+            None, '/zato/jwt/log-out', None, '', None, DATA_FORMAT.JSON, merge_url_params_req=True, service=service,
+            cluster=cluster)
         session.add(channel)
