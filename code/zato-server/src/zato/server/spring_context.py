@@ -64,6 +64,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.hot_deploy',
             'zato.server.service.internal.info',
             'zato.server.service.internal.http_soap',
+            'zato.server.service.internal.kv_data',
             'zato.server.service.internal.kvdb',
             'zato.server.service.internal.kvdb.data_dict.dictionary',
             'zato.server.service.internal.kvdb.data_dict.impexp',
@@ -215,7 +216,7 @@ class ZatoContext(PythonConfig):
             {'name': 'zato.outgoing.sql.auto-ping', 'minutes':3,
              'service':'zato.outgoing.sql.auto-ping'},
 
-            {'name': 'zato.security.jwt.auto-clean-up', 'seconds':3,
-             'service':'zato.security.jwt.auto-clean-up'},
+            {'name': 'zato.kv-data.auto-clean-up', 'seconds':3,
+             'service':'zato.kv-data.auto-clean-up'},
 
         ]

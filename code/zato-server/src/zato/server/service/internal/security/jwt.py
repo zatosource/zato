@@ -242,11 +242,3 @@ class LogOut(AdminService):
             self.response.payload.result = 'Token could not be deleted'
 
 # ################################################################################################################################
-
-class AutoCleanUp(AdminService):
-    """ Cleans up ODB from expired tokens (KVDB expires them up automatically so it's not needed here).
-    """
-    def handle(self):
-        self.logger.warn('333 AutoCleanUp')
-
-# ################################################################################################################################
