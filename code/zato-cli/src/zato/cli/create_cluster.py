@@ -112,6 +112,9 @@ zato_services = {
     'zato.info.get-info':'zato.server.service.internal.info.GetInfo',
     'zato.info.get-server-info':'zato.server.service.internal.info.GetServerInfo',
 
+    # SQL-backed KVDB
+    'zato.kv_data.auto-clean-up':'zato.server.service.internal.kv_data.AutoCleanUp',
+
     # Key/value DB
     'zato.kvdb.data-dict.dictionary.create':'zato.server.service.internal.kvdb.data_dict.dictionary.Create',
     'zato.kvdb.data-dict.dictionary.delete':'zato.server.service.internal.kvdb.data_dict.dictionary.Delete',

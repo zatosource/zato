@@ -70,7 +70,7 @@ class RobustCache(object):
                 item.key = key
                 item.value = value
                 item.creation_time = now
-                item.expire_time = now + datetime.timedelta(seconds=ttl)
+                item.expiry_time = now + datetime.timedelta(seconds=ttl)
 
                 session.add(item)
                 session.commit()
