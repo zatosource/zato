@@ -243,9 +243,13 @@ class URLDataTestCase(TestCase):
         class DummySecWrapper(object):
             def __init__(self, sec_def):
                 self.sec_def = sec_def
+                self.sec_use_rbac = False
 
         class DummySecDef(object):
             sec_type = 'basic_auth'
+
+            def __getitem__(self, key):
+                return object.__getattribute__(self, key)
 
         class DummyBasicAuth:
             def __init__(self):
@@ -255,13 +259,14 @@ class URLDataTestCase(TestCase):
                 self.payload = ZATO_NONE
                 self.wsgi_environ = ZATO_NONE
 
-            def __call__(self, cid, sec_def, path_info, payload, wsgi_environ, post_data):
+            def __call__(self, cid, sec_def, path_info, payload, wsgi_environ, post_data, enforce_auth):
                 self.cid = cid
                 self.sec_def = sec_def
                 self.path_info = path_info
                 self.payload = payload
                 self.wsgi_environ = wsgi_environ
                 self.post_data = post_data
+                self.enforce_auth = enforce_auth
 
         dummy_basic_auth = DummyBasicAuth()
 
@@ -1404,6 +1409,8 @@ class URLDataTestCase(TestCase):
                 'audit_repl_patt_type', 'replace_patterns_json_pointer', 'replace_patterns_xpath', 'content_type'):
                 msg[name] = uuid4().hex
 
+            msg['sec_use_rbac'] = False
+
             if needs_security_id:
                 for name in('sec_type', 'security_id', 'security_name'):
                     msg[name] = uuid4().hex
@@ -1425,11 +1432,11 @@ class URLDataTestCase(TestCase):
                 eq_(msg[name], channel_item[name])
 
             if needs_security_id:
-                eq_(len(channel_item.keys()), 33)
+                eq_(len(channel_item.keys()), 34)
                 for name in('sec_type', 'security_id', 'security_name'):
                     eq_(msg[name], channel_item[name])
             else:
-                eq_(len(channel_item.keys()), 30)
+                eq_(len(channel_item.keys()), 31)
 
         for needs_security_id in(True, False):
             msg = get_msg(needs_security_id)
@@ -1455,6 +1462,7 @@ class URLDataTestCase(TestCase):
             msg.is_active = uuid4().hex
             msg.data_format = uuid4().hex
             msg.transport = uuid4().hex
+            msg.sec_use_rbac = False
 
             ud = url_data.URLData()
             ud.basic_auth_config = basic_auth_config

@@ -33,11 +33,12 @@ from sortedcontainers import SortedListWithKey
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, ZATO_NONE
+from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, URL_TYPE, ZATO_NONE
 from zato.common.broker_message import code_to_name, CHANNEL, SECURITY
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition
 from zato.server.connection.http_soap import Forbidden, Unauthorized
+from zato.server.jwt import JWT
 
 logger = logging.getLogger(__name__)
 
@@ -91,13 +92,14 @@ class OAuthStore(object):
 class URLData(OAuthDataStore):
     """ Performs URL matching and all the HTTP/SOAP-related security checks.
     """
-    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, ntlm_config=None, oauth_config=None,
-                 tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, openstack_config=None,
-                 xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, kvdb=None, broker_client=None,
-                 odb=None, json_pointer_store=None, xpath_store=None):
+    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
+                 oauth_config=None, tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, \
+                 openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
+                 kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None, jwt_secret=None):
         self.channel_data = SortedListWithKey(channel_data, key=attrgetter('name'))
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
+        self.jwt_config = jwt_config
         self.ntlm_config = ntlm_config
         self.oauth_config = oauth_config
         self.tech_acc_config = tech_acc_config
@@ -111,6 +113,12 @@ class URLData(OAuthDataStore):
         self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
+        self.jwt_secret = jwt_secret
+
+        self.sec_config_getter = Bunch()
+        self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
+        self.sec_config_getter[SEC_DEF_TYPE.APIKEY] = self.apikey_get
+        self.sec_config_getter[SEC_DEF_TYPE.JWT] = self.jwt_get
 
         self.json_pointer_store = json_pointer_store
         self.xpath_store = xpath_store
@@ -176,24 +184,33 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
-    def _handle_security_apikey(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
+    def _handle_security_apikey(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
         """ Performs the authentication against an API key in a specified HTTP header.
         """
         # Find out if the header was provided at all
         if sec_def['username'] not in wsgi_environ:
-            msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
-            logger.error(msg + ' (No header)')
-            raise Unauthorized(cid, msg, 'zato-apikey')
+            if enforce_auth:
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
+                logger.error(msg + ' (No header)')
+                raise Unauthorized(cid, msg, 'zato-apikey')
+            else:
+                return False
 
         expected_key = sec_def.get('password', '')
 
         # Passwords are not required
         if expected_key and wsgi_environ[sec_def['username']] != expected_key:
-            msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
-            logger.error(msg + ' (Invalid key)')
-            raise Unauthorized(cid, msg, 'zato-apikey')
+            if enforce_auth:
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
+                logger.error(msg + ' (Invalid key)')
+                raise Unauthorized(cid, msg, 'zato-apikey')
+            else:
+                return False
 
-    def _handle_security_basic_auth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
+        return True
+
+    def _handle_security_basic_auth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None,
+        enforce_auth=True):
         """ Performs the authentication using HTTP Basic Auth.
         """
         env = {'HTTP_AUTHORIZATION':wsgi_environ.get('HTTP_AUTHORIZATION')}
@@ -202,16 +219,57 @@ class URLData(OAuthDataStore):
         result = on_basic_auth(env, url_config, False)
 
         if not result:
-            msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
-                path_info, cid, result.code, result.description)
-            logger.error(msg)
-            raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
+            if enforce_auth:
+                msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
+                    path_info, cid, result.code, result.description)
+                logger.error(msg)
+                raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
+            else:
+                return False
 
-    def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
+        return True
+
+    def _handle_security_jwt(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
+        """ Performs the authentication using a JavaScript Web Token (JWT).
+        """
+        authorization = wsgi_environ.get('HTTP_AUTHORIZATION')
+        if not authorization:
+            if enforce_auth:
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
+                logger.error(msg)
+                raise Unauthorized(cid, msg, 'JWT')
+            else:
+                return False
+
+        if not authorization.startswith('Bearer '):
+            if enforce_auth:
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
+                logger.error(msg)
+                raise Unauthorized(cid, msg, 'JWT')
+            else:
+                return False
+
+        token = authorization.split('Bearer ', 1)[1]
+        result = JWT(self.kvdb, self.odb, self.jwt_secret).validate(token.encode('utf8'))
+
+        if not result.valid:
+            if enforce_auth:
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`'.format(path_info, cid)
+                logger.error(msg)
+                raise Unauthorized(cid, msg, 'JWT')
+            else:
+                return False
+
+        return True
+
+    def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
         """ Performs the authentication using WS-Security.
         """
         if not body:
-            raise Unauthorized(cid, 'No message body found in [{}]'.format(body), 'zato-wss')
+            if enforce_auth:
+                raise Unauthorized(cid, 'No message body found in [{}]'.format(body), 'zato-wss')
+            else:
+                return False
 
         url_config = {}
 
@@ -225,16 +283,24 @@ class URLData(OAuthDataStore):
         try:
             result = on_wsse_pwd(self._wss, url_config, body, False)
         except Exception, e:
-            msg = 'Could not parse the WS-Security data, body:[{}], e:[{}]'.format(body, format_exc(e))
-            raise Unauthorized(cid, msg, 'zato-wss')
+            if enforce_auth:
+                msg = 'Could not parse the WS-Security data, body:[{}], e:[{}]'.format(body, format_exc(e))
+                raise Unauthorized(cid, msg, 'zato-wss')
+            else:
+                return False
 
         if not result:
-            msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
-                path_info, cid, result.code, result.description)
-            logger.error(msg)
-            raise Unauthorized(cid, msg, 'zato-wss')
+            if enforce_auth:
+                msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
+                    path_info, cid, result.code, result.description)
+                logger.error(msg)
+                raise Unauthorized(cid, msg, 'zato-wss')
+            else:
+                return False
 
-    def _handle_security_oauth(self, cid, sec_def, path_info, body, wsgi_environ, post_data):
+        return True
+
+    def _handle_security_oauth(self, cid, sec_def, path_info, body, wsgi_environ, post_data, enforce_auth=True):
         """ Performs the authentication using OAuth.
         """
         http_url = '{}://{}{}'.format(wsgi_environ['wsgi.url_scheme'],
@@ -244,9 +310,12 @@ class URLData(OAuthDataStore):
         http_auth_header = wsgi_environ.get('HTTP_AUTHORIZATION')
 
         if not http_auth_header:
-            msg = 'No Authorization header in wsgi_environ:[%r]'
-            logger.error(msg, wsgi_environ)
-            raise Unauthorized(cid, 'No Authorization header found', 'OAuth')
+            if enforce_auth:
+                msg = 'No Authorization header in wsgi_environ:[%r]'
+                logger.error(msg, wsgi_environ)
+                raise Unauthorized(cid, 'No Authorization header found', 'OAuth')
+            else:
+                return False
 
         wsgi_environ['Authorization'] = http_auth_header
 
@@ -257,91 +326,130 @@ class URLData(OAuthDataStore):
         if oauth_request is None:
             msg = 'No sig could be built using wsgi_environ:[%r], post_data:[%r]'
             logger.error(msg, wsgi_environ, post_data)
-            raise Unauthorized(cid, 'No parameters to build signature found', 'OAuth')
+
+            if enforce_auth:
+                raise Unauthorized(cid, 'No parameters to build signature found', 'OAuth')
+            else:
+                return False
 
         try:
             self._oauth_server.verify_request(oauth_request)
         except Exception, e:
-            msg = 'Signature verification failed, wsgi_environ:[%r], e:[%s], e.message:[%s]'
-            logger.error(msg, wsgi_environ, format_exc(e), e.message)
-            raise Unauthorized(cid, 'Signature verification failed', 'OAuth')
+            if enforce_auth:
+                msg = 'Signature verification failed, wsgi_environ:[%r], e:[%s], e.message:[%s]'
+                logger.error(msg, wsgi_environ, format_exc(e), e.message)
+                raise Unauthorized(cid, 'Signature verification failed', 'OAuth')
+            else:
+                return False
+
         else:
             # Store for later use, custom channels may want to inspect it later on
             wsgi_environ['zato.oauth.request'] = oauth_request
 
-    def _handle_security_tech_acc(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None):
+        return True
+
+    def _handle_security_tech_acc(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None,
+        enforce_auth=True):
         """ Performs the authentication using technical accounts.
         """
         zato_headers = ('HTTP_X_ZATO_USER', 'HTTP_X_ZATO_PASSWORD')
 
         for header in zato_headers:
             if not wsgi_environ.get(header, None):
-                error_msg = ("[{}] The header [{}] doesn't exist or is empty, URI:[{}, wsgi_environ:[{}]]").\
-                    format(cid, header, path_info, wsgi_environ)
-                logger.error(error_msg)
-                raise Unauthorized(cid, error_msg, 'zato-tech-acc')
+                if enforce_auth:
+                    error_msg = ("[{}] The header [{}] doesn't exist or is empty, URI:[{}, wsgi_environ:[{}]]").\
+                        format(cid, header, path_info, wsgi_environ)
+                    logger.error(error_msg)
+                    raise Unauthorized(cid, error_msg, 'zato-tech-acc')
+                else:
+                    return False
 
         # Note that logs get a specific information what went wrong whereas the
         # user gets a generic 'username or password' message
         msg_template = '[{}] The {} is incorrect, URI:[{}], X_ZATO_USER:[{}]'
 
         if wsgi_environ['HTTP_X_ZATO_USER'] != sec_def.name:
-            error_msg = msg_template.format(cid, 'username', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
-            user_msg = msg_template.format(cid, 'username or password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
-            logger.error(error_msg)
-            raise Unauthorized(cid, user_msg, 'zato-tech-acc')
+            if enforce_auth:
+                error_msg = msg_template.format(cid, 'username', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
+                user_msg = msg_template.format(cid, 'username or password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
+                logger.error(error_msg)
+                raise Unauthorized(cid, user_msg, 'zato-tech-acc')
+            else:
+                return False
 
         incoming_password = sha256(wsgi_environ['HTTP_X_ZATO_PASSWORD'] + ':' + sec_def.salt).hexdigest()
 
         if incoming_password != sec_def.password:
-            error_msg = msg_template.format(cid, 'password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
-            user_msg = msg_template.format(cid, 'username or password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
-            logger.error(error_msg)
-            raise Unauthorized(cid, user_msg, 'zato-tech-acc')
+            if enforce_auth:
+                error_msg = msg_template.format(cid, 'password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
+                user_msg = msg_template.format(cid, 'username or password', path_info, wsgi_environ['HTTP_X_ZATO_USER'])
+                logger.error(error_msg)
+                raise Unauthorized(cid, user_msg, 'zato-tech-acc')
+            else:
+                return False
 
         return wsgi_environ['HTTP_X_ZATO_USER']
 
-    def _handle_security_xpath_sec(self, cid, sec_def, ignored_path_info, ignored_body, wsgi_environ, ignored_post_data=None):
+    def _handle_security_xpath_sec(self, cid, sec_def, ignored_path_info, ignored_body, wsgi_environ, ignored_post_data=None,
+        enforce_auth=True):
 
         payload = wsgi_environ['zato.request.payload']
         user_msg = 'Invalid username or password'
 
         username = payload.xpath(sec_def.username_expr)
         if not username:
-            logger.error('%s `%s` expr:`%s`, value:`%r`', user_msg, '(no username)', sec_def.username_expr, username)
-            raise Unauthorized(cid, user_msg, 'zato-xpath')
+            if enforce_auth:
+                logger.error('%s `%s` expr:`%s`, value:`%r`', user_msg, '(no username)', sec_def.username_expr, username)
+                raise Unauthorized(cid, user_msg, 'zato-xpath')
+            else:
+                return False
 
         username = username[0]
 
         if username != sec_def.username:
-            logger.error('%s `%s` expr:`%s`, value:`%r`', user_msg, '(username)', sec_def.username_expr, username)
-            raise Unauthorized(cid, user_msg, 'zato-xpath')
+            if enforce_auth:
+                logger.error('%s `%s` expr:`%s`, value:`%r`', user_msg, '(username)', sec_def.username_expr, username)
+                raise Unauthorized(cid, user_msg, 'zato-xpath')
+            else:
+                return False
 
         if sec_def.get('password_expr'):
 
             password = payload.xpath(sec_def.password_expr)
             if not password:
-                logger.error('%s `%s` expr:`%s`', user_msg, '(no password)', sec_def.password_expr)
-                raise Unauthorized(cid, user_msg, 'zato-xpath')
+                if enforce_auth:
+                    logger.error('%s `%s` expr:`%s`', user_msg, '(no password)', sec_def.password_expr)
+                    raise Unauthorized(cid, user_msg, 'zato-xpath')
+                else:
+                    return False
 
             password = password[0]
 
             if password != sec_def.password:
-                logger.error('%s `%s` expr:`%s`', user_msg, '(password)', sec_def.password_expr)
-                raise Unauthorized(cid, user_msg, 'zato-xpath')
+                if enforce_auth:
+                    logger.error('%s `%s` expr:`%s`', user_msg, '(password)', sec_def.password_expr)
+                    raise Unauthorized(cid, user_msg, 'zato-xpath')
+                else:
+                    return False
 
         return True
 
-    def _handle_security_tls_channel_sec(self, cid, sec_def, ignored_path_info, ignored_body, wsgi_environ, ignored_post_data=None):
+    def _handle_security_tls_channel_sec(self, cid, sec_def, ignored_path_info, ignored_body, wsgi_environ,
+        ignored_post_data=None, enforce_auth=True):
         user_msg = 'Failed to satisfy TLS conditions'
 
         for header, expected_value in sec_def.value.items():
             given_value = wsgi_environ.get(header)
 
             if expected_value != given_value:
-                logger.error(
-                    '%s, header:`%s`, expected:`%s`, given:`%s` (%s)', user_msg, header, expected_value, given_value, cid)
-                raise Unauthorized(cid, user_msg, 'zato-tls-channel-sec')
+                if enforce_auth:
+                    logger.error(
+                        '%s, header:`%s`, expected:`%s`, given:`%s` (%s)', user_msg, header, expected_value, given_value, cid)
+                    raise Unauthorized(cid, user_msg, 'zato-tls-channel-sec')
+                else:
+                    return False
+
+        return True
 
 # ################################################################################################################################
 
@@ -374,22 +482,63 @@ class URLData(OAuthDataStore):
 
             return None, None
 
-    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store):
+    def check_rbac_delegated_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
+            sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP):
+
+        is_allowed = False
+
+        http_method = wsgi_environ.get('REQUEST_METHOD')
+        http_method_permission_id = worker_store.rbac.http_permissions.get(http_method)
+
+        if not http_method_permission_id:
+            logger.error('Invalid HTTP method `%s`, cid:`%s`', http_method, cid)
+            raise Forbidden(cid, 'You are not allowed to access this URL\n')
+
+        for role_id, perm_id, resource_id in worker_store.rbac.registry._allowed.iterkeys():
+            if perm_id == http_method_permission_id and resource_id == channel_item['service_id']:
+                for client_def in worker_store.rbac.role_id_to_client_def[role_id]:
+                    _, sec_type, sec_name = client_def.split(sep)
+
+                    sec = Bunch()
+                    sec.is_active = True
+                    sec.transport = plain_http
+                    sec.sec_use_rbac = False
+                    sec.sec_def = self.sec_config_getter[sec_type](sec_name)['config']
+
+                    is_allowed = self.check_security(
+                        sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
+                    if is_allowed:
+                        break
+
+        if not is_allowed:
+            logger.error('Cound not find a matching RBAC definition, cid:`%s`', cid)
+            raise Unauthorized(cid, 'You are not allowed to access this resource', 'zato')
+
+    def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
+        enforce_auth=True):
         """ Authenticates and authorizes a given request. Returns None on success
         or raises an exception otherwise.
         """
-        sec_def, sec_def_type = sec.sec_def, sec.sec_def.sec_type
+        if sec.sec_use_rbac:
+            return self.check_rbac_delegated_security(
+                sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store)
+
+        sec_def, sec_def_type = sec.sec_def, sec.sec_def['sec_type']
         handler_name = '_handle_security_%s' % sec_def_type.replace('-', '_')
-        getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ, post_data)
+
+        if not getattr(self, handler_name)(cid, sec_def, path_info, payload, wsgi_environ, post_data, enforce_auth):
+            return False
 
         # Ok, we now know that the credentials are valid so we can check RBAC permissions if need be.
         if channel_item.get('has_rbac'):
             is_allowed = worker_store.rbac.is_http_client_allowed(
-                'sec_def:::{}:::{}'.format(sec.sec_def.sec_type, sec.sec_def.name), wsgi_environ['REQUEST_METHOD'],
+                'sec_def:::{}:::{}'.format(sec.sec_def['sec_type'], sec.sec_def['name']), wsgi_environ['REQUEST_METHOD'],
                 channel_item.service_id)
 
             if not is_allowed:
                 raise Forbidden(cid, 'You are not allowed to access this URL\n')
+
+        return True
 
     def _update_url_sec(self, msg, sec_def_type, delete=False):
         """ Updates URL security definitions that use the security configuration
@@ -580,6 +729,48 @@ class URLData(OAuthDataStore):
         with self.url_sec_lock:
             self.basic_auth_config[msg.name]['config']['password'] = msg.password
             self._update_url_sec(msg, SEC_DEF_TYPE.BASIC_AUTH)
+
+# ################################################################################################################################
+
+    def _update_jwt(self, name, config):
+        self.jwt_config[name] = Bunch()
+        self.jwt_config[name].config = config
+
+    def jwt_get(self, name):
+        """ Returns the configuration of the JWT security definition
+        of the given name.
+        """
+        with self.url_sec_lock:
+            return self.jwt_config.get(name)
+
+    def on_broker_msg_SECURITY_JWT_CREATE(self, msg, *args):
+        """ Creates a new JWT security definition.
+        """
+        with self.url_sec_lock:
+            self._update_jwt(msg.name, msg)
+
+    def on_broker_msg_SECURITY_JWT_EDIT(self, msg, *args):
+        """ Updates an existing JWT security definition.
+        """
+        with self.url_sec_lock:
+            del self.jwt_config[msg.old_name]
+            self._update_jwt(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.JWT)
+
+    def on_broker_msg_SECURITY_JWT_DELETE(self, msg, *args):
+        """ Deletes a JWT security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('jwt', msg.name)
+            del self.jwt_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.JWT, True)
+
+    def on_broker_msg_SECURITY_JWT_CHANGE_PASSWORD(self, msg, *args):
+        """ Changes password of a JWT security definition.
+        """
+        with self.url_sec_lock:
+            self.jwt_config[msg.name]['config']['password'] = msg.password
+            self._update_url_sec(msg, SEC_DEF_TYPE.JWT)
 
 # ################################################################################################################################
 
@@ -866,7 +1057,7 @@ class URLData(OAuthDataStore):
         channel_item = Bunch()
         for name in('connection', 'content_type', 'data_format', 'host', 'id', 'has_rbac', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
-            'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path',):
+            'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac'):
 
             channel_item[name] = msg[name]
 
@@ -895,6 +1086,7 @@ class URLData(OAuthDataStore):
         sec_info.is_active = msg.is_active
         sec_info.data_format = msg.data_format
         sec_info.transport = msg.transport
+        sec_info.sec_use_rbac = msg.sec_use_rbac
 
         if msg.get('security_name'):
             sec_info.sec_def = Bunch()

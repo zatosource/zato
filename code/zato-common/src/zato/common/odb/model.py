@@ -207,8 +207,7 @@ class HTTPBasicAuth(SecurityBase):
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
     realm = Column(String(200), nullable=False)
 
-    def __init__(self, id=None, name=None, is_active=None, username=None,
-                 realm=None, password=None, cluster=None):
+    def __init__(self, id=None, name=None, is_active=None, username=None, realm=None, password=None, cluster=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -216,6 +215,15 @@ class HTTPBasicAuth(SecurityBase):
         self.realm = realm
         self.password = password
         self.cluster = cluster
+
+class JWT(SecurityBase):
+    """ A set of JavaScript Web Token (JWT) credentials.
+    """
+    __tablename__ = 'sec_jwt'
+    __mapper_args__ = {'polymorphic_identity': 'jwt'}
+
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+    ttl = Column(Integer, nullable=False)
 
 class WSSDefinition(SecurityBase):
     """ A WS-Security definition.
@@ -475,6 +483,7 @@ class HTTPSOAP(Base):
     sec_tls_ca_cert_id = Column(Integer, ForeignKey('sec_tls_ca_cert.id', ondelete='CASCADE'), nullable=True)
     sec_tls_ca_cert = relationship('TLSCACert', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
     has_rbac = Column(Boolean, nullable=False, default=False)
+    sec_use_rbac = Column(Boolean(), nullable=False, default=False)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
@@ -1857,3 +1866,19 @@ class RBACRolePermission(Base):
         return '{}/{}/{}/{}'.format(self.id, self.role_id, self.perm_id, self.service_id)
 
 # ################################################################################################################################
+
+class KVData(Base):
+    """ Key/value data table.
+    """
+    __tablename__ = 'kv_data'
+    __table_args__ = (UniqueConstraint('key', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('kv_data_id_seq'), primary_key=True)
+    key = Column(LargeBinary(), nullable=False)
+    value = Column(LargeBinary(), nullable=True)
+    data_type = Column(String(), nullable=False, default='text')
+    creation_time = Column(DateTime(), nullable=False)
+    expiry_time = Column(DateTime(), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
+    cluster = relationship(Cluster, backref=backref('kv_data', order_by=key, cascade='all, delete, delete-orphan'))

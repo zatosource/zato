@@ -138,6 +138,9 @@ ZATO_OK = 'ZATO_OK'
 ZATO_ERROR = 'ZATO_ERROR'
 ZATO_WARNING = 'ZATO_WARNING'
 ZATO_NONE = b'ZATO_NONE'
+ZATO_SEC_USE_RBAC = 'ZATO_SEC_USE_RBAC'
+
+DELEGATED_TO_RBAC = 'Delegated to RBAC'
 
 # Default HTTP method outgoing connections use to ping resources
 # TODO: Move it to MISC
@@ -266,6 +269,7 @@ class SEC_DEF_TYPE:
     APIKEY = 'apikey'
     AWS = 'aws'
     BASIC_AUTH = 'basic_auth'
+    JWT = 'jwt'
     NTLM = 'ntlm'
     OAUTH = 'oauth'
     OPENSTACK = 'openstack'
@@ -279,13 +283,14 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.APIKEY: 'API key',
     SEC_DEF_TYPE.AWS: 'AWS',
     SEC_DEF_TYPE.BASIC_AUTH: 'HTTP Basic Auth',
+    SEC_DEF_TYPE.JWT: 'JWT',
     SEC_DEF_TYPE.NTLM: 'NTLM',
     SEC_DEF_TYPE.OAUTH: 'OAuth 1.0',
     SEC_DEF_TYPE.OPENSTACK: 'OpenStack',
     SEC_DEF_TYPE.TECH_ACCOUNT: 'Tech account',
-    SEC_DEF_TYPE.WSS: 'WS-Security',
     SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
+    SEC_DEF_TYPE.WSS: 'WS-Security',
     SEC_DEF_TYPE.XPATH_SEC: 'XPath',
 }
 

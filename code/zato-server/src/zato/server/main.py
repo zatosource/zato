@@ -203,6 +203,7 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     server.app_context = app_context
     server.preferred_address = preferred_address
     server.sync_internal = options['sync_internal']
+    server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
 
     # Remove all locks possibly left over by previous server instances
     kvdb = app_context.get_object('kvdb')
