@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import SIMPLE_IO
+from zato.common import DATA_FORMAT, SIMPLE_IO
 from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, RBACPermission, RBACRole, Service, WSSDefinition
 from zato.common.util import get_http_json_channel, get_http_soap_channel
 
@@ -111,6 +111,9 @@ zato_services = {
     # Clusters - Connections map
     'zato.info.get-info':'zato.server.service.internal.info.GetInfo',
     'zato.info.get-server-info':'zato.server.service.internal.info.GetServerInfo',
+
+    # SQL-backed KVDB
+    'zato.kv_data.auto-clean-up':'zato.server.service.internal.kv_data.AutoCleanUp',
 
     # Key/value DB
     'zato.kvdb.data-dict.dictionary.create':'zato.server.service.internal.kvdb.data_dict.dictionary.Create',
@@ -285,6 +288,16 @@ zato_services = {
     'zato.security.basic-auth.delete':'zato.server.service.internal.security.basic_auth.Delete',
     'zato.security.basic-auth.edit':'zato.server.service.internal.security.basic_auth.Edit',
     'zato.security.basic-auth.get-list':'zato.server.service.internal.security.basic_auth.GetList',
+
+    # Security - JWT
+    'zato.security.jwt.auto-clean-up':'zato.server.service.internal.security.jwt.AutoCleanUp',
+    'zato.security.jwt.change-password':'zato.server.service.internal.security.jwt.ChangePassword',
+    'zato.security.jwt.create':'zato.server.service.internal.security.jwt.Create',
+    'zato.security.jwt.delete':'zato.server.service.internal.security.jwt.Delete',
+    'zato.security.jwt.edit':'zato.server.service.internal.security.jwt.Edit',
+    'zato.security.jwt.get-list':'zato.server.service.internal.security.jwt.GetList',
+    'zato.security.jwt.log-in':'zato.server.service.internal.security.jwt.LogIn',
+    'zato.security.jwt.log-out':'zato.server.service.internal.security.jwt.LogOut',
 
     # Security - NTLM
     'zato.security.tls.ca_cert.change-password':'zato.server.service.internal.security.tls.ca_cert.ChangePassword',
@@ -492,6 +505,12 @@ class Create(ZatoCommand):
             elif name == 'zato.pubsub.rest-handler':
                 self.add_pubsub_rest_handler(session, cluster, service)
 
+            elif name == 'zato.security.jwt.log-in':
+                self.add_jwt_log_in(session, cluster, service)
+
+            elif name == 'zato.security.jwt.log-out':
+                self.add_jwt_log_out(session, cluster, service)
+
             session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))
             session.add(get_http_json_channel(name, service, cluster, pubapi_sec))
 
@@ -617,4 +636,16 @@ class Create(ZatoCommand):
     def add_pubsub_rest_handler(self, session, cluster, service):
         channel = HTTPSOAP(None, 'zato.pubsub.rest', True, True, 'channel', 'plain_http',
             None, '/zato/pubsub/{item_type}/{item}/', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
+        session.add(channel)
+
+    def add_jwt_log_in(self, session, cluster, service):
+        channel = HTTPSOAP(None, 'zato.security.jwt.log-in', True, True, 'channel', 'plain_http',
+            None, '/zato/jwt/log-in', None, '', None, DATA_FORMAT.JSON, merge_url_params_req=True, service=service,
+            cluster=cluster)
+        session.add(channel)
+
+    def add_jwt_log_out(self, session, cluster, service):
+        channel = HTTPSOAP(None, 'zato.security.jwt.log-out', True, True, 'channel', 'plain_http',
+            None, '/zato/jwt/log-out', None, '', None, DATA_FORMAT.JSON, merge_url_params_req=True, service=service,
+            cluster=cluster)
         session.add(channel)

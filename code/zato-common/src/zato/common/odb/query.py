@@ -22,8 +22,8 @@ from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_S
      URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, CassandraQuery, ChannelAMQP, \
      ChannelSTOMP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, \
-     DeliveryHistory, DeliveryPayload, ElasticSearch, JSONPointer, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, \
-     IntervalBasedJob, Job, MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, \
+     DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, \
+     Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, \
      OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, \
      PubSubConsumer, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, \
      Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, \
@@ -198,6 +198,27 @@ def basic_auth_list(session, cluster_id, cluster_name, needs_columns=False):
         q = q.filter(Cluster.name==cluster_name)
 
     q = q.filter(SecurityBase.id==HTTPBasicAuth.id).\
+        order_by('sec_base.name')
+
+    return q
+
+@query_wrapper
+def jwt_list(session, cluster_id, cluster_name, needs_columns=False):
+    """ All the JWT definitions.
+    """
+    q = session.query(
+        JWT.id, JWT.name, JWT.is_active, JWT.username, JWT.password,
+        JWT.ttl, JWT.sec_type, JWT.password_type,
+        Cluster.id.label('cluster_id'),
+        Cluster.name.label('cluster_name')).\
+        filter(Cluster.id==JWT.cluster_id)
+
+    if cluster_id:
+        q = q.filter(Cluster.id==cluster_id)
+    else:
+        q = q.filter(Cluster.name==cluster_name)
+
+    q = q.filter(SecurityBase.id==JWT.id).\
         order_by('sec_base.name')
 
     return q
@@ -608,6 +629,7 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.audit_repl_patt_type,
         HTTPSOAP.timeout,
         HTTPSOAP.sec_tls_ca_cert_id,
+        HTTPSOAP.sec_use_rbac,
         TLSCACert.name.label('sec_tls_ca_cert_name'),
         SecurityBase.sec_type,
         Service.name.label('service_name'),

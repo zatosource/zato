@@ -24,7 +24,8 @@ from webhelpers.paginate import Page
 
 # Zato
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE
+     MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE, \
+     ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, JSONPointer, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsJSONPointer, \
      HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, TLSCACert, to_json, XPath
@@ -54,7 +55,7 @@ class _HTTPSOAPService(object):
 
         if security_id:
 
-            security = session.query(SecurityBase.name, SecurityBase.sec_type).\
+            sec_def = session.query(SecurityBase.name, SecurityBase.sec_type).\
                 filter(SecurityBase.id==security_id).\
                 one()
 
@@ -63,17 +64,17 @@ class _HTTPSOAPService(object):
             if connection == 'outgoing':
 
                 if transport == URL_TYPE.PLAIN_HTTP and \
-                   security.sec_type not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT):
-                    raise Exception('Only HTTP Basic Auth and TLS keys/certs are supported, not [{}]'.format(security.sec_type))
+                   sec_def.sec_type not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT):
+                    raise Exception('Only HTTP Basic Auth and TLS keys/certs are supported, not [{}]'.format(sec_def.sec_type))
 
-                elif transport == URL_TYPE.SOAP and security.sec_type \
+                elif transport == URL_TYPE.SOAP and sec_def.sec_type \
                      not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.WSS):
 
                     raise Exception('Security type must be HTTP Basic Auth, NTLM or WS-Security, not [{}]'.format(
-                        security.sec_type))
+                        sec_def.sec_type))
 
-            info['security_name'] = security.name
-            info['sec_type'] = security.sec_type
+            info['security_name'] = sec_def.name
+            info['sec_type'] = sec_def.sec_type
 
         return info
 
@@ -90,7 +91,7 @@ class GetList(AdminService):
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
-            'content_type')
+            'content_type', Boolean('sec_use_rbac'))
         output_repeated = True
 
     def get_data(self, session):
@@ -123,7 +124,8 @@ class Create(_CreateEdit):
 
     def handle(self):
         input = self.request.input
-        input.security_id = input.security_id if input.security_id != ZATO_NONE else None
+        input.sec_use_rbac = input.security_id == ZATO_SEC_USE_RBAC
+        input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
 
         if not input.url_path.startswith('/'):
@@ -181,8 +183,9 @@ class Create(_CreateEdit):
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
-                item.has_rbac = input.get('has_rbac') or False
+                item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
+                item.sec_use_rbac = input.sec_use_rbac
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
@@ -231,7 +234,8 @@ class Edit(_CreateEdit):
 
     def handle(self):
         input = self.request.input
-        input.security_id = input.security_id if input.security_id != ZATO_NONE else None
+        input.sec_use_rbac = input.security_id == ZATO_SEC_USE_RBAC
+        input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
 
         if not input.url_path.startswith('/'):
@@ -294,8 +298,9 @@ class Edit(_CreateEdit):
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
                 item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
-                item.has_rbac = input.get('has_rbac') or False
+                item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
+                item.sec_use_rbac = input.sec_use_rbac
 
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None

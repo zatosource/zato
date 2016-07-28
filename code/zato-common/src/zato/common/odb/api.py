@@ -35,7 +35,7 @@ from bunch import Bunch
 from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, ZATO_NONE, \
      ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition
+     HTTPSOAP, HTTSOAPAudit, JWT, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition
 from zato.common.odb import ping_queries, query
 from zato.common.util import current_host, get_component_name, get_engine_url, get_http_json_channel, get_http_soap_channel, \
      parse_extra_into_dict, parse_tls_channel_security_definition
@@ -379,6 +379,7 @@ class ODBManager(SessionWrapper):
             sec_type_db_class = {
                 SEC_DEF_TYPE.APIKEY: APIKeySecurity,
                 SEC_DEF_TYPE.BASIC_AUTH: HTTPBasicAuth,
+                SEC_DEF_TYPE.JWT: JWT,
                 SEC_DEF_TYPE.OAUTH: OAuth,
                 SEC_DEF_TYPE.TECH_ACCOUNT: TechnicalAccount,
                 SEC_DEF_TYPE.WSS: WSSDefinition,
@@ -402,6 +403,7 @@ class ODBManager(SessionWrapper):
                 result[target].is_active = item.is_active
                 result[target].transport = item.transport
                 result[target].data_format = item.data_format
+                result[target].sec_use_rbac = item.sec_use_rbac
 
                 if item.security_id:
                     result[target].sec_def = Bunch()
@@ -426,6 +428,10 @@ class ODBManager(SessionWrapper):
                         result[target].sec_def.username = sec_def.username
                         result[target].sec_def.password = sec_def.password
                         result[target].sec_def.realm = sec_def.realm
+
+                    elif item.sec_type == SEC_DEF_TYPE.JWT:
+                        result[target].sec_def.username = sec_def.username
+                        result[target].sec_def.password = sec_def.password
 
                     elif item.sec_type == SEC_DEF_TYPE.APIKEY:
                         result[target].sec_def.username = 'HTTP_{}'.format(sec_def.username.upper().replace('-', '_'))
@@ -826,6 +832,12 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.basic_auth_list(session, cluster_id, cluster_name, needs_columns)
+
+    def get_jwt_list(self, cluster_id, cluster_name, needs_columns=False):
+        """ Returns a list of JWT definitions existing on the given cluster.
+        """
+        with closing(self.session()) as session:
+            return query.jwt_list(session, cluster_id, cluster_name, needs_columns)
 
     def get_ntlm_list(self, cluster_id, needs_columns=False):
         """ Returns a list of NTLM definitions existing on the given cluster.

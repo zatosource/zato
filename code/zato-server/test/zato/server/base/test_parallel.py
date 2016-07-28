@@ -214,7 +214,7 @@ class AuditTestCase(TestCase):
 
                     class FakeURLData(URLData):
                         def __init__(self):
-                            self.url_sec = {expected_match_target: Bunch(sec_def=ZATO_NONE)}
+                            self.url_sec = {expected_match_target: Bunch(sec_def=ZATO_NONE, sec_use_rbac=False)}
 
                         def match(self, *ignored_args, **ignored_kwargs):
                             return True, channel_item
@@ -394,7 +394,7 @@ class HTTPAccessLogTestCase(TestCase):
 
             class FakeURLData(URLData):
                 def __init__(self):
-                    self.url_sec = {url_path: Bunch(sec_def=ZATO_NONE)}
+                    self.url_sec = {url_path: Bunch(sec_def=ZATO_NONE, sec_use_rbac=False)}
 
                 def match(self, *ignored_args, **ignored_kwargs):
                     return True, channel_item

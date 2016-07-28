@@ -15,7 +15,7 @@ from zato.bunch import Bunch
 from springpython.config import Object, PythonConfig
 
 # Zato
-from zato.common import SIMPLE_IO, ZATO_CRYPTO_WELL_KNOWN_DATA
+from zato.common import DEFAULT_STATS_SETTINGS, SIMPLE_IO, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto import CryptoManager
 from zato.common.kvdb import KVDB
 from zato.common.odb.api import ODBManager, PoolStore
@@ -62,6 +62,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.hot_deploy',
             'zato.server.service.internal.info',
             'zato.server.service.internal.http_soap',
+            'zato.server.service.internal.kv_data',
             'zato.server.service.internal.kvdb',
             'zato.server.service.internal.kvdb.data_dict.dictionary',
             'zato.server.service.internal.kvdb.data_dict.impexp',
@@ -95,6 +96,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.security.apikey',
             'zato.server.service.internal.security.aws',
             'zato.server.service.internal.security.basic_auth',
+            'zato.server.service.internal.security.jwt',
             'zato.server.service.internal.security.ntlm',
             'zato.server.service.internal.security.oauth',
             'zato.server.service.internal.security.rbac',
@@ -169,3 +171,45 @@ class ZatoContext(PythonConfig):
         server.user_config = Bunch()
 
         return server
+
+    # #######################################################
+    # Scheduler management
+
+    @Object
+    def startup_jobs(self):
+        return [
+            {'name': 'zato.stats.process-raw-times', 'seconds':90,
+             'service':'zato.stats.process-raw-times',
+             'extra':'max_batch_size={}'.format(DEFAULT_STATS_SETTINGS['scheduler_raw_times_batch'])},
+
+            {'name': 'zato.stats.aggregate-by-minute', 'seconds':60,
+             'service':'zato.stats.aggregate-by-minute'},
+
+            {'name': 'zato.stats.aggregate-by-hour', 'minutes':10,
+             'service':'zato.stats.aggregate-by-hour'},
+
+            {'name': 'zato.stats.aggregate-by-day', 'minutes':60,
+             'service':'zato.stats.aggregate-by-day'},
+
+            {'name': 'zato.stats.aggregate-by-month', 'minutes':60,
+             'service':'zato.stats.aggregate-by-month'},
+
+            {'name': 'zato.stats.summary.create-summary-by-day', 'minutes':10,
+             'service':'zato.stats.summary.create-summary-by-day'},
+
+            {'name': 'zato.stats.summary.create-summary-by-week', 'minutes':10,
+             'service':'zato.stats.summary.create-summary-by-week'},
+
+            {'name': 'zato.stats.summary.create-summary-by-month', 'minutes':60,
+             'service':'zato.stats.summary.create-summary-by-month'},
+
+            {'name': 'zato.stats.summary.create-summary-by-year', 'minutes':60,
+             'service':'zato.stats.summary.create-summary-by-year'},
+
+            {'name': 'zato.outgoing.sql.auto-ping', 'minutes':3,
+             'service':'zato.outgoing.sql.auto-ping'},
+
+            {'name': 'zato.kv-data.auto-clean-up', 'seconds':3,
+             'service':'zato.kv-data.auto-clean-up'},
+
+        ]

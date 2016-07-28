@@ -109,6 +109,7 @@ $.namespace('zato.security');
 $.namespace('zato.security.apikey');
 $.namespace('zato.security.aws');
 $.namespace('zato.security.basic_auth');
+$.namespace('zato.security.jwt');
 $.namespace('zato.security.ntlm');
 $.namespace('zato.security.oauth');
 $.namespace('zato.security.openstack');
