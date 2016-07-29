@@ -227,9 +227,13 @@ class ZMQ:
         MDP01: MDP01_HUMAN,
     })
 
+    class METHOD_NAME:
+        BIND = 'bind'
+        CONNECT = 'connect'
+
     METHOD = {
-        'bind': 'Bind',
-        'connect': 'Connect',
+        METHOD_NAME.BIND: 'Bind',
+        METHOD_NAME.CONNECT: 'Connect',
     }
 
     POOL_STRATEGY = OrderedDict({

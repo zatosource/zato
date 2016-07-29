@@ -99,8 +99,8 @@ from springpython.remoting.xmlrpc import SSLClientTransport
 
 # SQLAlchemy
 import sqlalchemy as sa
-from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy import orm
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 
 # Texttable
 from texttable import Texttable
@@ -110,11 +110,13 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, SECRET_SHADOW, SIMPLE_IO, \
-     soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN
+     soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
 from zato.common.odb.query import _service as _service
+
+# ################################################################################################################################
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +151,8 @@ def absjoin(base, path):
 
     return abspath(join(base, path))
 
+# ################################################################################################################################
+
 def absolutize(path, base=''):
     """ Turns a relative path to an absolute one or returns it as is if it's already absolute.
     """
@@ -160,8 +164,12 @@ def absolutize(path, base=''):
 
     return path
 
+# ################################################################################################################################
+
 def current_host():
     return gethostname() + '/' + getfqdn()
+
+# ################################################################################################################################
 
 def pprint(obj):
     """ Pretty-print an object into a string buffer.
@@ -178,6 +186,8 @@ def pprint(obj):
 
     return value
 
+# ################################################################################################################################
+
 def encrypt(data, priv_key, b64=True):
     """ Encrypt data using a public key derived from the private key.
     data - data to be encrypted
@@ -189,6 +199,8 @@ def encrypt(data, priv_key, b64=True):
     cm.load_keys()
 
     return cm.encrypt(data, b64)
+
+# ################################################################################################################################
 
 def decrypt(data, priv_key, b64=True):
     """ Decrypts data using the given private key.
@@ -202,16 +214,22 @@ def decrypt(data, priv_key, b64=True):
 
     return cm.decrypt(data, b64)
 
+# ################################################################################################################################
+
 def get_executable():
     """ Returns the wrapper buildout uses for executing Zato commands. This has
     all the dependencies added to PYTHONPATH.
     """
     return os.path.join(os.path.dirname(sys.executable), 'py')
 
+# ################################################################################################################################
+
 def get_zato_command():
     """ Returns the full path to the 'zato' command' in a buildout environment.
     """
     return os.path.join(os.path.dirname(sys.executable), 'zato')
+
+# ################################################################################################################################
 
 # Based on
 # http://stackoverflow.com/questions/384076/how-can-i-make-the-python-logging-output-to-be-colored
@@ -254,6 +272,8 @@ class ColorFormatter(logging.Formatter):
 
         return logging.Formatter.format(self, record)
 
+# ################################################################################################################################
+
 def object_attrs(_object, ignore_double_underscore, to_avoid_list, sort):
     attrs = dir(_object)
 
@@ -268,6 +288,8 @@ def object_attrs(_object, ignore_double_underscore, to_avoid_list, sort):
         attrs = sorted(attrs)
 
     return attrs
+
+# ################################################################################################################################
 
 def make_repr(_object, ignore_double_underscore=True, to_avoid_list='repr_to_avoid', sort=True):
     """ Makes a nice string representation of an object, suitable for logging purposes.
@@ -287,6 +309,8 @@ def make_repr(_object, ignore_double_underscore=True, to_avoid_list='repr_to_avo
 
     return out
 
+# ################################################################################################################################
+
 def to_form(_object):
     """ Reads public attributes of an object and creates a dictionary out of it;
     handy for providing initial data to a Django form which isn't backed by
@@ -298,6 +322,8 @@ def to_form(_object):
         out[attr] = getattr(_object, attr)
 
     return out
+
+# ################################################################################################################################
 
 def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_file, timeout):
     """ Returns an SSL XML-RPC client to the load-balancer.
@@ -322,8 +348,12 @@ def get_lb_client(lb_host, lb_agent_port, ssl_ca_certs, ssl_key_file, ssl_cert_f
     return LoadBalancerAgentClient(
         agent_uri, ssl_ca_certs, ssl_key_file, ssl_cert_file, transport=transport, timeout=timeout)
 
+# ################################################################################################################################
+
 def tech_account_password(password_clear, salt):
     return sha256(password_clear+ ':' + salt).hexdigest()
+
+# ################################################################################################################################
 
 def new_cid(random_bytes=random_bytes):
     """ Returns a new 96-bit correlation identifier. It's *not* safe to use the ID
@@ -334,8 +364,12 @@ def new_cid(random_bytes=random_bytes):
     """
     return random_bytes(12).encode('hex')
 
+# ################################################################################################################################
+
 def get_user_config_name(file_name):
     return file_name.split('.')[0]
+
+# ################################################################################################################################
 
 def get_config(repo_location, config_name, bunchified=True, needs_user_config=True):
     """ Returns the configuration object. Will load additional user-defined config files,
@@ -360,6 +394,8 @@ def get_config(repo_location, config_name, bunchified=True, needs_user_config=Tr
 
     return conf
 
+# ################################################################################################################################
+
 def _get_ioc_config(location, config_class):
     """ Instantiates an Inversion of Control container from the given location if the location exists at all.
     """
@@ -371,6 +407,8 @@ def _get_ioc_config(location, config_class):
 
     return config
 
+# ################################################################################################################################
+
 def get_app_context(config):
     """ Returns the Zato's Inversion of Control application context.
     """
@@ -380,6 +418,8 @@ def get_app_context(config):
     mod = import_module(mod_name)
     class_ = getattr(mod, class_name)()
     return ApplicationContext(class_)
+
+# ################################################################################################################################
 
 def get_crypto_manager(repo_location, app_context, config, load_keys=True):
     """ Returns a tool for crypto manipulations.
@@ -403,14 +443,20 @@ def get_crypto_manager(repo_location, app_context, config, load_keys=True):
 
     return crypto_manager
 
+# ################################################################################################################################
+
 def get_current_user():
     return getpwuid(getuid()).pw_name
+
+# ################################################################################################################################
 
 def service_name_from_impl(impl_name):
     """ Turns a Zato internal service's implementation name into a shorter
     service name
     """
     return impl_name.replace('server.service.internal.', '')
+
+# ################################################################################################################################
 
 def deployment_info(method, object_, timestamp, fs_location, remote_host='', remote_user=''):
     """ Returns a JSON document containing information who deployed a service
@@ -427,6 +473,8 @@ def deployment_info(method, object_, timestamp, fs_location, remote_host='', rem
         'current_user': get_current_user(),
     }
 
+# ################################################################################################################################
+
 def get_body_payload(body):
     body_children_count = body[0].countchildren()
 
@@ -438,6 +486,8 @@ def get_body_payload(body):
         body_payload = body[0].getchildren()
 
     return body_payload
+
+# ################################################################################################################################
 
 def payload_from_request(cid, request, data_format, transport):
     """ Converts a raw request to a payload suitable for usage with SimpleIO.
@@ -472,6 +522,8 @@ def payload_from_request(cid, request, data_format, transport):
 
     return payload
 
+# ################################################################################################################################
+
 def is_python_file(name):
     """ Is it a Python file we can import Zato services from?
     """
@@ -479,14 +531,20 @@ def is_python_file(name):
         if name.endswith(suffix):
             return True
 
+# ################################################################################################################################
+
 def fs_safe_name(value):
     return re.sub('[{}]'.format(string.punctuation + string.whitespace), '_', value)
+
+# ################################################################################################################################
 
 def fs_safe_now():
     """ Returns a UTC timestamp with any characters unsafe for filesystem names
     removed.
     """
     return fs_safe_name(str(datetime.utcnow()))
+
+# ################################################################################################################################
 
 class _DummyLink(object):
     """ A dummy class for staying consistent with pip's API in certain places
@@ -495,10 +553,14 @@ class _DummyLink(object):
     def __init__(self, url):
         self.url = url
 
+# ################################################################################################################################
+
 def decompress(archive, dir_name):
     """ Decompresses an archive into a directory, the directory must already exist.
     """
     unpack_file_url(_DummyLink('file:' + archive), dir_name)
+
+# ################################################################################################################################
 
 def visit_py_source(dir_name):
     for pattern in('*.py', '*.pyw'):
@@ -506,10 +568,14 @@ def visit_py_source(dir_name):
         for py_path in sorted(glob(glob_path)):
             yield py_path
 
+# ################################################################################################################################
+
 def _os_remove(path):
     """ A helper function so it's easier to mock it in unittests.
     """
     return os.remove(path)
+
+# ################################################################################################################################
 
 def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True):
     """ Hot-deploys a package if it looks like a Python module or archive.
@@ -531,6 +597,7 @@ def hot_deploy(parallel_server, file_name, path, delete_path=True, notify=True):
 
     return package_id
 
+# ################################################################################################################################
 
 # As taken from http://wiki.python.org/moin/SortingListsOfDictionaries
 def multikeysort(items, columns):
@@ -545,17 +612,25 @@ def multikeysort(items, columns):
             return 0
     return sorted(items, cmp=comparer)
 
+# ################################################################################################################################
+
 # From http://docs.python.org/release/2.7/library/itertools.html#recipes
 def grouper(n, iterable, fillvalue=None):
     "grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx"
     args = [iter(iterable)] * n
     return izip_longest(fillvalue=fillvalue, *args)
 
+# ################################################################################################################################
+
 def translation_name(system1, key1, value1, system2, key2):
     return KVDB.SEPARATOR.join((KVDB.TRANSLATION, system1, key1, value1, system2, key2))
 
+# ################################################################################################################################
+
 def dict_item_name(system, key, value):
     return KVDB.SEPARATOR.join((system, key, value))
+
+# ################################################################################################################################
 
 # From http://docs.python.org/release/2.7/library/itertools.html#recipes
 def pairwise(iterable):
@@ -563,6 +638,8 @@ def pairwise(iterable):
     a, b = tee(iterable)
     next(b, None)
     return izip(a, b)
+
+# ################################################################################################################################
 
 def from_local_to_utc(dt, tz_name, dayfirst=True):
     """ What is the UTC time given the local time and the timezone's name?
@@ -574,6 +651,8 @@ def from_local_to_utc(dt, tz_name, dayfirst=True):
     utc_dt = pytz.utc.normalize(dt.astimezone(pytz.utc))
     return utc_dt
 
+# ################################################################################################################################
+
 def from_utc_to_local(dt, tz_name):
     """ What is the local time in the user-provided time zone name?
     """
@@ -584,12 +663,14 @@ def from_utc_to_local(dt, tz_name):
     dt = local_tz.normalize(dt.astimezone(local_tz))
     return dt
 
-# ##############################################################################
+# ################################################################################################################################
 
 def _utcnow():
     """ See zato.common.util.utcnow for docstring.
     """
     return datetime.utcnow()
+
+# ################################################################################################################################
 
 def utcnow():
     """ A thin wrapper around datetime.utcnow added so that tests can mock it
@@ -597,10 +678,14 @@ def utcnow():
     """
     return _utcnow()
 
+# ################################################################################################################################
+
 def _now(tz):
     """ See zato.common.util.utcnow for docstring.
     """
     return datetime.now(tz)
+
+# ################################################################################################################################
 
 def now(tz=None):
     """ A thin wrapper around datetime.now added so that tests can mock it
@@ -608,12 +693,14 @@ def now(tz=None):
     """
     return _now(tz)
 
+# ################################################################################################################################
+
 def datetime_to_seconds(dt):
     """ Converts a datetime object to a number of seconds since UNIX epoch.
     """
     return (dt - _epoch).total_seconds()
 
-# ##############################################################################
+# ################################################################################################################################
 
 def clear_locks(kvdb, server_token, kvdb_config=None, decrypt_func=None):
     """ Clears out any KVDB locks held by Zato servers.
@@ -633,6 +720,7 @@ def clear_locks(kvdb, server_token, kvdb_config=None, decrypt_func=None):
 
     kvdb.close()
 
+# ################################################################################################################################
 
 # Inspired by http://stackoverflow.com/a/9283563
 def uncamelify(s, separator='-', elem_func=unicode.lower):
@@ -643,21 +731,28 @@ def uncamelify(s, separator='-', elem_func=unicode.lower):
     """
     return separator.join(elem_func(elem) for elem in re.sub(_uncamelify_re, r' \1', s).split())
 
+# ################################################################################################################################
+
 def get_component_name(prefix='parallel'):
     """ Returns a name of the component issuing a given request so it's possible
     to trace which Zato component issued it.
     """
     return '{}/{}/{}/{}'.format(prefix, current_host(), os.getpid(), current_thread().name)
 
+# ################################################################################################################################
+
 def dotted_getattr(o, path):
     return reduce(getattr, path.split('.'), o)
 
+# ################################################################################################################################
 
 def get_service_by_name(session, cluster_id, name):
     logger.debug('Looking for name:`%s` in cluster_id:`%s`'.format(name, cluster_id))
     return _service(session, cluster_id).\
            filter(Service.name==name).\
            one()
+
+# ################################################################################################################################
 
 def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
     """ Adds internal jobs to the ODB. Note that it isn't being added
@@ -692,10 +787,14 @@ def add_startup_jobs(cluster_id, odb, jobs, stats_enabled):
                 session.rollback()
                 logger.debug('Caught an expected error, carrying on anyway, e:`%s`', format_exc(e).decode('utf-8'))
 
+# ################################################################################################################################
+
 def hexlify(item):
     """ Returns a nice hex version of a string given on input.
     """
     return ' '.join([elem1+elem2 for (elem1, elem2) in grouper(2, item.encode('hex'))])
+
+# ################################################################################################################################
 
 def validate_input_dict(cid, *validation_info):
     """ Checks that input belongs is one of allowed values.
@@ -784,6 +883,8 @@ def get_threads_traceback(pid):
 
     return result
 
+# ################################################################################################################################
+
 def get_greenlets_traceback(pid):
     result = {}
     for item in gc.get_objects():
@@ -796,6 +897,8 @@ def get_greenlets_traceback(pid):
         result[key] = ''.join(get_stack(item.gr_frame, True))
 
     return result
+
+# ################################################################################################################################
 
 def dump_stacks(*ignored):
     pid = os.getpid()
@@ -812,6 +915,8 @@ def dump_stacks(*ignored):
     table.add_rows(rows)
     logger.info('\n' + table.draw())
 
+# ################################################################################################################################
+
 # Taken from https://stackoverflow.com/a/16589622
 def get_full_stack():
     exc = sys.exc_info()[0]
@@ -825,6 +930,8 @@ def get_full_stack():
         stackstr += '  ' + traceback.format_exc().decode('utf-8').lstrip(trc)
 
     return stackstr
+
+# ################################################################################################################################
 
 def register_diag_handlers():
     """ Registers diagnostic handlers dumping stacks, threads and greenlets on receiving a signal.
@@ -926,10 +1033,14 @@ def _wait_for_port(port, timeout, interval, needs_taken):
 
     return port_ready
 
+# ################################################################################################################################
+
 def wait_until_port_taken(port, timeout=2, interval=0.1):
     """ Waits until a given TCP port becomes taken, i.e. a process binds to a TCP socket.
     """
     return _wait_for_port(port, timeout, interval, True)
+
+# ################################################################################################################################
 
 def wait_until_port_free(port, timeout=2, interval=0.1):
     """ Waits until a given TCP port becomes free, i.e. a process releases a TCP socket.
@@ -952,6 +1063,8 @@ def get_kvdb_config_for_log(config):
     if config.shadow_password_in_logs:
         config.password = SECRET_SHADOW
     return config
+
+# ################################################################################################################################
 
 def has_redis_sentinels(config):
     return asbool(config.get('use_redis_sentinels', False))
@@ -985,14 +1098,22 @@ def validate_tls_from_payload(payload, is_key=False):
 
 get_tls_from_payload = validate_tls_from_payload
 
+# ################################################################################################################################
+
 def get_tls_full_path(root_dir, component, info):
     return os.path.join(root_dir, component, fs_safe_name(info) + '.pem')
+
+# ################################################################################################################################
 
 def get_tls_ca_cert_full_path(root_dir, info):
     return get_tls_full_path(root_dir, TLS.DIR_CA_CERTS, info)
 
+# ################################################################################################################################
+
 def get_tls_key_cert_full_path(root_dir, info):
     return get_tls_full_path(root_dir, TLS.DIR_KEYS_CERTS, info)
+
+# ################################################################################################################################
 
 def store_tls(root_dir, payload, is_key=False):
 
@@ -1152,6 +1273,8 @@ def get_http_json_channel(name, service, cluster, security):
     return HTTPSOAP(None, '{}.json'.format(name), True, True, 'channel', 'plain_http', None, '/zato/json/{}'.format(name),
         None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster, security=security)
 
+# ################################################################################################################################
+
 def get_http_soap_channel(name, service, cluster, security):
     return HTTPSOAP(None, name, True, True, 'channel', 'soap', None, '/zato/soap', None, name, '1.1',
         SIMPLE_IO.FORMAT.XML, service=service, cluster=cluster, security=security)
@@ -1160,6 +1283,8 @@ def get_http_soap_channel(name, service, cluster, security):
 
 def get_engine(args):
     return sa.create_engine(get_engine_url(args))
+
+# ################################################################################################################################
 
 def get_session(engine):
     session = orm.sessionmaker() # noqa
@@ -1241,6 +1366,8 @@ cli_sa_mappings = {
     'odb_password': 'password',
     'odb_type': 'engine',
 }
+
+# ################################################################################################################################
 
 def get_engine_url(args):
     attrs = {}
@@ -1405,5 +1532,30 @@ def spawn_greenlet(callable, *args, **kwargs):
 
 def get_logger_for_class(class_):
     return logging.getLogger('{}.{}'.format(inspect.getmodule(class_).__name__, class_.__name__))
+
+# ################################################################################################################################
+
+def get_worker_pids():
+    """ Returns all sibling worker PIDs of the server process we are being invoked on, including our own worker too.
+    """
+    return sorted(elem.pid for elem in psutil.Process(psutil.Process().ppid()).children())
+
+# ################################################################################################################################
+
+def start_connectors(worker_store, service_name, data):
+
+    if data.socket_method == ZMQ.METHOD_NAME.BIND:
+        address = data.address.split(':')
+        base = ':'.join(address[:-1])
+        initial_port = int(address[-1])
+
+    for idx, pid in enumerate(get_worker_pids()):
+
+        if data.socket_method == ZMQ.METHOD_NAME.BIND:
+            port = initial_port+idx
+            data.address = '{}:{}'.format(base, port)
+            data.bind_port = port
+
+        worker_store.server.invoke(service_name, data, pid=pid, is_async=True, data_format=DATA_FORMAT.DICT)
 
 # ################################################################################################################################

@@ -499,9 +499,13 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         target_pid = kwargs.pop('pid', None)
 
         if target_pid and target_pid != self.pid:
-            return self.ipc_api.invoke_by_pid(service, request, target_pid, self.fifo_response_buffer_size)
+
+            # We need it only in the other branch, not here.
+            kwargs.pop('data_format', None)
+
+            return self.ipc_api.invoke_by_pid(service, request, target_pid, self.fifo_response_buffer_size, *args, **kwargs)
         else:
-            return self.worker_store.invoke(service, request, *args, **kwargs)
+            return self.worker_store.invoke(service, request, data_format=kwargs.pop('data_format'), *args, **kwargs)
 
 # ################################################################################################################################
 
