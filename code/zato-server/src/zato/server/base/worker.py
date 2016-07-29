@@ -46,7 +46,7 @@ from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
-     parse_extra_into_dict, parse_tls_channel_security_definition, store_tls
+     parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, store_tls
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -507,6 +507,7 @@ class WorkerStore(BrokerMessageReceiver):
     def init_zmq_channels(self):
         """ Initializes ZeroMQ channels and MDP connections.
         """
+        return
         lock_name = 'startup.init_zmq.{}'.format(self.server.get_full_name())
 
         with self.server.zato_lock_manager(lock_name, ttl=20, block=None):
@@ -1783,15 +1784,25 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _on_broker_msg_channel_zmq_create_edit(self, name, msg, action, lock_timeout, start):
+    def zmq_create_edit(self, name, msg, action, lock_timeout, start):
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
             self._set_up_zmq_channel(name, msg, action, start)
 
+# ################################################################################################################################
+
+    def zmq_create(self, msg):
+        self.zmq_create_edit(msg.name, msg, 'create', 0, True)
+
     def on_broker_msg_CHANNEL_ZMQ_CREATE(self, msg):
-        self._on_broker_msg_channel_zmq_create_edit(msg.name, msg, 'create', 0, True)
+        if self.server.zato_lock_manager.acquire(msg.config_cid, ttl=10, block=False):
+            start_connectors(self, 'zato.channel.zmq.start', msg)
+
+# ################################################################################################################################
 
     def on_broker_msg_CHANNEL_ZMQ_EDIT(self, msg):
-        self._on_broker_msg_channel_zmq_create_edit(msg.old_name, msg, 'edit', 5, False)
+        self.zmq_create_edit(msg.old_name, msg, 'edit', 5, False)
+
+# ################################################################################################################################
 
     def on_broker_msg_CHANNEL_ZMQ_DELETE(self, msg):
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=5):
