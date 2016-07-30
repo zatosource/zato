@@ -48,7 +48,7 @@ class _UpdateSIO(AdminSIO):
     """
     input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
         'pool_strategy', 'service_source', 'service')
-    input_optional = ('sub_key', 'data_format', 'msg_source')
+    input_optional = ('id', 'sub_key', 'data_format', 'msg_source')
 
 # ################################################################################################################################
 
@@ -281,6 +281,6 @@ class Start(Service):
         if input.bind_port and is_port_taken(input.bind_port):
             self.logger.warn('Cannot bind Zero MQ channel `%s` to TCP port %s (already taken)', input.name, input.bind_port)
         else:
-            self.server.worker_store.zmq_create(self.request.input)
+            self.server.worker_store.zmq_channel_create(self.request.input)
 
 # ################################################################################################################################

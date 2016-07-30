@@ -1777,14 +1777,16 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def zmq_create_edit(self, name, msg, action, lock_timeout, start):
+    def zmq_channel_create_edit(self, name, msg, action, lock_timeout, start):
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
             self._set_up_zmq_channel(name, msg, action, start)
 
 # ################################################################################################################################
 
-    def zmq_create(self, msg):
-        self.zmq_create_edit(msg.name, msg, 'create', 0, True)
+    def zmq_channel_create(self, msg):
+        self.zmq_channel_create_edit(msg.name, msg, 'create', 0, True)
+
+# ################################################################################################################################
 
     def on_broker_msg_CHANNEL_ZMQ_CREATE(self, msg):
         if self.server.zato_lock_manager.acquire(msg.config_cid, ttl=10, block=False):
@@ -1793,7 +1795,13 @@ class WorkerStore(BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_CHANNEL_ZMQ_EDIT(self, msg):
-        self.zmq_create_edit(msg.old_name, msg, 'edit', 5, False)
+
+        # Each worker uses a unique bind port
+        msg = bunchify(msg)
+        base, initial_port = get_base_initial_port(msg)
+        update_bind_port(msg, base, initial_port, self.worker_idx)
+
+        self.zmq_channel_create_edit(msg.old_name, msg, 'edit', 5, False)
 
 # ################################################################################################################################
 
