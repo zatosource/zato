@@ -31,7 +31,7 @@ class Base(Connector):
         return '{} {}'.format(self.config.socket_type, address)
 
     def get_prev_log_details(self):
-        return self._get_log_details(self.config.prev_address)
+        return self._get_log_details(self.config.prev_address if 'prev_address' in self.config else self.config.address)
 
     def get_log_details(self):
         return self._get_log_details(self.config.address)

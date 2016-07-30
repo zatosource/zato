@@ -156,9 +156,6 @@ class Connector(object):
     def edit(self, old_name, config):
         with self.lock:
             config.prev_address = self.config.address
-            #logger.warn('old %s', self.config.address)
-            #logger.warn('new %s', config.address)
-            #logger.warn('')
             self._edit(old_name, config)
             self.restart()
 

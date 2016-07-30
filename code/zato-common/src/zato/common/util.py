@@ -1571,3 +1571,18 @@ def start_connectors(worker_store, service_name, data):
         worker_store.server.invoke(service_name, data, pid=pid, is_async=True, data_format=DATA_FORMAT.DICT)
 
 # ################################################################################################################################
+
+def require_tcp_port(address):
+    if not ':' in address:
+        raise Exception('No TCP port in {}'.format(address))
+
+    port = address.split(':')[-1]
+    if not port.strip():
+        raise Exception('No TCP port in {}'.format(address))
+
+    try:
+        int(port)
+    except ValueError:
+        raise Exception('Invalid TCP port in {}'.format(address))
+
+# ################################################################################################################################
