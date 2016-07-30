@@ -45,8 +45,9 @@ from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
-     parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, store_tls
+from zato.common.util import get_base_initial_port, get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
+     new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, store_tls, \
+     update_bind_port
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -93,6 +94,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.broker_client = None
         self.pubsub = None
         self.rbac = RBAC()
+        self.worker_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
 
         # Which services can be invoked
         self.invoke_matcher = Matcher()
@@ -507,28 +509,19 @@ class WorkerStore(BrokerMessageReceiver):
     def init_zmq_channels(self):
         """ Initializes ZeroMQ channels and MDP connections.
         """
-        return
-        lock_name = 'startup.init_zmq.{}'.format(self.server.get_full_name())
 
-        with self.server.zato_lock_manager(lock_name, ttl=20, block=None):
-            cache_key = KVDB.ZMQ_CONFIG_READY_PREFIX.format(self.server.deployment_key)
+        # Channels
+        for name, data in self.worker_config.channel_zmq.items():
 
-            # There must have been another worker before us
-            if self.kvdb.conn.get(cache_key):
-                return
+            # Each worker uses a unique bind port
+            data = bunchify(data)
+            base, initial_port = get_base_initial_port(data.config)
+            update_bind_port(data.config, base, initial_port, self.worker_idx)
 
-            # Channels
-            for name, data in self.worker_config.channel_zmq.items():
-                self._set_up_zmq_channel(name, bunchify(data.config), 'create')
+            self._set_up_zmq_channel(name, bunchify(data.config), 'create')
 
-                self.zmq_mdp_v01_api.start()
-                self.zmq_channel_api.start()
-
-            # Having configured and start ZeroMQ channels we need to set a flag in cache
-            # so that other workers of the same server do not try to start them too,
-            # which would be impossible because they would have to bind to the same socket.
-            self.kvdb.conn.set(cache_key, '1')
-            self.kvdb.conn.expire(cache_key, 600) # 10 minutes is aplenty for other workers to boot up
+            self.zmq_mdp_v01_api.start()
+            self.zmq_channel_api.start()
 
     def init_zmq_outconns(self):
         """ Initializes ZeroMQ outgoing connections (but not MDP that are initialized along with channels).
