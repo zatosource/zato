@@ -27,7 +27,13 @@ class Base(Connector):
     def _stop(self):
         self.impl.close(50) # TODO: Should be configurable
 
+    def _get_log_details(self, address):
+        return '{} {}'.format(self.config.socket_type, address)
+
+    def get_prev_log_details(self):
+        return self._get_log_details(self.config.prev_address)
+
     def get_log_details(self):
-        return '{} {}'.format(self.config.socket_type, self.config.address)
+        return self._get_log_details(self.config.address)
 
 # ################################################################################################################################

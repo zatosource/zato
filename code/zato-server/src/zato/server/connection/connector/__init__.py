@@ -88,6 +88,8 @@ class Connector(object):
         """
         return ''
 
+    get_prev_log_details = get_log_details
+
 # ################################################################################################################################
 
     def _start(self):
@@ -112,7 +114,7 @@ class Connector(object):
         logger.debug('%s %s connector `%s`', verb, self.type, self.name)
 
     def _info_start_stop(self, verb):
-        log_details = self.get_log_details()
+        log_details = self.get_prev_log_details() if 'Stop' in verb else self.get_log_details()
         logger.info('%s %s connector `%s`%s', verb, self.type, self.name, ' ({})'.format(log_details) if log_details else '')
 
 # ################################################################################################################################
@@ -153,6 +155,10 @@ class Connector(object):
 
     def edit(self, old_name, config):
         with self.lock:
+            config.prev_address = self.config.address
+            #logger.warn('old %s', self.config.address)
+            #logger.warn('new %s', config.address)
+            #logger.warn('')
             self._edit(old_name, config)
             self.restart()
 
