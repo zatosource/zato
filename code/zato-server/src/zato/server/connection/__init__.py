@@ -29,12 +29,12 @@ import psutil
 import yaml
 
 # Zato
+from zato.broker import BrokerMessageReceiver
 from zato.broker.thread_client import BrokerClient
 from zato.common import Inactive, SECRET_SHADOW, TRACE1, ZATO_ODB_POOL_NAME
 from zato.common.dispatch import dispatcher
 from zato.common.kvdb import KVDB
 from zato.common.util import get_app_context, get_config, get_crypto_manager, get_executable, new_cid
-from zato.server.base import BrokerMessageReceiver
 
 logger = logging.getLogger(__name__)
 

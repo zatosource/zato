@@ -9,13 +9,14 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import logging
+import os
 from datetime import datetime, timedelta
+from errno import ENOENT
 from hashlib import sha256
 from pwd import getpwuid
 from tempfile import gettempdir
 from threading import current_thread
-import logging
-import os
 
 # gevent
 from gevent import sleep, spawn
@@ -76,6 +77,9 @@ class LockInfo(object):
 
     def __repr__(self):
         return make_repr(self)
+
+    def __nonzero__(self):
+        return self.acquired
 
 # ################################################################################################################################
 
@@ -269,7 +273,15 @@ user={}
     def release(self, _has_debug=has_debug):
         unlock(self.tmp_file)
         self.tmp_file.close()
-        os.remove(self.tmp_file.name)
+
+        try:
+            os.remove(self.tmp_file.name)
+        except OSError, e:
+
+            # ENOENT = No such file, this is fine, apparently another process beat us to that lock's deletion.
+            # But any other exception needs to be re-raised.
+            if e.errno != ENOENT:
+                raise
 
         if _has_debug:
             logger.debug('Unlocked `%s`', self.tmp_file)

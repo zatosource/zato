@@ -10,14 +10,28 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from logging import getLogger
 from traceback import format_exc
 
 # Zato
 from zato.common import MSG_SOURCE, ZMQ
 from zato.common.broker_message import CHANNEL
-from zato.common.odb.model import ChannelZMQ, Cluster, Service
+from zato.common.odb.model import ChannelZMQ, Cluster, Service as ServiceModel
 from zato.common.odb.query import channel_zmq_list
+from zato.common.util import is_port_taken, require_tcp_port
+from zato.server.service import Int, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
+# ################################################################################################################################
+
+class _UpdateSIO(AdminSIO):
+    """ Common class for Create, Edit and Start SIO parameters.
+    """
+    input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method', 'pool_strategy', \
+        'service_source', 'service')
+    input_optional = ('id', 'sub_key', 'data_format', 'msg_source')
+
+# ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns a list of ZeroMQ channels.
@@ -40,19 +54,19 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+# ################################################################################################################################
+
 class Create(AdminService):
     """ Creates a new ZeroMQ channel.
     """
-    class SimpleIO(AdminSIO):
+    class SimpleIO(_UpdateSIO):
         request_elem = 'zato_channel_zmq_create_request'
         response_elem = 'zato_channel_zmq_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
-            'pool_strategy', 'service_source', 'service')
-        input_optional = ('sub_key', 'data_format', 'msg_source')
         output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
+        require_tcp_port(input.address)
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(ChannelZMQ.id).\
@@ -61,15 +75,15 @@ class Create(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('A ZeroMQ channel [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('A ZeroMQ channel `{}` already exists in this cluster'.format(input.name))
 
             # Is the service's name correct?
-            service = session.query(Service).\
+            service = session.query(ServiceModel).\
                 filter(Cluster.id==input.cluster_id).\
-                filter(Service.name==input.service).first()
+                filter(ServiceModel.name==input.service).first()
 
             if not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
                 raise Exception(msg)
 
             try:
@@ -101,33 +115,28 @@ class Create(AdminService):
 
                 self.broker_client.publish(input)
 
-                # We are not being invoked from an outgoing connection so we need to notify it
-                if input.socket_type.startswith(ZMQ.MDP) and input.get('msg_source') != MSG_SOURCE.DUPLEX:
-                    self.invoke('zato.outgoing.zmq.create', input)
-
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = 'Could not create a ZeroMQ channel, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not create a ZeroMQ channel, e:`%s`', format_exc(e))
                 session.rollback()
 
                 raise
 
+# ################################################################################################################################
+
 class Edit(AdminService):
     """ Updates a ZeroMQ channel.
     """
-    class SimpleIO(AdminSIO):
+    class SimpleIO(_UpdateSIO):
         request_elem = 'zato_channel_zmq_edit_request'
         response_elem = 'zato_channel_zmq_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method',
-            'pool_strategy', 'service_source', 'service')
-        input_optional = ('sub_key', 'data_format', 'msg_source')
         output_required = ('id', 'name')
 
     def handle(self):
         input = self.request.input
+        require_tcp_port(input.address)
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(ChannelZMQ.id).\
@@ -137,15 +146,15 @@ class Edit(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('A ZeroMQ channel [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('A ZeroMQ channel `{}` already exists in this cluster'.format(input.name))
 
             # Is the service's name correct?
-            service = session.query(Service).\
+            service = session.query(ServiceModel).\
                 filter(Cluster.id==input.cluster_id).\
-                filter(Service.name==input.service).first()
+                filter(ServiceModel.name==input.service).first()
 
             if not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist in this cluster'.format(input.service)
                 raise Exception(msg)
 
             try:
@@ -186,11 +195,12 @@ class Edit(AdminService):
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = 'Could not update the ZeroMQ channel, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not create the ZeroMQ channel, e:`%s`', format_exc(e))
                 session.rollback()
 
                 raise
+
+# ################################################################################################################################
 
 class Delete(AdminService):
     """ Deletes a ZeroMQ channel.
@@ -225,7 +235,26 @@ class Delete(AdminService):
 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the ZeroMQ channel, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not delete the ZeroMQ channel, e:`%s`', format_exc(e))
 
                 raise
+
+# ################################################################################################################################
+
+class Start(Service):
+    """ Starts a ZeroMQ channel.
+    """
+    class SimpleIO(_UpdateSIO):
+        input_required = _UpdateSIO.input_required + ('id', 'config_cid')
+        input_optional = _UpdateSIO.input_optional + (Int('bind_port'), 'service_name')
+        request_elem = 'zato_channel_zmq_start_request'
+        response_elem = 'zato_channel_zmq_start_response'
+
+    def handle(self):
+        input = self.request.input
+        if input.bind_port and is_port_taken(input.bind_port):
+            self.logger.warn('Cannot bind Zero MQ channel `%s` to TCP port %s (already taken)', input.name, input.bind_port)
+        else:
+            self.server.worker_store.zmq_channel_create(self.request.input)
+
+# ################################################################################################################################

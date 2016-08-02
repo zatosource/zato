@@ -66,7 +66,7 @@ username={{odb_user}}
 use_async_driver=True
 
 [hot_deploy]
-pickup_dir=../../pickup-dir
+pickup_dir=../../pickup/incoming/services
 work_dir=../../work
 backup_history=100
 backup_format=bztar
@@ -115,6 +115,7 @@ http_server_header=Zato
 zeromq_connect_sleep=0.1
 aws_host=
 use_soap_envelope=True
+fifo_response_buffer_size=0.2 # In MB
 jwt_secret={{jwt_secret}}
 
 [stats]
@@ -214,6 +215,42 @@ allow_loopback=False
 sample_key=sample_value
 """.format(**CONTENT_TYPE).encode('utf-8')
 
+pickup_conf = """[json]
+pickup_from=./pickup/incoming/json
+move_processed_to=./pickup/processed/json
+patterns=*.json
+recipients=zato.pickup.log-json
+parse_with=py:rapidjson.loads
+
+[xml]
+pickup_from=./pickup/incoming/xml
+move_processed_to=./pickup/processed/xml
+patterns=*.xml
+recipients=zato.pickup.log-xml
+parse_with=py:lxml.objectify.fromstring
+
+[csv]
+pickup_from=./pickup/incoming/csv
+move_processed_to=./pickup/processed/csv
+patterns=*.csv
+recipients=zato.pickup.log-csv
+read_on_pickup=False
+parse_on_pickup=False
+delete_after_pickup=False
+
+[user_conf]
+pickup_from=./config/repo/user-conf
+patterns=*.conf
+recipients=zato.pickup.update-user-conf
+parse_on_pickup=False
+
+[static]
+pickup_from=./pickup/incoming/static
+patterns=*
+recipients=zato.pickup.update-static
+parse_on_pickup=False
+"""
+
 service_sources_contents = """# Visit https://zato.io/docs for more information.
 
 # All paths are relative to server root so that, for instance,
@@ -258,8 +295,20 @@ default_odb_pool_size = 1
 directories = (
     'config',
     'config/repo',
+    'config/repo/user-conf',
     'logs',
-    'pickup-dir',
+    'pickup',
+    'pickup/incoming',
+    'pickup/processed',
+    'pickup/incoming/services',
+    'pickup/incoming/static',
+    'pickup/incoming/json',
+    'pickup/incoming/xml',
+    'pickup/incoming/csv',
+    'pickup/processed/static',
+    'pickup/processed/json',
+    'pickup/processed/xml',
+    'pickup/processed/csv',
     'profiler',
     'work',
     'work/hot-deploy',
@@ -398,6 +447,11 @@ class Create(ZatoCommand):
                     jwt_secret=getattr(args, 'jwt_secret', Fernet.generate_key()),
                 ))
             server_conf.close()
+
+            pickup_conf_loc = os.path.join(self.target_dir, 'config/repo/pickup.conf')
+            pickup_conf_file = open(pickup_conf_loc, 'w')
+            pickup_conf_file.write(pickup_conf)
+            pickup_conf_file.close()
 
             user_conf_loc = os.path.join(self.target_dir, 'config/repo/user.conf')
             user_conf = open(user_conf_loc, 'w')

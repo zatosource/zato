@@ -13,6 +13,9 @@ import logging
 from datetime import datetime, timedelta
 from traceback import format_exc
 
+# Bunch
+from bunch import Bunch
+
 # gevent
 from gevent import spawn
 from gevent.lock import RLock
@@ -48,7 +51,8 @@ class Broker(object):
         # A hundred years in seconds, used when creating internal workers
         self.y100 = 60 * 60 * 24 * 365 * 100
 
-        # So they do not have to be looked up on each request
+        # So they do not have to be looked up on each request or event
+        self.has_info = logger.isEnabledFor(logging.INFO)
         self.has_debug = logger.isEnabledFor(logging.DEBUG)
         self.has_pool_strategy_simple = self.pool_strategy == ZMQ.POOL_STRATEGY_NAME.SINGLE
         self.has_service_source_zato = self.service_source == ZMQ.SERVICE_SOURCE_NAME.ZATO
@@ -401,8 +405,14 @@ class Broker(object):
         """ A worker informs the broker that it is ready to handle messages destined for a given service.
         Must be called with self.lock held.
         """
+        service_name = service_name[0]
+
+        if self.has_info:
+            logger.info('Worker `%r` ready for `%s`',
+                WorkerData.wrap_worker_id(const.worker_type.zmq, worker_id), service_name)
+
         with self.lock:
-            self._add_worker(worker_id, service_name[0], const.ttl, const.worker_type.zmq)
+            self._add_worker(worker_id, service_name, const.ttl, const.worker_type.zmq)
 
         self.dispatch_requests(service_name)
 
@@ -445,5 +455,25 @@ class Broker(object):
 # ################################################################################################################################
 
 if __name__ == '__main__':
-    b = Broker(log_details=True)
+
+    config = Bunch()
+
+    config.name = 'Just testing'
+    config.address = 'tcp://*:47047'
+    config.poll_interval = 100
+    config.pool_strategy = 'simple'
+    config.service_source = ZMQ.SERVICE_SOURCE_NAME.ZATO
+    config.service_impl_name = 'zzz.MyService'
+    config.service_name = 'zzz.my-service'
+    config.workers_pool_initial = 10
+    config.workers_pool_mult = 2
+    config.workers_pool_max = 250
+    config.heartbeat = 3
+    config.linger = 0
+
+    def on_message_callback(msg, channel, action, args=None, **kwargs):
+        logger.info('Got MDP message %s %s %s', msg, channel, action)
+        return 'zzz'
+
+    b = Broker(config, on_message_callback)
     b.serve_forever()

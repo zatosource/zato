@@ -71,6 +71,8 @@ class AdminService(Service):
         if self._filter_by:
             self._search_tool = SearchTool(self._filter_by)
 
+        self.ipc_api = self.server.ipc_api
+
         super(AdminService, self)._init()
 
 # ################################################################################################################################

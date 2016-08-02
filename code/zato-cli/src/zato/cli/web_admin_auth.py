@@ -109,7 +109,7 @@ class UpdatePassword(_WebAdminAuthCommand):
     """
     opts = [
         {'name': 'username', 'help': 'Username to change the password of'},
-        {'name': '--password', 'help': 'The new password'},
+        {'name': '--password', 'help': 'New password'},
     ]
 
     def before_execute(self, args):

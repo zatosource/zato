@@ -154,7 +154,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
         else:
             msg = {'action': SCHEDULER_MSG.DELETE.value, 'name': name}
 
-        broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
+        broker_client.publish(msg, MESSAGE_TYPE.TO_SCHEDULER)
 
     except Exception, e:
         session.rollback()
@@ -273,7 +273,7 @@ class Delete(AdminService):
                 session.commit()
 
                 msg = {'action': SCHEDULER_MSG.DELETE.value, 'name': job.name}
-                self.broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
+                self.broker_client.publish(msg, MESSAGE_TYPE.TO_SCHEDULER)
 
             except Exception, e:
                 session.rollback()
@@ -300,7 +300,7 @@ class Execute(AdminService):
                     one()
 
                 msg = {'action': SCHEDULER_MSG.EXECUTE.value, 'name': job.name}
-                self.broker_client.publish(msg, MESSAGE_TYPE.TO_SINGLETON)
+                self.broker_client.publish(msg, MESSAGE_TYPE.TO_SCHEDULER)
 
             except Exception, e:
                 session.rollback()

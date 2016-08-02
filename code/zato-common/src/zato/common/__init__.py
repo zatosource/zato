@@ -227,9 +227,13 @@ class ZMQ:
         MDP01: MDP01_HUMAN,
     })
 
+    class METHOD_NAME:
+        BIND = 'bind'
+        CONNECT = 'connect'
+
     METHOD = {
-        'bind': 'Bind',
-        'connect': 'Connect',
+        METHOD_NAME.BIND: 'Bind',
+        METHOD_NAME.CONNECT: 'Connect',
     }
 
     POOL_STRATEGY = OrderedDict({
@@ -293,10 +297,6 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.WSS: 'WS-Security',
     SEC_DEF_TYPE.XPATH_SEC: 'XPath',
 }
-
-# Name of the scheduler's job that will ensure a singleton server is always
-# available in a cluster.
-ENSURE_SINGLETON_JOB = 'zato.server.ensure-cluster-wide-singleton'
 
 DEFAULT_STATS_SETTINGS = {
     'scheduler_per_minute_aggr_interval':60,
@@ -464,6 +464,7 @@ class CHANNEL(Attrs):
     INVOKE = 'invoke'
     INVOKE_ASYNC = 'invoke-async'
     INVOKE_ASYNC_CALLBACK = 'invoke-async-callback'
+    IPC = 'ipc'
     JMS_WMQ = 'jms-wmq'
     NOTIFIER_RUN = 'notifier-run'
     NOTIFIER_TARGET = 'notifier-target'
@@ -779,6 +780,10 @@ CONTENT_TYPE = Bunch(
     SOAP11 = 'text/xml',
     SOAP12 = 'application/soap+xml; charset=utf-8',
 )
+
+class IPC_ACTION:
+    INVOKE_SERVICE = 'invoke-service'
+    INVOKE_WORKER_STORE = 'invoke-worker-store'
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

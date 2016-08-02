@@ -15,9 +15,6 @@ from traceback import format_exc
 # anyjson
 from anyjson import dumps, loads
 
-# gevent
-from gevent import spawn
-
 # Bunch
 from bunch import Bunch
 
@@ -25,12 +22,13 @@ from bunch import Bunch
 import redis
 
 # Zato
-from zato.common import BROKER, TRACE1, ZATO_NONE
+from zato.common import BROKER, ZATO_NONE
 from zato.common.broker_message import KEYS, MESSAGE_TYPE, TOPICS
 from zato.common.kvdb import LuaContainer
-from zato.common.util import new_cid
+from zato.common.util import new_cid, spawn_greenlet
 
 logger = logging.getLogger(__name__)
+has_debug = logger.isEnabledFor(logging.DEBUG)
 
 REMOTE_END_CLOSED_SOCKET = 'Socket closed on remote end'
 FILE_DESCR_CLOSED_IN_ANOTHER_GREENLET = "Error while reading from socket: (9, 'File descriptor was closed in another greenlet')"
@@ -89,8 +87,8 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                 self.keep_running = True
 
         def publish(self, topic, msg):
-            if logger.isEnabledFor(TRACE1):
-                logger.log(TRACE1, 'Publishing [{}] to [{}]'.format(msg, topic))
+            if has_debug:
+                logger.debug('Publishing `%s` to `%s`', msg, topic)
             return self.client.publish(topic, msg)
 
         def close(self):
@@ -129,8 +127,8 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
             self.ready = False
 
         def run(self):
-            logger.info('Starting broker client, host:[{}], port:[{}], name:[{}], topics:[{}]'.format(
-                self.kvdb.config.host, self.kvdb.config.port, self.name, sorted(self.topic_callbacks)))
+            logger.debug('Starting broker client, host:`%s`, port:`%s`, name:`%s`, topics:`%s`',
+                self.kvdb.config.host, self.kvdb.config.port, self.name, sorted(self.topic_callbacks))
 
             self.pub_client = _ClientThread(self.kvdb.copy(), 'pub', self.name)
             self.sub_client = _ClientThread(self.kvdb.copy(), 'sub', self.name, self.topic_callbacks, self.on_message)
@@ -167,8 +165,8 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                 self.pub_client.publish(topic, broker_msg)
 
         def on_message(self, msg):
-            if logger.isEnabledFor(logging.DEBUG):
-                logger.debug('Got broker message:[{}]'.format(msg))
+            if has_debug:
+                logger.debug('Got broker message `%s`', msg)
 
             if msg.type == 'message':
 
@@ -182,7 +180,7 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
                         payload = self.kvdb.conn.get(tmp_key)
                         self.kvdb.conn.delete(tmp_key)  # Note that it would've expired anyway
                         if not payload:
-                            logger.warning('No KVDB payload for key [{}] (already expired?)'.format(tmp_key))
+                            logger.warning('No KVDB payload for key `%s` (already expired?)', tmp_key)
                         else:
                             payload = loads(payload)
                 else:
@@ -190,15 +188,15 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
 
                 if payload:
                     payload = Bunch(payload)
-                    if logger.isEnabledFor(logging.DEBUG):
-                        logger.debug('Got broker message payload [{}]'.format(payload))
+                    if has_debug:
+                        logger.debug('Got broker message payload `%s`', payload)
 
                     callback = self.topic_callbacks[msg.channel]
-                    spawn(callback, payload)
+                    spawn_greenlet(callback, payload)
 
                 else:
-                    if logger.isEnabledFor(logging.DEBUG):
-                        logger.debug('No payload in msg:[{}]'.format(msg))
+                    if has_debug:
+                        logger.debug('No payload in msg: `%s`', msg)
 
         def close(self):
             for client in(self.pub_client, self.sub_client):

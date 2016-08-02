@@ -130,7 +130,7 @@ loggers:
         propagate: false
     zato_scheduler:
         level: INFO
-        handlers: [scheduler]
+        handlers: [stdout, scheduler]
         qualname: zato_scheduler
         propagate: false
     zato_singleton:
@@ -241,6 +241,7 @@ def run_command(args):
         ('create_cluster', 'zato.cli.create_cluster.Create'),
         ('create_lb', 'zato.cli.create_lb.Create'),
         ('create_odb', 'zato.cli.create_odb.Create'),
+        ('create_scheduler', 'zato.cli.create_scheduler.Create'),
         ('create_server', 'zato.cli.create_server.Create'),
         ('create_user', 'zato.cli.web_admin_auth.CreateUser'),
         ('create_web_admin', 'zato.cli.create_web_admin.Create'),
@@ -309,6 +310,7 @@ class ZatoCommand(object):
 
         CA = _ComponentName('CA', 'Certificate authority')
         LOAD_BALANCER = _ComponentName('LOAD_BALANCER', 'Load balancer')
+        SCHEDULER = _ComponentName('SCHEDULER', 'Scheduler')
         SERVER = _ComponentName('SERVER', 'Server')
         WEB_ADMIN = _ComponentName('WEB_ADMIN', 'Web admin')
 
@@ -353,15 +355,17 @@ class ZatoCommand(object):
         keep_running = True
         self.logger.info('')
 
+        secret_name_cap = secret_name.capitalize()
+
         while keep_running:
-            secret1 = getpass(template + ' (will not be echoed): ')
+            secret1 = getpass(template + ' (will not echo): ')
             if not needs_confirm:
                 return secret1.strip('\n')
 
-            secret2 = getpass('Enter the {} again (will not be echoed): '.format(secret_name))
+            secret2 = getpass('{} again (will not echoe): '.format(secret_name_cap))
 
             if secret1 != secret2:
-                self.logger.info('{}s do not match'.format(secret_name.capitalize()))
+                self.logger.info('{}s do not match'.format(secret_name_cap))
             else:
                 if not secret1 and not allow_empty:
                     self.logger.info('No {} entered'.format(secret_name))
@@ -499,17 +503,20 @@ class ZatoCommand(object):
         if getattr(args, 'odb_type', None) == 'mysql':
             args.odb_type = 'mysql+pymysql'
 
-    def _copy_lb_server_crypto(self, repo_dir, args, middle_part):
+    def _copy_crypto(self, repo_dir, args, middle_part):
         for name in('pub-key', 'priv-key', 'cert', 'ca-certs'):
             arg_name = '{}_path'.format(name.replace('-', '_'))
             full_path = os.path.join(repo_dir, 'zato-{}-{}.pem'.format(middle_part, name))
             shutil.copyfile(os.path.abspath(getattr(args, arg_name)), full_path)
 
     def copy_lb_crypto(self, repo_dir, args):
-        self._copy_lb_server_crypto(repo_dir, args, 'lba')
+        self._copy_crypto(repo_dir, args, 'lba')
 
     def copy_server_crypto(self, repo_dir, args):
-        self._copy_lb_server_crypto(repo_dir, args, 'server')
+        self._copy_crypto(repo_dir, args, 'server')
+
+    def copy_scheduler_crypto(self, repo_dir, args):
+        self._copy_crypto(repo_dir, args, 'scheduler')
 
     def copy_web_admin_crypto(self, repo_dir, args):
         for attr, name in (('pub_key_path', 'pub-key'), ('priv_key_path', 'priv-key'), ('cert_path', 'cert'), ('ca_certs_path', 'ca-certs')):
@@ -593,7 +600,7 @@ class CACreateCommand(ZatoCommand):
             'target_dir':self.target_dir
         }
 
-        for arg in('cluster_name', 'server_name'):
+        for arg in('cluster_name', 'server_name', 'scheduler_name'):
             if hasattr(args, arg):
                 file_args[arg] = getattr(args, arg)
 
@@ -678,6 +685,7 @@ class ManageCommand(ZatoCommand):
             self.COMPONENTS.LOAD_BALANCER.code: self._on_lb,
             self.COMPONENTS.SERVER.code: self._on_server,
             self.COMPONENTS.WEB_ADMIN.code: self._on_web_admin,
+            self.COMPONENTS.SCHEDULER.code: self._on_scheduler,
         }
 
     command_files = set([ZATO_INFO_FILE])

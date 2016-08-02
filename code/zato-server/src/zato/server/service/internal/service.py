@@ -217,14 +217,13 @@ class GetChannelList(AdminService):
             self.response.payload[:] = q.all()
 
 class Invoke(AdminService):
-    """ Invokes the service directly, as though it was exposed through some channel
-    which doesn't necessarily have to be true.
+    """ Invokes the service directly, as though it was exposed through some channel defined in web-admin.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_service_invoke_request'
         response_elem = 'zato_service_invoke_response'
-        input_optional = ('id', 'name', 'payload', 'channel', 'data_format', 'transport',
-            Boolean('async'), Integer('expiration'))
+        input_optional = ('id', 'name', 'payload', 'channel', 'data_format', 'transport', Boolean('async'),
+            Integer('expiration'), Integer('pid'))
         output_optional = ('response',)
 
     def handle(self):
@@ -242,13 +241,16 @@ class Invoke(AdminService):
         expiration = self.request.input.get('expiration') or BROKER.DEFAULT_EXPIRATION
 
         if name and id:
-            raise ZatoException('Cannot accept both id:[{}] and name:[{}]'.format(id, name))
+            raise ZatoException('Cannot accept both id:`{}` and name:`{}`'.format(id, name))
 
         if self.request.input.get('async'):
+
             if id:
                 impl_name = self.server.service_store.id_to_impl_name[id]
                 name = self.server.service_store.service_data(impl_name)['name']
+
             response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
+
         else:
 
             func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
