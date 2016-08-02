@@ -18,10 +18,8 @@ from springpython.config import Object, PythonConfig
 from zato.common import DEFAULT_STATS_SETTINGS, SIMPLE_IO, ZATO_CRYPTO_WELL_KNOWN_DATA
 from zato.common.crypto import CryptoManager
 from zato.common.kvdb import KVDB
+from zato.common.odb.api import ODBManager, PoolStore
 from zato.server.base.parallel import ParallelServer
-from zato.server.base.singleton import SingletonServer
-from zato.server.connection.sql import PoolStore
-from zato.server.odb import ODBManager
 from zato.server.service.store import ServiceStore
 
 class ZatoContext(PythonConfig):
@@ -83,6 +81,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.outgoing.stomp',
             'zato.server.service.internal.outgoing.zmq',
             'zato.server.service.internal.pattern',
+            'zato.server.service.internal.pickup',
             'zato.server.service.internal.pattern.invoke_retry',
             'zato.server.service.internal.pubsub',
             'zato.server.service.internal.pubsub.consumers',
@@ -170,12 +169,6 @@ class ZatoContext(PythonConfig):
         server.service_modules = self.service_modules()
         server.kvdb = self.kvdb()
         server.user_config = Bunch()
-
-        return server
-
-    @Object
-    def singleton_server(self):
-        server = SingletonServer()
 
         return server
 

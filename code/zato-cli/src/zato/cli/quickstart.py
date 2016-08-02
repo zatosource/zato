@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import os, random, stat
 from collections import OrderedDict
+from contextlib import closing
 from copy import deepcopy
 from itertools import count
 from uuid import uuid4
@@ -22,11 +23,13 @@ from bunch import Bunch
 from cryptography.fernet import Fernet
 
 # Zato
-from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agent, ca_create_server, \
-     ca_create_web_admin, create_cluster, create_lb, create_odb, create_server, create_web_admin, ZatoCommand
+from zato.cli import common_odb_opts, kvdb_opts, ca_create_ca, ca_create_lb_agent, ca_create_scheduler, ca_create_server, \
+     ca_create_web_admin, create_cluster, create_lb, create_odb, create_scheduler, create_server, create_web_admin, \
+     ZatoCommand
 from zato.common.defaults import http_plain_server_port
 from zato.common.markov_passwords import generate_password
-from zato.common.util import make_repr
+from zato.common.odb.model import Cluster
+from zato.common.util import get_engine, get_session, make_repr
 
 random.seed()
 
@@ -62,7 +65,7 @@ ZATO_BIN={zato_bin}
 STEPS={start_steps}
 CLUSTER={cluster_name}
 
-echo Starting the Zato cluster $CLUSTER
+echo Starting Zato cluster $CLUSTER
 echo Running sanity checks
 """
 
@@ -79,6 +82,11 @@ echo [3/$STEPS] Load-balancer started
 
 # .. servers ..
 {start_servers}
+
+# .. scheduler ..
+cd $BASE_DIR/scheduler
+$ZATO_BIN start .
+echo [5/$STEPS] Scheduler started
 """
 
 zato_qs_start_tail = """
@@ -114,6 +122,7 @@ then
   rm -f $BASE_DIR/server1/pidfile
   rm -f $BASE_DIR/server2/pidfile
   rm -f $BASE_DIR/web-admin/pidfile
+  rm -f $BASE_DIR/scheduler/pidfile
 
   echo PID files deleted
 fi
@@ -122,7 +131,7 @@ ZATO_BIN={zato_bin}
 STEPS={stop_steps}
 CLUSTER={cluster_name}
 
-echo Stopping the Zato cluster $CLUSTER
+echo Stopping Zato cluster $CLUSTER
 
 # Start the load balancer first ..
 cd $BASE_DIR/load-balancer
@@ -135,6 +144,10 @@ echo [1/$STEPS] Load-balancer stopped
 cd $BASE_DIR/web-admin
 $ZATO_BIN stop .
 echo [$STEPS/$STEPS] Web admin stopped
+
+cd $BASE_DIR/scheduler
+$ZATO_BIN stop .
+echo [$STEPS/$STEPS] Scheduler stopped
 
 cd $BASE_DIR
 echo Zato cluster $CLUSTER stopped
@@ -149,6 +162,7 @@ $BASE_DIR/zato-qs-stop.sh
 $BASE_DIR/zato-qs-start.sh
 """
 
+# ################################################################################################################################
 
 class CryptoMaterialLocation(object):
     """ Locates and remembers location of various crypto material for Zato components.
@@ -173,7 +187,7 @@ class CryptoMaterialLocation(object):
                 if '{}-{}'.format(self.component_pattern, crypto_name) in full_path:
                     setattr(self, '{}_path'.format(crypto_name), full_path)
 
-################################################################################
+# ################################################################################################################################
 
 class Create(ZatoCommand):
     """ Quickly creates a working cluster
@@ -182,7 +196,7 @@ class Create(ZatoCommand):
     allow_empty_secrets = True
     opts = deepcopy(common_odb_opts) + deepcopy(kvdb_opts)
     opts.append({'name':'--cluster_name', 'help':'Name to be given to the new cluster'})
-    opts.append({'name':'--servers', 'help':'Number of servers to be created'})
+    opts.append({'name':'--servers', 'help':'How many servers to create'})
 
     def _bunch_from_args(self, args, cluster_name):
         bunch = Bunch()
@@ -202,8 +216,11 @@ class Create(ZatoCommand):
         bunch.odb_password = args.odb_password
         bunch.kvdb_password = args.kvdb_password
         bunch.cluster_name = cluster_name
+        bunch.scheduler_name = 'scheduler1'
 
         return bunch
+
+# ################################################################################################################################
 
     def execute(self, args):
         """ Quickly creates Zato components
@@ -213,11 +230,24 @@ class Create(ZatoCommand):
         4) servers
         5) load-balancer
         6) Web admin
-        7) Scripts
+        7) Scheduler
+        8) Scripts
         """
 
         if args.odb_type == 'sqlite':
             args.sqlite_path = os.path.abspath(os.path.join(args.path, 'zato.db'))
+
+        '''
+        cluster_id_args = Bunch()
+        cluster_id_args.odb_db_name = args.odb_db_name
+        cluster_id_args.odb_host = args.odb_host
+        cluster_id_args.odb_password = args.odb_password
+        cluster_id_args.odb_port = args.odb_port
+        cluster_id_args.odb_type = args.odb_type
+        cluster_id_args.odb_user = args.odb_user
+        cluster_id_args.postgresql_schema = args.postgresql_schema
+        cluster_id_args.sqlite_path = args.sqlite_path
+        '''
 
         next_step = count(1)
         next_port = count(http_plain_server_port)
@@ -228,7 +258,7 @@ class Create(ZatoCommand):
         for idx in range(1, servers+1):
             server_names['{}'.format(idx)] = 'server{}'.format(idx)
 
-        total_steps = 6 + servers
+        total_steps = 7 + servers
         admin_invoke_password = uuid4().hex
         broker_host = 'localhost'
         broker_port = 6379
@@ -243,6 +273,8 @@ class Create(ZatoCommand):
         # to store their own configs.
         args.store_config = False
 
+# ################################################################################################################################
+
         #
         # 1) CA
         #
@@ -254,8 +286,8 @@ class Create(ZatoCommand):
 
         ca_create_ca.Create(ca_args).execute(ca_args, False)
         ca_create_lb_agent.Create(ca_args).execute(ca_args, False)
-
         ca_create_web_admin.Create(ca_args).execute(ca_args, False)
+        ca_create_scheduler.Create(ca_args).execute(ca_args, False)
 
         server_crypto_loc = {}
 
@@ -267,8 +299,11 @@ class Create(ZatoCommand):
 
         lb_agent_crypto_loc = CryptoMaterialLocation(ca_path, 'lb-agent')
         web_admin_crypto_loc = CryptoMaterialLocation(ca_path, 'web-admin')
+        scheduler_crypto_loc = CryptoMaterialLocation(ca_path, 'scheduler1')
 
         self.logger.info('[{}/{}] Certificate authority created'.format(next_step.next(), total_steps))
+
+# ################################################################################################################################
 
         #
         # 2) ODB
@@ -277,6 +312,8 @@ class Create(ZatoCommand):
             self.logger.info('[{}/{}] ODB schema already exists'.format(next_step.next(), total_steps))
         else:
             self.logger.info('[{}/{}] ODB schema created'.format(next_step.next(), total_steps))
+
+# ################################################################################################################################
 
         #
         # 3) ODB initial data
@@ -291,6 +328,8 @@ class Create(ZatoCommand):
         create_cluster.Create(create_cluster_args).execute(create_cluster_args, False)
 
         self.logger.info('[{}/{}] ODB initial data created'.format(next_step.next(), total_steps))
+
+# ################################################################################################################################
 
         #
         # 4) servers
@@ -316,6 +355,8 @@ class Create(ZatoCommand):
 
             self.logger.info('[{}/{}] server{} created'.format(next_step.next(), total_steps, name))
 
+# ################################################################################################################################
+
         #
         # 5) load-balancer
         #
@@ -335,6 +376,8 @@ class Create(ZatoCommand):
 
         create_lb.Create(create_lb_args).execute(create_lb_args, True, servers_port, False)
         self.logger.info('[{}/{}] Load-balancer created'.format(next_step.next(), total_steps))
+
+# ################################################################################################################################
 
         #
         # 6) Web admin
@@ -359,8 +402,39 @@ class Create(ZatoCommand):
         self.reset_logger(args, True)
         self.logger.info('[{}/{}] Web admin created'.format(next_step.next(), total_steps))
 
+# ################################################################################################################################
+
         #
-        # 7) Scripts
+        # 7) Scheduler
+        #
+        scheduler_path = os.path.join(args_path, 'scheduler')
+        os.mkdir(scheduler_path)
+
+        session = get_session(get_engine(args))
+
+        with closing(session):
+            cluster_id = session.query(Cluster.id).\
+                filter(Cluster.name==cluster_name).\
+                one()[0]
+
+        create_scheduler_args = self._bunch_from_args(args, cluster_name)
+        create_scheduler_args.path = scheduler_path
+        create_scheduler_args.cert_path = scheduler_crypto_loc.cert_path
+        create_scheduler_args.pub_key_path = scheduler_crypto_loc.pub_path
+        create_scheduler_args.priv_key_path = scheduler_crypto_loc.priv_path
+        create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
+        create_scheduler_args.cluster_id = cluster_id
+
+        password = generate_password()
+        admin_created = create_scheduler.Create(create_scheduler_args).execute(
+            create_scheduler_args, False, password, True)
+
+        self.logger.info('[{}/{}] Scheduler created'.format(next_step.next(), total_steps))
+
+# ################################################################################################################################
+
+        #
+        # 8) Scripts
         #
         zato_bin = 'zato'
         zato_qs_start_path = os.path.join(args_path, 'zato-qs-start.sh')
@@ -411,3 +485,5 @@ class Create(ZatoCommand):
         start_command = os.path.join(args_path, 'zato-qs-start.sh')
         self.logger.info('Start the cluster by issuing the {} command'.format(start_command))
         self.logger.info('Visit https://zato.io/support for more information and support options')
+
+# ################################################################################################################################

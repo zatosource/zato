@@ -39,8 +39,8 @@ import yaml
 from zato.common import TRACE1
 from zato.common.repo import RepoManager
 from zato.common.ipaddress_ import get_preferred_ip
-from zato.common.util import absolutize_path, clear_locks, get_app_context, get_config, get_crypto_manager, \
-     get_kvdb_config_for_log, register_diag_handlers, store_pidfile
+from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_crypto_manager, \
+     get_kvdb_config_for_log, parse_extra_into_dict, register_diag_handlers, store_pidfile
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
@@ -83,9 +83,9 @@ class ZatoGunicornApplication(Application):
             self.cfg.set('ssl_version', getattr(ssl, 'PROTOCOL_{}'.format(self.crypto_config.tls_protocol)))
             self.cfg.set('ciphers', self.crypto_config.tls_ciphers)
             self.cfg.set('cert_reqs', getattr(ssl, 'CERT_{}'.format(self.crypto_config.tls_client_certs.upper())))
-            self.cfg.set('ca_certs', absolutize_path(self.repo_location, self.crypto_config.ca_certs_location))
-            self.cfg.set('keyfile', absolutize_path(self.repo_location, self.crypto_config.priv_key_location))
-            self.cfg.set('certfile', absolutize_path(self.repo_location, self.crypto_config.cert_location))
+            self.cfg.set('ca_certs', absjoin(self.repo_location, self.crypto_config.ca_certs_location))
+            self.cfg.set('keyfile', absjoin(self.repo_location, self.crypto_config.priv_key_location))
+            self.cfg.set('certfile', absjoin(self.repo_location, self.crypto_config.cert_location))
             self.cfg.set('do_handshake_on_connect', True)
 
         self.zato_wsgi_app.has_gevent = 'gevent' in self.cfg.settings['worker_class'].value
@@ -93,7 +93,8 @@ class ZatoGunicornApplication(Application):
     def load(self):
         return self.zato_wsgi_app.on_wsgi_request
 
-def run(base_dir, start_gunicorn_app=True):
+def run(base_dir, start_gunicorn_app=True, options=None):
+    options = options or {}
 
     # Store a pidfile before doing anything else
     store_pidfile(base_dir)
@@ -136,6 +137,7 @@ def run(base_dir, start_gunicorn_app=True):
     kvdb_logger = logging.getLogger('zato_kvdb')
 
     config = get_config(repo_location, 'server.conf')
+    pickup_config = get_config(repo_location, 'pickup.conf')
 
     # Do not proceed unless we can be certain our own preferred address or IP can be obtained.
     preferred_address = config.preferred_address.get('address')
@@ -192,13 +194,15 @@ def run(base_dir, start_gunicorn_app=True):
     server.host = zato_gunicorn_app.zato_host
     server.port = zato_gunicorn_app.zato_port
     server.repo_location = repo_location
+    server.user_conf_location = os.path.join(server.repo_location, 'user-conf')
     server.base_dir = base_dir
     server.tls_dir = os.path.join(server.base_dir, 'config', 'repo', 'tls')
     server.fs_server_config = config
+    server.pickup_config = pickup_config
     server.user_config.update(config.user_config_items)
-    server.startup_jobs = app_context.get_object('startup_jobs')
     server.app_context = app_context
     server.preferred_address = preferred_address
+    server.sync_internal = options['sync_internal']
     server.jwt_secret = server.fs_server_config.misc.jwt_secret.encode('utf8')
 
     # Remove all locks possibly left over by previous server instances
@@ -257,14 +261,13 @@ def run(base_dir, start_gunicorn_app=True):
     else:
         return zato_gunicorn_app.zato_wsgi_app
 
-def run_in_foreground(base_dir):
-    server = run(base_dir, False)
-    server.start_server(server)
-
-    return server
-
 if __name__ == '__main__':
     base_dir = sys.argv[1]
     if not os.path.isabs(base_dir):
         base_dir = os.path.abspath(os.path.join(os.getcwd(), base_dir))
-    run(base_dir)
+
+    options = sys.argv[2].split(';')
+    options = '\n'.join(options)
+    options = parse_extra_into_dict(options)
+
+    run(base_dir, options=options)

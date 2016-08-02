@@ -36,17 +36,18 @@ from gunicorn.workers.ggevent import GeventWorker as GunicornGeventWorker
 from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 
 # Zato
+from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common import CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, PUB_SUB, \
-     SEC_DEF_TYPE, SIMPLE_IO, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME
-from zato.common import broker_message, ZMQ
+from zato.common import broker_message, CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, \
+     PUB_SUB, SEC_DEF_TYPE, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
+from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
-     parse_extra_into_dict, parse_tls_channel_security_definition, store_tls
-from zato.server.base import BrokerMessageReceiver
+from zato.common.util import get_base_initial_port, get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
+     new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, store_tls, \
+     update_bind_port
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -61,7 +62,6 @@ from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConn
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
-from zato.server.connection.sql import PoolStore, SessionWrapper
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
@@ -94,6 +94,7 @@ class WorkerStore(BrokerMessageReceiver):
         self.broker_client = None
         self.pubsub = None
         self.rbac = RBAC()
+        self.worker_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
 
         # Which services can be invoked
         self.invoke_matcher = Matcher()
@@ -508,27 +509,19 @@ class WorkerStore(BrokerMessageReceiver):
     def init_zmq_channels(self):
         """ Initializes ZeroMQ channels and MDP connections.
         """
-        lock_name = 'startup.init_zmq.{}'.format(self.server.get_full_name())
 
-        with self.server.zato_lock_manager(lock_name, ttl=20, block=None):
-            cache_key = KVDB.ZMQ_CONFIG_READY_PREFIX.format(self.server.deployment_key)
+        # Channels
+        for name, data in self.worker_config.channel_zmq.items():
 
-            # There must have been another worker before us
-            if self.kvdb.conn.get(cache_key):
-                return
+            # Each worker uses a unique bind port
+            data = bunchify(data)
+            base, initial_port = get_base_initial_port(data.config)
+            update_bind_port(data.config, base, initial_port, self.worker_idx)
 
-            # Channels
-            for name, data in self.worker_config.channel_zmq.items():
-                self._set_up_zmq_channel(name, bunchify(data.config), 'create')
+            self._set_up_zmq_channel(name, bunchify(data.config), 'create')
 
-                self.zmq_mdp_v01_api.start()
-                self.zmq_channel_api.start()
-
-            # Having configured and start ZeroMQ channels we need to set a flag in cache
-            # so that other workers of the same server do not try to start them too,
-            # which would be impossible because they would have to bind to the same socket.
-            self.kvdb.conn.set(cache_key, '1')
-            self.kvdb.conn.expire(cache_key, 600) # 10 minutes is aplenty for other workers to boot up
+            self.zmq_mdp_v01_api.start()
+            self.zmq_channel_api.start()
 
     def init_zmq_outconns(self):
         """ Initializes ZeroMQ outgoing connections (but not MDP that are initialized along with channels).
@@ -1081,6 +1074,23 @@ class WorkerStore(BrokerMessageReceiver):
         if not isinstance(service.response.payload, self._simple_types):
             service.response.payload = service.response.payload.getvalue()
 
+# ################################################################################################################################
+
+    def invoke(self, service, payload, **kwargs):
+        """ Invokes a service by its name with request on input.
+        """
+        return self.on_message_invoke_service({
+            'channel': kwargs.get('channel', CHANNEL.WORKER),
+            'payload': payload,
+            'data_format': kwargs.get('data_format'),
+            'service': service,
+            'cid': new_cid(),
+            'is_async': kwargs.get('is_async'),
+            'callback': kwargs.get('callback'),
+        }, CHANNEL.WORKER, None, needs_response=True)
+
+# ################################################################################################################################
+
     def on_message_invoke_service(self, msg, channel, action, args=None, **kwargs):
         """ Triggered by external processes, such as AMQP or the singleton's scheduler,
         creates a new service instance and invokes it.
@@ -1322,12 +1332,31 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def on_broker_msg_HOT_DEPLOY_CREATE(self, msg, *args):
+    def on_broker_msg_hot_deploy(self, msg, service, payload, action, *args):
         msg.cid = new_cid()
-        msg.service = 'zato.hot-deploy.create'
-        msg.payload = {'package_id': msg.package_id}
-        msg.data_format = SIMPLE_IO.FORMAT.JSON
-        return self.on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_CREATE', args)
+        msg.service = service
+        msg.payload = payload
+        return self.on_message_invoke_service(msg, 'hot-deploy', 'HOT_DEPLOY_{}'.format(action), args)
+
+# ################################################################################################################################
+
+    def on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(self, msg, *args):
+        return self.on_broker_msg_hot_deploy(msg, 'zato.hot-deploy.create', {'package_id': msg.package_id}, 'CREATE_SERVICE',
+            *args)
+
+# ################################################################################################################################
+
+    def on_broker_msg_HOT_DEPLOY_CREATE_STATIC(self, msg, *args):
+        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-static', {'data': msg.data, 'file_name': msg.file_name},
+            'CREATE_STATIC', *args)
+
+# ################################################################################################################################
+
+    def on_broker_msg_HOT_DEPLOY_CREATE_USER_CONF(self, msg, *args):
+        return self.on_broker_msg_hot_deploy(msg, 'zato.pickup.on-update-user-conf',
+            {'data': msg.data, 'file_name': msg.file_name}, 'CREATE_USER_CONF', *args)
+
+# ################################################################################################################################
 
     def on_broker_msg_HOT_DEPLOY_AFTER_DEPLOY(self, msg, *args):
         self.rbac.create_resource(msg.id)
@@ -1748,15 +1777,33 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _on_broker_msg_channel_zmq_create_edit(self, name, msg, action, lock_timeout, start):
+    def zmq_channel_create_edit(self, name, msg, action, lock_timeout, start):
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
             self._set_up_zmq_channel(name, msg, action, start)
 
+# ################################################################################################################################
+
+    def zmq_channel_create(self, msg):
+        self.zmq_channel_create_edit(msg.name, msg, 'create', 0, True)
+
+# ################################################################################################################################
+
     def on_broker_msg_CHANNEL_ZMQ_CREATE(self, msg):
-        self._on_broker_msg_channel_zmq_create_edit(msg.name, msg, 'create', 0, True)
+        if self.server.zato_lock_manager.acquire(msg.config_cid, ttl=10, block=False):
+            start_connectors(self, 'zato.channel.zmq.start', msg)
+
+# ################################################################################################################################
 
     def on_broker_msg_CHANNEL_ZMQ_EDIT(self, msg):
-        self._on_broker_msg_channel_zmq_create_edit(msg.old_name, msg, 'edit', 5, False)
+
+        # Each worker uses a unique bind port
+        msg = bunchify(msg)
+        base, initial_port = get_base_initial_port(msg)
+        update_bind_port(msg, base, initial_port, self.worker_idx)
+
+        self.zmq_channel_create_edit(msg.old_name, msg, 'edit', 5, False)
+
+# ################################################################################################################################
 
     def on_broker_msg_CHANNEL_ZMQ_DELETE(self, msg):
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=5):
@@ -1815,5 +1862,20 @@ class WorkerStore(BrokerMessageReceiver):
     def on_broker_msg_CHANNEL_STOMP_CHANGE_PASSWORD(self, msg):
         dispatcher.notify(broker_message.CHANNEL.STOMP_CHANGE_PASSWORD.value, msg)
         self.stomp_channel_api.change_password_def(msg)
+
+# ################################################################################################################################
+
+    def on_ipc_message(self, msg):
+
+        # If there is target_pid we cannot continue if we are not the recipient.
+        if msg.target_pid and msg.target_pid != self.server.pid:
+            return
+
+        # We get here if there is no target_pid or if there is one and it matched that of ours.
+
+        response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=msg.data_format)
+
+        with open(msg.reply_to_fifo, 'wb') as fifo:
+            fifo.write(response)
 
 # ################################################################################################################################

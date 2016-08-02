@@ -13,8 +13,11 @@ from logging import getLogger
 from traceback import format_exc
 
 # gevent
-from gevent import spawn, Timeout
+from gevent import spawn
 from gevent.lock import RLock
+
+# Zato
+from zato.common.util import spawn_greenlet
 
 # ################################################################################################################################
 
@@ -85,6 +88,8 @@ class Connector(object):
         """
         return ''
 
+    get_prev_log_details = get_log_details
+
 # ################################################################################################################################
 
     def _start(self):
@@ -109,7 +114,7 @@ class Connector(object):
         logger.debug('%s %s connector `%s`', verb, self.type, self.name)
 
     def _info_start_stop(self, verb):
-        log_details = self.get_log_details()
+        log_details = self.get_prev_log_details() if 'Stop' in verb else self.get_log_details()
         logger.info('%s %s connector `%s`%s', verb, self.type, self.name, ' ({})'.format(log_details) if log_details else '')
 
 # ################################################################################################################################
@@ -125,12 +130,7 @@ class Connector(object):
 
             try:
                 if self.start_in_greenlet:
-                    try:
-                        spawn(self._spawn_start).get(timeout=0.1)
-                    except Timeout:
-                        # Timeout means that no exception was raised during the time we were waiting for it
-                        # which is just fine, this is what we want, no exceptions during initialization of that connector.
-                        pass 
+                    spawn_greenlet(self._spawn_start)
                 else:
                     self._start()
             except Exception, e:
@@ -155,6 +155,7 @@ class Connector(object):
 
     def edit(self, old_name, config):
         with self.lock:
+            config.prev_address = self.config.address
             self._edit(old_name, config)
             self.restart()
 

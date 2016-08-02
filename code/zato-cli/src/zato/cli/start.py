@@ -54,7 +54,8 @@ Examples:
   - If a load-balancer has been installed in /home/zato/lb1, the command to start it is 'zato start /home/zato/lb1'."""
 
     opts = [
-        {'name':'--fg', 'help':'If given, the component will run in foreground', 'action':'store_true'}
+        {'name':'--fg', 'help':'If given, the component will run in foreground', 'action':'store_true'},
+        {'name':'--sync-internal', 'help':"Whether to synchronize component's internal state with ODB", 'action':'store_true'}
     ]
 
     def run_check_config(self):
@@ -84,11 +85,15 @@ Examples:
         tmp_path = mkstemp('-zato-start-{}.txt'.format(name.replace(' ','')))[1]
         stdout_redirect = '' if self.args.fg else '1> /dev/null'
         stderr_redirect = '2> {}'.format(tmp_path)
-        program = '{} -m {} {} {} {}'.format(get_executable(), py_path, program_dir, stdout_redirect, stderr_redirect)
-        try:
-            _stderr = _StdErr(
-                tmp_path, stderr_sleep_fg if self.args.fg else stderr_sleep_bg)
 
+        options = {
+            'sync_internal': self.args.sync_internal,
+        }
+        options = ';'.join('{}={}'.format(k, v) for k, v in options.items())
+
+        program = '{} -m {} {} {} {} {}'.format(get_executable(), py_path, program_dir, options, stdout_redirect, stderr_redirect)
+        try:
+            _stderr = _StdErr(tmp_path, stderr_sleep_fg if self.args.fg else stderr_sleep_bg)
             run(program, async=False if self.args.fg else True)
 
             # Wait a moment for any potential errors
@@ -130,3 +135,8 @@ Examples:
     def _on_web_admin(self, *ignored):
         self.run_check_config()
         self.start_component('zato.admin.main', 'web admin', '', self.delete_pidfile)
+
+    def _on_scheduler(self, *ignored):
+        self.run_check_config()
+        self.check_pidfile()
+        self.start_component('zato.scheduler.main', 'web scheduler', '', self.delete_pidfile)

@@ -34,12 +34,12 @@ from tzlocal import get_localzone
 # Zato
 from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, DATA_FORMAT, ZATO_NONE
 from zato.common.broker_message import CHANNEL as CHANNEL_BROKER_MESSAGE, SERVICE
+from zato.common.odb.api import ODBManager
 from zato.common.test import rand_int, rand_string
 from zato.common.util import new_cid, utcnow
 from zato.server.connection.http_soap.channel import RequestDispatcher
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.base.parallel import ParallelServer
-from zato.server.odb import ODBManager
 
 # ################################################################################################################################
 
