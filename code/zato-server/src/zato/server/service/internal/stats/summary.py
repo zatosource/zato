@@ -27,9 +27,6 @@ from dateutil.rrule import DAILY, HOURLY, MINUTELY, MONTHLY, YEARLY
 # paodate
 from paodate import Date
 
-# SciPy
-from scipy import stats as sp_stats
-
 # Zato
 from zato.common import KVDB, StatsElem, ZatoException
 from zato.server.service import Integer, UTC
@@ -157,55 +154,7 @@ class BaseSummarizingService(BaseAggregatingService):
         return self._get_patterns(now, start, stop, KVDB.SERVICE_TIME_AGGREGATED_BY_MONTH, self.get_monthly_suffixes)
 
     def create_summary(self, target, *pattern_names):
-        try:
-
-            now = datetime.utcnow()
-            key_prefix = KVDB.SERVICE_SUMMARY_PREFIX_PATTERN.format(target)
-
-            if target == 'by-week':
-                start = parse((now + relativedelta(weekday=MO(-1))).strftime('%Y-%m-%d 00:00:00')) # Current week start
-                key_suffix = start.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[target])
-            else:
-                start = parse(now.strftime('%Y-%m-%d 00:00:00')) # Current day start
-                key_suffix = now.strftime(DT_PATTERNS.SUMMARY_SUFFIX_PATTERNS[target])
-            total_seconds = (now - start).total_seconds()
-
-            patterns = []
-            for name in pattern_names:
-                patterns.append(getattr(self, 'get_by_{}_patterns'.format(name))(now))
-
-            services = {}
-
-            for elem in chain(*patterns):
-                prefix, suffix = elem.split('*')
-                suffix = suffix[1:]
-                stats = self.collect_service_stats(elem, prefix, suffix, None, False, False, False)
-
-                for service_name, values in stats.items():
-                    stats = services.setdefault(service_name, deepcopy(DEFAULT_STATS))
-
-                    for name in STATS_KEYS:
-                        value = values[name]
-                        if name == 'usage':
-                            stats[name] += value
-                        elif name == 'max':
-                            stats[name] = max(stats[name], value)
-                        elif name == 'mean':
-                            stats[name].append(value)
-                        elif name == 'min':
-                            stats[name] = min(stats[name], value)
-
-            for service_name, values in services.items():
-
-                values['mean'] = round(sp_stats.tmean(values['mean']), 2)
-                values['rate'] = round(values['usage'] / total_seconds, 2)
-
-        except Exception, e:
-            self.logger.warn('Could not store mean/rate. e=`%r`, locals=`%r`',
-                format_exc(e), locals())
-
-        else:
-            self.hset_aggr_keys(services, key_prefix, key_suffix)
+        pass
 
 # ##############################################################################
 
