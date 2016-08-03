@@ -25,9 +25,6 @@ from dateutil.parser import parse
 from dateutil.relativedelta import relativedelta
 from dateutil.rrule import MINUTELY, rrule, rruleset
 
-# SciPy
-from scipy import stats as sp_stats
-
 # Zato
 from zato.common import KVDB, SECONDS_IN_DAY, StatsElem, ZatoException
 from zato.common.broker_message import STATS
@@ -72,26 +69,7 @@ class BaseAggregatingService(AdminService):
         many items will be fetched from the list so it's possible to fetch less
         items than its LLEN returns.
         """
-        key_len = self.server.kvdb.conn.llen(key)
-        if max_batch_size:
-            batch_size = min(key_len, max_batch_size)
-            if batch_size < key_len:
-                msg = ('batch_size:[{}] < key_len:[{}], max_batch_size:[{}], key:[{}], '
-                'consider decreasing the job interval or increasing the max_batch_size').format(
-                    batch_size, key_len, max_batch_size, key)
-                self.logger.warn(msg)
-        else:
-            batch_size = key_len
-
-        times = [int(elem) for elem in self.server.kvdb.conn.lrange(key, 0, batch_size)]
-
-        if times:
-            mean_percentile = int(self.server.kvdb.conn.hget(KVDB.SERVICE_TIME_BASIC + service_name, 'mean_percentile') or 0)
-            max_score = int(sp_stats.scoreatpercentile(times, mean_percentile))
-
-            return min(times), max(times), (sp_stats.tmean(times, (None, max_score)) or 0), len(times)
-        else:
-            return 0, 0, 0, 0
+        return 0, 0, 0, 0
 
     def collect_service_stats(self, keys_pattern, key_prefix, key_suffix, total_seconds,
                               suffix_needs_colon=True, chop_off_service_name=True, needs_rate=True):
