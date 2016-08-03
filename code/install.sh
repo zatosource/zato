@@ -16,7 +16,7 @@ N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 git log -n 1 --pretty=format:"%H" > $CURDIR/release-info/revision.txt
 
 IS_DEB=0
-IS_FEDORA=0
+IS_RHEL=0
 IS_DARWIN=0
 
 RUN=0
@@ -29,7 +29,7 @@ apt-get -v > /dev/null 2>&1
 if (($? == 0)) ; then IS_DEB=1 ; fi
 
 yum --help > /dev/null 2>&1
-if (($? == 0)) ; then IS_FEDORA=1 ; fi
+if (($? == 0)) ; then IS_RHEL=1 ; fi
 
 brew --help > /dev/null 2>&1
 if (($? == 0)) ; then IS_DARWIN=1 ; fi
@@ -44,9 +44,13 @@ then
   RUN=1
 fi
 
-if [ $IS_FEDORA -eq 1 ]
+if [ $IS_RHEL -eq 1 ]
 then
-  bash $CURDIR/_install-fedora.sh
+  bash $CURDIR/install-dependecies.sh
+  bash $CURDIR/install-python2.7.sh
+  bash $CURDIR/install-redis.sh
+  bash $CURDIR/_install-rhel
+  bash $CURDIR/create-package.sh
   RUN=1
 fi
 
