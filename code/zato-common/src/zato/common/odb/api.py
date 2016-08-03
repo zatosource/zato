@@ -1023,6 +1023,20 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_channel_web_socket(self, cluster_id, channel_id):
+        """ Returns a particular WebSocket channel.
+        """
+        with closing(self.session()) as session:
+            return query.channel_web_socket(session, cluster_id, channel_id)
+
+    def get_channel_web_socket_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of WebSocket channels.
+        """
+        with closing(self.session()) as session:
+            return query.channel_web_socket_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
     def get_out_sql(self, cluster_id, out_id):
         """ Returns an outgoing SQL connection's details.
         """

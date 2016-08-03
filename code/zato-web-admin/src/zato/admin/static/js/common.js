@@ -53,6 +53,7 @@ $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.jms_wmq');
 $.namespace('zato.channel.stomp');
+$.namespace('zato.channel.web_socket');
 $.namespace('zato.channel.zmq');
 $.namespace('zato.cloud');
 $.namespace('zato.cloud.aws');

@@ -36,6 +36,7 @@ class connector_type:
 
     class duplex:
         zmq_v01 = 'ZeroMQ MDP v0.1'
+        web_socket = 'WebSocket'
 
 class Inactive(Exception):
     pass
