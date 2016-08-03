@@ -46,7 +46,7 @@ fi
 
 if [ $IS_RHEL -eq 1 ]
 then
-  bash $CURDIR/install-dependecies.sh
+  bash $CURDIR/install-dependencies.sh
   bash $CURDIR/install-python2.7.sh
   bash $CURDIR/install-redis.sh
   bash $CURDIR/_install-rhel
