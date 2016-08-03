@@ -22,6 +22,5 @@ class CryptoBackendTestCase(TestCase):
         which can happen if we hit upon https://github.com/pyca/cryptography/commit/30e199e0fb220a17b3089508a59d29a2924f10e4
         """
         default_backend()
-        a
 
 # ################################################################################################################################
