@@ -49,7 +49,7 @@ then
   bash $CURDIR/install-dependencies.sh
   bash $CURDIR/install-python2.7.sh
   bash $CURDIR/install-redis.sh
-  bash $CURDIR/_install-rhel
+  bash $CURDIR/_install-rhel.sh
   bash $CURDIR/create-package.sh
   RUN=1
 fi
