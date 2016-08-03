@@ -14,7 +14,7 @@ else
 fi
 
 yum -y install git bzr gcc-gfortran \
-    gcc-c++ git bzip2 bzip2-devel libffi libffi-devel \
+    gcc-c++ bzip2 bzip2-devel libffi libffi-devel \
     libevent-devel libyaml-devel libxml2-devel libxslt-devel \
     openssl openssl-devel postgresql-devel python-devel swig \
     unzip uuid-devel uuid
