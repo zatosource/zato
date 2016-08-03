@@ -62,6 +62,7 @@ from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConn
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
+from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
@@ -136,6 +137,9 @@ class WorkerStore(BrokerMessageReceiver):
         self.zmq_channel_api = ConnectorStore(connector_type.channel.zmq, ChannelZMQSimple)
         self.zmq_out_api = ConnectorStore(connector_type.out.zmq, OutZMQSimple)
 
+        # WebSocket
+        self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket)
+
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
 
@@ -165,6 +169,9 @@ class WorkerStore(BrokerMessageReceiver):
 
         # ZeroMQ
         self.init_zmq()
+
+        # WebSocket
+        self.init_web_socket()
 
         # Odoo
         self.init_odoo()
@@ -494,11 +501,6 @@ class WorkerStore(BrokerMessageReceiver):
         else:
             api = self.zmq_channel_api
 
-        # If this is an edit and we do not have this connector, that is OK.
-        # It only means that it was not we but some other worker of this server start the connector.
-        if action == 'edit' and name not in api.connectors:
-            return
-
         getattr(api, action)(name, config, self.on_message_invoke_service)
 
         if start:
@@ -520,8 +522,8 @@ class WorkerStore(BrokerMessageReceiver):
 
             self._set_up_zmq_channel(name, bunchify(data.config), 'create')
 
-            self.zmq_mdp_v01_api.start()
-            self.zmq_channel_api.start()
+        self.zmq_mdp_v01_api.start()
+        self.zmq_channel_api.start()
 
     def init_zmq_outconns(self):
         """ Initializes ZeroMQ outgoing connections (but not MDP that are initialized along with channels).
@@ -546,6 +548,18 @@ class WorkerStore(BrokerMessageReceiver):
 
         self.init_zmq_channels()
         self.init_zmq_outconns()
+
+# ################################################################################################################################
+
+    def init_web_socket(self):
+        """ Initializes all WebSocket connections.
+        """
+
+        # Channels
+        for name, data in self.worker_config.channel_web_socket.items():
+            self.web_socket_api.create(name, bunchify(data.config))
+
+        self.web_socket_api.start()
 
 # ################################################################################################################################
 

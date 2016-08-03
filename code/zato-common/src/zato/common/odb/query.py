@@ -21,13 +21,13 @@ from sqlalchemy.sql.expression import case
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
      URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, CassandraQuery, ChannelAMQP, \
-     ChannelSTOMP, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, DeliveryDefinitionBase, Delivery, \
-     DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, \
-     Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, \
-     OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, \
-     PubSubConsumer, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, \
-     Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, \
-     WSSDefinition, XPath, XPathSecurity
+     ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
+     DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, \
+     IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
+     NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
+     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, \
+     RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, \
+     TLSChannelSecurity, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
 
 # ################################################################################################################################
 
@@ -1374,5 +1374,28 @@ def out_odoo_list(session, cluster_id, needs_columns=False):
     """ A list of Odoo connections.
     """
     return _out_odoo(session, cluster_id)
+
+# ################################################################################################################################
+
+def _channel_web_socket(session, cluster_id):
+    """ WebSocket channels
+    """
+    return session.query(ChannelWebSocket).\
+        filter(Cluster.id==ChannelWebSocket.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(ChannelWebSocket.name)
+
+def channel_web_socket(session, cluster_id, id):
+    """ An incoming WebSocket connection.
+    """
+    return _channel_web_socket(session, cluster_id).\
+        filter(ChannelWebSocket.id==id).\
+        one()
+
+@query_wrapper
+def channel_web_socket_list(session, cluster_id, needs_columns=False):
+    """ All the WebSocket channel connections.
+    """
+    return _channel_web_socket(session, cluster_id)
 
 # ################################################################################################################################
