@@ -19,9 +19,8 @@ yum -y install git bzr gcc-gfortran \
     openssl openssl-devel postgresql-devel python-devel swig \
     unzip uuid-devel uuid
 
-sudo su - foxway -c "mkdir -p /home/foxway/opt/zato/2.0.7"
-sudo su - foxway -c "cd $ZATO_TARGET_DIR"
-sudo su - foxway -c "wget https://github.com/zatosource/zato/archive/u/foxway.zip"
-sudo su - foxway -c "unzip foxway.zip"
-sudo su - foxway -c "mv zato-u-foxway/* $ZATO_TARGET_DIR"
+sudo su - foxway -c "mkdir -p $ZATO_TARGET_DIR"
+sudo su - foxway -c "git clone https://github.com/zatosource/zato.git $ZATO_TARGET_DIR"
+sudo su - foxway -c "cd $ZATO_TARGET_DIR && git fetch origin u/foxway"
+sudo su - foxway -c "cd $ZATO_TARGET_DIR && git checkout u/foxway"
 sudo su - foxway -c "$ZATO_TARGET_DIR/code/install.sh"
