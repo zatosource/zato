@@ -6,7 +6,6 @@ MIRROR_OS=http://mirror.centos.org/centos/6/os/x86_64/Packages
 mkdir $FOXWAY_HOME/rpms
 wget -P $FOXWAY_HOME/rpms \
     $MIRROR_OS/unzip-6.0-4.el6.x86_64.rpm \
-    $MIRROR_OS/git-1.7.1-4.el6_7.1.x86_64.rpm \
     $MIRROR_OS/haproxy-1.5.4-3.el6.x86_64.rpm
 
 for file in $(ls /home/foxway/rpms/)
