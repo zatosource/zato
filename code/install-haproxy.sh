@@ -7,10 +7,11 @@ HAPROXY_VERSION=1.6.7
 
 cd /home/foxway
 mkdir haproxy
-sudo su - foxway -c "mkdir $HOME/haproxy"
-sudo su - foxway -c "wget http://www.haproxy.org/download/1.6/src/haproxy-$HAPROXY_VERSION.tar.gz"
-sudo su - foxway -c "tar xzf haproxy-$HAPROXY_VERSION.tar.gz -C $HOME/haproxy"
-sudo su - foxway -c "cd $HOME/haproxy && make TARGET=generic USE_OPENSSL=1"
+mkdir $HOME/haproxy
+#wget http://www.haproxy.org/download/1.6/src/haproxy-$HAPROXY_VERSION.tar.gz
+tar -xzvf haproxy-$HAPROXY_VERSION.tar.gz --strip 1 -C $HOME/haproxy/
+cd $HOME/haproxy
+make TARGET=generic USE_OPENSSL=1
 
 # Generate config file for haproxy
 cat > /home/foxway/haproxy/haproxy.cfg << EOL
@@ -30,7 +31,6 @@ listen http1
     bind 127.0.0.1:80
     mode http
 EOL
-chown foxway:foxway /home/foxway/haproxy.cfg
 
 # Start haproxy in daemon mode
-sudo su - foxway -c "cd $HOME/haproxy/haproxy -D -f haproxy.cfg"
+$HOME/haproxy/haproxy -D -f haproxy.cfg
