@@ -10,11 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
-from logging import getLogger
 from traceback import format_exc
 
 # Zato
-from zato.common import MSG_SOURCE, ZMQ
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelZMQ, Cluster, Service as ServiceModel
 from zato.common.odb.query import channel_zmq_list

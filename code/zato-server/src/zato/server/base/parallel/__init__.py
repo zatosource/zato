@@ -168,7 +168,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
                     msg.package_id = hot_deploy(self, file_name, full_path, notify=False)
 
                     # .. and tell the worker to actually deploy all the services the package contains.
-                    gevent.spawn(self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE, msg)
+                    gevent.spawn(self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE, msg)
 
                     logger.info('Deployed an extra service found: %s (%s)', name, service_id)
 
