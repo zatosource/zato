@@ -362,7 +362,7 @@ class ZatoCommand(object):
             if not needs_confirm:
                 return secret1.strip('\n')
 
-            secret2 = getpass('{} again (will not echoe): '.format(secret_name_cap))
+            secret2 = getpass('{} again (will not echo): '.format(secret_name_cap))
 
             if secret1 != secret2:
                 self.logger.info('{}s do not match'.format(secret_name_cap))
