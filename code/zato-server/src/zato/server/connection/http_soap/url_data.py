@@ -495,6 +495,10 @@ class URLData(OAuthDataStore):
             raise Forbidden(cid, 'You are not allowed to access this URL\n')
 
         for role_id, perm_id, resource_id in worker_store.rbac.registry._allowed.iterkeys():
+
+            if is_allowed:
+                break
+
             if perm_id == http_method_permission_id and resource_id == channel_item['service_id']:
                 for client_def in worker_store.rbac.role_id_to_client_def[role_id]:
                     _, sec_type, sec_name = client_def.split(sep)
@@ -507,6 +511,7 @@ class URLData(OAuthDataStore):
 
                     is_allowed = self.check_security(
                         sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
+
                     if is_allowed:
                         break
 
