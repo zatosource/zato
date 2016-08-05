@@ -45,9 +45,8 @@ from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import get_base_initial_port, get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
-     new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, store_tls, \
-     update_bind_port
+from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
+     parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, store_tls, update_bind_port
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -517,8 +516,7 @@ class WorkerStore(BrokerMessageReceiver):
 
             # Each worker uses a unique bind port
             data = bunchify(data)
-            base, initial_port = get_base_initial_port(data.config)
-            update_bind_port(data.config, base, initial_port, self.worker_idx)
+            update_bind_port(data.config, self.worker_idx)
 
             self._set_up_zmq_channel(name, bunchify(data.config), 'create')
 
@@ -557,6 +555,10 @@ class WorkerStore(BrokerMessageReceiver):
 
         # Channels
         for name, data in self.worker_config.channel_web_socket.items():
+
+            # Each worker uses a unique bind port
+            update_bind_port(data.config, self.worker_idx)
+
             self.web_socket_api.create(name, bunchify(data.config))
 
         self.web_socket_api.start()
@@ -1812,8 +1814,7 @@ class WorkerStore(BrokerMessageReceiver):
 
         # Each worker uses a unique bind port
         msg = bunchify(msg)
-        base, initial_port = get_base_initial_port(msg)
-        update_bind_port(msg, base, initial_port, self.worker_idx)
+        update_bind_port(msg, self.worker_idx)
 
         self.zmq_channel_create_edit(msg.old_name, msg, 'edit', 5, False)
 

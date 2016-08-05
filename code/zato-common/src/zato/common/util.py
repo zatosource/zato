@@ -1542,31 +1542,22 @@ def get_worker_pids():
 
 # ################################################################################################################################
 
-def get_base_initial_port(data):
-    address = data.address.split(':')
-    base = ':'.join(address[:-1])
-    initial_port = int(address[-1])
+def update_bind_port(data, idx):
+    address_info = urlparse(data.address)
+    base, port = address_info.netloc.split(':')
+    port = int(port) + idx
 
-    return base, initial_port
-
-# ################################################################################################################################
-
-def update_bind_port(data, base, initial_port, idx):
-    port = initial_port+idx
-    data.address = '{}:{}'.format(base, port)
+    data.address = '{}://{}:{}{}'.format(address_info.scheme, base, port, address_info.path)
     data.bind_port = port
 
 # ################################################################################################################################
 
 def start_connectors(worker_store, service_name, data):
 
-    if data.socket_method == ZMQ.METHOD_NAME.BIND:
-        base, initial_port = get_base_initial_port(data)
-
     for idx, pid in enumerate(get_worker_pids()):
 
         if data.socket_method == ZMQ.METHOD_NAME.BIND:
-            update_bind_port(data, base, initial_port, idx)
+            update_bind_port(data, idx)
 
         worker_store.server.invoke(service_name, data, pid=pid, is_async=True, data_format=DATA_FORMAT.DICT)
 
