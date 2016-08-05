@@ -260,7 +260,7 @@ class CreateEditMeta(AdminServiceMeta):
                         existing_one = existing_one.first()
 
                         if existing_one and not attrs.is_edit:
-                            raise Exception('{} [{}] already exists on this cluster'.format(
+                            raise Exception('{} `{}` already exists in this cluster'.format(
                                 attrs.label[0].upper() + attrs.label[1:], input.name))
 
                     if attrs.is_edit:
