@@ -50,7 +50,7 @@ then
   bash $CURDIR/install-python2.7.sh
   bash $CURDIR/install-redis.sh
   bash $CURDIR/install-bzr.sh
-  #bash $CURDIR/install-haproxy.sh
+  bash $CURDIR/install-haproxy.sh
   bash $CURDIR/_install-rhel.sh
   bash $CURDIR/create-package.sh
   RUN=1
