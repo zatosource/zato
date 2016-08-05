@@ -10,7 +10,7 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/foxway/lib/:/home/foxway/lib64/:/h
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/home/foxway/lib64/pkgconfig/
 export CYTHON=$ZATO_TARGET_DIR/code/bin/cython
 
-echo "export PATH=$PATH:/home/foxway/usr/bin/:/home/foxway/.local/bin:/home/foxway/opt/zato/2.0.7/code/bin/:/home/foxway/redis-3.2.3/src/" \
+echo "export PATH=$PATH:/home/foxway/usr/bin/:/home/foxway/.local/bin:/home/foxway/opt/zato/2.0.7/code/bin/:/home/foxway/redis-3.2.3/src/:/home/foxway/haproxy/" \
     | tee -a /home/foxway/.bashrc /home/foxway/.bash_profile
 echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/foxway/lib/:/home/foxway/lib64/:/home/foxway/usr/lib/:/home/foxway/usr/lib64/" \
     | tee -a /home/foxway/.bashrc /home/foxway/.bash_profile
