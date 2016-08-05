@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_security_select, add_services, DataFormatForm, INITIAL_CHOICES
-from zato.common import DELEGATED_TO_RBAC, SIMPLE_IO, ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common import SIMPLE_IO
 
 class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))

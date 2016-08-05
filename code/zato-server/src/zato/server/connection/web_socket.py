@@ -11,12 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from logging import getLogger
 
-# gevent
-from gevent import spawn
-
-# PyZMQ
-import zmq.green as zmq
-
 # Zato
 from zato.server.connection.connector import Connector
 

@@ -12,7 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelWebSocket
 from zato.common.odb.query import channel_web_socket_list
-from zato.server.service import Service
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
