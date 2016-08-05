@@ -13,7 +13,7 @@ else
     useradd foxway -g foxway
 fi
 
-yum -y install git bzr gcc-gfortran \
+yum -y install git gcc-gfortran \
     gcc-c++ bzip2 bzip2-devel libffi libffi-devel \
     libevent-devel libyaml-devel libxml2-devel libxslt-devel \
     openssl openssl-devel postgresql-devel python-devel swig \
