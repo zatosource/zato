@@ -13,6 +13,7 @@ import logging, inspect, os, sys
 from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
+from inspect import isclass
 from json import loads
 from threading import RLock
 from time import sleep
@@ -45,8 +46,11 @@ from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
-     parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, store_tls, update_bind_port
+from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
+     import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, \
+     store_tls, update_bind_port, visit_py_source
+from zato.server.base.worker.common import WorkerImpl
+from zato.server.base.worker.web_socket import WebSocket
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -69,22 +73,60 @@ from zato.server.stats import MaintenanceTool
 from zato.zmq_.channel import MDPv01 as ChannelZMQMDPv01, Simple as ChannelZMQSimple
 from zato.zmq_.outgoing import Simple as OutZMQSimple
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+#_worker_store_base = (())
+
+# ################################################################################################################################
 
 class GeventWorker(GunicornGeventWorker):
     def __init__(self, *args, **kwargs):
         self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
         super(GunicornGeventWorker, self).__init__(*args, **kwargs)
 
+# ################################################################################################################################
+
 class SyncWorker(GunicornSyncWorker):
     def __init__(self, *args, **kwargs):
         self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
         super(GunicornSyncWorker, self).__init__(*args, **kwargs)
 
-class WorkerStore(BrokerMessageReceiver):
+# ################################################################################################################################
+
+def _get_base_classes():
+    ignore = ('__init__.py', 'common.py')
+    out = []
+
+    for py_path in visit_py_source(os.path.dirname(os.path.abspath(__file__))):
+        import_path = True
+        for item in ignore:
+            if py_path.endswith(item):
+                import_path = False
+                continue
+
+        if import_path:
+            mod_info = import_module_from_path(py_path)
+            for name in dir(mod_info.module):
+                item = getattr(mod_info.module, name)
+                if isclass(item) and issubclass(item, WorkerImpl) and item is not WorkerImpl:
+                    out.append(item)
+
+    return tuple(out)
+
+# ################################################################################################################################
+
+# Dynamically adds as base classes everything found in current directory that subclasses WorkerImpl
+_WorkerStoreBase = type(b'_WorkerStoreBase', _get_base_classes(), {})
+
+class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
     def __init__(self, worker_config=None, server=None):
+
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_ready = False
         self.worker_config = worker_config
@@ -104,6 +146,8 @@ class WorkerStore(BrokerMessageReceiver):
 
         # To speed up look-ups
         self._simple_types = simple_types
+
+# ################################################################################################################################
 
     def init(self):
 
@@ -206,16 +250,24 @@ class WorkerStore(BrokerMessageReceiver):
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
 
+# ################################################################################################################################
+
     def set_broker_client(self, broker_client):
         self.broker_client = broker_client
         #self.request_dispatcher.url_data.broker_client = broker_client
+
+# ################################################################################################################################
 
     def filter(self, msg):
         # TODO: Fix it, worker doesn't need to accept all the messages
         return True
 
+# ################################################################################################################################
+
     def _update_queue_build_cap(self, item):
         item.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
+
+# ################################################################################################################################
 
     def _update_aws_config(self, msg):
         """ Parses the address to AWS we store into discrete components S3Connection objects expect.
@@ -228,6 +280,8 @@ class WorkerStore(BrokerMessageReceiver):
         msg.host = url_info.netloc
 
         msg.metadata = parse_extra_into_dict(msg.metadata_)
+
+# ################################################################################################################################
 
     def _http_soap_wrapper_from_config(self, config, has_sec_config=True):
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration
@@ -559,7 +613,7 @@ class WorkerStore(BrokerMessageReceiver):
             # Each worker uses a unique bind port
             update_bind_port(data.config, self.worker_idx)
 
-            self.web_socket_api.create(name, bunchify(data.config))
+            self.web_socket_api.create(name, bunchify(data.config), self.on_message_invoke_service)
 
         self.web_socket_api.start()
 

@@ -1976,12 +1976,7 @@ class ChannelWebSocket(Base):
     data_format = Column(String(20), nullable=True)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
-    service = relationship('Service', backref=backref('web_socket', order_by=name, cascade='all, delete, delete-orphan'))
-
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('web_socket_list', order_by=name, cascade='all, delete, delete-orphan'))
-
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
-    security = relationship(SecurityBase, backref=backref('web_socket_list', order_by=name, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
