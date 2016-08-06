@@ -28,13 +28,14 @@
             'name',
             '_is_active',
             'address',
-            'service',
+            'service_name',
             '_edit',
             '_delete',
             'id',
             'token_format',
             'data_format',
             'is_active',
+            'security_id',
         ]
     }
     </script>
@@ -74,6 +75,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         
                 </thead>
 
@@ -93,6 +95,7 @@
                         <td class='ignore'>{{ item.token_format }}</td>
                         <td class='ignore'>{{ item.data_format }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.security_id }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -128,12 +131,12 @@
 
                         <tr>
                             <td style="vertical-align:middle">Service</td>
-                            <td>{{ create_form.service }}</td>
+                            <td>{{ create_form.service_name }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Security<br/>definition</td>
-                            <td>{{ create_form.security }}</td>
+                            <td>{{ create_form.security_id }}</td>
                         </tr>
 
                         <tr>
@@ -180,12 +183,12 @@
 
                         <tr>
                             <td style="vertical-align:middle">Service</td>
-                            <td>{{ edit_form.service }}</td>
+                            <td>{{ edit_form.service_name }}</td>
                         </tr>
 
                         <tr>
                             <td style="vertical-align:middle">Security<br/>definition</td>
-                            <td>{{ edit_form.security }}</td>
+                            <td>{{ edit_form.security_id }}</td>
                         </tr>
 
                         <tr>

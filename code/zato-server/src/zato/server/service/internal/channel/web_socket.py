@@ -13,6 +13,7 @@ from contextlib import closing
 
 # Zato
 from zato.common.broker_message import CHANNEL
+from zato.common import ZATO_NONE
 from zato.common.odb.model import ChannelWebSocket, Cluster, Service as ServiceModel
 from zato.common.odb.query import channel_web_socket_list
 from zato.common.util import is_port_taken
@@ -28,8 +29,9 @@ label = 'a WebSocket channel'
 broker_message = CHANNEL
 broker_message_prefix = 'WEB_SOCKET_'
 list_func = channel_web_socket_list
-create_edit_input_required_extra = ['service']
-create_edit_rewrite = ['service_name']
+skip_input_params = ['service_id']
+create_edit_input_required_extra = ['service_name']
+output_optional_extra = ['service_name']
 
 # ################################################################################################################################
 
@@ -37,21 +39,14 @@ def broker_message_hook(self, input, instance, attrs, service_type):
     input.source_server = self.server.get_full_name()
     input.config_cid = 'channel.web_socket.{}.{}.{}'.format(service_type, input.source_server, self.cid)
 
-    if service_type == 'create_edit':
-        with closing(self.odb.session()) as session:
-            service = session.query(ServiceModel).\
-                filter(Cluster.id==input.cluster_id).\
-                filter(ServiceModel.id==instance.service_id).\
-                one()
-        input.service_name = service.name
-
 # ################################################################################################################################
 
 def instance_hook(self, input, instance, attrs):
 
     with closing(self.odb.session()) as session:
+
         instance.service_id = session.query(ServiceModel).\
-            filter(ServiceModel.name==input.service).\
+            filter(ServiceModel.name==input.service_name).\
             filter(ServiceModel.cluster_id==input.cluster_id).\
             one().id
 

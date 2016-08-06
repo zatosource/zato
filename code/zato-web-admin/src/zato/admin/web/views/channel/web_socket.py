@@ -14,6 +14,7 @@ import logging
 # Zato
 from zato.admin.web.forms.channel.web_socket import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, SecurityList
+from zato.common import ZATO_NONE
 from zato.common.odb.model import ChannelWebSocket
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'address', 'service_name', 'token_format', 'data_format')
+        output_required = ('id', 'name', 'is_active', 'address', 'service_name', 'token_format', 'data_format', 'security_id')
         output_repeated = True
 
     def handle(self):
@@ -46,8 +47,15 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'address', 'service', 'token_format', 'data_format', 'is_internal')
+        input_required = ('name', 'is_active', 'address', 'service_name', 'token_format', 'data_format', 'is_internal', 
+            'security_id')
         output_required = ('id', 'name')
+
+    def on_after_set_input(self):
+        if self.input.security_id != ZATO_NONE:
+            self.input.security_id = int(self.input.security_id.split('/')[1])
+        else:
+            self.input.security_id = None
 
     def success_message(self, item):
         return 'WebSocket channel `{}` successfully {}'.format(item.name, self.verb)
