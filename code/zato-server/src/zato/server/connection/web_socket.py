@@ -11,13 +11,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from httplib import FORBIDDEN, NOT_FOUND, responses
 from logging import getLogger
+from traceback import format_exc
 from urlparse import urlparse
 
 # Bunch
 from bunch import Bunch
 
 # ws4py
-from ws4py.websocket import EchoWebSocket, WebSocket
+from ws4py.websocket import EchoWebSocket, WebSocket as _WebSocket
 from ws4py.server.geventserver import WSGIServer
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
@@ -60,44 +61,66 @@ error_response = {
 
 # ################################################################################################################################
 
-class WebSocketHandler(WebSocket):
+class WebSocket(_WebSocket):
     """ Encapsulates an individual connection from a WebSocket client.
     """
-    def __init__(self, config, *args, **kwargs):
-        super(WebSocketHandler, self).__init__(*args, **kwargs)
+    def __init__(self, container, config, *args, **kwargs):
+        super(WebSocket, self).__init__(*args, **kwargs)
+        self.container = container
         self.config = config
+        self.is_authenticated = False
+
+        _local_address = self.sock.getsockname()
+        self._local_address = '{}:{}'.format(_local_address[0], _local_address[1])
+
+        _peer_address = self.sock.getpeername()
+        self._peer_address = '{}:{}'.format(_peer_address[0], _peer_address[1])
 
     def opened(self):
-        print('zzz opened', self.sock)
+        logger.info('New connection from %s to %s (%s)', self._peer_address, self._local_address, self.config.name)
 
     def closed(self, code, reason=None):
-        print('aaa', code, reason)
+        logger.info('Closing connection from %s to %s (%s)', self._peer_address, self._local_address, self.config.name)
 
     def received_message(self, message):
+
+        if not self.is_authenticated:
+            logger.warn('Peer %s not authenticated, closing connection to %s (%s)', self._peer_address, self._local_address,
+                self.config.name)
+            self.send(error_response[FORBIDDEN][self.config.data_format])
+            self.close()
+
         self.send('qqq', message.is_binary)
+
+    def run(self):
+        try:
+            super(WebSocket, self).run()
+        except Exception, e:
+            logger.warn(format_exc(e))
 
 # ################################################################################################################################
 
-class WSGIApplication(WebSocketWSGIApplication):
+class WebSocketContainer(WebSocketWSGIApplication):
 
     def __init__(self, config, *args, **kwargs):
         self.config = config
-        super(WSGIApplication, self).__init__(*args, **kwargs)
+        super(WebSocketContainer, self).__init__(*args, **kwargs)
 
     def make_websocket(self, sock, protocols, extensions, environ):
-        websocket = self.handler_cls(self.config, sock, protocols, extensions, environ.copy())
-        environ['ws4py.websocket'] = websocket
-        return websocket
+        try:
+            websocket = self.handler_cls(self, self.config, sock, protocols, extensions, environ.copy())
+            environ['ws4py.websocket'] = websocket
+            return websocket
+        except Exception, e:
+            logger.warn(format_exc(e))
 
     def __call__(self, environ, start_response):
-
-        logger.info('111\n%s', self.config)
 
         if environ['PATH_INFO'] != self.config.path:
             start_response(http404, {})
             return [error_response[NOT_FOUND][self.config.data_format]]
 
-        super(WSGIApplication, self).__call__(environ, start_response)
+        super(WebSocketContainer, self).__call__(environ, start_response)
 
 # ################################################################################################################################
 
@@ -114,7 +137,7 @@ class WebSocketServer(WSGIServer):
         config.path = address_info.path
         config.needs_tls = address_info.scheme == 'wss'
 
-        super(WebSocketServer, self).__init__((config.host, config.port), WSGIApplication(config, handler_cls=WebSocketHandler))
+        super(WebSocketServer, self).__init__((config.host, config.port), WebSocketContainer(config, handler_cls=WebSocket))
 
 # ################################################################################################################################
 
