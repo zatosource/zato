@@ -27,7 +27,7 @@ from zato.server.connection.connector import Connector
 
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+logger = getLogger('zato_web_socket')
 
 # ################################################################################################################################
 
@@ -91,6 +91,8 @@ class WSGIApplication(WebSocketWSGIApplication):
 
     def __call__(self, environ, start_response):
 
+        logger.info('111\n%s', self.config)
+
         if environ['PATH_INFO'] != self.config.path:
             start_response(http404, {})
             return [error_response[NOT_FOUND][self.config.data_format]]
@@ -124,5 +126,11 @@ class ChannelWebSocket(Connector):
     def _start(self):
         self.server = WebSocketServer(self.config)
         self.server.serve_forever()
+
+    def _stop(self):
+        self.server.stop(1)
+
+    def get_log_details(self):
+        return self.config.address
 
 # ################################################################################################################################

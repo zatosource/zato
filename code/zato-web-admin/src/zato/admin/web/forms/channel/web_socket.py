@@ -19,8 +19,8 @@ class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     address = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    service = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
-    security = forms.ChoiceField(widget=forms.Select())
+    service_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
+    security_id = forms.ChoiceField(widget=forms.Select())
     token_format = forms.ChoiceField(widget=forms.Select())
 
     def __init__(self, security_list=[], prefix=None, post_data=None, req=None):
@@ -33,7 +33,7 @@ class CreateForm(DataFormatForm):
             if name.upper() == name:
                 self.fields['token_format'].choices.append([name.lower(), name])
 
-        add_security_select(self, security_list, needs_rbac=False)
+        add_security_select(self, security_list, field_name='security_id', needs_rbac=False)
         add_services(self, req)
 
 class EditForm(CreateForm):
