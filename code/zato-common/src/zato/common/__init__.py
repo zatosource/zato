@@ -785,6 +785,11 @@ class IPC_ACTION:
     INVOKE_SERVICE = 'invoke-service'
     INVOKE_WORKER_STORE = 'invoke-worker-store'
 
+class WEB_SOCKET:
+    class DEFAULT:
+        NEW_TOKEN_TIMEOUT = 5
+        TOKEN_TTL = 3600
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'

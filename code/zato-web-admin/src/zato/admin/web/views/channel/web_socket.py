@@ -30,7 +30,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'address', 'service_name', 'token_format', 'data_format',
-            'security_id', 'sec_type')
+            'security_id', 'sec_type', 'new_token_wait_time', 'token_ttl')
         output_repeated = True
 
     def on_before_append_item(self, item):
@@ -53,7 +53,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'address', 'service_name', 'token_format', 'data_format', 'is_internal', 
-            'security_id')
+            'security_id', 'new_token_wait_time', 'token_ttl')
         output_required = ('id', 'name')
 
     def on_after_set_input(self):

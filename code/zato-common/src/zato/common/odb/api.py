@@ -538,7 +538,7 @@ class ODBManager(SessionWrapper):
                 one()[0]
 
     def hot_deploy(self, deployment_time, details, payload_name, payload, server_id):
-        """ Inserts a hot-deployed data into the DB along with setting the preliminary
+        """ Inserts hot-deployed data into the DB along with setting the preliminary
         AWAITING_DEPLOYMENT status for each of the servers this server's cluster
         is aware of.
         """

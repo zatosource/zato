@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.admin.web.forms import add_security_select, add_services, DataFormatForm, INITIAL_CHOICES
-from zato.common import SIMPLE_IO
+from zato.common import SIMPLE_IO, WEB_SOCKET
 
 class CreateForm(DataFormatForm):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -22,6 +22,10 @@ class CreateForm(DataFormatForm):
     service_name = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
     security_id = forms.ChoiceField(widget=forms.Select())
     token_format = forms.ChoiceField(widget=forms.Select())
+    new_token_wait_time = forms.CharField(initial=WEB_SOCKET.DEFAULT.NEW_TOKEN_TIMEOUT,
+        widget=forms.TextInput(attrs={'style':'width:10%'}))
+    token_ttl = forms.CharField(initial=WEB_SOCKET.DEFAULT.TOKEN_TTL,
+        widget=forms.TextInput(attrs={'style':'width:20%'}))
 
     def __init__(self, security_list=[], prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
