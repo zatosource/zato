@@ -29,8 +29,13 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'address', 'service_name', 'token_format', 'data_format', 'security_id')
+        output_required = ('id', 'name', 'is_active', 'address', 'service_name', 'token_format', 'data_format',
+            'security_id', 'sec_type')
         output_repeated = True
+
+    def on_before_append_item(self, item):
+        item.security_id = '{}/{}'.format(item.sec_type, item.security_id)
+        return item
 
     def handle(self):
         if self.req.zato.cluster_id:
