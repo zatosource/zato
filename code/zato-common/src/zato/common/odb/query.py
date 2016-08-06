@@ -1380,7 +1380,11 @@ def out_odoo_list(session, cluster_id, needs_columns=False):
 def _channel_web_socket(session, cluster_id):
     """ WebSocket channels
     """
-    return session.query(ChannelWebSocket).\
+    return session.query(
+        ChannelWebSocket.id, ChannelWebSocket.name, ChannelWebSocket.is_active,
+        ChannelWebSocket.is_internal, ChannelWebSocket.address, ChannelWebSocket.token_format,
+        ChannelWebSocket.data_format, ChannelWebSocket.service_id, ChannelWebSocket.security_id,
+        Service.name.label('service_name')).\
         filter(Cluster.id==ChannelWebSocket.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(ChannelWebSocket.name)
