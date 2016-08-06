@@ -1384,6 +1384,7 @@ def _channel_web_socket(session, cluster_id):
         ChannelWebSocket.id, ChannelWebSocket.name, ChannelWebSocket.is_active,
         ChannelWebSocket.is_internal, ChannelWebSocket.address, ChannelWebSocket.token_format,
         ChannelWebSocket.data_format, ChannelWebSocket.service_id, ChannelWebSocket.security_id,
+        ChannelWebSocket.new_token_wait_time, ChannelWebSocket.token_ttl,
         SecurityBase.sec_type,
         Service.name.label('service_name')).\
         outerjoin(Service, Service.id==ChannelWebSocket.service_id).\

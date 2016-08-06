@@ -1974,6 +1974,8 @@ class ChannelWebSocket(Base):
     address = Column(String(200), nullable=False)
     token_format = Column(String(20), nullable=True)
     data_format = Column(String(20), nullable=True)
+    new_token_wait_time = Column(Integer(), nullable=False)
+    token_ttl = Column(Integer(), nullable=False)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)

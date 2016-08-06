@@ -223,7 +223,7 @@ class ServiceStore(InitializingObject):
         deployed = []
 
         try:
-            mod_info = import_module_from_path(base_dir, file_name)
+            mod_info = import_module_from_path(file_name, base_dir)
         except Exception, e:
             msg = 'Could not load source, file_name:`%s`, e:`%s`'
             logger.error(msg, file_name, format_exc(e))
