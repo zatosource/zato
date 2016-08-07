@@ -30,7 +30,7 @@ from ws4py.server.geventserver import WSGIServer
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Zato
-from zato.common import DATA_FORMAT, WEB_SOCKET
+from zato.common import CHANNEL, DATA_FORMAT, WEB_SOCKET
 from zato.common.util import make_repr, new_cid
 from zato.server.connection.connector import Connector
 
@@ -230,8 +230,21 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def handle_invoke_service(self, request):
-        self.send(ServiceInvokeResponse(request.id, {'aa':'aa', 'bb':'bb'}).serialize())
+    def handle_invoke_service(self, request, _channel=CHANNEL.WEB_SOCKET, _data_format=DATA_FORMAT.DICT):
+        try:
+
+            service_response = self.config.on_message_callback({
+                'cid': new_cid(),
+                'data_format': _data_format,
+                'service': self.config.service_name,
+                'payload': request.data,
+            }, CHANNEL.WEB_SOCKET, None, needs_response=True)
+
+        except Exception, e:
+            logger.warn(format_exc(e))
+            service_response = {'aa': format_exc(e)}
+
+        self.send(ServiceInvokeResponse(request.id, service_response).serialize())
 
 # ################################################################################################################################
 
@@ -297,7 +310,7 @@ class WebSocketContainer(WebSocketWSGIApplication):
 class WebSocketServer(WSGIServer):
     """ A WebSocket server exposing Zato services to client applications.
     """
-    def __init__(self, config, auth_func):
+    def __init__(self, config, auth_func, on_message_callback):
 
         address_info = urlparse(config.address)
 
@@ -307,6 +320,7 @@ class WebSocketServer(WSGIServer):
         config.path = address_info.path
         config.needs_tls = address_info.scheme == 'wss'
         config.auth_func = auth_func
+        config.on_message_callback = on_message_callback
         config.needs_auth = bool(config.sec_name)
 
         super(WebSocketServer, self).__init__((config.host, config.port), WebSocketContainer(config, handler_cls=WebSocket))
@@ -319,7 +333,7 @@ class ChannelWebSocket(Connector):
     start_in_greenlet = True
 
     def _start(self):
-        self.server = WebSocketServer(self.config, self.auth_func)
+        self.server = WebSocketServer(self.config, self.auth_func, self.on_message_callback)
         self.server.serve_forever()
 
     def _stop(self):
