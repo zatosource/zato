@@ -29,7 +29,7 @@ class WebSocket(WorkerImpl):
     def web_socket_channel_create_edit(self, name, msg, action, lock_timeout, start):
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
             func = getattr(self.web_socket_api, action)
-            func(name, msg, self.on_message_invoke_service)
+            func(name, msg, self.on_message_invoke_service, self.request_dispatcher.url_data.authenticate_web_socket)
 
 # ################################################################################################################################
 

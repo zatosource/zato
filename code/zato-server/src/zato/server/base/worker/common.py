@@ -16,3 +16,5 @@ class WorkerImpl(object):
     def __init__(self):
         self.server = None
         self.worker_idx = None
+        self.url_data = None
+

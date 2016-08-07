@@ -78,10 +78,6 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-#_worker_store_base = (())
-
-# ################################################################################################################################
-
 class GeventWorker(GunicornGeventWorker):
     def __init__(self, *args, **kwargs):
         self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
@@ -212,9 +208,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # ZeroMQ
         self.init_zmq()
 
-        # WebSocket
-        self.init_web_socket()
-
         # Odoo
         self.init_odoo()
 
@@ -246,6 +239,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_pubsub()
         self.init_notifiers()
 
+        # WebSocket
+        self.init_web_socket()
+
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
 
@@ -253,7 +249,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def set_broker_client(self, broker_client):
         self.broker_client = broker_client
-        #self.request_dispatcher.url_data.broker_client = broker_client
 
 # ################################################################################################################################
 
@@ -612,7 +607,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             # Each worker uses a unique bind port
             update_bind_port(data.config, self.worker_idx)
 
-            self.web_socket_api.create(name, bunchify(data.config), self.on_message_invoke_service)
+            self.web_socket_api.create(name, bunchify(data.config), self.on_message_invoke_service,
+                self.request_dispatcher.url_data.authenticate_web_socket)
 
         self.web_socket_api.start()
 
