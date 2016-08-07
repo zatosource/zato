@@ -50,13 +50,11 @@ copy_not_found = b'Not found'
 error_response = {
 
     FORBIDDEN: {
-        None: copy_forbidden,
         DATA_FORMAT.JSON: dumps({'error': copy_forbidden}),
         DATA_FORMAT.XML: xml_error_template.format(copy_forbidden)
     },
 
     NOT_FOUND: {
-        None: copy_not_found,
         DATA_FORMAT.JSON: dumps({'error': copy_not_found}),
         DATA_FORMAT.XML: xml_error_template.format(copy_not_found)
     }
@@ -100,7 +98,6 @@ class WebSocket(_WebSocket):
         self._parse_func = {
             DATA_FORMAT.JSON: self.parse_json,
             DATA_FORMAT.XML: self.parse_xml,
-            None: lambda data: data
         }[self.config.data_format]
 
 # ################################################################################################################################
@@ -128,7 +125,9 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def parse_xml(self, data):
-        pass
+        raise NotImplementedError('Not supported yet')
+
+# ################################################################################################################################
 
     def authenticate(self, request):
         if self.config.auth_func(request.cid, request.username, request.password, self.config.sec_name):

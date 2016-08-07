@@ -1382,7 +1382,7 @@ def _channel_web_socket(session, cluster_id):
     """
     return session.query(
         ChannelWebSocket.id, ChannelWebSocket.name, ChannelWebSocket.is_active,
-        ChannelWebSocket.is_internal, ChannelWebSocket.address, ChannelWebSocket.token_format,
+        ChannelWebSocket.is_internal, ChannelWebSocket.address,
         ChannelWebSocket.data_format, ChannelWebSocket.service_id, ChannelWebSocket.security_id,
         ChannelWebSocket.new_token_wait_time, ChannelWebSocket.token_ttl,
         SecurityBase.sec_type,
