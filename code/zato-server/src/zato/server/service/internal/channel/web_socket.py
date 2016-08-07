@@ -15,7 +15,7 @@ from contextlib import closing
 from zato.common.broker_message import CHANNEL
 from zato.common import ZATO_NONE
 from zato.common.odb.model import ChannelWebSocket, Cluster, Service as ServiceModel
-from zato.common.odb.query import channel_web_socket_list
+from zato.common.odb.query import channel_web_socket_list, channel_web_socket
 from zato.common.util import is_port_taken
 from zato.server.service import Int, Service
 from zato.server.service.internal import AdminService
@@ -38,6 +38,12 @@ output_optional_extra = ['service_name', 'sec_type']
 def broker_message_hook(self, input, instance, attrs, service_type):
     input.source_server = self.server.get_full_name()
     input.config_cid = 'channel.web_socket.{}.{}.{}'.format(service_type, input.source_server, self.cid)
+
+    with closing(self.odb.session()) as session:
+        full_data = channel_web_socket(session, input.cluster_id, instance.id)
+
+    input.sec_type = full_data.sec_type
+    input.sec_name = full_data.sec_name
 
 # ################################################################################################################################
 

@@ -34,12 +34,13 @@ class Index(_Index):
         output_repeated = True
 
     def on_before_append_item(self, item):
-        item.security_id = '{}/{}'.format(item.sec_type, item.security_id)
+        if item.security_id:
+            item.security_id = '{}/{}'.format(item.sec_type, item.security_id)
         return item
 
     def handle(self):
         if self.req.zato.cluster_id:
-            sec_list = SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id)
+            sec_list = SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, 'basic_auth')
         else:
             sec_list = []
 
