@@ -39,11 +39,13 @@ def broker_message_hook(self, input, instance, attrs, service_type):
     input.source_server = self.server.get_full_name()
     input.config_cid = 'channel.web_socket.{}.{}.{}'.format(service_type, input.source_server, self.cid)
 
-    with closing(self.odb.session()) as session:
-        full_data = channel_web_socket(session, input.cluster_id, instance.id)
+    if service_type == 'create_edit':
 
-    input.sec_type = full_data.sec_type
-    input.sec_name = full_data.sec_name
+        with closing(self.odb.session()) as session:
+            full_data = channel_web_socket(session, input.cluster_id, instance.id)
+
+        input.sec_type = full_data.sec_type
+        input.sec_name = full_data.sec_name
 
 # ################################################################################################################################
 
@@ -94,7 +96,7 @@ class Start(Service):
     """
     class SimpleIO(object):
         input_required = tuple(Edit.SimpleIO.input_required) + ('id', 'config_cid')
-        input_optional = tuple(Edit.SimpleIO.input_optional) + (Int('bind_port'), 'service_name')
+        input_optional = tuple(Edit.SimpleIO.input_optional) + (Int('bind_port'), 'service_name', 'sec_name', 'sec_type')
         request_elem = 'zato_channel_web_socket_start_request'
         response_elem = 'zato_channel_web_socket_start_response'
 

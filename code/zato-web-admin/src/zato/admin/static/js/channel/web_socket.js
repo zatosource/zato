@@ -47,7 +47,6 @@ $.fn.zato.channel.web_socket.data_table.new_row = function(item, data, include_t
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.channel.web_socket.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.channel.web_socket.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
-    row += String.format("<td class='ignore'>{0}</td>", item.token_format ? item.token_format : '');
     row += String.format("<td class='ignore'>{0}</td>", item.data_format ? item.data_format : '');
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", item.security_id ? item.security_id : '');

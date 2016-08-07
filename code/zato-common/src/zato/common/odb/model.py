@@ -1972,7 +1972,6 @@ class ChannelWebSocket(Base):
     is_internal = Column(Boolean(), nullable=False)
 
     address = Column(String(200), nullable=False)
-    token_format = Column(String(20), nullable=True)
     data_format = Column(String(20), nullable=True)
     new_token_wait_time = Column(Integer(), nullable=False)
     token_ttl = Column(Integer(), nullable=False)
