@@ -475,6 +475,7 @@ class CHANNEL(Attrs):
     SCHEDULER_AFTER_ONE_TIME = 'scheduler-after-one-time'
     STARTUP_SERVICE = 'startup-service'
     STOMP = 'stomp'
+    WEB_SOCKET = 'web-socket'
     WORKER = 'worker'
     ZMQ = 'zmq'
 
@@ -789,6 +790,10 @@ class WEB_SOCKET:
     class DEFAULT:
         NEW_TOKEN_TIMEOUT = 5
         TOKEN_TTL = 3600
+
+    class ACTION:
+        AUTHENTICATE = 'authenticate'
+        INVOKE_SERVICE = 'invoke-service'
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

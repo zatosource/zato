@@ -9,13 +9,17 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from httplib import FORBIDDEN, NOT_FOUND, responses
+from datetime import datetime, timedelta
+from httplib import BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK, responses
 from logging import getLogger
 from traceback import format_exc
 from urlparse import urlparse
 
 # Bunch
 from bunch import Bunch, bunchify
+
+# gevent
+from gevent.lock import RLock
 
 # pyrapidjson
 from rapidjson import dumps, loads
@@ -26,8 +30,8 @@ from ws4py.server.geventserver import WSGIServer
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Zato
-from zato.common import DATA_FORMAT
-from zato.common.util import new_cid
+from zato.common import DATA_FORMAT, WEB_SOCKET
+from zato.common.util import make_repr, new_cid
 from zato.server.connection.connector import Connector
 
 # ################################################################################################################################
@@ -63,8 +67,8 @@ error_response = {
 
 # ################################################################################################################################
 
-class Request(object):
-    """ An individual message received from a WebSocket.
+class ClientMessage(object):
+    """ An individual message received from a WebSocket client.
     """
     def __init__(self):
         self.action = None
@@ -75,8 +79,59 @@ class Request(object):
         self.id = None
         self.cid = new_cid()
         self.in_reply_to = None
-        self.data = None
-        self.is_authenticate = False
+        self.data = Bunch()
+        self.has_credentials = False
+        self.token = None
+
+    def __repr__(self):
+        return make_repr(self)
+
+# ################################################################################################################################
+
+class ServerMessage(object):
+    """ A message sent from a WebSocket server to a client.
+    """
+    def __init__(self, id_prefix, in_reply_to, status=OK, error_message=''):
+        self.id = '{}.{}'.format(id_prefix, new_cid())
+        self.in_reply_to = in_reply_to
+        self.meta = Bunch(id=self.id, in_reply_to=in_reply_to, status=status)
+        self.data = Bunch()
+
+        if error_message:
+            self.meta.error_message = error_message
+
+    def serialize(self):
+        return dumps({
+            'meta': self.meta,
+            'data': self.data,
+        })
+
+# ################################################################################################################################
+
+class AuthenticateResponse(ServerMessage):
+    def __init__(self, token, *args, **kwargs):
+        super(AuthenticateResponse, self).__init__('ws.auth', *args, **kwargs)
+        self.data.token = token
+
+# ################################################################################################################################
+
+class ServiceInvokeResponse(ServerMessage):
+    def __init__(self, in_reply_to, data):
+        super(ServiceInvokeResponse, self).__init__('ws.si', in_reply_to)
+        self.data = data
+
+# ################################################################################################################################
+
+class TokenInfo(object):
+    def __init__(self, value, ttl, _utcnow=datetime.utcnow):
+        self.value = value
+        self.ttl = ttl
+        self.creation_time = _utcnow()
+        self.expires_at =  self.creation_time
+        self.extend()
+
+    def extend(self, _timedelta=timedelta):
+        self.expires_at = self.expires_at + _timedelta(seconds=self.ttl)
 
 # ################################################################################################################################
 
@@ -88,6 +143,8 @@ class WebSocket(_WebSocket):
         self.container = container
         self.config = config
         self.is_authenticated = False
+        self._token = None
+        self.update_lock = RLock()
 
         _local_address = self.sock.getsockname()
         self._local_address = '{}:{}'.format(_local_address[0], _local_address[1])
@@ -100,22 +157,35 @@ class WebSocket(_WebSocket):
             DATA_FORMAT.XML: self.parse_xml,
         }[self.config.data_format]
 
+    @property
+    def token(self):
+        return self._token
+
+    @token.setter
+    def token(self, value):
+
+        if not self._token:
+            self._token = TokenInfo(value, self.config.token_ttl)
+        else:
+            self._token.value = value
+            self._token.extend()
+
 # ################################################################################################################################
 
-    def parse_json(self, data):
+    def parse_json(self, data, _auth_action=WEB_SOCKET.ACTION.AUTHENTICATE):
         parsed = loads(data)
 
         meta = bunchify(parsed['meta'])
 
-        request = Request()
+        request = ClientMessage()
         request.action = meta.action
         request.id = meta.id
 
-        if request.action == 'authenticate':
+        if request.action == _auth_action:
             request.sec_type = meta.sec_type
             request.username = meta.username
             request.password = meta.password
-            request.is_authenticate = True
+            request.has_credentials = True
         else:
             request.in_reply_to = meta.get('in_reply_to')
             request.data = parsed['data']
@@ -131,33 +201,50 @@ class WebSocket(_WebSocket):
 
     def authenticate(self, request):
         if self.config.auth_func(request.cid, request.username, request.password, self.config.sec_name):
-            return 'zxc'
+
+            with self.update_lock:
+                self.token = 'ws.token.{}'.format(new_cid())
+                self.is_authenticated = True
+
+            return AuthenticateResponse(self.token.value, request.id).serialize()
 
 # ################################################################################################################################
 
     def on_forbidden(self, action):
-        logger.warn('Peer %s %s, closing connection to %s (%s)', self._peer_address, action,
-            self._local_address, self.config.name)
+        logger.warn(
+            'Peer %s %s, closing connection to %s (%s)', self._peer_address, action, self._local_address, self.config.name)
         self.send(error_response[FORBIDDEN][self.config.data_format])
         self.close()
 
 # ################################################################################################################################
 
-    def received_message(self, message):
+    def handle_authenticate(self, request):
+        if request.has_credentials:
+            response = self.authenticate(request)
+            if response:
+                self.send(response)
+            else:
+                self.on_forbidden('sent invalid credentials')
+        else:
+            self.on_forbidden('not authenticated')
 
+# ################################################################################################################################
+
+    def handle_invoke_service(self, request):
+        self.send(ServiceInvokeResponse(request.id, {'aa':'aa', 'bb':'bb'}).serialize())
+
+# ################################################################################################################################
+
+    def received_message(self, message):
         request = self._parse_func(message.data)
 
+        # If client is authenticated we allow either for it to re-authenticate, which grants a new token, or to invoke a service.
+        # Otherwise, authentication is required.
+
         if self.is_authenticated:
-            zzz
+            self.handle_invoke_service(request) if not request.has_credentials else self.handle_authenticate(request)
         else:
-            if request.is_authenticate:
-                response = self.authenticate(request)
-                if response:
-                    self.send(response, message.is_binary)
-                else:
-                    self.on_forbidden('sent invalid credentials')
-            else:
-                self.on_forbidden('not authenticated')
+            self.handle_authenticate(request)
 
 # ################################################################################################################################
 
@@ -173,7 +260,8 @@ class WebSocket(_WebSocket):
         logger.info('New connection from %s to %s (%s)', self._peer_address, self._local_address, self.config.name)
 
         if not self.config.needs_auth:
-            self.is_authenticated = True
+            with self.update_lock:
+                self.is_authenticated = True
 
 # ################################################################################################################################
 
