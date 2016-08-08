@@ -1292,7 +1292,8 @@ class WorkerStore(BrokerMessageReceiver):
         mod = inspect.getmodule(self.server.service_store.services[msg.impl_name]['service_class'])
 
         # Where to delete it from in the second step
-        fs_location = self.server.service_store.services[msg.impl_name]['deployment_info']['fs_location']
+        deployment_info = loads(self.server.service_store.services[msg.impl_name]['deployment_info'])
+        fs_location = deployment_info['fs_location']
 
         # Delete it from the service store
         del self.server.service_store.services[msg.impl_name]
