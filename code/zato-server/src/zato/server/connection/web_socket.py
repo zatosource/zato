@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
-from httplib import BAD_REQUEST, FORBIDDEN, NOT_FOUND, OK, responses
+from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK, responses
 from logging import getLogger
 from traceback import format_exc
 from urlparse import urlparse
@@ -116,9 +116,16 @@ class AuthenticateResponse(ServerMessage):
 # ################################################################################################################################
 
 class ServiceInvokeResponse(ServerMessage):
-    def __init__(self, in_reply_to, data):
+    def __init__(self, in_reply_to, data, *ignored_args, **ignored_kwargs):
         super(ServiceInvokeResponse, self).__init__('ws.si', in_reply_to)
         self.data = data
+
+# ################################################################################################################################
+
+class ServiceErrorResponse(ServerMessage):
+    def __init__(self, in_reply_to, cid, status, error_message):
+        super(ServiceErrorResponse, self).__init__('ws.se', in_reply_to, status, error_message)
+        self.data = {'cid': cid}
 
 # ################################################################################################################################
 
@@ -232,19 +239,24 @@ class WebSocket(_WebSocket):
 
     def handle_invoke_service(self, request, _channel=CHANNEL.WEB_SOCKET, _data_format=DATA_FORMAT.DICT):
         try:
+            cid = new_cid()
 
             service_response = self.config.on_message_callback({
-                'cid': new_cid(),
+                'cid': cid,
                 'data_format': _data_format,
                 'service': self.config.service_name,
                 'payload': request.data,
             }, CHANNEL.WEB_SOCKET, None, needs_response=True, serialize=False)
 
         except Exception, e:
-            logger.warn(format_exc(e))
-            service_response = {'aa': format_exc(e)}
+            logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, e:`%s`', self.config.service_name, request.id,
+                cid, format_exc(e))
+            response = ServiceErrorResponse(request.id, cid, INTERNAL_SERVER_ERROR,
+                    'Could not invoke service `{}`, id:`{}`, cid:`{}`'.format(self.config.service_name, request.id, cid))
+        else:
+            response = ServiceInvokeResponse(request.id, service_response)
 
-        self.send(ServiceInvokeResponse(request.id, service_response).serialize())
+        self.send(response.serialize())
 
 # ################################################################################################################################
 
