@@ -1135,9 +1135,13 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _set_service_response_data(self, service, **ignored):
-        if not isinstance(service.response.payload, self._simple_types):
-            service.response.payload = service.response.payload.getvalue()
+    def _set_service_response_data(self, serialize=True):
+
+        def inner(service, **ignored):
+            if not isinstance(service.response.payload, self._simple_types):
+                service.response.payload = service.response.payload.getvalue(serialize)
+
+        return inner
 
 # ################################################################################################################################
 
@@ -1212,7 +1216,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             payload = msg['payload']
 
         service = self.server.service_store.new_instance_by_name(msg['service'])
-        service.update_handle(self._set_service_response_data, service, payload,
+        service.update_handle(self._set_service_response_data(kwargs.get('serialize', True)), service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
             environ=msg.get('environ'))

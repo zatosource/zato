@@ -238,7 +238,7 @@ class WebSocket(_WebSocket):
                 'data_format': _data_format,
                 'service': self.config.service_name,
                 'payload': request.data,
-            }, CHANNEL.WEB_SOCKET, None, needs_response=True)
+            }, CHANNEL.WEB_SOCKET, None, needs_response=True, serialize=False)
 
         except Exception, e:
             logger.warn(format_exc(e))
