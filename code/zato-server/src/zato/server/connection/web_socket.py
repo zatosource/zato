@@ -237,10 +237,8 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def handle_invoke_service(self, request, _channel=CHANNEL.WEB_SOCKET, _data_format=DATA_FORMAT.DICT):
+    def handle_invoke_service(self, cid, request, _channel=CHANNEL.WEB_SOCKET, _data_format=DATA_FORMAT.DICT):
         try:
-            cid = new_cid()
-
             service_response = self.config.on_message_callback({
                 'cid': cid,
                 'data_format': _data_format,
@@ -249,8 +247,10 @@ class WebSocket(_WebSocket):
             }, CHANNEL.WEB_SOCKET, None, needs_response=True, serialize=False)
 
         except Exception, e:
+
             logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, e:`%s`', self.config.service_name, request.id,
                 cid, format_exc(e))
+
             response = ServiceErrorResponse(request.id, cid, INTERNAL_SERVER_ERROR,
                     'Could not invoke service `{}`, id:`{}`, cid:`{}`'.format(self.config.service_name, request.id, cid))
         else:
@@ -260,16 +260,24 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def received_message(self, message):
+    def received_message(self, message, _utcnow=datetime.utcnow):
         request = self._parse_func(message.data)
 
         # If client is authenticated we allow either for it to re-authenticate, which grants a new token, or to invoke a service.
         # Otherwise, authentication is required.
 
+        cid = new_cid()
+        now = _utcnow()
+        logger.info('Request received cid:`%s`', cid)
+
         if self.is_authenticated:
-            self.handle_invoke_service(request) if not request.has_credentials else self.handle_authenticate(request)
+
+            self.handle_invoke_service(cid, request) if not request.has_credentials else self.handle_authenticate(request)
+
         else:
             self.handle_authenticate(request)
+
+        logger.info('Response returned cid:`%s`, time:`%s`', cid, _utcnow()-now)
 
 # ################################################################################################################################
 
