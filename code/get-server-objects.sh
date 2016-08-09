@@ -18,3 +18,9 @@ fi
 
 echo "Copying server objects to a separate directory..."
 cp -r $HOME/$repo/*.json $HOME/$workdir
+if [ $? == 0 ]
+then
+    echo "Server objects copied."
+else
+    echo "ERROR - Server objects not copied."
+fi
