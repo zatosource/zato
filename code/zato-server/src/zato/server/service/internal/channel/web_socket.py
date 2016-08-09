@@ -13,8 +13,7 @@ from contextlib import closing
 
 # Zato
 from zato.common.broker_message import CHANNEL
-from zato.common import ZATO_NONE
-from zato.common.odb.model import ChannelWebSocket, Cluster, Service as ServiceModel
+from zato.common.odb.model import ChannelWebSocket, Service as ServiceModel
 from zato.common.odb.query import channel_web_socket_list, channel_web_socket
 from zato.common.util import is_port_taken
 from zato.server.service import Int, Service
