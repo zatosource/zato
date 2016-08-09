@@ -47,9 +47,6 @@ fi
 
 if [ $IS_RHEL -eq 1 ]
 then
-  echo "Adding identity to the authentication client..."
-  eval `ssh-agent -s`
-  ssh-add $HOME/.ssh/zato_deploy
   bash $CURDIR/install-python2.7.sh
   bash $CURDIR/install-redis.sh
   bash $CURDIR/install-bzr.sh
