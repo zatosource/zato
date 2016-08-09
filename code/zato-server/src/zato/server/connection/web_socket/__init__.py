@@ -19,7 +19,7 @@ from urlparse import urlparse
 from bunch import bunchify
 
 # gevent
-from gevent import Greenlet, sleep, spawn
+from gevent import spawn
 from gevent.lock import RLock
 
 # pyrapidjson
@@ -32,7 +32,7 @@ from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, WEB_SOCKET
-from zato.common.util import new_cid, spawn_greenlet
+from zato.common.util import new_cid
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientMessage, error_response, ServiceErrorResponse, \
      ServiceInvokeResponse
@@ -205,7 +205,7 @@ class WebSocket(_WebSocket):
         except Exception, e:
             logger.warn(format_exc(e))
 
-    def received_message(self, message, _gevent_sleep=sleep):
+    def received_message(self, message):
         try:
             spawn(self._received_message, message)
         except Exception, e:
