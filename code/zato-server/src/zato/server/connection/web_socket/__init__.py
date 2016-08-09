@@ -19,6 +19,7 @@ from urlparse import urlparse
 from bunch import bunchify
 
 # gevent
+from gevent import Greenlet, sleep, spawn
 from gevent.lock import RLock
 
 # pyrapidjson
@@ -31,7 +32,7 @@ from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, WEB_SOCKET
-from zato.common.util import new_cid
+from zato.common.util import new_cid, spawn_greenlet
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientMessage, error_response, ServiceErrorResponse, \
      ServiceInvokeResponse
@@ -67,6 +68,7 @@ class WebSocket(_WebSocket):
         self.container = container
         self.config = config
         self.is_authenticated = False
+        self.authenticate_by = None
         self._token = None
         self.update_lock = RLock()
 
@@ -98,21 +100,23 @@ class WebSocket(_WebSocket):
 
     def parse_json(self, data, _auth_action=WEB_SOCKET.ACTION.AUTHENTICATE):
         parsed = loads(data)
-
-        meta = bunchify(parsed['meta'])
-
         request = ClientMessage()
-        request.action = meta.action
-        request.id = meta.id
 
-        if request.action == _auth_action:
-            request.sec_type = meta.sec_type
-            request.username = meta.username
-            request.password = meta.password
-            request.has_credentials = True
-        else:
-            request.in_reply_to = meta.get('in_reply_to')
-            request.data = parsed['data']
+        meta = parsed.get('meta', {})
+        if meta:
+            meta = bunchify(meta)
+
+            request.action = meta.action
+            request.id = meta.id
+
+            if request.action == _auth_action:
+                request.sec_type = meta.sec_type
+                request.username = meta.username
+                request.password = meta.password
+                request.has_credentials = True
+            else:
+                request.in_reply_to = meta.get('in_reply_to')
+                request.data = parsed.get('data')
 
         return request
 
@@ -178,24 +182,34 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def received_message(self, message, _utcnow=datetime.utcnow):
-        request = self._parse_func(message.data)
+    def _received_message(self, message, _utcnow=datetime.utcnow, _default_data='{}', *args, **kwargs):
 
-        # If client is authenticated we allow either for it to re-authenticate, which grants a new token, or to invoke a service.
-        # Otherwise, authentication is required.
+        try:
 
-        cid = new_cid()
-        now = _utcnow()
-        logger.info('Request received cid:`%s`', cid)
+            request = self._parse_func(message.data or _default_data)
+            cid = new_cid()
+            now = _utcnow()
 
-        if self.is_authenticated:
+            logger.info('Request received cid:`%s`', cid)
 
-            self.handle_invoke_service(cid, request) if not request.has_credentials else self.handle_authenticate(request)
+            # If client is authenticated we allow either for it to re-authenticate, which grants a new token, or to invoke a service.
+            # Otherwise, authentication is required.
 
-        else:
-            self.handle_authenticate(request)
+            if self.is_authenticated:
+                self.handle_invoke_service(cid, request) if not request.has_credentials else self.handle_authenticate(request)
+            else:
+                self.handle_authenticate(request)
 
-        logger.info('Response returned cid:`%s`, time:`%s`', cid, _utcnow()-now)
+            logger.info('Response returned cid:`%s`, time:`%s`', cid, _utcnow()-now)
+
+        except Exception, e:
+            logger.warn(format_exc(e))
+
+    def received_message(self, message, _gevent_sleep=sleep):
+        try:
+            spawn(self._received_message, message)
+        except Exception, e:
+            logger.warn(format_exc(e))
 
 # ################################################################################################################################
 
@@ -207,12 +221,14 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def opened(self):
+    def opened(self, _utcnow=datetime.utcnow, _timedelta=timedelta):
         logger.info('New connection from %s to %s (%s)', self._peer_address, self._local_address, self.config.name)
 
         if not self.config.needs_auth:
             with self.update_lock:
                 self.is_authenticated = True
+        else:
+            self.authenticate_by = _utcnow() + _timedelta(seconds=self.config.new_token_wait_time)
 
 # ################################################################################################################################
 
