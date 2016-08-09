@@ -24,7 +24,7 @@ services
 
 echo "Adding identity to the authentication client..."
 eval `ssh-agent -s`
-ssh-add .ssh/zato_deploy
+ssh-add $HOME/.ssh/zato_deploy
 
 echo "Creating directories to store Zato services and server objects..."
 for dir in ${workdirs[@]}
