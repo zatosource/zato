@@ -10,29 +10,31 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
-from httplib import BAD_REQUEST, FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, OK, responses
+from httplib import FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import getLogger
 from traceback import format_exc
 from urlparse import urlparse
 
 # Bunch
-from bunch import Bunch, bunchify
+from bunch import bunchify
 
 # gevent
 from gevent.lock import RLock
 
 # pyrapidjson
-from rapidjson import dumps, loads
+from rapidjson import loads
 
 # ws4py
-from ws4py.websocket import EchoWebSocket, WebSocket as _WebSocket
+from ws4py.websocket import WebSocket as _WebSocket
 from ws4py.server.geventserver import WSGIServer
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, WEB_SOCKET
-from zato.common.util import make_repr, new_cid
+from zato.common.util import new_cid
 from zato.server.connection.connector import Connector
+from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientMessage, error_response, ServiceErrorResponse, \
+     ServiceInvokeResponse
 
 # ################################################################################################################################
 
@@ -40,92 +42,7 @@ logger = getLogger('zato_web_socket')
 
 # ################################################################################################################################
 
-# Note that we always return forbidden even if unathorized could make sense because we do not want
-# to tell anyone what are expect authentication methods are.
-
-http403 = b'{} {}'.format(FORBIDDEN, responses[FORBIDDEN])
 http404 = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
-
-xml_error_template = '<?xml version="1.0" encoding="utf-8"?><error>{}</error>'
-
-copy_forbidden = b'You are not authorized to access this resource'
-copy_not_found = b'Not found'
-
-error_response = {
-
-    FORBIDDEN: {
-        DATA_FORMAT.JSON: dumps({'error': copy_forbidden}),
-        DATA_FORMAT.XML: xml_error_template.format(copy_forbidden)
-    },
-
-    NOT_FOUND: {
-        DATA_FORMAT.JSON: dumps({'error': copy_not_found}),
-        DATA_FORMAT.XML: xml_error_template.format(copy_not_found)
-    }
-
-}
-
-# ################################################################################################################################
-
-class ClientMessage(object):
-    """ An individual message received from a WebSocket client.
-    """
-    def __init__(self):
-        self.action = None
-        self.service = None
-        self.sec_type = None
-        self.username = None
-        self.password = None
-        self.id = None
-        self.cid = new_cid()
-        self.in_reply_to = None
-        self.data = Bunch()
-        self.has_credentials = False
-        self.token = None
-
-    def __repr__(self):
-        return make_repr(self)
-
-# ################################################################################################################################
-
-class ServerMessage(object):
-    """ A message sent from a WebSocket server to a client.
-    """
-    def __init__(self, id_prefix, in_reply_to, status=OK, error_message=''):
-        self.id = '{}.{}'.format(id_prefix, new_cid())
-        self.in_reply_to = in_reply_to
-        self.meta = Bunch(id=self.id, in_reply_to=in_reply_to, status=status)
-        self.data = Bunch()
-
-        if error_message:
-            self.meta.error_message = error_message
-
-    def serialize(self):
-        return dumps({
-            'meta': self.meta,
-            'data': self.data,
-        })
-
-# ################################################################################################################################
-
-class AuthenticateResponse(ServerMessage):
-    def __init__(self, token, *args, **kwargs):
-        super(AuthenticateResponse, self).__init__('ws.auth', *args, **kwargs)
-        self.data.token = token
-
-# ################################################################################################################################
-
-class ServiceInvokeResponse(ServerMessage):
-    def __init__(self, in_reply_to, data, *ignored_args, **ignored_kwargs):
-        super(ServiceInvokeResponse, self).__init__('ws.si', in_reply_to)
-        self.data = data
-
-# ################################################################################################################################
-
-class ServiceErrorResponse(ServerMessage):
-    def __init__(self, in_reply_to, cid, status, error_message):
-        super(ServiceErrorResponse, self).__init__('ws.se', in_reply_to, status, error_message)
-        self.data = {'cid': cid}
 
 # ################################################################################################################################
 
@@ -238,6 +155,7 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def handle_invoke_service(self, cid, request, _channel=CHANNEL.WEB_SOCKET, _data_format=DATA_FORMAT.DICT):
+
         try:
             service_response = self.config.on_message_callback({
                 'cid': cid,
@@ -363,3 +281,4 @@ class ChannelWebSocket(Connector):
         return self.config.address
 
 # ################################################################################################################################
+
