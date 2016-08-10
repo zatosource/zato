@@ -29,6 +29,7 @@ $ZATO_TARGET_DIR/code/bin/python /home/foxway/get-pip.py --user
 /home/foxway/.local/bin/pip install --upgrade pip --user
 /home/foxway/.local/bin/pip install virtualenv==1.9.1 --user
 /home/foxway/.local/bin/pip install cffi --user
+/home/foxway/.local/bin/pip install argon2_cffi --user
 
 /home/foxway/.local/bin/virtualenv /home/foxway/
 
