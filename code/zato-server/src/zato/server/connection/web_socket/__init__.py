@@ -20,7 +20,7 @@ from urlparse import urlparse
 from bunch import bunchify
 
 # gevent
-from gevent import spawn
+from gevent import sleep, spawn
 from gevent.lock import RLock
 
 # pyrapidjson
@@ -49,10 +49,10 @@ http404 = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
 # ################################################################################################################################
 
 class TokenInfo(object):
-    def __init__(self, value, ttl, _utcnow=datetime.utcnow):
+    def __init__(self, value, ttl, _now=datetime.utcnow):
         self.value = value
         self.ttl = ttl
-        self.creation_time = _utcnow()
+        self.creation_time = _now()
         self.expires_at =  self.creation_time
         self.extend()
 
@@ -144,9 +144,11 @@ class WebSocket(_WebSocket):
 
     def on_forbidden(self, action):
         logger.warn(
-            'Peer %s %s, closing connection to %s (%s)', self._peer_address, action, self._local_address, self.config.name)
+            'Peer %s %s, closing its connection to %s (%s)', self._peer_address, action, self._local_address, self.config.name)
         self.send(error_response[FORBIDDEN][self.config.data_format])
-        self.close()
+
+        self.server_terminated = True
+        self.client_terminated = True
 
 # ################################################################################################################################
 
@@ -158,7 +160,7 @@ class WebSocket(_WebSocket):
             else:
                 self.on_forbidden('sent invalid credentials')
         else:
-            self.on_forbidden('not authenticated')
+            self.on_forbidden('is not authenticated')
 
 # ################################################################################################################################
 
@@ -186,13 +188,13 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def _received_message(self, data, _utcnow=datetime.utcnow, _default_data='111', *args, **kwargs):
+    def _received_message(self, data, _now=datetime.utcnow, _default_data='111', *args, **kwargs):
 
         try:
 
             request = self._parse_func(data or _default_data)
             cid = new_cid()
-            now = _utcnow()
+            now = _now()
 
             logger.info('Request received cid:`%s`', cid)
 
@@ -204,7 +206,7 @@ class WebSocket(_WebSocket):
             else:
                 self.handle_authenticate(request)
 
-            logger.info('Response returned cid:`%s`, time:`%s`', cid, _utcnow()-now)
+            logger.info('Response returned cid:`%s`, time:`%s`', cid, _now()-now)
 
         except Exception, e:
             logger.warn(format_exc(e))
@@ -225,14 +227,32 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def opened(self, _utcnow=datetime.utcnow, _timedelta=timedelta):
+    def _ensure_authenticated(self, _now=datetime.utcnow):
+        """ Runs in its own greenlet and waits for an authentication request to arrive by self.authenticate_by,
+        which is a timestamp object. If self.is_authenticated is not True by that time, connection to the remote end
+        is closed.
+        """
+        now = _now()
+        while now < self.authenticate_by:
+            sleep(0.1)
+            if self.is_authenticated:
+                return
+            now = _now()
+
+        # We get here if self.is_authenticated has not been set to True by self.authenticate_by
+        self.on_forbidden('did not authenticate within {}s'.format(self.config.new_token_wait_time))
+
+# ################################################################################################################################
+
+    def opened(self, _now=datetime.utcnow, _timedelta=timedelta):
         logger.info('New connection from %s to %s (%s)', self._peer_address, self._local_address, self.config.name)
 
         if not self.config.needs_auth:
             with self.update_lock:
                 self.is_authenticated = True
         else:
-            self.authenticate_by = _utcnow() + _timedelta(seconds=self.config.new_token_wait_time)
+            self.authenticate_by = _now() + _timedelta(seconds=self.config.new_token_wait_time)
+            spawn(self._ensure_authenticated)
 
 # ################################################################################################################################
 
