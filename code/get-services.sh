@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eux
 
 declare -a repos
 declare -a workdirs

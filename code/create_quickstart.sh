@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eux
 
 # Create Zato quickstart
 mkdir -p $HOME/env/qs-1

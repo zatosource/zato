@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eux
 
 repo=databases.foxwayid
 workdir=sql

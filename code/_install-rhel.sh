@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -eux
 
 FOXWAY_HOME=/home/foxway
 ZATO_VERSION=2.0.7
