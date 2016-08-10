@@ -37,6 +37,14 @@ zato_services = {
     'zato.channel.jms-wmq.edit':'zato.server.service.internal.channel.jms_wmq.Edit',
     'zato.channel.jms-wmq.get-list':'zato.server.service.internal.channel.jms_wmq.GetList',
 
+    # Channels - WebSocket
+    'zato.channel.web-socket.create':'zato.server.service.internal.channel.web_socket.Create',
+    'zato.channel.web-socket.delete':'zato.server.service.internal.channel.web_socket.Delete',
+    'zato.channel.web-socket.edit':'zato.server.service.internal.channel.web_socket.Edit',
+    'zato.channel.web-socket.get-list':'zato.server.service.internal.channel.web_socket.GetList',
+    'zato.channel.web-socket.get-token':'zato.server.service.internal.channel.web_socket.GetToken',
+    'zato.channel.web-socket.invalidate-token':'zato.server.service.internal.channel.web_socket.InvalidateToken',
+
     # Channels - ZeroMQ
     'zato.channel.zmq.create':'zato.server.service.internal.channel.zmq.Create',
     'zato.channel.zmq.delete':'zato.server.service.internal.channel.zmq.Delete',

@@ -133,10 +133,10 @@ loggers:
         handlers: [stdout, scheduler]
         qualname: zato_scheduler
         propagate: false
-    zato_singleton:
+    zato_web_socket:
         level: INFO
-        handlers: [singleton]
-        qualname: zato_singleton
+        handlers: [stdout, web_socket]
+        qualname: zato_web_socket
         propagate: false
 
 handlers:
@@ -207,10 +207,10 @@ handlers:
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10
-    singleton:
+    web_socket:
         formatter: default
         class: logging.handlers.ConcurrentRotatingFileHandler
-        filename: './logs/singleton.log'
+        filename: './logs/web_socket.log'
         mode: 'a'
         maxBytes: 20000000
         backupCount: 10

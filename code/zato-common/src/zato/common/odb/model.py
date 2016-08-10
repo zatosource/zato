@@ -81,6 +81,8 @@ class ZatoInstallState(Base):
         self.source_host = source_host
         self.source_user = source_user
 
+# ################################################################################################################################
+
 class Cluster(Base):
     """ Represents a Zato cluster.
     """
@@ -127,6 +129,8 @@ class Cluster(Base):
 
     def to_json(self):
         return to_json(self)
+
+# ################################################################################################################################
 
 class Server(Base):
     """ Represents a Zato server.
@@ -198,6 +202,8 @@ class SecurityBase(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('security_list', order_by=name, cascade='all, delete, delete-orphan'))
 
+# ################################################################################################################################
+
 class HTTPBasicAuth(SecurityBase):
     """ An HTTP Basic Auth definition.
     """
@@ -216,6 +222,8 @@ class HTTPBasicAuth(SecurityBase):
         self.password = password
         self.cluster = cluster
 
+# ################################################################################################################################
+
 class JWT(SecurityBase):
     """ A set of JavaScript Web Token (JWT) credentials.
     """
@@ -224,6 +232,8 @@ class JWT(SecurityBase):
 
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
     ttl = Column(Integer, nullable=False)
+
+# ################################################################################################################################
 
 class WSSDefinition(SecurityBase):
     """ A WS-Security definition.
@@ -254,6 +264,8 @@ class WSSDefinition(SecurityBase):
         self.cluster = cluster
         self.password_type_raw = password_type_raw
 
+# ################################################################################################################################
+
 class TechnicalAccount(SecurityBase):
     """ Stores information about technical accounts, used for instance by Zato
     itself for securing access to its API.
@@ -274,6 +286,8 @@ class TechnicalAccount(SecurityBase):
 
     def to_json(self):
         return to_json(self)
+
+# ################################################################################################################################
 
 class OAuth(SecurityBase):
     """ Stores OAuth credentials.
@@ -302,6 +316,8 @@ class OAuth(SecurityBase):
     def to_json(self):
         return to_json(self)
 
+# ################################################################################################################################
+
 class NTLM(SecurityBase):
     """ Stores NTLM definitions.
     """
@@ -319,6 +335,8 @@ class NTLM(SecurityBase):
 
     def to_json(self):
         return to_json(self)
+
+# ################################################################################################################################
 
 class AWSSecurity(SecurityBase):
     """ Stores Amazon credentials.
@@ -339,6 +357,8 @@ class AWSSecurity(SecurityBase):
     def to_json(self):
         return to_json(self)
 
+# ################################################################################################################################
+
 class OpenStackSecurity(SecurityBase):
     """ Stores OpenStack credentials..
     """
@@ -356,6 +376,8 @@ class OpenStackSecurity(SecurityBase):
 
     def to_json(self):
         return to_json(self)
+
+# ################################################################################################################################
 
 class APIKeySecurity(SecurityBase):
     """ Stores API keys.
@@ -375,6 +397,8 @@ class APIKeySecurity(SecurityBase):
 
     def to_json(self):
         return to_json(self)
+
+# ################################################################################################################################
 
 class XPathSecurity(SecurityBase):
     """ Stores XPath-based credentials.
@@ -633,6 +657,8 @@ class Service(Base):
         self.time_trend_mean_1h = None # Not used by the database
         self.time_trend_rate_1h = None # Not used by the database
 
+# ################################################################################################################################
+
 class DeployedService(Base):
     """ A service living on a given server.
     """
@@ -706,6 +732,8 @@ class Job(Base):
         self.definition_text = definition_text # Not used by the database
         self.job_type_friendly = job_type_friendly # Not used by the database
 
+# ################################################################################################################################
+
 class IntervalBasedJob(Base):
     """ A Cron-style scheduler's job.
     """
@@ -736,6 +764,8 @@ class IntervalBasedJob(Base):
         self.seconds = seconds
         self.repeats = repeats
         self.definition_text = definition_text # Not used by the database
+
+# ################################################################################################################################
 
 class CronStyleJob(Base):
     """ A Cron-style scheduler's job.
@@ -792,6 +822,8 @@ class ConnDefAMQP(Base):
         self.frame_max = frame_max
         self.heartbeat = heartbeat
         self.cluster_id = cluster_id
+
+# ################################################################################################################################
 
 class ConnDefWMQ(Base):
     """ A WebSphere MQ connection definition.
@@ -883,6 +915,8 @@ class OutgoingAMQP(Base):
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
         self.def_name = def_name # Not used by the DB
 
+# ################################################################################################################################
+
 class OutgoingFTP(Base):
     """ An outgoing FTP connection.
     """
@@ -919,6 +953,8 @@ class OutgoingFTP(Base):
         self.dircache = dircache
         self.cluster_id = cluster_id
 
+# ################################################################################################################################
+
 class OutgoingOdoo(Base):
     """ An outgoing Odoo connection.
     """
@@ -943,6 +979,8 @@ class OutgoingOdoo(Base):
     def __init__(self):
         self.protocol_name = None # Not used by the DB
 
+# ################################################################################################################################
+
 class OutgoingSTOMP(Base):
     """ An outgoing STOMP connection.
     """
@@ -962,6 +1000,8 @@ class OutgoingSTOMP(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_stomp', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
 
 class OutgoingWMQ(Base):
     """ An outgoing WebSphere MQ connection.
@@ -992,6 +1032,8 @@ class OutgoingWMQ(Base):
         self.def_id = def_id
         self.delivery_mode_text = delivery_mode_text # Not used by the DB
         self.def_name = def_name # Not used by the DB
+
+# ################################################################################################################################
 
 class OutgoingZMQ(Base):
     """ An outgoing Zero MQ connection.
@@ -1053,6 +1095,8 @@ class ChannelAMQP(Base):
         self.service_name = service_name # Not used by the DB
         self.data_format = data_format
 
+# ################################################################################################################################
+
 class ChannelSTOMP(Base):
     """ An incoming STOMP connection.
     """
@@ -1076,6 +1120,8 @@ class ChannelSTOMP(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('channels_stomp', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
 
 class ChannelWMQ(Base):
     """ An incoming WebSphere MQ connection.
@@ -1105,6 +1151,8 @@ class ChannelWMQ(Base):
         self.def_name = def_name # Not used by the DB
         self.service_name = service_name # Not used by the DB
         self.data_format = data_format
+
+# ################################################################################################################################
 
 class ChannelZMQ(Base):
     """ An incoming Zero MQ connection.
@@ -1142,6 +1190,8 @@ class ChannelZMQ(Base):
         self.service_name = service_name # Not used by the DB
         self.data_format = data_format
 
+# ################################################################################################################################
+
 class DeploymentPackage(Base):
     """ A package to be deployed onto a server, either a plain .py/.pyw or
     a Distutils2 archive.
@@ -1164,6 +1214,8 @@ class DeploymentPackage(Base):
         self.details = details
         self.payload_name = payload_name
         self.payload = payload
+
+# ################################################################################################################################
 
 class DeploymentStatus(Base):
     """ Whether a server has already deployed a given package.
@@ -1215,6 +1267,8 @@ class DeliveryDefinitionBase(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('delivery_list', order_by=name, cascade='all, delete, delete-orphan'))
 
+# ################################################################################################################################
+
 class DeliveryDefinitionOutconnWMQ(DeliveryDefinitionBase):
     """ A guaranteed delivery's definition (outgoing WebSphere MQ connections).
     """
@@ -1228,6 +1282,8 @@ class DeliveryDefinitionOutconnWMQ(DeliveryDefinitionBase):
     def __init__(self, id=None, target_id=None):
         self.id = id
         self.target_id = target_id
+
+# ################################################################################################################################
 
 class Delivery(Base):
     """ A guaranteed delivery.
@@ -1254,6 +1310,8 @@ class Delivery(Base):
     definition_id = Column(Integer, ForeignKey('delivery_def_base.id', ondelete='CASCADE'), nullable=False, primary_key=False)
     definition = relationship(DeliveryDefinitionBase, backref=backref('delivery_list', order_by=creation_time, cascade='all, delete, delete-orphan'))
 
+# ################################################################################################################################
+
 class DeliveryPayload(Base):
     """ A guaranteed delivery's payload.
     """
@@ -1267,6 +1325,8 @@ class DeliveryPayload(Base):
 
     delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)
     delivery = relationship(Delivery, backref=backref('payload', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
+
+# ################################################################################################################################
 
 class DeliveryHistory(Base):
     """ A guaranteed delivery's history.
@@ -1305,6 +1365,8 @@ class MsgNamespace(Base):
         self.value = value
         self.cluster_id = cluster_id
 
+# ################################################################################################################################
+
 class XPath(Base):
     """ An XPath expression to run against XML messages.
     """
@@ -1323,6 +1385,8 @@ class XPath(Base):
         self.name = name
         self.value = value
         self.cluster_id = cluster_id
+
+# ################################################################################################################################
 
 class JSONPointer(Base):
     """ An XPath-list expression to run against JSON messages.
@@ -1398,6 +1462,8 @@ class HTTSOAPAudit(Base):
         self.resp_headers = resp_headers
         self.resp_payload = resp_payload
 
+# ################################################################################################################################
+
 class HTTSOAPAuditReplacePatternsJSONPointer(Base):
     """ JSONPointer replace patterns for HTTP/SOAP connections.
     """
@@ -1413,6 +1479,8 @@ class HTTSOAPAuditReplacePatternsJSONPointer(Base):
         backref=backref('replace_patterns_json_pointer', order_by=id, cascade='all, delete, delete-orphan'))
 
     pattern = relationship(JSONPointer)
+
+# ################################################################################################################################
 
 class HTTSOAPAuditReplacePatternsXPath(Base):
     """ XPath replace patterns for HTTP/SOAP connections.
@@ -1814,6 +1882,8 @@ class RBACRole(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('rbac_roles', order_by=name, cascade='all, delete, delete-orphan'))
 
+# ################################################################################################################################
+
 class RBACPermission(Base):
     """ Permissions defined in a given cluster.
     """
@@ -1825,6 +1895,8 @@ class RBACPermission(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('rbac_permissions', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
 
 class RBACClientRole(Base):
     """ Mappings between clients and roles they have.
@@ -1841,6 +1913,8 @@ class RBACClientRole(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('rbac_client_roles', order_by=client_def, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
 
 class RBACRolePermission(Base):
     """ Mappings between roles and permissions they have on given services.
@@ -1882,3 +1956,28 @@ class KVData(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
     cluster = relationship(Cluster, backref=backref('kv_data', order_by=key, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class ChannelWebSocket(Base):
+    """ A WebSocket connection definition.
+    """
+    __tablename__ = 'channel_web_socket'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'),
+                      UniqueConstraint('address', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('web_socket_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False)
+
+    address = Column(String(200), nullable=False)
+    data_format = Column(String(20), nullable=True)
+    new_token_wait_time = Column(Integer(), nullable=False)
+    token_ttl = Column(Integer(), nullable=False)
+
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
+
+# ################################################################################################################################

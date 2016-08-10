@@ -538,7 +538,7 @@ class ODBManager(SessionWrapper):
                 one()[0]
 
     def hot_deploy(self, deployment_time, details, payload_name, payload, server_id):
-        """ Inserts a hot-deployed data into the DB along with setting the preliminary
+        """ Inserts hot-deployed data into the DB along with setting the preliminary
         AWAITING_DEPLOYMENT status for each of the servers this server's cluster
         is aware of.
         """
@@ -1020,6 +1020,20 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return query.channel_zmq_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
+    def get_channel_web_socket(self, cluster_id, channel_id):
+        """ Returns a particular WebSocket channel.
+        """
+        with closing(self.session()) as session:
+            return query.channel_web_socket(session, cluster_id, channel_id)
+
+    def get_channel_web_socket_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of WebSocket channels.
+        """
+        with closing(self.session()) as session:
+            return query.channel_web_socket_list(session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 

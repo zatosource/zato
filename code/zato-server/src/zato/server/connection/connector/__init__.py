@@ -36,6 +36,7 @@ class connector_type:
 
     class duplex:
         zmq_v01 = 'ZeroMQ MDP v0.1'
+        web_socket = 'WebSocket'
 
 class Inactive(Exception):
     pass
@@ -64,11 +65,12 @@ class Connector(object):
     # Whether that connector's start method should be called in its own greenlet
     start_in_greenlet = False
 
-    def __init__(self, name, type, config, on_message_callback=None):
+    def __init__(self, name, type, config, on_message_callback=None, auth_func=None):
         self.name = name
         self.type = type
         self.config = config
         self.on_message_callback = on_message_callback # Invoked by channels for each message received
+        self.auth_func = auth_func # Invoked by channels that need to authenticate users
         self.service = config.get('service_name') # Service to invoke by channels for each message received
 
         self.id = self.config.id
@@ -182,9 +184,9 @@ class ConnectorStore(object):
         self.connectors = {}
         self.lock = RLock()
 
-    def create(self, name, config, on_message_callback=None):
+    def create(self, name, config, on_message_callback=None, auth_func=None):
         with self.lock:
-            self.connectors[name] = self.connector_class(name, self.type, config, on_message_callback)
+            self.connectors[name] = self.connector_class(name, self.type, config, on_message_callback, auth_func)
 
     def edit(self, old_name, config, *ignored_args):
         with self.lock:

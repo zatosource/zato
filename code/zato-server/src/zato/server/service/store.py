@@ -9,7 +9,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import imp
 import inspect
 import logging
 import os
@@ -43,7 +42,7 @@ from springpython.context import InitializingObject
 # Zato
 from zato.common import DONT_DEPLOY_ATTR_NAME, SourceInfo, TRACE1
 from zato.common.match import Matcher
-from zato.common.util import decompress, deployment_info, fs_safe_now, is_python_file, visit_py_source
+from zato.common.util import decompress, deployment_info, fs_safe_now, import_module_from_path, is_python_file, visit_py_source
 from zato.server.service import Service
 from zato.server.service.internal import AdminService
 
@@ -223,29 +222,13 @@ class ServiceStore(InitializingObject):
         """
         deployed = []
 
-        if not os.path.isabs(file_name):
-            file_name = os.path.normpath(os.path.join(base_dir, file_name))
-
-        if not os.path.exists(file_name):
-            raise ValueError("Could not import services, path:`{}` doesn't exist".format(file_name))
-
-        _, mod_file = os.path.split(file_name)
-        mod_name, _ = os.path.splitext(mod_file)
-
-        # Delete compiled bytecode if it exists so that imp.load_source
-        # actually picks up the source module
-        for suffix in('c', 'o'):
-            path = file_name + suffix
-            if os.path.exists(path):
-                os.remove(path)
-
         try:
-            mod = imp.load_source(mod_name, file_name)
+            mod_info = import_module_from_path(file_name, base_dir)
         except Exception, e:
-            msg = 'Could not load source mod_name:`%s` file_name:`%s`, e:`%s`'
-            logger.error(msg, mod_name, file_name, format_exc(e))
+            msg = 'Could not load source, file_name:`%s`, e:`%s`'
+            logger.error(msg, file_name, format_exc(e))
         else:
-            deployed.extend(self._visit_module(mod, is_internal, file_name))
+            deployed.extend(self._visit_module(mod_info.module, is_internal, mod_info.file_name))
         finally:
             return deployed
 

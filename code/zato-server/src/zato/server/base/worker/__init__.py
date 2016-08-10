@@ -13,6 +13,7 @@ import logging, inspect, os, sys
 from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
+from inspect import isclass
 from json import loads
 from threading import RLock
 from time import sleep
@@ -45,9 +46,10 @@ from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub import Client, Consumer, Topic
-from zato.common.util import get_base_initial_port, get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
-     new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, store_tls, \
-     update_bind_port
+from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
+     import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, \
+     store_tls, update_bind_port, visit_py_source
+from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -62,6 +64,7 @@ from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConn
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
+from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
@@ -69,22 +72,56 @@ from zato.server.stats import MaintenanceTool
 from zato.zmq_.channel import MDPv01 as ChannelZMQMDPv01, Simple as ChannelZMQSimple
 from zato.zmq_.outgoing import Simple as OutZMQSimple
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
 
 class GeventWorker(GunicornGeventWorker):
     def __init__(self, *args, **kwargs):
         self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
         super(GunicornGeventWorker, self).__init__(*args, **kwargs)
 
+# ################################################################################################################################
+
 class SyncWorker(GunicornSyncWorker):
     def __init__(self, *args, **kwargs):
         self.deployment_key = '{}.{}'.format(datetime.utcnow().isoformat(), uuid4().hex)
         super(GunicornSyncWorker, self).__init__(*args, **kwargs)
 
-class WorkerStore(BrokerMessageReceiver):
+# ################################################################################################################################
+
+def _get_base_classes():
+    ignore = ('__init__.py', 'common.py')
+    out = []
+
+    for py_path in visit_py_source(os.path.dirname(os.path.abspath(__file__))):
+        import_path = True
+        for item in ignore:
+            if py_path.endswith(item):
+                import_path = False
+                continue
+
+        if import_path:
+            mod_info = import_module_from_path(py_path)
+            for name in dir(mod_info.module):
+                item = getattr(mod_info.module, name)
+                if isclass(item) and issubclass(item, WorkerImpl) and item is not WorkerImpl:
+                    out.append(item)
+
+    return tuple(out)
+
+# ################################################################################################################################
+
+# Dynamically adds as base classes everything found in current directory that subclasses WorkerImpl
+_WorkerStoreBase = type(b'_WorkerStoreBase', _get_base_classes(), {})
+
+class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     """ Dispatches work between different pieces of configuration of an individual gunicorn worker.
     """
     def __init__(self, worker_config=None, server=None):
+
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_ready = False
         self.worker_config = worker_config
@@ -104,6 +141,8 @@ class WorkerStore(BrokerMessageReceiver):
 
         # To speed up look-ups
         self._simple_types = simple_types
+
+# ################################################################################################################################
 
     def init(self):
 
@@ -135,6 +174,9 @@ class WorkerStore(BrokerMessageReceiver):
         self.zmq_mdp_v01_api = ConnectorStore(connector_type.duplex.zmq_v01, ChannelZMQMDPv01)
         self.zmq_channel_api = ConnectorStore(connector_type.channel.zmq, ChannelZMQSimple)
         self.zmq_out_api = ConnectorStore(connector_type.out.zmq, OutZMQSimple)
+
+        # WebSocket
+        self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket)
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
@@ -197,19 +239,29 @@ class WorkerStore(BrokerMessageReceiver):
         self.init_pubsub()
         self.init_notifiers()
 
+        # WebSocket
+        self.init_web_socket()
+
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
 
+# ################################################################################################################################
+
     def set_broker_client(self, broker_client):
         self.broker_client = broker_client
-        #self.request_dispatcher.url_data.broker_client = broker_client
+
+# ################################################################################################################################
 
     def filter(self, msg):
         # TODO: Fix it, worker doesn't need to accept all the messages
         return True
 
+# ################################################################################################################################
+
     def _update_queue_build_cap(self, item):
         item.queue_build_cap = float(self.server.fs_server_config.misc.queue_build_cap)
+
+# ################################################################################################################################
 
     def _update_aws_config(self, msg):
         """ Parses the address to AWS we store into discrete components S3Connection objects expect.
@@ -222,6 +274,8 @@ class WorkerStore(BrokerMessageReceiver):
         msg.host = url_info.netloc
 
         msg.metadata = parse_extra_into_dict(msg.metadata_)
+
+# ################################################################################################################################
 
     def _http_soap_wrapper_from_config(self, config, has_sec_config=True):
         """ Creates a new HTTP/SOAP connection wrapper out of a configuration
@@ -494,11 +548,6 @@ class WorkerStore(BrokerMessageReceiver):
         else:
             api = self.zmq_channel_api
 
-        # If this is an edit and we do not have this connector, that is OK.
-        # It only means that it was not we but some other worker of this server start the connector.
-        if action == 'edit' and name not in api.connectors:
-            return
-
         getattr(api, action)(name, config, self.on_message_invoke_service)
 
         if start:
@@ -515,13 +564,12 @@ class WorkerStore(BrokerMessageReceiver):
 
             # Each worker uses a unique bind port
             data = bunchify(data)
-            base, initial_port = get_base_initial_port(data.config)
-            update_bind_port(data.config, base, initial_port, self.worker_idx)
+            update_bind_port(data.config, self.worker_idx)
 
             self._set_up_zmq_channel(name, bunchify(data.config), 'create')
 
-            self.zmq_mdp_v01_api.start()
-            self.zmq_channel_api.start()
+        self.zmq_mdp_v01_api.start()
+        self.zmq_channel_api.start()
 
     def init_zmq_outconns(self):
         """ Initializes ZeroMQ outgoing connections (but not MDP that are initialized along with channels).
@@ -546,6 +594,23 @@ class WorkerStore(BrokerMessageReceiver):
 
         self.init_zmq_channels()
         self.init_zmq_outconns()
+
+# ################################################################################################################################
+
+    def init_web_socket(self):
+        """ Initializes all WebSocket connections.
+        """
+
+        # Channels
+        for name, data in self.worker_config.channel_web_socket.items():
+
+            # Each worker uses a unique bind port
+            update_bind_port(data.config, self.worker_idx)
+
+            self.web_socket_api.create(name, bunchify(data.config), self.on_message_invoke_service,
+                self.request_dispatcher.url_data.authenticate_web_socket)
+
+        self.web_socket_api.start()
 
 # ################################################################################################################################
 
@@ -1070,9 +1135,13 @@ class WorkerStore(BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def _set_service_response_data(self, service, **ignored):
-        if not isinstance(service.response.payload, self._simple_types):
-            service.response.payload = service.response.payload.getvalue()
+    def _set_service_response_data(self, serialize=True):
+
+        def inner(service, **ignored):
+            if not isinstance(service.response.payload, self._simple_types):
+                service.response.payload = service.response.payload.getvalue(serialize)
+
+        return inner
 
 # ################################################################################################################################
 
@@ -1147,7 +1216,7 @@ class WorkerStore(BrokerMessageReceiver):
             payload = msg['payload']
 
         service = self.server.service_store.new_instance_by_name(msg['service'])
-        service.update_handle(self._set_service_response_data, service, payload,
+        service.update_handle(self._set_service_response_data(kwargs.get('serialize', True)), service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,
             environ=msg.get('environ'))
@@ -1799,8 +1868,7 @@ class WorkerStore(BrokerMessageReceiver):
 
         # Each worker uses a unique bind port
         msg = bunchify(msg)
-        base, initial_port = get_base_initial_port(msg)
-        update_bind_port(msg, base, initial_port, self.worker_idx)
+        update_bind_port(msg, self.worker_idx)
 
         self.zmq_channel_create_edit(msg.old_name, msg, 'edit', 5, False)
 
