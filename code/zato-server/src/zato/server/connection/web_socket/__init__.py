@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from copy import deepcopy
 from datetime import datetime, timedelta
 from httplib import FORBIDDEN, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import getLogger
@@ -99,10 +100,12 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def parse_json(self, data, _auth_action=WEB_SOCKET.ACTION.AUTHENTICATE):
+
         parsed = loads(data)
         request = ClientMessage()
 
         meta = parsed.get('meta', {})
+
         if meta:
             meta = bunchify(meta)
 
@@ -116,7 +119,8 @@ class WebSocket(_WebSocket):
                 request.has_credentials = True
             else:
                 request.in_reply_to = meta.get('in_reply_to')
-                request.data = parsed.get('data')
+
+        request.data = parsed.get('data')
 
         return request
 
@@ -182,11 +186,11 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def _received_message(self, message, _utcnow=datetime.utcnow, _default_data='{}', *args, **kwargs):
+    def _received_message(self, data, _utcnow=datetime.utcnow, _default_data='111', *args, **kwargs):
 
         try:
 
-            request = self._parse_func(message.data or _default_data)
+            request = self._parse_func(data or _default_data)
             cid = new_cid()
             now = _utcnow()
 
@@ -207,7 +211,7 @@ class WebSocket(_WebSocket):
 
     def received_message(self, message):
         try:
-            spawn(self._received_message, message)
+            spawn(self._received_message, deepcopy(message.data))
         except Exception, e:
             logger.warn(format_exc(e))
 
