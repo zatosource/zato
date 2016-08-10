@@ -50,6 +50,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.channel.amqp',
             'zato.server.service.internal.channel.jms_wmq',
             'zato.server.service.internal.channel.stomp',
+            'zato.server.service.internal.channel.web_socket',
             'zato.server.service.internal.channel.zmq',
             'zato.server.service.internal.cloud.aws.s3',
             'zato.server.service.internal.cloud.openstack.swift',

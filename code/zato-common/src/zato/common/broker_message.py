@@ -231,6 +231,10 @@ class CHANNEL(Constants):
     STOMP_DELETE = ValueConstant('')
     STOMP_CHANGE_PASSWORD = ValueConstant('')
 
+    WEB_SOCKET_CREATE = ValueConstant('')
+    WEB_SOCKET_EDIT = ValueConstant('')
+    WEB_SOCKET_DELETE = ValueConstant('')
+
 class AMQP_CONNECTOR(Constants):
     """ Since 3.0, this is not used anymore.
     """

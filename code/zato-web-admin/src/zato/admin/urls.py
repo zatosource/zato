@@ -20,6 +20,7 @@ from zato.admin.web.views import account, cluster, http_soap, kvdb, load_balance
 from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import stomp as channel_stomp
+from zato.admin.web.views.channel import web_socket as channel_web_socket
 from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
@@ -767,6 +768,21 @@ urlpatterns += [
         login_required(channel_stomp.change_password), name='channel-stomp-change-password'),
     url(r'^zato/channel/stomp/ping/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_stomp.ping), name='channel-stomp-ping'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. WebSocket
+    url(r'^zato/channel/web-socket/$',
+        login_required(channel_web_socket.Index()), name=channel_web_socket.Index.url_name),
+    url(r'^zato/channel/web-socket/create/$',
+        login_required(channel_web_socket.Create()), name=channel_web_socket.Create.url_name),
+    url(r'^zato/channel/web-socket/edit/$',
+        login_required(channel_web_socket.Edit()), name=channel_web_socket.Edit.url_name),
+    url(r'^zato/channel/web-socket/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(channel_web_socket.Delete()), name=channel_web_socket.Delete.url_name),
     ]
 
 # ################################################################################################################################

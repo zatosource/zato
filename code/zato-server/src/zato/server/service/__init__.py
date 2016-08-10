@@ -358,7 +358,7 @@ class Service(object):
                 except Exception, resp_e:
 
                     # If we already have an exception around, log the new one but don't overwrite the old one with it.
-                    logger.warn(format_exc(resp_e))
+                    logger.warn('Exception in service `%s`, e:`%s`', service.name, format_exc(resp_e))
 
                     if e:
                         raise Exception(exc_formatted)

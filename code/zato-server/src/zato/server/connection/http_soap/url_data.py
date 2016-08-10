@@ -209,6 +209,8 @@ class URLData(OAuthDataStore):
 
         return True
 
+# ################################################################################################################################
+
     def _handle_security_basic_auth(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None,
         enforce_auth=True):
         """ Performs the authentication using HTTP Basic Auth.
@@ -228,6 +230,20 @@ class URLData(OAuthDataStore):
                 return False
 
         return True
+
+# ################################################################################################################################
+
+    def authenticate_web_socket(self, cid, username, password, sec_name):
+        """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
+        """
+        return self._handle_security_basic_auth(
+            cid, self.basic_auth_get(sec_name)['config'],
+            None, None,
+            {'HTTP_AUTHORIZATION': 'Basic {}'.format('{}:{}'.format(username, password).encode('base64'))},
+            enforce_auth=False
+        )
+
+# ################################################################################################################################
 
     def _handle_security_jwt(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
         """ Performs the authentication using a JavaScript Web Token (JWT).
@@ -261,6 +277,8 @@ class URLData(OAuthDataStore):
                 return False
 
         return True
+
+# ################################################################################################################################
 
     def _handle_security_wss(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
         """ Performs the authentication using WS-Security.
@@ -299,6 +317,8 @@ class URLData(OAuthDataStore):
                 return False
 
         return True
+
+# ################################################################################################################################
 
     def _handle_security_oauth(self, cid, sec_def, path_info, body, wsgi_environ, post_data, enforce_auth=True):
         """ Performs the authentication using OAuth.
@@ -348,6 +368,8 @@ class URLData(OAuthDataStore):
 
         return True
 
+# ################################################################################################################################
+
     def _handle_security_tech_acc(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None,
         enforce_auth=True):
         """ Performs the authentication using technical accounts.
@@ -389,6 +411,8 @@ class URLData(OAuthDataStore):
                 return False
 
         return wsgi_environ['HTTP_X_ZATO_USER']
+
+# ################################################################################################################################
 
     def _handle_security_xpath_sec(self, cid, sec_def, ignored_path_info, ignored_body, wsgi_environ, ignored_post_data=None,
         enforce_auth=True):
@@ -433,6 +457,8 @@ class URLData(OAuthDataStore):
                     return False
 
         return True
+
+# ################################################################################################################################
 
     def _handle_security_tls_channel_sec(self, cid, sec_def, ignored_path_info, ignored_body, wsgi_environ,
         ignored_post_data=None, enforce_auth=True):
@@ -562,6 +588,11 @@ class URLData(OAuthDataStore):
                         for key, new_value in msg.items():
                             if key in sec_def:
                                 sec_def[key] = msg[key]
+
+# ################################################################################################################################
+
+#    def authenticate_web_socket(self, username, password, sec_name):
+#        logger.warn('zzz %s %s %s', username, password, self.basic_auth_get(sec_name))
 
 # ################################################################################################################################
 

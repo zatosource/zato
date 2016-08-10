@@ -148,6 +148,10 @@ class ConfigLoader(object):
         query = self.odb.get_out_zmq_list(server.cluster.id, True)
         self.config.out_zmq = ConfigDict.from_query('out_zmq', query)
 
+        # WebSocket channels
+        query = self.odb.get_channel_web_socket_list(server.cluster.id, True)
+        self.config.channel_web_socket = ConfigDict.from_query('channel_web_socket', query)
+
         #
         # Outgoing connections - end
         #

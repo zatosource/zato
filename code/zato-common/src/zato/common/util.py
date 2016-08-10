@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import copy
 import errno
 import gc
+import imp
 import inspect
 import json
 import linecache
@@ -559,6 +560,34 @@ def decompress(archive, dir_name):
     """ Decompresses an archive into a directory, the directory must already exist.
     """
     unpack_file_url(_DummyLink('file:' + archive), dir_name)
+
+# ################################################################################################################################
+
+class ModuleInfo(object):
+    def __init__(self, file_name, module):
+        self.file_name = file_name
+        self.module = module
+
+# ################################################################################################################################
+
+def import_module_from_path(file_name, base_dir=None):
+
+    if not os.path.isabs(file_name):
+        file_name = os.path.normpath(os.path.join(base_dir, file_name))
+
+    if not os.path.exists(file_name):
+        raise ValueError("Module could not be imported, path:`{}` doesn't exist".format(file_name))
+
+    _, mod_file = os.path.split(file_name)
+    mod_name, _ = os.path.splitext(mod_file)
+
+    # Delete compiled bytecode if it exists so that imp.load_source actually picks up the source module
+    for suffix in('c', 'o'):
+        path = file_name + suffix
+        if os.path.exists(path):
+            os.remove(path)
+
+    return ModuleInfo(file_name, imp.load_source(mod_name, file_name))
 
 # ################################################################################################################################
 
@@ -1542,31 +1571,22 @@ def get_worker_pids():
 
 # ################################################################################################################################
 
-def get_base_initial_port(data):
-    address = data.address.split(':')
-    base = ':'.join(address[:-1])
-    initial_port = int(address[-1])
+def update_bind_port(data, idx):
+    address_info = urlparse(data.address)
+    base, port = address_info.netloc.split(':')
+    port = int(port) + idx
 
-    return base, initial_port
-
-# ################################################################################################################################
-
-def update_bind_port(data, base, initial_port, idx):
-    port = initial_port+idx
-    data.address = '{}:{}'.format(base, port)
+    data.address = '{}://{}:{}{}'.format(address_info.scheme, base, port, address_info.path)
     data.bind_port = port
 
 # ################################################################################################################################
 
 def start_connectors(worker_store, service_name, data):
 
-    if data.socket_method == ZMQ.METHOD_NAME.BIND:
-        base, initial_port = get_base_initial_port(data)
-
     for idx, pid in enumerate(get_worker_pids()):
 
-        if data.socket_method == ZMQ.METHOD_NAME.BIND:
-            update_bind_port(data, base, initial_port, idx)
+        if 'socket_method' in data and data.socket_method == ZMQ.METHOD_NAME.BIND:
+            update_bind_port(data, idx)
 
         worker_store.server.invoke(service_name, data, pid=pid, is_async=True, data_format=DATA_FORMAT.DICT)
 
