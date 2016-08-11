@@ -1,8 +1,7 @@
 #!/bin/bash
 
-FOXWAY_HOME=/home/foxway
 ZATO_VERSION=2.0.7
-ZATO_ROOT_DIR=/home/foxway/opt/zato
+ZATO_ROOT_DIR=$HOME/opt/zato
 ZATO_TARGET_DIR=$ZATO_ROOT_DIR/$ZATO_VERSION
 
 export PATH=$PATH:/home/foxway/usr/bin/:/home/foxway/.local/bin
@@ -30,6 +29,7 @@ $ZATO_TARGET_DIR/code/bin/python /home/foxway/get-pip.py --user
 /home/foxway/.local/bin/pip install virtualenv==1.9.1 --user
 /home/foxway/.local/bin/pip install cffi --user
 /home/foxway/.local/bin/pip install argon2_cffi --user
+/home/foxway/.local/bin/pip install sqlalchemy-utils --user
 
 /home/foxway/.local/bin/virtualenv /home/foxway/
 
