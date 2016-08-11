@@ -28,7 +28,7 @@ do
     if [ ! -d $HOME/$dir ]
     then
         mkdir $HOME/$dir
-        "Directory $dir created."
+        echo "Directory $dir created."
     fi
 done
 cd $HOME/appcloud
@@ -40,7 +40,7 @@ do
     then
         git clone git@bitbucket.org:foxway/appcloud.$repo.git
         cd appcloud.$repo
-        cp *.py *.ops $HOME/services
+        cp ./*.py ./*.ops $HOME/services
         cd ..
     fi
 done
