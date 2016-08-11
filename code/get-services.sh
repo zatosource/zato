@@ -40,7 +40,11 @@ do
     then
         git clone git@bitbucket.org:foxway/appcloud.$repo.git
         cd appcloud.$repo
-        cp ./*.py ./*.ops $HOME/services
+        cp ./*.py $HOME/services
+        if [ -f ./*ops ]
+        then
+            cp ./*ops $HOME/services
+        fi
         cd ..
     fi
 done
