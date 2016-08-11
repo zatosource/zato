@@ -1,4 +1,4 @@
-#!/bin/bash -eux
+#!/bin/bash
 
 repo=foxway.ops.odb_config
 workdir=server_objects

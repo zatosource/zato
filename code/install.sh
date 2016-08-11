@@ -1,4 +1,4 @@
-#!/bin/bash -eux
+#!/bin/bash
 
 #
 # I'm just waiting for someone to tell me they use apt-get on Fedora

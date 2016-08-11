@@ -1,4 +1,4 @@
-#!/bin/bash -eux
+#!/bin/bash
 
 ZATO_VERSION=2.0.7
 ZATO_ROOT_DIR=/home/foxway/opt/zato
