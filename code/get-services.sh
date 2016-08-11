@@ -11,6 +11,7 @@ dbconnector
 dbmanager
 descriptionxml
 devicemanager
+feedbackmanager
 licensemanager
 organizationmanager
 servicemanager
