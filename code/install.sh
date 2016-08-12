@@ -13,7 +13,7 @@ CURDIR="${BASH_SOURCE[0]}";RL="readlink";([[ `uname -s`=='Darwin' ]] || RL="$RL 
 while([ -h "${CURDIR}" ]) do CURDIR=`$RL "${CURDIR}"`; done
 N="/dev/null";pushd .>$N;cd `dirname ${CURDIR}`>$N;CURDIR=`pwd`;popd>$N
 
-cd /home/foxway/opt/zato/2.0.7/code/
+cd $CURDIR
 git log -n 1 --pretty=format:"%H" > ./release-info/revision.txt
 
 IS_DEB=0
