@@ -20,6 +20,7 @@ sqlalchemymodels
 
 workdirs=(
 appcloud
+extra-libs
 services
 )
 
@@ -40,8 +41,15 @@ do
     if [ ! -d appcloud.$repo ]
     then
         git clone git@bitbucket.org:foxway/appcloud.$repo.git
-        cd appcloud.$repo
-        cp ./*.py $HOME/services
-        cd ..
+        if [ $repo = "sqlalchemymodels" ]
+        then
+            cd appcloud.$repo/uploads
+            cp ./*py $HOME/extra-libs
+            cd ../..
+        else
+            cd appcloud.$repo
+            cp ./*.py $HOME/services
+            cd ..
+        fi
     fi
 done
