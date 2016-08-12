@@ -9,15 +9,6 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/lib/:$HOME/lib64/:$HOME/usr/lib/:$
 export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HOME/lib64/pkgconfig/
 export CYTHON=$ZATO_TARGET_DIR/code/bin/cython
 
-echo "export PATH=$PATH:$HOME/usr/bin/:$HOME/.local/bin:$HOME/opt/zato/2.0.7/code/bin/:$HOME/redis-3.2.3/src/:$HOME/haproxy/" \
-    | tee -a $HOME/.bashrc $HOME/.bash_profile
-echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/lib/:$HOME/lib64/:$HOME/usr/lib/:$HOME/usr/lib64/" \
-    | tee -a $HOME/.bashrc $HOME/.bash_profile
-echo "export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HOME/lib64/pkgconfig/" \
-    | tee -a $HOME/.bashrc $HOME/.bash_profile
-echo "export CYTHON=$ZATO_TARGET_DIR/code/bin/cython" \
-    | tee -a $HOME/.bashrc $HOME/.bash_profile
-
 ln -s $ZATO_TARGET_DIR/code/bin/python2.7 $ZATO_TARGET_DIR/code/bin/python2
 ln -s $ZATO_TARGET_DIR/code/bin/python2.7 $ZATO_TARGET_DIR/code/bin/python
 strip -s $ZATO_TARGET_DIR/code/bin/python2.7
