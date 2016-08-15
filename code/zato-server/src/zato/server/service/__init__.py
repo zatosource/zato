@@ -75,6 +75,44 @@ Int = Integer
 
 # ################################################################################################################################
 
+class ChannelInfo(object):
+    """ Conveys information abouts the channel that a service is invoked through.
+    Available in services as self.channel or self.chan.
+    """
+    __slots__ = ('id', 'name', 'type', 'is_internal', 'match_target', 'impl', 'security', 'sec')
+
+    def __init__(self, id, name, type, is_internal, match_target, security, impl):
+        self.id = id
+        self.name = name
+        self.type = type
+        self.is_internal = is_internal
+        self.match_target = match_target
+        self.security = self.sec = security
+        self.impl = impl
+
+# ################################################################################################################################
+
+class ChannelSecurityInfo(object):
+    """ Contains information about a security definition assigned to a channel, if any.
+    Available in services as:
+
+    * self.channel.security
+    * self.channel.sec
+
+    * self.chan.security
+    * self.chan.sec
+    """
+    __slots__ = ('id', 'name', 'type', 'username', 'impl')
+
+    def __init__(self, id, name, type, username, impl):
+        self.id = id
+        self.name = name
+        self.type = type
+        self.username = username
+        self.impl = impl
+
+# ################################################################################################################################
+
 class PatternsFacade(object):
     """ The API through which services make use of integration patterns.
     """
@@ -601,7 +639,7 @@ class Service(object):
 # ################################################################################################################################
 
     def call_job_hooks(self, prefix):
-        if self.channel == CHANNEL.SCHEDULER and prefix != 'finalize':
+        if self.channel.type == CHANNEL.SCHEDULER and prefix != 'finalize':
             try:
                 getattr(self, '{}_job'.format(prefix))()
             except Exception, e:
@@ -725,7 +763,7 @@ class Service(object):
 
         for attr in attrs:
             if attr not in suppress_keys:
-                msg[attr] = getattr(self, attr, '(None)')
+                msg[attr] = self.channel.type if attr == 'channel' else getattr(self, attr, '(None)')
             else:
                 msg[attr] = suppressed_msg
 
@@ -742,14 +780,13 @@ class Service(object):
 # ################################################################################################################################
 
     @staticmethod
-    def update(service, channel, server, broker_client, worker_store, cid, payload,
+    def update(service, channel_type, server, broker_client, worker_store, cid, payload,
                raw_request, transport=None, simple_io_config=None, data_format=None,
                wsgi_environ={}, job_type=None, channel_params=None,
                merge_channel_params=True, params_priority=None, in_reply_to=None, environ=None, init=True):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
-        service.channel = channel
         service.server = server
         service.broker_client = broker_client
         service.worker_store = worker_store
@@ -774,6 +811,15 @@ class Service(object):
         service.request.params_priority = params_priority
         service.in_reply_to = in_reply_to
         service.environ = environ or {}
+
+        channel_item = wsgi_environ.get('zato.http.channel_item', {})
+        sec_def_info = wsgi_environ.get('zato.sec_def', {})
+
+        service.channel = service.chan = ChannelInfo(channel_item.get('id'), channel_item.get('name'), channel_type,
+            channel_item.get('is_internal'), channel_item.get('match_target'),
+            ChannelSecurityInfo(sec_def_info.get('id'), sec_def_info.get('name'), sec_def_info.get('type'),
+                sec_def_info.get('username'), sec_def_info.get('impl')),
+            channel_item)
 
         if init:
             service._init()
