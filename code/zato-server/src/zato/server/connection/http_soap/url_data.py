@@ -184,6 +184,28 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
+    def enrich_with_sec_data(self, data_dict, sec_def, sec_def_type):
+        data_dict['zato.sec_def'] = {}
+        data_dict['zato.sec_def']['id'] = sec_def['id']
+        data_dict['zato.sec_def']['name'] = sec_def['name']
+        data_dict['zato.sec_def']['username'] = sec_def.get('username')
+        data_dict['zato.sec_def']['impl'] = sec_def
+        data_dict['zato.sec_def']['type'] = sec_def_type
+
+# ################################################################################################################################
+
+    def authenticate_web_socket(self, cid, username, password, sec_name):
+        """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
+        """
+        return self._handle_security_basic_auth(
+            cid, self.basic_auth_get(sec_name)['config'],
+            None, None,
+            {'HTTP_AUTHORIZATION': 'Basic {}'.format('{}:{}'.format(username, password).encode('base64'))},
+            enforce_auth=False
+        )
+
+# ################################################################################################################################
+
     def _handle_security_apikey(self, cid, sec_def, path_info, body, wsgi_environ, ignored_post_data=None, enforce_auth=True):
         """ Performs the authentication against an API key in a specified HTTP header.
         """
@@ -230,18 +252,6 @@ class URLData(OAuthDataStore):
                 return False
 
         return True
-
-# ################################################################################################################################
-
-    def authenticate_web_socket(self, cid, username, password, sec_name):
-        """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
-        """
-        return self._handle_security_basic_auth(
-            cid, self.basic_auth_get(sec_name)['config'],
-            None, None,
-            {'HTTP_AUTHORIZATION': 'Basic {}'.format('{}:{}'.format(username, password).encode('base64'))},
-            enforce_auth=False
-        )
 
 # ################################################################################################################################
 
@@ -508,6 +518,8 @@ class URLData(OAuthDataStore):
 
             return None, None
 
+# ################################################################################################################################
+
     def check_rbac_delegated_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
             sep=MISC.SEPARATOR, plain_http=URL_TYPE.PLAIN_HTTP):
 
@@ -539,11 +551,14 @@ class URLData(OAuthDataStore):
                         sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
 
                     if is_allowed:
+                        self.enrich_with_sec_data(wsgi_environ, sec.sec_def, sec_type)
                         break
 
         if not is_allowed:
             logger.error('Cound not find a matching RBAC definition, cid:`%s`', cid)
             raise Unauthorized(cid, 'You are not allowed to access this resource', 'zato')
+
+# ################################################################################################################################
 
     def check_security(self, sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store,
         enforce_auth=True):
@@ -569,7 +584,11 @@ class URLData(OAuthDataStore):
             if not is_allowed:
                 raise Forbidden(cid, 'You are not allowed to access this URL\n')
 
+        self.enrich_with_sec_data(wsgi_environ, sec_def, sec_def_type)
+
         return True
+
+# ################################################################################################################################
 
     def _update_url_sec(self, msg, sec_def_type, delete=False):
         """ Updates URL security definitions that use the security configuration
