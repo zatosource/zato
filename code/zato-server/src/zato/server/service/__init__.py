@@ -639,7 +639,7 @@ class Service(object):
 # ################################################################################################################################
 
     def call_job_hooks(self, prefix):
-        if self.channel == CHANNEL.SCHEDULER and prefix != 'finalize':
+        if self.channel.type == CHANNEL.SCHEDULER and prefix != 'finalize':
             try:
                 getattr(self, '{}_job'.format(prefix))()
             except Exception, e:
@@ -763,7 +763,7 @@ class Service(object):
 
         for attr in attrs:
             if attr not in suppress_keys:
-                msg[attr] = getattr(self, attr, '(None)')
+                msg[attr] = self.channel.type if attr == 'channel' else getattr(self, attr, '(None)')
             else:
                 msg[attr] = suppressed_msg
 
