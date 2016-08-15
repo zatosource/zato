@@ -1,7 +1,7 @@
 #!/bin/bash
 
 repo=foxway.ops.odb_config
-workdir=server_objects
+workdir=server-objects
 
 echo "Creating a directory to store server objects..."
 if [ ! -d $HOME/$workdir ]
