@@ -618,7 +618,7 @@ class URLData(OAuthDataStore):
     def _delete_channel_data(self, sec_type, sec_name):
         match_idx = ZATO_NONE
         for item in self.channel_data:
-            if item.sec_type == sec_type and item.security_name == sec_name:
+            if item.get('sec_type') == sec_type and item.security_name == sec_name:
                 match_idx = self.channel_data.index(item)
 
         # No error, let's delete channel info
