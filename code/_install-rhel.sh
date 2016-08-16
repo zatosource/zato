@@ -21,6 +21,7 @@ $HOME/.local/bin/pip install virtualenv==1.9.1 --user
 $HOME/.local/bin/pip install cffi --user
 $HOME/.local/bin/pip install argon2_cffi --user
 $HOME/.local/bin/pip install sqlalchemy-utils --user
+$HOME/.local/bin/pip install gunicorn --user
 
 $HOME/.local/bin/virtualenv $HOME/
 
