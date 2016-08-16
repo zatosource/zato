@@ -54,6 +54,7 @@ then
   bash $CURDIR/_install-rhel.sh
   bash $CURDIR/get-services.sh
   bash $CURDIR/get-server-objects.sh
+  bash $CURDIR/get-portal.sh
   bash $CURDIR/create-package.sh
   RUN=1
 fi
