@@ -12,3 +12,16 @@ echo "export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HOME/lib64/pkgconfig/" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
 echo "export CYTHON=$ZATO_TARGET_DIR/code/bin/cython" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
+
+echo "export OPS_API_ROOT=http://localhost:8000" \
+    | tee -a $HOME/.bashrc $HOME/.bash_profile
+echo "export OPS_APS_ROOTDIR=$HOME/foxway.foxwayops" \
+    | tee -a $HOME/.bashrc $HOME/.bash_profile
+echo "export OPS_WEB_URLROOT=http://localhost:8000/app" \
+    | tee -a $HOME/.bashrc $HOME/.bash_profile
+echo "export OPS_SERVER_ISOPS=True" \
+    | tee -a $HOME/.bashrc $HOME/.bash_profile
+echo "export OPS_DB_NAME=sqlite" \
+    | tee -a $HOME/.bashrc $HOME/.bash_profile
+echo "export OPS_DB_SQLLITE_PATH=$HOME/foxway.foxwayops/portal.db" \
+    | tee -a $HOME/.bashrc $HOME/.bash_profile
