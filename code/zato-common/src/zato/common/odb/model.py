@@ -603,7 +603,7 @@ class Service(Base):
     __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
 
     id = Column(Integer, Sequence('service_id_seq'), primary_key=True)
-    name = Column(String(300), nullable=False)
+    name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     impl_name = Column(String(2000), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
@@ -1950,7 +1950,7 @@ class KVData(Base):
     id = Column(Integer, Sequence('kv_data_id_seq'), primary_key=True)
     key = Column(LargeBinary(), nullable=False)
     value = Column(LargeBinary(), nullable=True)
-    data_type = Column(String(), nullable=False, default='text')
+    data_type = Column(String(200), nullable=False, default='text')
     creation_time = Column(DateTime(), nullable=False)
     expiry_time = Column(DateTime(), nullable=True)
 
