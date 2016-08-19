@@ -13,11 +13,11 @@ echo "export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HOME/lib64/pkgconfig/" \
 echo "export CYTHON=$ZATO_TARGET_DIR/code/bin/cython" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
 
-#echo "export OPS_API_ROOT=https://localhost:5000" \
+#echo "export OPS_API_ROOT=https://localhost:8000" \
 #    | tee -a $HOME/.bashrc $HOME/.bash_profile
 echo "export OPS_APPS_ROOTDIR=$HOME/foxway.foxwayops" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
-echo "export OPS_WEB_URLROOT=https://localhost:5000/app" \
+echo "export OPS_WEB_URLROOT=https://localhost:8000/app" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
 echo "export OPS_SERVER_ISOPS=True" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
