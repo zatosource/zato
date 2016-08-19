@@ -12,5 +12,5 @@ echo "Install Portal's dependencies..."
 $HOME/.local/bin/pip install -r $HOME/$repo/requirements.txt --user
 
 # Ensure that there is the latest version of pyScss installed
-$HOME/.local/bin/pip uninstall pyScss
+$HOME/.local/bin/pip uninstall pyScss --yes
 $HOME/.local/bin/pip install pyScss
