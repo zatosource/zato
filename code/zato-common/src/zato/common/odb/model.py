@@ -16,7 +16,7 @@ from json import dumps
 from dictalchemy import make_class_dictable
 
 # SQLAlchemy
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Integer, LargeBinary, Sequence, SmallInteger, String, \
+from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, LargeBinary, Sequence, SmallInteger, String, \
      Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
@@ -1945,7 +1945,7 @@ class KVData(Base):
     """ Key/value data table.
     """
     __tablename__ = 'kv_data'
-    __table_args__ = (UniqueConstraint('key', 'cluster_id'), {})
+    __table_args__ = (Index('key_clust_id_idx', 'key', 'cluster_id', unique=True, mysql_length={'key':767}),)
 
     id = Column(Integer, Sequence('kv_data_id_seq'), primary_key=True)
     key = Column(LargeBinary(), nullable=False)
