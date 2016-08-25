@@ -17,7 +17,7 @@ echo "export OPS_API_ROOT=http://localhost:11223" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
 echo "export OPS_APPS_ROOTDIR=$HOME/foxway.foxwayops/foxwayid/apps" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
-echo "export OPS_WEB_URLROOT=https://serverhost:11224/ops/apps" \
+echo "export OPS_WEB_URLROOT=https://$HOSTNAME:11224/ops/apps" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
 echo "export OPS_SERVER_ISOPS=True" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
