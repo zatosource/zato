@@ -13,6 +13,7 @@ descriptionxml
 devicemanager
 feedbackmanager
 licensemanager
+mailingservice
 organizationmanager
 servicemanager
 sqlalchemymodels
