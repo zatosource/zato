@@ -13,7 +13,7 @@ ln -s $ZATO_TARGET_DIR/code/bin/python2.7 $ZATO_TARGET_DIR/code/bin/python2
 ln -s $ZATO_TARGET_DIR/code/bin/python2.7 $ZATO_TARGET_DIR/code/bin/python
 strip -s $ZATO_TARGET_DIR/code/bin/python2.7
 
-wget -P $HOME https://bootstrap.pypa.io/get-pip.py
+wget -N -P $HOME https://bootstrap.pypa.io/get-pip.py
 $ZATO_TARGET_DIR/code/bin/python $HOME/get-pip.py --user
 
 $HOME/.local/bin/pip install --upgrade pip --user
