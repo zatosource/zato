@@ -15,9 +15,9 @@ echo "export CYTHON=$ZATO_TARGET_DIR/code/bin/cython" \
 
 echo "export OPS_API_ROOT=http://localhost:11223" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
-echo "export OPS_APPS_ROOTDIR=$HOME/foxway.foxwayops" \
+echo "export OPS_APPS_ROOTDIR=$HOME/foxway.foxwayops/foxwayid/apps" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
-echo "export OPS_WEB_URLROOT=https://localhost:8000/app" \
+echo "export OPS_WEB_URLROOT=https://[server host]:11224/ops/apps" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
 echo "export OPS_SERVER_ISOPS=True" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
@@ -25,9 +25,9 @@ echo "export OPS_DB_ENGINE=sqlite" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
 echo "export OPS_DB_NAME=portal.db" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
-echo "export OPS_DB_USERNAME=testuser" \
-    | tee -a $HOME/.bashrc $HOME/.bash_profile
-echo "export OPS_DB_PASSWORD=testadmin" \
-    | tee -a $HOME/.bashrc $HOME/.bash_profile
-echo "export OPS_DB_SQLITE_PATH=$HOME/foxway.foxwayops/portal.db" \
+#echo "export OPS_DB_USERNAME=testuser" \
+#    | tee -a $HOME/.bashrc $HOME/.bash_profile
+#echo "export OPS_DB_PASSWORD=testadmin" \
+#    | tee -a $HOME/.bashrc $HOME/.bash_profile
+echo "export OPS_SQLITE_PATH=$HOME/foxway.foxwayops" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
