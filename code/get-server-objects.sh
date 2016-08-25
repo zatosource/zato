@@ -10,10 +10,14 @@ then
     echo "Done."
 fi
 
+cd $HOME
+
 if [ ! -d $HOME/$repo ]
 then
-    cd $HOME
     git clone git@bitbucket.org:foxway/$repo.git
+else
+    cd $HOME/$repo
+    git pull
 fi
 
 echo "Copying server objects to a separate directory..."

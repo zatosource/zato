@@ -42,15 +42,20 @@ do
     if [ ! -d appcloud.$repo ]
     then
         git clone git@bitbucket.org:foxway/appcloud.$repo.git
-        if [ $repo = "sqlalchemymodels" ]
-        then
-            cd appcloud.$repo/uploads
-            cp ./*py $HOME/extra-libs
-            cd ../..
-        else
-            cd appcloud.$repo
-            cp ./*.py $HOME/services
-            cd ..
-        fi
+    else
+        cd appcloud.$repo
+        git pull
+	cd $HOME/appcloud
+    fi
+
+    if [ $repo = "sqlalchemymodels" ]
+    then
+        cd appcloud.$repo/uploads
+        cp ./*py $HOME/extra-libs
+        cd ../..
+    else
+        cd appcloud.$repo
+        cp ./*.py $HOME/services
+        cd ..
     fi
 done
