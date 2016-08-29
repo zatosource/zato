@@ -21,6 +21,9 @@ from gevent import spawn
 # Bunch
 from bunch import Bunch
 
+# gevent
+from gevent import sleep
+
 # Redis
 import redis
 
@@ -52,12 +55,26 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
 
     class _ClientThread(object):
         def __init__(self, kvdb, pubsub, name, topic_callbacks=None, on_message=None):
-            self.kvdb = kvdb
+            self.kvdb = kvdb.copy()
+            self.kvdb.init()
             self.pubsub = pubsub
             self.topic_callbacks = topic_callbacks
             self.on_message = on_message
             self.client = None
             self.keep_running = ZATO_NONE
+            self.connect_sleep_time = 1
+
+        def set_up_pub_sub_client(self):
+            try:
+                self.kvdb = self.kvdb.copy()
+                self.kvdb.init()
+                self.kvdb.conn.ping()
+                self.client = self.kvdb.pubsub()
+                self.client.subscribe(self.topic_callbacks.keys())
+            except Exception, e:
+                logger.warn('Redis connection error, will retry after %ss.\n%s',
+                    self.connect_sleep_time, format_exc(e))
+                sleep(self.connect_sleep_time)
 
         def run(self):
 
@@ -65,22 +82,22 @@ def BrokerClient(kvdb, client_type, topic_callbacks, _initial_lua_programs):
             self.kvdb.init()
 
             if self.pubsub == 'sub':
-                self.client = self.kvdb.pubsub()
-                self.client.subscribe(self.topic_callbacks.keys())
+
+                self.set_up_pub_sub_client()
                 self.keep_running = True
 
                 try:
-                    try:
-                        while self.keep_running:
+                    while self.keep_running:
+                        try:
                             for msg in self.client.listen():
                                 try:
                                     self.on_message(Bunch(msg))
                                 except Exception, e:
                                     logger.warn('Could not handle broker message `%s`, e:`%s`', msg, format_exc(e))
-                    except redis.ConnectionError, e:
-                        if e.message not in EXPECTED_CONNECTION_ERRORS:  # Hm, there's no error code, only the message
-                            logger.info('Caught `%s`, will quit now', e.message)
-                            raise
+                        except redis.ConnectionError, e:
+                            if e.message not in EXPECTED_CONNECTION_ERRORS:  # Hm, there's no error code, only the message
+                                logger.warn('Caught Redis exception `%s`', e.message)
+                                self.set_up_pub_sub_client()
                 except KeyboardInterrupt:
                     self.keep_running = False
 
