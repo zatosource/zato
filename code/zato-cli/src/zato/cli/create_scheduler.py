@@ -63,7 +63,7 @@ user1={user1_password}
 """
 
 startup_jobs="""[zato.stats.process-raw-times]
-seconds=1
+seconds=90
 service=zato.stats.process-raw-times
 extra=max_batch_size=99999
 
