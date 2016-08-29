@@ -422,10 +422,10 @@ def get_app_context(config):
 
 # ################################################################################################################################
 
-def get_crypto_manager(repo_location, app_context, config, load_keys=True):
+def get_crypto_manager(repo_location, app_context, config, load_keys=True, crypto_manager=None):
     """ Returns a tool for crypto manipulations.
     """
-    crypto_manager = app_context.get_object('crypto_manager')
+    crypto_manager = crypto_manager or app_context.get_object('crypto_manager')
 
     priv_key_location = config['crypto']['priv_key_location']
     cert_location = config['crypto']['cert_location']
