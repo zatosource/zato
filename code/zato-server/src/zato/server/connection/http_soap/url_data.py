@@ -489,7 +489,7 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
-    def match(self, url_path, soap_action):
+    def match(self, url_path, soap_action, has_trace1=logger.isEnabledFor(TRACE1)):
         """ Attemps to match the combination of SOAP Action and URL path against
         the list of HTTP channel targets.
         """
@@ -497,7 +497,7 @@ class URLData(OAuthDataStore):
 
         # Return from cache if already seen
         try:
-            return self.url_path_cache[target]
+            return {}, self.url_path_cache[target]
         except KeyError:
             needs_user = not url_path.startswith('/zato')
 
@@ -507,12 +507,12 @@ class URLData(OAuthDataStore):
 
                 match = item.match_target_compiled.match(target)
                 if match is not None:
-                    if logger.isEnabledFor(TRACE1):
-                        logger.log(TRACE1, 'Matched target:`%s` with:`%r`', target, item)
+                    if has_trace1:
+                        logger.log(TRACE1, 'Matched target:`%s` with:`%r` and `%r`', target, match, item)
 
                     # Cache that URL if it's a static one, i.e. does not contain dynamically computed variables
                     if item.match_target_compiled.is_static:
-                        self.url_path_cache[target] = (match, item)
+                        self.url_path_cache[target] = item
 
                     return match, item
 
