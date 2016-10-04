@@ -347,17 +347,19 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
-    def match(self, url_path, soap_action):
+    def match(self, url_path, soap_action, has_trace1=logger.isEnabledFor(TRACE1)):
         """ Attemps to match the combination of SOAP Action and URL path against
         the list of HTTP channel targets.
         """
         needs_is_internal = url_path.startswith('/zato')
         target = '{}{}{}'.format(soap_action, self._target_separator, url_path)
 
-        # Check if we already have it in URL cache
-        out = self.url_path_cache.get(target)
-        if out:
-            return out
+        # Check if we already have it in URL cache - if we do then we return that cached item along with an empty
+        # dictionary. The dictionary needs to be empty because we only ever cache items that are static,
+        # i.e. these that don't have any path variables to populate such a dictionary with.
+        cached_item = self.url_path_cache.get(target)
+        if cached_item:
+            return {}, cached_item
 
         for item in self.channel_data:
             if not needs_is_internal and item.match_target_compiled.is_internal:
@@ -365,12 +367,12 @@ class URLData(OAuthDataStore):
 
             match = item.match_target_compiled.match(target)
             if match is not None:
-                if logger.isEnabledFor(TRACE1):
-                    logger.log(TRACE1, 'Matched target:`%s` with:`%r`', target, item)
+                if has_trace1:
+                    logger.log(TRACE1, 'Matched target:`%s` with:`%r` and `%r`', target, item, match)
 
                 # Cache that URL if it's a static one, i.e. does not contain dynamically computed variables
                 if item.match_target_compiled.is_static:
-                    self.url_path_cache[target] = (match, item)
+                    self.url_path_cache[target] = item
 
                 return match, item
 
