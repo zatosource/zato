@@ -160,6 +160,9 @@ else:
     ssl_cert_file = 'dummy'
     ssl_ca_certs = 'dummy'
 
+    lb_use_tls = False
+    lb_tls_verify = True
+
     os.environ['DJANGO_SETTINGS_MODULE'] = 'zato.admin.settings'
 
     DATABASE_ENGINE = DATABASES['default']['ENGINE']

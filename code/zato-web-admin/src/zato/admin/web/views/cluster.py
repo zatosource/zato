@@ -174,8 +174,13 @@ def index(req):
             logger.error(msg)
             item.lb_config = None
 
-    return_data = {'delete_form':delete_form,
-                   'edit_form':EditClusterForm(prefix='edit'), 'items':items}
+    return_data = {
+        'delete_form':delete_form,
+        'edit_form':EditClusterForm(prefix='edit'),
+        'items':items,
+        'lb_use_tls': req.zato.lb_use_tls,
+        'lb_tls_verify': req.zato.lb_tls_verify,
+    }
 
     return TemplateResponse(req, 'zato/cluster/index.html', return_data)
 
