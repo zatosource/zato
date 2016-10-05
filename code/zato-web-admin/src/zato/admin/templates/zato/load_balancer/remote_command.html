@@ -18,7 +18,7 @@
     {% if haproxy_alive.status %}
         <a href="{% url "lb-remote-command" cluster.id %}" class="common current">Remote commands</a>
         {% if cluster.stats_uri %}
-            <a href="http://{{ cluster.lb_host }}:{{ cluster.stats_port }}{{ cluster.stats_uri }}" class="common">Statistics</a>
+            <a href="http{% if lb_use_tls %}s{% endif %}://{{ cluster.lb_host }}:{{ cluster.stats_port }}{{ cluster.stats_uri }}" class="common">Statistics</a>
         {% endif %}
     {% endif %}
 </div>

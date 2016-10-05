@@ -304,7 +304,8 @@ class _Client(object):
     """ A base class of convenience clients for invoking Zato services from other Python applications.
     """
     def __init__(self, address, path, auth=None, session=None, to_bunch=False,
-                 max_response_repr=DEFAULT_MAX_RESPONSE_REPR, max_cid_repr=DEFAULT_MAX_CID_REPR, logger=None):
+                 max_response_repr=DEFAULT_MAX_RESPONSE_REPR, max_cid_repr=DEFAULT_MAX_CID_REPR, logger=None,
+                 tls_verify=True):
         self.address = address
         self.service_address = '{}{}'.format(address, path)
         self.session = session or requests.session()
@@ -312,6 +313,7 @@ class _Client(object):
         self.max_response_repr = max_response_repr
         self.max_cid_repr = max_cid_repr
         self.logger = logger or mod_logger
+        self.tls_verify = tls_verify
 
         if not self.session.auth:
             self.session.auth = auth
@@ -319,7 +321,7 @@ class _Client(object):
     def inner_invoke(self, request, response_class, async, headers, output_repeated=False):
         """ Actually invokes a service through HTTP and returns its response.
         """
-        raw_response = self.session.post(self.service_address, request, headers=headers)
+        raw_response = self.session.post(self.service_address, request, headers=headers, verify=self.tls_verify)
         response = response_class(
             raw_response, self.to_bunch, self.max_response_repr,
             self.max_cid_repr, self.logger, output_repeated)

@@ -33,14 +33,14 @@ from zato.common.odb.model import Cluster
 
 logger = logging.getLogger(__name__)
 
-def _haproxy_alive(client):
+def _haproxy_alive(client, lb_use_tls):
     """ Check whether HAProxy is up and running. If 'status' is True then HAProxy
     is alive, sets 'status' to False otherwise and fills in the 'error' attribute
     with the details of an exception caught.
     """
     haproxy_alive = {}
     try:
-        client.is_haproxy_alive()
+        client.is_haproxy_alive(lb_use_tls)
     except Exception, e:
         haproxy_alive["status"] = False
         haproxy_alive["error"] = format_exc(e)
@@ -113,7 +113,7 @@ def remote_command(req, cluster_id):
     cluster = req.zato.odb.query(Cluster).filter_by(id=cluster_id).one()
     client = get_lb_client(cluster)
 
-    haproxy_alive = _haproxy_alive(client)
+    haproxy_alive = _haproxy_alive(client, req.zato.lb_use_tls)
     cluster.stats_uri, cluster.stats_port = _haproxy_stat_config(client=client)
 
     # We need to know the HAProxy version before we can build up the select box
@@ -137,7 +137,7 @@ def remote_command(req, cluster_id):
     else:
         form = RemoteCommandForm(commands)
 
-    return_data = {"form":form, "cluster":cluster, "haproxy_alive":haproxy_alive}
+    return_data = {"form":form, "cluster":cluster, "haproxy_alive":haproxy_alive, "lb_use_tls": req.zato.lb_use_tls}
 
     return TemplateResponse(req, 'zato/load_balancer/remote_command.html', return_data)
 
@@ -184,14 +184,14 @@ def manage(req, cluster_id):
 
     backends = OrderedDict(sorted(backends.items(), key=lambda t: t[0]))
     form = ManageLoadBalancerForm(initial=form_data)
-    haproxy_alive = _haproxy_alive(client)
+    haproxy_alive = _haproxy_alive(client, req.zato.lb_use_tls)
     cluster.stats_uri, cluster.stats_port = _haproxy_stat_config(lb_config=lb_config)
     servers_state = client.get_servers_state()
 
     return_data = {'cluster':cluster, 'lb_start_time':lb_start_time,
                    'lb_config':lb_config, 'lb_work_config':lb_work_config,
                    'form':form, 'backends':backends, 'haproxy_alive':haproxy_alive,
-                   'servers_state':servers_state}
+                   'servers_state':servers_state, 'lb_use_tls': req.zato.lb_use_tls}
 
     return TemplateResponse(req, 'zato/load_balancer/manage.html', return_data)
 
@@ -254,11 +254,11 @@ def manage_source_code(req, cluster_id):
     client = get_lb_client(cluster)
     cluster.stats_uri, cluster.stats_port = _haproxy_stat_config(client=client)
 
-    haproxy_alive = _haproxy_alive(client)
+    haproxy_alive = _haproxy_alive(client, req.zato.lb_use_tls)
     source_code = client.get_config_source_code()
     form = ManageLoadBalancerSourceCodeForm(initial={"source_code":source_code})
 
-    return_data = {"form": form, "haproxy_alive":haproxy_alive, "cluster":cluster}
+    return_data = {"form": form, "haproxy_alive":haproxy_alive, "cluster":cluster, "lb_use_tls": req.zato.lb_use_tls}
 
     return TemplateResponse(req, 'zato/load_balancer/manage_source_code.html', return_data)
 
