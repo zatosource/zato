@@ -37,6 +37,8 @@ config_template = """{{
   "port": {port},
   "db_type": "{db_type}",
   "log_config": "./config/repo/{log_config}",
+  "lb_use_tls": false,
+  "lb_tls_verify": true,
 
   "DEBUG": 1,
 

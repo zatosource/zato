@@ -373,14 +373,15 @@ class LoadBalancerAgent(SSLServer):
         """
         return self.start_time
 
-    def _lb_agent_is_haproxy_alive(self):
+    def _lb_agent_is_haproxy_alive(self, lb_use_tls):
         """ Invoke HAProxy through HTTP monitor_uri and return ZATO_OK if
         HTTP status code is 200. Raise Exception otherwise.
         """
         host = self.config.frontend["front_http_plain"]["bind"]["address"]
         port = self.config.frontend["front_http_plain"]["bind"]["port"]
         path = self.config.frontend["front_http_plain"]["monitor_uri"]
-        url = "http://{host}:{port}{path}".format(host=host, port=port, path=path)
+
+        url = "http{}://{}:{}{}".format('s' if lb_use_tls else "", host, port, path)
 
         try:
             conn = urllib.urlopen(url)

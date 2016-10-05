@@ -26,6 +26,12 @@ from zato.client import AnyServiceInvoker
 from zato.common import version
 from zato.common.odb.model import Cluster
 
+# New in 2.0.8 thus optional
+try:
+    from zato.admin.settings import lb_use_tls, lb_tls_verify
+except ImportError:
+    lb_use_tls = False
+    lb_tls_verify = True
 
 # Code below is taken from http://djangosnippets.org/snippets/136/
 # Slightly modified for Zato's purposes.
@@ -61,18 +67,19 @@ from zato.common.odb.model import Cluster
 
 class Client(AnyServiceInvoker):
     def __init__(self, req, *args, **kwargs):
-        self.forwarder_for = req.META.get('HTTP_X_FORWARDED_FOR') or req.META.get('REMOTE_ADDR')
+        kwargs['tls_verify'] = lb_tls_verify
+        self.forwarded_for = req.META.get('HTTP_X_FORWARDED_FOR') or req.META.get('REMOTE_ADDR')
         super(Client, self).__init__(*args, **kwargs)
 
     def invoke(self, *args, **kwargs):
-        response = super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarder_for}, **kwargs)
+        response = super(Client, self).invoke(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
         if response.inner.status_code != OK:
             zato_env = loads(response.inner.text).get('zato_env', {})
             raise Exception('CID: {}\nDetails: {}'.format(zato_env.get('cid'), zato_env.get('details')))
         return response
 
     def invoke_async(self, *args, **kwargs):
-        response = super(Client, self).invoke_async(*args, headers={'X-Zato-Forwarded-For': self.forwarder_for}, **kwargs)
+        response = super(Client, self).invoke_async(*args, headers={'X-Zato-Forwarded-For': self.forwarded_for}, **kwargs)
         return response
 
 class ZatoMiddleware(object):
@@ -86,6 +93,13 @@ class ZatoMiddleware(object):
         req.zato.settings_db = settings_db
         req.zato.args = Bunch() # Arguments read from URL
 
+        # Whether this request to web-admin was served over TLS
+        req.zato.is_tls = req.META.get('HTTP_X_FORWARDED_PROTO', '').lower() == 'https'
+
+        # Whether communication with load-balancer should go over TLS
+        req.zato.lb_use_tls = lb_use_tls
+        req.zato.lb_tls_verify = lb_tls_verify
+
         try:
             resolved_kwargs = resolve(req.path).kwargs
             req.zato.id = resolved_kwargs.get('id')
@@ -95,7 +109,8 @@ class ZatoMiddleware(object):
             if req.zato.cluster_id:
                 req.zato.cluster = req.zato.odb.query(Cluster).filter_by(id=req.zato.cluster_id).one()
 
-                url = 'http://{}:{}'.format(req.zato.cluster.lb_host, req.zato.cluster.lb_port)
+                url = 'http{}://{}:{}'.format(
+                    's' if req.zato.lb_use_tls else '', req.zato.cluster.lb_host, req.zato.cluster.lb_port)
                 auth = (ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD)
                 req.zato.client = Client(req, url, ADMIN_INVOKE_PATH, auth, to_bunch=True)
 
