@@ -4,6 +4,28 @@ ZATO_VERSION=2.0.7
 ZATO_ROOT_DIR=$HOME/opt/zato
 ZATO_TARGET_DIR=$ZATO_ROOT_DIR/$ZATO_VERSION
 
+while [[ $# -gt 1 ]]
+do
+key="$1"
+
+case $key in
+    -h|--host)
+    URL_HOST="$2"
+    shift # past argument
+    ;;
+    *)
+            # unknown option
+    ;;
+esac
+shift # past argument or value
+done
+
+if [ -z "${URL_HOST+set}" ] || [ -z "${URL_HOST-unset}" ]; then
+    OPSHOST=$HOSTNAME
+else
+    OPSHOST=$URL_HOST
+fi
+
 echo "export PATH=$PATH:$HOME/usr/bin/:$HOME/.local/bin:$ZATO_TARGET_DIR/code/bin/:$HOME/redis-3.2.3/src/:$HOME/haproxy/" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
 echo "export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/lib/:$HOME/lib64/:$HOME/usr/lib/:$HOME/usr/lib64/" \
@@ -17,7 +39,7 @@ echo "export OPS_API_ROOT=http://localhost:11223" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
 echo "export OPS_APPS_ROOTDIR=$HOME/foxway.foxwayops/foxwayid/apps" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
-echo "export OPS_WEB_URLROOT=https://$HOSTNAME:11224/ops/apps" \
+echo "export OPS_WEB_URLROOT=https://$OPSHOST:11224/ops/apps" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
 echo "export OPS_SERVER_ISOPS=True" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
