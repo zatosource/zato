@@ -15,7 +15,7 @@ echo "export CYTHON=$ZATO_TARGET_DIR/code/bin/cython" \
 
 echo "export OPS_API_ROOT=http://localhost:11223" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
-echo "export OPS_APPS_ROOTDIR=$HOME/foxway.foxwayops/foxwayid/apps" \
+echo "export OPS_APPS_ROOTDIR=$HOME/foxway.foxwayops/apps" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
 echo "export OPS_WEB_URLROOT=https://$HOSTNAME:11224/ops/apps" \
     | tee -a $HOME/.bashrc $HOME/.bash_profile
