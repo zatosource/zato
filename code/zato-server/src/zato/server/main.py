@@ -191,6 +191,10 @@ def run(base_dir, start_gunicorn_app=True):
     parallel_server.startup_jobs = app_context.get_object('startup_jobs')
     parallel_server.app_context = app_context
 
+    # New in 2.0.8
+    parallel_server.return_tracebacks = asbool(config.misc.get('return_tracebacks', True))
+    parallel_server.default_error_message = config.misc.get('default_error_message', 'An error has occurred')
+
     # Remove all locks possibly left over by previous server instances
     kvdb = app_context.get_object('kvdb')
     kvdb.component = 'master-proc'
