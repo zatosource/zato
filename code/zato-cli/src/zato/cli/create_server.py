@@ -111,6 +111,8 @@ http_server_header=Zato
 zeromq_connect_sleep=0.1
 aws_host=
 use_soap_envelope=True
+return_tracebacks=True
+default_error_message="An error has occurred"
 
 [stats]
 expire_after=168 # In hours, 168 = 7 days = 1 week

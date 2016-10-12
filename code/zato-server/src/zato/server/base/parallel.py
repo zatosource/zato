@@ -110,6 +110,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
         self.component_enabled = Bunch()
         self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
         self.broker_client = None
+        self.return_tracebacks = None
+        self.default_error_message = None
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -154,7 +156,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver):
             wsgi_environ['zato.http.response.status'] = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
             error_msg = b'[{0}] Exception caught [{1}]'.format(cid, tb)
             logger.error(error_msg)
-            payload = error_msg
+            payload = error_msg if self.return_tracebacks else self.default_error_message
             raise
 
         # Note that this call is asynchronous and we do it the last possible moment.
