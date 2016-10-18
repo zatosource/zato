@@ -45,7 +45,7 @@ class FakeSession(object):
         self.response = response
         self.auth = auth
 
-    def post(self, address, request, headers):
+    def post(self, address, request, headers, *ignored_args, **ignored_kwargs):
         return self.response
 
 # ##############################################################################
