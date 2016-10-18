@@ -19,7 +19,7 @@ from django.core.urlresolvers import resolve
 from bunch import Bunch
 
 # Zato
-from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, SASession
+from zato.admin.settings import ADMIN_INVOKE_NAME, ADMIN_INVOKE_PASSWORD, ADMIN_INVOKE_PATH, SASession, settings_db
 from zato.admin.web.forms import ChooseClusterForm
 from zato.admin.web.models import ClusterColorMarker, UserProfile
 from zato.client import AnyServiceInvoker
@@ -91,6 +91,7 @@ class ZatoMiddleware(object):
         # defined in app's settings.py
         req.zato = Bunch()
         req.zato.odb = SASession()
+        req.zato.settings_db = settings_db
         req.zato.args = Bunch() # Arguments read from URL
 
         # Whether this request to web-admin was served over TLS

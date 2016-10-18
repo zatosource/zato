@@ -21,6 +21,7 @@ import yaml
 
 # Zato
 from zato.common import TRACE1
+from zato.common.settings_db import SettingsDB
 from zato.common.odb.util import get_engine_url
 from zato_settings import * # noqa
 
@@ -97,6 +98,7 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.humanize',
+    'django_openid_auth',
     'zato.admin.web',
 )
 
@@ -136,7 +138,7 @@ if 'DATABASES' in globals():
     ssl_cert_file = os.path.abspath(os.path.join(config_dir, SSL_CERT_FILE))
     ssl_ca_certs = os.path.abspath(os.path.join(config_dir, SSL_CA_CERTS))
 
-    # SQLAlchemy setup
+    # ODB SQLAlchemy setup
     SASession = scoped_session(sessionmaker())
 
     kwargs = {}
@@ -146,6 +148,14 @@ if 'DATABASES' in globals():
 
     engine = create_engine(get_engine_url(db_data), **kwargs)
     SASession.configure(bind=engine)
+
+    # Settings DB
+    _settings_db_path = os.path.join(config_dir, 'config', 'repo', 'settings.db')
+    _settings_db_session = scoped_session(sessionmaker())
+    _settings_db_engine = create_engine('sqlite:///{}'.format(_settings_db_path))
+    _settings_db_session.configure(bind=_settings_db_engine)
+
+    settings_db = SettingsDB(_settings_db_path, _settings_db_session)
 
 else:
     ADMIN_INVOKE_NAME = 'dummy'
@@ -170,3 +180,5 @@ else:
     DATABASE_HOST = 'dummy'
     DATABASE_PORT = 123456
     SECRET_KEY = uuid4().hex
+
+    settings_db = None
