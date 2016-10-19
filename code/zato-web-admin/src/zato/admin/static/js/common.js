@@ -82,6 +82,7 @@ $.namespace('zato.http_soap.details');
 $.namespace('zato.load_balancer');
 $.namespace('zato.message');
 $.namespace('zato.message.json_pointer');
+$.namespace('zato.message.live_browser');
 $.namespace('zato.message.namespace');
 $.namespace('zato.message.xpath');
 $.namespace('zato.notif');
@@ -822,4 +823,23 @@ $.fn.zato.toggle_visible_hidden = function(id, is_visible) {
         add_class = 'hidden';
     }
     $(elem).removeClass(remove_class).addClass(add_class);
+}
+
+
+// Taken from https://stackoverflow.com/a/901144
+$.fn.zato.get_url_param = function(name, url) {
+    if (!url) {
+        url = window.location.href;
+    }
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"), results=regex.exec(url);
+
+    if (!results) {
+        return null;
+    }
+
+    if (!results[2]) {
+        return ''
+    };
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
 }

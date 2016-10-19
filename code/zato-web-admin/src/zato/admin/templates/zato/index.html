@@ -76,6 +76,11 @@
                                 <li><a href="{% url "message-xpath" %}?cluster={{ cluster_id|default:'' }}">XPath</a></li>
                             </ul>
                         </li>
+                        <!--
+                        <li>
+                            <a href="{% url "message-live-browser-index" %}?cluster={{ cluster_id|default:'' }}">Live browser</a>
+                        </li>
+                        -->
                     </ul>
                 </li>
 
@@ -134,8 +139,8 @@
                                 <li class='wide'><a href="{% url "channel-jms-wmq" %}?cluster={{ cluster_id|default:'' }}">JMS WebSphere MQ</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=plain_http">Plain HTTP</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=channel&amp;transport=soap">SOAP</a></li>
-                                <li class='wide'><a href="{% url "channel-stomp" %}?cluster={{ cluster_id|default:'' }}">STOMP</a></li>
-                                <li class='wide'><a href="{% url "channel-web-socket" %}?cluster={{ cluster_id|default:'' }}">WebSocket</a></li>
+                                <!-- <li class='wide'><a href="{% url "channel-stomp" %}?cluster={{ cluster_id|default:'' }}">STOMP</a></li> -->
+                                <li class='wide'><a href="{% url "channel-web-socket" %}?cluster={{ cluster_id|default:'' }}">WebSockets</a></li>
                                 <li class='wide'><a href="{% url "channel-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>
@@ -149,7 +154,7 @@
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=plain_http">Plain HTTP</a></li>
                                 <li class='wide'><a href="{% url "http-soap" %}?cluster={{ cluster_id|default:'' }}&amp;connection=outgoing&amp;transport=soap">SOAP</a></li>
                                 <li class='wide'><a href="{% url "out-sql" %}?cluster={{ cluster_id|default:'' }}">SQL</a></li>
-                                <li class='wide'><a href="{% url "out-stomp" %}?cluster={{ cluster_id|default:'' }}">STOMP</a></li>
+                                <!-- <li class='wide'><a href="{% url "out-stomp" %}?cluster={{ cluster_id|default:'' }}">STOMP</a></li> -->
                                 <li class='wide'><a href="{% url "out-zmq" %}?cluster={{ cluster_id|default:'' }}">ZeroMQ</a></li>
                             </ul>
                         </li>

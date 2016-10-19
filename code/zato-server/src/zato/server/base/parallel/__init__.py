@@ -36,7 +36,7 @@ from springpython.context import DisposableObject
 from zato.broker import BrokerMessageReceiver
 from zato.broker.client import BrokerClient
 from zato.bunch import Bunch
-from zato.common import KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
+from zato.common import DATA_FORMAT, KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
 from zato.common.time_util import TimeUtil
@@ -493,7 +493,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
-    def invoke(self, service, request, *args, **kwargs):
+    def invoke(self, service, request=None, *args, **kwargs):
         """ Invokes a service either in our own worker or, if PID is given on input, in another process of this server.
         """
         target_pid = kwargs.pop('pid', None)
@@ -505,7 +505,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
             return self.ipc_api.invoke_by_pid(service, request, target_pid, self.fifo_response_buffer_size, *args, **kwargs)
         else:
-            return self.worker_store.invoke(service, request, data_format=kwargs.pop('data_format'), *args, **kwargs)
+            return self.worker_store.invoke(
+                service, request, data_format=kwargs.pop('data_format', DATA_FORMAT.DICT), *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -551,6 +552,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
             self.odb.server_up_down(self.odb.token, SERVER_UP_STATUS.CLEAN_DOWN)
             self.odb.close()
+
+        # Per-worker cleanup
+        else:
+            self.invoke('zato.channel.web-socket.client.delete-by-server')
 
     # Convenience API
     stop = destroy

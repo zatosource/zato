@@ -26,6 +26,7 @@
     <form action="./save/" method="post" id="settings_form">
     {% csrf_token %}
     <table id="data-table">
+
         <tr>
             <td class="inline_header" colspan="4">Date and time</td>
         </tr>
@@ -40,10 +41,26 @@
             <span class="form_hint">(default: dd-mm-yyyy, 24-hour)
             </span></td>
         </tr>
+
+        <tr>
+            <td class="inline_header" colspan="4">Live message browser</td>
+        </tr>
+        <tr>
+            <td style="width:15%">Max number of messages shown</td>
+            <td style="width:25%;text-align:left">{{ form.msg_browser_max_shown }} 
+            <br/>
+            <span class="form_hint">(default: 1000)</span></td>
+            <td style="width:15%">Show internal messages?</td>
+            <td style="width:40%;text-align:left">{{ form.msg_browser_show_internal }}
+            <br/>
+            <span class="form_hint">(default: No)
+            </span></td>
+        </tr>
+
         <tr>
             <td class="inline_header" colspan="4">Cluster color markers</td>
         </tr>
-        
+
         {% for cluster in clusters %}
             <tr>
                 <td style="width:15%;line-height:25px">{{ cluster.name }}</td>
