@@ -234,6 +234,7 @@ class Invoke(AdminService):
 
         id = self.request.input.get('id')
         name = self.request.input.get('name')
+        pid = self.request.input.get('pid')
 
         channel = self.request.input.get('channel')
         data_format = self.request.input.get('data_format')
@@ -249,12 +250,20 @@ class Invoke(AdminService):
                 impl_name = self.server.service_store.id_to_impl_name[id]
                 name = self.server.service_store.service_data(impl_name)['name']
 
-            response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
+            # If PID is given on input it means we must invoke this particular server process by it ID
+            if pid:
+                response = self.server.invoke_by_pid(name, payload, pid)
+            else:
+                response = self.invoke_async(name, payload, channel, data_format, transport, expiration)
 
         else:
 
-            func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
-            response = func(id_, payload, channel, data_format, transport, serialize=True)
+            # Same as above in async branch
+            if pid:
+                response = self.server.invoke(name, payload, pid=pid, data_format=data_format)
+            else:
+                func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
+                response = func(id_, payload, channel, data_format, transport, serialize=True)
 
         if isinstance(response, basestring):
             if response:

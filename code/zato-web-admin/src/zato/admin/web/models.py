@@ -14,6 +14,7 @@ from django.contrib.auth.models import User
 
 # Zato
 from zato.admin.web import DATE_FORMATS, MONTH_YEAR_FORMATS, TIME_FORMATS
+from zato.common import LIVE_MSG_BROWSER
 
 class UserProfile(models.Model):
     class Meta:
@@ -23,6 +24,8 @@ class UserProfile(models.Model):
     timezone = models.CharField(max_length=100, null=True, default='UTC')
     date_format = models.CharField(max_length=100, null=True, default='dd-mm-yyyy')
     time_format = models.CharField(max_length=10, null=True, default='24')
+    msg_browser_max_shown = models.IntegerField(default=LIVE_MSG_BROWSER.DEFAULT_MAX_SHOWN, null=True)
+    msg_browser_show_internal = models.BooleanField(default=False)
 
     def __init__(self, *args, **kwargs):
         super(UserProfile, self).__init__(*args, **kwargs)

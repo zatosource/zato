@@ -19,9 +19,12 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import DATA_FORMAT, SIMPLE_IO
-from zato.common.odb.model import Cluster, HTTPBasicAuth, HTTPSOAP, RBACPermission, RBACRole, Service, WSSDefinition
+from zato.common import DATA_FORMAT, SIMPLE_IO, WEB_SOCKET
+from zato.common.odb.model import ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, RBACPermission, RBACRole, Service, \
+     WSSDefinition
 from zato.common.util import get_http_json_channel, get_http_soap_channel
+
+msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
 
 zato_services = {
 
@@ -44,6 +47,15 @@ zato_services = {
     'zato.channel.web-socket.get-list':'zato.server.service.internal.channel.web_socket.GetList',
     'zato.channel.web-socket.get-token':'zato.server.service.internal.channel.web_socket.GetToken',
     'zato.channel.web-socket.invalidate-token':'zato.server.service.internal.channel.web_socket.InvalidateToken',
+
+    # Channels - WebSocket - clients
+    'zato.channel.web-socket.client.create':'zato.server.service.internal.channel.web_socket.client.Create',
+    'zato.channel.web-socket.client.delete-by-pub-id':'zato.server.service.internal.channel.web_socket.client.DeleteByPubId',
+    'zato.channel.web-socket.client.delete-by-server':'zato.server.service.internal.channel.web_socket.client.DeleteByServer',
+
+    # Channels - WebSocket - subscriptions
+    'zato.channel.web-socket.subscription.create':'zato.server.service.internal.channel.web_socket.subscription.Create',
+    'zato.channel.web-socket.subscription.delete':'zato.server.service.internal.channel.web_socket.subscription.Delete',
 
     # Channels - ZeroMQ
     'zato.channel.zmq.create':'zato.server.service.internal.channel.zmq.Create',
@@ -158,6 +170,11 @@ zato_services = {
     'zato.server.message.xpath.edit': 'zato.server.service.internal.message.xpath.Edit',
     'zato.server.message.xpath.delete': 'zato.server.service.internal.message.xpath.Delete',
     'zato.server.message.xpath.get-list': 'zato.server.service.internal.message.xpath.GetList',
+
+    # Messages - Live browser
+    'zato.server.message.live-browser.subscribe': 'zato.server.service.internal.message.live_browser.Subscribe',
+    'zato.server.message.live-browser.get-web-admin-connection-details': \
+        'zato.server.service.internal.message.live_browser.GetWebAdminConnectionDetails',
 
     # Notifications - Cloud - OpenStack - Swift
     'zato.notif.cloud.openstack.swift.create': 'zato.server.service.internal.notif.cloud.openstack.swift.Create',
@@ -461,7 +478,12 @@ class Create(ZatoCommand):
             'Zato internal invoker', uuid4().hex, cluster)
         session.add(internal_invoke_sec)
 
-        self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec)
+        live_browser_sec = JWT(
+            None, msg_browser_defaults.CHANNEL, True, msg_browser_defaults.USER,
+            uuid4().hex, msg_browser_defaults.TOKEN_TTL, cluster)
+        session.add(live_browser_sec)
+
+        self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec)
         self.add_ping_services(session, cluster)
         self.add_default_pubsub_accounts(session, cluster)
         self.add_default_rbac_permissions(session, cluster)
@@ -486,7 +508,7 @@ class Create(ZatoCommand):
             else:
                 self.logger.info('OK')
 
-    def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec):
+    def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec):
         """ Adds these Zato internal services that can be accessed through SOAP requests.
         """
 
@@ -518,6 +540,9 @@ class Create(ZatoCommand):
 
             elif name == 'zato.security.jwt.log-out':
                 self.add_jwt_log_out(session, cluster, service)
+
+            elif name == 'zato.server.message.live-browser.subscribe':
+                self.add_live_browser(session, cluster, service, live_browser_sec)
 
             session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))
             session.add(get_http_json_channel(name, service, cluster, pubapi_sec))
@@ -656,4 +681,10 @@ class Create(ZatoCommand):
         channel = HTTPSOAP(None, 'zato.security.jwt.log-out', True, True, 'channel', 'plain_http',
             None, '/zato/jwt/log-out', None, '', None, DATA_FORMAT.JSON, merge_url_params_req=True, service=service,
             cluster=cluster)
+        session.add(channel)
+
+    def add_live_browser(self, session, cluster, service, live_browser_sec):
+        channel = ChannelWebSocket(None, msg_browser_defaults.CHANNEL, True, True,
+            'ws://0.0.0.0:{}/{}'.format(msg_browser_defaults.PORT, msg_browser_defaults.CHANNEL), DATA_FORMAT.JSON, 5,
+            msg_browser_defaults.TOKEN_TTL, service=service, cluster=cluster, security=live_browser_sec)
         session.add(channel)

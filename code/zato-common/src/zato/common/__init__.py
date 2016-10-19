@@ -536,6 +536,9 @@ class MISC:
     PIDFILE = 'pidfile'
     SEPARATOR = ':::'
 
+class LIVE_MSG_BROWSER:
+    DEFAULT_MAX_SHOWN = 1000
+
 class ADAPTER_PARAMS:
     APPLY_AFTER_REQUEST = 'apply-after-request'
     APPLY_BEFORE_REQUEST = 'apply-before-request'
@@ -791,9 +794,20 @@ class WEB_SOCKET:
         NEW_TOKEN_TIMEOUT = 5
         TOKEN_TTL = 3600
 
+        class LIVE_MSG_BROWSER:
+            CHANNEL = 'zato.web.admin.msg.live.browser'
+            USER = CHANNEL + '.user'
+            TOKEN_TTL = 864000 # 10 days
+            PORT = 48901
+
+    class PATTERN:
+        BY_EXT_ID = 'zato.by-ext-id.{}'
+        BY_CHANNEL = 'zato.by-channel.{}'
+
     class ACTION:
         AUTHENTICATE = 'authenticate'
         INVOKE_SERVICE = 'invoke-service'
+        CLIENT_RESPONSE = 'client-response'
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

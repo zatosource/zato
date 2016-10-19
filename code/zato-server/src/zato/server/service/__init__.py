@@ -139,7 +139,7 @@ class Service(object):
         self.channel = None
         self.cid = None
         self.in_reply_to = None
-        self.outgoing = None
+        self.out = self.outgoing = None
         self.cloud = None
         self.worker_store = None
         self.odb = None
@@ -242,9 +242,9 @@ class Service(object):
         # Regular outconns
         out_ftp, out_odoo, out_plain_http, out_soap = self.worker_store.worker_config.outgoing_connections()
 
-        self.outgoing = Outgoing(
+        self.out = self.outgoing = Outgoing(
             out_amqp, out_ftp, out_jms_wmq, out_odoo, out_plain_http, out_soap, out_sql,
-            self.worker_store.stomp_outconn_api, out_zmq)
+            self.worker_store.stomp_outconn_api, out_zmq, self.worker_store.outgoing_web_sockets)
 
         # Cloud
         self.cloud = Cloud()
