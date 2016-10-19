@@ -31,6 +31,7 @@ from nose.tools import eq_
 from zato.common import CHANNEL, DATA_FORMAT, PARAMS_PRIORITY, SCHEDULER, URL_TYPE
 from zato.common.test import rand_string, ServiceTestCase
 from zato.server.service import List, Service
+from zato.server.service.internal.helpers import InputLogger
 from zato.server.service.reqresp import HTTPRequestData, Request
 
 logger = getLogger(__name__)
@@ -431,3 +432,12 @@ class RESTTargetType(ServiceTestCase):
 
         MyService2.add_http_method_handlers()
         self.assertDictEqual(MyService2.http_method_handlers, {})
+
+# ################################################################################################################################
+
+class SelfOutgoingSelfOut(ServiceTestCase):
+    def test_self_outgoing_is_self_out(self):
+        """ GH #712 - self.outgoing should be the same as self.out
+        """
+        instance = self.invoke(InputLogger, {}, {})
+        self.assertIs(instance.outgoing, instance.out)
