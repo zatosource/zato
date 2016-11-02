@@ -387,9 +387,10 @@ class Outgoing(object):
     """ A container for various outgoing connections a service can access. This
     in fact is a thin wrapper around data fetched from the service's self.worker_store.
     """
-    __slots__ = ('amqp', 'ftp', 'jms_wmq', 'odoo', 'plain_http', 'soap', 'sql', 'stomp', 'zmq')
+    __slots__ = ('amqp', 'ftp', 'jms_wmq', 'odoo', 'plain_http', 'soap', 'sql', 'stomp', 'zmq', 'websockets')
 
-    def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, stomp=None, zmq=None):
+    def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, stomp=None, zmq=None,
+            websockets=None):
         self.amqp = amqp
         self.ftp = ftp
         self.jms_wmq = jms_wmq
@@ -399,6 +400,7 @@ class Outgoing(object):
         self.sql = sql
         self.stomp = stomp
         self.zmq = zmq
+        self.websockets = websockets
 
 class AWS(object):
     def __init__(self, s3=None):

@@ -65,6 +65,7 @@ from zato.server.connection.search.solr import SolrAPI, SolrConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
+from zato.server.connection.web_socket.outgoing import OutgoingWebSocket
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
@@ -177,6 +178,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # WebSocket
         self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket)
+        self.outgoing_web_sockets = OutgoingWebSocket(self.server.cluster_id, self.server.servers, self.server.odb)
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.

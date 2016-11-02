@@ -75,7 +75,12 @@ class _RemoteServer(_Server):
         self.invoker = AnyServiceInvoker(self.address, '/zato/internal/invoke', (api_user, self.api_password))
 
     def invoke(self, service, request=None, *args, **kwargs):
-        return self.invoker.invoke(service, request, *args, **kwargs)
+        response = self.invoker.invoke(service, request, *args, **kwargs)
+
+        if response.ok:
+            return response.data
+        else:
+            raise Exception(response.details)
 
     def invoke_async(self, service, request=None, *args, **kwargs):
         return self.invoker.invoke_async(service, request, *args, **kwargs)

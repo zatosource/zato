@@ -26,10 +26,12 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_PROMPT = 'Click to pick a color'
 
+profile_attrs = ('timezone', 'date_format', 'time_format', 'msg_browser_max_shown', 'msg_browser_show_internal')
+
 @method_allowed('GET')
 def settings_basic(req):
     initial = {}
-    for attr in('timezone', 'date_format', 'time_format'):
+    for attr in profile_attrs:
         initial[attr] = getattr(req.zato.user_profile, attr)
 
     return_data = {'clusters':req.zato.clusters, 'default_prompt':DEFAULT_PROMPT, 'form':BasicSettingsForm(initial)}
@@ -42,8 +44,10 @@ def settings_basic(req):
 @method_allowed('POST')
 def settings_basic_save(req):
 
-    for attr in('timezone', 'date_format', 'time_format'):
-        setattr(req.zato.user_profile, attr, req.POST[attr])
+    for attr in profile_attrs:
+        # Use False as default value so as to convert blank checkboxes into a boolean value
+        value = req.POST.get(attr, False)
+        setattr(req.zato.user_profile, attr, value)
     req.zato.user_profile.save()
 
     for key, value in req.POST.items():

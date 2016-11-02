@@ -27,7 +27,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
      OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, \
      RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, \
-     TLSChannelSecurity, TLSKeyCertSecurity, WSSDefinition, XPath, XPathSecurity
+     TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, XPath, XPathSecurity
 
 # ################################################################################################################################
 
@@ -202,8 +202,7 @@ def basic_auth_list(session, cluster_id, cluster_name, needs_columns=False):
 
     return q
 
-@query_wrapper
-def jwt_list(session, cluster_id, cluster_name, needs_columns=False):
+def _jwt(session, cluster_id, cluster_name, needs_columns=False):
     """ All the JWT definitions.
     """
     q = session.query(
@@ -222,6 +221,17 @@ def jwt_list(session, cluster_id, cluster_name, needs_columns=False):
         order_by('sec_base.name')
 
     return q
+
+@query_wrapper
+def jwt_list(*args, **kwargs):
+    return _jwt(*args, **kwargs)
+
+def jwt_by_username(session, cluster_id, username, needs_columns=False):
+    """ An individual JWT definition by its username.
+    """
+    return _jwt(session, cluster_id, None, needs_columns).\
+        filter(JWT.username==username).\
+        one()
 
 @query_wrapper
 def ntlm_list(session, cluster_id, needs_columns=False):
@@ -1407,5 +1417,37 @@ def channel_web_socket_list(session, cluster_id, needs_columns=False):
     """ All the WebSocket channel connections.
     """
     return _channel_web_socket(session, cluster_id)
+
+# ################################################################################################################################
+
+def web_socket_client_by_pub_id(session, pub_client_id):
+    """ An individual WebSocket connection by its public ID.
+    """
+    return session.query(WebSocketClient).\
+        filter(WebSocketClient.pub_client_id==pub_client_id).\
+        one()
+
+# ################################################################################################################################
+
+def web_socket_clients_by_server_id(session, server_id):
+    """ A list of WebSocket clients attached to a particular server by the latter's ID.
+    """
+    return session.query(WebSocketClient).\
+        filter(WebSocketClient.server_id==server_id)
+
+# ################################################################################################################################
+
+def web_socket_sub_list(session, is_by_ext_id, is_by_channel, pattern, cluster_id):
+    """ A list of subscriptions to a particular pattern.
+    """
+    return session.query(WebSocketClient, ChannelWebSocket.name.label('channel_name')).\
+        filter(WebSocketSubscription.is_by_ext_id==is_by_ext_id).\
+        filter(WebSocketSubscription.is_by_channel==is_by_channel).\
+        filter(WebSocketSubscription.pattern==pattern).\
+        filter(Server.cluster_id==cluster_id).\
+        outerjoin(ChannelWebSocket, ChannelWebSocket.id==WebSocketClient.channel_id).\
+        outerjoin(WebSocketSubscription, WebSocketSubscription.client_id==WebSocketClient.id).\
+        outerjoin(Server, Server.id==WebSocketClient.server_id).\
+        all()
 
 # ################################################################################################################################

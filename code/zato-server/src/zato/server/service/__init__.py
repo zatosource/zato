@@ -244,7 +244,7 @@ class Service(object):
 
         self.out = self.outgoing = Outgoing(
             out_amqp, out_ftp, out_jms_wmq, out_odoo, out_plain_http, out_soap, out_sql,
-            self.worker_store.stomp_outconn_api, out_zmq)
+            self.worker_store.stomp_outconn_api, out_zmq, self.worker_store.outgoing_web_sockets)
 
         # Cloud
         self.cloud = Cloud()
