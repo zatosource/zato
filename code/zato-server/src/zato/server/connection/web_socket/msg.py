@@ -84,8 +84,8 @@ class ServerMessage(object):
     """
     is_response = True
 
-    def __init__(self, id_prefix, in_reply_to, status=OK, error_message='', _now=datetime.utcnow):
-        self.id = '{}.{}'.format(id_prefix, new_cid())
+    def __init__(self, id_prefix, cid, in_reply_to, status=OK, error_message='', _now=datetime.utcnow):
+        self.id = '{}.{}'.format(id_prefix, cid)
         self.in_reply_to = in_reply_to
         self.meta = Bunch(id=self.id, timestamp=_now().isoformat())
         self.data = Bunch()
@@ -106,15 +106,15 @@ class ServerMessage(object):
 # ################################################################################################################################
 
 class AuthenticateResponse(ServerMessage):
-    def __init__(self, token, *args, **kwargs):
-        super(AuthenticateResponse, self).__init__(MSG_PREFIX.RESP_AUTH, *args, **kwargs)
+    def __init__(self, token, cid, *args, **kwargs):
+        super(AuthenticateResponse, self).__init__(MSG_PREFIX.RESP_AUTH, cid, *args, **kwargs)
         self.data.token = token
 
 # ################################################################################################################################
 
 class OKResponse(ServerMessage):
-    def __init__(self, in_reply_to, data, *ignored_args, **ignored_kwargs):
-        super(OKResponse, self).__init__(MSG_PREFIX.RESP_SERVICE_INVOKE_OK, in_reply_to)
+    def __init__(self, cid, in_reply_to, data, *ignored_args, **ignored_kwargs):
+        super(OKResponse, self).__init__(MSG_PREFIX.RESP_SERVICE_INVOKE_OK, cid, in_reply_to)
         self.data = data
 
 # ################################################################################################################################
