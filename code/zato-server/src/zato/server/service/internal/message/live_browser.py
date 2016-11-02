@@ -14,16 +14,22 @@ from contextlib import closing
 # Zato
 from zato.common import WEB_SOCKET
 from zato.common.odb.query import jwt_by_username
+from zato.server.service import Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
-class Subscribe(AdminService):
-    """ Creates a new message subscription for live message browsing.
+class Dispatch(AdminService):
+    """ Dispatches incoming requests from live message browsers.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_message_live_browser_subscribe_request'
-        response_elem = 'zato_message_live_browser_subscribe_response'
+        request_elem = 'zato_message_live_browser_dispatch_request'
+        response_elem = 'zato_message_live_browser_dispatch_response'
+        input_required = (Opaque('data'),)
+        output_optional = ('response',)
+
+    def handle(self):
+        self.logger.warn(self.request.raw_request)
 
 # ################################################################################################################################
 
