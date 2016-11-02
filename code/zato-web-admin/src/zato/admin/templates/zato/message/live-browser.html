@@ -54,6 +54,7 @@
                     req.meta.client_name = 'zato.web.admin.live.message.browser ('+ window.navigator.userAgent + ')';
                     req.meta.client_id = 'zato.wa.msg.browser.' + $.fn.zato.get_random_string();
                     req.meta.id = this.auth_req_id;
+                    req.meta.timestamp = new Date().toISOString();
                     req.meta.username = self.username;
                     req.meta.secret = self.secret;
 

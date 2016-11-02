@@ -151,7 +151,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def authenticate(self, request):
+    def authenticate(self, cid, request):
         if self.config.auth_func(request.cid, request.sec_type, request.username, request.secret, self.config.sec_name):
 
             with self.update_lock:
@@ -160,7 +160,7 @@ class WebSocket(_WebSocket):
                 self.ext_client_id = request.ext_client_id
                 self.ext_client_name = request.ext_client_name
 
-            return AuthenticateResponse(self.token.value, request.id).serialize()
+            return AuthenticateResponse(self.token.value, cid, request.id).serialize()
 
 # ################################################################################################################################
 
@@ -202,9 +202,9 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def handle_authenticate(self, request):
+    def handle_authenticate(self, cid, request):
         if request.has_credentials:
-            response = self.authenticate(request)
+            response = self.authenticate(cid, request)
             if response:
                 self.send(response)
                 self.register_auth_client()
@@ -247,7 +247,7 @@ class WebSocket(_WebSocket):
             response = ErrorResponse(msg.id, cid, INTERNAL_SERVER_ERROR,
                     'Could not invoke service `{}`, id:`{}`, cid:`{}`'.format(self.config.service_name, msg.id, cid))
         else:
-            response = OKResponse(msg.id, service_response)
+            response = OKResponse(cid, msg.id, service_response)
 
         self.send(response.serialize())
 
@@ -297,9 +297,10 @@ class WebSocket(_WebSocket):
             # Otherwise, authentication is required.
 
             if self.is_authenticated:
-                self.handle_client_message(cid, request) if not request.has_credentials else self.handle_authenticate(request)
+                self.handle_client_message(cid, request) if not request.has_credentials else \
+                    self.handle_authenticate(cid, request)
             else:
-                self.handle_authenticate(request)
+                self.handle_authenticate(cid, request)
 
             logger.info('Response returned cid:`%s`, time:`%s`', cid, _now()-now)
 
@@ -358,8 +359,8 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def closed(self, code, reason=None):
-        logger.info('Closing connection from %s (%s) to %s (%s %s)',
-            self._peer_address, self._peer_fqdn, self._local_address, self.pub_client_id, self.config.name)
+        logger.info('Closing connection from %s (%s) to %s (%s %s %s)',
+            self._peer_address, self._peer_fqdn, self._local_address, self.ext_client_id, self.config.name, self.pub_client_id)
 
         self.unregister_auth_client()
         del self.container.clients[self.pub_client_id]
