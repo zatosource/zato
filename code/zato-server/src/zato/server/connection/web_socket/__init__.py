@@ -20,7 +20,7 @@ from urlparse import urlparse
 from bunch import bunchify
 
 # gevent
-from gevent import sleep, spawn
+from gevent import sleep, socket, spawn
 from gevent.lock import RLock
 
 # pyrapidjson
@@ -35,8 +35,8 @@ from ws4py.server.wsgiutils import WebSocketWSGIApplication
 from zato.common import CHANNEL, DATA_FORMAT, WEB_SOCKET
 from zato.common.util import new_cid
 from zato.server.connection.connector import Connector
-from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientMessage, error_response, ServiceErrorResponse, \
-     ServiceInvokeResponse
+from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientInvokeRequest, ClientMessage, error_response, \
+     ErrorResponse, OKResponse
 
 # ################################################################################################################################
 
@@ -62,22 +62,38 @@ class TokenInfo(object):
 # ################################################################################################################################
 
 class WebSocket(_WebSocket):
-    """ Encapsulates an individual connection from a WebSocket client.
+    """ Encapsulates information about an individual connection from a WebSocket client.
     """
     def __init__(self, container, config, *args, **kwargs):
         super(WebSocket, self).__init__(*args, **kwargs)
         self.container = container
         self.config = config
         self.is_authenticated = False
-        self.authenticate_by = None
         self._token = None
         self.update_lock = RLock()
+        self.pub_client_id = 'ws.{}'.format(new_cid())
+        self.ext_client_id = None
+        self.ext_client_name = None
+        self.connection_time = self.last_seen = datetime.utcnow()
+
+        # Responses to previously sent requests - keyed by request IDs
+        self.responses_received = {}
 
         _local_address = self.sock.getsockname()
         self._local_address = '{}:{}'.format(_local_address[0], _local_address[1])
 
         _peer_address = self.sock.getpeername()
         self._peer_address = '{}:{}'.format(_peer_address[0], _peer_address[1])
+
+        _peer_fqdn = '(Unknown)'
+
+        try:
+            _peer_host = socket.gethostbyaddr(_peer_address[0])[0]
+            _peer_fqdn = socket.getfqdn(_peer_host)
+        except Exception, e:
+            logger.warn(format_exc(e))
+        finally:
+            self._peer_fqdn = _peer_fqdn
 
         self._parse_func = {
             DATA_FORMAT.JSON: self.parse_json,
@@ -99,30 +115,34 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def parse_json(self, data, _auth_action=WEB_SOCKET.ACTION.AUTHENTICATE):
+    def parse_json(self, data, _auth=WEB_SOCKET.ACTION.AUTHENTICATE, _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
 
         parsed = loads(data)
-        request = ClientMessage()
+        msg = ClientMessage()
 
         meta = parsed.get('meta', {})
 
         if meta:
             meta = bunchify(meta)
 
-            request.action = meta.action
-            request.id = meta.id
+            msg.action = meta.action
+            msg.id = meta.id
+            msg.timestamp = meta.timestamp
+            msg.ext_client_id = meta.client_id
+            msg.ext_client_name = meta.get('client_name')
 
-            if request.action == _auth_action:
-                request.sec_type = meta.sec_type
-                request.username = meta.username
-                request.password = meta.password
-                request.has_credentials = True
+            if msg.action == _auth:
+                msg.sec_type = meta.sec_type
+                msg.username = meta.username
+                msg.secret = meta.secret
+                msg.has_credentials = True
             else:
-                request.in_reply_to = meta.get('in_reply_to')
+                msg.in_reply_to = meta.get('in_reply_to')
 
-        request.data = parsed.get('data')
+        _data = parsed.get('data', {}).get('input')
+        msg.data =_data['response'] if msg.action == _response else _data
 
-        return request
+        return msg
 
 # ################################################################################################################################
 
@@ -132,11 +152,13 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def authenticate(self, request):
-        if self.config.auth_func(request.cid, request.username, request.password, self.config.sec_name):
+        if self.config.auth_func(request.cid, request.sec_type, request.username, request.secret, self.config.sec_name):
 
             with self.update_lock:
                 self.token = 'ws.token.{}'.format(new_cid())
                 self.is_authenticated = True
+                self.ext_client_id = request.ext_client_id
+                self.ext_client_name = request.ext_client_name
 
             return AuthenticateResponse(self.token.value, request.id).serialize()
 
@@ -152,11 +174,43 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
+    def register_auth_client(self):
+        """ Registers peer in ODB. Called only if authentication succeeded.
+        """
+        self.invoke_service(new_cid(), 'zato.channel.web-socket.client.create', {
+            'pub_client_id': self.pub_client_id,
+            'ext_client_id': self.ext_client_id,
+            'ext_client_name': self.ext_client_name,
+            'is_internal': True,
+            'local_address': self.local_address,
+            'peer_address': self.peer_address,
+            'peer_fqdn': self._peer_fqdn,
+            'connection_time': self.connection_time,
+            'last_seen': self.last_seen,
+            'channel_name': self.config.name,
+        }, needs_response=True)
+
+# ################################################################################################################################
+
+    def unregister_auth_client(self):
+        """ Unregisters an already registered peer in ODB.
+        """
+        if self.is_authenticated:
+            self.invoke_service(new_cid(), 'zato.channel.web-socket.client.delete-by-pub-id', {
+                'pub_client_id': self.pub_client_id,
+            }, needs_response=True)
+
+# ################################################################################################################################
+
     def handle_authenticate(self, request):
         if request.has_credentials:
             response = self.authenticate(request)
             if response:
                 self.send(response)
+                self.register_auth_client()
+                logger.info(
+                    'Client %s (%s %s) logged in successfully to %s (%s)', self._peer_address, self._peer_fqdn,
+                    self.pub_client_id, self._local_address, self.config.name)
             else:
                 self.on_forbidden('sent invalid credentials')
         else:
@@ -164,45 +218,86 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def handle_invoke_service(self, cid, request, _channel=CHANNEL.WEB_SOCKET, _data_format=DATA_FORMAT.DICT):
+    def invoke_service(self, cid, service_name, data, needs_response=True, _channel=CHANNEL.WEB_SOCKET,
+            _data_format=DATA_FORMAT.DICT):
+
+        return self.config.on_message_callback({
+            'cid': cid,
+            'data_format': _data_format,
+            'service': service_name,
+            'payload': data,
+        }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=False)
+
+# ################################################################################################################################
+
+    def handle_client_message(self, cid, msg, _action=WEB_SOCKET.ACTION):
+        self._handle_client_response(cid, msg) if msg.action == _action.CLIENT_RESPONSE else self._handle_invoke_service(cid, msg)
+
+# ################################################################################################################################
+
+    def _handle_invoke_service(self, cid, msg):
 
         try:
-            service_response = self.config.on_message_callback({
-                'cid': cid,
-                'data_format': _data_format,
-                'service': self.config.service_name,
-                'payload': request.data,
-            }, CHANNEL.WEB_SOCKET, None, needs_response=True, serialize=False)
-
+            service_response = self.invoke_service(cid, self.config.service_name, msg.data)
         except Exception, e:
 
-            logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, e:`%s`', self.config.service_name, request.id,
+            logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, e:`%s`', self.config.service_name, msg.id,
                 cid, format_exc(e))
 
-            response = ServiceErrorResponse(request.id, cid, INTERNAL_SERVER_ERROR,
-                    'Could not invoke service `{}`, id:`{}`, cid:`{}`'.format(self.config.service_name, request.id, cid))
+            response = ErrorResponse(msg.id, cid, INTERNAL_SERVER_ERROR,
+                    'Could not invoke service `{}`, id:`{}`, cid:`{}`'.format(self.config.service_name, msg.id, cid))
         else:
-            response = ServiceInvokeResponse(request.id, service_response)
+            response = OKResponse(msg.id, service_response)
 
         self.send(response.serialize())
 
 # ################################################################################################################################
 
-    def _received_message(self, data, _now=datetime.utcnow, _default_data='111', *args, **kwargs):
+    def _wait_for_event(self, wait_time, condition_callable, _now=datetime.utcnow, _delta=timedelta,
+                        _sleep=sleep, *args, **kwargs):
+        now = _now()
+        until = now + _delta(seconds=wait_time)
+
+        while now < until:
+
+            response = condition_callable(*args, **kwargs)
+            if response:
+                return response
+            else:
+                _sleep(0.01)
+                now = _now()
+
+# ################################################################################################################################
+
+    def _handle_client_response(self, cid, msg):
+        self.responses_received[msg.in_reply_to] = msg
+
+    def _has_client_response(self, request_id):
+        return self.responses_received.get(request_id)
+
+    def _wait_for_client_response(self, request_id, wait_time=1):
+        """ Wait until a response from client arrives and return it or return None if there is no response up to wait_time.
+        """
+        return self._wait_for_event(wait_time, self._has_client_response, request_id=request_id)
+
+# ################################################################################################################################
+
+    def _received_message(self, data, _now=datetime.utcnow, _default_data='', *args, **kwargs):
 
         try:
 
             request = self._parse_func(data or _default_data)
             cid = new_cid()
             now = _now()
+            self.last_seen = now
 
-            logger.info('Request received cid:`%s`', cid)
+            logger.info('Request received cid:`%s`, client:`%s`', cid, self.pub_client_id)
 
             # If client is authenticated we allow either for it to re-authenticate, which grants a new token, or to invoke a service.
             # Otherwise, authentication is required.
 
             if self.is_authenticated:
-                self.handle_invoke_service(cid, request) if not request.has_credentials else self.handle_authenticate(request)
+                self.handle_client_message(cid, request) if not request.has_credentials else self.handle_authenticate(request)
             else:
                 self.handle_authenticate(request)
 
@@ -232,32 +327,42 @@ class WebSocket(_WebSocket):
         which is a timestamp object. If self.is_authenticated is not True by that time, connection to the remote end
         is closed.
         """
-        now = _now()
-        while now < self.authenticate_by:
-            sleep(0.1)
-            if self.is_authenticated:
-                return
-            now = _now()
+        if self._wait_for_event(self.config.new_token_wait_time, lambda: self.is_authenticated):
+            return
 
         # We get here if self.is_authenticated has not been set to True by self.authenticate_by
         self.on_forbidden('did not authenticate within {}s'.format(self.config.new_token_wait_time))
 
 # ################################################################################################################################
 
+    def invoke_client(self, cid, request):
+        msg = ClientInvokeRequest(cid, request)
+        self.send(msg.serialize())
+
+        response = self._wait_for_client_response(msg.id)
+        if response:
+            return response.data
+
+# ################################################################################################################################
+
     def opened(self, _now=datetime.utcnow, _timedelta=timedelta):
-        logger.info('New connection from %s to %s (%s)', self._peer_address, self._local_address, self.config.name)
+        logger.info('New connection from %s (%s) to %s (%s)', self._peer_address, self._peer_fqdn,
+            self._local_address, self.config.name)
 
         if not self.config.needs_auth:
             with self.update_lock:
                 self.is_authenticated = True
         else:
-            self.authenticate_by = _now() + _timedelta(seconds=self.config.new_token_wait_time)
             spawn(self._ensure_authenticated)
 
 # ################################################################################################################################
 
     def closed(self, code, reason=None):
-        logger.info('Closing connection from %s to %s (%s)', self._peer_address, self._local_address, self.config.name)
+        logger.info('Closing connection from %s (%s) to %s (%s %s)',
+            self._peer_address, self._peer_fqdn, self._local_address, self.pub_client_id, self.config.name)
+
+        self.unregister_auth_client()
+        del self.container.clients[self.pub_client_id]
 
 # ################################################################################################################################
 
@@ -265,11 +370,13 @@ class WebSocketContainer(WebSocketWSGIApplication):
 
     def __init__(self, config, *args, **kwargs):
         self.config = config
+        self.clients = {}
         super(WebSocketContainer, self).__init__(*args, **kwargs)
 
     def make_websocket(self, sock, protocols, extensions, environ):
         try:
             websocket = self.handler_cls(self, self.config, sock, protocols, extensions, environ.copy())
+            self.clients[websocket.pub_client_id] = websocket
             environ['ws4py.websocket'] = websocket
             return websocket
         except Exception, e:
@@ -282,6 +389,9 @@ class WebSocketContainer(WebSocketWSGIApplication):
             return [error_response[NOT_FOUND][self.config.data_format]]
 
         super(WebSocketContainer, self).__call__(environ, start_response)
+
+    def invoke_client(self, cid, pub_client_id, request):
+        return self.clients[pub_client_id].invoke_client(cid, request)
 
 # ################################################################################################################################
 
@@ -303,6 +413,9 @@ class WebSocketServer(WSGIServer):
 
         super(WebSocketServer, self).__init__((config.host, config.port), WebSocketContainer(config, handler_cls=WebSocket))
 
+    def invoke_client(self, cid, pub_client_id, request):
+        return self.application.invoke_client(cid, pub_client_id, request)
+
 # ################################################################################################################################
 
 class ChannelWebSocket(Connector):
@@ -319,6 +432,9 @@ class ChannelWebSocket(Connector):
 
     def get_log_details(self):
         return self.config.address
+
+    def invoke(self, cid, pub_client_id, request):
+        return self.server.invoke_client(cid, pub_client_id, request)
 
 # ################################################################################################################################
 

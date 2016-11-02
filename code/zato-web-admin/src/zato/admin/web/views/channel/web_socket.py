@@ -13,7 +13,7 @@ import logging
 
 # Zato
 from zato.admin.web.forms.channel.web_socket import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, SecurityList
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
 from zato.common import ZATO_NONE
 from zato.common.odb.model import ChannelWebSocket
 
@@ -40,7 +40,8 @@ class Index(_Index):
 
     def handle(self):
         if self.req.zato.cluster_id:
-            sec_list = SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, 'basic_auth')
+            sec_list = self.get_sec_def_list('basic_auth').def_items
+            sec_list.extend(self.get_sec_def_list('jwt'))
         else:
             sec_list = []
 

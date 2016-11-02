@@ -194,15 +194,19 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
-    def authenticate_web_socket(self, cid, username, password, sec_name):
+    def authenticate_web_socket(self, cid, sec_def_type, username, secret, sec_name, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
         """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
         """
-        return self._handle_security_basic_auth(
-            cid, self.basic_auth_get(sec_name)['config'],
-            None, None,
-            {'HTTP_AUTHORIZATION': 'Basic {}'.format('{}:{}'.format(username, password).encode('base64'))},
-            enforce_auth=False
-        )
+        if sec_def_type == _basic_auth:
+            auth_func = self._handle_security_basic_auth
+            get_func = self.basic_auth_get
+            http_auth = 'Basic {}'.format('{}:{}'.format(username, secret).encode('base64'))
+        else:
+            auth_func = self._handle_security_jwt
+            get_func = self.jwt_get
+            http_auth = 'Bearer {}'.format(secret)
+
+        return auth_func(cid, get_func(sec_name)['config'], None, None, {'HTTP_AUTHORIZATION': http_auth}, enforce_auth=False)
 
 # ################################################################################################################################
 

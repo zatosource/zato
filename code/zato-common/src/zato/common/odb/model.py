@@ -22,8 +22,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, MSG_PATTERN_TYPE, \
-     ODOO, PUB_SUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
+from zato.common import CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, \
+     MSG_PATTERN_TYPE, ODOO, PUB_SUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -232,6 +232,15 @@ class JWT(SecurityBase):
 
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
     ttl = Column(Integer, nullable=False)
+
+    def __init__(self, id=None, name=None, is_active=None, username=None, password=None, ttl=None, cluster=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.username = username
+        self.password = password
+        self.ttl = ttl
+        self.cluster = cluster
 
 # ################################################################################################################################
 
@@ -1972,12 +1981,110 @@ class ChannelWebSocket(Base):
     is_internal = Column(Boolean(), nullable=False)
 
     address = Column(String(200), nullable=False)
-    data_format = Column(String(20), nullable=True)
+    data_format = Column(String(20), nullable=False)
     new_token_wait_time = Column(Integer(), nullable=False)
     token_ttl = Column(Integer(), nullable=False)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+    service = relationship('Service', backref=backref('web_socket', order_by=name, cascade='all, delete, delete-orphan'))
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('web_socket_list', order_by=name, cascade='all, delete, delete-orphan'))
+
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
+    security = relationship(SecurityBase, backref=backref('web_socket_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self, id=None, name=None, is_active=None, is_internal=None, address=None, data_format=None,
+            new_token_wait_time=None, token_ttl=None, service_id=None, service=None, cluster_id=None, cluster=None,
+            security_id=None, security=None):
+        self.id = id
+        self.name = name
+        self.is_active = is_active
+        self.is_internal = is_internal
+        self.address = address
+        self.data_format = data_format
+        self.new_token_wait_time = new_token_wait_time
+        self.token_ttl = token_ttl
+        self.service_id = service_id
+        self.service = service
+        self.cluster_id = cluster_id
+        self.cluster = cluster
+        self.security_id = security_id
+        self.security = security
+
+# ################################################################################################################################
+
+class WebSocketClient(Base):
+    """ An active WebSocket client - currently connected to a Zato server process.
+    """
+    __tablename__ = 'web_socket_client'
+    __table_args__ = (
+        Index('wscl_client_idx', 'pub_client_id', unique=True),
+        Index('wscl_cli_ext_n_idx', 'ext_client_name', unique=False),
+        Index('wscl_cli_ext_i_idx', 'ext_client_id', unique=False),
+        Index('wscl_pr_addr_idx', 'peer_address', unique=False),
+        Index('wscl_pr_fqdn_idx', 'peer_fqdn', unique=False),
+        {}
+    )
+
+    # This ID is for SQL
+    id = Column(Integer, Sequence('web_socket_cli_seq'), primary_key=True)
+
+    is_internal = Column(Boolean(), nullable=False)
+
+    # This one is assigned by Zato
+    pub_client_id = Column(String(200), nullable=False)
+
+    # These are assigned by clients themselves
+    ext_client_id = Column(String(200), nullable=False)
+    ext_client_name = Column(String(200), nullable=True)
+
+    local_address = Column(String(400), nullable=False)
+    peer_address = Column(String(400), nullable=False)
+    peer_fqdn = Column(String(400), nullable=False)
+
+    connection_time = Column(DateTime, nullable=False)
+    last_seen = Column(DateTime, nullable=False)
+
+    server_proc_pid = Column(Integer, nullable=False)
+    server_name = Column(String(200), nullable=False) # References server.name
+
+    channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=False)
+    channel = relationship(
+        ChannelWebSocket, backref=backref('clients', order_by=local_address, cascade='all, delete, delete-orphan'))
+
+    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=False)
+    server = relationship(
+        Server, backref=backref('server_web_socket_clients', order_by=local_address, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class WebSocketSubscription(Base):
+    """ Describes what kind of messages WebSocket clients elect to receive.
+    """
+    __tablename__ = 'web_socket_sub'
+    __table_args__ = (Index('wssub_channel_idx', 'channel_id', unique=False), {})
+
+    id = Column(Integer, Sequence('web_socket_seq'), primary_key=True)
+    is_internal = Column(Boolean(), nullable=False)
+    pattern = Column(String(400), nullable=False)
+
+    is_by_ext_id = Column(Boolean(), nullable=False)
+    is_by_channel = Column(Boolean(), nullable=False)
+
+    is_durable = Column(Boolean(), nullable=False)
+    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
+
+    client_id = Column(Integer, ForeignKey('web_socket_client.id', ondelete='CASCADE'), nullable=True)
+    client = relationship(
+        WebSocketClient, backref=backref('subscriptions', order_by=pattern, cascade='all, delete, delete-orphan'))
+
+    channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
+    channel = relationship(
+        ChannelWebSocket, backref=backref('subscriptions', order_by=pattern, cascade='all, delete, delete-orphan'))
+
+    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=True)
+    server = relationship(
+        Server, backref=backref('sub_web_socket_clients', order_by=pattern, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################

@@ -208,4 +208,7 @@ class ConnectorStore(object):
 
                 c.start()
 
+    def invoke(self, name, *args, **kwargs):
+        return self.connectors[name].invoke(*args, **kwargs)
+
 # ################################################################################################################################

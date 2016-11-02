@@ -30,7 +30,7 @@ from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
 from zato.admin.web.views.email import imap as email_imap
 from zato.admin.web.views.email import smtp as email_smtp
 from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
-from zato.admin.web.views.message import json_pointer, namespace, xpath
+from zato.admin.web.views.message import json_pointer, live_browser, namespace, xpath
 from zato.admin.web.views.notif.cloud.openstack import swift as notif_cloud_openstack_swift
 from zato.admin.web.views.notif import sql as notif_sql
 from zato.admin.web.views.outgoing import amqp as out_amqp
@@ -214,6 +214,17 @@ urlpatterns += [
         login_required(json_pointer.Edit()), name=json_pointer.Edit.url_name),
     url(r'^zato/messages/json-pointer/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(json_pointer.Delete()), name=json_pointer.Delete.url_name),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. Live browser
+    url(r'^zato/messages/live-browser/$',
+        login_required(live_browser.index), name='message-live-browser-index'),
+    url(r'^zato/messages/live-browser/get-connection-details$',
+        login_required(live_browser.get_connection_details), name='message-live-browser-get-connection-details'),
     ]
 
 # ################################################################################################################################

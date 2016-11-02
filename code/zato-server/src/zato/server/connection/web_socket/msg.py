@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from datetime import datetime
 from httplib import FORBIDDEN, NOT_FOUND, OK
 
 # Bunch
@@ -44,6 +45,16 @@ error_response = {
 
 # ################################################################################################################################
 
+class MSG_PREFIX:
+    _COMMON = 'zato.ws.server.{}'
+
+    REQ_TO_CLIENT = _COMMON.format('req-client')
+    RESP_AUTH = _COMMON.format('resp-auth')
+    RESP_SERVICE_INVOKE_OK = _COMMON.format('resp-ok')
+    RESP_SERVICE_INVOKE_ERROR = _COMMON.format('resp-err')
+
+# ################################################################################################################################
+
 class ClientMessage(object):
     """ An individual message received from a WebSocket client.
     """
@@ -54,11 +65,14 @@ class ClientMessage(object):
         self.username = None
         self.password = None
         self.id = None
+        self.timestamp = None
         self.cid = new_cid()
         self.in_reply_to = None
         self.data = Bunch()
-        self.has_credentials = False
+        self.has_credentials = None
         self.token = None
+        self.ext_client_name = None
+        self.ext_client_id = None
 
     def __repr__(self):
         return make_repr(self)
@@ -68,11 +82,17 @@ class ClientMessage(object):
 class ServerMessage(object):
     """ A message sent from a WebSocket server to a client.
     """
-    def __init__(self, id_prefix, in_reply_to, status=OK, error_message=''):
+    is_response = True
+
+    def __init__(self, id_prefix, in_reply_to, status=OK, error_message='', _now=datetime.utcnow):
         self.id = '{}.{}'.format(id_prefix, new_cid())
         self.in_reply_to = in_reply_to
-        self.meta = Bunch(id=self.id, in_reply_to=in_reply_to, status=status)
+        self.meta = Bunch(id=self.id, timestamp=_now().isoformat())
         self.data = Bunch()
+
+        if self.is_response:
+            self.meta.in_reply_to = in_reply_to
+            self.meta.status = status
 
         if error_message:
             self.meta.error_message = error_message
@@ -87,21 +107,30 @@ class ServerMessage(object):
 
 class AuthenticateResponse(ServerMessage):
     def __init__(self, token, *args, **kwargs):
-        super(AuthenticateResponse, self).__init__('ws.auth', *args, **kwargs)
+        super(AuthenticateResponse, self).__init__(MSG_PREFIX.RESP_AUTH, *args, **kwargs)
         self.data.token = token
 
 # ################################################################################################################################
 
-class ServiceInvokeResponse(ServerMessage):
+class OKResponse(ServerMessage):
     def __init__(self, in_reply_to, data, *ignored_args, **ignored_kwargs):
-        super(ServiceInvokeResponse, self).__init__('ws.si', in_reply_to)
+        super(OKResponse, self).__init__(MSG_PREFIX.RESP_SERVICE_INVOKE_OK, in_reply_to)
         self.data = data
 
 # ################################################################################################################################
 
-class ServiceErrorResponse(ServerMessage):
+class ErrorResponse(ServerMessage):
     def __init__(self, in_reply_to, cid, status, error_message):
-        super(ServiceErrorResponse, self).__init__('ws.se', in_reply_to, status, error_message)
+        super(ErrorResponse, self).__init__(MSG_PREFIX.RESP_SERVICE_INVOKE_ERROR, in_reply_to, status, error_message)
         self.data = {'cid': cid}
+
+# ################################################################################################################################
+
+class ClientInvokeRequest(ServerMessage):
+    is_response = False
+
+    def __init__(self, cid, data):
+        super(ClientInvokeRequest, self).__init__(MSG_PREFIX.REQ_TO_CLIENT, None)
+        self.data = data
 
 # ################################################################################################################################

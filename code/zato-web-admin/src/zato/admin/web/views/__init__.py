@@ -234,6 +234,9 @@ class _BaseView(object):
         self.cluster_id = None
         self.fetch_cluster_id()
 
+    def get_sec_def_list(self, sec_type):
+        return SecurityList.from_service(self.req.zato.client, self.req.zato.cluster.id, sec_type)
+
     def set_input(self, req=None, default_attrs=('cur_page', 'query')):
         req = req or self.req
         self.input.update({
