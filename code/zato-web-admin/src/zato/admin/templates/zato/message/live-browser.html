@@ -46,21 +46,28 @@
                 },
 
                 authenticate: function() {
-                    req = {};
-                    req.meta = {};
+
+                    req = self.get_request();
+
                     req.meta.action = 'authenticate';
                     req.meta.sec_type = 'jwt';
                     req.meta.id = this.auth_req_id;
-                    req.meta.client_name = 'zato.web.admin.live.message.browser ('+ window.navigator.userAgent + ')';
-                    req.meta.client_id = 'zato.wa.msg.browser.' + $.fn.zato.get_random_string();
-                    req.meta.id = this.auth_req_id;
-                    req.meta.timestamp = new Date().toISOString();
                     req.meta.username = self.username;
                     req.meta.secret = self.secret;
 
                     self.send(req);
                     self.auth_req_sent = true;
 
+                },
+
+                get_request: function() {
+                    req = {};
+                    req.meta = {};
+                    req.meta.client_name = 'zato.web.admin.live.message.browser ('+ window.navigator.userAgent + ')';
+                    req.meta.client_id = 'zato.wa.msg.browser.' + $.fn.zato.get_random_string();
+                    req.meta.timestamp = new Date().toISOString();
+
+                    return req;
                 },
 
                 send: function(req) {
@@ -94,12 +101,34 @@
                                 self.auth_token = msg.data.token;
                                 self.is_authenticated = true;
                                 self.is_connected = true;
+                                self.ping();
                             }
                         }
                         else {
                             console.warn('Did not receive status 200, cannot continue');
                         }
                     }
+                    else {
+                        console.log('zzz handle incoming message here');
+                    }
+                },
+
+                invoke_service: function(service_name, request) {
+                    req = self.get_request();
+                    req.meta.action = 'invoke-service';
+                    req.meta.id = 'zato.web.admin.ws.ping.' + $.fn.zato.get_random_string()
+                    req.data = {};
+                    req.data.input = {'data': {
+                        'service_name': service_name,
+                        'request': request
+                    }};
+
+                    self.send(req);
+                },
+
+                ping: function() {
+                    console.log('Sending ping to server');
+                    self.invoke_service('zato.ping');
                 }
 
             });
@@ -112,6 +141,8 @@
 
                     // Creates a globally accessible object
                     self = client;
+
+                    // Wait up to 10 seconds to authenticate or give up
 
                 }
                 else {
