@@ -160,7 +160,7 @@ class WebSocket(_WebSocket):
                 self.ext_client_id = request.ext_client_id
                 self.ext_client_name = request.ext_client_name
 
-            return AuthenticateResponse(self.token.value, request.id).serialize()
+            return AuthenticateResponse(self.token.value, request.cid, request.id).serialize()
 
 # ################################################################################################################################
 
@@ -247,7 +247,7 @@ class WebSocket(_WebSocket):
             response = ErrorResponse(cid, msg.id, INTERNAL_SERVER_ERROR,
                     'Could not invoke service `{}`, id:`{}`, cid:`{}`'.format(self.config.service_name, msg.id, cid))
         else:
-            response = OKResponse(msg.id, service_response)
+            response = OKResponse(cid, msg.id, service_response)
 
         self.send(response.serialize())
 

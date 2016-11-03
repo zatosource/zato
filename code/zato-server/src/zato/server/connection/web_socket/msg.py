@@ -113,8 +113,8 @@ class AuthenticateResponse(ServerMessage):
 # ################################################################################################################################
 
 class OKResponse(ServerMessage):
-    def __init__(self, in_reply_to, data, *ignored_args, **ignored_kwargs):
-        super(OKResponse, self).__init__(MSG_PREFIX.RESP_SERVICE_INVOKE_OK, in_reply_to)
+    def __init__(self, cid, in_reply_to, data, *ignored_args, **ignored_kwargs):
+        super(OKResponse, self).__init__(MSG_PREFIX.RESP_SERVICE_INVOKE_OK, cid, in_reply_to)
         self.data = data
 
 # ################################################################################################################################
