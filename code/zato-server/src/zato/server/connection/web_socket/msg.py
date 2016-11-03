@@ -84,7 +84,7 @@ class ServerMessage(object):
     """
     is_response = True
 
-    def __init__(self, id_prefix, cid, in_reply_to, status=OK, error_message='', _now=datetime.utcnow):
+    def __init__(self, id_prefix, cid, in_reply_to=None, status=OK, error_message='', _now=datetime.utcnow):
         self.id = '{}.{}'.format(id_prefix, cid)
         self.in_reply_to = in_reply_to
         self.meta = Bunch(id=self.id, timestamp=_now().isoformat())
@@ -120,8 +120,8 @@ class OKResponse(ServerMessage):
 # ################################################################################################################################
 
 class ErrorResponse(ServerMessage):
-    def __init__(self, in_reply_to, cid, status, error_message):
-        super(ErrorResponse, self).__init__(MSG_PREFIX.RESP_SERVICE_INVOKE_ERROR, in_reply_to, status, error_message)
+    def __init__(self, cid, in_reply_to, status, error_message):
+        super(ErrorResponse, self).__init__(MSG_PREFIX.RESP_SERVICE_INVOKE_ERROR, cid, in_reply_to, status, error_message)
         self.data = {'cid': cid}
 
 # ################################################################################################################################
@@ -130,7 +130,7 @@ class ClientInvokeRequest(ServerMessage):
     is_response = False
 
     def __init__(self, cid, data):
-        super(ClientInvokeRequest, self).__init__(MSG_PREFIX.REQ_TO_CLIENT, None)
+        super(ClientInvokeRequest, self).__init__(MSG_PREFIX.REQ_TO_CLIENT, cid)
         self.data = data
 
 # ################################################################################################################################

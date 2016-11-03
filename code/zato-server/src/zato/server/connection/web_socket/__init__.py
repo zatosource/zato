@@ -244,7 +244,7 @@ class WebSocket(_WebSocket):
             logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, e:`%s`', self.config.service_name, msg.id,
                 cid, format_exc(e))
 
-            response = ErrorResponse(msg.id, cid, INTERNAL_SERVER_ERROR,
+            response = ErrorResponse(cid, msg.id, INTERNAL_SERVER_ERROR,
                     'Could not invoke service `{}`, id:`{}`, cid:`{}`'.format(self.config.service_name, msg.id, cid))
         else:
             response = OKResponse(cid, msg.id, service_response)
