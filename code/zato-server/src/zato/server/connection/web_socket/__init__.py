@@ -174,8 +174,19 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
+    def send_background_pings(self):
+        try:
+            while self.container.clients.get(self.pub_client_id):
+                sleep(20)
+                self.invoke_client(new_cid(), 'zato-keep-alive-ping')
+        except Exception, e:
+            logger.warn(format_exc(e))
+
+# ################################################################################################################################
+
     def register_auth_client(self):
-        """ Registers peer in ODB. Called only if authentication succeeded.
+        """ Registers peer in ODB and sets up background pings to keep its connection alive.
+        Called only if authentication succeeded.
         """
         self.invoke_service(new_cid(), 'zato.channel.web-socket.client.create', {
             'pub_client_id': self.pub_client_id,
@@ -189,6 +200,8 @@ class WebSocket(_WebSocket):
             'last_seen': self.last_seen,
             'channel_name': self.config.name,
         }, needs_response=True)
+
+        spawn(self.send_background_pings)
 
 # ################################################################################################################################
 
