@@ -138,6 +138,7 @@ class SMTPConnection(_Connection):
                 conn.send(email, atts, from_ or msg.from_)
         except Exception, e:
             logger.warn('Could not send an SMTP message to `%s`, e:`%s`', self.config_no_sensitive, format_exc(e))
+            raise
         else:
             if logger.isEnabledFor(INFO):
                 atts_info = ', '.join(att.name for att in atts) if atts else None
