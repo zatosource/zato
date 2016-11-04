@@ -1177,3 +1177,17 @@ def timeouting_popen(command, timeout, timeout_msg, rc_non_zero_msg, common_msg=
             raise Exception(msg)
 
     return p.returncode
+
+# ################################################################################################################################
+
+def get_engine(args):
+    return sa.create_engine(get_engine_url(args))
+
+# ################################################################################################################################
+
+def get_session(engine):
+    session = orm.sessionmaker() # noqa
+    session.configure(bind=engine)
+    return session()
+
+# ################################################################################################################################
