@@ -17,7 +17,7 @@ from bunch import bunchify
 
 # Zato
 from zato.common import WEB_SOCKET
-from zato.common.odb.query import web_socket_sub_list
+from zato.common.odb.query import web_socket_client_list
 
 logger = getLogger(__name__)
 
@@ -50,7 +50,7 @@ class OutgoingWebSocket(object):
 
         with closing(self.odb_session_maker.session()) as session:
 
-            for item, channel_name in web_socket_sub_list(session, is_by_pub_id, is_by_channel, p, self.cluster_id):
+            for item, channel_name in web_socket_client_list(session, self.cluster_id, is_by_pub_id, is_by_channel, p).all():
 
                 item = bunchify(item.asdict())
 

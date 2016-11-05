@@ -2019,13 +2019,12 @@ class WebSocketClient(Base):
     """
     __tablename__ = 'web_socket_client'
     __table_args__ = (
-        Index('wscl_client_idx', 'pub_client_id', unique=True),
+        Index('wscl_pub_client_idx', 'pub_client_id', unique=True),
         Index('wscl_cli_ext_n_idx', 'ext_client_name', unique=False),
         Index('wscl_cli_ext_i_idx', 'ext_client_id', unique=False),
         Index('wscl_pr_addr_idx', 'peer_address', unique=False),
         Index('wscl_pr_fqdn_idx', 'peer_fqdn', unique=False),
-        {}
-    )
+    {})
 
     # This ID is for SQL
     id = Column(Integer, Sequence('web_socket_cli_seq'), primary_key=True)
@@ -2063,7 +2062,11 @@ class WebSocketSubscription(Base):
     """ Describes what kind of messages WebSocket clients elect to receive.
     """
     __tablename__ = 'web_socket_sub'
-    __table_args__ = (Index('wssub_channel_idx', 'channel_id', unique=False), {})
+    __table_args__ = (
+        Index('wssub_channel_idx', 'channel_id', unique=False),
+        Index('wssub_patt_idx', 'pattern', unique=False),
+        Index('wssub_patt_is_idx', 'pattern', 'is_internal', 'is_by_ext_id', 'is_by_channel', unique=False),
+    {})
 
     id = Column(Integer, Sequence('web_socket_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False)
