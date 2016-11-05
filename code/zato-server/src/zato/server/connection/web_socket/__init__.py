@@ -176,9 +176,20 @@ class WebSocket(_WebSocket):
 
     def send_background_pings(self):
         try:
-            while self.container.clients.get(self.pub_client_id):
+            while self.stream:
+
+                # Sleep for N seconds before sending a ping but check if we are connected upfront because
+                # we could have disconnected in between while and sleep calls.
                 sleep(20)
-                self.invoke_client(new_cid(), 'zato-keep-alive-ping')
+
+                # Ok, still connected
+                if self.stream:
+                    self.invoke_client(new_cid(), 'zato-keep-alive-ping')
+
+                # Alrady disconnected, we can quit
+                else:
+                    return
+
         except Exception, e:
             logger.warn(format_exc(e))
 
@@ -239,6 +250,7 @@ class WebSocket(_WebSocket):
             'data_format': _data_format,
             'service': service_name,
             'payload': data,
+            'environ': {'pub_client_id': self.pub_client_id},
         }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=False)
 
 # ################################################################################################################################
