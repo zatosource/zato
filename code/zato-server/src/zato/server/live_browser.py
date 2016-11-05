@@ -11,14 +11,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # TextBlob
 from textblob import TextBlob
 
-class PatternMatcher(object):
-    """ Matches text against patterns and returns information whether all patterns were found in text.
+def match_pattern(text, pattern):
+    """ Returns True if every element in pattern is contained in words extracted ouf of text,
+    pattern is assumed to be lower-cased.
     """
-    def __init__(self, text):
-        self.blob = TextBlob(text)
-
-    def match(self, pattern):
-        """ Returns True if every element in pattern is contained in self.blob.words,
-        pattern is assumed to be lower-cased.
-        """
-        return set(pattern) <= set(elem.lower() for elem in self.blob.words)
+    return set(pattern) <= set(elem.lower() for elem in TextBlob(text).words)

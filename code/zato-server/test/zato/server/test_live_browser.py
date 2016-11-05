@@ -13,7 +13,7 @@ from json import dumps
 from unittest import TestCase
 
 # Zato
-from zato.server.live_browser import PatternMatcher
+from zato.server.live_browser import match_pattern
 
 # ################################################################################################################################
 
@@ -27,9 +27,7 @@ class PatternMatcherTestCase(TestCase):
             'bbb':222,
             'ccc':'333'
         })
-
-        pm = PatternMatcher(text)
-        self.assertTrue(pm.match(pattern))
+        self.assertTrue(match_pattern(text, pattern))
 
 # ################################################################################################################################
 
@@ -41,9 +39,7 @@ class PatternMatcherTestCase(TestCase):
             'bbb&&&&bbb@@@@zzz':222,
             'ccc':'333'
         })
-
-        pm = PatternMatcher(text)
-        self.assertTrue(pm.match(pattern))
+        self.assertTrue(match_pattern(text, pattern))
 
 # ################################################################################################################################
 
@@ -55,9 +51,7 @@ class PatternMatcherTestCase(TestCase):
             'bbb&&&&bbb@@@@zzz':111,
             'ccc':'333-ggg'
         })
-
-        pm = PatternMatcher(text)
-        self.assertTrue(pm.match(pattern))
+        self.assertTrue(match_pattern(text, pattern))
 
 # ################################################################################################################################
 
@@ -71,8 +65,6 @@ class PatternMatcherTestCase(TestCase):
           <ccc>111-qqq</ccc>
         </aaa>
         """
-
-        pm = PatternMatcher(text)
-        self.assertTrue(pm.match(pattern))
+        self.assertTrue(match_pattern(text, pattern))
 
 # ################################################################################################################################
