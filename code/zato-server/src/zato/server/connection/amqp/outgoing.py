@@ -206,6 +206,11 @@ class OutgoingConnector(BaseAMQPConnector):
             if value:
                 properties[name] = value
 
+        if not properties['expiration']:
+            properties['expiration'] = 0
+        else:
+            properties['expiration'] = int(properties['expiration'])
+
         headers = msg.get('headers') or {}
 
         if not 'X-Zato-Component' in headers:
