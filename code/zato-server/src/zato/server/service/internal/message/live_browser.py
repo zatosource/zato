@@ -14,6 +14,9 @@ from contextlib import closing
 # Bunch
 from bunch import bunchify
 
+# SQLAlchemy
+from sqlalchemy import and_
+
 # Zato
 from zato.common import WEB_SOCKET
 from zato.common.odb.model import WebSocketSubscription
@@ -43,9 +46,12 @@ class DeleteCurrentSubscriptions(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
 
-            web_socket_sub_list(session, self.server.cluster_id).\
+            q = web_socket_sub_list(session, self.server.cluster_id).\
                 filter(WebSocketSubscription.client_id==self.request.input.client_id).\
-                delete()
+                filter(and_(
+                    WebSocketSubscription.is_by_ext_id.is_(False),
+                    WebSocketSubscription.is_by_channel.is_(False),
+                )).delete()
 
             session.commit()
 
@@ -67,6 +73,7 @@ class Subscribe(AdminService):
                 'client_id':client.id,
                 'pub_client_id':self.request.input.pub_client_id,
             })
+            aaa
 
             # .. now subscribe to all the new patterns.
             for pattern in set(elem.strip() for elem in self.request.input.query.strip().split()):
@@ -103,5 +110,28 @@ class Dispatch(AdminService):
         request = data.get('request', {})
         request.update(self.environ)
         self.invoke(data.service_name, request)
+
+# ################################################################################################################################
+
+class GetWebAdminConnectionDetails(AdminService):
+
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_message_live_browser_get_web_admin_connection_details_request'
+        response_elem = 'zato_message_live_browser_get_web_admin_connection_details_response'
+        output_required = ('address', 'username', 'jwt_token')
+
+    def handle(self):
+
+        with closing(self.odb.session()) as session:
+
+            defs = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
+            username = defs.USER
+
+            self.response.payload.address = 'ws://{}:{}/{}'.format(self.server.preferred_address, defs.PORT, defs.CHANNEL)
+            self.response.payload.username = username
+            self.response.payload.jwt_token = self.invoke('zato.security.jwt.log-in', {
+                'username': username,
+                'password': jwt_by_username(session, self.server.cluster_id, username).password
+            }, as_bunch=True).zato_security_jwt_log_in_response.token
 
 # ################################################################################################################################

@@ -185,6 +185,12 @@ custom_auth_list_service=
 [component_enabled]
 stats=True
 slow_response=True
+live_msg_browser=False
+
+[live_msg_browser]
+include_internal=False
+service=True
+out=True
 
 [content_type]
 json = {JSON}
