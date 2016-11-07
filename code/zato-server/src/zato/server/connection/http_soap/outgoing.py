@@ -358,13 +358,13 @@ class HTTPSOAPWrapper(BaseHTTPSOAPWrapper):
 # ################################################################################################################################
 
     def get(self, cid, params=None, *args, **kwargs):
-        return self.http_request('GET', cid, None, params, *args, **kwargs)
+        return self.http_request('GET', cid, '', params, *args, **kwargs)
 
     def delete(self, cid, params=None, *args, **kwargs):
-        return self.http_request('DELETE', cid, None, params, *args, **kwargs)
+        return self.http_request('DELETE', cid, '', params, *args, **kwargs)
 
     def options(self, cid, params=None, *args, **kwargs):
-        return self.http_request('OPTIONS', cid, None, params, *args, **kwargs)
+        return self.http_request('OPTIONS', cid, '', params, *args, **kwargs)
 
 # ################################################################################################################################
 
