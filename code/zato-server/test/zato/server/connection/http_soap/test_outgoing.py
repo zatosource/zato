@@ -254,7 +254,7 @@ class HTTPSOAPWrapperTestCase(TestCase, Base):
                         eq_(cid, _cid)
 
                         if name in('get', 'delete', 'options'):
-                            eq_(data, None)
+                            eq_(data, '')
                         else:
                             eq_(data, _data)
 
