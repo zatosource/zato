@@ -825,7 +825,6 @@ $.fn.zato.toggle_visible_hidden = function(id, is_visible) {
     $(elem).removeClass(remove_class).addClass(add_class);
 }
 
-
 // Taken from https://stackoverflow.com/a/901144
 $.fn.zato.get_url_param = function(name, url) {
     if (!url) {

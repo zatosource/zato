@@ -17,7 +17,7 @@ from bunch import bunchify
 
 # Zato
 from zato.common import WEB_SOCKET
-from zato.common.odb.query import web_socket_sub_list
+from zato.common.odb.query import web_socket_client_list
 
 logger = getLogger(__name__)
 
@@ -37,22 +37,24 @@ class OutgoingWebSocket(object):
         if not any((id, channel, pattern)):
             raise ValueError('At least one of `id, `channel` or `pattern` parameters is required')
 
-        is_by_pub_id = bool(id)
+        is_by_ext_id = bool(id)
         is_by_channel = bool(channel)
 
         if pattern:
             p = pattern
         else:
-            p = _pattern.BY_EXT_ID.format(id) if is_by_pub_id else _pattern.BY_CHANNEL.format(channel)
+            p = _pattern.BY_EXT_ID.format(id) if is_by_ext_id else _pattern.BY_CHANNEL.format(channel)
 
         # All individual responses from each WebSocket client that received this request
         responses = []
 
         with closing(self.odb_session_maker.session()) as session:
 
-            for item, channel_name in web_socket_sub_list(session, is_by_pub_id, is_by_channel, p, self.cluster_id):
+            for item, channel_name in web_socket_client_list(session, self.cluster_id, is_by_ext_id, is_by_channel, p).all():
 
                 item = bunchify(item.asdict())
+
+                logger.warn('zzzz %r', item)
 
                 response = self.servers_api[item.server_name].invoke('zato.channel.web-socket.client.deliver-request', {
                     'pub_client_id': item.pub_client_id,

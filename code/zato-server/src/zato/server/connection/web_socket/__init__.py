@@ -151,7 +151,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def authenticate(self, request):
+    def authenticate(self, cid, request):
         if self.config.auth_func(request.cid, request.sec_type, request.username, request.secret, self.config.sec_name):
 
             with self.update_lock:
@@ -176,9 +176,20 @@ class WebSocket(_WebSocket):
 
     def send_background_pings(self):
         try:
-            while self.container.clients.get(self.pub_client_id):
+            while self.stream:
+
+                # Sleep for N seconds before sending a ping but check if we are connected upfront because
+                # we could have disconnected in between while and sleep calls.
                 sleep(20)
-                self.invoke_client(new_cid(), 'zato-keep-alive-ping')
+
+                # Ok, still connected
+                if self.stream:
+                    self.invoke_client(new_cid(), 'zato-keep-alive-ping')
+
+                # Alrady disconnected, we can quit
+                else:
+                    return
+
         except Exception, e:
             logger.warn(format_exc(e))
 
@@ -215,9 +226,9 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def handle_authenticate(self, request):
+    def handle_authenticate(self, cid, request):
         if request.has_credentials:
-            response = self.authenticate(request)
+            response = self.authenticate(cid, request)
             if response:
                 self.send(response)
                 self.register_auth_client()
@@ -239,6 +250,7 @@ class WebSocket(_WebSocket):
             'data_format': _data_format,
             'service': service_name,
             'payload': data,
+            'environ': {'pub_client_id': self.pub_client_id},
         }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=False)
 
 # ################################################################################################################################
@@ -310,9 +322,10 @@ class WebSocket(_WebSocket):
             # Otherwise, authentication is required.
 
             if self.is_authenticated:
-                self.handle_client_message(cid, request) if not request.has_credentials else self.handle_authenticate(request)
+                self.handle_client_message(cid, request) if not request.has_credentials else \
+                    self.handle_authenticate(cid, request)
             else:
-                self.handle_authenticate(request)
+                self.handle_authenticate(cid, request)
 
             logger.info('Response returned cid:`%s`, time:`%s`', cid, _now()-now)
 
@@ -371,8 +384,8 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def closed(self, code, reason=None):
-        logger.info('Closing connection from %s (%s) to %s (%s %s)',
-            self._peer_address, self._peer_fqdn, self._local_address, self.pub_client_id, self.config.name)
+        logger.info('Closing connection from %s (%s) to %s (%s %s %s)',
+            self._peer_address, self._peer_fqdn, self._local_address, self.ext_client_id, self.config.name, self.pub_client_id)
 
         self.unregister_auth_client()
         del self.container.clients[self.pub_client_id]

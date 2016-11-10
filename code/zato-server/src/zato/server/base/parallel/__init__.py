@@ -116,6 +116,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.ipc_api = IPCAPI(False)
         self.ipc_forwarder = IPCAPI(True)
         self.fifo_response_buffer_size = 0.1 # In megabytes
+        self.live_msg_browser = None
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
