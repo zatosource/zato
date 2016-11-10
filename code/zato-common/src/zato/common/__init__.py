@@ -803,6 +803,8 @@ class WEB_SOCKET:
     class PATTERN:
         BY_EXT_ID = 'zato.by-ext-id.{}'
         BY_CHANNEL = 'zato.by-channel.{}'
+        MSG_BROWSER_PREFIX = 'zato.msg-browser.' # This is used as a prefix in SQL queries
+        MSG_BROWSER = MSG_BROWSER_PREFIX + '{}'
 
     class ACTION:
         AUTHENTICATE = 'authenticate'

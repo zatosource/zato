@@ -154,26 +154,26 @@ zato_services = {
     'zato.kvdb.remote-command.execute':'zato.server.service.internal.kvdb.ExecuteCommand',
 
     # Messages - Namespaces
-    'zato.server.message.namespace.create': 'zato.server.service.internal.message.namespace.Create',
-    'zato.server.message.namespace.edit': 'zato.server.service.internal.message.namespace.Edit',
-    'zato.server.message.namespace.delete': 'zato.server.service.internal.message.namespace.Delete',
-    'zato.server.message.namespace.get-list': 'zato.server.service.internal.message.namespace.GetList',
+    'zato.message.namespace.create': 'zato.server.service.internal.message.namespace.Create',
+    'zato.message.namespace.edit': 'zato.server.service.internal.message.namespace.Edit',
+    'zato.message.namespace.delete': 'zato.server.service.internal.message.namespace.Delete',
+    'zato.message.namespace.get-list': 'zato.server.service.internal.message.namespace.GetList',
 
     # Messages - JSON Pointers
-    'zato.server.message.json_pointer.create': 'zato.server.service.internal.message.json_pointer.Create',
-    'zato.server.message.json_pointer.edit': 'zato.server.service.internal.message.json_pointer.Edit',
-    'zato.server.message.json_pointer.delete': 'zato.server.service.internal.message.json_pointer.Delete',
-    'zato.server.message.json_pointer.get-list': 'zato.server.service.internal.message.json_pointer.GetList',
+    'zato.message.json_pointer.create': 'zato.server.service.internal.message.json_pointer.Create',
+    'zato.message.json_pointer.edit': 'zato.server.service.internal.message.json_pointer.Edit',
+    'zato.message.json_pointer.delete': 'zato.server.service.internal.message.json_pointer.Delete',
+    'zato.message.json_pointer.get-list': 'zato.server.service.internal.message.json_pointer.GetList',
 
     # Messages - XPath
-    'zato.server.message.xpath.create': 'zato.server.service.internal.message.xpath.Create',
-    'zato.server.message.xpath.edit': 'zato.server.service.internal.message.xpath.Edit',
-    'zato.server.message.xpath.delete': 'zato.server.service.internal.message.xpath.Delete',
-    'zato.server.message.xpath.get-list': 'zato.server.service.internal.message.xpath.GetList',
+    'zato.message.xpath.create': 'zato.server.service.internal.message.xpath.Create',
+    'zato.message.xpath.edit': 'zato.server.service.internal.message.xpath.Edit',
+    'zato.message.xpath.delete': 'zato.server.service.internal.message.xpath.Delete',
+    'zato.message.xpath.get-list': 'zato.server.service.internal.message.xpath.GetList',
 
     # Messages - Live browser
-    'zato.server.message.live-browser.subscribe': 'zato.server.service.internal.message.live_browser.Subscribe',
-    'zato.server.message.live-browser.get-web-admin-connection-details': \
+    'zato.message.live-browser.dispatch': 'zato.server.service.internal.message.live_browser.Dispatch',
+    'zato.message.live-browser.get-web-admin-connection-details': \
         'zato.server.service.internal.message.live_browser.GetWebAdminConnectionDetails',
 
     # Notifications - Cloud - OpenStack - Swift
@@ -541,7 +541,7 @@ class Create(ZatoCommand):
             elif name == 'zato.security.jwt.log-out':
                 self.add_jwt_log_out(session, cluster, service)
 
-            elif name == 'zato.server.message.live-browser.subscribe':
+            elif name == 'zato.message.live-browser.dispatch':
                 self.add_live_browser(session, cluster, service, live_browser_sec)
 
             session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))

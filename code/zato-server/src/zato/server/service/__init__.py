@@ -364,16 +364,29 @@ class Service(object):
             e, exc_formatted = None, None
 
             try:
+
+                has_live_msg_browser = self.server.component_enabled.live_msg_browser
+
+                if has_live_msg_browser and 'qqq' in service.get_name():
+                    service._notify_msg_browser('before hooks')
+
                 service.pre_handle()
                 service.call_hooks('before')
 
                 service.validate_input()
+
+                #if has_live_msg_browser and 'qqq' in service.get_name():
+                #    service._notify_msg_browser('service')
+
                 self._invoke(service, channel)
                 service.validate_output()
 
                 service.call_hooks('after')
                 service.post_handle()
                 service.call_hooks('finalize')
+
+                #if has_live_msg_browser and 'qqq' in service.get_name():
+                #    service._notify_msg_browser('after hooks')
 
             except Exception, e:
                 exc_formatted = format_exc(e)

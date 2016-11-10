@@ -106,8 +106,8 @@ class ServerMessage(object):
 # ################################################################################################################################
 
 class AuthenticateResponse(ServerMessage):
-    def __init__(self, token, *args, **kwargs):
-        super(AuthenticateResponse, self).__init__(MSG_PREFIX.RESP_AUTH, *args, **kwargs)
+    def __init__(self, token, cid, *args, **kwargs):
+        super(AuthenticateResponse, self).__init__(MSG_PREFIX.RESP_AUTH, cid, *args, **kwargs)
         self.data.token = token
 
 # ################################################################################################################################

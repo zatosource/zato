@@ -1423,8 +1423,9 @@ def channel_web_socket_list(session, cluster_id, needs_columns=False):
 def web_socket_client_by_pub_id(session, pub_client_id):
     """ An individual WebSocket connection by its public ID.
     """
-    return session.query(WebSocketClient).\
+    return session.query(WebSocketClient, ChannelWebSocket.name.label('channel_name')).\
         filter(WebSocketClient.pub_client_id==pub_client_id).\
+        outerjoin(ChannelWebSocket, ChannelWebSocket.id==WebSocketClient.channel_id).\
         one()
 
 # ################################################################################################################################
@@ -1437,17 +1438,33 @@ def web_socket_clients_by_server_id(session, server_id):
 
 # ################################################################################################################################
 
-def web_socket_sub_list(session, is_by_ext_id, is_by_channel, pattern, cluster_id):
-    """ A list of subscriptions to a particular pattern.
-    """
-    return session.query(WebSocketClient, ChannelWebSocket.name.label('channel_name')).\
+def _web_socket_client(session, cluster_id, is_by_ext_id=False, is_by_channel=False, pattern=None):
+    q = session.query(WebSocketClient, ChannelWebSocket.name.label('channel_name')).\
         filter(WebSocketSubscription.is_by_ext_id==is_by_ext_id).\
         filter(WebSocketSubscription.is_by_channel==is_by_channel).\
-        filter(WebSocketSubscription.pattern==pattern).\
         filter(Server.cluster_id==cluster_id).\
         outerjoin(ChannelWebSocket, ChannelWebSocket.id==WebSocketClient.channel_id).\
         outerjoin(WebSocketSubscription, WebSocketSubscription.client_id==WebSocketClient.id).\
-        outerjoin(Server, Server.id==WebSocketClient.server_id).\
-        all()
+        outerjoin(Server, Server.id==WebSocketClient.server_id)
+
+    if pattern:
+        q = q.filter(WebSocketSubscription.pattern==pattern)
+
+    return q
+
+def web_socket_client_list(*args, **kwargs):
+    """ A list of subscriptions to a particular pattern.
+    """
+    return _web_socket_client(*args, **kwargs)
+
+# ################################################################################################################################
+
+def _web_socket_sub(session, cluster_id):
+    return session.query(WebSocketSubscription).\
+        outerjoin(Server, Server.id==WebSocketSubscription.server_id).\
+        outerjoin(Cluster, Cluster.id==Server.cluster_id)
+
+def web_socket_sub_list(session, cluster_id):
+    return _web_socket_sub(session, cluster_id)
 
 # ################################################################################################################################
