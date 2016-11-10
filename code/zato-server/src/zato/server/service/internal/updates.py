@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from errno import ENETUNREACH
 from httplib import OK
 from json import loads
 from traceback import format_exc
@@ -24,6 +25,7 @@ from gevent import sleep, spawn
 
 # Requests
 from requests import get as requests_get
+from requests.exceptions import ConnectionError
 
 # Zato
 from zato.common import version
@@ -136,9 +138,16 @@ class CheckUpdates(Service):
 # ################################################################################################################################
 
     def _get_current(self, _url_info, self_major, self_version):
-        response = requests_get(_url_info.format(self_major), params={'v':self_version})
-        if response.status_code == OK:
-            return bunchify(loads(response.text))
+        try:
+            response = requests_get(_url_info.format(self_major), params={'v':self_version})
+        except ConnectionError, e:
+            # We ignore ENETUNREACH because it simply means that we could not connect to the server,
+            # which is fine, e.g. no Internet connectivity is allowed in that system.
+            if e.errno != ENETUNREACH:
+                raise
+        else:
+            if response.status_code == OK:
+                return bunchify(loads(response.text))
 
 # ################################################################################################################################
 
