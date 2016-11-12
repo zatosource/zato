@@ -458,6 +458,25 @@ class TLSChannelSecurity(SecurityBase):
 
 # ################################################################################################################################
 
+class VaultConnection(SecurityBase):
+    """ Stores information on how to connect to Vault and how to authenticate against it by default.
+    """
+    __tablename__ = 'sec_vault_conn'
+    __mapper_args__ = {'polymorphic_identity':'vault_conn_sec'}
+
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+    url = Column(String(200), nullable=False)
+    token = Column(String(200), nullable=True)
+    default_auth_method = Column(String(200), nullable=False)
+    timeout = Column(Integer, nullable=False)
+    allow_redirects = Column(Boolean(), nullable=False)
+    tls_verify = Column(Boolean(), nullable=False)
+
+    tls_key_cert_id = Column(Integer, ForeignKey('sec_tls_key_cert.id', ondelete='CASCADE'), nullable=True)
+    tls_ca_cert_id = Column(Integer, ForeignKey('sec_tls_ca_cert.id', ondelete='CASCADE'), nullable=True)
+
+# ################################################################################################################################
+
 class TLSCACert(Base):
     """ Stores information regarding CA certs.
     """

@@ -113,6 +113,8 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.security.tls.channel',
             'zato.server.service.internal.security.tls.key_cert',
             'zato.server.service.internal.security.wss',
+            'zato.server.service.internal.security.vault.connection',
+            'zato.server.service.internal.security.vault.policy',
             'zato.server.service.internal.security.xpath',
             'zato.server.service.internal.server',
             'zato.server.service.internal.service',

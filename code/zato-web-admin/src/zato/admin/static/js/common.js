@@ -126,6 +126,8 @@ $.namespace('zato.security.tls.ca_cert');
 $.namespace('zato.security.tls.channel');
 $.namespace('zato.security.tls.key_cert');
 $.namespace('zato.security.wss');
+$.namespace('zato.security.vault.connection');
+$.namespace('zato.security.vault.policy');
 $.namespace('zato.security.xpath');
 $.namespace('zato.search');
 $.namespace('zato.search.es');
