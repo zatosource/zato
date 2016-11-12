@@ -811,6 +811,21 @@ class WEB_SOCKET:
         INVOKE_SERVICE = 'invoke-service'
         CLIENT_RESPONSE = 'client-response'
 
+class VAULT:
+    class DEFAULT:
+        TIMEOUT = 10
+
+    class AUTH_METHOD:
+        #APP_ROLE = NameId('AppRole', 'APP_ROLE')
+        GITHUB = NameId('GitHub', 'GITHUB')
+        #LDAP = NameId('LDAP', 'LDAP')
+        TOKEN = NameId('Token', 'TOKEN')
+        USERNAME_PASSWORD = NameId('Username/password', 'USERNAME_PASSWORD')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.GITHUB, self.TOKEN, self.USERNAME_PASSWORD))
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'

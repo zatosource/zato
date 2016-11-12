@@ -50,6 +50,7 @@ from zato.admin.web.views.search import solr
 from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oauth, openstack as openstack_security, rbac, \
      tech_account, wss, xpath as xpath_sec
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
+from zato.admin.web.views.security.vault import connection as vault_conn
 
 urlpatterns = [
 
@@ -488,6 +489,22 @@ urlpatterns += [
     url(r'^zato/security/tls/ca-cert/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(tls_ca_cert.Delete()), name='security-tls-ca-cert-delete'),
 
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. Vault connections
+
+    url(r'^zato/security/vault/conn/$',
+        login_required(vault_conn.Index()), name=vault_conn.Index.url_name),
+    url(r'^zato/security/vault/conn/create/$',
+        login_required(vault_conn.Create()), name=vault_conn.Create.url_name),
+    url(r'^zato/security/vault/conn/edit/$',
+        login_required(vault_conn.Edit()), name=vault_conn.Edit.url_name),
+    url(r'^zato/security/vault/conn/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(vault_conn.Delete()), name=vault_conn.Delete.url_name),
     ]
 
 # ################################################################################################################################
