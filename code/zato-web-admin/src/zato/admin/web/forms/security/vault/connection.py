@@ -15,7 +15,7 @@ from copy import deepcopy
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_initial_select, add_services
+from zato.admin.web.forms import add_initial_select, add_select_from_service, add_services
 from zato.common import VAULT
 
 class CreateForm(forms.Form):
@@ -30,6 +30,8 @@ class CreateForm(forms.Form):
     allow_redirects = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     tls_verify = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     service_id = forms.ChoiceField(widget=forms.Select())
+    tls_key_cert_id = forms.ChoiceField(widget=forms.Select())
+    tls_ca_cert_id = forms.ChoiceField(widget=forms.Select())
 
     def __init__(self, req, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)
@@ -40,3 +42,5 @@ class CreateForm(forms.Form):
         for item in VAULT.AUTH_METHOD:
             self.fields['default_auth_method'].choices.append([item.id, item.name])
 
+        add_select_from_service(self, req, 'zato.security.tls.key-cert.get-list', 'tls_key_cert_id')
+        add_select_from_service(self, req, 'zato.security.tls.ca-cert.get-list', 'tls_ca_cert_id')
