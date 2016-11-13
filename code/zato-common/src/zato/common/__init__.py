@@ -814,13 +814,14 @@ class WEB_SOCKET:
 class VAULT:
     class DEFAULT:
         TIMEOUT = 10
+        URL = 'http://localhost:8200'
 
     class AUTH_METHOD:
-        #APP_ROLE = NameId('AppRole', 'APP_ROLE')
-        GITHUB = NameId('GitHub', 'GITHUB')
-        #LDAP = NameId('LDAP', 'LDAP')
-        TOKEN = NameId('Token', 'TOKEN')
-        USERNAME_PASSWORD = NameId('Username/password', 'USERNAME_PASSWORD')
+        #APP_ROLE = NameId('AppRole', 'app-role')
+        GITHUB = NameId('GitHub', 'github')
+        #LDAP = NameId('LDAP', 'ldap')
+        TOKEN = NameId('Token', 'token')
+        USERNAME_PASSWORD = NameId('Username/password', 'username-password')
 
         class __metaclass__(type):
             def __iter__(self):

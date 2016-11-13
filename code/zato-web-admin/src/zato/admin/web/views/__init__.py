@@ -422,6 +422,7 @@ class CreateEdit(_BaseView):
                 return_data = {
                     'message': self.success_message(response.data)
                     }
+
                 return_data.update(initial_return_data)
 
                 for name in chain(self.SimpleIO.output_optional, self.SimpleIO.output_required):

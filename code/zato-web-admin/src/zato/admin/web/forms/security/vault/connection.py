@@ -22,7 +22,8 @@ class CreateForm(forms.Form):
 
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
-    url = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    url = forms.CharField(
+        initial=VAULT.DEFAULT.URL, widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     token = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     default_auth_method = forms.ChoiceField(widget=forms.Select())
     timeout = forms.CharField(
@@ -33,8 +34,8 @@ class CreateForm(forms.Form):
     tls_key_cert_id = forms.ChoiceField(widget=forms.Select())
     tls_ca_cert_id = forms.ChoiceField(widget=forms.Select())
 
-    def __init__(self, req, *args, **kwargs):
-        super(CreateForm, self).__init__(*args, **kwargs)
+    def __init__(self, req, prefix=None, *args, **kwargs):
+        super(CreateForm, self).__init__(prefix=prefix, *args, **kwargs)
 
         add_services(self, req, True)
         add_initial_select(self, 'default_auth_method')
@@ -44,3 +45,6 @@ class CreateForm(forms.Form):
 
         add_select_from_service(self, req, 'zato.security.tls.key-cert.get-list', 'tls_key_cert_id')
         add_select_from_service(self, req, 'zato.security.tls.ca-cert.get-list', 'tls_ca_cert_id')
+
+class EditForm(CreateForm):
+    pass

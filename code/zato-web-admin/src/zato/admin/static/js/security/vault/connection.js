@@ -3,11 +3,9 @@
 
 $.fn.zato.data_table.VaultConnection = new Class({
     toString: function() {
-        var s = '<VaultConnection id:{0} name:{1} client_def:{2} role_id:{3}>';
+        var s = '<VaultConnection id:{0} name:{1}>';
         return String.format(s, this.id ? this.id : '(none)',
-                this.name ? this.name : '(none)',
-                this.client_def ? this.client_def : '(none)',
-                this.role_id ? this.role_id : '(none)');
+                this.name ? this.name : '(none)');
     }
 
 });
@@ -20,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.VaultConnection;
     $.fn.zato.data_table.new_row_func = $.fn.zato.security.vault.connection.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'client_def', 'role_id']);
+    $.fn.zato.data_table.setup_forms(['name', 'url', 'timeout']);
 })
 
 
@@ -39,17 +37,28 @@ $.fn.zato.security.vault.connection.data_table.new_row = function(item, data, in
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
-    item.name = String.format("{0}:::{1}", item.client_def, data.role_name);
+    if(data.service_name) {
+        var service_name = String.format(
+            '<a href="/zato/service/overview/{0}/?cluster={1}">{0}</a>', data.service_name, item.cluster_id);
+    }
+    else {
+        var service_name = "<span class='form_hint'>(None)</span>";
+    };
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', data.client_name);
-    row += String.format('<td>{0}</td>', data.role_name);
+    row += String.format('<td>{0}</td>', item.name);
+    row += String.format('<td>{0}</td>', item.url);
+    row += String.format('<td>{0}</td>', item.default_auth_method);
+    row += String.format('<td>{0}</td>', service_name);
+    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.vault.connection.edit({0});'>Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.vault.connection.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
-    row += String.format("<td class='ignore'>{0}</td>", item.client_def);
-    row += String.format("<td class='ignore'>{0}</td>", item.role_id);
-    row += String.format("<td class='ignore'>{0}:::{1}</td>", item.client_def, data.role_name);
+    row += String.format("<td class='ignore'>{0}</td>", item.timeout);
+    row += String.format("<td class='ignore'>{0}</td>", item.allow_redirects);
+    row += String.format("<td class='ignore'>{0}</td>", item.tls_verify);
+    row += String.format("<td class='ignore'>{0}</td>", item.token);
+    row += String.format("<td class='ignore'>{0}</td>", data.service_id);
 
     if(include_tr) {
         row += '</tr>';

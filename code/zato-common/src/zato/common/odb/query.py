@@ -1471,11 +1471,14 @@ def web_socket_sub_list(session, cluster_id):
 # ################################################################################################################################
 
 def _vault_connection(session, cluster_id):
-    return session.query(VaultConnection.id, VaultConnection.url, VaultConnection.token,
-            VaultConnection.default_auth_method, VaultConnection.timeout, VaultConnection.allow_redirects,
-            VaultConnection.tls_verify, VaultConnection.tls_ca_cert_id, VaultConnection.tls_key_cert_id).\
+    return session.query(VaultConnection.id, VaultConnection.is_active, VaultConnection.name,
+            VaultConnection.url, VaultConnection.token, VaultConnection.default_auth_method,
+            VaultConnection.timeout, VaultConnection.allow_redirects, VaultConnection.tls_verify,
+            VaultConnection.tls_ca_cert_id, VaultConnection.tls_key_cert_id, VaultConnection.sec_type,
+            Service.name.label('service_name'), Service.id.label('service_id')).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==VaultConnection.cluster_id).\
+        outerjoin(Service, Service.id==VaultConnection.service_id).\
         order_by(VaultConnection.name)
 
 def vault_connection(session, cluster_id, id):

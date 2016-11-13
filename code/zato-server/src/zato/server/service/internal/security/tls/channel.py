@@ -35,7 +35,6 @@ def instance_hook(self, input, instance, attrs):
     # So that username, an artificial and inherited field, is not an empty string.
     instance.username = input.username = input.name
 
-
 def broker_message_hook(self, input, instance, attrs, service_type):
     input.sec_type = SEC_DEF_TYPE.TLS_CHANNEL_SEC
 

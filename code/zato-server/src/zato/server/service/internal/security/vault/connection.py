@@ -8,6 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from uuid import uuid4
+
 # Zato
 from zato.common.broker_message import VAULT
 from zato.common.odb.model import VaultConnection
@@ -21,10 +24,10 @@ label = 'a Vault connection'
 broker_message = VAULT
 broker_message_prefix = 'CONNECTION_'
 list_func = vault_connection_list
+output_optional_extra = ['service_id', 'service_name']
 
-#def broker_message_hook(service, input, instance, attrs, service_type):
-#    if service_type == 'create_edit':
-#        input.id = instance.id
+def instance_hook(self, input, instance, attrs):
+    instance.username = uuid4().hex
 
 class GetList(AdminService):
     _filter_by = VaultConnection.name,
