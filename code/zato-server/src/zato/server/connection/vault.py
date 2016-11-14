@@ -82,6 +82,8 @@ class VaultConnAPI(object):
             self.config[name].client.ping()
         except Exception, e:
             logger.warn('Could not ping Vault connection `%s`, e:`%s`', name, format_exc(e))
+        else:
+            logger.info('Ping OK, Vault connection `%s`', name)
 
     def ping(self, name):
         spawn(self._ping, name)
@@ -90,7 +92,8 @@ class VaultConnAPI(object):
 
     def _create(self, config):
         conn = _VaultConn(
-            config.name, config.url, config.token, config.service_name, config.tls_verify, config.timeout, config.allow_redirects)
+            config.name, config.url, config.token, config.get('service_name'), config.tls_verify, config.timeout,
+            config.allow_redirects)
         self.config[config.name] = conn
         self.ping(config.name)
 

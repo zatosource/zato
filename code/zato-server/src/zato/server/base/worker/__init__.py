@@ -1949,6 +1949,17 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def on_broker_msg_VAULT_CONNECTION_CREATE(self, msg):
+        self.vault_conn_api.create(msg)
+
+    def on_broker_msg_VAULT_CONNECTION_EDIT(self, msg):
+        self.vault_conn_api.edit(msg)
+
+    def on_broker_msg_VAULT_CONNECTION_DELETE(self, msg):
+        self.vault_conn_api.delete(msg.name)
+
+# ################################################################################################################################
+
     def on_ipc_message(self, msg):
 
         # If there is target_pid we cannot continue if we are not the recipient.
