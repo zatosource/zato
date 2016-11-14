@@ -1608,3 +1608,7 @@ class URLDataTestCase(TestCase):
         eq_(dummy_lock.enter_called, True)
 
 # ################################################################################################################################
+
+class VaultSecurityTestCase(TestCase):
+    def test_headers_gh(self):
+        self.fail()

@@ -207,6 +207,7 @@ class FakeServer(object):
         self.time_util = Bunch()
         self.servers = []
         self.ipc_api = None
+        self.component_enabled = Bunch(live_msg_browser=True)
 
 class ForceTypeWrapper(object):
     """ Makes comparison between two ForceType elements use their names.
