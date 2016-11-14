@@ -26,6 +26,7 @@ from gevent.lock import RLock
 from hvac import Client
 
 # Zato
+from zato.common import VAULT
 from zato.server.config import ConfigDict
 
 # ################################################################################################################################
@@ -36,8 +37,29 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 class _Client(Client):
+
+    def __init__(self, *args, **kwargs):
+        super(_Client, self).__init__(*args, **kwargs)
+        self._auth_func = {
+            VAULT.AUTH_METHOD.TOKEN: self._auth_token,
+            VAULT.AUTH_METHOD.USERNAME_PASSWORD: self._auth_username_password,
+            VAULT.AUTH_METHOD.GITHUB: self._auth_github,
+        }
+
     def ping(self):
         return self.is_sealed()
+
+    def _auth_token(self, vault_token):
+        return self.lookup_token(vault_token)['data']['id']
+
+    def _auth_username_password(self, username, password):
+        return self.auth_userpass(username, password, use_token=False)['auth']['client_token']
+
+    def _auth_github(self, gh_token):
+        return self.auth_github(gh_token, use_token=False)
+
+    def authenticate(self, auth_method, *credentials):
+        return self._auth_func[auth_method](*credentials)
 
 # ################################################################################################################################
 
@@ -74,6 +96,11 @@ class VaultConnAPI(object):
 
     def get(self, name):
         return self.config.get(name)
+
+# ################################################################################################################################
+
+    def get_client(self, name):
+        return self.config[name].client
 
 # ################################################################################################################################
 
@@ -130,10 +157,16 @@ class VaultConnAPI(object):
 
 if __name__ == '__main__':
 
+    name = 'abc'
+    vault_token = '5f763fa3-2872-71ab-4e5d-f1398aca6637'
+    username = 'user1'
+    password = 'secret1'
+    gh_token = ''
+
     config = Bunch()
-    config.name = 'abc'
+    config.name = name
     config.url = 'http://localhost:49517'
-    config.token = 'zzz'
+    config.token = vault_token
     config.service_name = 'my.service'
     config.tls_verify = True
     config.timeout = 20
@@ -142,6 +175,14 @@ if __name__ == '__main__':
     api = VaultConnAPI([config])
 
     import time
-    time.sleep(1)
+    time.sleep(0.1)
+
+    token1 = api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN, vault_token)
+    logger.info('Token1 %s', token1)
+
+    token2 = api[name].client.authenticate(VAULT.AUTH_METHOD.USERNAME_PASSWORD, username, password)
+    api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN, token2)
+    api[name].client.renew_token(token2)
+    logger.info('Token2 %s', token2)
 
 # ################################################################################################################################

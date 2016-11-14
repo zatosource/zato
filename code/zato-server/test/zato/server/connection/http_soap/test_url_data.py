@@ -1610,5 +1610,5 @@ class URLDataTestCase(TestCase):
 # ################################################################################################################################
 
 class VaultSecurityTestCase(TestCase):
-    def test_headers_gh(self):
+    def test_no_service_no_def_auth_no_headers(self):
         self.fail()
