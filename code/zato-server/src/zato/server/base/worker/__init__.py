@@ -233,8 +233,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.worker_config.basic_auth, self.worker_config.jwt, self.worker_config.ntlm, self.worker_config.oauth,
             self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws,
             self.worker_config.openstack_security, self.worker_config.xpath_sec, self.worker_config.tls_channel_sec,
-            self.worker_config.tls_key_cert, self.kvdb, self.broker_client, self.server.odb, self.json_pointer_store,
-            self.xpath_store, self.server.jwt_secret, self.vault_conn_api)
+            self.worker_config.tls_key_cert, self.worker_config.vault_conn_sec, self.kvdb, self.broker_client, self.server.odb,
+            self.json_pointer_store, self.xpath_store, self.server.jwt_secret, self.vault_conn_api)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
@@ -657,7 +657,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def init_vault_conn(self):
-        for value in self.worker_config.vault_conn.values():
+        for value in self.worker_config.vault_conn_sec.values():
             self.vault_conn_api.create(bunchify(value['config']))
 
 # ################################################################################################################################
