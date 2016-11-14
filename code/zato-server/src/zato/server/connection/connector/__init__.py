@@ -33,6 +33,7 @@ class connector_type:
 
     class out:
         zmq = 'ZeroMQ outgoing'
+        vault_conn = 'Vault connection'
 
     class duplex:
         zmq_v01 = 'ZeroMQ MDP v0.1'

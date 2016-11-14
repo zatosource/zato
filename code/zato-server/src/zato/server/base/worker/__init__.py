@@ -66,6 +66,7 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
      OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.web_socket.outgoing import OutgoingWebSocket
+from zato.server.connection.vault import VaultConnAPI
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
@@ -180,6 +181,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket)
         self.outgoing_web_sockets = OutgoingWebSocket(self.server.cluster_id, self.server.servers, self.server.odb)
 
+        # Vault connections
+        self.vault_conn_api = VaultConnAPI()
+
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
 
@@ -216,6 +220,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # RBAC
         self.init_rbac()
 
+        # Vault connections
+        self.init_vault_conn()
+
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
 
@@ -227,7 +234,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws,
             self.worker_config.openstack_security, self.worker_config.xpath_sec, self.worker_config.tls_channel_sec,
             self.worker_config.tls_key_cert, self.kvdb, self.broker_client, self.server.odb, self.json_pointer_store,
-            self.xpath_store, self.server.jwt_secret)
+            self.xpath_store, self.server.jwt_secret, self.vault_conn_api)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
@@ -646,6 +653,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             self.rbac.create_role_permission_allow(value.config.role_id, value.config.perm_id, value.config.service_id)
 
         self.rbac.set_http_permissions()
+
+# ################################################################################################################################
+
+    def init_vault_conn(self):
+        for value in self.worker_config.vault_conn.values():
+            self.vault_conn_api.create(bunchify(value['config']))
 
 # ################################################################################################################################
 
