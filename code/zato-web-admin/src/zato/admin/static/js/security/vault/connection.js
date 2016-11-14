@@ -49,7 +49,7 @@ $.fn.zato.security.vault.connection.data_table.new_row = function(item, data, in
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', item.url);
-    row += String.format('<td>{0}</td>', item.default_auth_method);
+    row += String.format('<td>{0}</td>', item.default_auth_method ? item.default_auth_method : "<span class='form_hint'>(None)</span>");
     row += String.format('<td>{0}</td>', service_name);
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.vault.connection.edit({0});'>Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.security.vault.connection.delete_({0});'>Delete</a>", item.id));
