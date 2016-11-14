@@ -95,7 +95,7 @@ class URLData(OAuthDataStore):
     def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
                  oauth_config=None, tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, \
                  openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
-                 kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
+                 vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
                  jwt_secret=None, vault_conn_api=None):
         self.channel_data = SortedListWithKey(channel_data, key=attrgetter('name'))
         self.url_sec = url_sec
@@ -111,6 +111,7 @@ class URLData(OAuthDataStore):
         self.xpath_sec_config = xpath_sec_config
         self.tls_channel_sec_config = tls_channel_sec_config
         self.tls_key_cert_config = tls_key_cert_config
+        self.vault_conn_sec_config = vault_conn_sec_config
         self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
@@ -492,6 +493,18 @@ class URLData(OAuthDataStore):
                     raise Unauthorized(cid, user_msg, 'zato-tls-channel-sec')
                 else:
                     return False
+
+        return True
+
+# ################################################################################################################################
+
+    def _handle_security_vault_conn_sec(self, cid, sec_def, path_info, body, wsgi_environ, post_data=None, enforce_auth=True):
+
+        logger.warn('1 %r', sec_def)
+        logger.warn('2 %r', wsgi_environ)
+        logger.warn('3 %r', body)
+        logger.warn('4 %r', post_data)
+        logger.warn('5 %r', path_info)
 
         return True
 
