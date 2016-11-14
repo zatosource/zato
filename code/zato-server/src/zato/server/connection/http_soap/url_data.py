@@ -17,6 +17,9 @@ from operator import attrgetter
 from threading import RLock
 from traceback import format_exc
 
+# Bunch
+from bunch import bunchify
+
 # oauth
 from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
      OAuthSignatureMethod_PLAINTEXT, OAuthToken
@@ -92,11 +95,12 @@ class OAuthStore(object):
 class URLData(OAuthDataStore):
     """ Performs URL matching and security checks.
     """
-    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
+    def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
                  oauth_config=None, tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, \
                  openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
                  vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
                  jwt_secret=None, vault_conn_api=None):
+        self.worker = worker
         self.channel_data = SortedListWithKey(channel_data, key=attrgetter('name'))
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -498,13 +502,45 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
+    def _vault_conn_headers_only(self, client, wsgi_environ):
+        """ Authenticate with Vault with credentials extracted from HTTP headers. Authentication is attempted
+        in the order of: API keys, username/password, GitHub.
+        """
+        # API key
+
+        # Username/password
+
+        # GitHub
+
     def _handle_security_vault_conn_sec(self, cid, sec_def, path_info, body, wsgi_environ, post_data=None, enforce_auth=True):
+        """ Authenticates users with Vault.
+        """
+        # 1. Has service that will drive us and give us credentials out of incoming data
+        # 2. No service but has default authentication method - need to extract those headers that pertain to this method
+        # 3. No service and no default authentication method - need to extract all headers that may contain credentials
+
+        config = self.vault_conn_sec_config[sec_def.name]['config']
+        client = self.worker.vault_conn_api.get_client(sec_def.name)
 
         logger.warn('1 %r', sec_def)
-        logger.warn('2 %r', wsgi_environ)
-        logger.warn('3 %r', body)
-        logger.warn('4 %r', post_data)
-        logger.warn('5 %r', path_info)
+        logger.warn('1 %r', config)
+        logger.warn('1 %r', client)
+
+        # 1.
+        if config['service_name']:
+            is_allowed = False
+        else:
+            if config['default_auth_method']:
+                is_allowed = False
+            else:
+                is_allowed = self._vault_conn_headers_only(client, wsgi_environ)
+
+        if not is_allowed:
+            if enforce_auth:
+                logger.error('Could not authenticate with Vault `%s`, cid:`%s`', sec_def.name, cid)
+                raise Unauthorized(cid, 'Failed to authenticate', 'zato-vault')
+            else:
+                return False
 
         return True
 
