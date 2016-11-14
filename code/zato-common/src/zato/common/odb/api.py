@@ -887,6 +887,12 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             return query.wss_list(session, cluster_id, needs_columns)
 
+    def get_vault_connection_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of Vault connections on the given cluster.
+        """
+        with closing(self.session()) as session:
+            return query.vault_connection_list(session, cluster_id, needs_columns)
+
     def get_xpath_sec_list(self, cluster_id, needs_columns=False):
         """ Returns a list of XPath-based security definitions on the given cluster.
         """

@@ -90,12 +90,13 @@ class OAuthStore(object):
         self.oauth_config = oauth_config
 
 class URLData(OAuthDataStore):
-    """ Performs URL matching and all the HTTP/SOAP-related security checks.
+    """ Performs URL matching and security checks.
     """
     def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
                  oauth_config=None, tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, \
                  openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
-                 kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None, jwt_secret=None):
+                 kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
+                 jwt_secret=None, vault_conn_api=None):
         self.channel_data = SortedListWithKey(channel_data, key=attrgetter('name'))
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -114,6 +115,7 @@ class URLData(OAuthDataStore):
         self.broker_client = broker_client
         self.odb = odb
         self.jwt_secret = jwt_secret
+        self.vault_conn_api = vault_conn_api
 
         self.sec_config_getter = Bunch()
         self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
@@ -131,6 +133,8 @@ class URLData(OAuthDataStore):
         self._oauth_server = OAuthServer(self)
         self._oauth_server.add_signature_method(OAuthSignatureMethod_HMAC_SHA1())
         self._oauth_server.add_signature_method(OAuthSignatureMethod_PLAINTEXT())
+
+        self
 
         self.url_path_cache = {}
 

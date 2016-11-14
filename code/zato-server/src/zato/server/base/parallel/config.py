@@ -249,6 +249,10 @@ class ConfigLoader(object):
         query = self.odb.get_wss_list(server.cluster.id, True)
         self.config.wss = ConfigDict.from_query('wss', query)
 
+        # Vault connections
+        query = self.odb.get_vault_connection_list(server.cluster.id, True)
+        self.config.vault_conn = ConfigDict.from_query('vault_conn', query)
+
         # XPath
         query = self.odb.get_xpath_sec_list(server.cluster.id, True)
         self.config.xpath_sec = ConfigDict.from_query('xpath_sec', query)
