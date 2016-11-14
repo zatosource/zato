@@ -123,7 +123,7 @@ class VaultConnAPI(object):
 
     def edit(self, new_config):
         with self.lock:
-            self._delete(new_config.name)
+            self._delete(new_config.old_name)
             self._create(new_config)
 
 # ################################################################################################################################

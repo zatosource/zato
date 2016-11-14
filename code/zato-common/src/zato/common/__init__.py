@@ -281,6 +281,7 @@ class SEC_DEF_TYPE:
     TLS_CHANNEL_SEC = 'tls_channel_sec'
     TLS_KEY_CERT = 'tls_key_cert'
     WSS = 'wss'
+    VAULT = 'vault_conn_sec'
     XPATH_SEC = 'xpath_sec'
 
 SEC_DEF_TYPE_NAME = {
@@ -295,6 +296,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
     SEC_DEF_TYPE.WSS: 'WS-Security',
+    SEC_DEF_TYPE.VAULT: 'Vault',
     SEC_DEF_TYPE.XPATH_SEC: 'XPath',
 }
 
