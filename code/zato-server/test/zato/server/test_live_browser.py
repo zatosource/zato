@@ -21,7 +21,7 @@ class PatternMatcherTestCase(TestCase):
 
     def test_simple(self):
 
-        pattern = ['aaa', '111', '333']
+        pattern = set(['aaa', '111', '333'])
         text = dumps({
             'aaa':'111',
             'bbb':222,
@@ -33,7 +33,7 @@ class PatternMatcherTestCase(TestCase):
 
     def test_punctuation_simple(self):
 
-        pattern = ['aaa', '111', '333']
+        pattern = set(['aaa', '111', '333'])
         text = dumps({
             'aaa:aaa':'111---qqq',
             'bbb&&&&bbb@@@@zzz':222,
@@ -45,7 +45,7 @@ class PatternMatcherTestCase(TestCase):
 
     def test_punctuation_hyphens(self):
 
-        pattern = ['aaa', '111', '333-ggg', '111-qqq']
+        pattern = set(['aaa', '111', '333-ggg', '111-qqq'])
         text = dumps({
             'aaa:aaa':'111-qqq',
             'bbb&&&&bbb@@@@zzz':111,
@@ -57,7 +57,7 @@ class PatternMatcherTestCase(TestCase):
 
     def test_xml(self):
 
-        pattern = ['aaa', '111', '333-ggg', '111-qqq']
+        pattern = set(['aaa', '111', '333-ggg', '111-qqq'])
         text = """<?xml version="1.0"?>
         <aaa>
           <ggg>111</ggg>

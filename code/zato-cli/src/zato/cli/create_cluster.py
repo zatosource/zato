@@ -394,6 +394,18 @@ zato_services = {
     'zato.security.wss.edit':'zato.server.service.internal.security.wss.Edit',
     'zato.security.wss.get-list':'zato.server.service.internal.security.wss.GetList',
 
+    # Security - Vault - Connections
+    'zato.security.vault.connection.create':'zato.server.service.internal.security.vault.connection.Create',
+    'zato.security.vault.connection.delete':'zato.server.service.internal.security.vault.connection.Delete',
+    'zato.security.vault.connection.edit':'zato.server.service.internal.security.vault.connection.Edit',
+    'zato.security.vault.connection.get-list':'zato.server.service.internal.security.vault.connection.GetList',
+
+    # Security - Vault - Policies
+    'zato.security.vault.policy.create':'zato.server.service.internal.security.vault.policy.Create',
+    'zato.security.vault.policy.delete':'zato.server.service.internal.security.vault.policy.Delete',
+    'zato.security.vault.policy.edit':'zato.server.service.internal.security.vault.policy.Edit',
+    'zato.security.vault.policy.get-list':'zato.server.service.internal.security.vault.policy.GetList',
+
     # Security - XPath
     'zato.security.xpath.change-password':'zato.server.service.internal.security.xpath.ChangePassword',
     'zato.security.xpath.create':'zato.server.service.internal.security.xpath.Create',

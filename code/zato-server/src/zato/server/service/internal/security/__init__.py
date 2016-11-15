@@ -33,9 +33,9 @@ class GetList(AdminService):
 
     def handle(self):
 
-        has_needs_internal = self.request.input.get('needs_internal') != ''
+        _needs_internal = self.request.input.get('needs_internal') != ''
 
-        if has_needs_internal:
+        if _needs_internal:
             needs_internal = True if self.request.input.get('needs_internal') is True else False
         else:
             needs_internal = True
@@ -50,6 +50,7 @@ class GetList(AdminService):
                      (SEC_DEF_TYPE.OPENSTACK, query.openstack_security_list),
                      (SEC_DEF_TYPE.TECH_ACCOUNT, query.tech_acc_list),
                      (SEC_DEF_TYPE.WSS, query.wss_list),
+                     (SEC_DEF_TYPE.VAULT, query.vault_connection_list),
                      (SEC_DEF_TYPE.TLS_CHANNEL_SEC, query.tls_channel_sec_list),
                      (SEC_DEF_TYPE.TLS_KEY_CERT, query.tls_key_cert_list),
                      (SEC_DEF_TYPE.XPATH_SEC, query.xpath_sec_list),

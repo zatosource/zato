@@ -42,6 +42,7 @@ class Index(_Index):
         if self.req.zato.cluster_id:
             sec_list = self.get_sec_def_list('basic_auth').def_items
             sec_list.extend(self.get_sec_def_list('jwt'))
+            sec_list.extend(self.get_sec_def_list('vault_conn_sec'))
         else:
             sec_list = []
 

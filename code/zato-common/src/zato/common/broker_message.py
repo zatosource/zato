@@ -397,6 +397,17 @@ class RBAC(Constants):
     ROLE_PERMISSION_EDIT = ValueConstant('')
     ROLE_PERMISSION_DELETE = ValueConstant('')
 
+class VAULT(Constants):
+    code_start = 105600
+
+    CONNECTION_CREATE = ValueConstant('')
+    CONNECTION_EDIT = ValueConstant('')
+    CONNECTION_DELETE = ValueConstant('')
+
+    POLICY_CREATE = ValueConstant('')
+    POLICY_EDIT = ValueConstant('')
+    POLICY_DELETE = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'
