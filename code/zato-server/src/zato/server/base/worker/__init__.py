@@ -66,6 +66,7 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
      OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.web_socket.outgoing import OutgoingWebSocket
+from zato.server.connection.vault import VaultConnAPI
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
@@ -180,6 +181,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket)
         self.outgoing_web_sockets = OutgoingWebSocket(self.server.cluster_id, self.server.servers, self.server.odb)
 
+        # Vault connections
+        self.vault_conn_api = VaultConnAPI()
+
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
 
@@ -216,18 +220,21 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # RBAC
         self.init_rbac()
 
+        # Vault connections
+        self.init_vault_conn()
+
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
 
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
         self.request_dispatcher.url_data = URLData(
-            deepcopy(self.worker_config.http_soap),
+            self, deepcopy(self.worker_config.http_soap),
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.jwt, self.worker_config.ntlm, self.worker_config.oauth,
             self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws,
             self.worker_config.openstack_security, self.worker_config.xpath_sec, self.worker_config.tls_channel_sec,
-            self.worker_config.tls_key_cert, self.kvdb, self.broker_client, self.server.odb, self.json_pointer_store,
-            self.xpath_store, self.server.jwt_secret)
+            self.worker_config.tls_key_cert, self.worker_config.vault_conn_sec, self.kvdb, self.broker_client, self.server.odb,
+            self.json_pointer_store, self.xpath_store, self.server.jwt_secret, self.vault_conn_api)
 
         self.request_dispatcher.request_handler = RequestHandler(self.server)
 
@@ -649,6 +656,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def init_vault_conn(self):
+        for value in self.worker_config.vault_conn_sec.values():
+            self.vault_conn_api.create(bunchify(value['config']))
+
+# ################################################################################################################################
+
     def _topic_from_topic_data(self, data):
         return Topic(data.name, data.is_active, True, data.max_depth)
 
@@ -899,6 +912,22 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.BASIC_AUTH,
                 self._visit_wrapper_change_password)
+
+# ################################################################################################################################
+
+    def on_broker_msg_VAULT_CONNECTION_CREATE(self, msg):
+        self.vault_conn_api.create(msg)
+        dispatcher.notify(broker_message.VAULT.CONNECTION_CREATE.value, msg)
+
+    def on_broker_msg_VAULT_CONNECTION_EDIT(self, msg):
+        self.vault_conn_api.edit(msg)
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.VAULT,
+                self._visit_wrapper_edit, keys=('is_active', 'username', 'name'))
+
+    def on_broker_msg_VAULT_CONNECTION_DELETE(self, msg):
+        self.vault_conn_api.delete(msg.name)
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.VAULT,
+                self._visit_wrapper_delete)
 
 # ################################################################################################################################
 
@@ -1158,7 +1187,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'cid': new_cid(),
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
-        }, CHANNEL.WORKER, None, needs_response=True)
+        }, CHANNEL.WORKER, None, needs_response=True, serialize=kwargs.get('serialize', True))
 
 # ################################################################################################################################
 

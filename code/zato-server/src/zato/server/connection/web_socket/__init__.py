@@ -133,7 +133,7 @@ class WebSocket(_WebSocket):
 
             if msg.action == _auth:
                 msg.sec_type = meta.sec_type
-                msg.username = meta.username
+                msg.username = meta.get('username')
                 msg.secret = meta.secret
                 msg.has_credentials = True
             else:
@@ -152,7 +152,8 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def authenticate(self, cid, request):
-        if self.config.auth_func(request.cid, request.sec_type, request.username, request.secret, self.config.sec_name):
+        if self.config.auth_func(request.cid, request.sec_type, {'username':request.username, 'secret':request.secret},
+            self.config.sec_name):
 
             with self.update_lock:
                 self.token = 'ws.token.{}'.format(new_cid())

@@ -17,6 +17,9 @@ from operator import attrgetter
 from threading import RLock
 from traceback import format_exc
 
+# Bunch
+from bunch import bunchify
+
 # oauth
 from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
      OAuthSignatureMethod_PLAINTEXT, OAuthToken
@@ -33,7 +36,7 @@ from sortedcontainers import SortedListWithKey
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, URL_TYPE, ZATO_NONE
+from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, URL_TYPE, VAULT, ZATO_NONE
 from zato.common.broker_message import code_to_name, CHANNEL, SECURITY
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition
@@ -90,12 +93,14 @@ class OAuthStore(object):
         self.oauth_config = oauth_config
 
 class URLData(OAuthDataStore):
-    """ Performs URL matching and all the HTTP/SOAP-related security checks.
+    """ Performs URL matching and security checks.
     """
-    def __init__(self, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
+    def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
                  oauth_config=None, tech_acc_config=None, wss_config=None, apikey_config=None, aws_config=None, \
                  openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
-                 kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None, jwt_secret=None):
+                 vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
+                 jwt_secret=None, vault_conn_api=None):
+        self.worker = worker
         self.channel_data = SortedListWithKey(channel_data, key=attrgetter('name'))
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -110,10 +115,12 @@ class URLData(OAuthDataStore):
         self.xpath_sec_config = xpath_sec_config
         self.tls_channel_sec_config = tls_channel_sec_config
         self.tls_key_cert_config = tls_key_cert_config
+        self.vault_conn_sec_config = vault_conn_sec_config
         self.kvdb = kvdb
         self.broker_client = broker_client
         self.odb = odb
         self.jwt_secret = jwt_secret
+        self.vault_conn_api = vault_conn_api
 
         self.sec_config_getter = Bunch()
         self.sec_config_getter[SEC_DEF_TYPE.BASIC_AUTH] = self.basic_auth_get
@@ -131,6 +138,8 @@ class URLData(OAuthDataStore):
         self._oauth_server = OAuthServer(self)
         self._oauth_server.add_signature_method(OAuthSignatureMethod_HMAC_SHA1())
         self._oauth_server.add_signature_method(OAuthSignatureMethod_PLAINTEXT())
+
+        self
 
         self.url_path_cache = {}
 
@@ -194,19 +203,30 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
-    def authenticate_web_socket(self, cid, sec_def_type, username, secret, sec_name, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
+    def authenticate_web_socket(self, cid, sec_def_type, auth, sec_name, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH,
+        _jwt=SEC_DEF_TYPE.JWT, _vault_ws=VAULT.WEB_SOCKET):
         """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
         """
         if sec_def_type == _basic_auth:
             auth_func = self._handle_security_basic_auth
             get_func = self.basic_auth_get
-            http_auth = 'Basic {}'.format('{}:{}'.format(username, secret).encode('base64'))
-        else:
+            headers = {'HTTP_AUTHORIZATION': 'Basic {}'.format('{}:{}'.format(auth['username'], auth['secret']).encode('base64'))}
+        elif sec_def_type == _jwt:
             auth_func = self._handle_security_jwt
             get_func = self.jwt_get
-            http_auth = 'Bearer {}'.format(secret)
+            headers = {'HTTP_AUTHORIZATION': 'Bearer {}'.format(auth['secret'])}
+        else:
+            auth_func = self._handle_security_vault_conn_sec
+            get_func = self.vault_conn_sec_get
 
-        return auth_func(cid, get_func(sec_name)['config'], None, None, {'HTTP_AUTHORIZATION': http_auth}, enforce_auth=False)
+            # The defauly header is a dummy one
+            headers = {'zato.http.response.headers':{}}
+            for key, header in _vault_ws[sec_def_type].iteritems():
+                headers[header] = auth[key]
+
+            print(3333, headers)
+
+        return auth_func(cid, get_func(sec_name)['config'], None, None, headers, enforce_auth=False)
 
 # ################################################################################################################################
 
@@ -493,6 +513,100 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
+    def _vault_conn_check_headers(self, client, wsgi_environ, sec_def_config, _auth_method=VAULT.AUTH_METHOD,
+        _headers=VAULT.HEADERS):
+        """ Authenticate with Vault with credentials extracted from WSGI environment. Authentication is attempted
+        in the order of: API keys, username/password, GitHub.
+        """
+
+        # API key
+        if _headers.TOKEN_VAULT in wsgi_environ:
+            return client.authenticate(_auth_method.TOKEN, wsgi_environ[_headers.TOKEN_VAULT])
+
+        # Username/password
+        elif _headers.USERNAME in wsgi_environ:
+            return client.authenticate(
+                _auth_method.USERNAME_PASSWORD, wsgi_environ[_headers.USERNAME], wsgi_environ.get(_headers.PASSWORD))
+
+        # GitHub
+        elif _headers.TOKEN_GH in wsgi_environ:
+            return client.authenticate(_auth_method.GITHUB, wsgi_environ[_headers.TOKEN_GH])
+
+# ################################################################################################################################
+
+    def _vault_conn_by_method(self, client, method, headers):
+        auth_attrs = []
+        auth_headers = VAULT.METHOD_HEADER[method]
+        auth_headers = [auth_headers] if isinstance(auth_headers, basestring) else auth_headers
+
+        for header in auth_headers:
+            auth_attrs.append(headers[header])
+
+        return client.authenticate(method, *auth_attrs)
+
+# ################################################################################################################################
+
+    def _enforce_vault_sec(self, cid, name):
+        logger.error('Could not authenticate with Vault `%s`, cid:`%s`', name, cid)
+        raise Unauthorized(cid, 'Failed to authenticate', 'zato-vault')
+
+# ################################################################################################################################
+
+    def _handle_security_vault_conn_sec(self, cid, sec_def, path_info, body, wsgi_environ, post_data=None, enforce_auth=True):
+        """ Authenticates users with Vault.
+        """
+        # 1. Has service that will drive us and give us credentials out of incoming data
+        # 2. No service but has default authentication method - need to extract those headers that pertain to this method
+        # 3. No service and no default authentication method - need to extract all headers that may contain credentials
+
+        sec_def_config = self.vault_conn_sec_config[sec_def.name]['config']
+        client = self.worker.vault_conn_api.get_client(sec_def.name)
+
+        try:
+
+            #
+            # 1.
+            #
+            if sec_def_config['service_name']:
+                response = self.worker.invoke(sec_def_config['service_name'], {
+                    'sec_def': sec_def,
+                    'body': body,
+                    'environ': wsgi_environ
+                }, data_format=DATA_FORMAT.DICT, serialize=False)['response']
+
+                vault_response = self._vault_conn_by_method(client, response['method'], response['headers'])
+
+            else:
+
+                #
+                # 2.
+                #
+                if sec_def_config['default_auth_method']:
+                    vault_response = self._vault_conn_by_method(client, sec_def_config['default_auth_method'], wsgi_environ)
+
+                #
+                # 3.
+                #
+                else:
+                    vault_response = self._vault_conn_check_headers(client, wsgi_environ, sec_def_config)
+
+        except Exception, e:
+            logger.warn(format_exc(e))
+            if enforce_auth:
+                self._enforce_vault_sec(cid, sec_def.name)
+            else:
+                return False
+        else:
+            if vault_response:
+                wsgi_environ['zato.http.response.headers'][VAULT.HEADERS.TOKEN_RESPONSE] = vault_response.client_token
+                wsgi_environ['zato.http.response.headers'][VAULT.HEADERS.TOKEN_RESPONSE_LEASE] = str(
+                    vault_response.lease_duration)
+                return vault_response
+            else:
+                self._enforce_vault_sec(cid, sec_def.name)
+
+# ################################################################################################################################
+
     def match(self, url_path, soap_action, has_trace1=logger.isEnabledFor(TRACE1)):
         """ Attemps to match the combination of SOAP Action and URL path against
         the list of HTTP channel targets.
@@ -611,11 +725,6 @@ class URLData(OAuthDataStore):
                         for key, new_value in msg.items():
                             if key in sec_def:
                                 sec_def[key] = msg[key]
-
-# ################################################################################################################################
-
-#    def authenticate_web_socket(self, username, password, sec_name):
-#        logger.warn('zzz %s %s %s', username, password, self.basic_auth_get(sec_name))
 
 # ################################################################################################################################
 
@@ -791,13 +900,53 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
+    def _update_vault_conn_sec(self, name, config):
+        self.vault_conn_sec_config[name] = Bunch()
+        self.vault_conn_sec_config[name].config = config
+
+    def vault_conn_sec_get(self, name):
+        """ Returns configuration of a Vault connection of the given name.
+        """
+        with self.url_sec_lock:
+            return self.vault_conn_sec_config.get(name)
+
+    def vault_conn_sec_get(self, name):
+        """ Returns the configuration of the Vault security definition
+        of the given name.
+        """
+        with self.url_sec_lock:
+            return self.vault_conn_sec_config.get(name)
+
+    def on_broker_msg_VAULT_CONNECTION_CREATE(self, msg, *args):
+        """ Creates a new Vault security definition.
+        """
+        with self.url_sec_lock:
+            self._update_vault_conn_sec(msg.name, msg)
+
+    def on_broker_msg_VAULT_CONNECTION_EDIT(self, msg, *args):
+        """ Updates an existing Vault security definition.
+        """
+        with self.url_sec_lock:
+            del self.vault_conn_sec_config[msg.old_name]
+            self._update_vault_conn_sec(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.VAULT)
+
+    def on_broker_msg_VAULT_CONNECTION_DELETE(self, msg, *args):
+        """ Deletes an Vault security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('vault_conn_sec', msg.name)
+            del self.vault_conn_sec_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.VAULT, True)
+
+# ################################################################################################################################
+
     def _update_jwt(self, name, config):
         self.jwt_config[name] = Bunch()
         self.jwt_config[name].config = config
 
     def jwt_get(self, name):
-        """ Returns the configuration of the JWT security definition
-        of the given name.
+        """ Returns configuration of a JWT security definition of the given name.
         """
         with self.url_sec_lock:
             return self.jwt_config.get(name)

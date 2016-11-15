@@ -1,0 +1,272 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Vault connections{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    {% comment %} jQuery {% endcomment %}
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/security/vault/connection.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'name',
+            'url',
+            '_default_auth_method_text',
+            'service_name',
+            '_edit',
+            '_delete',
+            'id',
+            'timeout',
+            'allow_redirects',
+            'tls_verify',
+            'token',
+            'service_id',
+            'default_auth_method',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Vault connections</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show connections"%}
+
+
+    {% if cluster_id %}
+
+        <div class='page_prompt' style="clear:left">
+            <a href="javascript:$.fn.zato.security.vault.connection.create()">Create a new Vault connection</a>
+        </div>
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th><a href="#">Name</a></th>
+                        <th><a href="#">URL</a></th>
+                        <th><a href="#">Def. auth method</a></th>
+                        <th><a href="#">Service</a></th>
+
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+
+                        <td>{{ item.name }}</td>
+                        <td>{{ item.url }}</td>
+                        <td>{{ item.default_auth_method|default:"<span class='form_hint'>(None)</span>" }}</td>
+                        <td>
+                        {% if item.service_name %}
+                            <a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a>
+                        {% else %}
+                            <span class='form_hint'>(None)</span>
+                        {% endif %}
+                        </td>
+
+                        <td><a href="javascript:$.fn.zato.security.vault.connection.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.security.vault.connection.delete_('{{ item.id }}')">Delete</a></td>
+
+                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.timeout }}</td>
+                        <td class='ignore'>{{ item.allow_redirects }}</td>
+                        <td class='ignore'>{{ item.tls_verify }}</td>
+                        <td class='ignore'>{{ item.token }}</td>
+                        <td class='ignore'>{{ item.service_id }}</td>
+                        <td class='ignore'>{{ item.default_auth_method }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='14'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+        <div id="create-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "security-vault-conn-create" %}" method="post" id="create-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td>{{ create_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">URL</td>
+                            <td>{{ create_form.url }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Token</td>
+                            <td>{{ create_form.token }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Default authentication method</td>
+                            <td>{{ create_form.default_auth_method }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ create_form.service_id }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Timeout<br/><span class="form_hint">(in seconds)</span></td>
+                            <td>{{ create_form.timeout }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Allow redirects</td>
+                            <td>{{ create_form.allow_redirects }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Verify TLS</td>
+                            <td>{{ create_form.tls_verify }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">TLS key<br/>and cert</td>
+                            <td>{{ create_form.tls_key_cert_id }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">TLS CA certs</td>
+                            <td>{{ create_form.tls_ca_cert_id }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" name="is_active" value="on" />
+                    <input type="hidden" name="sec_type" value="vault_conn_sec" />
+                    <input type="hidden" name="cluster_id" id="cluster_id"  value="{{ cluster_id }}" />
+                </form>
+            </div>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "security-vault-conn-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+
+                        <tr>
+                            <td style="vertical-align:middle;width:20%">Name</td>
+                            <td>{{ edit_form.name }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">URL</td>
+                            <td>{{ edit_form.url }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Token</td>
+                            <td>{{ edit_form.token }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Default authentication method</td>
+                            <td>{{ edit_form.default_auth_method }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Service</td>
+                            <td>{{ edit_form.service_id }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Timeout<br/><span class="form_hint">(in seconds)</span></td>
+                            <td>{{ edit_form.timeout }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Allow redirects</td>
+                            <td>{{ edit_form.allow_redirects }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Verify TLS</td>
+                            <td>{{ edit_form.tls_verify }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">TLS key<br/>and cert</td>
+                            <td>{{ edit_form.tls_key_cert_id }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">TLS CA certs</td>
+                            <td>{{ edit_form.tls_ca_cert_id }}</td>
+                        </tr>
+
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" name="edit-is_active" value="on" />
+                    <input type="hidden" name="edit-sec_type" value="vault_conn_sec" />
+                    <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" name="edit-id" id="id_edit-id" />
+                </form>
+            </div>
+        </div>
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

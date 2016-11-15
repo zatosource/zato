@@ -281,6 +281,7 @@ class SEC_DEF_TYPE:
     TLS_CHANNEL_SEC = 'tls_channel_sec'
     TLS_KEY_CERT = 'tls_key_cert'
     WSS = 'wss'
+    VAULT = 'vault_conn_sec'
     XPATH_SEC = 'xpath_sec'
 
 SEC_DEF_TYPE_NAME = {
@@ -295,6 +296,7 @@ SEC_DEF_TYPE_NAME = {
     SEC_DEF_TYPE.TLS_CHANNEL_SEC: 'TLS channel',
     SEC_DEF_TYPE.TLS_KEY_CERT: 'TLS key/cert',
     SEC_DEF_TYPE.WSS: 'WS-Security',
+    SEC_DEF_TYPE.VAULT: 'Vault',
     SEC_DEF_TYPE.XPATH_SEC: 'XPath',
 }
 
@@ -475,6 +477,7 @@ class CHANNEL(Attrs):
     SCHEDULER_AFTER_ONE_TIME = 'scheduler-after-one-time'
     STARTUP_SERVICE = 'startup-service'
     STOMP = 'stomp'
+    URL_DATA = 'url-data'
     WEB_SOCKET = 'web-socket'
     WORKER = 'worker'
     ZMQ = 'zmq'
@@ -810,6 +813,44 @@ class WEB_SOCKET:
         AUTHENTICATE = 'authenticate'
         INVOKE_SERVICE = 'invoke-service'
         CLIENT_RESPONSE = 'client-response'
+
+class VAULT:
+    class DEFAULT:
+        TIMEOUT = 10
+        URL = 'http://localhost:8200'
+
+    class HEADERS:
+        TOKEN_VAULT = 'HTTP_X_ZATO_VAULT_TOKEN'
+        TOKEN_GH = 'HTTP_X_ZATO_VAULT_TOKEN_GITHUB'
+        USERNAME = 'HTTP_X_ZATO_VAULT_USERNAME'
+        PASSWORD = 'HTTP_X_ZATO_VAULT_PASSWORD'
+        TOKEN_RESPONSE = 'X-Zato-Vault-Token'
+        TOKEN_RESPONSE_LEASE = 'X-Zato-Vault-Token-Lease-Duration'
+
+    class AUTH_METHOD:
+        GITHUB = NameId('GitHub', 'github')
+        TOKEN = NameId('Token', 'token')
+        USERNAME_PASSWORD = NameId('Username/password', 'username-password')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.GITHUB, self.TOKEN, self.USERNAME_PASSWORD))
+
+VAULT.METHOD_HEADER = {
+    VAULT.AUTH_METHOD.GITHUB.id: VAULT.HEADERS.TOKEN_GH,
+    VAULT.AUTH_METHOD.TOKEN.id: VAULT.HEADERS.TOKEN_VAULT,
+    VAULT.AUTH_METHOD.USERNAME_PASSWORD.id: (VAULT.HEADERS.USERNAME, VAULT.HEADERS.PASSWORD),
+}
+
+VAULT.WEB_SOCKET = {
+    'vault_github': {'secret': VAULT.HEADERS.TOKEN_GH},
+    'vault_token': {'secret': VAULT.HEADERS.TOKEN_VAULT},
+    'vault_username_password': {
+        'username': VAULT.HEADERS.USERNAME,
+        'secret': VAULT.HEADERS.PASSWORD,
+    }
+}
+
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

@@ -19,6 +19,12 @@ INITIAL_CHOICES = INITIAL_CHOICES_DICT.items()[0]
 
 # ################################################################################################################################
 
+def add_initial_select(form, field_name):
+    form.fields[field_name].choices = []
+    form.fields[field_name].choices.append(INITIAL_CHOICES)
+
+# ################################################################################################################################
+
 def add_security_select(form, security_list, needs_no_security=True, field_name='security', needs_rbac=True):
     form.fields[field_name].choices = []
     form.fields[field_name].choices.append(INITIAL_CHOICES)
@@ -34,17 +40,39 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
 
 # ################################################################################################################################
 
-def add_services(form, req):
+def add_services(form, req, by_id=False):
     if req.zato.cluster_id:
 
-        # Either must exist
-        field = form.fields.get('service_name') or form.fields['service']
+        field = form.fields.get('service_name') or form.fields.get('service_id') or form.fields['service']
         field.choices = []
         field.choices.append(INITIAL_CHOICES)
 
         for service in req.zato.client.invoke(
             'zato.service.get-list', {'cluster_id': req.zato.cluster_id, 'name_filter':'*'}).data:
-            field.choices.append([service.name, service.name])
+
+            # Older parts of web-admin use service names only but newer ones prefer service ID
+            id_attr = service.id if by_id else service.name
+            field.choices.append([id_attr, service.name])
+
+# ################################################################################################################################
+
+def add_select_from_service(form, req, service_name, field_names, by_id=True):
+    if req.zato.cluster_id:
+
+        field_names = field_names if isinstance(field_names, list) else [field_names]
+
+        field = None
+        for name in field_names:
+            field = form.fields.get(name)
+            if field:
+                break
+
+        field.choices = []
+        field.choices.append(INITIAL_CHOICES)
+
+        for item in req.zato.client.invoke(service_name, {'cluster_id': req.zato.cluster_id, }).data:
+            id_attr = item.id if by_id else item.name
+            field.choices.append([id_attr, item.name])
 
 # ################################################################################################################################
 

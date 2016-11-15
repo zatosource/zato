@@ -191,7 +191,7 @@ class SecurityBase(Base):
     id = Column(Integer, Sequence('sec_base_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
 
-    # It's nullable because TechnicalAccount doesn't use usernames
+    # It's nullable because some children classes do not use usernames
     username = Column(String(200), nullable=True)
 
     password = Column(String(64), nullable=True)
@@ -455,6 +455,28 @@ class TLSChannelSecurity(SecurityBase):
 
     id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
     value = Column(LargeBinary(200000), nullable=False)
+
+# ################################################################################################################################
+
+class VaultConnection(SecurityBase):
+    """ Stores information on how to connect to Vault and how to authenticate against it by default.
+    """
+    __tablename__ = 'sec_vault_conn'
+    __mapper_args__ = {'polymorphic_identity':'vault_conn_sec'}
+
+    id = Column(Integer, ForeignKey('sec_base.id'), primary_key=True)
+    url = Column(String(200), nullable=False)
+    token = Column(String(200), nullable=True)
+    default_auth_method = Column(String(200), nullable=True)
+    timeout = Column(Integer, nullable=False)
+    allow_redirects = Column(Boolean(), nullable=False)
+    tls_verify = Column(Boolean(), nullable=False)
+
+    tls_key_cert_id = Column(Integer, ForeignKey('sec_tls_key_cert.id', ondelete='CASCADE'), nullable=True)
+    tls_ca_cert_id = Column(Integer, ForeignKey('sec_tls_ca_cert.id', ondelete='CASCADE'), nullable=True)
+
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+    service = relationship('Service', backref=backref('vault_conn_list', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 

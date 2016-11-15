@@ -27,7 +27,8 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
      OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, \
      RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, \
-     TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, XPath, XPathSecurity
+     TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, \
+     XPath, XPathSecurity
 
 # ################################################################################################################################
 
@@ -1466,5 +1467,31 @@ def _web_socket_sub(session, cluster_id):
 
 def web_socket_sub_list(session, cluster_id):
     return _web_socket_sub(session, cluster_id)
+
+# ################################################################################################################################
+
+def _vault_connection(session, cluster_id):
+    return session.query(VaultConnection.id, VaultConnection.is_active, VaultConnection.name,
+            VaultConnection.url, VaultConnection.token, VaultConnection.default_auth_method,
+            VaultConnection.timeout, VaultConnection.allow_redirects, VaultConnection.tls_verify,
+            VaultConnection.tls_ca_cert_id, VaultConnection.tls_key_cert_id, VaultConnection.sec_type,
+            Service.name.label('service_name'), Service.id.label('service_id')).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==VaultConnection.cluster_id).\
+        outerjoin(Service, Service.id==VaultConnection.service_id).\
+        order_by(VaultConnection.name)
+
+def vault_connection(session, cluster_id, id):
+    """ An individual Vault connection.
+    """
+    return _vault_connection(session, cluster_id).\
+        filter(VaultConnection.id==id).\
+        one()
+
+@query_wrapper
+def vault_connection_list(session, cluster_id, needs_columns=False):
+    """ A list of Vault connections.
+    """
+    return _vault_connection(session, cluster_id)
 
 # ################################################################################################################################
