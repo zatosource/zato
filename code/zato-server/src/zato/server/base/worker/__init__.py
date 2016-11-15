@@ -915,6 +915,22 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def on_broker_msg_VAULT_CONNECTION_CREATE(self, msg):
+        self.vault_conn_api.create(msg)
+        dispatcher.notify(broker_message.VAULT.CONNECTION_CREATE.value, msg)
+
+    def on_broker_msg_VAULT_CONNECTION_EDIT(self, msg):
+        self.vault_conn_api.edit(msg)
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.VAULT,
+                self._visit_wrapper_edit, keys=('is_active', 'username', 'name'))
+
+    def on_broker_msg_VAULT_CONNECTION_DELETE(self, msg):
+        self.vault_conn_api.delete(msg.name)
+        self._update_auth(msg, code_to_name[msg.action], SEC_DEF_TYPE.VAULT,
+                self._visit_wrapper_delete)
+
+# ################################################################################################################################
+
     def jwt_get(self, name):
         """ Returns the configuration of the JWT security definition
         of the given name.
@@ -1946,17 +1962,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def on_broker_msg_CHANNEL_STOMP_CHANGE_PASSWORD(self, msg):
         dispatcher.notify(broker_message.CHANNEL.STOMP_CHANGE_PASSWORD.value, msg)
         self.stomp_channel_api.change_password_def(msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_VAULT_CONNECTION_CREATE(self, msg):
-        self.vault_conn_api.create(msg)
-
-    def on_broker_msg_VAULT_CONNECTION_EDIT(self, msg):
-        self.vault_conn_api.edit(msg)
-
-    def on_broker_msg_VAULT_CONNECTION_DELETE(self, msg):
-        self.vault_conn_api.delete(msg.name)
 
 # ################################################################################################################################
 

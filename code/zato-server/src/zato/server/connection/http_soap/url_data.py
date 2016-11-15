@@ -203,19 +203,30 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
-    def authenticate_web_socket(self, cid, sec_def_type, username, secret, sec_name, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH):
+    def authenticate_web_socket(self, cid, sec_def_type, auth, sec_name, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH,
+        _jwt=SEC_DEF_TYPE.JWT, _vault_ws=VAULT.WEB_SOCKET):
         """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
         """
         if sec_def_type == _basic_auth:
             auth_func = self._handle_security_basic_auth
             get_func = self.basic_auth_get
-            http_auth = 'Basic {}'.format('{}:{}'.format(username, secret).encode('base64'))
-        else:
+            headers = {'HTTP_AUTHORIZATION': 'Basic {}'.format('{}:{}'.format(auth['username'], auth['secret']).encode('base64'))}
+        elif sec_def_type == _jwt:
             auth_func = self._handle_security_jwt
             get_func = self.jwt_get
-            http_auth = 'Bearer {}'.format(secret)
+            headers = {'HTTP_AUTHORIZATION': 'Bearer {}'.format(auth['secret'])}
+        else:
+            auth_func = self._handle_security_vault_conn_sec
+            get_func = self.vault_conn_sec_get
 
-        return auth_func(cid, get_func(sec_name)['config'], None, None, {'HTTP_AUTHORIZATION': http_auth}, enforce_auth=False)
+            # The defauly header is a dummy one
+            headers = {'zato.http.response.headers':{}}
+            for key, header in _vault_ws[sec_def_type].iteritems():
+                headers[header] = auth[key]
+
+            print(3333, headers)
+
+        return auth_func(cid, get_func(sec_name)['config'], None, None, headers, enforce_auth=False)
 
 # ################################################################################################################################
 
@@ -717,11 +728,6 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
-#    def authenticate_web_socket(self, username, password, sec_name):
-#        logger.warn('zzz %s %s %s', username, password, self.basic_auth_get(sec_name))
-
-# ################################################################################################################################
-
     def _delete_channel_data(self, sec_type, sec_name):
         match_idx = ZATO_NONE
         for item in self.channel_data:
@@ -894,13 +900,53 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
+    def _update_vault_conn_sec(self, name, config):
+        self.vault_conn_sec_config[name] = Bunch()
+        self.vault_conn_sec_config[name].config = config
+
+    def vault_conn_sec_get(self, name):
+        """ Returns configuration of a Vault connection of the given name.
+        """
+        with self.url_sec_lock:
+            return self.vault_conn_sec_config.get(name)
+
+    def vault_conn_sec_get(self, name):
+        """ Returns the configuration of the Vault security definition
+        of the given name.
+        """
+        with self.url_sec_lock:
+            return self.vault_conn_sec_config.get(name)
+
+    def on_broker_msg_VAULT_CONNECTION_CREATE(self, msg, *args):
+        """ Creates a new Vault security definition.
+        """
+        with self.url_sec_lock:
+            self._update_vault_conn_sec(msg.name, msg)
+
+    def on_broker_msg_VAULT_CONNECTION_EDIT(self, msg, *args):
+        """ Updates an existing Vault security definition.
+        """
+        with self.url_sec_lock:
+            del self.vault_conn_sec_config[msg.old_name]
+            self._update_vault_conn_sec(msg.name, msg)
+            self._update_url_sec(msg, SEC_DEF_TYPE.VAULT)
+
+    def on_broker_msg_VAULT_CONNECTION_DELETE(self, msg, *args):
+        """ Deletes an Vault security definition.
+        """
+        with self.url_sec_lock:
+            self._delete_channel_data('vault_conn_sec', msg.name)
+            del self.vault_conn_sec_config[msg.name]
+            self._update_url_sec(msg, SEC_DEF_TYPE.VAULT, True)
+
+# ################################################################################################################################
+
     def _update_jwt(self, name, config):
         self.jwt_config[name] = Bunch()
         self.jwt_config[name].config = config
 
     def jwt_get(self, name):
-        """ Returns the configuration of the JWT security definition
-        of the given name.
+        """ Returns configuration of a JWT security definition of the given name.
         """
         with self.url_sec_lock:
             return self.jwt_config.get(name)
