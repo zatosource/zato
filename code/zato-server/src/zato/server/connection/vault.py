@@ -80,16 +80,18 @@ class _Client(Client):
     def __init__(self, *args, **kwargs):
         super(_Client, self).__init__(*args, **kwargs)
         self._auth_func = {
-            VAULT.AUTH_METHOD.TOKEN: self._auth_token,
-            VAULT.AUTH_METHOD.USERNAME_PASSWORD: self._auth_username_password,
-            VAULT.AUTH_METHOD.GITHUB: self._auth_github,
+            VAULT.AUTH_METHOD.TOKEN.id: self._auth_token,
+            VAULT.AUTH_METHOD.USERNAME_PASSWORD.id: self._auth_username_password,
+            VAULT.AUTH_METHOD.GITHUB.id: self._auth_github,
         }
 
     def ping(self):
         return self.is_sealed()
 
     def _auth_token(self, client_token, _from_vault=VaultResponse.from_vault):
-        logger.warn('ttt %s', client_token)
+        if not client_token:
+            raise ValueError('Client token missing on input')
+
         response = self.lookup_token(client_token)
         return _from_vault('auth_token', response, 'data', 'id', False)
 
@@ -221,17 +223,17 @@ if __name__ == '__main__':
     import time
     time.sleep(0.1)
 
-    response1 = api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN, client_token)
+    response1 = api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN.id, client_token)
     logger.info('Response1 %s', response1)
 
-    response2 = api[name].client.authenticate(VAULT.AUTH_METHOD.USERNAME_PASSWORD, username, password)
+    response2 = api[name].client.authenticate(VAULT.AUTH_METHOD.USERNAME_PASSWORD.id, username, password)
     logger.info('Response2 %s', response2)
-    api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN, response2.client_token)
+    api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN.id, response2.client_token)
     api[name].client.renew_token(response2.client_token)
 
     if gh_token:
-        token3 = api[name].client.authenticate(VAULT.AUTH_METHOD.GITHUB, gh_token)
-        api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN, token3)
+        token3 = api[name].client.authenticate(VAULT.AUTH_METHOD.GITHUB.id, gh_token)
+        api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN.id, token3)
         api[name].client.renew_token(token3)
         logger.info('Token3 %s', token3)
 

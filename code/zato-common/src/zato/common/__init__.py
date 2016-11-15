@@ -477,6 +477,7 @@ class CHANNEL(Attrs):
     SCHEDULER_AFTER_ONE_TIME = 'scheduler-after-one-time'
     STARTUP_SERVICE = 'startup-service'
     STOMP = 'stomp'
+    URL_DATA = 'url-data'
     WEB_SOCKET = 'web-socket'
     WORKER = 'worker'
     ZMQ = 'zmq'
@@ -826,15 +827,19 @@ class VAULT:
         TOKEN_RESPONSE = 'X-Zato-Vault-Token'
 
     class AUTH_METHOD:
-        #APP_ROLE = NameId('AppRole', 'app-role')
         GITHUB = NameId('GitHub', 'github')
-        #LDAP = NameId('LDAP', 'ldap')
         TOKEN = NameId('Token', 'token')
         USERNAME_PASSWORD = NameId('Username/password', 'username-password')
 
         class __metaclass__(type):
             def __iter__(self):
                 return iter((self.GITHUB, self.TOKEN, self.USERNAME_PASSWORD))
+
+VAULT.METHOD_HEADER = {
+    VAULT.AUTH_METHOD.GITHUB.id: VAULT.HEADERS.TOKEN_GH,
+    VAULT.AUTH_METHOD.TOKEN.id: VAULT.HEADERS.TOKEN_VAULT,
+    VAULT.AUTH_METHOD.USERNAME_PASSWORD.id: (VAULT.HEADERS.USERNAME, VAULT.HEADERS.PASSWORD),
+}
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

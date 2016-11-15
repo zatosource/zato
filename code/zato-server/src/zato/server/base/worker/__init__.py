@@ -1171,7 +1171,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'cid': new_cid(),
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
-        }, CHANNEL.WORKER, None, needs_response=True)
+        }, CHANNEL.WORKER, None, needs_response=True, serialize=kwargs.get('serialize', True))
 
 # ################################################################################################################################
 

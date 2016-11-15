@@ -1608,7 +1608,3 @@ class URLDataTestCase(TestCase):
         eq_(dummy_lock.enter_called, True)
 
 # ################################################################################################################################
-
-class VaultSecurityTestCase(TestCase):
-    def test_no_service_no_def_auth_no_headers(self):
-        self.fail()
