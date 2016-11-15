@@ -818,6 +818,13 @@ class VAULT:
         TIMEOUT = 10
         URL = 'http://localhost:8200'
 
+    class HEADERS:
+        TOKEN_VAULT = 'HTTP_X_ZATO_VAULT_TOKEN'
+        TOKEN_GH = 'HTTP_X_ZATO_VAULT_TOKEN_GITHUB'
+        USERNAME = 'HTTP_X_ZATO_VAULT_USERNAME'
+        PASSWORD = 'HTTP_X_ZATO_VAULT_PASSWORD'
+        TOKEN_RESPONSE = 'X-Zato-Vault-Token'
+
     class AUTH_METHOD:
         #APP_ROLE = NameId('AppRole', 'app-role')
         GITHUB = NameId('GitHub', 'github')

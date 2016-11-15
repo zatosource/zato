@@ -36,7 +36,7 @@ from sortedcontainers import SortedListWithKey
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, URL_TYPE, ZATO_NONE
+from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, URL_TYPE, VAULT, ZATO_NONE
 from zato.common.broker_message import code_to_name, CHANNEL, SECURITY
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition
@@ -502,15 +502,30 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
-    def _vault_conn_headers_only(self, client, wsgi_environ):
-        """ Authenticate with Vault with credentials extracted from HTTP headers. Authentication is attempted
+    def _vault_conn_headers_only(self, client, wsgi_environ, sec_def_config, _auth_method=VAULT.AUTH_METHOD,
+        _headers=VAULT.HEADERS):
+        """ Authenticate with Vault with credentials extracted from WSGI environment. Authentication is attempted
         in the order of: API keys, username/password, GitHub.
         """
+
+        for k, v in wsgi_environ.items():
+            if k.startswith('HTTP_'):
+                logger.warn('1 %s=%s', k, v)
+
+        #logger.warn('1 %r', sec_def_config)
+
+        return client.authenticate(_auth_method.TOKEN, wsgi_environ['HTTP_HTTP_X_ZATO_VAULT_TOKEN'])
+
+
         # API key
 
         # Username/password
 
         # GitHub
+
+    def _enforce_vault_sec(self, cid, name):
+        logger.error('Could not authenticate with Vault `%s`, cid:`%s`', name, cid)
+        raise Unauthorized(cid, 'Failed to authenticate', 'zato-vault')
 
     def _handle_security_vault_conn_sec(self, cid, sec_def, path_info, body, wsgi_environ, post_data=None, enforce_auth=True):
         """ Authenticates users with Vault.
@@ -519,30 +534,28 @@ class URLData(OAuthDataStore):
         # 2. No service but has default authentication method - need to extract those headers that pertain to this method
         # 3. No service and no default authentication method - need to extract all headers that may contain credentials
 
-        config = self.vault_conn_sec_config[sec_def.name]['config']
+        sec_def_config = self.vault_conn_sec_config[sec_def.name]['config']
         client = self.worker.vault_conn_api.get_client(sec_def.name)
 
-        logger.warn('1 %r', sec_def)
-        logger.warn('1 %r', config)
-        logger.warn('1 %r', client)
+        try:
 
-        # 1.
-        if config['service_name']:
-            is_allowed = False
-        else:
-            if config['default_auth_method']:
-                is_allowed = False
+            # 1.
+            if sec_def_config['service_name']:
+                vault_response = False
             else:
-                is_allowed = self._vault_conn_headers_only(client, wsgi_environ)
+                if sec_def_config['default_auth_method']:
+                    vault_response = False
+                else:
+                    vault_response = self._vault_conn_headers_only(client, wsgi_environ, sec_def_config)
 
-        if not is_allowed:
+        except Exception, e:
+            logger.warn(format_exc(e))
             if enforce_auth:
-                logger.error('Could not authenticate with Vault `%s`, cid:`%s`', sec_def.name, cid)
-                raise Unauthorized(cid, 'Failed to authenticate', 'zato-vault')
+                self._enforce_vault_sec(cid, sec_def.name)
             else:
                 return False
-
-        return True
+        else:
+            return vault_response if vault_response else self._enforce_vault_sec(cid, sec_def.name)
 
 # ################################################################################################################################
 
