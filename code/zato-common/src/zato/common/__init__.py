@@ -842,6 +842,16 @@ VAULT.METHOD_HEADER = {
     VAULT.AUTH_METHOD.USERNAME_PASSWORD.id: (VAULT.HEADERS.USERNAME, VAULT.HEADERS.PASSWORD),
 }
 
+VAULT.WEB_SOCKET = {
+    'vault_github': {'secret': VAULT.HEADERS.TOKEN_GH},
+    'vault_token': {'secret': VAULT.HEADERS.TOKEN_VAULT},
+    'vault_username_password': {
+        'username': VAULT.HEADERS.USERNAME,
+        'secret': VAULT.HEADERS.PASSWORD,
+    }
+}
+
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
