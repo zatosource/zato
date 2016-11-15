@@ -502,30 +502,44 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
-    def _vault_conn_headers_only(self, client, wsgi_environ, sec_def_config, _auth_method=VAULT.AUTH_METHOD,
+    def _vault_conn_check_headers(self, client, wsgi_environ, sec_def_config, _auth_method=VAULT.AUTH_METHOD,
         _headers=VAULT.HEADERS):
         """ Authenticate with Vault with credentials extracted from WSGI environment. Authentication is attempted
         in the order of: API keys, username/password, GitHub.
         """
 
-        for k, v in wsgi_environ.items():
-            if k.startswith('HTTP_'):
-                logger.warn('1 %s=%s', k, v)
-
-        #logger.warn('1 %r', sec_def_config)
-
-        return client.authenticate(_auth_method.TOKEN, wsgi_environ['HTTP_HTTP_X_ZATO_VAULT_TOKEN'])
-
-
         # API key
+        if _headers.TOKEN_VAULT in wsgi_environ:
+            return client.authenticate(_auth_method.TOKEN, wsgi_environ[_headers.TOKEN_VAULT])
 
         # Username/password
+        elif _headers.USERNAME in wsgi_environ:
+            return client.authenticate(
+                _auth_method.USERNAME_PASSWORD, wsgi_environ[_headers.USERNAME], wsgi_environ.get(_headers.PASSWORD))
 
         # GitHub
+        elif _headers.TOKEN_GH in wsgi_environ:
+            return client.authenticate(_auth_method.GITHUB, wsgi_environ[_headers.TOKEN_GH])
+
+# ################################################################################################################################
+
+    def _vault_conn_by_method(self, client, method, headers):
+        auth_attrs = []
+        auth_headers = VAULT.METHOD_HEADER[method]
+        auth_headers = [auth_headers] if isinstance(auth_headers, basestring) else auth_headers
+
+        for header in auth_headers:
+            auth_attrs.append(headers[header])
+
+        return client.authenticate(method, *auth_attrs)
+
+# ################################################################################################################################
 
     def _enforce_vault_sec(self, cid, name):
         logger.error('Could not authenticate with Vault `%s`, cid:`%s`', name, cid)
         raise Unauthorized(cid, 'Failed to authenticate', 'zato-vault')
+
+# ################################################################################################################################
 
     def _handle_security_vault_conn_sec(self, cid, sec_def, path_info, body, wsgi_environ, post_data=None, enforce_auth=True):
         """ Authenticates users with Vault.
@@ -539,14 +553,31 @@ class URLData(OAuthDataStore):
 
         try:
 
+            #
             # 1.
+            #
             if sec_def_config['service_name']:
-                vault_response = False
+                response = self.worker.invoke(sec_def_config['service_name'], {
+                    'sec_def': sec_def,
+                    'body': body,
+                    'environ': wsgi_environ
+                }, data_format=DATA_FORMAT.DICT, serialize=False)['response']
+
+                vault_response = self._vault_conn_by_method(client, response['method'], response['headers'])
+
             else:
+
+                #
+                # 2.
+                #
                 if sec_def_config['default_auth_method']:
-                    vault_response = False
+                    vault_response = self._vault_conn_by_method(client, sec_def_config['default_auth_method'], wsgi_environ)
+
+                #
+                # 3.
+                #
                 else:
-                    vault_response = self._vault_conn_headers_only(client, wsgi_environ, sec_def_config)
+                    vault_response = self._vault_conn_check_headers(client, wsgi_environ, sec_def_config)
 
         except Exception, e:
             logger.warn(format_exc(e))
