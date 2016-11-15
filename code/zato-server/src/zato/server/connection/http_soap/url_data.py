@@ -586,7 +586,13 @@ class URLData(OAuthDataStore):
             else:
                 return False
         else:
-            return vault_response if vault_response else self._enforce_vault_sec(cid, sec_def.name)
+            if vault_response:
+                wsgi_environ['zato.http.response.headers'][VAULT.HEADERS.TOKEN_RESPONSE] = vault_response.client_token
+                wsgi_environ['zato.http.response.headers'][VAULT.HEADERS.TOKEN_RESPONSE_LEASE] = str(
+                    vault_response.lease_duration)
+                return vault_response
+            else:
+                self._enforce_vault_sec(cid, sec_def.name)
 
 # ################################################################################################################################
 

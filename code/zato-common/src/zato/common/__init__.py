@@ -825,6 +825,7 @@ class VAULT:
         USERNAME = 'HTTP_X_ZATO_VAULT_USERNAME'
         PASSWORD = 'HTTP_X_ZATO_VAULT_PASSWORD'
         TOKEN_RESPONSE = 'X-Zato-Vault-Token'
+        TOKEN_RESPONSE_LEASE = 'X-Zato-Vault-Token-Lease-Duration'
 
     class AUTH_METHOD:
         GITHUB = NameId('GitHub', 'github')
