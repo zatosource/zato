@@ -36,8 +36,47 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-class _Client(Client):
+class VaultResponse(object):
+    """ A convenience class to hold individual attributes of responses from Vault.
+    """
+    __slots__ = ('action', 'client_token', 'lease_duration', 'accessor', 'policies')
 
+    def __init__(self, action=None, client_token=None, lease_duration=None, accessor=None, policies=None):
+        self.action = action
+        self.client_token = client_token
+        self.lease_duration = lease_duration
+        self.accessor = accessor
+        self.policies = policies
+
+    def __str__(self):
+        attrs = []
+        for elem in sorted(self.__slots__):
+            value = getattr(self, elem)
+            attrs.append('{}:{}'.format(elem, value))
+
+        return '<{} at {}, {}>'.format(self.__class__.__name__, hex(id(self)), ', '.join(attrs))
+
+    @staticmethod
+    def from_vault(action, response, main_key='auth', token_key='client_token', has_lease_duration=True):
+        """ Builds a VaultResponse out of a dictionary returned from Vault.
+        """
+        auth = response[main_key]
+
+        vr = VaultResponse(action)
+        vr.client_token = auth[token_key]
+        vr.accessor = auth['accessor']
+        vr.policies = auth['policies']
+
+        if has_lease_duration:
+            vr.lease_duration = auth['lease_duration']
+
+        return vr
+
+# ################################################################################################################################
+
+class _Client(Client):
+    """ A thin wrapper around hvac.Client providing connectivity to Vault.
+    """
     def __init__(self, *args, **kwargs):
         super(_Client, self).__init__(*args, **kwargs)
         self._auth_func = {
@@ -49,14 +88,19 @@ class _Client(Client):
     def ping(self):
         return self.is_sealed()
 
-    def _auth_token(self, vault_token):
-        return self.lookup_token(vault_token)['data']['id']
+    def _auth_token(self, client_token, _from_vault=VaultResponse.from_vault):
+        logger.warn('ttt %s', client_token)
+        response = self.lookup_token(client_token)
+        return _from_vault('auth_token', response, 'data', 'id', False)
 
-    def _auth_username_password(self, username, password):
-        return self.auth_userpass(username, password, use_token=False)['auth']['client_token']
+    def _auth_username_password(self, username, password, _from_vault=VaultResponse.from_vault):
+        return _from_vault('auth_userpass', self.auth_userpass(username, password, use_token=False))
 
-    def _auth_github(self, gh_token):
-        return self.auth_github(gh_token, use_token=False)
+    def _auth_github(self, gh_token, _from_vault=VaultResponse.from_vault):
+        return _from_vault('auth_github', self.auth_github(gh_token, use_token=False))
+
+    def renew(self, client_token, _from_vault=VaultResponse.from_vault):
+        return _from_vault('renew', self.renew_token(client_token))
 
     def authenticate(self, auth_method, *credentials):
         return self._auth_func[auth_method](*credentials)
@@ -64,7 +108,7 @@ class _Client(Client):
 # ################################################################################################################################
 
 class _VaultConn(object):
-    def __init__(self, name, url, token, service_name, tls_verify, timeout, allow_redirects):
+    def __init__(self, name, url, token, service_name, tls_verify, timeout, allow_redirects, client_class=_Client):
         self.name = name
         self.url = url
         self.token = token
@@ -72,7 +116,7 @@ class _VaultConn(object):
         self.tls_verify = tls_verify
         self.timeout = timeout
         self.allow_redirects = allow_redirects
-        self.client = _Client(self.url, self.token, verify=self.tls_verify, timeout=self.timeout,
+        self.client = client_class(self.url, self.token, verify=self.tls_verify, timeout=self.timeout,
                 allow_redirects=self.allow_redirects)
 
 # ################################################################################################################################
@@ -158,7 +202,7 @@ class VaultConnAPI(object):
 if __name__ == '__main__':
 
     name = 'abc'
-    vault_token = '5f763fa3-2872-71ab-4e5d-f1398aca6637'
+    client_token = '5f763fa3-2872-71ab-4e5d-f1398aca6637'
     username = 'user1'
     password = 'secret1'
     gh_token = ''
@@ -166,7 +210,7 @@ if __name__ == '__main__':
     config = Bunch()
     config.name = name
     config.url = 'http://localhost:49517'
-    config.token = vault_token
+    config.token = client_token
     config.service_name = 'my.service'
     config.tls_verify = True
     config.timeout = 20
@@ -177,12 +221,21 @@ if __name__ == '__main__':
     import time
     time.sleep(0.1)
 
-    token1 = api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN, vault_token)
-    logger.info('Token1 %s', token1)
+    response1 = api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN, client_token)
+    logger.info('Response1 %s', response1)
 
-    token2 = api[name].client.authenticate(VAULT.AUTH_METHOD.USERNAME_PASSWORD, username, password)
-    api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN, token2)
-    api[name].client.renew_token(token2)
-    logger.info('Token2 %s', token2)
+    response2 = api[name].client.authenticate(VAULT.AUTH_METHOD.USERNAME_PASSWORD, username, password)
+    logger.info('Response2 %s', response2)
+    api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN, response2.client_token)
+    api[name].client.renew_token(response2.client_token)
+
+    if gh_token:
+        token3 = api[name].client.authenticate(VAULT.AUTH_METHOD.GITHUB, gh_token)
+        api[name].client.authenticate(VAULT.AUTH_METHOD.TOKEN, token3)
+        api[name].client.renew_token(token3)
+        logger.info('Token3 %s', token3)
+
+    response = api[name].client.renew(response2.client_token)
+    logger.info('Renew 11 %s', bunchify(response))
 
 # ################################################################################################################################
