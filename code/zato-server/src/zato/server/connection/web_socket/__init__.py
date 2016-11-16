@@ -56,8 +56,8 @@ class TokenInfo(object):
         self.expires_at =  self.creation_time
         self.extend()
 
-    def extend(self, _timedelta=timedelta):
-        self.expires_at = self.expires_at + _timedelta(seconds=self.ttl)
+    def extend(self, extend_by=None, _timedelta=timedelta):
+        self.expires_at = self.expires_at + _timedelta(seconds=extend_by or self.ttl)
 
 # ################################################################################################################################
 
@@ -128,16 +128,22 @@ class WebSocket(_WebSocket):
             msg.action = meta.action
             msg.id = meta.id
             msg.timestamp = meta.timestamp
-            msg.ext_client_id = meta.client_id
-            msg.ext_client_name = meta.get('client_name')
+            msg.token = meta.get('token') # Optional because it won't exist during first authentication
+
+            # self.ext_client_id and self.ext_client_name will exist after authenticate action
+            # so we use them if they are available but fall back to meta.client_id and meta.client_name during
+            # the very authenticate action.
+            msg.ext_client_id = self.ext_client_id or meta.client_id
+            msg.ext_client_name = self.ext_client_name or meta.get('client_name')
 
             if msg.action == _auth:
                 msg.sec_type = meta.sec_type
                 msg.username = meta.get('username')
                 msg.secret = meta.secret
-                msg.has_credentials = True
+                msg.is_auth = True
             else:
                 msg.in_reply_to = meta.get('in_reply_to')
+                msg.is_auth = False
 
         _data = parsed.get('data', {}).get('input')
         msg.data =_data['response'] if msg.action == _response else _data
@@ -175,17 +181,19 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def send_background_pings(self):
+    def send_background_pings(self, ping_extend=20):
         try:
             while self.stream:
 
                 # Sleep for N seconds before sending a ping but check if we are connected upfront because
                 # we could have disconnected in between while and sleep calls.
-                sleep(20)
+                sleep(ping_extend)
 
                 # Ok, still connected
                 if self.stream:
                     self.invoke_client(new_cid(), 'zato-keep-alive-ping')
+                    with self.update_lock:
+                        self.token.extend(ping_extend)
 
                 # Alrady disconnected, we can quit
                 else:
@@ -228,7 +236,7 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def handle_authenticate(self, cid, request):
-        if request.has_credentials:
+        if request.is_auth:
             response = self.authenticate(cid, request)
             if response:
                 self.send(response)
@@ -319,12 +327,26 @@ class WebSocket(_WebSocket):
 
             logger.info('Request received cid:`%s`, client:`%s`', cid, self.pub_client_id)
 
-            # If client is authenticated we allow either for it to re-authenticate, which grants a new token, or to invoke a service.
+            # If client is authenticated, allow it to re-authenticate, which grants a new token, or to invoke a service.
             # Otherwise, authentication is required.
 
             if self.is_authenticated:
-                self.handle_client_message(cid, request) if not request.has_credentials else \
-                    self.handle_authenticate(cid, request)
+
+                # Reject request if an already existing token was not given on input, it should have been
+                # because the client is authenticated after all.
+                if not request.token:
+                    self.on_forbidden('did not send token')
+                    return
+
+                # Reject request if token is provided but it already expired
+                if _now() > self.token.expires_at:
+                    self.on_forbidden('used an expired token')
+                    return
+
+                # Ok, we can proceed
+                self.handle_client_message(cid, request) if not request.is_auth else self.handle_authenticate(cid, request)
+
+            # Unauthenticated - require credentials on input
             else:
                 self.handle_authenticate(cid, request)
 
