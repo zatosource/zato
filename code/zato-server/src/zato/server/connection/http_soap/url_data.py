@@ -224,8 +224,6 @@ class URLData(OAuthDataStore):
             for key, header in _vault_ws[sec_def_type].iteritems():
                 headers[header] = auth[key]
 
-            print(3333, headers)
-
         return auth_func(cid, get_func(sec_name)['config'], None, None, headers, enforce_auth=False)
 
 # ################################################################################################################################
