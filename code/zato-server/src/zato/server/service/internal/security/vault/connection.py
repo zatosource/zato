@@ -12,10 +12,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from uuid import uuid4
 
+# SQLAlchemy
+from sqlalchemy.orm.exc import NoResultFound
+
 # Zato
 from zato.common.broker_message import VAULT
 from zato.common.odb.model import Service, VaultConnection
-from zato.common.odb.query import vault_connection, vault_connection_list
+from zato.common.odb.query import service, vault_connection_list
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -26,6 +29,7 @@ broker_message = VAULT
 broker_message_prefix = 'CONNECTION_'
 list_func = vault_connection_list
 output_optional_extra = ['service_id', 'service_name']
+extra_delete_attrs = ['cluster_id', 'service_id']
 
 def instance_hook(self, input, instance, attrs):
     instance.username = uuid4().hex
@@ -33,7 +37,10 @@ def instance_hook(self, input, instance, attrs):
 def broker_message_hook(self, input, instance, attrs, service_type):
 
     with closing(self.odb.session()) as session:
-        input.service_name = vault_connection(session, input.cluster_id, input.id).service_name
+        try:
+            input.service_name = service(session, input.cluster_id, input.service_id).name
+        except NoResultFound:
+            pass # That is fine, service is optional for Vault connections
 
 class GetList(AdminService):
     _filter_by = VaultConnection.name,
