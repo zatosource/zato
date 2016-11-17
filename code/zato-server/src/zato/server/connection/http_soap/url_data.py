@@ -37,7 +37,7 @@ from sortedcontainers import SortedListWithKey
 # Zato
 from zato.bunch import Bunch
 from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, URL_TYPE, VAULT, ZATO_NONE
-from zato.common.broker_message import code_to_name, CHANNEL, SECURITY
+from zato.common.broker_message import code_to_name, CHANNEL, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition
 from zato.server.connection.http_soap import Forbidden, Unauthorized
@@ -144,6 +144,7 @@ class URLData(OAuthDataStore):
         self.url_path_cache = {}
 
         dispatcher.listen_for_updates(SECURITY, self.dispatcher_callback)
+        dispatcher.listen_for_updates(VAULT_BROKER_MSG, self.dispatcher_callback)
 
 # ################################################################################################################################
 
