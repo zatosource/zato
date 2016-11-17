@@ -18,7 +18,7 @@ from django.conf import settings
 from django.template import Context, Template
 
 # Zato
-from zato.server.service import Service
+from zato.server.service import AsIs, Service
 
 # Configure Django settings when the module is picked up
 if not settings.configured:
@@ -76,6 +76,8 @@ class HTMLService(Service):
 # ################################################################################################################################
 
 class TLSLogger(Service):
+    """ Logs details of client TLS certificates.
+    """
     def handle(self):
         has_tls = False
         for k, v in sorted(self.wsgi_environ.items()):
@@ -85,5 +87,17 @@ class TLSLogger(Service):
 
         if not has_tls:
             self.logger.warn('No HTTP_X_ZATO_TLS_* headers found')
+
+# ################################################################################################################################
+
+class WebSocketsGateway(Service):
+    """ Dispatches incoming requests to target services.
+    """
+    class SimpleIO:
+        input_required = ('service',)
+        input_optional = (AsIs('request'),)
+
+    def handle(self):
+        self.response.payload = self.invoke(self.request.input.service, self.request.input.request)
 
 # ################################################################################################################################
