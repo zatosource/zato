@@ -40,7 +40,7 @@ def broker_message_hook(self, input, instance, attrs, service_type):
         try:
             input.service_name = service(session, input.cluster_id, input.service_id).name
         except NoResultFound:
-            pass # That is fine, service is optional for Vault connections
+            input.service_name = '' # That is fine, service is optional for Vault connections
 
 class GetList(AdminService):
     _filter_by = VaultConnection.name,
