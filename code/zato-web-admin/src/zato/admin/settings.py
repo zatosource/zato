@@ -91,6 +91,17 @@ TEMPLATES = [{
     },
 }]
 
+# Make OpenID optional
+# Data model is not tested with Oracle
+# as documented here: https://review.cloudera.org/r/4463/diff/1/
+# and here: https://github.com/edx/django-openid-auth/blob/master/django_openid_auth/south_migrations/0001_initial.py
+
+USE_OPENID = True
+
+if os.environ.get('ZATO_USE_OPENID').lower() == 'false':
+    USE_OPENID = False
+
+
 INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.auth',
@@ -98,14 +109,18 @@ INSTALLED_APPS = (
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.humanize',
-    'django_openid_auth',
+    #'django_openid_auth',
     'zato.admin.web',
 )
 
 AUTHENTICATION_BACKENDS = (
-    'django_openid_auth.auth.OpenIDBackend',
+    #'django_openid_auth.auth.OpenIDBackend',
     'django.contrib.auth.backends.ModelBackend',
 )
+
+if USE_OPENID:
+    INSTALLED_APPS = INSTALLED_APPS + ('django_openid_auth',)
+    AUTHENTICATION_BACKENDS = AUTHENTICATION_BACKENDS + ('django_openid_auth.auth.OpenIDBackend',)
 
 # Its value is injected from web-admin.conf zato.admin.zato_settings.update_globals
 if globals().get('OPENID_SSO_SERVER_URL'):

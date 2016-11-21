@@ -450,7 +450,8 @@ class HTTPSOAP(Base):
     url_path = Column(String(200), nullable=False)
     method = Column(String(200), nullable=True)
 
-    soap_action = Column(String(200), nullable=False)
+    soap_action = Column(String(200), nullable=True)  # Set to nullable, since this causes problems on oracle
+                                                      # '' is treated as Null on Oracle
     soap_version = Column(String(20), nullable=True)
 
     data_format = Column(String(20), nullable=True)
@@ -648,7 +649,8 @@ class DeployedService(Base):
     """ A service living on a given server.
     """
     __tablename__ = 'deployed_service'
-    __table_args__ = (UniqueConstraint('server_id', 'service_id'), {})
+    #__table_args__ = (UniqueConstraint('server_id', 'service_id'), {})  # Not supported and not needed since PK will make the columns unique
+                                                                         # Illegal construction on Oracle where PK can not be explicitly defined as unique
 
     deployment_time = Column(DateTime(), nullable=False)
     details = Column(String(2000), nullable=False)
@@ -1615,7 +1617,9 @@ class NotificationOpenStackSwift(Notification):
 
     id = Column(Integer, ForeignKey('notif.id'), primary_key=True)
 
-    containers = Column(String(20000), nullable=False)
+    #containers = Column(String(20000), nullable=False)
+    containers = Column(String(4000), nullable=False)  # Quick fix since String renders to VARCHAR2 where max_length on Oracle is 4000
+                                                       # Should probably make it render to CLOB instead of VARCHAR2
 
     def_id = Column(Integer, ForeignKey('os_swift.id'), primary_key=True)
     definition = relationship(OpenStackSwift, backref=backref('notif_oss_list', order_by=id, cascade='all, delete, delete-orphan'))
