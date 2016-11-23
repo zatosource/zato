@@ -921,7 +921,7 @@ class URLData(OAuthDataStore):
         """ Creates a new channel, both its core data and the related security definition.
         Clears out URL cache for that entry, if it existed at all.
         """
-        match_target = '{}{}{}'.format(msg.soap_action, MISC.SEPARATOR, msg.url_path)
+        match_target = '{}{}{}'.format(msg.soap_action or '', MISC.SEPARATOR, msg.url_path)
         self.channel_data.add(self._channel_item_from_msg(msg, match_target, old_data))
         self.url_sec[match_target] = self._sec_info_from_msg(msg)
         self.url_path_cache.pop(match_target, None)
