@@ -165,7 +165,7 @@ class ODBManager(SessionWrapper):
                 columns[c.name] = None
 
             for item in q.all():
-                target = '{}{}{}'.format(item.soap_action, MISC.SEPARATOR, item.url_path)
+                target = '{}{}{}'.format(item.soap_action or '', MISC.SEPARATOR, item.url_path)
 
                 result[target] = Bunch()
                 result[target].is_active = item.is_active
