@@ -252,7 +252,7 @@ class WorkerStore(BrokerMessageReceiver):
             'name':config.name, 'transport':config.transport,
             'address_host':config.host,
             'address_url_path':config.url_path,
-            'soap_action':config.soap_action, 'soap_version':config.soap_version, 'ping_method':config.ping_method,
+            'soap_action':config.soap_action or '', 'soap_version':config.soap_version, 'ping_method':config.ping_method,
             'pool_size':config.pool_size, 'serialization_type':config.serialization_type,
             'timeout':config.timeout}
         wrapper_config.update(sec_config)
