@@ -98,7 +98,7 @@ TEMPLATES = [{
 
 USE_OPENID = True
 
-if os.environ.get('ZATO_USE_OPENID').lower() == 'false':
+if os.environ.get('ZATO_USE_OPENID', '').lower() == 'false':
     USE_OPENID = False
 
 
