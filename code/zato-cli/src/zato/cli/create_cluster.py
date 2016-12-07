@@ -349,23 +349,23 @@ zato_services = {
     'zato.security.rbac.role.create':'zato.server.service.internal.security.rbac.role.Create',
     'zato.security.rbac.role.delete':'zato.server.service.internal.security.rbac.role.Delete',
     'zato.security.rbac.role.edit':'zato.server.service.internal.security.rbac.role.Edit',
-    'zato.security.rbac.role.get-list':'zato.server.service.internal.security.rbac.role.get-list',
+    'zato.security.rbac.role.get-list':'zato.server.service.internal.security.rbac.role.GetList',
 
     # Security - RBAC - Client roles
     'zato.security.rbac.client-role.create':'zato.server.service.internal.security.rbac.client_role.Create',
     'zato.security.rbac.client-role.delete':'zato.server.service.internal.security.rbac.client_role.Delete',
-    'zato.security.rbac.client-role.get-list':'zato.server.service.internal.security.rbac.client_role.get-list',
+    'zato.security.rbac.client-role.get-list':'zato.server.service.internal.security.rbac.client_role.GetList',
 
     # Security - RBAC - Permissions
     'zato.security.rbac.permission.create':'zato.server.service.internal.security.rbac.permission.Create',
     'zato.security.rbac.permission.delete':'zato.server.service.internal.security.rbac.permission.Delete',
     'zato.security.rbac.permission.edit':'zato.server.service.internal.security.rbac.permission.Edit',
-    'zato.security.rbac.permission.get-list':'zato.server.service.internal.security.rbac.permission.get-list',
+    'zato.security.rbac.permission.get-list':'zato.server.service.internal.security.rbac.permission.GetList',
 
     # Security - RBAC - Permissions for roles
     'zato.security.rbac.role-permission.create':'zato.server.service.internal.security.rbac.role_permission.Create',
     'zato.security.rbac.role-permission.delete':'zato.server.service.internal.security.rbac.role_permission.Delete',
-    'zato.security.rbac.role-permission.get-list':'zato.server.service.internal.security.rbac.role_permission.get-list',
+    'zato.security.rbac.role-permission.get-list':'zato.server.service.internal.security.rbac.role_permission.GetList',
 
     # Security - Technical accounts
     'zato.security.tech-account.change-password':'zato.server.service.internal.security.tech_account.ChangePassword',
