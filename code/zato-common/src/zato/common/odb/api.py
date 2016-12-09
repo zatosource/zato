@@ -717,6 +717,8 @@ class ODBManager(SessionWrapper):
             ('zato.security.rbac.client-role.create.json', 'zato.server.service.internal.security.rbac.client_role.Create'),
             ('zato.security.rbac.client-role.delete', 'zato.server.service.internal.security.rbac.client_role.Delete'),
             ('zato.security.rbac.client-role.delete.json', 'zato.server.service.internal.security.rbac.client_role.Delete'),
+            ('zato.security.rbac.client-role.get-client-def-list', 'zato.server.service.internal.security.rbac.client_role.GetClientDefList'),
+            ('zato.security.rbac.client-role.get-client-def-list.json', 'zato.server.service.internal.security.rbac.client_role.GetClientDefList'),
             ('zato.security.rbac.permission.create', 'zato.server.service.internal.security.rbac.permission.Create'),
             ('zato.security.rbac.permission.create.json', 'zato.server.service.internal.security.rbac.permission.Create'),
             ('zato.security.rbac.permission.delete', 'zato.server.service.internal.security.rbac.permission.Delete'),

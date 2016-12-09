@@ -355,6 +355,7 @@ zato_services = {
     'zato.security.rbac.client-role.create':'zato.server.service.internal.security.rbac.client_role.Create',
     'zato.security.rbac.client-role.delete':'zato.server.service.internal.security.rbac.client_role.Delete',
     'zato.security.rbac.client-role.get-list':'zato.server.service.internal.security.rbac.client_role.GetList',
+    'zato.security.rbac.client-role.get-client-def-list':'zato.server.service.internal.security.rbac.client_role.GetClientDefList',
 
     # Security - RBAC - Permissions
     'zato.security.rbac.permission.create':'zato.server.service.internal.security.rbac.permission.Create',
