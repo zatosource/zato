@@ -24,8 +24,8 @@ from lxml.objectify import Element
 from paste.util.converters import asbool
 
 # Zato
-from zato.common import DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, path, ZatoException, ZATO_NONE, \
-     ZATO_SEC_USE_RBAC
+from zato.common import APISPEC, DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, path, ZatoException, \
+     ZATO_NONE, ZATO_SEC_USE_RBAC
 
 logger = logging.getLogger(__name__)
 
@@ -319,11 +319,22 @@ COMPLEX_VALUE = (AsIs, Dict, List, ListOfDicts, Nested)
 
 # ################################################################################################################################
 
+def is_bool(param, param_name, bool_parameter_prefixes, _Boolean=Boolean):
+    return any(param_name.startswith(prefix) for prefix in bool_parameter_prefixes) or isinstance(param, _Boolean)
+
+# ################################################################################################################################
+
+def is_int(param_name, int_params, int_param_suffixes):
+        if any(param_name==elem for elem in int_params) or any(param_name.endswith(suffix) for suffix in int_param_suffixes):
+            return True
+
+# ################################################################################################################################
+
 def convert_sio(param, param_name, value, has_simple_io_config, is_xml, bool_parameter_prefixes, int_parameters,
-                int_parameter_suffixes, date_time_format=None, data_format=ZATO_NONE, from_sio_to_external=False,
-                special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC)):
+    int_parameter_suffixes, date_time_format=None, data_format=ZATO_NONE, from_sio_to_external=False,
+    special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC), _is_bool=is_bool, _is_int=is_int):
     try:
-        if any(param_name.startswith(prefix) for prefix in bool_parameter_prefixes) or isinstance(param, Boolean):
+        if _is_bool(param, param_name, bool_parameter_prefixes):
             value = asbool(value or None) # value can be an empty string and asbool chokes on that
 
         if value is not None:
@@ -331,8 +342,7 @@ def convert_sio(param, param_name, value, has_simple_io_config, is_xml, bool_par
                 value = param.convert(value, param_name, data_format, from_sio_to_external)
             else:
                 if value and (value not in special_values) and has_simple_io_config:
-                    if any(param_name==elem for elem in int_parameters) or \
-                       any(param_name.endswith(suffix) for suffix in int_parameter_suffixes):
+                    if _is_int(param_name, int_parameters, int_parameter_suffixes):
                         value = int(value)
 
         return value
@@ -358,6 +368,8 @@ def convert_from_json(payload, param_name, cid, *ignored):
     return (payload or {}).get(param_name, NOT_GIVEN)
 
 convert_from_dict = convert_from_json
+
+# ################################################################################################################################
 
 def convert_from_xml(payload, param_name, cid, is_required, is_complex, default_value, path_prefix, use_text):
     try:
@@ -386,6 +398,8 @@ convert_impl = {
     DATA_FORMAT.DICT: convert_from_dict,
     None: convert_from_dict,
 }
+
+# ################################################################################################################################
 
 def convert_param(cid, payload, param, data_format, is_required, default_value, path_prefix, use_text,
                   channel_params, has_simple_io_config, bool_parameter_prefixes, int_parameters, int_parameter_suffixes,
@@ -445,3 +459,63 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
                 bool_parameter_prefixes, int_parameters, int_parameter_suffixes, None, data_format, False)
 
     return param_name, value
+
+# ################################################################################################################################
+
+class SIO_TYPE_MAP:
+
+# ################################################################################################################################
+
+    class OPEN_API_V2:
+
+        name = APISPEC.OPEN_API_V2
+        STRING = ('string', None)
+        DEFAULT = STRING
+        INTEGER = ('integer', 'int32')
+        BOOLEAN = ('boolean', None)
+
+        map = {
+            AsIs: STRING,
+            Boolean: BOOLEAN,
+            CSV: STRING,
+            Dict: (None, None),
+            Float: ('number', 'float'),
+            Integer: INTEGER,
+            List: (None, None),
+            ListOfDicts: (None, None),
+            Opaque: (None, None),
+            Unicode: STRING,
+            UTC: ('string', 'date-time'),
+        }
+
+# ################################################################################################################################
+
+    class ZATO:
+
+        name = 'zato'
+        STRING = ('string', 'string')
+        DEFAULT = STRING
+        INTEGER = ('integer', 'integer')
+        BOOLEAN = ('boolean', 'boolean')
+
+        map = {
+            AsIs: STRING,
+            Boolean: BOOLEAN,
+            CSV: STRING,
+            Dict: ('dict', 'dict'),
+            Float: ('number', 'float'),
+            Integer: INTEGER,
+            List: ('list', 'list'),
+            ListOfDicts: ('list', 'list-of-dicts'),
+            Opaque: ('opaque', 'opaque'),
+            Unicode: STRING,
+            UTC: ('string', 'date-time-utc'),
+        }
+
+# ################################################################################################################################
+
+    class __metaclass__(type):
+        def __iter__(self):
+            return iter((self.OPEN_API_V2, self.ZATO))
+
+# ################################################################################################################################

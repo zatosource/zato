@@ -110,8 +110,8 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, SECRET_SHADOW, SIMPLE_IO, \
-     soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN, ZMQ
+from zato.common import CHANNEL, curdir as common_curdir, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, SECRET_SHADOW, \
+     SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
@@ -1604,5 +1604,25 @@ def require_tcp_port(address):
         int(port)
     except ValueError:
         raise Exception('Invalid TCP port in {}'.format(address))
+
+# ################################################################################################################################
+
+def get_brython_js():
+    code_root = os.path.normpath(os.path.join(common_curdir, '..', '..', '..', '..'))
+    brython_path = os.path.join(
+        code_root, 'zato-web-admin', 'src', 'zato', 'admin', 'static', 'brython', '_brython', 'brython.js')
+
+    f = open(brython_path)
+    brython = f.read()
+    f.close()
+
+    # To make it 100% certain that we are returning the correct file
+    expected = '450c1a7fcab574947c5a5299b81512be2f251649c326209e7c612ed1be6f35e5'
+    actual = sha256(brython).hexdigest()
+
+    if actual != expected:
+        raise ValueError('Failed to validate hash of `{}`'.format(brython_path))
+
+    return brython
 
 # ################################################################################################################################

@@ -46,6 +46,8 @@ class ZatoContext(PythonConfig):
     def internal_service_modules(self):
         return [
             'zato.server.service.internal',
+            'zato.server.service.internal.apispec',
+            'zato.server.service.internal.apispec.pub',
             'zato.server.service.internal.checks.sio',
             'zato.server.service.internal.channel.amqp',
             'zato.server.service.internal.channel.jms_wmq',
@@ -167,6 +169,7 @@ class ZatoContext(PythonConfig):
         server = ParallelServer()
         server.odb = self.odb_manager()
         server.service_store = self.service_store()
+        server.service_store.server = server
         server.sql_pool_store = self.sql_pool_store()
         server.int_parameters = self.int_parameters()
         server.int_parameter_suffixes = self.int_parameter_suffixes()

@@ -64,10 +64,11 @@ def get_service_name(class_obj):
 class ServiceStore(InitializingObject):
     """ A store of Zato services.
     """
-    def __init__(self, services=None, service_store_config=None, odb=None):
+    def __init__(self, services=None, service_store_config=None, odb=None, server=None):
         self.services = services
         self.service_store_config = service_store_config
         self.odb = odb
+        self.server = server
         self.id_to_impl_name = {}
         self.impl_name_to_id = {}
         self.name_to_impl_name = {}
@@ -358,6 +359,14 @@ class ServiceStore(InitializingObject):
                     item = getattr(mod, name)
 
                     if self._should_deploy(name, item):
+
+                        # Set up enforcement of what other services a given service can invoke
+                        try:
+                            item.invokes
+                        except AttributeError:
+                            item.invokes = []
+
+                        setattr(item, '_enforce_service_invokes', self.server.enforce_service_invokes)
 
                         should_add = item.before_add_to_store(logger)
                         if should_add:
