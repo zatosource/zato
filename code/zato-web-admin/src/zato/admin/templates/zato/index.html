@@ -13,6 +13,7 @@
     <script type="text/javascript" src="/static/js/stringformat.js"></script>
     <script type="text/javascript" src="/static/mootools/mootools.js"></script>
     <script type="text/javascript" src="/static/superfish/js/superfish.js"></script>
+    <script type="text/javascript" src="/static/brython/_brython/brython.js"></script>
 
     <script>
 
@@ -58,6 +59,15 @@
                 <li><span class="like-a">Services &darr;</span>
                     <ul>
                         <li><a href="{% url "service" %}?cluster={{ cluster_id|default:'' }}">List services</a></li>
+                        <ul>
+                            <li>
+                                <span class="like-a">Documentation &rarr;</span>
+                                <ul>
+                                    <li><a href="{% url "docs-index" %}?cluster={{ cluster_id|default:'' }}">Web-admin</a></li>
+                                    <li><a href="{% url "docs-index" %}?cluster={{ cluster_id|default:'' }}">Public</a></li>
+                                </ul>
+                            </li>
+                        </ul>
                     </ul>
                 </li>
 

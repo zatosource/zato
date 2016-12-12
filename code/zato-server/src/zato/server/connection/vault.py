@@ -27,7 +27,6 @@ from hvac import Client
 
 # Zato
 from zato.common import VAULT
-from zato.server.config import ConfigDict
 
 # ################################################################################################################################
 

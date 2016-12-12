@@ -243,6 +243,17 @@ def overview(req, service_name):
                         url += '&highlight={}'.format(item.id)
                         service.scheduler_jobs.append(ExposedThrough(item.id, item.name, url))
 
+            response = req.zato.client.invoke('zato.apispec.get-api-spec', {'query':service.name})
+            if response.has_data:
+                if response.data.services:
+                    service_data = response.data.services[0]
+                    service.docs_full = service_data.docs.full
+                    service.docs_full_html = service_data.docs.full_html
+                    service.docs_summary = service_data.docs.summary
+                    service.docs_description = service_data.docs.description
+                    service.invokes = service_data.invokes
+                    service.invoked_by = service_data.invoked_by
+
     return_data = {'zato_clusters':req.zato.clusters,
         'service': service,
         'cluster_id':cluster_id,

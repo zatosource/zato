@@ -117,6 +117,7 @@ aws_host=
 use_soap_envelope=True
 fifo_response_buffer_size=0.2 # In MB
 jwt_secret={{jwt_secret}}
+enforce_service_invokes=False
 
 [stats]
 expire_after=168 # In hours, 168 = 7 days = 1 week
@@ -216,6 +217,11 @@ address=
 ip=10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, eth0
 boot_if_preferred_not_found=False
 allow_loopback=False
+
+[apispec]
+pub_enabled=False
+pub_name=API specification
+pub_css_style="color:#eee; font-weight:bold; font-size:17px; padding-left:2px"
 
 [os_environ]
 sample_key=sample_value

@@ -851,6 +851,9 @@ VAULT.WEB_SOCKET = {
     }
 }
 
+class APISPEC:
+    OPEN_API_V2 = 'openapi-v2'
+    NAMESPACE_NULL = ''
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

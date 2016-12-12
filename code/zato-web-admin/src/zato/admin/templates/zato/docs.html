@@ -1,0 +1,223 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Documentation{% endblock %}
+
+{% block "extra_css" %}
+
+    <style type="text/css">
+
+        /* ///////////////////////////////////
+        // Namespaces
+        // //////////////////////////////// */
+
+        div.highlight span.header {
+            background-color:#e0e030;
+            color:#000
+        }
+
+        .td-ns {
+            background-color: #e1e3e5;
+            border: 1px solid #adb3b9;
+            border-radius: 3px;
+            box-shadow: 0 1px 0 rgba(12, 13, 14, 0.2), 0 0 0 2px #fff inset;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0 0.1em;
+            margin-bottom: 3px;
+            text-shadow: 0 1px 0 #fff;
+            white-space: nowrap;
+            vertical-align:bottom !important;
+        }
+
+        .ns-name {
+            float:left;
+            font-weight:600
+        }
+
+        .ns-name span.docs {
+            font-weight:500;
+            color: #666;
+        }
+
+        .ns-options {
+            float:right;
+            padding:none !important
+        }
+
+        .tr-ns + .tr-service .td-service {
+            border-top:none;
+        }
+
+        /* ///////////////////////////////////
+        // Services
+        // //////////////////////////////// */
+
+        .td-service {
+            border-left:1px dashed #c3c3c3;
+            border-right:1px dashed #c3c3c3;
+            border-top:1px dashed #c3c3c3;
+        }
+
+        .service-name > .service-desc{
+            color:#666
+        }
+
+        .service-name > .service-desc {
+            display:inline !important;
+        }
+
+        .service-name {
+            float:left;
+            padding-left:3px;
+        }
+
+        .service-io th {
+            text-align:center;
+            font-size:0.9em !important;
+            border-bottom:1px solid #c9c9c9 !important;
+            border-top:1px solid #c9c9c9 !important;
+            border-right:1px solid #c9c9c9 !important;
+        }
+
+        .service-io th.input {
+            border-left:1px solid #c9c9c9 !important;
+        }
+
+        .service-io td {
+            padding:10px !important;
+            border-bottom:1px dashed #ccc;
+            border-right:1px dashed #ccc;
+            font-size:1em;
+        }
+
+        .service-io td.req-opt {
+            font-size:0.8em;
+            color:#666;
+            font-style:italic
+        }
+
+        .io-is-required {
+            border-right:1px solid #c9c9c9 !important;
+        }
+
+        .tr-io-last td {
+            border-bottom:1px solid #c9c9c9 !important;
+        }
+
+        .io-name-input {
+            border-left:1px solid #c9c9c9 !important;
+        }
+
+        .service-options {
+            float:right;
+        }
+
+        .service-details {
+            clear:left;
+            padding:5px;
+            padding-left:0px;
+            color: #555;
+        }
+
+        .header-details {
+            margin-top:5px;
+            padding-top:5px;
+            padding-bottom:5px;
+            color:#333
+        }
+
+        .header-details strong, .header-details em {
+            color:#000;
+            padding:3px;
+            background-color:#e3e3e3;
+            font-style:italic;
+        }
+
+        .header-details p {
+            padding-top:3px;
+            padding-bottom:3px;
+        }
+
+        .header-details ul {
+            list-style-type: "• ";
+            padding-left:15px;
+        }
+
+        .header-details ol {
+            list-style-type:decimal;
+            padding-left:20px;
+        }
+
+        .header-details li {
+            padding-top:2px;
+            padding-bottom:2px;
+        }
+
+        .service-details .header, .service-details .header a {
+            font-size:11px !important;
+            color:#333;
+        }
+
+        .service-details .header, .service-details .header a:hover {
+            color:#000;
+        }
+
+        /* ///////////////////////////////////
+        // Containers and misc
+        // //////////////////////////////// */
+
+        #main-div {
+            text-align:center;
+        }
+
+        #main-div.no-results {
+            text-align:left;
+            background-color:#e9e9e9;
+            padding:5px;
+            border:1px dashed #ccc
+        }
+
+        #spec-table {
+            width:100%;
+            text-align:center;
+        }
+
+        #spec-table tr.tr-service:last-child > td {
+            border-bottom:1px dashed #ccc;
+        }
+
+    </style>
+
+{% endblock %}
+
+{% block "extra_js" %}
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/python" src="/static/brython/_zato/docs.py"></script>
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Documentation</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+{% include "zato/search-form.html" with page_prompt="Show documentation"%}
+
+    {% if cluster_id %}
+        <input type="hidden" id="cluster_id" value="{{ cluster_id }}" />
+    {% endif %}
+
+        <div id="docs-data" style="display:none">{{ response_inner }}</div>
+
+        <div id="markup">
+            <table id="data-table" style="border:none">
+                <tr>
+                    <td><div id="main-div"></div></td>
+                </tr>
+            </table>
+        </div>
+
+{% endif %}
+
+{% endblock %}

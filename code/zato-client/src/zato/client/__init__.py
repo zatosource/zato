@@ -255,8 +255,8 @@ class ServiceInvokeResponse(JSONSIOResponse):
                     # Not a JSON response
                     self.data = self.inner_service_response
                 else:
-                    self.meta = data.get('_meta')
                     if isinstance(data, dict):
+                        self.meta = data.get('_meta')
                         data_keys = data.keys()
                         if len(data_keys) == 1:
                             data_key = data_keys[0]
