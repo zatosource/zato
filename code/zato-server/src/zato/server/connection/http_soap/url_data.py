@@ -17,9 +17,6 @@ from operator import attrgetter
 from threading import RLock
 from traceback import format_exc
 
-# Bunch
-from bunch import bunchify
-
 # oauth
 from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
      OAuthSignatureMethod_PLAINTEXT, OAuthToken
@@ -905,13 +902,6 @@ class URLData(OAuthDataStore):
 
     def vault_conn_sec_get(self, name):
         """ Returns configuration of a Vault connection of the given name.
-        """
-        with self.url_sec_lock:
-            return self.vault_conn_sec_config.get(name)
-
-    def vault_conn_sec_get(self, name):
-        """ Returns the configuration of the Vault security definition
-        of the given name.
         """
         with self.url_sec_lock:
             return self.vault_conn_sec_config.get(name)

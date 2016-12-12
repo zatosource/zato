@@ -319,6 +319,9 @@ class Index(_BaseView):
     def _handle_item(self, item):
         pass
 
+    def handle_return_data(self, return_data):
+        return return_data
+
     def __call__(self, req, *args, **kwargs):
         """ Handles the request, taking care of common things and delegating
         control to the subclass for fetching this view-specific data.
@@ -340,6 +343,7 @@ class Index(_BaseView):
                 self.before_invoke_admin_service()
                 response = self.invoke_admin_service()
                 if response.ok:
+                    return_data['response_inner'] = response.inner_service_response
                     if output_repeated:
                         if isinstance(response.data, dict):
                             response.data.pop('_meta', None)
@@ -368,6 +372,8 @@ class Index(_BaseView):
             view_specific = self.handle()
             if view_specific:
                 return_data.update(view_specific)
+
+            return_data = self.handle_return_data(return_data)
 
             return TemplateResponse(req, self.template, return_data)
 

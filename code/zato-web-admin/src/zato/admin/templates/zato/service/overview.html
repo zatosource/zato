@@ -3,6 +3,21 @@
 {% block html_title %}{{ service.name }} - Overview{% endblock %}
 
 {% block "extra_css" %}
+
+<style type="text/css">
+
+    #docs-table * p {
+        padding-bottom:15px;
+        line-height:100%;
+    }
+
+    #docs-table * li{
+        list-style-type: square;
+        margin-left:12px;
+        padding-bottom:2px;
+    }
+</style>
+
 {% endblock %}
 
 {% block "extra_js" %}
@@ -94,21 +109,61 @@
                             </td>
 
                             <td style="width:65%">
+
+                                {% if service.docs_full_md %}
+                                <table style="width:100%;" id="docs-table">
+                                    <tr>
+                                        <td class='inline_header'>Documentation</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            {{ service.docs_full_md|safe }}
+                                        </td>
+                                    </tr>
+                                </table>
+                                {% endif %}
+
                                 <table style="width:100%">
                                     <tr>
                                         <td class='inline_header'>Channels and scheduler</td>
                                     </tr>
                                     <tr>
                                         <td>
-                                            Plain HTTP: {% if not service.plain_http_channels %}(None) {% endif %}{% for item in service.plain_http_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
-                                            SOAP: {% if not service.soap_channels %}(None) {% endif %}{% for item in service.soap_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
-                                            AMQP: {% if not service.amqp_channels %}(None) {% endif %}{% for item in service.amqp_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
-                                            JMS WebSphere MQ: {% if not service.wmq_channels %}(None) {% endif %}{% for item in service.wmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
-                                            ZeroMQ: {% if not service.zmq_channels %}(None) {% endif %}{% for item in service.zmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
-                                            Scheduler: {% if not service.scheduler_jobs %}(None) {% endif %}{% for item in service.scheduler_jobs %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                            Plain HTTP: {% if not service.plain_http_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.plain_http_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                            SOAP: {% if not service.soap_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.soap_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                            AMQP: {% if not service.amqp_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.amqp_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                            JMS WebSphere MQ: {% if not service.wmq_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.wmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                            ZeroMQ: {% if not service.zmq_channels %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.zmq_channels %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
+                                            Scheduler: {% if not service.scheduler_jobs %}<span class="form_hint">(None)</span> {% endif %}{% for item in service.scheduler_jobs %}<a class="common" href="{{ item.url }}">{{ item.name }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}<br/>
                                         </td>
                                     </tr>
                                 </table>
+
+                                <table style="width:100%">
+                                    <tr>
+                                        <td class='inline_header'>Services</td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            Invokes:
+                                            {% if service.invokes %}
+                                                {% for service_name in service.invokes %}<a href="{% url "service-overview" service_name %}?cluster={{ cluster_id }}" class="common">{{ service_name }}</a>{% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="form_hint">(None)</span>
+                                            {% endif %}
+                                            <br/>
+                                            Invoked by:
+                                            {% if service.invoked_by %}
+                                                {% for service_name in service.invoked_by %}<a href="{% url "service-overview" service_name %}?cluster={{ cluster_id }}" class="common">{{ service_name }}</a>{% if not forloop.last %}, {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="form_hint">(None)</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+
                             </td>
                         </tr>
                     </table>

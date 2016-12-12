@@ -357,6 +357,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.cluster_id = server.cluster_id
         self.cluster = self.odb.cluster
 
+        # Looked up upfront here and assigned to services in their store
+        self.enforce_service_invokes = asbool(self.fs_server_config.misc.enforce_service_invokes)
+
         # For server-server communication
         logger.info('Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`', self.name,
             self.cluster.name, self.pid, 's' if use_tls else '', self.preferred_address,

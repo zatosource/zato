@@ -26,7 +26,21 @@ from zato.common.util import get_http_json_channel, get_http_soap_channel
 
 msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
 
+apispec_name_path = {
+    'zato.apispec.pub.brython-js': '/apispec/static/brython/_brython/brython.js',
+    'zato.apispec.pub.brython-json': '/apispec/static/brython/_brython/libs/json.js',
+    'zato.apispec.pub.main': '/apispec',
+    'zato.apispec.pub.frontend': '/apispec/static/brython/_zato/docs.py',
+}
+
 zato_services = {
+
+    # API Spec
+    'zato.apispec.get-api-spec':'zato.server.service.internal.apispec.GetAPISpec',
+    'zato.apispec.pub.main':'zato.server.service.internal.apispec.pub.Main',
+    'zato.apispec.pub.brython-js':'zato.server.service.internal.apispec.pub.BrythonJS',
+    'zato.apispec.pub.brython-json':'zato.server.service.internal.apispec.pub.BrythonJSON',
+    'zato.apispec.pub.frontend':'zato.server.service.internal.apispec.pub.Frontend',
 
     # Channels - AMQP
     'zato.channel.amqp.create':'zato.server.service.internal.channel.amqp.Create',
@@ -557,6 +571,9 @@ class Create(ZatoCommand):
             elif name == 'zato.message.live-browser.dispatch':
                 self.add_live_browser(session, cluster, service, live_browser_sec)
 
+            elif 'apispec.pub' in name:
+                self.add_apispec_pub(session, cluster, service)
+
             session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))
             session.add(get_http_json_channel(name, service, cluster, pubapi_sec))
 
@@ -700,4 +717,10 @@ class Create(ZatoCommand):
         channel = ChannelWebSocket(None, msg_browser_defaults.CHANNEL, True, True,
             'ws://0.0.0.0:{}/{}'.format(msg_browser_defaults.PORT, msg_browser_defaults.CHANNEL), DATA_FORMAT.JSON, 5,
             msg_browser_defaults.TOKEN_TTL, service=service, cluster=cluster, security=live_browser_sec)
+        session.add(channel)
+
+    def add_apispec_pub(self, session, cluster, service, _name_path=apispec_name_path):
+        url_path = _name_path[service.name]
+        channel = HTTPSOAP(None, url_path, True, True, 'channel', 'plain_http', None, url_path, None, '', None, None,
+            merge_url_params_req=True, service=service, cluster=cluster)
         session.add(channel)

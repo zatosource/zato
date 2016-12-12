@@ -17,7 +17,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 # Zato
 from zato.common.broker_message import VAULT
-from zato.common.odb.model import Service, VaultConnection
+from zato.common.odb.model import VaultConnection
 from zato.common.odb.query import service, vault_connection_list
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
