@@ -64,7 +64,6 @@ class CreateDefault(AdminService):
 
     def handle(self):
         req = self.request.input
-        from logging.handlers import SMTPHandler
 
         # pattern, is_by_ext_id, is_by_channel
         patterns = [

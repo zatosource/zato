@@ -11,9 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 
-# Bunch
-from bunch import bunchify
-
 # SQLAlchemy
 from sqlalchemy import and_
 
@@ -46,7 +43,7 @@ class DeleteCurrentSubscriptions(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
 
-            q = web_socket_sub_list(session, self.server.cluster_id).\
+            web_socket_sub_list(session, self.server.cluster_id).\
                 filter(WebSocketSubscription.client_id==self.request.input.client_id).\
                 filter(and_(
                     WebSocketSubscription.is_by_ext_id.is_(False),
@@ -73,7 +70,6 @@ class Subscribe(AdminService):
                 'client_id':client.id,
                 'pub_client_id':self.request.input.pub_client_id,
             })
-            aaa
 
             # .. now subscribe to all the new patterns.
             for pattern in set(elem.strip() for elem in self.request.input.query.strip().split()):

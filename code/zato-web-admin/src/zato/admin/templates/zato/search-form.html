@@ -3,7 +3,7 @@
     <form action="." method="get" id="main_page_form">
         {{ search_form.cluster }}
 
-        {% if meta %} {% comment %} Statistics and other pages will not need the search box {% endcomment %}
+        {% if meta or show_search_form %} {% comment %} Statistics and other pages will not need the search box {% endcomment %}
         {{ search_form.query }}
         {% endif %}
 

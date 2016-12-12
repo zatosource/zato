@@ -106,7 +106,6 @@ def notify_msg_browser(service, step):
 
         # Ok, something matched, send that client a notification
         if match_pattern(text, pattern):
-            request_pretty = service.request.raw_request
             spawn(service.out.websockets.invoke, {'meta':meta, 'request':service.request.raw_request}, id=ext_client_id)
 
 # ################################################################################################################################

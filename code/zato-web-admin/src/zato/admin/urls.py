@@ -16,7 +16,7 @@ from django.views.static import serve as django_static_serve
 
 # Zato
 from zato.admin import settings
-from zato.admin.web.views import account, cluster, http_soap, kvdb, load_balancer, main, scheduler, service, stats
+from zato.admin.web.views import account, cluster, docs, http_soap, kvdb, load_balancer, main, scheduler, service, stats
 from zato.admin.web.views.channel import amqp as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import stomp as channel_stomp
@@ -166,6 +166,15 @@ urlpatterns += [
         login_required(service.slow_response_details), name='service-slow-response-details'),
     url(r'^zato/service/slow-response/(?P<service_name>.*)/$',
         login_required(service.slow_response), name='service-slow-response'),
+    ]
+
+urlpatterns += [
+
+    # Services docs
+
+    url(r'^zato/docs/web-admin/$',
+        login_required(docs.Index()), name=docs.Index.url_name),
+
     ]
 
 # ################################################################################################################################

@@ -688,6 +688,11 @@ class Service(Base):
         self.time_trend_mean_1h = None # Not used by the database
         self.time_trend_rate_1h = None # Not used by the database
 
+        self.docs_summary = None # Not used by the database
+        self.docs_description = None # Not used by the database
+        self.invokes = None # Not used by the database
+        self.invoked_by = None # Not used by the database
+
 # ################################################################################################################################
 
 class DeployedService(Base):
