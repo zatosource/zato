@@ -28,14 +28,15 @@ symlink_py 'scipy'
 
 export CYTHON=$CURDIR/bin/cython
 
-sudo pip install distribute==0.6.49
-sudo pip install virtualenv==1.9.1
+sudo pip install distribute==0.7.3
+sudo pip install virtualenv==15.1.0
 sudo pip install zato-apitest
 
 virtualenv $CURDIR
 $CURDIR/bin/pip install --upgrade pip
 
 $CURDIR/bin/python bootstrap.py -v 1.7.0
+$CURDIR/bin/pip install setuptools==31.0.1
 $CURDIR/bin/pip install cython==0.22
 $CURDIR/bin/buildout
 
