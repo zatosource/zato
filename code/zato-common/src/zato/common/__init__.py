@@ -42,7 +42,7 @@ try:
     _version_py = os.path.normpath(os.path.join(curdir, '..', '..', '..', '..', '.version.py'))
     _locals = {}
     execfile(_version_py, _locals)
-    version = _locals['version']
+    version = 'Zato {}'.format(_locals['version'])
 except IOError:
     version = '2.0.3.4'
 
