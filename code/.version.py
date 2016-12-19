@@ -20,4 +20,4 @@ release = open(os.path.join(release_info_dir, 'release.json')).read()
 release = json.loads(release)
 revision = open(os.path.join(release_info_dir, 'revision.txt')).read()[:8]
 
-version = 'Zato {}.{}.{}.rev-{}'.format(release['major'], release['minor'], release['micro'], revision)
+version = '{}.{}.{}+rev.{}'.format(release['major'], release['minor'], release['micro'], revision)
