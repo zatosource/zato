@@ -115,15 +115,6 @@ class CreateTestCase(_Base):
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
 
-    def test_impl(self):
-        self.assertEquals(self.service_class.get_name(), 'zato.channel.amqp.create')
-
-        request_data = self.get_request_data()
-        with patch('zato.server.service.internal.channel.amqp.start_connector', self.get_fake_start_connector(request_data)):
-            with patch('zato.server.service.internal.channel.amqp.ChannelAMQP', self.get_fake_channel_amqp()):
-                self.check_impl(self.service_class, request_data, self.get_response_data(),
-                    self.sio.response_elem, self.mock_data)
-
 # ##############################################################################
 
 class EditTestCase(_Base):
@@ -162,15 +153,6 @@ class EditTestCase(_Base):
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
-
-    def test_impl(self):
-        self.assertEquals(self.service_class.get_name(), 'zato.channel.amqp.edit')
-
-        request_data = self.get_request_data()
-        with patch('zato.server.service.internal.channel.amqp.start_connector', self.get_fake_start_connector(request_data)):
-            with patch('zato.server.service.internal.channel.amqp.ChannelAMQP', self.get_fake_channel_amqp()):
-                self.check_impl(self.service_class, request_data, self.get_response_data(),
-                    self.sio.response_elem, self.mock_data)
 
 # ##############################################################################
 
