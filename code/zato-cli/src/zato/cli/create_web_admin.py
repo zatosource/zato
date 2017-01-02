@@ -18,7 +18,6 @@ except ImportError:
 import os, json, uuid
 from copy import deepcopy
 from random import getrandbits
-from traceback import format_exc
 
 # Django
 from django.core.management import call_command
@@ -65,7 +64,7 @@ initial_data_json = """[{{
 "model": "sites.site",
 "fields": {{
     "name": "web admin",
-    "domain":"webadmin.example.com"
+    "domain":"webadmin-{SITE_ID}.example.com"
     }}
 }}]
 """
@@ -157,10 +156,10 @@ class Create(ZatoCommand):
             user.set_password(password)
             user.save()
 
-        except IntegrityError, e:
+        except IntegrityError:
+            # This will happen if user 'admin' already exists, e.g. if this is not the first cluster in this database
             admin_created = False
             connection._rollback()
-            self.logger.info('Ignoring IntegrityError e:[%s]', format_exc(e).decode('utf-8'))
 
         # Needed because Django took over our logging config
         self.reset_logger(args, True)

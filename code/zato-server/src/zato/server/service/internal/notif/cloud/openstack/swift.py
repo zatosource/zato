@@ -21,7 +21,7 @@ from globre import match as globre_match
 # Zato
 from zato.common import NOTIF as COMMON_NOTIF, ZATO_NONE
 from zato.common.broker_message import NOTIF
-from zato.common.odb.model import NotificationOpenStackSwift, Service
+from zato.common.odb.model import Cluster, NotificationOpenStackSwift, Service
 from zato.common.odb.query import notif_cloud_openstack_swift_list
 from zato.server.service import Bool, ForceType, Int
 from zato.server.service.internal.notif import NotifierService
@@ -89,6 +89,7 @@ class _CreateEdit(AdminService):
 
                 item.service_id = session.query(Service.id).\
                     filter(Service.name==input.service_name).\
+                    filter(Service.cluster_id==Cluster.id).\
                     filter(Service.cluster_id==self.server.cluster_id).\
                     one()[0]
 
