@@ -78,6 +78,7 @@ class Create(AdminService):
             # Is the service's name correct?
             service = session.query(ServiceModel).\
                 filter(Cluster.id==input.cluster_id).\
+                filter(ServiceModel.cluster_id==Cluster.id).\
                 filter(ServiceModel.name==input.service).first()
 
             if not service:
@@ -149,6 +150,7 @@ class Edit(AdminService):
             # Is the service's name correct?
             service = session.query(ServiceModel).\
                 filter(Cluster.id==input.cluster_id).\
+                filter(Service.cluster_id==Cluster.id).\
                 filter(ServiceModel.name==input.service).first()
 
             if not service:

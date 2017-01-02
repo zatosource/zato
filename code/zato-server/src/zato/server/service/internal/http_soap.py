@@ -147,6 +147,7 @@ class Create(_CreateEdit):
             # Is the service's name correct?
             service = session.query(Service).\
                 filter(Cluster.id==input.cluster_id).\
+                filter(Service.cluster_id==Cluster.id).\
                 filter(Service.name==input.service).first()
 
             if input.connection == 'channel' and not service:
@@ -259,6 +260,7 @@ class Edit(_CreateEdit):
             # Is the service's name correct?
             service = session.query(Service).\
                 filter(Cluster.id==input.cluster_id).\
+                filter(Service.cluster_id==Cluster.id).\
                 filter(Service.name==input.service).first()
 
             if input.connection == 'channel' and not service:
