@@ -69,6 +69,7 @@ Feature: zato.service.get-list
     Given format "JSON"
     Given request is "{}"
     Given JSON Pointer "/cluster_id" in request is "$ZATO_API_TEST_CLUSTER_ID"
+    Given JSON Pointer "/name_filter" in request is "test-service.test-service"
 
     When the URL is invoked
 
