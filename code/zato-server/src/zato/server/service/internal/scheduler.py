@@ -61,6 +61,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     # Is the service's name correct?
     service = session.query(Service).\
         filter(Cluster.id==cluster_id).\
+        filter(Service.cluster_id==Cluster.id).\
         filter(Service.name==service_name).first()
 
     if not service:
