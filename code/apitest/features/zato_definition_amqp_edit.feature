@@ -54,7 +54,7 @@ Feature: zato.definition.amqp.edit
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
 
-    And I store "/zato_definition_amqp_create_response/id" from response under "amqp_def_id"
+    And I store "/zato_definition_amqp_edit_response/id" from response under "amqp_def_id"
     And JSON Pointer "/zato_definition_amqp_edit_response/id" is any integer
 
   @definition.amqp.edit
