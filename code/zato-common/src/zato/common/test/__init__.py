@@ -257,8 +257,8 @@ class ServiceTestCase(TestCase):
 
             for mock_path_data in mock_path_data_list:
                 for path, value in mock_path_data.iteritems():
-                    splitted = path.split('.')
-                    new_path = '.return_value.'.join(elem for elem in splitted) + '.return_value'
+                    split = path.split('.')
+                    new_path = '.return_value.'.join(elem for elem in split) + '.return_value'
                     attr.configure_mock(**{new_path:value})
 
         broker_client_publish = getattr(self, 'broker_client_publish', None)

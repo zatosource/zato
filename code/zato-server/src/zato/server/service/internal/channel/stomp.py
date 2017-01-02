@@ -13,7 +13,7 @@ from contextlib import closing
 
 # Zato
 from zato.common.broker_message import CHANNEL
-from zato.common.odb.model import ChannelSTOMP, Service
+from zato.common.odb.model import ChannelSTOMP, Cluster, Service
 from zato.common.odb.query import channel_stomp_list
 from zato.server.connection.stomp import create_stomp_session
 from zato.server.service.internal import AdminService, ChangePasswordBase
@@ -37,6 +37,7 @@ def instance_hook(self, input, instance, attrs):
     with closing(self.odb.session()) as session:
         instance.service_id = session.query(Service).\
             filter(Service.name==input.service_name).\
+            filter(Service.cluster_id==Cluster.id).\
             filter(Service.cluster_id==input.cluster_id).\
             one().id
 
