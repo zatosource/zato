@@ -426,9 +426,7 @@ class Create(ZatoCommand):
         create_scheduler_args.cluster_id = cluster_id
 
         password = generate_password()
-        admin_created = create_scheduler.Create(create_scheduler_args).execute(
-            create_scheduler_args, False, password, True)
-
+        create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, password, True)
         self.logger.info('[{}/{}] Scheduler created'.format(next_step.next(), total_steps))
 
 # ################################################################################################################################

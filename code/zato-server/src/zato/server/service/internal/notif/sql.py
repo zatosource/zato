@@ -18,7 +18,7 @@ from sqlalchemy.orm.exc import NoResultFound
 # Zato
 from zato.common import NOTIF as COMMON_NOTIF, SECRET_SHADOW
 from zato.common.broker_message import NOTIF
-from zato.common.odb.model import NotificationSQL, SQLConnectionPool, Service
+from zato.common.odb.model import Cluster, NotificationSQL, SQLConnectionPool, Service
 from zato.common.odb.query import notif_sql_list
 from zato.server.service.internal import AdminService
 from zato.server.service.internal.notif import NotifierService
@@ -42,6 +42,7 @@ def instance_hook(service, input, instance, attrs):
     with closing(service.odb.session()) as session:
         instance.service_id = session.query(Service).\
             filter(Service.name==input.service_name).\
+            filter(Service.cluster_id==Cluster.id).\
             filter(Service.cluster_id==input.cluster_id).\
             one().id
 
