@@ -5,21 +5,23 @@ Feature: zato.stats.get-trends
     @stats.get-trends
     Scenario: Set up
 
+        Given I store "2017-01-04T16:09:00" under "start"
+        Given I store "2017-01-04T19:09:00" under "stop"
         Given I store "3" under "n_of_slowest"
         Given I store "usage" under "n_type"
 
     @stats.get-trends
     Scenario: Get trends of n slowest of most commonly used services
 
-	Given address "$ZATO_API_TEST_SERVER"
-	Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
 
-	Given URL path "/zato/json/zato.stats.get-trends"
+    Given URL path "/zato/json/zato.stats.trends.get-trends"
 
         Given format "JSON"
         Given request is "{}"
-        Given JSON Pointer "/start" in request is "2017-01-04T16:09:00"
-        Given JSON Pointer "/stop" in request is "2017-01-04T19:09:00"
+        Given JSON Pointer "/start" in request is "#start"
+        Given JSON Pointer "/stop" in request is "#stop"
         Given JSON Pointer "/n" in request is an integer "#n_of_slowest"
         Given JSON Pointer "/n_type" in request is "#n_type"
 
