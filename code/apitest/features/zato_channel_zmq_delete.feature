@@ -19,6 +19,9 @@ Feature: zato.channel.zmq.delete
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/address" in request is "127.0.0.1:33445"
     Given JSON Pointer "/socket_type" in request is "PULL"
+    Given JSON Pointer "/socket_method" in request is "Bind"
+    Given JSON Pointer "/pool_strategy" in request is "Single"
+    Given JSON Pointer "/service_source" in request is "Zato"
     Given JSON Pointer "/service" in request is "zato.ping"
     Given JSON Pointer "/data_format" in request is "json"
 
