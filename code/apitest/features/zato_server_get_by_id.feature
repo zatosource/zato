@@ -25,7 +25,7 @@ Feature: zato.server.get-by-id
         And JSON Pointer "/zato_server_get_by_id_response/id" is an integer "@server1_id"
         And JSON Pointer "/zato_server_get_by_id_response/cluster_id" is an integer "$ZATO_API_TEST_CLUSTER_ID"
         And JSON Pointer "/zato_server_get_by_id_response/name" is "@server1_name"
-        And JSON Pointer "/zato_server_get_by_id_response/host" is "@servers_host"
+        And JSON Pointer "/zato_server_get_by_id_response/host" is "@server_host"
 
     @server.get-by-id
     Scenario: Get information on a Zato test server2
@@ -45,7 +45,7 @@ Feature: zato.server.get-by-id
         And JSON Pointer "/zato_server_get_by_id_response/id" is an integer "@server2_id"
         And JSON Pointer "/zato_server_get_by_id_response/cluster_id" is an integer "$ZATO_API_TEST_CLUSTER_ID"
         And JSON Pointer "/zato_server_get_by_id_response/name" is "@server2_name"
-        And JSON Pointer "/zato_server_get_by_id_response/host" is "@servers_host"
+        And JSON Pointer "/zato_server_get_by_id_response/host" is "@server_host"
 
     @server.get-by-id
     Scenario: Check that no information is returned for a non-existent server
