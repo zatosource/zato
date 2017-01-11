@@ -36,7 +36,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_string_only(self):
+    def test_parse_line_string_only(self):
 
         data = 'abbcccdddd\nABBCCCDDDD'
         a = String(1, 'a')
@@ -70,7 +70,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_integer_only(self):
+    def test_parse_line_integer_only(self):
 
         data = '1223334444\n5667778888'
         a = Int(1, 'a')
@@ -104,13 +104,13 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_decimal_only(self):
+    def test_parse_line_decimal_only(self):
 
         data = '1.122.22333.3334444.4444\n5.566.66777.7778888.8888'
         a = FWDecimal(3, 1, 'a')
         b = FWDecimal(5, 2, 'b')
         c = FWDecimal(7, 3, 'c')
-        d = FWDecimal(9, 3, 'd')
+        d = FWDecimal(9, 4, 'd')
         definition = (a, b, c, d)
 
         expected1 = [

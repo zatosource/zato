@@ -78,20 +78,18 @@ class Decimal(_Base):
     def from_raw_string(self, value):
 
         value = stdlib_Decimal(value, self.ctx)
-
-        # If configured to, raise an error if the resulting scale is too big. For instance, scale was expected to be at most
-        # 3 digits but the result has 4 digits.
         scale = abs(value.as_tuple().exponent)
 
-        if self._err_if_scale_too_big:
-            if scale > self._scale:
+        if scale > self._scale:
+
+            # If configured to, raise an error if the resulting scale is too big. For instance, scale was expected to be at most
+            # 3 digits but the result has 4 digits.
+            if self._err_if_scale_too_big:
                 raise ValueError('Resulting scale is too big `{}` in input string `{}`, expected scale of `{}`'.format(
                     scale, value, self._scale))
 
-        # Otherwise, we need to round down to the `scale` decimal places but we do it only if we actually have anything
-        # to round down, e.g. if there are more decimal digits than self._scale permits.
-        else:
-            if scale > self._scale:
+            # Otherwise, we need to round down to the `scale` decimal places.
+            else:
                 value = value.quantize(self._quantize_to, context=self.ctx)
 
         return value
