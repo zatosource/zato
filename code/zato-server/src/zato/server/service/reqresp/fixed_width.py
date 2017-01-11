@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from cStringIO import StringIO
-from decimal import Decimal as stdlib_Decimal, localcontext
+from decimal import Context, Decimal as stdlib_Decimal
 from itertools import izip
 
 # regex
@@ -54,31 +54,45 @@ class Decimal(_Base):
     def __init__(self, len=None, scale=2, name=None, ctx_config=None, err_if_scale_too_big=False):
         super(Decimal, self).__init__(len, name)
         self._scale = self.scale or scale
-
-        if self.ctx_config is not None:
-            self._ctx_config = self.ctx_config
-        else:
-            self._ctx_config = ctx_config if ctx_config is not None else {}
-
         self._err_if_scale_too_big = self.err_if_scale_too_big if self.err_if_scale_too_big is not None else err_if_scale_too_big
-        self.ctx_prec = self.len - 1 # Substract decimal point since self.len is counted in characters, not digits
+        self.ctx = self._get_context(ctx_config)
+
+        # To have many decimal digits possibly round it down to
+        self._quantize_to = stdlib_Decimal('.' + '0' * self._scale)
+
+    def _get_context(self, ctx_config):
+        """ Returns a decimal.Context object under which all operations on decimal.Decimal objects will be performed.
+        This is used instead of getcontext or localcontext so as to have a new Context object each time it's needed instead
+        of changing thread-local values.
+        """
+        if self.ctx_config is not None:
+            _ctx_config = self.ctx_config
+        else:
+            _ctx_config = ctx_config if ctx_config is not None else {}
+
+        if 'prec' not in _ctx_config:
+            _ctx_config['prec'] = self.len - 1 # Substract decimal point since self.len is counted in characters, not digits
+
+        return Context(**_ctx_config)
 
     def from_raw_string(self, value):
 
-        with localcontext() as ctx:
-            ctx.prec = self.ctx_prec
-            for key, value in self._ctx_config.iteritems():
-                setattr(ctx, key, value)
+        value = stdlib_Decimal(value, self.ctx)
 
-            value = stdlib_Decimal(value, ctx)
+        # If configured to, raise an error if the resulting scale is too big. For instance, scale was expected to be at most
+        # 3 digits but the result has 4 digits.
+        scale = abs(value.as_tuple().exponent)
 
-            # If configured to, raise an error if the resulting scale is too big. For instance, scale was expected to be at most
-            # 3 digits but the result has 4 digits.
-            if self._err_if_scale_too_big:
-                scale = abs(value.as_tuple().exponent)
-                if scale > self._scale:
-                    raise ValueError('Resulting scale is too big `{}` in input string `{}`, expected scale of `{}`'.format(
-                        scale, value, self._scale))
+        if self._err_if_scale_too_big:
+            if scale > self._scale:
+                raise ValueError('Resulting scale is too big `{}` in input string `{}`, expected scale of `{}`'.format(
+                    scale, value, self._scale))
+
+        # Otherwise, we need to round down to the `scale` decimal places but we do it only if we actually have anything
+        # to round down, e.g. if there are more decimal digits than self._scale permits.
+        else:
+            if scale > self._scale:
+                value = value.quantize(self._quantize_to, context=self.ctx)
 
         return value
 
