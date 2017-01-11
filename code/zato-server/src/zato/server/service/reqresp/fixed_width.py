@@ -58,7 +58,7 @@ class Decimal(_Base):
         self.ctx = self._get_context(ctx_config)
 
         # To have many decimal digits possibly round it down to
-        self._quantize_to = stdlib_Decimal('.' + '0' * self._scale)
+        self._quantize_to = stdlib_Decimal(10) ** -self._scale
 
     def _get_context(self, ctx_config):
         """ Returns a decimal.Context object under which all operations on decimal.Decimal objects will be performed.
