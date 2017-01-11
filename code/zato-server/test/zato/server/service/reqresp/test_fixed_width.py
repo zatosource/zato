@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from decimal import Decimal
+from decimal import Decimal, ROUND_CEILING
 from unittest import TestCase
 
 # Zato
@@ -153,6 +153,39 @@ class TestParser(TestCase):
         expected2 = [
             {'key':'a', 'value':Decimal('3.3')},
             {'key':'b', 'value':Decimal('4.4')},
+        ]
+
+        fw = FixedWidth(data, definition)
+        elems = list(fw)
+
+        actual1 = elems[0]
+        actual2 = elems[1]
+
+        self.compare_line(expected1, actual1)
+        self.compare_line(expected2, actual2)
+
+# ################################################################################################################################
+
+    def test_parse_line_decimal_only_rounding_with_context(self):
+
+        class MyDecimal(FWDecimal):
+            ctx_config = {
+                'rounding': ROUND_CEILING
+            }
+
+        data = '1.112.22\n3.334.44'
+        a = MyDecimal(4, 1, 'a')
+        b = MyDecimal(4, 1, 'b')
+        definition = (a, b)
+
+        expected1 = [
+            {'key':'a', 'value':Decimal('1.2')},
+            {'key':'b', 'value':Decimal('2.3')},
+        ]
+
+        expected2 = [
+            {'key':'a', 'value':Decimal('3.4')},
+            {'key':'b', 'value':Decimal('4.5')},
         ]
 
         fw = FixedWidth(data, definition)
