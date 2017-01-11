@@ -13,6 +13,9 @@ from cStringIO import StringIO
 from decimal import Context, Decimal as stdlib_Decimal
 from itertools import izip
 
+# dateparser
+from dateparser import parse as dateparser_parse
+
 # regex
 from regex import compile as re_compile
 
@@ -97,7 +100,8 @@ class Decimal(_Base):
 # ################################################################################################################################
 
 class Timestamp(_Base):
-    pass
+    def from_raw_string(self, value):
+        aaa
 
 # ################################################################################################################################
 
