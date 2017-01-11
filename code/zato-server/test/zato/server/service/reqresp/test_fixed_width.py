@@ -19,6 +19,7 @@ from zato.server.service.reqresp.fixed_width import FixedWidth
 FWDecimal = fixed_width.Decimal
 Int = fixed_width.Int
 String = fixed_width.String
+Timestamp = fixed_width.Timestamp
 
 # ################################################################################################################################
 
@@ -36,7 +37,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def test_parse_line_string_only(self):
+    def test_parse_line_string(self):
 
         data = 'abbcccdddd\nABBCCCDDDD'
         a = String(1, 'a')
@@ -70,7 +71,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def test_parse_line_integer_only(self):
+    def test_parse_line_integer(self):
 
         data = '1223334444\n5667778888'
         a = Int(1, 'a')
@@ -104,7 +105,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def test_parse_line_decimal_only(self):
+    def test_parse_line_decimal(self):
 
         data = '1.122.22333.3334444.4444\n5.566.66777.7778888.8888'
         a = FWDecimal(3, 1, 'a')
@@ -138,7 +139,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def test_parse_line_decimal_only_rounding(self):
+    def test_parse_line_decimal_rounding(self):
 
         data = '1.112.22\n3.334.44'
         a = FWDecimal(4, 1, 'a')
@@ -166,7 +167,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def test_parse_line_decimal_only_rounding_with_context(self):
+    def test_parse_line_decimal_rounding_with_context(self):
 
         class MyDecimal(FWDecimal):
             ctx_config = {
@@ -199,7 +200,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def test_parse_line_decimal_only_rounding_with_context_scale_zero(self):
+    def test_parse_line_decimal_rounding_with_context_scale_zero(self):
 
         class MyDecimal(FWDecimal):
             ctx_config = {
@@ -219,6 +220,34 @@ class TestParser(TestCase):
         expected2 = [
             {'key':'a', 'value':Decimal('3')},
             {'key':'b', 'value':Decimal('4')},
+        ]
+
+        fw = FixedWidth(data, definition)
+        elems = list(fw)
+
+        actual1 = elems[0]
+        actual2 = elems[1]
+
+        self.compare_line(expected1, actual1)
+        self.compare_line(expected2, actual2)
+
+# ################################################################################################################################
+
+    def test_parse_line_timestamp_iso(self):
+
+        data = '2015-06-23T21:22:23   aaa\n2044-12-29T13:14:15   bbb'
+        ts = Timestamp(19, 'ts')
+        str = String(3, 'str')
+        definition = (ts, str)
+
+        expected1 = [
+            {'key':'ts', 'value':'zzz'},
+            {'key':'str', 'value':'aaa'},
+        ]
+
+        expected2 = [
+            {'key':'ts', 'value':'qqq'},
+            {'key':'str', 'value':'bbb'},
         ]
 
         fw = FixedWidth(data, definition)
