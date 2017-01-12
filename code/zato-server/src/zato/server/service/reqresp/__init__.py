@@ -42,9 +42,11 @@ direct_payload = simple_types + (EtreeElement, ObjectifiedElement)
 
 # ################################################################################################################################
 
+
 class HTTPRequestData(object):
     """ Data regarding an HTTP request.
     """
+
     def __init__(self):
         self.method = None
         self.GET = None
@@ -61,6 +63,7 @@ class HTTPRequestData(object):
         return make_repr(self)
 
 # ################################################################################################################################
+
 
 class Request(SIOConverter):
     """ Wraps a service request and adds some useful meta-data.
@@ -145,7 +148,7 @@ class Request(SIOConverter):
                 self.input.update(self.channel_params)
 
     def get_params(self, params_to_visit, use_channel_params_only, path_prefix='', default_value=NO_DEFAULT_VALUE,
-            use_text=True, is_required=True):
+                   use_text=True, is_required=True):
         """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
         params = {}
@@ -193,13 +196,15 @@ class Request(SIOConverter):
 
 # ################################################################################################################################
 
+
 class SimpleIOPayload(SIOConverter):
     """ Produces the actual response - XML or JSON - out of the user-provided
     SimpleIO abstract data. All of the attributes are prefixed with zato_ so that
     they don't conflict with user-provided data.
     """
+
     def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config, response_elem, namespace,
-            output_repeated):
+                 output_repeated):
         self.zato_cid = zato_cid
         self.zato_logger = logger
         self.zato_data_format = data_format
@@ -298,7 +303,7 @@ class SimpleIOPayload(SIOConverter):
             return elem_value
         else:
             return self.convert(name, lookup_name, elem_value, True, self.zato_is_xml, self.bool_parameter_prefixes,
-                self.int_parameters, self.int_parameter_suffixes, None, self.zato_data_format, True)
+                                self.int_parameters, self.int_parameter_suffixes, None, self.zato_data_format, True)
 
     def _missing_value_log_msg(self, name, item, is_sa_namedtuple, is_required):
         """ Returns a log message indicating that an element was missing.
@@ -334,7 +339,7 @@ class SimpleIOPayload(SIOConverter):
         if output:
 
             # All elements must be of the same type so it's OK to do it
-            is_sa_namedtuple = isinstance(output[0], KeyedTuple)
+            is_sa_namedtuple = isinstance(output[0], KeyedTuple) or isinstance(output[0], WritableKeyedTuple)
 
             for item in output:
                 if self.zato_is_xml:
@@ -362,7 +367,7 @@ class SimpleIOPayload(SIOConverter):
                     value = out_item
 
         if self.zato_is_xml:
-            em = ElementMaker(annotate=False, namespace=self.namespace, nsmap={None:self.namespace})
+            em = ElementMaker(annotate=False, namespace=self.namespace, nsmap={None: self.namespace})
             zato_env = em.zato_env(em.cid(self.zato_cid), em.result(ZATO_OK))
             top = getattr(em, self.response_elem)(zato_env)
             top.append(value)
@@ -383,6 +388,7 @@ class SimpleIOPayload(SIOConverter):
 
 # ################################################################################################################################
 
+
 class Outgoing(object):
     """ A container for various outgoing connections a service can access. This
     in fact is a thin wrapper around data fetched from the service's self.worker_store.
@@ -390,7 +396,7 @@ class Outgoing(object):
     __slots__ = ('amqp', 'ftp', 'jms_wmq', 'odoo', 'plain_http', 'soap', 'sql', 'stomp', 'zmq', 'websockets')
 
     def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, stomp=None, zmq=None,
-            websockets=None):
+                 websockets=None):
         self.amqp = amqp
         self.ftp = ftp
         self.jms_wmq = jms_wmq
@@ -402,13 +408,18 @@ class Outgoing(object):
         self.zmq = zmq
         self.websockets = websockets
 
+
 class AWS(object):
+
     def __init__(self, s3=None):
         self.s3 = s3
 
+
 class OpenStack(object):
+
     def __init__(self, swift=None):
         self.swift = swift
+
 
 class Cloud(object):
     """ A container for cloud-related connections a service can establish.
@@ -421,16 +432,17 @@ class Cloud(object):
 
 # ################################################################################################################################
 
+
 class Response(object):
     """ A response from the service's invocation.
     """
     __slots__ = ('logger', 'result', 'result_details', '_payload', 'payload',
-        '_content_type', 'content_type', 'content_type_changed', 'content_encoding',
-        'headers', 'status_code', 'data_format', 'simple_io_config', 'outgoing_declared')
+                 '_content_type', 'content_type', 'content_type_changed', 'content_encoding',
+                 'headers', 'status_code', 'data_format', 'simple_io_config', 'outgoing_declared')
 
     def __init__(self, logger, result=ZATO_OK, result_details='', payload='',
-            _content_type='text/plain', content_encoding=None, data_format=None, headers=None,
-            status_code=OK, status_message='OK', simple_io_config={}):
+                 _content_type='text/plain', content_encoding=None, data_format=None, headers=None,
+                 status_code=OK, status_message='OK', simple_io_config={}):
         self.logger = logger
         self.result = ZATO_OK
         self.result_details = result_details
@@ -492,4 +504,4 @@ class Response(object):
 
         if required_list or optional_list:
             self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, self.simple_io_config,
-                response_elem, namespace, output_repeated)
+                                            response_elem, namespace, output_repeated)

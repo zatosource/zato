@@ -27,19 +27,20 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import NullPool
+from sqlalchemy.orm.query import Query
 
 # Bunch
 from bunch import Bunch
 
 # Zato
 from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, SEC_DEF_TYPE, SECRET_SHADOW, SERVER_UP_STATUS, TRACE1, ZATO_NONE, \
-     ZATO_ODB_POOL_NAME
+    ZATO_ODB_POOL_NAME
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
-     HTTPSOAP, HTTSOAPAudit, JWT, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition, \
-     VaultConnection
+    HTTPSOAP, HTTSOAPAudit, JWT, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition, \
+    VaultConnection
 from zato.common.odb import ping_queries, query
 from zato.common.util import current_host, get_component_name, get_engine_url, get_http_json_channel, get_http_soap_channel, \
-     parse_extra_into_dict, parse_tls_channel_security_definition
+    parse_extra_into_dict, parse_tls_channel_security_definition
 
 # ################################################################################################################################
 
@@ -47,9 +48,53 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+
+class WritableKeyedTuple(object):
+
+    def __init__(self, elem):
+        self._elem = elem
+
+    # TODO: this is slow, come up with a faster object
+    # that is still writable.
+    def __getattr__(self, key):
+        return getattr(self._elem, key)
+
+    def __repr__(self):
+        inner = [
+            (key, getattr(self._elem, key))
+            for key in self._elem.keys()
+        ]
+        outer = [
+            (key, getattr(self, key))
+            for key in dir(self) if not key.startswith("_")
+        ]
+        return "WritableKeyedTuple(%s)" % (
+            ", ".join(
+                "%s=%s" % (key, value) for
+                (key, value) in inner + outer
+            )
+        )
+
+
+class WritableTupleQuery(Query):
+
+    def __iter__(self):
+        it = super(WritableTupleQuery, self).__iter__()
+
+        cdesc = self.column_descriptions
+        if len(cdesc) > 1 or not isinstance(cdesc[0]['type'], type):
+            return (
+                WritableKeyedTuple(elem)
+                for elem in it
+            )
+        else:
+            return it
+
+
 class SessionWrapper(object):
     """ Wraps an SQLAlchemy session.
     """
+
     def __init__(self):
         self.session_initialized = False
         self.pool = None
@@ -67,9 +112,9 @@ class SessionWrapper(object):
             self.logger.warn(msg, name, format_exc(e))
         else:
             if use_scoped_session:
-                self._Session = scoped_session(sessionmaker(bind=self.pool.engine))
+                self._Session = scoped_session(sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery))
             else:
-                self._Session = sessionmaker(bind=self.pool.engine)
+                self._Session = sessionmaker(bind=self.pool.engine, query_cls=WritableTupleQuery)
 
             self._session = self._Session()
             self.session_initialized = True
@@ -82,15 +127,17 @@ class SessionWrapper(object):
 
 # ################################################################################################################################
 
+
 class SQLConnectionPool(object):
     """ A pool of SQL connections wrapping an SQLAlchemy engine.
     """
+
     def __init__(self, name, config, config_no_sensitive):
         self.logger = getLogger(self.__class__.__name__)
 
         self.name = name
         self.config = config
-        self.engine_name = config['engine'] # self.engine.name is 'mysql' while 'self.engine_name' is mysql+pymysql
+        self.engine_name = config['engine']  # self.engine.name is 'mysql' while 'self.engine_name' is mysql+pymysql
 
         # Safe for printing out to logs, any sensitive data has been shadowed
         self.config_no_sensitive = config_no_sensitive
@@ -105,7 +152,7 @@ class SQLConnectionPool(object):
         elif self.engine_name.startswith('postgres'):
             _extra['connect_args'] = {'application_name': get_component_name()}
 
-        extra = self.config.get('extra') # Optional, hence .get
+        extra = self.config.get('extra')  # Optional, hence .get
         _extra.update(parse_extra_into_dict(extra))
 
         # SQLite has no pools
@@ -153,13 +200,15 @@ class SQLConnectionPool(object):
         """
         query = ping_queries[self.engine_name]
 
-        self.logger.debug('About to ping the SQL connection pool:[{}], query:[{}]'.format(self.config_no_sensitive, query))
+        self.logger.debug(
+            'About to ping the SQL connection pool:[{}], query:[{}]'.format(self.config_no_sensitive, query))
 
         start_time = time()
         self.engine.connect().execute(query)
         response_time = time() - start_time
 
-        self.logger.debug('Ping OK, pool:[{0}], response_time:[{1:03.4f} s]'.format(self.config_no_sensitive, response_time))
+        self.logger.debug('Ping OK, pool:[{0}], response_time:[{1:03.4f} s]'.format(
+            self.config_no_sensitive, response_time))
 
         return response_time
 
@@ -179,10 +228,12 @@ class SQLConnectionPool(object):
 
 # ################################################################################################################################
 
+
 class PoolStore(DisposableObject):
     """ A main class for accessing all of the SQL connection pools. Each server
     thread has its own store.
     """
+
     def __init__(self, sql_conn_class=SQLConnectionPool):
         super(PoolStore, self).__init__()
         self.sql_conn_class = sql_conn_class
@@ -257,10 +308,12 @@ class PoolStore(DisposableObject):
 
 # ################################################################################################################################
 
+
 class _Server(object):
     """ A plain Python object which is used instead of an SQLAlchemy model so the latter is not tied to a session
     for as long a server is up.
     """
+
     def __init__(self, odb_server, odb_cluster):
         self.id = odb_server.id
         self.name = odb_server.name
@@ -271,11 +324,13 @@ class _Server(object):
 
 # ################################################################################################################################
 
+
 class ODBManager(SessionWrapper):
     """ Manages connections to a given component's Operational Database.
     """
+
     def __init__(self, well_known_data=None, token=None, crypto_manager=None, server_id=None, server_name=None, cluster_id=None,
-            pool=None):
+                 pool=None):
         super(ODBManager, self).__init__()
         self.well_known_data = well_known_data
         self.token = token
@@ -300,8 +355,8 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
             try:
                 server = session.query(Server).\
-                       filter(Server.token == self.token).\
-                       one()
+                    filter(Server.token == self.token).\
+                    one()
                 self.server = _Server(server, server.cluster)
                 self.server_id = server.id
                 self.cluster = server.cluster
@@ -339,8 +394,8 @@ class ODBManager(SessionWrapper):
             server_services = session.query(
                 Service.id, Service.name,
                 DeployedService.source_path, DeployedService.source).\
-                join(DeployedService, Service.id==DeployedService.service_id).\
-                join(Server, DeployedService.server_id==Server.id).\
+                join(DeployedService, Service.id == DeployedService.service_id).\
+                join(Server, DeployedService.server_id == Server.id).\
                 all()
 
             for item in server_services:
@@ -350,13 +405,13 @@ class ODBManager(SessionWrapper):
         return missing
 
     def server_up_down(self, token, status, update_host=False, bind_host=None, bind_port=None, preferred_address=None,
-        crypto_use_tls=None):
+                       crypto_use_tls=None):
         """ Updates the information regarding the server is RUNNING or CLEAN_DOWN etc.
         and what host it's running on.
         """
         with closing(self.session()) as session:
             server = session.query(Server).\
-                filter(Server.token==token).\
+                filter(Server.token == token).\
                 one()
 
             server.up_status = status
@@ -387,7 +442,7 @@ class ODBManager(SessionWrapper):
                 SEC_DEF_TYPE.WSS: WSSDefinition,
                 SEC_DEF_TYPE.VAULT: VaultConnection,
                 SEC_DEF_TYPE.XPATH_SEC: XPathSecurity,
-                }
+            }
 
             result = {}
 
@@ -414,8 +469,8 @@ class ODBManager(SessionWrapper):
                     db_class = sec_type_db_class[item.sec_type]
 
                     sec_def = session.query(db_class).\
-                            filter(db_class.id==item.security_id).\
-                            one()
+                        filter(db_class.id == item.security_id).\
+                        one()
 
                     # Common things first
                     result[target].sec_def.id = sec_def.id
@@ -475,9 +530,9 @@ class ODBManager(SessionWrapper):
                 self._session.rollback()
 
                 service = self._session.query(Service).\
-                    join(Cluster, Service.cluster_id==Cluster.id).\
-                    filter(Service.name==name).\
-                    filter(Cluster.id==self.cluster.id).\
+                    join(Cluster, Service.cluster_id == Cluster.id).\
+                    filter(Service.name == name).\
+                    filter(Cluster.id == self.cluster.id).\
                     one()
 
             self.add_deployed_service(deployment_time, details, service, source_info)
@@ -493,7 +548,7 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             session.query(DeployedService).\
-                filter(DeployedService.server_id==server_id).\
+                filter(DeployedService.server_id == server_id).\
                 delete()
             session.commit()
 
@@ -502,7 +557,7 @@ class ODBManager(SessionWrapper):
         """
         try:
             ds = DeployedService(deployment_time, details, self.server.id, service,
-                source_info.source, source_info.path, source_info.hash, source_info.hash_method)
+                                 source_info.source, source_info.path, source_info.hash, source_info.hash_method)
             self._session.add(ds)
             try:
                 self._session.commit()
@@ -512,8 +567,8 @@ class ODBManager(SessionWrapper):
                 self._session.rollback()
 
                 ds = self._session.query(DeployedService).\
-                    filter(DeployedService.service_id==service.id).\
-                    filter(DeployedService.server_id==self.server.id).\
+                    filter(DeployedService.service_id == service.id).\
+                    filter(DeployedService.server_id == self.server.id).\
                     one()
 
                 ds.deployment_time = deployment_time
@@ -536,7 +591,7 @@ class ODBManager(SessionWrapper):
         """
         with closing(self.session()) as session:
             return session.query(Service.is_active).\
-                filter(Service.id==service_id).\
+                filter(Service.id == service_id).\
                 one()[0]
 
     def hot_deploy(self, deployment_time, details, payload_name, payload, server_id):
@@ -558,8 +613,8 @@ class ODBManager(SessionWrapper):
 
             # .. for each of the servers in this cluster set the initial status ..
             servers = session.query(Cluster).\
-                   filter(Cluster.id == self.server.cluster_id).\
-                   one().servers
+                filter(Cluster.id == self.server.cluster_id).\
+                one().servers
 
             for server in servers:
                 ds = DeploymentStatus()
@@ -622,7 +677,7 @@ class ODBManager(SessionWrapper):
             else:
                 session.rollback()
                 msg = ('Server id:[{}], name:[{}] will not be a connector server for '
-                'cluster id:[{}], name:[{}], cluster.cw_srv_id:[{}], cluster.cw_srv_keep_alive_dt:[{}]').format(
+                       'cluster id:[{}], name:[{}], cluster.cw_srv_id:[{}], cluster.cw_srv_keep_alive_dt:[{}]').format(
                     self.server.id, self.server.name, cluster.id, cluster.name, cluster.cw_srv_id, cluster.cw_srv_keep_alive_dt)
                 logger.debug(msg)
 
@@ -684,7 +739,8 @@ class ODBManager(SessionWrapper):
             ('zato.info.get-server-info', 'zato.server.service.internal.info.GetServerInfo'),
             ('zato.info.get-server-info.json', 'zato.server.service.internal.info.GetServerInfo'),
             ('zato.security.apikey.change-password', 'zato.server.service.internal.security.apikey.ChangePassword'),
-            ('zato.security.apikey.change-password.json', 'zato.server.service.internal.security.apikey.ChangePassword'),
+            ('zato.security.apikey.change-password.json',
+             'zato.server.service.internal.security.apikey.ChangePassword'),
             ('zato.security.apikey.create', 'zato.server.service.internal.security.apikey.Create'),
             ('zato.security.apikey.create.json', 'zato.server.service.internal.security.apikey.Create'),
             ('zato.security.apikey.delete', 'zato.server.service.internal.security.apikey.Delete'),
@@ -714,15 +770,21 @@ class ODBManager(SessionWrapper):
             ('zato.security.ntlm.get-list', 'zato.server.service.internal.security.ntlm.GetList'),
             ('zato.security.ntlm.get-list.json', 'zato.server.service.internal.security.ntlm.GetList'),
             ('zato.security.rbac.client-role.create', 'zato.server.service.internal.security.rbac.client_role.Create'),
-            ('zato.security.rbac.client-role.create.json', 'zato.server.service.internal.security.rbac.client_role.Create'),
+            ('zato.security.rbac.client-role.create.json',
+             'zato.server.service.internal.security.rbac.client_role.Create'),
             ('zato.security.rbac.client-role.delete', 'zato.server.service.internal.security.rbac.client_role.Delete'),
-            ('zato.security.rbac.client-role.delete.json', 'zato.server.service.internal.security.rbac.client_role.Delete'),
-            ('zato.security.rbac.client-role.get-client-def-list', 'zato.server.service.internal.security.rbac.client_role.GetClientDefList'),
-            ('zato.security.rbac.client-role.get-client-def-list.json', 'zato.server.service.internal.security.rbac.client_role.GetClientDefList'),
+            ('zato.security.rbac.client-role.delete.json',
+             'zato.server.service.internal.security.rbac.client_role.Delete'),
+            ('zato.security.rbac.client-role.get-client-def-list',
+             'zato.server.service.internal.security.rbac.client_role.GetClientDefList'),
+            ('zato.security.rbac.client-role.get-client-def-list.json',
+             'zato.server.service.internal.security.rbac.client_role.GetClientDefList'),
             ('zato.security.rbac.permission.create', 'zato.server.service.internal.security.rbac.permission.Create'),
-            ('zato.security.rbac.permission.create.json', 'zato.server.service.internal.security.rbac.permission.Create'),
+            ('zato.security.rbac.permission.create.json',
+             'zato.server.service.internal.security.rbac.permission.Create'),
             ('zato.security.rbac.permission.delete', 'zato.server.service.internal.security.rbac.permission.Delete'),
-            ('zato.security.rbac.permission.delete.json', 'zato.server.service.internal.security.rbac.permission.Delete'),
+            ('zato.security.rbac.permission.delete.json',
+             'zato.server.service.internal.security.rbac.permission.Delete'),
             ('zato.security.rbac.permission.edit', 'zato.server.service.internal.security.rbac.permission.Edit'),
             ('zato.security.rbac.permission.edit.json', 'zato.server.service.internal.security.rbac.permission.Edit'),
             ('zato.security.rbac.role.create', 'zato.server.service.internal.security.rbac.role.Create'),
@@ -731,10 +793,14 @@ class ODBManager(SessionWrapper):
             ('zato.security.rbac.role.delete.json', 'zato.server.service.internal.security.rbac.role.Delete'),
             ('zato.security.rbac.role.edit', 'zato.server.service.internal.security.rbac.role.Edit'),
             ('zato.security.rbac.role.edit.json', 'zato.server.service.internal.security.rbac.role.Edit'),
-            ('zato.security.rbac.role-permission.create', 'zato.server.service.internal.security.rbac.role_permission.Create'),
-            ('zato.security.rbac.role-permission.create.json', 'zato.server.service.internal.security.rbac.role_permission.Create'),
-            ('zato.security.rbac.role-permission.delete', 'zato.server.service.internal.security.rbac.role_permission.Delete'),
-            ('zato.security.rbac.role-permission.delete.json', 'zato.server.service.internal.security.rbac.role_permission.Delete'),
+            ('zato.security.rbac.role-permission.create',
+             'zato.server.service.internal.security.rbac.role_permission.Create'),
+            ('zato.security.rbac.role-permission.create.json',
+             'zato.server.service.internal.security.rbac.role_permission.Create'),
+            ('zato.security.rbac.role-permission.delete',
+             'zato.server.service.internal.security.rbac.role_permission.Delete'),
+            ('zato.security.rbac.role-permission.delete.json',
+             'zato.server.service.internal.security.rbac.role_permission.Delete'),
             ('zato.security.xpath.change-password', 'zato.server.service.internal.security.xpath.ChangePassword'),
             ('zato.security.xpath.change-password.json', 'zato.server.service.internal.security.xpath.ChangePassword'),
             ('zato.security.xpath.create', 'zato.server.service.internal.security.xpath.Create'),
@@ -750,24 +816,24 @@ class ODBManager(SessionWrapper):
         with closing(self.session()) as session:
 
             cluster = session.query(Cluster).\
-                filter(Cluster.id==self.cluster.id).\
+                filter(Cluster.id == self.cluster.id).\
                 one()
 
             pubapi_sec = session.query(HTTPBasicAuth).\
-                filter(HTTPBasicAuth.name=='pubapi').\
-                filter(HTTPBasicAuth.cluster_id==self.cluster.id).\
+                filter(HTTPBasicAuth.name == 'pubapi').\
+                filter(HTTPBasicAuth.cluster_id == self.cluster.id).\
                 one()
 
             for channel_name, impl_name in diff:
 
                 service = session.query(Service).\
-                    filter(Service.impl_name==impl_name).\
-                    filter(Service.cluster_id==self.cluster.id).\
+                    filter(Service.impl_name == impl_name).\
+                    filter(Service.cluster_id == self.cluster.id).\
                     one()
 
                 channel = session.query(HTTPSOAP).\
-                    filter(HTTPSOAP.name==channel_name).\
-                    filter(HTTPSOAP.cluster_id==self.cluster.id).\
+                    filter(HTTPSOAP.name == channel_name).\
+                    filter(HTTPSOAP.cluster_id == self.cluster.id).\
                     first()
 
                 if not channel:
@@ -794,10 +860,10 @@ class ODBManager(SessionWrapper):
             if connection == 'channel':
                 for item in item_list:
                     item.replace_patterns_json_pointer = [elem.pattern.name for elem in session.query(HTTPSOAP).
-                        filter(HTTPSOAP.id == item.id).one().replace_patterns_json_pointer]
+                                                          filter(HTTPSOAP.id == item.id).one().replace_patterns_json_pointer]
 
                     item.replace_patterns_xpath = [elem.pattern.name for elem in session.query(HTTPSOAP).
-                        filter(HTTPSOAP.id == item.id).one().replace_patterns_xpath]
+                                                   filter(HTTPSOAP.id == item.id).one().replace_patterns_xpath]
 
             return item_list
 
@@ -1110,8 +1176,8 @@ class ODBManager(SessionWrapper):
 # ################################################################################################################################
 
     def audit_set_request_http_soap(self, conn_id, name, cid, transport,
-            connection, req_time, user_token, remote_addr, req_headers,
-            req_payload):
+                                    connection, req_time, user_token, remote_addr, req_headers,
+                                    req_payload):
 
         with closing(self.session()) as session:
 
@@ -1166,7 +1232,7 @@ class ODBManager(SessionWrapper):
     def get_pubsub_producer_list(self, cluster_id, needs_columns=False):
         """ Returns a list of pub/sub producers defined on a cluster.
         """
-        return query.pubsub_producer_list(self._session, cluster_id, None,needs_columns)
+        return query.pubsub_producer_list(self._session, cluster_id, None, needs_columns)
 
     def get_pubsub_consumer_list(self, cluster_id, needs_columns=False):
         """ Returns a list of pub/sub consumers defined on a cluster.
