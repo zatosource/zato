@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from datetime import date as datetime_date
+from datetime import date as datetime_date, time as datetime_time
 from decimal import Decimal, ROUND_CEILING, ROUND_DOWN
 from unittest import TestCase
 
@@ -24,6 +24,7 @@ Date = fixed_width.Date
 FWDecimal = fixed_width.Decimal
 Int = fixed_width.Int
 String = fixed_width.String
+Time = fixed_width.Time
 Timestamp = fixed_width.Timestamp
 
 # ################################################################################################################################
@@ -357,5 +358,63 @@ class TestParser(TestCase):
 
         self.compare_line(expected1, actual1)
         self.compare_line(expected2, actual2)
+
+# ################################################################################################################################
+
+    def test_parse_line_time(self):
+
+        data = '23:21:12   aaa\n19:22:44   bbb'
+        time = Time(11, 'time')
+        str = String(3, 'str')
+        definition = (time, str)
+
+        expected1 = [
+            {'key':'time', 'value':datetime_time(23, 21, 12)},
+            {'key':'str', 'value':'aaa'},
+        ]
+
+        expected2 = [
+            {'key':'time', 'value':datetime_time(19, 22, 44)},
+            {'key':'str', 'value':'bbb'},
+        ]
+
+        fw = FixedWidth(data, definition)
+        elems = list(fw)
+
+        actual1 = elems[0]
+        actual2 = elems[1]
+
+        self.compare_line(expected1, actual1)
+        self.compare_line(expected2, actual2)
+
+
+# ################################################################################################################################
+
+    def test_parse_line_time_custom_format(self):
+
+        data = '02_21_12   aaa\n07_22_44   bbb'
+        time = Time(11, 'time', parse_kwargs={'date_formats': ['%H_%M_%S']})
+        str = String(3, 'str')
+        definition = (time, str)
+
+        expected1 = [
+            {'key':'time', 'value':datetime_time(2, 21, 12)},
+            {'key':'str', 'value':'aaa'},
+        ]
+
+        expected2 = [
+            {'key':'time', 'value':datetime_time(7, 22, 44)},
+            {'key':'str', 'value':'bbb'},
+        ]
+
+        fw = FixedWidth(data, definition)
+        elems = list(fw)
+
+        actual1 = elems[0]
+        actual2 = elems[1]
+
+        self.compare_line(expected1, actual1)
+        self.compare_line(expected2, actual2)
+
 
 # ################################################################################################################################
