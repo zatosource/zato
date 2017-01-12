@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from decimal import Decimal, ROUND_CEILING, ROUND_DOWN
 from unittest import TestCase
 
+# dateutil
+from dateutil.parser import parse as dateutil_parse
+
 # Zato
 from zato.server.service import fixed_width
 from zato.server.service.reqresp.fixed_width import FixedWidth
@@ -235,18 +238,51 @@ class TestParser(TestCase):
 
     def test_parse_line_timestamp_iso(self):
 
-        data = '2015-06-23T21:22:23   aaa\n2044-12-29T13:14:15   bbb'
-        ts = Timestamp(19, 'ts')
+        data = '2015-06-23T21:22:23,123456   aaa\n2044-12-29T13:14:15,567890   bbb'
+        ts = Timestamp(29, 'ts')
         str = String(3, 'str')
         definition = (ts, str)
 
         expected1 = [
-            {'key':'ts', 'value':'zzz'},
+            {'key':'ts', 'value':dateutil_parse('2015-06-23T21:22:23,123456')},
             {'key':'str', 'value':'aaa'},
         ]
 
         expected2 = [
-            {'key':'ts', 'value':'qqq'},
+            {'key':'ts', 'value':dateutil_parse('2044-12-29T13:14:15,567890')},
+            {'key':'str', 'value':'bbb'},
+        ]
+
+        fw = FixedWidth(data, definition)
+        elems = list(fw)
+
+        actual1 = elems[0]
+        actual2 = elems[1]
+
+        self.compare_line(expected1, actual1)
+        self.compare_line(expected2, actual2)
+
+# ################################################################################################################################
+
+    def test_parse_line_timestamp_custom_format(self):
+
+        class MyTimestamp(Timestamp):
+            parse_kwargs = {
+                'date_formats': ['%b, %Y_%d//  --%I%p']
+            }
+
+        data = 'Jan, 1923_12//  --3pm aaa\nMar, 2732_11//  --7pm bbb'
+        ts = MyTimestamp(22, 'ts')
+        str = String(3, 'str')
+        definition = (ts, str)
+
+        expected1 = [
+            {'key':'ts', 'value':dateutil_parse('1923-01-12T15:00')},
+            {'key':'str', 'value':'aaa'},
+        ]
+
+        expected2 = [
+            {'key':'ts', 'value':dateutil_parse('2732-03-11T19:00')},
             {'key':'str', 'value':'bbb'},
         ]
 

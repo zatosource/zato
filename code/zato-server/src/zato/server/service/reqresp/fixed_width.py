@@ -60,7 +60,7 @@ class Decimal(_Base):
         self._err_if_scale_too_big = self.err_if_scale_too_big if self.err_if_scale_too_big is not None else err_if_scale_too_big
         self.ctx = self._get_context(ctx_config)
 
-        # To have many decimal digits possibly round it down to
+        # To how many decimal digits possibly round down to
         self._quantize_to = stdlib_Decimal(10) ** -self._scale
 
     def _get_context(self, ctx_config):
@@ -99,9 +99,20 @@ class Decimal(_Base):
 
 # ################################################################################################################################
 
-class Timestamp(_Base):
+class _BaseTime(_Base):
+    parse_kwargs = None
+    output_format=None
+
+    def __init__(self, len=None, name=None, output_format=None, parse_kwargs=None):
+        self._parse_kwargs = self.parse_kwargs if self.parse_kwargs else parse_kwargs or {}
+        self._output_format = self.output_format or output_format
+        super(_BaseTime, self).__init__(len, name)
+
     def from_raw_string(self, value):
-        aaa
+        return dateparser_parse(value, **self._parse_kwargs)
+
+class Timestamp(_BaseTime):
+    pass
 
 # ################################################################################################################################
 
