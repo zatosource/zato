@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from datetime import date as datetime_date
 from decimal import Decimal, ROUND_CEILING, ROUND_DOWN
 from unittest import TestCase
 
@@ -19,6 +20,7 @@ from dateutil.parser import parse as dateutil_parse
 from zato.server.service import fixed_width
 from zato.server.service.reqresp.fixed_width import FixedWidth
 
+Date = fixed_width.Date
 FWDecimal = fixed_width.Decimal
 Int = fixed_width.Int
 String = fixed_width.String
@@ -283,6 +285,67 @@ class TestParser(TestCase):
 
         expected2 = [
             {'key':'ts', 'value':dateutil_parse('2732-03-11T19:00')},
+            {'key':'str', 'value':'bbb'},
+        ]
+
+        fw = FixedWidth(data, definition)
+        elems = list(fw)
+
+        actual1 = elems[0]
+        actual2 = elems[1]
+
+        self.compare_line(expected1, actual1)
+        self.compare_line(expected2, actual2)
+
+# ################################################################################################################################
+
+    def test_parse_line_date(self):
+
+        data = '2015-06-23   aaa\n2044-12-29   bbb'
+        date = Date(13, 'date')
+        str = String(3, 'str')
+        definition = (date, str)
+
+        expected1 = [
+            {'key':'date', 'value':datetime_date(2015, 6, 23)},
+            {'key':'str', 'value':'aaa'},
+        ]
+
+        expected2 = [
+            {'key':'date', 'value':datetime_date(2044, 12, 29)},
+            {'key':'str', 'value':'bbb'},
+        ]
+
+        fw = FixedWidth(data, definition)
+        elems = list(fw)
+
+        actual1 = elems[0]
+        actual2 = elems[1]
+
+        self.compare_line(expected1, actual1)
+        self.compare_line(expected2, actual2)
+
+# ################################################################################################################################
+
+    def test_parse_line_date_custom_format(self):
+
+        class MyDate(Date):
+            parse_kwargs = {
+                'date_formats': ['%y%m---%d']
+            }
+
+        data = '9901---03aaa\n6612---23bbb'
+        date = MyDate(9, 'date')
+        str = String(3, 'str')
+        definition = (date, str)
+
+        expected1 = [
+            {'key':'date', 'value':datetime_date(1999, 1, 3)},
+            {'key':'str', 'value':'aaa'},
+        ]
+
+        expected2 = [
+            {'key':'date', 'value':datetime_date(2066, 12, 23)},
             {'key':'str', 'value':'bbb'},
         ]
 
