@@ -30,7 +30,7 @@ class _Base(object):
         self._name = self.name or name
         self.pattern = '(?P<{}>.{{{}}})'.format(self._name, self.len)
 
-    def from_raw_string(self, value):
+    def from_string(self, value):
         return value
 
 # ################################################################################################################################
@@ -42,7 +42,7 @@ class String(_Base):
 # ################################################################################################################################
 
 class Integer(_Base):
-    def from_raw_string(self, value):
+    def from_string(self, value):
         return long(value)
 
 Int = Integer
@@ -78,7 +78,7 @@ class Decimal(_Base):
 
         return Context(**_ctx_config)
 
-    def from_raw_string(self, value):
+    def from_string(self, value):
 
         value = stdlib_Decimal(value, self.ctx)
         scale = abs(value.as_tuple().exponent)
@@ -108,7 +108,7 @@ class _BaseTime(_Base):
         self._output_format = self.output_format or output_format
         super(_BaseTime, self).__init__(len, name)
 
-    def from_raw_string(self, value):
+    def from_string(self, value):
         return dateparser_parse(value.strip(), **self._parse_kwargs)
 
 class Timestamp(_BaseTime):
@@ -117,14 +117,14 @@ class Timestamp(_BaseTime):
 # ################################################################################################################################
 
 class Date(_BaseTime):
-    def from_raw_string(self, value):
-        return super(Date, self).from_raw_string(value).date()
+    def from_string(self, value):
+        return super(Date, self).from_string(value).date()
 
 # ################################################################################################################################
 
 class Time(_BaseTime):
-    def from_raw_string(self, value):
-        return super(Time, self).from_raw_string(value).time()
+    def from_string(self, value):
+        return super(Time, self).from_string(value).time()
 
 # ################################################################################################################################
 
@@ -156,7 +156,7 @@ class FixedWidth(object):
                 if m:
                     instance = self.line_class()
                     for elem, value in izip(self.definition, m.groups()):
-                        setattr(instance, elem._name, elem.from_raw_string(value))
+                        setattr(instance, elem._name, elem.from_string(value))
                     yield instance
                 else:
                     yield None
