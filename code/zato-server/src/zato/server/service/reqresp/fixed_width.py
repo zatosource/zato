@@ -109,7 +109,7 @@ class _BaseTime(_Base):
         super(_BaseTime, self).__init__(len, name)
 
     def from_raw_string(self, value):
-        return dateparser_parse(value, **self._parse_kwargs)
+        return dateparser_parse(value.strip(), **self._parse_kwargs)
 
 class Timestamp(_BaseTime):
     pass
@@ -122,8 +122,9 @@ class Date(_BaseTime):
 
 # ################################################################################################################################
 
-class Time(_Base):
-    pass
+class Time(_BaseTime):
+    def from_raw_string(self, value):
+        return super(Time, self).from_raw_string(value).time()
 
 # ################################################################################################################################
 
