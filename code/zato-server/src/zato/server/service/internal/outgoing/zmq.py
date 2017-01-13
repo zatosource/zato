@@ -42,7 +42,7 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_zmq_create_request'
         response_elem = 'zato_outgoing_zmq_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type')
+        input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method')
         input_optional = ('msg_source',)
         output_required = ('id', 'name')
 
@@ -70,6 +70,7 @@ class Create(AdminService):
                 session.commit()
 
                 input.action = OUTGOING.ZMQ_CREATE.value
+                input.id = item.id
                 self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
@@ -120,6 +121,7 @@ class Edit(AdminService):
                 session.commit()
 
                 input.action = OUTGOING.ZMQ_EDIT.value
+                input.id = item.id
                 input.old_name = old_name
                 self.broker_client.publish(input)
 
