@@ -126,3 +126,9 @@ class TestUpdateBindPort(TestCase):
         self.assertEquals(config2.bind_port, 16254)
 
 # ################################################################################################################################
+
+class TestAPIKeyUsername(TestCase):
+    def test_update_apikey_username(self):
+        config = Bunch(username='x-aaa')
+        util.update_apikey_username(config)
+        self.assertEquals(config.username, 'HTTP_X_AAA')
