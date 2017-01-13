@@ -1191,3 +1191,6 @@ def get_session(engine):
     return session()
 
 # ################################################################################################################################
+
+def update_apikey_username(config):
+    config.username = 'HTTP_{}'.format(config.get('username', '').upper().replace('-', '_'))

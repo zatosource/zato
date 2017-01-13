@@ -38,7 +38,7 @@ from sortedcontainers import SortedListWithKey
 from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, ZATO_NONE
 from zato.common.broker_message import code_to_name, CHANNEL, SECURITY
 from zato.common.dispatch import dispatcher
-from zato.common.util import parse_tls_channel_security_definition
+from zato.common.util import parse_tls_channel_security_definition, update_apikey_username
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 
 logger = logging.getLogger(__name__)
@@ -433,7 +433,7 @@ class URLData(OAuthDataStore):
 # ################################################################################################################################
 
     def _update_apikey(self, name, config):
-        config.username = 'HTTP_{}'.format(config.get('username', '').replace('-', '_'))
+        update_apikey_username(config)
         self.apikey_config[name] = Bunch()
         self.apikey_config[name].config = config
 

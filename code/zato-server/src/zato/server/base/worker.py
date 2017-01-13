@@ -46,7 +46,7 @@ from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, new_cid, pairwise, \
-     parse_extra_into_dict, parse_tls_channel_security_definition, store_tls
+     parse_extra_into_dict, parse_tls_channel_security_definition, store_tls, update_apikey_username
 from zato.server.base import BrokerMessageReceiver
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -163,6 +163,9 @@ class WorkerStore(BrokerMessageReceiver):
 
         # RBAC
         self.init_rbac()
+
+        # API keys
+        self.update_apikeys()
 
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
@@ -515,6 +518,14 @@ class WorkerStore(BrokerMessageReceiver):
                         config.client_id, config.name, config.is_active, config.sub_key, config.max_depth,
                         config.delivery_mode, config.callback_id, config.callback_name, callback_type),
                     Topic(config.topic_name))
+
+# ################################################################################################################################
+
+    def update_apikeys(self):
+        """ API keys need to be upper-cased and in the format that WSGI environment will have them in.
+        """
+        for config_dict in self.worker_config.apikey.values():
+            update_apikey_username(config_dict.config)
 
 # ################################################################################################################################
 
