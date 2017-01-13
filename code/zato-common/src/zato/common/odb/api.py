@@ -27,6 +27,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import NullPool
+from sqlalchemy.sql.expression import true
 
 # Bunch
 from bunch import Bunch
@@ -341,6 +342,7 @@ class ODBManager(SessionWrapper):
                 DeployedService.source_path, DeployedService.source).\
                 join(DeployedService, Service.id==DeployedService.service_id).\
                 join(Server, DeployedService.server_id==Server.id).\
+                filter(Service.is_internal!=true()).\
                 all()
 
             for item in server_services:
