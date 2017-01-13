@@ -94,11 +94,14 @@ def get_client_error_wrapper(transport, data_format):
 class RequestDispatcher(object):
     """ Dispatches all the incoming HTTP/SOAP requests to appropriate handlers.
     """
-    def __init__(self, url_data=None, security=None, request_handler=None, simple_io_config=None):
+    def __init__(self, url_data=None, security=None, request_handler=None, simple_io_config=None, return_tracebacks=None,
+            default_error_message=None):
         self.url_data = url_data
         self.security = security
         self.request_handler = request_handler
         self.simple_io_config = simple_io_config
+        self.return_tracebacks = return_tracebacks
+        self.default_error_message = default_error_message
 
     def wrap_error_message(self, cid, url_type, msg):
         """ Wraps an error message in a transport-specific envelope.
@@ -244,7 +247,7 @@ class RequestDispatcher(object):
 
                 else:
                     status_code = INTERNAL_SERVER_ERROR
-                    response = _format_exc
+                    response = _format_exc if self.return_tracebacks else self.default_error_message
 
                 # TODO: This should be configurable. Some people may want such
                 # things to be on DEBUG whereas for others ERROR will make most sense
