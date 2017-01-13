@@ -368,21 +368,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             self.port)
 
         self.servers = Servers(self.odb, self.cluster.name)
-
         is_first, locally_deployed = self._after_init_common(server)
-
-        self._after_init_accepted(server, locally_deployed)
-
-        broker_callbacks = {
-            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,
-            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: self.worker_store.on_broker_msg,
-        }
-
-        self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks, self.get_lua_programs())
-        self.worker_store.set_broker_client(self.broker_client)
-
-        self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host,
-            self.port, self.preferred_address, use_tls)
 
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
@@ -402,6 +388,19 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             else:
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
+
+        self._after_init_accepted(server, locally_deployed)
+
+        broker_callbacks = {
+            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,
+            TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: self.worker_store.on_broker_msg,
+        }
+
+        self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks, self.get_lua_programs())
+        self.worker_store.set_broker_client(self.broker_client)
+
+        self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host,
+            self.port, self.preferred_address, use_tls)
 
         # Startup services
         if is_first:
