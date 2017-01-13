@@ -106,6 +106,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.component_enabled = Bunch()
         self.client_address_headers = ['HTTP_X_ZATO_FORWARDED_FOR', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR']
         self.broker_client = None
+        self.return_tracebacks = None
+        self.default_error_message = None
         self.time_util = None
         self.preferred_address = None
         self.crypto_use_tls = None
