@@ -14,11 +14,8 @@ from logging import getLogger
 # gevent
 from gevent import spawn
 
-# PyZMQ
-import zmq.green as zmq
-
 # Zato
-from zato.common import CHANNEL, ZMQ
+from zato.common import CHANNEL
 from zato.common.util import new_cid
 from zato.zmq_ import Base
 from zato.zmq_.mdp.broker import Broker
@@ -36,16 +33,7 @@ class Simple(Base):
 
     def _start(self):
         super(Simple, self)._start()
-
-        # Open a ZMQ socket and set its options, if required
-        self.impl = self.ctx.socket(getattr(zmq, self.config.socket_type))
-
-        if self.config.socket_type == ZMQ.SUB and self.config.sub_key:
-            self.impl.setsockopt(zmq.SUBSCRIBE, self.config.sub_key)
-
-        # Whether to bind or connect?
-        socket_method = getattr(self.impl, self.config.socket_method)
-        socket_method(self.config.address)
+        self.init_simple_socket()
 
         # Micro-optimizations to make things faster
         _spawn = spawn

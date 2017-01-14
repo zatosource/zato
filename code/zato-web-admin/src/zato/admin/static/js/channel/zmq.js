@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.ChannelZMQ;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.zmq.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'address', 'socket_type', 'service']);
+    $.fn.zato.data_table.setup_forms(['name', 'address', 'socket_type', 'socket_method', 'service']);
 })
 
 $.fn.zato.channel.zmq.create = function() {

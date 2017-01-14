@@ -27,7 +27,7 @@ class GetList(AdminService):
         request_elem = 'zato_outgoing_zmq_get_list_request'
         response_elem = 'zato_outgoing_zmq_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'address', 'socket_type')
+        output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'socket_method')
 
     def get_data(self, session):
         return self._search(out_zmq_list, session, self.request.input.cluster_id, False)
@@ -42,7 +42,7 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_zmq_create_request'
         response_elem = 'zato_outgoing_zmq_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type')
+        input_required = ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method')
         input_optional = ('msg_source',)
         output_required = ('id', 'name')
 
@@ -70,6 +70,7 @@ class Create(AdminService):
                 session.commit()
 
                 input.action = OUTGOING.ZMQ_CREATE.value
+                input.id = item.id
                 self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
@@ -107,8 +108,6 @@ class Edit(AdminService):
             try:
                 item = session.query(OutgoingZMQ).filter_by(id=input.id).one()
 
-                self.logger.warn('111 %s', input)
-
                 old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
@@ -120,6 +119,7 @@ class Edit(AdminService):
                 session.commit()
 
                 input.action = OUTGOING.ZMQ_EDIT.value
+                input.id = item.id
                 input.old_name = old_name
                 self.broker_client.publish(input)
 
