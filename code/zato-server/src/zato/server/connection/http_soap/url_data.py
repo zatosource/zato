@@ -36,7 +36,7 @@ from zato.bunch import Bunch
 from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, URL_TYPE, VAULT, ZATO_NONE
 from zato.common.broker_message import code_to_name, CHANNEL, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
-from zato.common.util import parse_tls_channel_security_definition
+from zato.common.util import parse_tls_channel_security_definition, update_apikey_username
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.jwt import JWT
 
@@ -135,8 +135,6 @@ class URLData(OAuthDataStore):
         self._oauth_server = OAuthServer(self)
         self._oauth_server.add_signature_method(OAuthSignatureMethod_HMAC_SHA1())
         self._oauth_server.add_signature_method(OAuthSignatureMethod_PLAINTEXT())
-
-        self
 
         self.url_path_cache = {}
 
@@ -669,7 +667,7 @@ class URLData(OAuthDataStore):
                         break
 
         if not is_allowed:
-            logger.error('Cound not find a matching RBAC definition, cid:`%s`', cid)
+            logger.error('None of RBAC definitions allowed request in, cid:`%s`', cid)
             raise Unauthorized(cid, 'You are not allowed to access this resource', 'zato')
 
 # ################################################################################################################################
@@ -737,7 +735,7 @@ class URLData(OAuthDataStore):
 # ################################################################################################################################
 
     def _update_apikey(self, name, config):
-        config.username = 'HTTP_{}'.format(config.get('username', '').replace('-', '_'))
+        update_apikey_username(config)
         self.apikey_config[name] = Bunch()
         self.apikey_config[name].config = config
 

@@ -294,7 +294,7 @@ def servers_edit(req):
         else:
             fetch_lb_data = False
 
-        response = req.zato.client.invoke('zato.cluster.server.edit', {'id':server_id, 'name':req.POST['edit-name']})
+        response = req.zato.client.invoke('zato.server.edit', {'id':server_id, 'name':req.POST['edit-name']})
 
         return _common_edit_message(client, 'Server [{}] updated',
             response.data.id, response.data.name, response.data.host,

@@ -11,9 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Bunch
 from bunch import Bunch
 
-# mock
-from mock import patch
-
 # Zato
 from zato.common import zato_namespace
 from zato.common.broker_message import CHANNEL, MESSAGE_TYPE

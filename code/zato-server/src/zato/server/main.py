@@ -210,6 +210,10 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     kvdb.component = 'master-proc'
     clear_locks(kvdb, config.main.token, config.kvdb, crypto_manager.decrypt)
 
+    # New in 2.0.8
+    server.return_tracebacks = asbool(config.misc.get('return_tracebacks', True))
+    server.default_error_message = config.misc.get('default_error_message', 'An error has occurred')
+
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
 

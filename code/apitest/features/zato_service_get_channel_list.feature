@@ -95,7 +95,7 @@ Feature: zato.service.get-channel-list
     Given format "JSON"
     Given request is "{}"
     Given JSON Pointer "/id" in request is "#service_id"
-    Given JSON Pointer "/channel_type" in request is "http_plain"
+    Given JSON Pointer "/channel_type" in request is "plain_http"
     When the URL is invoked
 
     Then status is "200"

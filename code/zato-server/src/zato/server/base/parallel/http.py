@@ -65,7 +65,7 @@ class HTTPHandler(object):
             wsgi_environ['zato.http.response.status'] = b'{} {}'.format(INTERNAL_SERVER_ERROR, responses[INTERNAL_SERVER_ERROR])
             error_msg = b'[{0}] Exception caught [{1}]'.format(cid, tb)
             logger.error(error_msg)
-            payload = error_msg
+            payload = error_msg if self.return_tracebacks else self.default_error_message
             raise
 
         channel_item = wsgi_environ['zato.http.channel_item']

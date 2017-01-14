@@ -438,7 +438,7 @@ zato_services = {
     'zato.service.delete':'zato.server.service.internal.service.Delete',
     'zato.service.edit':'zato.server.service.internal.service.Edit',
     'zato.service.get-by-name':'zato.server.service.internal.service.GetByName',
-    'zato.service.get-channel-list':'zato.server.service.interna.sol.service.GetChannelList',
+    'zato.service.get-channel-list':'zato.server.service.internal.service.GetChannelList',
     'zato.service.get-deployment-info-list':'zato.server.service.internal.service.GetDeploymentInfoList',
     'zato.service.get-list':'zato.server.service.internal.service.GetList',
     'zato.service.get-request-response':'zato.server.service.internal.service.GetRequestResponse',
