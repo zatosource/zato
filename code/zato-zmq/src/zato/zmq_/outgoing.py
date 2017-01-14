@@ -20,3 +20,6 @@ class Simple(Base):
     def _start(self):
         super(Simple, self)._start()
         self.init_simple_socket()
+
+    def send(self, msg):
+        self.impl.send_string(msg)

@@ -27,7 +27,7 @@ class GetList(AdminService):
         request_elem = 'zato_outgoing_zmq_get_list_request'
         response_elem = 'zato_outgoing_zmq_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'address', 'socket_type')
+        output_required = ('id', 'name', 'is_active', 'address', 'socket_type', 'socket_method')
 
     def get_data(self, session):
         return self._search(out_zmq_list, session, self.request.input.cluster_id, False)
@@ -107,8 +107,6 @@ class Edit(AdminService):
 
             try:
                 item = session.query(OutgoingZMQ).filter_by(id=input.id).one()
-
-                self.logger.warn('111 %s', input)
 
                 old_name = item.name
                 item.name = input.name
