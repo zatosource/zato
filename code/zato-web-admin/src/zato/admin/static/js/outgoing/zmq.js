@@ -17,7 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.OutgoingZMQ;
     $.fn.zato.data_table.new_row_func = $.fn.zato.outgoing.zmq.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'address', 'socket_type']);
+    $.fn.zato.data_table.setup_forms(['name', 'address', 'socket_type', 'socket_method']);
 })
 
 $.fn.zato.outgoing.zmq.create = function() {
@@ -43,6 +43,7 @@ $.fn.zato.outgoing.zmq.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', item.address);
     row += String.format('<td>{0}</td>', item.socket_type);
+    row += String.format('<td>{0}</td>', item.socket_method);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.zmq.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.zmq.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);

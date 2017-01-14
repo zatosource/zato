@@ -207,6 +207,8 @@ ZMQ_OUTGOING_TYPES = ('PUSH', 'PUB')
 class ZMQ:
 
     PULL = 'PULL'
+    PUSH = 'PUSH'
+    PUB = 'PUB'
     SUB = 'SUB'
     MDP = 'MDP'
     MDP01 = MDP + '01'
@@ -225,6 +227,11 @@ class ZMQ:
         PULL: 'Pull',
         SUB: 'Sub',
         MDP01: MDP01_HUMAN,
+    })
+
+    OUTGOING = OrderedDict({
+        PUSH: 'Push',
+        PUB: 'Pub',
     })
 
     class METHOD_NAME:

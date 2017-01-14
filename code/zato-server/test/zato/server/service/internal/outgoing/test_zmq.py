@@ -38,7 +38,7 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.response_elem, 'zato_outgoing_zmq_get_list_response')
         self.assertEquals(self.sio.input_required, ('cluster_id',))
         self.assertEquals(self.sio.input_optional, GetListAdminSIO.input_optional)
-        self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'address', 'socket_type'))
+        self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'address', 'socket_type', 'socket_method'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
@@ -55,7 +55,8 @@ class CreateTestCase(ServiceTestCase):
         self.sio = self.service_class.SimpleIO
 
     def get_request_data(self):
-        return {'cluster_id':rand_int(), 'name':rand_string(), 'is_active':rand_bool(), 'address':rand_string(), 'socket_type':rand_string()}
+        return {'cluster_id':rand_int(), 'name':rand_string(), 'is_active':rand_bool(), 'address':rand_string(),
+                'socket_type':rand_string()}
 
     def get_response_data(self):
         return Bunch({'id':rand_int(), 'name':rand_string()})
@@ -64,7 +65,7 @@ class CreateTestCase(ServiceTestCase):
 
         self.assertEquals(self.sio.request_elem, 'zato_outgoing_zmq_create_request')
         self.assertEquals(self.sio.response_elem, 'zato_outgoing_zmq_create_response')
-        self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'address', 'socket_type'))
+        self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'address', 'socket_type', 'socket_method'))
         self.assertEquals(self.sio.input_optional, ('msg_source',))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
