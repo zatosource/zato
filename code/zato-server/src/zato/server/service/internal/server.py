@@ -47,6 +47,11 @@ class Edit(AdminService):
 
                 self.response.payload = item
 
+                for name in('last_join_mod_date', 'up_mod_date'):
+                    attr = getattr(self.response.payload, name, None)
+                    if attr:
+                        setattr(self.response.payload, name, attr.isoformat())
+
             except Exception, e:
                 msg = 'Could not update the server, id:[{}], e:[{}]'.format(self.request.input.id, format_exc(e))
                 self.logger.error(msg)

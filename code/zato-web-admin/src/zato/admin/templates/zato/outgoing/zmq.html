@@ -29,6 +29,7 @@
             '_is_active',
             'address',
             'socket_type',
+            'socket_method',
             '_edit',
             '_delete',
             'id',
@@ -67,6 +68,7 @@
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Address</a></th>
                         <th><a href="#">Socket type</a></th>
+                        <th><a href="#">Socket method</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -82,6 +84,7 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.address }}</td>
                         <td>{{ item.socket_type }}</td>
+                        <td>{{ item.socket_method }}</td>
                         <td><a href="javascript:$.fn.zato.outgoing.zmq.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.zmq.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -90,7 +93,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='9'>No results</td>
+                        <td colspan='11'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -122,6 +125,11 @@
                         <tr>
                             <td style="vertical-align:middle">Socket type</td>
                             <td>{{ create_form.socket_type }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Socket method</td>
+                            <td>{{ create_form.socket_method }}</td>
                         </tr>
 
                         <tr>
@@ -158,6 +166,11 @@
                         <tr>
                             <td style="vertical-align:middle">Socket type</td>
                             <td>{{ edit_form.socket_type }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Socket method</td>
+                            <td>{{ edit_form.socket_method }}</td>
                         </tr>
 
                         <tr>

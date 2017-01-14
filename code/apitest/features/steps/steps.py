@@ -23,7 +23,7 @@ from datadiff.tools import assert_equals
 # Zato
 from zato.apitest import steps as default_steps
 from zato.apitest.steps.json import set_pointer
-from zato.apitest.util import obtain_values, utcnow
+from zato.apitest.util import obtain_values, utcnow, utcnow_minus_hour
 from zato.apitest.steps.json import assert_value
 
 @given('I store a format string "{value}" under "{name}"')
@@ -35,6 +35,10 @@ def given_i_store_format_string_value_under_name(ctx, value, name):
 def given_i_store_utc_now_under_name(ctx, name, format):
     ctx.zato.user_ctx[name] = utcnow(format=ctx.zato.date_formats[format])
 
+@given('JSON Pointer "{path}" in request is UTC now "{format}" minus one hour')
+@obtain_values
+def given_json_pointer_is_utc_now_minus_one_hour(ctx, path, format):
+    set_pointer(ctx, path, utcnow_minus_hour(format=ctx.zato.date_formats[format]))
 
 @then('JSON Pointer "{path}" is base64 JSON which pointer "{path2}" has "{value}"')
 @obtain_values

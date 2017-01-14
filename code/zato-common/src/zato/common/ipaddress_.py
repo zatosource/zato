@@ -72,7 +72,7 @@ def get_preferred_ip(base_bind, user_prefs):
     current_ifaces.sort()
 
     current_addresses = [net_ifaddresses(elem).get(AF_INET) for elem in current_ifaces]
-    current_addresses = [[elem.get('addr').decode('utf-8') for elem in x] for x in current_addresses]
+    current_addresses = [[elem.get('addr').decode('utf-8') for elem in x] for x in current_addresses if x]
     current_addresses = list(itertools.chain.from_iterable(current_addresses))
 
     # Preferences broken out into interfacs and network ranges/IP addresses

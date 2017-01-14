@@ -48,7 +48,7 @@ from zato.common.odb.api import PoolStore, SessionWrapper
 from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, \
-     store_tls, update_bind_port, visit_py_source
+     store_tls, update_apikey_username, update_bind_port, visit_py_source
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
@@ -223,10 +223,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Vault connections
         self.init_vault_conn()
 
+        # API keys
+        self.update_apikeys()
+
         # Request dispatcher - matches URLs, checks security and dispatches HTTP
         # requests to services.
 
-        self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io)
+        self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io,
+            return_tracebacks=self.server.return_tracebacks, default_error_message=self.server.default_error_message)
         self.request_dispatcher.url_data = URLData(
             self, deepcopy(self.worker_config.http_soap),
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
@@ -692,6 +696,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                         config.client_id, config.name, config.is_active, config.sub_key, config.max_depth,
                         config.delivery_mode, config.callback_id, config.callback_name, callback_type),
                     Topic(config.topic_name))
+
+# ################################################################################################################################
+
+    def update_apikeys(self):
+        """ API keys need to be upper-cased and in the format that WSGI environment will have them in.
+        """
+        for config_dict in self.worker_config.apikey.values():
+            update_apikey_username(config_dict.config)
 
 # ################################################################################################################################
 
@@ -1914,6 +1926,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_broker_msg_OUTGOING_ZMQ_CREATE(self, msg):
+        print(333, msg)
         self.zmq_out_api.create(msg.name, msg)
 
     def on_broker_msg_OUTGOING_ZMQ_EDIT(self, msg):

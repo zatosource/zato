@@ -117,7 +117,7 @@ Feature: zato.service.edit
     Given URL path "/zato/json/zato.service.invoke"
 
     Given format "JSON"
-    Given request "service_upload.json"
+    Given request is "{}"
     Given JSON Pointer "/name" in request is "test-service.test-service"
     # payload sent as base64 {"service_request": "hola"}
     Given JSON Pointer "/payload" in request is "eyJzZXJ2aWNlX3JlcXVlc3QiOiAiaG9sYSJ9Cg=="
