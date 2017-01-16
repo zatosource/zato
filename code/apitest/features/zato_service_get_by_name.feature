@@ -47,7 +47,7 @@ Feature: zato.service.get-by-name
     Given URL path "/zato/json/zato.service.invoke"
 
     Given format "JSON"
-    Given request "service_upload.json"
+    Given request is "{}"
     Given JSON Pointer "/name" in request is "test-service.test-service"
     # payload sent as base64 {"service_request": "hola"}
     Given JSON Pointer "/payload" in request is "eyJzZXJ2aWNlX3JlcXVlc3QiOiAiaG9sYSJ9Cg=="
@@ -57,7 +57,7 @@ Feature: zato.service.get-by-name
     Then status is "200"
 
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
-    And JSON Pointer "/zato_service_invoke_response/response" is base64 JSON which pointer "/response/echo_request" has "hola"
+    And JSON Pointer "/zato_service_invoke_response/response" is base64 JSON which pointer "/response/service_response/echo_request" has "hola"
 
   @service.get-by-name
   Scenario: Delete test service
