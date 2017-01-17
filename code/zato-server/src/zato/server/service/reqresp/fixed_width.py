@@ -19,15 +19,23 @@ from dateparser import parse as dateparser_parse
 # regex
 from regex import compile as re_compile
 
+# Zato
+from zato.common import PADDING
+
 # ################################################################################################################################
 
 class _Base(object):
     len = None
     name = None
+    padding = PADDING.RIGHT
+    fill_char = ' '
 
-    def __init__(self, len=None, name=None):
+    def __init__(self, len=None, name=None, padding=None, fill_char=None):
         self.len = self.len or len
         self._name = self.name or name
+        self._padding = padding or self.padding
+        _fill_char = fill_char or self.fill_char
+        self._fill_char = _fill_char if isinstance(_fill_char, str) else str(_fill_char)
         self.pattern = '(?P<{}>.{{{}}})'.format(self._name, self.len)
 
     def from_string(self, value):
@@ -54,8 +62,8 @@ class Decimal(_Base):
     err_if_scale_too_big = None
     ctx_config = None
 
-    def __init__(self, len=None, scale=2, name=None, ctx_config=None, err_if_scale_too_big=False):
-        super(Decimal, self).__init__(len, name)
+    def __init__(self, len=None, scale=2, name=None, ctx_config=None, err_if_scale_too_big=False, padding=None, fill_char=None):
+        super(Decimal, self).__init__(len, name, padding, fill_char)
         self._scale = self.scale or scale
         self._err_if_scale_too_big = self.err_if_scale_too_big if self.err_if_scale_too_big is not None else err_if_scale_too_big
         self.ctx = self._get_context(ctx_config)
@@ -103,10 +111,10 @@ class _BaseTime(_Base):
     parse_kwargs = None
     output_format=None
 
-    def __init__(self, len=None, name=None, output_format=None, parse_kwargs=None):
+    def __init__(self, len=None, name=None, output_format=None, parse_kwargs=None, padding=None, fill_char=None):
         self._parse_kwargs = self.parse_kwargs if self.parse_kwargs else parse_kwargs or {}
         self._output_format = self.output_format or output_format
-        super(_BaseTime, self).__init__(len, name)
+        super(_BaseTime, self).__init__(len, name, padding, fill_char)
 
     def from_string(self, value):
         return dateparser_parse(value.strip(), **self._parse_kwargs)
@@ -131,11 +139,13 @@ class Time(_BaseTime):
 class FixedWidth(object):
     """ Parses fixed-width data, whole files and individual lines alike, and returns iterators or lists to read contents from.
     """
-    def __init__(self, raw_data, definition):
-        self.raw_data = raw_data
+    def __init__(self, definition, raw_data=None):
         self.definition = definition
+        self.raw_data = raw_data
         self.matcher = re_compile(''.join(elem.pattern for elem in self.definition))
         self.line_class = self.get_line_class([elem._name for elem in self.definition])
+
+# ################################################################################################################################
 
     def get_line_class(self, keys):
         """ Returns a class whose instance in runtime will represent a single line of fixed-width data.
@@ -144,6 +154,8 @@ class FixedWidth(object):
             __slots__ = keys
 
         return FWLine
+
+# ################################################################################################################################
 
     def __iter__(self):
         """ Iterates over all lines of input yielding each one with individual elements converted to business objects.
@@ -162,5 +174,39 @@ class FixedWidth(object):
                     yield None
         finally:
             data.close()
+
+# ################################################################################################################################
+
+    def _serialize_line(self, response, _right=PADDING.RIGHT):
+        """ Serializes to string a single line out fixed-width data.
+        """
+        line = StringIO()
+        try:
+            for item in self.definition:
+
+                value = str(getattr(response, item._name))
+                value_len = len(value)
+
+                if value_len < item.len:
+                    if item.padding == _right:
+                        value = value.rjust(item.len, item._fill_char)
+                    else:
+                        value = value.ljust(item.len, item._fill_char)
+
+                line.write(value)
+
+            return line.getvalue()
+
+        finally:
+            line.close()
+
+# ################################################################################################################################
+
+    def serialize(self, response):
+        """ Serializes to string one or more lines of fixed-width data.
+        """
+        out = [self._serialize_line(line) for line in response] if \
+            isinstance(response, list) else [self._serialize_line(response)]
+        return '\n'.join(out)
 
 # ################################################################################################################################

@@ -862,6 +862,10 @@ class APISPEC:
     OPEN_API_V2 = 'openapi-v2'
     NAMESPACE_NULL = ''
 
+class PADDING:
+    LEFT = 'left'
+    RIGHT = 'right'
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'
