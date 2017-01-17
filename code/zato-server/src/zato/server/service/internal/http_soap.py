@@ -24,18 +24,20 @@ from webhelpers.paginate import Page
 
 # Zato
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE, \
-     ZATO_SEC_USE_RBAC
+    MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE, URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE, \
+    ZATO_SEC_USE_RBAC
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, JSONPointer, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsJSONPointer, \
-     HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, TLSCACert, to_json, XPath
+    HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, TLSCACert, to_json, XPath
 from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap_list
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
+
 class _HTTPSOAPService(object):
     """ A common class for various HTTP/SOAP-related services.
     """
+
     def notify_worker_threads(self, params, action):
         """ Notify worker threads of new or updated parameters.
         """
@@ -51,12 +53,12 @@ class _HTTPSOAPService(object):
         """ First checks whether the security type is correct for the given
         connection type. If it is, returns a dictionary of security-related information.
         """
-        info = {'security_name':None, 'sec_type':None}
+        info = {'security_name': None, 'sec_type': None}
 
         if security_id:
 
             sec_def = session.query(SecurityBase.name, SecurityBase.sec_type).\
-                filter(SecurityBase.id==security_id).\
+                filter(SecurityBase.id == security_id).\
                 one()
 
             # Outgoing plain HTTP connections may use HTTP Basic Auth only,
@@ -65,10 +67,11 @@ class _HTTPSOAPService(object):
 
                 if transport == URL_TYPE.PLAIN_HTTP and \
                    sec_def.sec_type not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.TLS_KEY_CERT):
-                    raise Exception('Only HTTP Basic Auth and TLS keys/certs are supported, not [{}]'.format(sec_def.sec_type))
+                    raise Exception(
+                        'Only HTTP Basic Auth and TLS keys/certs are supported, not [{}]'.format(sec_def.sec_type))
 
                 elif transport == URL_TYPE.SOAP and sec_def.sec_type \
-                     not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.WSS):
+                        not in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM, SEC_DEF_TYPE.WSS):
 
                     raise Exception('Security type must be HTTP Basic Auth, NTLM or WS-Security, not [{}]'.format(
                         sec_def.sec_type))
@@ -77,6 +80,7 @@ class _HTTPSOAPService(object):
             info['sec_type'] = sec_def.sec_type
 
         return info
+
 
 class GetList(AdminService):
     """ Returns a list of HTTP/SOAP connections.
@@ -89,26 +93,30 @@ class GetList(AdminService):
         input_required = ('cluster_id', 'connection', 'transport')
         output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
-            'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
-            'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
-            'content_type', Boolean('sec_use_rbac'))
+                           'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
+                           'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean(
+                               'has_rbac'),
+                           'content_type', Boolean('sec_use_rbac'))
         output_repeated = True
 
     def get_data(self, session):
         return self._search(http_soap_list, session, self.request.input.cluster_id,
-            self.request.input.connection, self.request.input.transport,
-            asbool(self.server.fs_server_config.misc.return_internal_objects), False)
+                            self.request.input.connection, self.request.input.transport,
+                            asbool(self.server.fs_server_config.misc.return_internal_objects), False)
 
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+
 class _CreateEdit(AdminService, _HTTPSOAPService):
+
     def add_tls_ca_cert(self, input, sec_tls_ca_cert_id):
         with closing(self.odb.session()) as session:
             input.sec_tls_ca_cert_name = session.query(TLSCACert.name).\
-                filter(TLSCACert.id==sec_tls_ca_cert_id).\
+                filter(TLSCACert.id == sec_tls_ca_cert_id).\
                 one()[0]
+
 
 class Create(_CreateEdit):
     """ Creates a new HTTP/SOAP connection.
@@ -118,8 +126,9 @@ class Create(_CreateEdit):
         response_elem = 'zato_http_soap_create_response'
         input_required = ('cluster_id', 'name', 'is_active', 'connection', 'transport', 'is_internal', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
-            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type')
+                          'host', 'ping_method', 'pool_size', Boolean(
+                              'merge_url_params_req'), 'url_params_pri', 'params_pri',
+                          'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -135,10 +144,10 @@ class Create(_CreateEdit):
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(HTTPSOAP.id).\
-                filter(HTTPSOAP.cluster_id==input.cluster_id).\
-                filter(HTTPSOAP.name==input.name).\
-                filter(HTTPSOAP.connection==input.connection).\
-                filter(HTTPSOAP.transport==input.transport).\
+                filter(HTTPSOAP.cluster_id == input.cluster_id).\
+                filter(HTTPSOAP.name == input.name).\
+                filter(HTTPSOAP.connection == input.connection).\
+                filter(HTTPSOAP.transport == input.transport).\
                 first()
 
             if existing_one:
@@ -146,9 +155,9 @@ class Create(_CreateEdit):
 
             # Is the service's name correct?
             service = session.query(Service).\
-                filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
-                filter(Service.name==input.service).first()
+                filter(Cluster.id == input.cluster_id).\
+                filter(Service.cluster_id == Cluster.id).\
+                filter(Service.name == input.service).first()
 
             if input.connection == 'channel' and not service:
                 msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
@@ -158,20 +167,21 @@ class Create(_CreateEdit):
             # Will raise exception if the security type doesn't match connection
             # type and transport
             sec_info = self._handle_security_info(session, input.security_id,
-                input.connection, input.transport)
+                                                  input.connection, input.transport)
 
             try:
 
-                item = HTTPSOAP()
+                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
+                item = HTTPSOAP(cluster=cluster)
                 item.connection = input.connection
                 item.transport = input.transport
-                item.cluster_id = input.cluster_id
+                #item.cluster_id = input.cluster_id
                 item.is_internal = input.is_internal
                 item.name = input.name
                 item.is_active = input.is_active
                 item.host = input.host
                 item.url_path = input.url_path
-                item.security_id = input.security_id or None # So SQLite doesn't reject ''
+                item.security_id = input.security_id or None  # So SQLite doesn't reject ''
                 item.method = input.method
                 item.soap_action = input.soap_action
                 item.soap_version = input.soap_version or None
@@ -221,6 +231,7 @@ class Create(_CreateEdit):
 
                 raise
 
+
 class Edit(_CreateEdit):
     """ Updates an HTTP/SOAP connection.
     """
@@ -229,8 +240,9 @@ class Edit(_CreateEdit):
         response_elem = 'zato_http_soap_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'connection', 'transport', 'url_path')
         input_optional = ('service', 'security_id', 'method', 'soap_action', 'soap_version', 'data_format',
-            'host', 'ping_method', 'pool_size', Boolean('merge_url_params_req'), 'url_params_pri', 'params_pri',
-            'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type')
+                          'host', 'ping_method', 'pool_size', Boolean(
+                              'merge_url_params_req'), 'url_params_pri', 'params_pri',
+                          'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'), 'content_type')
         output_required = ('id', 'name')
 
     def handle(self):
@@ -247,11 +259,11 @@ class Edit(_CreateEdit):
         with closing(self.odb.session()) as session:
 
             existing_one = session.query(HTTPSOAP.id).\
-                filter(HTTPSOAP.cluster_id==input.cluster_id).\
-                filter(HTTPSOAP.id!=input.id).\
-                filter(HTTPSOAP.name==input.name).\
-                filter(HTTPSOAP.connection==input.connection).\
-                filter(HTTPSOAP.transport==input.transport).\
+                filter(HTTPSOAP.cluster_id == input.cluster_id).\
+                filter(HTTPSOAP.id != input.id).\
+                filter(HTTPSOAP.name == input.name).\
+                filter(HTTPSOAP.connection == input.connection).\
+                filter(HTTPSOAP.transport == input.transport).\
                 first()
 
             if existing_one:
@@ -259,9 +271,9 @@ class Edit(_CreateEdit):
 
             # Is the service's name correct?
             service = session.query(Service).\
-                filter(Cluster.id==input.cluster_id).\
-                filter(Service.cluster_id==Cluster.id).\
-                filter(Service.name==input.service).first()
+                filter(Cluster.id == input.cluster_id).\
+                filter(Service.cluster_id == Cluster.id).\
+                filter(Service.name == input.service).first()
 
             if input.connection == 'channel' and not service:
                 msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
@@ -284,7 +296,7 @@ class Edit(_CreateEdit):
                 item.is_active = input.is_active
                 item.host = input.host
                 item.url_path = input.url_path
-                item.security_id = input.security_id or None # So SQLite doesn't reject ''
+                item.security_id = input.security_id or None  # So SQLite doesn't reject ''
                 item.connection = input.connection
                 item.transport = input.transport
                 item.cluster_id = input.cluster_id
@@ -346,6 +358,7 @@ class Edit(_CreateEdit):
 
                 raise
 
+
 class Delete(AdminService, _HTTPSOAPService):
     """ Deletes an HTTP/SOAP connection.
     """
@@ -358,7 +371,7 @@ class Delete(AdminService, _HTTPSOAPService):
         with closing(self.odb.session()) as session:
             try:
                 item = session.query(HTTPSOAP).\
-                    filter(HTTPSOAP.id==self.request.input.id).\
+                    filter(HTTPSOAP.id == self.request.input.id).\
                     one()
 
                 old_name = item.name
@@ -374,8 +387,8 @@ class Delete(AdminService, _HTTPSOAPService):
                 else:
                     action = OUTGOING.HTTP_SOAP_DELETE.value
 
-                self.notify_worker_threads({'name':old_name, 'transport':old_transport,
-                    'old_url_path':old_url_path, 'old_soap_action':old_soap_action}, action)
+                self.notify_worker_threads({'name': old_name, 'transport': old_transport,
+                                            'old_url_path': old_url_path, 'old_soap_action': old_soap_action}, action)
 
             except Exception, e:
                 session.rollback()
@@ -383,6 +396,7 @@ class Delete(AdminService, _HTTPSOAPService):
                 self.logger.error(msg)
 
                 raise
+
 
 class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
@@ -398,6 +412,7 @@ class Ping(AdminService):
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             config_dict = getattr(self.outgoing, item.transport)
             self.response.payload.info = config_dict.get(item.name).ping(self.cid)
+
 
 class ReloadWSDL(AdminService, _HTTPSOAPService):
     """ Reloads WSDL by recreating the whole underlying queue of SOAP clients.
@@ -419,19 +434,23 @@ class ReloadWSDL(AdminService, _HTTPSOAPService):
         action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
         self.notify_worker_threads(fields, action)
 
+
 class GetURLSecurity(AdminService):
     """ Returns a JSON document describing the security configuration of all
     Zato channels.
     """
+
     def handle(self):
         response = {}
         response['url_sec'] = sorted(self.worker_store.request_handler.security.url_sec.items())
-        response['plain_http_handler.http_soap'] = sorted(self.worker_store.request_handler.plain_http_handler.http_soap.items())
+        response['plain_http_handler.http_soap'] = sorted(
+            self.worker_store.request_handler.plain_http_handler.http_soap.items())
         response['soap_handler.http_soap'] = sorted(self.worker_store.request_handler.soap_handler.http_soap.items())
         self.response.payload = dumps(response, sort_keys=True, indent=4)
         self.response.content_type = 'application/json'
 
 # ################################################################################################################################
+
 
 class GetAuditConfig(AdminService):
     """ Returns audit configuration for a given HTTP/SOAP object.
@@ -441,18 +460,19 @@ class GetAuditConfig(AdminService):
         response_elem = 'zato_http_soap_get_audit_config_response'
         input_required = ('id',)
         output_required = (Boolean('audit_enabled'), Integer('audit_back_log'),
-            Integer('audit_max_payload'), 'audit_repl_patt_type')
+                           Integer('audit_max_payload'), 'audit_repl_patt_type')
 
     def handle(self):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).\
-                filter(HTTPSOAP.id==self.request.input.id).\
+                filter(HTTPSOAP.id == self.request.input.id).\
                 one()
 
             self.response.payload.audit_enabled = item.audit_enabled
             self.response.payload.audit_back_log = item.audit_back_log
             self.response.payload.audit_max_payload = item.audit_max_payload
             self.response.payload.audit_repl_patt_type = item.audit_repl_patt_type
+
 
 class SetAuditConfig(AdminService):
     """ Sets audit configuration for a given HTTP/SOAP connection. Everything except for replace patterns.
@@ -465,7 +485,7 @@ class SetAuditConfig(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).\
-                filter(HTTPSOAP.id==self.request.input.id).\
+                filter(HTTPSOAP.id == self.request.input.id).\
                 one()
 
             item.audit_max_payload = self.request.input.audit_max_payload
@@ -480,6 +500,7 @@ class SetAuditConfig(AdminService):
 
 # ################################################################################################################################
 
+
 class GetAuditReplacePatterns(AdminService):
     """ Returns audit replace patterns for a given connection, both JSONPointer and XPath.
     """
@@ -492,11 +513,13 @@ class GetAuditReplacePatterns(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).\
-                filter(HTTPSOAP.id==self.request.input.id).\
+                filter(HTTPSOAP.id == self.request.input.id).\
                 one()
 
-            self.response.payload.patterns_json_pointer = [elem.pattern.name for elem in item.replace_patterns_json_pointer]
+            self.response.payload.patterns_json_pointer = [
+                elem.pattern.name for elem in item.replace_patterns_json_pointer]
             self.response.payload.patterns_xpath = [elem.pattern.name for elem in item.replace_patterns_xpath]
+
 
 class SetAuditReplacePatterns(AdminService):
     """ Set audit replace patterns for a given HTTP/SOAP connection.
@@ -517,7 +540,7 @@ class SetAuditReplacePatterns(AdminService):
 
         with closing(self.odb.session()) as session:
             conn = session.query(HTTPSOAP).\
-                filter(HTTPSOAP.id==conn_id).\
+                filter(HTTPSOAP.id == conn_id).\
                 one()
 
             if not self.request.input.pattern_list:
@@ -531,7 +554,7 @@ class SetAuditReplacePatterns(AdminService):
                     HTTSOAPAuditReplacePatternsXPath
 
                 all_patterns = session.query(pattern_class).\
-                    filter(pattern_class.cluster_id==self.server.cluster_id).\
+                    filter(pattern_class.cluster_id == self.server.cluster_id).\
                     all()
 
                 missing = set(self.request.input.pattern_list) - set([elem.name for elem in all_patterns])
@@ -564,6 +587,7 @@ class SetAuditReplacePatterns(AdminService):
 
 # ################################################################################################################################
 
+
 class SetAuditState(AdminService):
     """ Enables or disables audit for a given HTTP/SOAP object.
     """
@@ -575,7 +599,7 @@ class SetAuditState(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             item = session.query(HTTPSOAP).\
-                filter(HTTPSOAP.id==self.request.input.id).\
+                filter(HTTPSOAP.id == self.request.input.id).\
                 one()
 
             item.audit_enabled = self.request.input.audit_enabled
@@ -592,9 +616,11 @@ class SetAuditState(AdminService):
 
 # ################################################################################################################################
 
+
 class SetAuditResponseData(AdminService):
     """ Updates information regarding a response of a channel/outconn invocation.
     """
+
     def handle(self):
         with closing(self.odb.session()) as session:
 
@@ -612,16 +638,19 @@ class SetAuditResponseData(AdminService):
 
 # ################################################################################################################################
 
+
 class _BaseAuditService(AdminService):
+
     def get_page(self, session):
         current_batch = self.request.input.get('current_batch', BATCH_DEFAULTS.PAGE_NO)
         batch_size = self.request.input.get('batch_size', BATCH_DEFAULTS.SIZE)
         batch_size = min(batch_size, BATCH_DEFAULTS.MAX_SIZE)
 
         q = http_soap_audit_item_list(session, self.server.cluster_id, self.request.input.conn_id,
-            self.request.input.get('start'), self.request.input.get('stop'), self.request.input.get('query'), False)
+                                      self.request.input.get('start'), self.request.input.get('stop'), self.request.input.get('query'), False)
 
         return Page(q, page=current_batch, items_per_page=batch_size)
+
 
 class GetAuditItemList(_BaseAuditService):
     """ Returns a list of audit items for a particular HTTP/SOAP object.
@@ -643,6 +672,7 @@ class GetAuditItemList(_BaseAuditService):
             if item.resp_time_utc:
                 item.resp_time_utc = item.resp_time_utc.isoformat()
 
+
 class GetAuditBatchInfo(_BaseAuditService):
     """ Returns pagination information for audit log for a specified object and from/to dates.
     """
@@ -651,7 +681,8 @@ class GetAuditBatchInfo(_BaseAuditService):
         response_elem = 'zato_http_soap_get_batch_info_response'
         input_required = ('conn_id',)
         input_optional = ('start', 'stop', Integer('current_batch'), Integer('batch_size'), 'query')
-        output_required = ('total_results', 'num_batches', 'has_previous', 'has_next', 'next_batch_number', 'previous_batch_number')
+        output_required = ('total_results', 'num_batches', 'has_previous',
+                           'has_next', 'next_batch_number', 'previous_batch_number')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -665,6 +696,7 @@ class GetAuditBatchInfo(_BaseAuditService):
                 'previous_batch_number': page.previous_page,
             }
 
+
 class GetAuditItem(_BaseAuditService):
     """ Returns a particular audit item by its ID.
     """
@@ -674,7 +706,7 @@ class GetAuditItem(_BaseAuditService):
         input_required = ('id',)
         output_required = ('id', 'cid', 'req_time_utc', 'remote_addr',)
         output_optional = ('resp_time_utc', 'user_token', 'invoke_ok', 'auth_ok', 'req_headers', 'req_payload',
-            'resp_headers', 'resp_payload')
+                           'resp_headers', 'resp_payload')
 
     def handle(self):
         with closing(self.odb.session()) as session:

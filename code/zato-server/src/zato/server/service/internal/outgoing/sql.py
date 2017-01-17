@@ -16,14 +16,16 @@ from uuid import uuid4
 # Zato
 from zato.common import ZatoException, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import OUTGOING
-from zato.common.odb.model import SQLConnectionPool
+from zato.common.odb.model import SQLConnectionPool, Cluster
 from zato.common.odb.query import out_sql_list
 from zato.server.service import Integer
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
+
 class _SQLService(object):
     """ A common class for various SQL-related services.
     """
+
     def notify_worker_threads(self, params, action=OUTGOING.SQL_CREATE_EDIT.value):
         """ Notify worker threads of new or updated parameters.
         """
@@ -32,7 +34,9 @@ class _SQLService(object):
 
     def validate_extra(self, cid, extra):
         if extra and not b'=' in extra:
-            raise ZatoException(cid, 'extra should be a list of key=value parameters, possibly one-element long, instead of [{}]'.format(extra.decode('utf-8')))
+            raise ZatoException(
+                cid, 'extra should be a list of key=value parameters, possibly one-element long, instead of [{}]'.format(extra.decode('utf-8')))
+
 
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
@@ -43,7 +47,8 @@ class GetList(AdminService):
         request_elem = 'zato_outgoing_sql_get_list_request'
         response_elem = 'zato_outgoing_sql_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', Integer('pool_size'))
+        output_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer(
+            'port'), 'db_name', 'username', Integer('pool_size'))
         output_optional = ('extra',)
 
     def get_data(self, session):
@@ -53,13 +58,15 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_sql_create_request'
         response_elem = 'zato_outgoing_sql_create_response'
-        input_required = ('name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', Integer('pool_size'))
+        input_required = ('name', 'is_active', 'cluster_id', 'engine', 'host', Integer(
+            'port'), 'db_name', 'username', Integer('pool_size'))
         input_optional = ('extra',)
         output_required = ('id', 'name')
 
@@ -72,18 +79,19 @@ class Create(AdminService, _SQLService):
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(SQLConnectionPool.id).\
-                filter(SQLConnectionPool.cluster_id==input.cluster_id).\
-                filter(SQLConnectionPool.name==input.name).\
+                filter(SQLConnectionPool.cluster_id == input.cluster_id).\
+                filter(SQLConnectionPool.name == input.name).\
                 first()
 
             if existing_one:
                 raise Exception('An outgoing SQL connection [{0}] already exists on this cluster'.format(input.name))
 
             try:
-                item = SQLConnectionPool()
+                cluster = session.query(Cluster).filter_by(id=input.cluster_id).first()
+                item = SQLConnectionPool(cluster=cluster)
                 item.name = input.name
                 item.is_active = input.is_active
-                item.cluster_id = input.cluster_id
+                #item.cluster_id = input.cluster_id
                 item.engine = input.engine
                 item.host = input.host
                 item.port = input.port
@@ -108,13 +116,15 @@ class Create(AdminService, _SQLService):
 
                 raise
 
+
 class Edit(AdminService, _SQLService):
     """ Updates an outgoing SQL connection.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_sql_edit_request'
         response_elem = 'zato_outgoing_sql_edit_response'
-        input_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', Integer('pool_size'))
+        input_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer(
+            'port'), 'db_name', 'username', Integer('pool_size'))
         input_optional = ('extra',)
         output_required = ('id', 'name')
 
@@ -126,9 +136,9 @@ class Edit(AdminService, _SQLService):
 
         with closing(self.odb.session()) as session:
             existing_one = session.query(SQLConnectionPool.id).\
-                filter(SQLConnectionPool.cluster_id==input.cluster_id).\
-                filter(SQLConnectionPool.name==input.name).\
-                filter(SQLConnectionPool.id!=input.id).\
+                filter(SQLConnectionPool.cluster_id == input.cluster_id).\
+                filter(SQLConnectionPool.name == input.name).\
+                filter(SQLConnectionPool.id != input.id).\
                 first()
 
             if existing_one:
@@ -165,6 +175,7 @@ class Edit(AdminService, _SQLService):
 
                 raise
 
+
 class Delete(AdminService, _SQLService):
     """ Deletes an outgoing SQL connection.
     """
@@ -177,14 +188,14 @@ class Delete(AdminService, _SQLService):
         with closing(self.odb.session()) as session:
             try:
                 item = session.query(SQLConnectionPool).\
-                    filter(SQLConnectionPool.id==self.request.input.id).\
+                    filter(SQLConnectionPool.id == self.request.input.id).\
                     one()
                 old_name = item.name
 
                 session.delete(item)
                 session.commit()
 
-                self.notify_worker_threads({'name':old_name}, OUTGOING.SQL_DELETE.value)
+                self.notify_worker_threads({'name': old_name}, OUTGOING.SQL_DELETE.value)
 
             except Exception, e:
                 session.rollback()
@@ -192,6 +203,7 @@ class Delete(AdminService, _SQLService):
                 self.logger.error(msg)
 
                 raise
+
 
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an outgoing SQL connection. The underlying implementation
@@ -207,6 +219,7 @@ class ChangePassword(ChangePasswordBase):
 
         self._handle(SQLConnectionPool, _auth, OUTGOING.SQL_CHANGE_PASSWORD.value)
 
+
 class Ping(AdminService):
     """ Pings an SQL database
     """
@@ -220,7 +233,7 @@ class Ping(AdminService):
         with closing(self.odb.session()) as session:
             try:
                 item = session.query(SQLConnectionPool).\
-                    filter(SQLConnectionPool.id==self.request.input.id).\
+                    filter(SQLConnectionPool.id == self.request.input.id).\
                     one()
 
                 self.response.payload.response_time = str(self.outgoing.sql.get(item.name, False).pool.ping())
@@ -232,16 +245,18 @@ class Ping(AdminService):
 
                 raise
 
+
 class AutoPing(AdminService):
     """ Invoked periodically from the scheduler - pings all the existing SQL connections.
     """
+
     def handle(self):
         try:
             self.server.sql_pool_store[ZATO_ODB_POOL_NAME].pool.ping()
         except Exception, e:
             self.logger.warn('Could not ping ODB, e:`%s`', format_exc(e))
 
-        for item in self.invoke(GetList.get_name(), {'cluster_id':self.server.cluster_id})['zato_outgoing_sql_get_list_response']:
+        for item in self.invoke(GetList.get_name(), {'cluster_id': self.server.cluster_id})['zato_outgoing_sql_get_list_response']:
             try:
                 self.invoke(Ping.get_name(), {'id': item['id']})
             except Exception, e:
