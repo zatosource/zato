@@ -85,6 +85,7 @@ class Create(AdminService):
 
                 raise
             else:
+                input.id = wss.id
                 input.action = SECURITY.WSS_CREATE.value
                 input.password = password
                 input.sec_type = SEC_DEF_TYPE.WSS
