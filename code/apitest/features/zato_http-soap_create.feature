@@ -271,7 +271,7 @@ Feature: zato.http-soap.create
 
     Then status is "200"
 
-    And JSON pointer "/response/test_service_response/echo_request" is "hola outconn"
+    And JSON pointer "/response/test_service_response/service_response/echo_request" is "hola outconn"
 
   ### Outgoing connection ApiTest clean up ###
   @http-soap.create

@@ -49,7 +49,7 @@ Feature: zato.channel.zmq.edit
     Given JSON Pointer "/name" in request is a random string
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/address" in request is "127.0.1.1:33445"
-    Given JSON Pointer "/socket_type" in request is "SUB"
+    Given JSON Pointer "/socket_type" in request is "PULL"
     Given JSON Pointer "/socket_method" in request is "Bind"
     Given JSON Pointer "/pool_strategy" in request is "Single"
     Given JSON Pointer "/service_source" in request is "Zato"

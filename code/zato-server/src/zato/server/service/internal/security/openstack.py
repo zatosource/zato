@@ -76,6 +76,7 @@ class Create(AdminService):
 
                 raise
             else:
+                input.id = auth.id
                 input.action = SECURITY.OPENSTACK_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.OPENSTACK
                 self.broker_client.publish(input)

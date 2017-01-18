@@ -50,14 +50,14 @@ Feature: zato.service.get-list
     Given request is "{}"
     Given JSON Pointer "/name" in request is "test-service.test-service"
     # payload sent as base64 {"test_output": "Test Output"}
-    Given JSON Pointer "/payload" in request is "eyJ0ZXN0X2lucHV0IjogIlRlc3QgSW5wdXQifQ=="
+    Given JSON Pointer "/payload" in request is "eyJzZXJ2aWNlX3JlcXVlc3QiOiAiaG9sYSJ9Cg=="
     Given JSON Pointer "/data_format" in request is "json"
     When the URL is invoked
 
     Then status is "200"
 
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
-    And JSON Pointer "/zato_service_invoke_response/response" is base64 JSON which pointer "/response/test_output" has "Test Output"
+    And JSON Pointer "/zato_service_invoke_response/response" is base64 JSON which pointer "/response/service_response/echo_request" has "hola"
 
   @service.get-list
   Scenario: Get service list
