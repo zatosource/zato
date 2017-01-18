@@ -76,6 +76,7 @@ class Create(AdminService):
 
                 raise
             else:
+                input.id = auth.id
                 input.action = SECURITY.NTLM_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.NTLM
                 self.broker_client.publish(input)

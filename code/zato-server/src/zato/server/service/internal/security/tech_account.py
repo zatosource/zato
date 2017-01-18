@@ -98,6 +98,7 @@ class Create(AdminService):
 
                 raise
             else:
+                input.id = tech_account.id
                 input.action = SECURITY.TECH_ACC_CREATE.value
                 input.password = input.password
                 input.sec_type = SEC_DEF_TYPE.TECH_ACCOUNT

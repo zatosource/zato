@@ -17,6 +17,7 @@ Feature: zato.outgoing.zmq.edit
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/address" in request is "tcp://localhost:5555"
     Given JSON Pointer "/socket_type" in request is "PUSH"
+    Given JSON Pointer "/socket_method" in request is "Bind"
 
 
     When the URL is invoked
@@ -44,6 +45,7 @@ Feature: zato.outgoing.zmq.edit
     Given JSON Pointer "/is_active" in request is "false"
     Given JSON Pointer "/address" in request is "tcp://localhost:5556"
     Given JSON Pointer "/socket_type" in request is "PUSH"
+    Given JSON Pointer "/socket_method" in request is "Bind"
 
 
     When the URL is invoked
