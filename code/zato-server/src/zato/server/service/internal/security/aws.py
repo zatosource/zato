@@ -74,6 +74,7 @@ class Create(AdminService):
 
                 raise
             else:
+                input.id = auth.id
                 input.action = SECURITY.AWS_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.AWS
                 self.broker_client.publish(input)

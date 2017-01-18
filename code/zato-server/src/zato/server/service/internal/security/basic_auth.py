@@ -75,6 +75,7 @@ class Create(AdminService):
 
                 raise
             else:
+                input.id = auth.id
                 input.action = SECURITY.BASIC_AUTH_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.BASIC_AUTH
                 input.id = auth.id
