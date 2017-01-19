@@ -16,7 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common import SEARCH, SECRET_SHADOW, zato_namespace, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
-from zato.common.util import replace_private_key
+from zato.common.util import get_response_value, replace_private_key
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -104,9 +104,8 @@ class AdminService(Service):
         if needs_meta and hasattr(self, '_search_tool') and not is_basestring:
             payload.zato_meta = self._search_tool.output_meta
 
-        response = replace_private_key(payload if is_basestring else payload.getvalue())
-
-        logger.info('cid:`{}`, name:`{}`, response:`{}`'.format(self.cid, self.name, response))
+        logger.info(
+            'cid:`%s`, name:`%s`, response:`%s`', self.cid, self.name, replace_private_key(get_response_value(self.response)))
 
 # ################################################################################################################################
 
