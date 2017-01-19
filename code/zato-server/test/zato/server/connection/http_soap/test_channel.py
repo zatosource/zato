@@ -267,8 +267,7 @@ class TestRequestDispatcher(MessageHandlingBase):
 
         self.assertEquals(wsgi_environ['zato.http.response.status'], '404 Not Found')
         self.assertEquals(
-            response, "[{}] Unknown URL:[{}] or SOAP action:[{}]".format(
-                cid, path_info, ''))
+            response, 'CID:`{}` Unknown URL:`{}` or SOAP action:`{}`'.format(cid, path_info, ''))
 
     def test_check_security_request_handler_handle_are_called(self):
 
@@ -282,8 +281,8 @@ class TestRequestDispatcher(MessageHandlingBase):
                 self.worker_store = None
                 self.simple_io_config = None
 
-            def handle(self, cid, url_match, channel_item, wsgi_environ, payload,
-                    worker_store, simple_io_config, post_data):
+            def handle(self, cid, url_match, channel_item, wsgi_environ, payload, worker_store, simple_io_config, post_data,
+                    path_info=None, soap_action=None, channel_type=None, _response_404=None):
                 self.cid = cid
                 self.url_match = url_match
                 self.channel_item = channel_item
@@ -421,13 +420,13 @@ class TestRequestHandler(TestCase):
                     @staticmethod
                     def new_instance(service_impl_name):
                         _server.service_impl_name = service_impl_name
-                        return _Service()
+                        return _Service(), True
 
             rh.server = _server
             rh.create_channel_params = _create_channel_params
             rh.handle(expected_cid, expected_url_match, expected_channel_item,
                 expected_wsgi_environ, expected_raw_request, expected_worker_store,
-                expected_simple_io_config, None)
+                expected_simple_io_config, None, None, None)
 
     def test_create_channel_params(self):
 
