@@ -67,6 +67,8 @@ soap_error = """<?xml version='1.0' encoding='UTF-8'?>
   </SOAP-ENV:Body>
 </SOAP-ENV:Envelope>"""
 
+response_404 = b'CID:`{}` Unknown URL:`{}` or SOAP action:`{}`'
+
 def client_json_error(cid, faultstring):
     zato_env = {'zato_env':{'result':ZATO_ERROR, 'cid':cid, 'details':faultstring}}
     return dumps(zato_env)
@@ -125,7 +127,7 @@ class RequestDispatcher(object):
         return soap_action
 
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
-        no_url_match=(None, False)):
+        no_url_match=(None, False), _response_404=response_404):
         """ Base method for dispatching incoming HTTP/SOAP messages. If the security
         configuration is one of the technical account or HTTP basic auth,
         the security validation is being performed. Otherwise, that step
@@ -206,7 +208,7 @@ class RequestDispatcher(object):
                 # OK, no security exception at that point means we can finally
                 # invoke the service.
                 response = self.request_handler.handle(cid, url_match, channel_item, wsgi_environ,
-                    payload, worker_store, self.simple_io_config, post_data)
+                    payload, worker_store, self.simple_io_config, post_data, path_info, soap_action)
 
                 wsgi_environ['zato.http.response.headers']['Content-Type'] = response.content_type
                 wsgi_environ['zato.http.response.headers'].update(response.headers)
@@ -271,7 +273,7 @@ class RequestDispatcher(object):
 
         # This is 404, no such URL path and SOAP action is known.
         else:
-            response = b'[{}] Unknown URL:[{}] or SOAP action:[{}]'.format(cid, path_info, soap_action)
+            response = response_404.format(cid, path_info, soap_action)
             wsgi_environ['zato.http.response.status'] = _status_not_found
 
             logger.error(response)
@@ -334,11 +336,14 @@ class RequestHandler(object):
 
         return channel_params
 
-    def handle(self, cid, url_match, channel_item, wsgi_environ, raw_request,
-            worker_store, simple_io_config, post_data, channel_type=CHANNEL.HTTP_SOAP):
+    def handle(self, cid, url_match, channel_item, wsgi_environ, raw_request, worker_store, simple_io_config, post_data,
+            path_info, soap_action, channel_type=CHANNEL.HTTP_SOAP, _response_404=response_404):
         """ Create a new instance of a service and invoke it.
         """
-        service = self.server.service_store.new_instance(channel_item.service_impl_name)
+        service, is_active = self.server.service_store.new_instance(channel_item.service_impl_name)
+        if not is_active:
+            logger.warn('Could not invoke an inactive service:`%s`, cid:`%s`', service.get_name(), cid)
+            raise NotFound(cid, _response_404.format(cid, path_info, soap_action))
 
         if channel_item.merge_url_params_req:
             channel_params = self.create_channel_params(url_match, channel_item,
