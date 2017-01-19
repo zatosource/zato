@@ -1631,3 +1631,8 @@ def update_apikey_username(config):
     config.username = 'HTTP_{}'.format(config.get('username', '').upper().replace('-', '_'))
 
 # ################################################################################################################################
+
+def get_response_value(response):
+    """ Extracts the actual response string from a response object produced by services.
+    """
+    return (response.payload.getvalue() if hasattr(response.payload, 'getvalue') else response.payload) or ''
