@@ -41,7 +41,9 @@ class Import(DataDictService):
             data = data['data']
 
             p.set(KVDB.DICTIONARY_ITEM_ID, data['last_dict_id'])
-            p.set(KVDB.TRANSLATION_ID, data['last_translation_id'])
+
+            if data['last_translation_id']:
+                p.set(KVDB.TRANSLATION_ID, data['last_translation_id'])
 
             for item in data['dict_list']:
                 p.hset(KVDB.DICTIONARY_ITEM, item['id'], dict_item_name(item['system'], item['key'], item['value']))
