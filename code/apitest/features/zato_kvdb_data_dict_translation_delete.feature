@@ -1,10 +1,10 @@
 @kvdb.data-dict.translation
-Feature: zato.kvdb.data-dict.translation.create
+Feature: zato.kvdb.data-dict.translation.delete
   Creates a translation, a mapping, between two dictionary entries in order to express the idea that one entry is equal
   to the other one in another system.
 
 
-  @kvdb.data-dict.translation.create
+  @kvdb.data-dict.translation.delete
   Scenario: Set up
 
     Given I store "CRM" under "first_test_system"
@@ -13,15 +13,8 @@ Feature: zato.kvdb.data-dict.translation.create
     Given I store "PORTAL" under "second_test_system"
     Given I store "customerType" under "second_test_key"
     Given I store "292" under "second_test_value"
-    # all random
-    #Given I store a random string under "first_test_system"
-    #Given I store a random string under "first_test_key"
-    #Given I store a random string under "first_test_value"
-    #Given I store a random string under "second_test_system"
-    #Given I store a random string under "second_test_system"
-    #Given I store a random string under "second_test_value"
 
-  @kvdb.data-dict.translation.create
+  @kvdb.data-dict.translation.delete
   Scenario: Create first data dictionary entry in a cluster's KVDB
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -40,7 +33,7 @@ Feature: zato.kvdb.data-dict.translation.create
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And I store "/zato_kvdb_data_dict_dictionary_create_response/id" from response under "first_dictionary_entry_id"
 
-  @kvdb.data-dict.translation.create
+  @kvdb.data-dict.translation.delete
   Scenario: Create second data dictionary entry in a cluster's KVDB
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -59,8 +52,8 @@ Feature: zato.kvdb.data-dict.translation.create
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And I store "/zato_kvdb_data_dict_dictionary_create_response/id" from response under "second_dictionary_entry_id"
 
-  @kvdb.data-dict.translation.create
-  Scenario: Invoke translation create
+  @kvdb.data-dict.translation.delete
+  Scenario: Invoke translation.create
 
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
@@ -80,9 +73,23 @@ Feature: zato.kvdb.data-dict.translation.create
 
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_kvdb_data_dict_translation_create_response/id" isn't empty
+    And I store "/zato_kvdb_data_dict_translation_create_response/id" from response under "translation_id"
 
+  @kvdb.data-dict.translation.delete
+  Scenario: Delete the translation
 
-  @kvdb.data-dict.translation.create
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+    Given URL path "/zato/json/zato.kvdb.data-dict.translation.delete"
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/id" in request is "#translation_id"
+    When the URL is invoked
+
+    Then JSON Pointer "/zato_env/result" is "ZATO_OK"
+
+  @kvdb.data-dict.translation.delete
   Scenario: Delete first test dictionary entry
 
     Given address "$ZATO_API_TEST_SERVER"
@@ -98,7 +105,7 @@ Feature: zato.kvdb.data-dict.translation.create
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_kvdb_data_dict_dictionary_delete_response/id" is an integer "#first_dictionary_entry_id"
 
-  @kvdb.data-dict.translation.create
+  @kvdb.data-dict.translation.delete
   Scenario: Delete second test dictionary entry
 
     Given address "$ZATO_API_TEST_SERVER"
