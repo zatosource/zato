@@ -1012,7 +1012,12 @@ class WorkerStore(BrokerMessageReceiver):
         else:
             payload = msg['payload']
 
-        service = self.server.service_store.new_instance_by_name(msg['service'])
+        service, is_active = self.server.service_store.new_instance_by_name(msg['service'])
+        if not is_active:
+            msg = 'Could not invoke an inactive service:`{}`, cid:`{}`'.format(service.get_name(), cid)
+            logger.warn(msg)
+            raise Exception(msg)
+
         service.update_handle(self._set_service_response_data, service, payload,
             channel, data_format, transport, self.server, self.broker_client, self, cid,
             self.worker_config.simple_io, job_type=msg.get('job_type'), wsgi_environ=wsgi_environ,

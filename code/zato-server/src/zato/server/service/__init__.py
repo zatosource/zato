@@ -35,7 +35,7 @@ from retools.lock import Lock
 from gevent import Timeout, spawn
 
 # Zato
-from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException
+from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl
@@ -461,7 +461,10 @@ class Service(object):
             self.logger.error(msg)
             raise ZatoException(self.cid, msg)
 
-        service = self.server.service_store.new_instance(impl_name)
+        service, is_active = self.server.service_store.new_instance(impl_name)
+        if not is_active:
+            raise Inactive(service.get_name())
+
         set_response_func = kwargs.pop('set_response_func', self.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,

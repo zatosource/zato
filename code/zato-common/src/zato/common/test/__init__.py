@@ -198,8 +198,8 @@ class FakeServiceStore(object):
         self.name_to_impl_name = name_to_impl_name or {}
         self.impl_name_to_service = impl_name_to_service or {}
 
-    def new_instance(self, impl_name):
-        return self.impl_name_to_service[impl_name]()
+    def new_instance(self, impl_name, is_active=True):
+        return self.impl_name_to_service[impl_name](), is_active
 
 class FakeServer(object):
     """ A fake mock server used in test cases.
