@@ -16,7 +16,7 @@ from traceback import format_exc
 # Zato
 from zato.common import SECRET_SHADOW, zato_namespace, ZATO_NONE
 from zato.common.broker_message import MESSAGE_TYPE
-from zato.common.util import replace_private_key
+from zato.common.util import get_response_value, replace_private_key
 from zato.server.service import Service
 
 success_code = 0
@@ -46,10 +46,8 @@ class AdminService(Service):
         raise NotImplementedError('Should be overridden by subclasses')
 
     def after_handle(self):
-        payload = self.response.payload
-        response = replace_private_key(payload if isinstance(payload, basestring) else payload.getvalue())
-
-        logger.info('cid:[{}], name:[{}], response:[{}]'.format(self.cid, self.name, response))
+        logger.info(
+            'cid:`%s`, name:`%s`, response:`%s`', self.cid, self.name, replace_private_key(get_response_value(self.response)))
 
     def get_data(self, *args, **kwargs):
         raise NotImplementedError('Should be overridden by subclasses')
