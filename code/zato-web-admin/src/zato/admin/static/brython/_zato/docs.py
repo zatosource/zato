@@ -323,8 +323,11 @@ class APISpec(object):
 
 # ################################################################################################################################
 
-    def get_ns(self, ns):
-        return ns if ns else _anon_ns
+    def get_ns(self, ns, orig_or_anon=False):
+        if orig_or_anon:
+            return ns if ns else _anon_ns
+        else:
+            return ns.replace('.', '-') if ns else _anon_ns
 
 # ################################################################################################################################
 
@@ -354,13 +357,14 @@ class APISpec(object):
                 continue
 
             ns_docs_md = values['docs_md']
+            orig_ns_name = self.get_ns(values['name'], orig_or_anon=True)
             ns_name = self.get_ns(values['name'])
 
             # Create a new row for each namespace
             tr_ns = tr(id='tr-ns-{}'.format(ns_name))
             tr_ns.class_name='tr-ns'
             tr_ns.html = self.get_tr_ns_html(
-                ns_name, (ns_name if ns_name != _anon_ns else default_ns_name_human), ns_docs_md)
+                ns_name, (orig_ns_name if orig_ns_name != _anon_ns else default_ns_name_human), ns_docs_md)
 
             # Append namespaces to the main table
             self.spec_table <= tr_ns
@@ -424,6 +428,9 @@ class APISpec(object):
 
         for item in namespaces:
             ns_name = self.get_ns(item['name'])
+
+            if not item['services']:
+                continue
 
             elem = doc['a-ns-options-toggle-services-{}'.format(ns_name)]
             elem.bind('click', self.toggle_simple('tr-service-ns-', ns_name))
