@@ -42,8 +42,11 @@
             };
             var uploader = new qq.FileUploader(options);
         }
-        window.onload = create_uploader;
-        
+
+        $(document).ready(function() {
+          create_uploader();
+        });
+
     </script>
 
 {% endblock %}
