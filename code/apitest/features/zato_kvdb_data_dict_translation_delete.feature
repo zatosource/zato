@@ -1,8 +1,6 @@
 @kvdb.data-dict.translation
 Feature: zato.kvdb.data-dict.translation.delete
-  Creates a translation, a mapping, between two dictionary entries in order to express the idea that one entry is equal
-  to the other one in another system.
-
+  Creates a translation to eventually delete it.
 
   @kvdb.data-dict.translation.delete
   Scenario: Set up
