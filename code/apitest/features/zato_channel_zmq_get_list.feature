@@ -48,7 +48,6 @@ Feature: zato.channel.zmq.create
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_channel_zmq_get_list_response" isn't an empty list
 
-
   @channel.zmq.get-list
   Scenario: Delete zmq channel
 
@@ -65,5 +64,3 @@ Feature: zato.channel.zmq.create
 
     Then status is "200"
     And JSON Pointer "/zato_env/result" is "ZATO_OK"
-
-
