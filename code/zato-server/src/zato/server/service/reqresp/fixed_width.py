@@ -39,7 +39,7 @@ class _Base(object):
         self.pattern = '(?P<{}>.{{{}}})'.format(self._name, self.len)
 
     def from_string(self, value):
-        return value
+        return value.strip(self.fill_char)
 
 # ################################################################################################################################
 
@@ -91,6 +91,9 @@ class Decimal(_Base):
 
     def from_string(self, value):
 
+        # Strip of filler characters before any parsing takes place
+        value = value.lstrip(self.fill_char)
+
         # If the value lacks a decimal separator, it needs to be added manually before it is converted to string.
         if not self._has_dec_sep:
             value = '{}.{}'.format(value[:len(value)-self._scale], value[:self._scale])
@@ -124,7 +127,7 @@ class _BaseTime(_Base):
         super(_BaseTime, self).__init__(len, name, padding, fill_char)
 
     def from_string(self, value):
-        return dateparser_parse(value.strip(), **self._parse_kwargs)
+        return dateparser_parse(value.strip(self.fill_char), **self._parse_kwargs)
 
 class Timestamp(_BaseTime):
     pass
