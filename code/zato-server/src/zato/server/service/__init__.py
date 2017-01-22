@@ -30,10 +30,10 @@ from gevent import Timeout, spawn
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import BROKER, CHANNEL, DATA_FORMAT, KVDB, PARAMS_PRIORITY, ZatoException
+from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.nav import DictNav, ListNav
-from zato.common.util import uncamelify, new_cid, payload_from_request, service_name_from_impl
+from zato.common.util import get_response_value, new_cid, payload_from_request, service_name_from_impl, uncamelify
 from zato.server.connection import request_response, slow_response
 from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.email import EMailAPI
@@ -449,7 +449,10 @@ class Service(object):
             self.logger.error(msg)
             raise ZatoException(self.cid, msg)
 
-        service = self.server.service_store.new_instance(impl_name)
+        service, is_active = self.server.service_store.new_instance(impl_name)
+        if not is_active:
+            raise Inactive(service.get_name())
+
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
@@ -556,7 +559,7 @@ class Service(object):
 
         self.invocation_time = datetime.utcnow()
 
-    def post_handle(self):
+    def post_handle(self, _get_response_value=get_response_value):
         """ An internal method executed after the service has completed and has
         a response ready to return. Updates its statistics and, optionally, stores
         a sample request/response pair.
@@ -599,15 +602,12 @@ class Service(object):
         key, freq = request_response.should_store(self.kvdb, self.usage, self.name)
         if freq:
 
-            # TODO: Don't parse it here and a moment later below
-            resp = (self.response.payload.getvalue() if hasattr(self.response.payload, 'getvalue') else self.response.payload) or ''
-
             data = {
                 'cid': self.cid,
                 'req_ts': self.invocation_time.isoformat(),
                 'resp_ts': self.handle_return_time.isoformat(),
                 'req': self.request.raw_request or '',
-                'resp':resp,
+                'resp':_get_response_value(self.response), # TODO: Don't parse it here and a moment later below
             }
             request_response.store(self.kvdb, key, self.usage, freq, **data)
 
@@ -618,10 +618,6 @@ class Service(object):
 
             if self.processing_time > self.slow_threshold:
 
-                # TODO: Don't parse it here and a moment earlier above
-                resp = (self.response.payload.getvalue() if hasattr(self.response.payload, 'getvalue')
-                        else self.response.payload) or ''
-
                 data = {
                     'cid': self.cid,
                     'proc_time': self.processing_time,
@@ -629,7 +625,7 @@ class Service(object):
                     'req_ts': self.invocation_time.isoformat(),
                     'resp_ts': self.handle_return_time.isoformat(),
                     'req': self.request.raw_request or '',
-                    'resp': resp,
+                    'resp':_get_response_value(self.response), # TODO: Don't parse it here and a moment earlier above
                 }
                 slow_response.store(self.kvdb, self.name, **data)
 
