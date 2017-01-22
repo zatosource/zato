@@ -61,11 +61,14 @@ class Decimal(_Base):
     scale = None
     err_if_scale_too_big = None
     ctx_config = None
+    has_dec_sep = True
 
-    def __init__(self, len=None, scale=2, name=None, ctx_config=None, err_if_scale_too_big=False, padding=None, fill_char=None):
+    def __init__(self, len=None, scale=2, name=None, ctx_config=None, err_if_scale_too_big=False, padding=None, fill_char=None,
+                 has_dec_sep=True):
         super(Decimal, self).__init__(len, name, padding, fill_char)
         self._scale = self.scale or scale
         self._err_if_scale_too_big = self.err_if_scale_too_big if self.err_if_scale_too_big is not None else err_if_scale_too_big
+        self._has_dec_sep = self.has_dec_sep if self.has_dec_sep is not None else has_dec_sep
         self.ctx = self._get_context(ctx_config)
 
         # To how many decimal digits possibly round down to
@@ -87,6 +90,10 @@ class Decimal(_Base):
         return Context(**_ctx_config)
 
     def from_string(self, value):
+
+        # If the value lacks a decimal separator, it needs to be added manually before it is converted to string.
+        if not self._has_dec_sep:
+            value = '{}.{}'.format(value[:len(value)-self._scale], value[:self._scale])
 
         value = stdlib_Decimal(value, self.ctx)
         scale = abs(value.as_tuple().exponent)

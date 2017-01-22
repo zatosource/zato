@@ -47,7 +47,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_string(self):
+    def test_parse_line_string(self):
 
         data = 'abbcccdddd\nABBCCCDDDD'
         a = String(1, 'a')
@@ -81,7 +81,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_integer(self):
+    def test_parse_line_integer(self):
 
         data = '1223334444\n5667778888'
         a = Int(1, 'a')
@@ -115,7 +115,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_decimal(self):
+    def test_parse_line_decimal(self):
 
         data = '1.122.22333.3334444.4444\n5.566.66777.7778888.8888'
         a = FWDecimal(3, 1, 'a')
@@ -149,7 +149,44 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_decimal_rounding(self):
+    def test_parse_line_decimal_has_dec_sep_false(self):
+
+        class MyDecimal(FWDecimal):
+            has_dec_sep = False
+
+        data = '11222233333344444444\n55666677777788888888'
+        a = MyDecimal(2, 1, 'a')
+        b = MyDecimal(4, 2, 'b')
+        c = MyDecimal(6, 3, 'c')
+        d = MyDecimal(8, 4, 'd')
+        definition = (a, b, c, d)
+
+        expected1 = [
+            {'key':'a', 'value':Decimal('1.1')},
+            {'key':'b', 'value':Decimal('22.22')},
+            {'key':'c', 'value':Decimal('333.333')},
+            {'key':'d', 'value':Decimal('4444.4444')},
+        ]
+
+        expected2 = [
+            {'key':'a', 'value':Decimal('5.5')},
+            {'key':'b', 'value':Decimal('66.66')},
+            {'key':'c', 'value':Decimal('777.777')},
+            {'key':'d', 'value':Decimal('8888.8888')},
+        ]
+
+        fw = FixedWidth(definition, data)
+        elems = list(fw)
+
+        actual1 = elems[0]
+        actual2 = elems[1]
+
+        self.compare_line(expected1, actual1)
+        self.compare_line(expected2, actual2)
+
+# ################################################################################################################################
+
+    def test_parse_line_decimal_rounding(self):
 
         data = '1.112.22\n3.334.44'
         a = FWDecimal(4, 1, 'a')
@@ -177,7 +214,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_decimal_rounding_with_context(self):
+    def test_parse_line_decimal_rounding_with_context(self):
 
         class MyDecimal(FWDecimal):
             ctx_config = {
@@ -210,7 +247,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_decimal_rounding_with_context_scale_zero(self):
+    def test_parse_line_decimal_rounding_with_context_scale_zero(self):
 
         class MyDecimal(FWDecimal):
             ctx_config = {
@@ -243,7 +280,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_timestamp_iso(self):
+    def test_parse_line_timestamp_iso(self):
 
         data = '2015-06-23T21:22:23,123456   aaa\n2044-12-29T13:14:15,567890   bbb'
         ts = Timestamp(29, 'ts')
@@ -271,7 +308,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_timestamp_custom_format(self):
+    def test_parse_line_timestamp_custom_format(self):
 
         class MyTimestamp(Timestamp):
             parse_kwargs = {
@@ -304,7 +341,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_date(self):
+    def test_parse_line_date(self):
 
         data = '2015-06-23   aaa\n2044-12-29   bbb'
         date = Date(13, 'date')
@@ -332,7 +369,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_date_custom_format(self):
+    def test_parse_line_date_custom_format(self):
 
         class MyDate(Date):
             parse_kwargs = {
@@ -365,7 +402,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_time(self):
+    def test_parse_line_time(self):
 
         data = '23:21:12   aaa\n19:22:44   bbb'
         time = Time(11, 'time')
@@ -393,7 +430,7 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
-    def xtest_parse_line_time_custom_format(self):
+    def test_parse_line_time_custom_format(self):
 
         data = '02_21_12   aaa\n07_22_44   bbb'
         time = Time(11, 'time', parse_kwargs={'date_formats': ['%H_%M_%S']})
