@@ -35,15 +35,17 @@
                 debug: true,
                 template: '<div class="qq-uploader">' + 
                         '<div class="qq-upload-drop-area"><span>Drop files here to upload</span></div>' +
-                        '<div class="qq-upload-button" style="width:170px">Import the data dictionaries</div>' +
+                        '<div class="qq-upload-button" style="width:170px">Import data dictionaries</div>' +
                         '<span class="form_hint">&nbsp;Note: This will first delete any existing ones</span>' +
                         '<ul class="qq-upload-list"></ul>' + 
                      '</div>',
             };
             var uploader = new qq.FileUploader(options);
         }
-        window.onload = create_uploader;
-        
+        $(document).ready(function() {
+          create_uploader();
+        });
+
     </script>
 
 {% endblock %}
@@ -86,7 +88,7 @@
         </tr>
         <tr>
             <td id="td_import">
-                <a href="{% url "kvdb-data-dict-impexp-export" cluster_id %}" class="common">Click to export the data dictionaries</a>
+                <a href="{% url "kvdb-data-dict-impexp-export" cluster_id %}" class="common">Click to export data dictionaries</a>
             </td>
         </tr>
     </table>

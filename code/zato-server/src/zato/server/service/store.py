@@ -91,7 +91,8 @@ class ServiceStore(InitializingObject):
     def new_instance(self, class_name):
         """ Returns a new instance of a service of the given impl name.
         """
-        return self.services[class_name]['service_class']()
+        _info = self.services[class_name]
+        return _info['service_class'](), _info['is_active']
 
 # ################################################################################################################################
 

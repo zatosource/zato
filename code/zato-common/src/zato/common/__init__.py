@@ -133,6 +133,9 @@ DONT_DEPLOY_ATTR_NAME = 'zato_dont_import'
 # arguments which are, well, not given (as opposed to being None, an empty string etc.)
 ZATO_NOT_GIVEN = b'ZATO_NOT_GIVEN'
 
+# Separates command line arguments in shell commands.
+CLI_ARG_SEP = 'ZATO_ZATO_ZATO'
+
 # Also used in a couple of places.
 ZATO_OK = 'ZATO_OK'
 ZATO_ERROR = 'ZATO_ERROR'
