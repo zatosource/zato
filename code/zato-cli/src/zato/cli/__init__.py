@@ -301,6 +301,7 @@ class ZatoCommand(object):
         EXCEPTION_CAUGHT = 16
         CANNOT_MIGRATE = 17
         FAILED_TO_START = 18
+        FOUND_PIDFILE = 19
 
     class COMPONENTS(object):
         class _ComponentName(object):

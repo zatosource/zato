@@ -110,8 +110,8 @@ from texttable import Texttable
 from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
-from zato.common import CHANNEL, curdir as common_curdir, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, SECRET_SHADOW, \
-     SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN, ZMQ
+from zato.common import CHANNEL, CLI_ARG_SEP, curdir as common_curdir, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
+     SECRET_SHADOW, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN, ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
@@ -1078,12 +1078,12 @@ def wait_until_port_free(port, timeout=2, interval=0.1):
 
 # ################################################################################################################################
 
-def get_haproxy_pidfile(component_dir):
+def get_haproxy_agent_pidfile(component_dir):
     json_config = json.loads(open(os.path.join(component_dir, 'config', 'repo', 'lb-agent.conf')).read())
     return os.path.abspath(os.path.join(component_dir, json_config['pid_file']))
 
-def store_pidfile(component_dir):
-    open(os.path.join(component_dir, MISC.PIDFILE), 'w').write('{}'.format(os.getpid()))
+def store_pidfile(component_dir, pidfile=MISC.PIDFILE):
+    open(os.path.join(component_dir, pidfile), 'w').write('{}'.format(os.getpid()))
 
 # ################################################################################################################################
 
@@ -1636,3 +1636,17 @@ def get_response_value(response):
     """ Extracts the actual response string from a response object produced by services.
     """
     return (response.payload.getvalue() if hasattr(response.payload, 'getvalue') else response.payload) or ''
+
+# ################################################################################################################################
+
+def get_lb_agent_json_config(repo_dir):
+    return json.loads(open(os.path.join(repo_dir, 'lb-agent.conf')).read())
+
+# ################################################################################################################################
+
+def parse_cmd_line_options(argv):
+    options = argv.split(CLI_ARG_SEP)
+    options = '\n'.join(options)
+    return parse_extra_into_dict(options)
+
+# ################################################################################################################################
