@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import httplib, json, logging, logging.config, os, ssl, urllib
+import httplib, logging, logging.config, os, ssl, urllib
 from collections import Counter
 from datetime import datetime
 from traceback import format_exc
@@ -26,10 +26,10 @@ import yaml
 # Zato
 from zato.agent.load_balancer.config import backend_template, config_from_string, string_from_config, zato_item_token
 from zato.agent.load_balancer.haproxy_stats import HAProxyStats
-from zato.common import TRACE1, ZATO_OK
+from zato.common import MISC, TRACE1, ZATO_OK
 from zato.common.haproxy import haproxy_stats, validate_haproxy_config
 from zato.common.repo import RepoManager
-from zato.common.util import timeouting_popen
+from zato.common.util import get_lb_agent_json_config, timeouting_popen
 
 public_method_prefix = "_lb_agent_"
 config_file = "zato.config"
@@ -46,7 +46,7 @@ class LoadBalancerAgent(SSLServer):
     def __init__(self, repo_dir):
 
         self.repo_dir = os.path.abspath(repo_dir)
-        self.json_config = json.loads(open(os.path.join(self.repo_dir, 'lb-agent.conf')).read())
+        self.json_config = get_lb_agent_json_config(self.repo_dir)
 
         self.work_dir = os.path.abspath(os.path.join(self.repo_dir, self.json_config['work_dir']))
         self.haproxy_command = self.json_config['haproxy_command']
@@ -56,7 +56,7 @@ class LoadBalancerAgent(SSLServer):
         self.certfile = os.path.abspath(os.path.join(self.repo_dir, self.json_config['certfile']))
         self.ca_certs = os.path.abspath(os.path.join(self.repo_dir, self.json_config['ca_certs']))
 
-        self.pid_path = os.path.abspath(os.path.join(self.repo_dir, '../', '../', self.json_config['pid_file']))
+        self.haproxy_pidfile = os.path.abspath(os.path.join(self.repo_dir, '../', '../', MISC.PIDFILE))
 
         log_config = os.path.abspath(os.path.join(self.repo_dir, self.json_config['log_config']))
         with open(log_config) as f:
@@ -78,7 +78,7 @@ class LoadBalancerAgent(SSLServer):
     def _re_start_load_balancer(self, timeout_msg, rc_non_zero_msg, additional_params=[]):
         """ A common method for (re-)starting HAProxy.
         """
-        command = [self.haproxy_command, '-D', '-f', self.config_path, '-p', self.pid_path]
+        command = [self.haproxy_command, '-D', '-f', self.config_path, '-p', self.haproxy_pidfile]
         command.extend(additional_params)
         timeouting_popen(command, 5.0, timeout_msg, rc_non_zero_msg)
 
@@ -90,7 +90,7 @@ class LoadBalancerAgent(SSLServer):
     def restart_load_balancer(self):
         """ Restarts the HAProxy load balancer without disrupting existing connections.
         """
-        additional_params = ['-sf', open(self.pid_path).read().strip()]
+        additional_params = ['-sf', open(self.haproxy_pidfile).read().strip()]
         self._re_start_load_balancer("Could not restart in [{}] seconds. ", 'Failed to restart HAProxy. ', additional_params)
 
     def _dispatch(self, method, params):
