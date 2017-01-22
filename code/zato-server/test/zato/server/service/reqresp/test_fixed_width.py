@@ -81,6 +81,40 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
+    def test_parse_line_string_strip(self):
+
+        data = ' a   bb    cccdddd   \n A   BB    CCCDDDD   '
+        a = String(3, 'a')
+        b = String(6, 'b')
+        c = String(5, 'c')
+        d = String(7, 'd')
+        definition = (a, b, c, d)
+
+        expected1 = [
+            {'key':'a', 'value':'a'},
+            {'key':'b', 'value':'bb'},
+            {'key':'c', 'value':'ccc'},
+            {'key':'d', 'value':'dddd'},
+        ]
+
+        expected2 = [
+            {'key':'a', 'value':'A'},
+            {'key':'b', 'value':'BB'},
+            {'key':'c', 'value':'CCC'},
+            {'key':'d', 'value':'DDDD'},
+        ]
+
+        fw = FixedWidth(definition, data)
+        elems = list(fw)
+
+        actual1 = elems[0]
+        actual2 = elems[1]
+
+        self.compare_line(expected1, actual1)
+        self.compare_line(expected2, actual2)
+
+# ################################################################################################################################
+
     def test_parse_line_integer(self):
 
         data = '1223334444\n5667778888'
@@ -115,6 +149,40 @@ class TestParser(TestCase):
 
 # ################################################################################################################################
 
+    def test_parse_line_integer_strip(self):
+
+        data = ' 1 22  333   4444\n 5 66  777   8888'
+        a = Int(3, 'a')
+        b = Int(4, 'b')
+        c = Int(3, 'c')
+        d = Int(7, 'd')
+        definition = (a, b, c, d)
+
+        expected1 = [
+            {'key':'a', 'value':1},
+            {'key':'b', 'value':22},
+            {'key':'c', 'value':333},
+            {'key':'d', 'value':4444},
+        ]
+
+        expected2 = [
+            {'key':'a', 'value':5},
+            {'key':'b', 'value':66},
+            {'key':'c', 'value':777},
+            {'key':'d', 'value':8888},
+        ]
+
+        fw = FixedWidth(definition, data)
+        elems = list(fw)
+
+        actual1 = elems[0]
+        actual2 = elems[1]
+
+        self.compare_line(expected1, actual1)
+        self.compare_line(expected2, actual2)
+
+# ################################################################################################################################
+
     def test_parse_line_decimal(self):
 
         data = '1.122.22333.3334444.4444\n5.566.66777.7778888.8888'
@@ -122,6 +190,74 @@ class TestParser(TestCase):
         b = FWDecimal(5, 2, 'b')
         c = FWDecimal(7, 3, 'c')
         d = FWDecimal(9, 4, 'd')
+        definition = (a, b, c, d)
+
+        expected1 = [
+            {'key':'a', 'value':Decimal('1.1')},
+            {'key':'b', 'value':Decimal('22.22')},
+            {'key':'c', 'value':Decimal('333.333')},
+            {'key':'d', 'value':Decimal('4444.4444')},
+        ]
+
+        expected2 = [
+            {'key':'a', 'value':Decimal('5.5')},
+            {'key':'b', 'value':Decimal('66.66')},
+            {'key':'c', 'value':Decimal('777.777')},
+            {'key':'d', 'value':Decimal('8888.8888')},
+        ]
+
+        fw = FixedWidth(definition, data)
+        elems = list(fw)
+
+        actual1 = elems[0]
+        actual2 = elems[1]
+
+        self.compare_line(expected1, actual1)
+        self.compare_line(expected2, actual2)
+
+# ################################################################################################################################
+
+    def test_parse_line_decimal_strip(self):
+
+        data = ' 1.1 22.22    333.3334444.4444     \n 5.5 66.66    777.7778888.8888     '
+        a = FWDecimal(5, 1, 'a')
+        b = FWDecimal(9, 2, 'b')
+        c = FWDecimal(7, 3, 'c')
+        d = FWDecimal(14, 4, 'd')
+        definition = (a, b, c, d)
+
+        expected1 = [
+            {'key':'a', 'value':Decimal('1.1')},
+            {'key':'b', 'value':Decimal('22.22')},
+            {'key':'c', 'value':Decimal('333.333')},
+            {'key':'d', 'value':Decimal('4444.4444')},
+        ]
+
+        expected2 = [
+            {'key':'a', 'value':Decimal('5.5')},
+            {'key':'b', 'value':Decimal('66.66')},
+            {'key':'c', 'value':Decimal('777.777')},
+            {'key':'d', 'value':Decimal('8888.8888')},
+        ]
+
+        fw = FixedWidth(definition, data)
+        elems = list(fw)
+
+        actual1 = elems[0]
+        actual2 = elems[1]
+
+        self.compare_line(expected1, actual1)
+        self.compare_line(expected2, actual2)
+
+# ################################################################################################################################
+
+    def test_parse_line_decimal_strip_custom(self):
+
+        data = '0001.10000022.22333.33304444.4444\n0005.50000066.66777.77708888.8888'
+        a = FWDecimal(6, 1, 'a')
+        b = FWDecimal(10, 2, 'b')
+        c = FWDecimal(7, 3, 'c')
+        d = FWDecimal(10, 4, 'd')
         definition = (a, b, c, d)
 
         expected1 = [
