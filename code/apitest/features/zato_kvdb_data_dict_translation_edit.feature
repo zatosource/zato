@@ -11,8 +11,6 @@ Feature: zato.kvdb.data-dict.translation.edit
     Given I store "PORTAL" under "second_test_system"
     Given I store "customerType" under "second_test_key"
     Given I store "292" under "second_test_value"
-    Given I store "customerType_update" under "second_test_key_update"
-    Given I store "85135" under "second_test_value_update"
 
   @kvdb.data-dict.translation.edit
   Scenario: Create first data dictionary entry in a cluster's KVDB
@@ -85,18 +83,18 @@ Feature: zato.kvdb.data-dict.translation.edit
     Given format "JSON"
 
     Given request is "{}"
-    Given JSON Pointer "/id" in request is "#translation_id"
-    Given JSON Pointer "/system1" in request is "#first_test_system"
-    Given JSON Pointer "/key1" in request is "#first_test_key"
-    Given JSON Pointer "/value1" in request is "#first_test_value"
-    Given JSON Pointer "/system2" in request is "#second_test_system"
-    Given JSON Pointer "/key2" in request is "#second_test_key_update"
-    Given JSON Pointer "/value2" in request is "#second_test_value_update"
+    Given JSON Pointer "/id" in request is an integer "#translation_id"
+    Given JSON Pointer "/system1" in request is "#second_test_system"
+    Given JSON Pointer "/key1" in request is "#second_test_key"
+    Given JSON Pointer "/value1" in request is "#second_test_value"
+    Given JSON Pointer "/system2" in request is "#first_test_system"
+    Given JSON Pointer "/key2" in request is "#first_test_key"
+    Given JSON Pointer "/value2" in request is "#first_test_value"
 
     When the URL is invoked
 
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
-    And JSON Pointer "/zato_kvdb_data_dict_translation_create_response/id" isn't empty
+    And JSON Pointer "/zato_kvdb_data_dict_translation_edit_response/id" is an integer "#translation_id"
 
   @kvdb.data-dict.translation.edit
   Scenario: Delete first test dictionary entry
