@@ -41,6 +41,9 @@ class _Base(object):
     def from_string(self, value):
         return value.strip(self.fill_char)
 
+    def to_string(self, value):
+        return value
+
 # ################################################################################################################################
 
 class String(_Base):
@@ -50,8 +53,12 @@ class String(_Base):
 # ################################################################################################################################
 
 class Integer(_Base):
+
     def from_string(self, value):
         return long(value)
+
+    def to_string(self, value):
+        return str(value)
 
 Int = Integer
 
@@ -113,6 +120,9 @@ class Decimal(_Base):
             else:
                 value = value.quantize(self._quantize_to, context=self.ctx)
 
+        return value
+
+    def to_string(self, value):
         return value
 
 # ################################################################################################################################
@@ -194,7 +204,7 @@ class FixedWidth(object):
         try:
             for item in self.definition:
 
-                value = str(getattr(response, item._name))
+                value = item.to_string(getattr(response, item._name))
                 value_len = len(value)
 
                 if value_len < item.len:
