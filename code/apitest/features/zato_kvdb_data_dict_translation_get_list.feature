@@ -102,7 +102,7 @@ Feature: zato.kvdb.data-dict.translation.get-list
     When the URL is invoked
 
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
-    And JSON Pointer "/zato_kvdb_data_dict_translation_get_list_response" isn't empty
+    And JSON Pointer "/zato_kvdb_data_dict_translation_get_list_response" isn't an empty list
 
   @kvdb.data-dict.translation.get-list
   Scenario: Delete first test dictionary entry
