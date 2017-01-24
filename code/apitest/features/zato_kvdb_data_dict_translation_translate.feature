@@ -11,9 +11,6 @@ Feature: zato.kvdb.data-dict.translation.translate
     Given I store "PORTAL" under "second_test_system"
     Given I store "customerType" under "second_test_key"
     Given I store "292" under "second_test_value"
-    Given I store "TEST" under "third_test_system"
-    Given I store "test_key" under "third_test_key"
-    Given I store "abcdefg12345" under "third_test_value"
 
   @kvdb.data-dict.translation.translate
   Scenario: Create first data dictionary entry in a cluster's KVDB
@@ -53,22 +50,8 @@ Feature: zato.kvdb.data-dict.translation.translate
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And I store "/zato_kvdb_data_dict_dictionary_create_response/id" from response under "second_dictionary_entry_id"
 
-  @kvdb.data-dict.translation.edit
-  Scenario: Create third data dictionary entry in a cluster's KVDB
-
-    Given address "$ZATO_API_TEST_SERVER"
-    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
-
-    Given URL path "/zato/json/zato.kvdb.data-dict.dictionary.create"
-
-    Given format "JSON"
-    Given request is "{}"
-    Given JSON Pointer "/system" in request is "#third_test_system"
-    Given JSON Pointer "/key" in request is "#third_test_key"
-    Given JSON Pointer "/value" in request is "#third_test_value"
-
   @kvdb.data-dict.translation.translate
-  Scenario: Invoke translation create
+  Scenario: Create a translation
 
     Given address "$ZATO_API_TEST_SERVER"
     Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
@@ -88,7 +71,7 @@ Feature: zato.kvdb.data-dict.translation.translate
 
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
     And JSON Pointer "/zato_kvdb_data_dict_translation_create_response/id" isn't empty
-    And I store "/zato_kvdb_data_dict_translation_create_response/id" from response under "translation_id"
+    And I store "/zato_kvdb_data_dict_translation_create_response/id" from response under "first_translation_id"
 
   @kvdb.data-dict.translation.translate
   Scenario: Return the translation of a value
