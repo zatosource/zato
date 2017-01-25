@@ -663,7 +663,7 @@ class TestSerialize(TestCase):
 
         fw = FixedWidth(definition)
         result = fw.serialize(response)
-        self.assertEquals(result, 'a b cc   d')
+        self.assertEquals(result, 'ab cc d   ')
 
 # ################################################################################################################################
 
@@ -686,7 +686,7 @@ class TestSerialize(TestCase):
 
         fw = FixedWidth(definition)
         result = fw.serialize(response)
-        self.assertEquals(result, 'ab cc d   ')
+        self.assertEquals(result, 'a b cc   d')
 
 # ################################################################################################################################
 
@@ -706,7 +706,7 @@ class TestSerialize(TestCase):
 
         fw = FixedWidth(definition)
         result = fw.serialize(response)
-        self.assertEquals(result, 'a b#cc^^^d')
+        self.assertEquals(result, 'ab cc#d^^^')
 
 # ################################################################################################################################
 
@@ -730,7 +730,7 @@ class TestSerialize(TestCase):
 
         fw = FixedWidth(definition)
         result = fw.serialize(response)
-        self.assertEquals(result, 'abZcc*d777')
+        self.assertEquals(result, 'aZb*cc777d')
 
 # ################################################################################################################################
 
@@ -871,5 +871,21 @@ class TestSerialize(TestCase):
         fw = FixedWidth(definition)
         result = fw.serialize(response)
         self.assertEquals(result, '1.1022.22333.334444.44')
+
+# ################################################################################################################################
+
+    def test_serialize_line_timestamp_from_string_input(self):
+
+        a = Timestamp(26, 'a')
+        b = Timestamp(36, 'b')
+        definition = (a, b)
+
+        response = Bunch()
+        response.a = '2017-01-25T21:30:53.020669'
+        response.b = '2018-02-26T22:31:54.131770'
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '2017-01-25T21:30:53.0206692018-02-26T22:31:54.131770          ')
 
 # ################################################################################################################################
