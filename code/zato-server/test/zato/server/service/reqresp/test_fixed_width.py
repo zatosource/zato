@@ -754,7 +754,7 @@ class TestSerialize(TestCase):
 
 # ################################################################################################################################
 
-    def test_serialize_line_decimal(self):
+    def test_serialize_line_decimal_from_string_input(self):
 
         a = FWDecimal(4, 2, 'a')
         b = FWDecimal(5, 2, 'b')
@@ -771,5 +771,105 @@ class TestSerialize(TestCase):
         fw = FixedWidth(definition)
         result = fw.serialize(response)
         self.assertEquals(result, '1.0022.00333.004444.00')
+
+# ################################################################################################################################
+
+    def test_serialize_line_decimal_from_integer_input(self):
+
+        a = FWDecimal(4, 2, 'a')
+        b = FWDecimal(5, 2, 'b')
+        c = FWDecimal(6, 2, 'c')
+        d = FWDecimal(7, 2, 'd')
+        definition = (a, b, c, d)
+
+        response = Bunch()
+        response.a = 1
+        response.b = 22
+        response.c = 333
+        response.d = 4444
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '1.0022.00333.004444.00')
+
+# ################################################################################################################################
+
+    def test_serialize_line_decimal_from_long_input(self):
+
+        a = FWDecimal(4, 2, 'a')
+        b = FWDecimal(5, 2, 'b')
+        c = FWDecimal(6, 2, 'c')
+        d = FWDecimal(7, 2, 'd')
+        definition = (a, b, c, d)
+
+        response = Bunch()
+        response.a = 1L
+        response.b = 22L
+        response.c = 333L
+        response.d = 4444L
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '1.0022.00333.004444.00')
+
+# ################################################################################################################################
+
+    def test_serialize_line_decimal_from_float_input(self):
+
+        a = FWDecimal(4, 2, 'a')
+        b = FWDecimal(5, 2, 'b')
+        c = FWDecimal(6, 2, 'c')
+        d = FWDecimal(7, 2, 'd')
+        definition = (a, b, c, d)
+
+        response = Bunch()
+        response.a = 1.0
+        response.b = 22.0
+        response.c = 333.0
+        response.d = 4444.0
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '1.0022.00333.004444.00')
+
+# ################################################################################################################################
+
+    def test_serialize_line_decimal_from_decimal_input(self):
+
+        a = FWDecimal(4, 2, 'a')
+        b = FWDecimal(5, 2, 'b')
+        c = FWDecimal(6, 2, 'c')
+        d = FWDecimal(7, 2, 'd')
+        definition = (a, b, c, d)
+
+        response = Bunch()
+        response.a = Decimal('1')
+        response.b = Decimal('22')
+        response.c = Decimal('333')
+        response.d = Decimal('4444')
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '1.0022.00333.004444.00')
+
+# ################################################################################################################################
+
+    def test_serialize_line_decimal_from_decimal_input_quantize_scale(self):
+
+        a = FWDecimal(4, 2, 'a')
+        b = FWDecimal(5, 2, 'b')
+        c = FWDecimal(6, 2, 'c')
+        d = FWDecimal(7, 2, 'd')
+        definition = (a, b, c, d)
+
+        response = Bunch()
+        response.a = Decimal('1.1')
+        response.b = Decimal('22.22')
+        response.c = Decimal('333.3333')
+        response.d = Decimal('4444.4444')
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '1.1022.22333.334444.44')
 
 # ################################################################################################################################
