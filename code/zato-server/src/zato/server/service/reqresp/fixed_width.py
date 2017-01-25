@@ -31,12 +31,12 @@ class _Base(object):
     fill_char = ' '
 
     def __init__(self, len=None, name=None, padding=None, fill_char=None):
-        self.len = self.len or len
+        self._len = self.len or len
         self._name = self.name or name
         self._padding = padding or self.padding
         _fill_char = fill_char or self.fill_char
         self._fill_char = _fill_char if isinstance(_fill_char, str) else str(_fill_char)
-        self.pattern = '(?P<{}>.{{{}}})'.format(self._name, self.len)
+        self.pattern = '(?P<{}>.{{{}}})'.format(self._name, self._len)
 
     def from_string(self, value):
         return value.strip(self.fill_char)
@@ -68,18 +68,33 @@ class Decimal(_Base):
     scale = None
     err_if_scale_too_big = None
     ctx_config = None
-    has_dec_sep = True
+    has_dec_sep = None
 
     def __init__(self, len=None, scale=2, name=None, ctx_config=None, err_if_scale_too_big=False, padding=None, fill_char=None,
-                 has_dec_sep=True):
+                 has_dec_sep=True, _decimal_ten=stdlib_Decimal(10)):
         super(Decimal, self).__init__(len, name, padding, fill_char)
         self._scale = self.scale or scale
         self._err_if_scale_too_big = self.err_if_scale_too_big if self.err_if_scale_too_big is not None else err_if_scale_too_big
         self._has_dec_sep = self.has_dec_sep if self.has_dec_sep is not None else has_dec_sep
+
+        # Make sure this kind of input will actually work.
+        # For instance, if scale is given at all and total length is 1 but scale is 2, we cannot possibly parse it, total length
+        # should be at least scale+1 (to accommodate decimal separator), or equal to scale (if no decimal separator is used).
+        if self._scale:
+            if self._has_dec_sep:
+                if self._len - self._scale < 1:
+                    raise ValueError('Total length must be at least {} if scale is {} and a decimal separator is expected'.format(
+                        self._scale+1, self._scale))
+            else:
+                if self._len - self._scale < 0:
+                    raise ValueError(
+                        'Total length must be at least {} if scale is {} and no decimal separator is expected'.format(
+                            self._scale, self._scale))
+
         self.ctx = self._get_context(ctx_config)
 
         # To how many decimal digits possibly round down to
-        self._quantize_to = stdlib_Decimal(10) ** -self._scale
+        self._quantize_to = _decimal_ten ** -self._scale
 
     def _get_context(self, ctx_config):
         """ Returns a decimal.Context object under which all operations on decimal.Decimal objects will be performed.
@@ -92,7 +107,7 @@ class Decimal(_Base):
             _ctx_config = ctx_config if ctx_config is not None else {}
 
         if 'prec' not in _ctx_config:
-            _ctx_config['prec'] = self.len - 1 # Substract decimal point since self.len is counted in characters, not digits
+            _ctx_config['prec'] = self._len - 1 # Substract decimal point since self.len is counted in characters, not digits
 
         return Context(**_ctx_config)
 
@@ -207,11 +222,11 @@ class FixedWidth(object):
                 value = item.to_string(getattr(response, item._name))
                 value_len = len(value)
 
-                if value_len < item.len:
+                if value_len < item._len:
                     if item.padding == _right:
-                        value = value.rjust(item.len, item._fill_char)
+                        value = value.rjust(item._len, item._fill_char)
                     else:
-                        value = value.ljust(item.len, item._fill_char)
+                        value = value.ljust(item._len, item._fill_char)
 
                 line.write(value)
 
