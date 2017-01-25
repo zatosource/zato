@@ -111,7 +111,7 @@ class Decimal(_Base):
 
         return Context(**_ctx_config)
 
-    def from_string(self, value):
+    def from_string(self, value, _decimal=stdlib_Decimal):
 
         # Strip of filler characters before any parsing takes place
         value = value.lstrip(self.fill_char)
@@ -120,7 +120,7 @@ class Decimal(_Base):
         if not self._has_dec_sep:
             value = '{}.{}'.format(value[:len(value)-self._scale], value[:self._scale])
 
-        value = stdlib_Decimal(value, self.ctx)
+        value = _decimal(value, self.ctx)
         scale = abs(value.as_tuple().exponent)
 
         if scale > self._scale:
@@ -137,7 +137,14 @@ class Decimal(_Base):
 
         return value
 
-    def to_string(self, value):
+    def to_string(self, value, _decimal=stdlib_Decimal, _base_types=(basestring, int, long, float)):
+
+        if isinstance(value, _base_types):
+            value = str(_decimal(value).quantize(self._quantize_to, context=self.ctx))
+
+        elif isinstance(value, _decimal):
+            value = str(value.quantize(self._quantize_to, context=self.ctx))
+
         return value
 
 # ################################################################################################################################
