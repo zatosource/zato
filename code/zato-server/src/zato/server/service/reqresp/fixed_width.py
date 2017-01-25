@@ -231,9 +231,9 @@ class FixedWidth(object):
 
                 if value_len < item._len:
                     if item.padding == _right:
-                        value = value.rjust(item._len, item._fill_char)
-                    else:
                         value = value.ljust(item._len, item._fill_char)
+                    else:
+                        value = value.rjust(item._len, item._fill_char)
 
                 line.write(value)
 
