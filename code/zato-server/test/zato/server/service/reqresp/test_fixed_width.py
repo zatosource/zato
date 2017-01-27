@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from datetime import date as datetime_date, time as datetime_time
+from datetime import date as datetime_date, datetime as datetime_datetime, time as datetime_time
 from decimal import Decimal, ROUND_CEILING, ROUND_DOWN
 from unittest import TestCase
 
@@ -883,6 +883,22 @@ class TestSerialize(TestCase):
         response = Bunch()
         response.a = '2017-01-25T21:30:53.020669'
         response.b = '2018-02-26T22:31:54.131770'
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '2017-01-25T21:30:53.0206692018-02-26T22:31:54.131770          ')
+
+# ################################################################################################################################
+
+    def test_serialize_line_timestamp_from_datetime_input(self):
+
+        a = Timestamp(26, 'a')
+        b = Timestamp(36, 'b')
+        definition = (a, b)
+
+        response = Bunch()
+        response.a = datetime_datetime(2017, 1, 25, 21, 30, 53, 20669)
+        response.b = datetime_datetime(2018, 2, 26, 22, 31, 54, 131770)
 
         fw = FixedWidth(definition)
         result = fw.serialize(response)
