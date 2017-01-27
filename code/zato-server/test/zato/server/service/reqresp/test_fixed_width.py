@@ -905,3 +905,35 @@ class TestSerialize(TestCase):
         self.assertEquals(result, '2017-01-25T21:30:53.0206692018-02-26T22:31:54.131770          ')
 
 # ################################################################################################################################
+
+    def test_serialize_line_timestamp_from_string_input_with_output_format(self):
+
+        a = Timestamp(30, 'a', '%y/%m/%j-(%U)-%I--%M--%S')
+        b = Timestamp(30, 'b', '%y/%m/%j-(%U)-%I--%M--%S')
+        definition = (a, b)
+
+        response = Bunch()
+        response.a = '2017-01-25T21:30:53.020669'
+        response.b = '2018-02-26T22:31:54.131770'
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '17/01/025-(04)-09--30--53     18/02/057-(08)-10--31--54     ')
+
+# ################################################################################################################################
+
+    def test_serialize_line_timestamp_from_datetime_input_with_output_format(self):
+
+        a = Timestamp(30, 'a', '%y/%m/%j-(%U)-%I--%M--%S')
+        b = Timestamp(30, 'b', '%y/%m/%j-(%U)-%I--%M--%S')
+        definition = (a, b)
+
+        response = Bunch()
+        response.a = datetime_datetime(2017, 1, 25, 21, 30, 53, 20669)
+        response.b = datetime_datetime(2018, 2, 26, 22, 31, 54, 131770)
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '17/01/025-(04)-09--30--53     18/02/057-(08)-10--31--54     ')
+
+# ################################################################################################################################

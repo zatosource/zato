@@ -166,10 +166,10 @@ class Timestamp(_BaseTime):
     def to_string(self, value):
 
         if isinstance(value, basestring):
-            return value
+            return dateparser_parse(value).strftime(self._output_format) if self._output_format else value
 
         elif isinstance(value, datetime):
-            return value.isoformat()
+            return value.strftime(self._output_format) if self._output_format else value.isoformat()
 
         else:
             raise ValueError('Value `{}` is neither string nor datetime'.format(value))
