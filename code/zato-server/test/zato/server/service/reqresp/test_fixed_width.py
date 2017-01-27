@@ -937,3 +937,67 @@ class TestSerialize(TestCase):
         self.assertEquals(result, '17/01/025-(04)-09--30--53     18/02/057-(08)-10--31--54     ')
 
 # ################################################################################################################################
+
+    def test_serialize_line_date_from_string_input(self):
+
+        a = Date(16, 'a')
+        b = Date(16, 'b')
+        definition = (a, b)
+
+        response = Bunch()
+        response.a = '2017-01-25'
+        response.b = '2018-02-26'
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '2017-01-25      2018-02-26      ')
+
+# ################################################################################################################################
+
+    def test_serialize_line_date_from_date_input(self):
+
+        a = Date(16, 'a')
+        b = Date(16, 'b')
+        definition = (a, b)
+
+        response = Bunch()
+        response.a = datetime_date(2017, 1, 25)
+        response.b = datetime_date(2018, 2, 26)
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '2017-01-25      2018-02-26      ')
+
+# ################################################################################################################################
+
+    def test_serialize_line_date_from_string_input_with_output_format(self):
+
+        a = Date(12, 'a', '%m-%d-%y')
+        b = Date(12, 'b', '%m-%d-%y')
+        definition = (a, b)
+
+        response = Bunch()
+        response.a = '2017-01-25'
+        response.b = '2018-02-26'
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '01-25-17    02-26-18    ')
+
+# ################################################################################################################################
+
+    def test_serialize_line_date_from_date_input_with_output_format(self):
+
+        a = Date(12, 'a', '%m-%d-%y')
+        b = Date(12, 'b', '%m-%d-%y')
+        definition = (a, b)
+
+        response = Bunch()
+        response.a = datetime_date(2017, 1, 25)
+        response.b = datetime_date(2018, 2, 26)
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '01-25-17    02-26-18    ')
+
+# ################################################################################################################################

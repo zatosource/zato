@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from cStringIO import StringIO
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Context, Decimal as stdlib_Decimal
 from itertools import izip
 
@@ -153,6 +153,7 @@ class Decimal(_Base):
 class _BaseTime(_Base):
     parse_kwargs = None
     output_format = None
+    _stdlib_class = None
 
     def __init__(self, len=None, name=None, output_format=None, parse_kwargs=None, padding=None, fill_char=None):
         self._parse_kwargs = self.parse_kwargs if self.parse_kwargs else parse_kwargs or {}
@@ -162,21 +163,25 @@ class _BaseTime(_Base):
     def from_string(self, value):
         return dateparser_parse(value.strip(self.fill_char), **self._parse_kwargs)
 
-class Timestamp(_BaseTime):
     def to_string(self, value):
 
         if isinstance(value, basestring):
             return dateparser_parse(value).strftime(self._output_format) if self._output_format else value
 
-        elif isinstance(value, datetime):
+        elif isinstance(value, self._stdlib_class):
             return value.strftime(self._output_format) if self._output_format else value.isoformat()
 
         else:
-            raise ValueError('Value `{}` is neither string nor datetime'.format(value))
+            raise ValueError('Value `{}` is neither string nor {}'.format(value, self._stdlib_class))
+
+class Timestamp(_BaseTime):
+    _stdlib_class = datetime
 
 # ################################################################################################################################
 
 class Date(_BaseTime):
+    _stdlib_class = date
+
     def from_string(self, value):
         return super(Date, self).from_string(value).date()
 
