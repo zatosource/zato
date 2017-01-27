@@ -1001,3 +1001,67 @@ class TestSerialize(TestCase):
         self.assertEquals(result, '01-25-17    02-26-18    ')
 
 # ################################################################################################################################
+
+    def test_serialize_line_time_from_string_input(self):
+
+        a = Time(16, 'a')
+        b = Time(16, 'b')
+        definition = (a, b)
+
+        response = Bunch()
+        response.a = '15:39'
+        response.b = '23:33'
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '15:39           23:33           ')
+
+# ################################################################################################################################
+
+    def test_serialize_line_time_from_date_input(self):
+
+        a = Time(16, 'a')
+        b = Time(16, 'b')
+        definition = (a, b)
+
+        response = Bunch()
+        response.a = datetime_time(15, 39, 1)
+        response.b = datetime_time(23, 33, 44)
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '15:39:01        23:33:44        ')
+
+# ################################################################################################################################
+
+    def test_serialize_line_time_from_string_input_with_output_format(self):
+
+        a = Time(12, 'a', '%I--%M//%S')
+        b = Time(12, 'b', '%I--%M//%S')
+        definition = (a, b)
+
+        response = Bunch()
+        response.a = '15:39:01'
+        response.b = '23:33:44'
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '03--39//01  11--33//44  ')
+
+# ################################################################################################################################
+
+    def test_serialize_line_time_from_date_input_with_output_format(self):
+
+        a = Time(12, 'a', '%I--%M//%S')
+        b = Time(12, 'b', '%I--%M//%S')
+        definition = (a, b)
+
+        response = Bunch()
+        response.a = datetime_time(15, 39, 1)
+        response.b = datetime_time(23, 33, 44)
+
+        fw = FixedWidth(definition)
+        result = fw.serialize(response)
+        self.assertEquals(result, '03--39//01  11--33//44  ')
+
+# ################################################################################################################################

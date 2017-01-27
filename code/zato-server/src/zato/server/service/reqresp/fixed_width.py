@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from cStringIO import StringIO
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Context, Decimal as stdlib_Decimal
 from itertools import izip
 
@@ -188,6 +188,8 @@ class Date(_BaseTime):
 # ################################################################################################################################
 
 class Time(_BaseTime):
+    _stdlib_class = time
+
     def from_string(self, value):
         return super(Time, self).from_string(value).time()
 
