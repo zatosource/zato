@@ -114,12 +114,12 @@ def _apitests():
             proc = psutil.Process(pid=item.pid)
             known_found = 0
             open_files = proc.open_files()
-            for f in open_files:
+            for idx, f in enumerate(open_files):
                 if any(part in f.path for part in known_file_parts):
                     known_found += 1
 
             if known_found == len(known_file_parts):
-                server_path = open_files[0].path.split('/logs/')[0]
+                server_path = open_files[idx].path.split('/logs/')[0]
                 break
 
     # We've got a path that for 99% is a server, but let's run zato info against it to be 100% sure.
