@@ -77,6 +77,22 @@ zato_services = {
     'zato.channel.zmq.edit':'zato.server.service.internal.channel.zmq.Edit',
     'zato.channel.zmq.get-list':'zato.server.service.internal.channel.zmq.GetList',
 
+    # Checks
+    'zato.checks.sio.as-is-service': 'zato.server.service.internal.checks.sio.AsIsService',
+    'zato.checks.sio.boolean-service': 'zato.server.service.internal.checks.sio.BooleanService',
+    'zato.checks.sio.csv-service': 'zato.server.service.internal.checks.sio.CSVService',
+    'zato.checks.sio.check-sio': 'zato.server.service.internal.checks.sio.CheckSIO',
+    'zato.checks.check-service': 'zato.server.service.internal.checks.CheckService',
+    'zato.checks.sio.check-target-service': 'zato.server.service.internal.checks.sio.CheckTargetService',
+    'zato.checks.sio.dict-service': 'zato.server.service.internal.checks.sio.DictService',
+    'zato.checks.sio.integer-service': 'zato.server.service.internal.checks.sio.IntegerService',
+    'zato.checks.sio.list-of-dicts-service': 'zato.server.service.internal.checks.sio.ListOfDictsService',
+    'zato.checks.sio.list-service': 'zato.server.service.internal.checks.sio.ListService',
+    'zato.checks.sio.nested-service': 'zato.server.service.internal.checks.sio.NestedService',
+    'zato.checks.sio.no-force-type-service': 'zato.server.service.internal.checks.sio.NoForceTypeService',
+    'zato.checks.sio.utc-service': 'zato.server.service.internal.checks.sio.UTCService',
+    'zato.checks.sio.unicode-service': 'zato.server.service.internal.checks.sio.UnicodeService',
+
     # Cloud - AWS - S3
     'zato.cloud.aws.s3.create':'zato.server.service.internal.cloud.aws.s3.Create',
     'zato.cloud.aws.s3.delete':'zato.server.service.internal.cloud.aws.s3.Delete',
@@ -574,6 +590,9 @@ class Create(ZatoCommand):
             elif 'apispec.pub' in name:
                 self.add_apispec_pub(session, cluster, service)
 
+            elif 'check' in name:
+                self.add_check(session, cluster, service, pubapi_sec)
+
             session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))
             session.add(get_http_json_channel(name, service, cluster, pubapi_sec))
 
@@ -724,3 +743,14 @@ class Create(ZatoCommand):
         channel = HTTPSOAP(None, url_path, True, True, 'channel', 'plain_http', None, url_path, None, '', None, None,
             merge_url_params_req=True, service=service, cluster=cluster)
         session.add(channel)
+
+    def add_check(self, session, cluster, service, pubapi_sec):
+
+        for data_format in (DATA_FORMAT.JSON, DATA_FORMAT.XML):
+
+            name = 'zato.checks.{}.{}'.format(data_format, service.name)
+            url_path = '/zato/checks/{}/{}'.format(data_format, service.name)
+
+            channel = HTTPSOAP(None, name, True, True, 'channel', 'plain_http', None, url_path, None, '', None, data_format,
+                merge_url_params_req=True, service=service, cluster=cluster, security=pubapi_sec)
+            session.add(channel)
