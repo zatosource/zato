@@ -26,7 +26,7 @@ Feature: zato.server.get-by-id
         And JSON Pointer "/zato_server_get_by_id_response/id" is an integer "@server1_id"
         And JSON Pointer "/zato_server_get_by_id_response/cluster_id" is an integer "$ZATO_API_TEST_CLUSTER_ID"
         And JSON Pointer "/zato_server_get_by_id_response/name" is "@server1_name"
-        And JSON Pointer "/zato_server_get_by_id_response/host" is "@servers_host"
+        And JSON Pointer "/zato_server_get_by_id_response/host" is "@server_host"
 
     @server.edit
     Scenario: Update server1's information
@@ -45,10 +45,10 @@ Feature: zato.server.get-by-id
 
         Then status is "200"
         And JSON Pointer "/zato_env/result" is "ZATO_OK"
-        And JSON Pointer "/zato_server_edit_response/id" is an integer "@server2_id"
+        And JSON Pointer "/zato_server_edit_response/id" is an integer "@server1_id"
         And JSON Pointer "/zato_server_edit_response/cluster_id" is an integer "$ZATO_API_TEST_CLUSTER_ID"
         And JSON Pointer "/zato_server_edit_response/name" is "#test_name1"
-        And JSON Pointer "/zato_server_edit_response/host" is "@servers_host"
+        And JSON Pointer "/zato_server_edit_response/host" is "@server_host"
 
     @server.edit
     Scenario: Check that correct information is returned for server1
@@ -69,7 +69,7 @@ Feature: zato.server.get-by-id
         And JSON Pointer "/zato_server_get_by_id_response/id" is an integer "@server1_id"
         And JSON Pointer "/zato_server_get_by_id_response/cluster_id" is an integer "$ZATO_API_TEST_CLUSTER_ID"
         And JSON Pointer "/zato_server_get_by_id_response/name" is "#test_name1"
-        And JSON Pointer "/zato_server_get_by_id_response/host" is "@servers_host"
+        And JSON Pointer "/zato_server_get_by_id_response/host" is "@server_host"
 
     @server.edit
     Scenario: Rename server1 back to its original name
@@ -88,10 +88,10 @@ Feature: zato.server.get-by-id
 
         Then status is "200"
         And JSON Pointer "/zato_env/result" is "ZATO_OK"
-        And JSON Pointer "/zato_server_edit_response/id" is an integer "@server2_id"
+        And JSON Pointer "/zato_server_edit_response/id" is an integer "@server1_id"
         And JSON Pointer "/zato_server_edit_response/cluster_id" is an integer "$ZATO_API_TEST_CLUSTER_ID"
         And JSON Pointer "/zato_server_edit_response/name" is "@server1_name"
-        And JSON Pointer "/zato_server_edit_response/host" is "@servers_host"
+        And JSON Pointer "/zato_server_edit_response/host" is "@server_host"
 
     @server.edit
     Scenario: Check again that correct information is returned for server1
@@ -112,4 +112,4 @@ Feature: zato.server.get-by-id
         And JSON Pointer "/zato_server_get_by_id_response/id" is an integer "@server1_id"
         And JSON Pointer "/zato_server_get_by_id_response/cluster_id" is an integer "$ZATO_API_TEST_CLUSTER_ID"
         And JSON Pointer "/zato_server_get_by_id_response/name" is "@server1_name"
-        And JSON Pointer "/zato_server_get_by_id_response/host" is "@servers_host"
+        And JSON Pointer "/zato_server_get_by_id_response/host" is "@server_host"

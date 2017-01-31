@@ -17,6 +17,7 @@ Feature: zato.outgoing.zmq.get-list
     Given JSON Pointer "/is_active" in request is "true"
     Given JSON Pointer "/address" in request is "tcp://localhost:5555"
     Given JSON Pointer "/socket_type" in request is "PUSH"
+    Given JSON Pointer "/socket_method" in request is "Bind"
 
 
     When the URL is invoked
@@ -28,7 +29,6 @@ Feature: zato.outgoing.zmq.get-list
     And JSON Pointer "/zato_outgoing_zmq_create_response/id" is any integer
     And I sleep for "2"
 
-    
   @outgoing.zmq.get-list
   Scenario: Get List of created ZMQ connections
 

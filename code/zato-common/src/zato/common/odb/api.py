@@ -27,6 +27,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.pool import NullPool
+from sqlalchemy.sql.expression import true
 from sqlalchemy.orm.query import Query
 
 # Bunch
@@ -394,8 +395,9 @@ class ODBManager(SessionWrapper):
             server_services = session.query(
                 Service.id, Service.name,
                 DeployedService.source_path, DeployedService.source).\
-                join(DeployedService, Service.id == DeployedService.service_id).\
-                join(Server, DeployedService.server_id == Server.id).\
+                join(DeployedService, Service.id==DeployedService.service_id).\
+                join(Server, DeployedService.server_id==Server.id).\
+                filter(Service.is_internal!=true()).\
                 all()
 
             for item in server_services:

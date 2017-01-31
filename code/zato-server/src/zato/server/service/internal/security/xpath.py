@@ -93,6 +93,7 @@ class Create(_CreateEdit):
 
                 raise
             else:
+                input.id = auth.id
                 input.action = SECURITY.XPATH_SEC_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.XPATH_SEC
                 self.broker_client.publish(input)

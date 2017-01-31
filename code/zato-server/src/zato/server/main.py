@@ -40,7 +40,7 @@ from zato.common import TRACE1
 from zato.common.repo import RepoManager
 from zato.common.ipaddress_ import get_preferred_ip
 from zato.common.util import absjoin, clear_locks, get_app_context, get_config, get_crypto_manager, \
-     get_kvdb_config_for_log, parse_extra_into_dict, register_diag_handlers, store_pidfile
+     get_kvdb_config_for_log, parse_cmd_line_options, register_diag_handlers, store_pidfile
 
 class ZatoGunicornApplication(Application):
     def __init__(self, zato_wsgi_app, repo_location, config_main, crypto_config, *args, **kwargs):
@@ -210,6 +210,10 @@ def run(base_dir, start_gunicorn_app=True, options=None):
     kvdb.component = 'master-proc'
     clear_locks(kvdb, config.main.token, config.kvdb, crypto_manager.decrypt)
 
+    # New in 2.0.8
+    server.return_tracebacks = asbool(config.misc.get('return_tracebacks', True))
+    server.default_error_message = config.misc.get('default_error_message', 'An error has occurred')
+
     # Turn the repo dir into an actual repository and commit any new/modified files
     RepoManager(repo_location).ensure_repo_consistency()
 
@@ -266,8 +270,4 @@ if __name__ == '__main__':
     if not os.path.isabs(base_dir):
         base_dir = os.path.abspath(os.path.join(os.getcwd(), base_dir))
 
-    options = sys.argv[2].split(';')
-    options = '\n'.join(options)
-    options = parse_extra_into_dict(options)
-
-    run(base_dir, options=options)
+    run(base_dir, options=parse_cmd_line_options(sys.argv[2]))

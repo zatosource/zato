@@ -572,7 +572,7 @@ def out_stomp_list(session, cluster_id, needs_columns=False):
 def _out_zmq(session, cluster_id):
     return session.query(
         OutgoingZMQ.id, OutgoingZMQ.name, OutgoingZMQ.is_active,
-        OutgoingZMQ.address, OutgoingZMQ.socket_type).\
+        OutgoingZMQ.address, OutgoingZMQ.socket_type, OutgoingZMQ.socket_method).\
         filter(Cluster.id==OutgoingZMQ.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(OutgoingZMQ.name)

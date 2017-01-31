@@ -79,7 +79,7 @@ Feature: zato.kvdb.data-dict.translation.create
     When the URL is invoked
 
     Then JSON Pointer "/zato_env/result" is "ZATO_OK"
-    And JSON Pointer "/zato_kvdb_data_dict_translation_create_response/id" is an integer "#first_dictionary_id"
+    And JSON Pointer "/zato_kvdb_data_dict_translation_create_response/id" isn't empty
 
 
   @kvdb.data-dict.translation.create

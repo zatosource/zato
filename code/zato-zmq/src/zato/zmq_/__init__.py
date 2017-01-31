@@ -10,6 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 import zmq.green as zmq
 
 # Zato
+from zato.common import ZMQ
 from zato.server.connection.connector import Connector
 
 # ################################################################################################################################
@@ -17,6 +18,19 @@ from zato.server.connection.connector import Connector
 class Base(Connector):
     """ Base class for ZeroMQ connections, both channels and outgoing ones, other than Majordomo (MDP).
     """
+    def init_simple_socket(self):
+        """ Initializes a ZeroMQ socket other than Majordomo one.
+        """
+        # Open a ZMQ socket and set its options, if required
+        self.impl = self.ctx.socket(getattr(zmq, self.config.socket_type))
+
+        if self.config.socket_type == ZMQ.SUB and self.config.sub_key:
+            self.impl.setsockopt(zmq.SUBSCRIBE, self.config.sub_key)
+
+        # Whether to bind or connect?
+        socket_method = getattr(self.impl, self.config.socket_method)
+        socket_method(self.config.address)
+
     def _start(self):
         self.conn = self
         self.ctx = zmq.Context()

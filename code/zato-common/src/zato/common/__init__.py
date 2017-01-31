@@ -133,6 +133,9 @@ DONT_DEPLOY_ATTR_NAME = 'zato_dont_import'
 # arguments which are, well, not given (as opposed to being None, an empty string etc.)
 ZATO_NOT_GIVEN = b'ZATO_NOT_GIVEN'
 
+# Separates command line arguments in shell commands.
+CLI_ARG_SEP = 'ZATO_ZATO_ZATO'
+
 # Also used in a couple of places.
 ZATO_OK = 'ZATO_OK'
 ZATO_ERROR = 'ZATO_ERROR'
@@ -207,6 +210,8 @@ ZMQ_OUTGOING_TYPES = ('PUSH', 'PUB')
 class ZMQ:
 
     PULL = 'PULL'
+    PUSH = 'PUSH'
+    PUB = 'PUB'
     SUB = 'SUB'
     MDP = 'MDP'
     MDP01 = MDP + '01'
@@ -225,6 +230,11 @@ class ZMQ:
         PULL: 'Pull',
         SUB: 'Sub',
         MDP01: MDP01_HUMAN,
+    })
+
+    OUTGOING = OrderedDict({
+        PUSH: 'Push',
+        PUB: 'Pub',
     })
 
     class METHOD_NAME:
@@ -854,6 +864,10 @@ VAULT.WEB_SOCKET = {
 class APISPEC:
     OPEN_API_V2 = 'openapi-v2'
     NAMESPACE_NULL = ''
+
+class PADDING:
+    LEFT = 'left'
+    RIGHT = 'right'
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

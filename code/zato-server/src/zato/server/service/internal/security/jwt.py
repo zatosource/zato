@@ -93,9 +93,9 @@ class Create(AdminService):
 
                 raise
             else:
+                input.id = item.id
                 input.action = SECURITY.JWT_CREATE.value
                 input.sec_type = SEC_DEF_TYPE.JWT
-                input.id = item.id
                 self.broker_client.publish(input)
 
             self.response.payload.id = item.id

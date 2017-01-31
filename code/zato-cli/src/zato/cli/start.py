@@ -23,8 +23,8 @@ from sarge import run
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.cli.stop import Stop
-from zato.common import MISC
-from zato.common.util import get_executable, get_haproxy_pidfile
+from zato.common import CLI_ARG_SEP, MISC
+from zato.common.util import get_executable, get_haproxy_agent_pidfile
 
 stderr_sleep_fg = 0.9
 stderr_sleep_bg = 1.2
@@ -88,8 +88,9 @@ Examples:
 
         options = {
             'sync_internal': self.args.sync_internal,
+            'fg': self.args.fg,
         }
-        options = ';'.join('{}={}'.format(k, v) for k, v in options.items())
+        options = CLI_ARG_SEP.join('{}={}'.format(k, v) for k, v in options.items())
 
         program = '{} -m {} {} {} {} {}'.format(get_executable(), py_path, program_dir, options, stdout_redirect, stderr_redirect)
         try:
@@ -125,12 +126,12 @@ Examples:
 
         found_pidfile = self.check_pidfile()
         if not found_pidfile:
-            found_pidfile = self.check_pidfile(get_haproxy_pidfile(self.component_dir))
-            if not found_pidfile:
+            found_agent_pidfile = self.check_pidfile(get_haproxy_agent_pidfile(self.component_dir))
+            if not found_agent_pidfile:
                 self.start_component(
                     'zato.agent.load_balancer.main', 'load-balancer', os.path.join(self.config_dir, 'repo'), stop_haproxy)
 
-        sys.exit(found_pidfile)
+        sys.exit(self.SYS_ERROR.FOUND_PIDFILE)
 
     def _on_web_admin(self, *ignored):
         self.run_check_config()

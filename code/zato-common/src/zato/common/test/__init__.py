@@ -36,7 +36,7 @@ from sqlalchemy import create_engine
 from zato.common import CHANNEL, DATA_FORMAT, SIMPLE_IO
 from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
-from zato.common.util import new_cid
+from zato.common.util import is_port_taken, new_cid
 
 def rand_bool():
     return choice((True, False))
@@ -117,6 +117,16 @@ def is_like_cid(cid):
 
     return True
 
+def get_free_tcp_port(start=40000, stop=40500):
+    """ Iterates between start and stop, returning first free TCP port. Must not be used except for tests because
+    it comes with a race condition - another process may want to bind the port we find before our caller does.
+    """
+    for port in xrange(start, stop):
+        if not is_port_taken(port):
+            return port
+    else:
+        raise Exception('Could not find any free TCP port between {} and {}'.format(start, stop))
+
 class Expected(object):
     """ A container for the data a test expects the service to return.
     """
@@ -187,8 +197,8 @@ class FakeServiceStore(object):
         self.name_to_impl_name = name_to_impl_name or {}
         self.impl_name_to_service = impl_name_to_service or {}
 
-    def new_instance(self, impl_name):
-        return self.impl_name_to_service[impl_name]()
+    def new_instance(self, impl_name, is_active=True):
+        return self.impl_name_to_service[impl_name](), is_active
 
 class FakeServer(object):
     """ A fake mock server used in test cases.
