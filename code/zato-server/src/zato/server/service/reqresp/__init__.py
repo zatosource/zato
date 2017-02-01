@@ -33,6 +33,7 @@ from sqlalchemy.util import KeyedTuple
 from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, SIMPLE_IO, simple_types, TRACE1, ZatoException, ZATO_OK
 from zato.common.util import make_repr
 from zato.server.service.reqresp.sio import AsIs, convert_param, ForceType, ServiceInput, SIOConverter
+from zato.common.odb.api import WritableKeyedTuple
 
 logger = logging.getLogger(__name__)
 
