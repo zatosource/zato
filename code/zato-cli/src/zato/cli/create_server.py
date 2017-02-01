@@ -9,7 +9,8 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import os, uuid
+import os
+import uuid
 from copy import deepcopy
 from datetime import datetime
 from traceback import format_exc
@@ -339,13 +340,14 @@ directories = (
 )
 
 files = {
-    'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
-    'config/repo/service-sources.txt':service_sources_contents,
-    'config/repo/lua/internal/zato.rename_if_exists.lua':lua_zato_rename_if_exists
+    'config/repo/logging.conf': common_logging_conf_contents.format(log_path='./logs/server.log'),
+    'config/repo/service-sources.txt': service_sources_contents,
+    'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists
 }
 
 priv_key_location = './config/repo/config-priv.pem'
 priv_key_location = './config/repo/config-pub.pem'
+
 
 class Create(ZatoCommand):
     """ Creates a new Zato server
@@ -356,13 +358,13 @@ class Create(ZatoCommand):
     opts = deepcopy(common_odb_opts)
     opts.extend(kvdb_opts)
 
-    opts.append({'name':'pub_key_path', 'help':"Path to the server's public key in PEM"})
-    opts.append({'name':'priv_key_path', 'help':"Path to the server's private key in PEM"})
-    opts.append({'name':'cert_path', 'help':"Path to the server's certificate in PEM"})
-    opts.append({'name':'ca_certs_path', 'help':"Path to the a PEM list of certificates the server will trust"})
-    opts.append({'name':'cluster_name', 'help':'Name of the cluster to join'})
-    opts.append({'name':'server_name', 'help':"Server's name"})
-    opts.append({'name':'jwt_secret', 'help':"Server's JWT secret (must be the same for all servers in a cluster)"})
+    opts.append({'name': 'pub_key_path', 'help': "Path to the server's public key in PEM"})
+    opts.append({'name': 'priv_key_path', 'help': "Path to the server's private key in PEM"})
+    opts.append({'name': 'cert_path', 'help': "Path to the server's certificate in PEM"})
+    opts.append({'name': 'ca_certs_path', 'help': "Path to the a PEM list of certificates the server will trust"})
+    opts.append({'name': 'cluster_name', 'help': 'Name of the cluster to join'})
+    opts.append({'name': 'server_name', 'help': "Server's name"})
+    opts.append({'name': 'jwt_secret', 'help': "Server's JWT secret (must be the same for all servers in a cluster)"})
 
     def __init__(self, args):
         super(Create, self).__init__(args)
@@ -396,8 +398,7 @@ class Create(ZatoCommand):
             self.logger.error(msg)
             return self.SYS_ERROR.NO_SUCH_CLUSTER
 
-        server = Server()
-        server.cluster_id = cluster.id
+        server = Server(cluster=cluster)
         server.name = args.server_name
         server.token = self.token
         server.last_join_status = SERVER_JOIN_STATUS.ACCEPTED
@@ -435,7 +436,7 @@ class Create(ZatoCommand):
             if show_output:
                 self.logger.debug('Logging configuration stored in {}'.format(logging_conf_loc))
 
-            odb_engine=args.odb_type
+            odb_engine = args.odb_type
             if odb_engine.startswith('postgresql'):
                 odb_engine = 'postgresql+pg8000'
 
