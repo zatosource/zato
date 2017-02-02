@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 from json import loads
 from uuid import uuid4
-import logging, glob, os
+import logging, glob, os, sys
 
 # Click
 import click
@@ -108,18 +108,29 @@ def _apitests():
 
     # We expect a process to be a Zato a server if it keeps open files containing these parts in their names.
     known_file_parts = ('logs/kvdb.log', 'logs/pubsub-overflown.log', 'logs/rbac.log')
+    len_known_file_parts = len(known_file_parts)
+
+    def _get_server_path(open_files):
+
+        known_found = 0
+        last = None
+
+        for known in known_file_parts:
+            for f in open_files:
+                if f.endswith(known):
+                    known_found += 1
+                    last = f
+
+        if known_found == len_known_file_parts:
+            return f.split('/logs/')[0]
 
     for item in psutil.net_connections():
         if item.status == psutil.CONN_LISTEN and item.laddr[1] == 17010:
             proc = psutil.Process(pid=item.pid)
-            known_found = 0
             open_files = proc.open_files()
-            for f in open_files:
-                if any(part in f.path for part in known_file_parts):
-                    known_found += 1
 
-            if known_found == len(known_file_parts):
-                server_path = open_files[0].path.split('/logs/')[0]
+            server_path = _get_server_path([f.path for f in open_files if f.path.endswith('.log')])
+            if server_path:
                 break
 
     # We've got a path that for 99% is a server, but let's run zato info against it to be 100% sure.
@@ -144,10 +155,7 @@ def _apitests():
         os.environ.update(**conn_info)
         apitest_cmd = 'apitest'
         tests_dir = os.path.join(curdir, 'apitest')
-        run('{} run {}'.format(apitest_cmd, tests_dir))
-
-        # TODO: The output should be consulted - it's possible that someone
-        # will want to stop the tests if API test don't succeed.
+        sys.exit(run('{} run {}'.format(apitest_cmd, tests_dir)).returncode)
 
 @click.command()
 def apitests():
