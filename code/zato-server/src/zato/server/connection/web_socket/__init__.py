@@ -132,8 +132,8 @@ class WebSocket(_WebSocket):
             msg.token = meta.get('token') # Optional because it won't exist during first authentication
 
             # self.ext_client_id and self.ext_client_name will exist after authenticate action
-            # so we use them if they are available but fall back to meta.client_id and meta.client_name otherwise
-            # because authentication is not required and will be skipped if the channel has no security definition attached.
+            # so we use them if they are available but fall back to meta.client_id and meta.client_name during
+            # the very authenticate action.
             msg.ext_client_id = self.ext_client_id or meta.client_id
             msg.ext_client_name = self.ext_client_name or meta.get('client_name')
 
@@ -329,28 +329,25 @@ class WebSocket(_WebSocket):
             # If client is authenticated, allow it to re-authenticate, which grants a new token, or to invoke a service.
             # Otherwise, authentication is required.
 
-            if not self.config.needs_auth:
-                self.handle_client_message(cid, request)
+            if self.is_authenticated:
+
+                # Reject request if an already existing token was not given on input, it should have been
+                # because the client is authenticated after all.
+                if not request.token:
+                    self.on_forbidden('did not send token')
+                    return
+
+                # Reject request if token is provided but it already expired
+                if _now() > self.token.expires_at:
+                    self.on_forbidden('used an expired token')
+                    return
+
+                # Ok, we can proceed
+                self.handle_client_message(cid, request) if not request.is_auth else self.handle_authenticate(cid, request)
+
+            # Unauthenticated - require credentials on input
             else:
-                if self.is_authenticated:
-
-                    # Reject request if an already existing token was not given on input, it should have been
-                    # because the client is authenticated after all.
-                    if not request.token:
-                        self.on_forbidden('did not send token')
-                        return
-
-                    # Reject request if token is provided but it already expired
-                    if _now() > self.token.expires_at:
-                        self.on_forbidden('used an expired token')
-                        return
-
-                    # Ok, we can proceed
-                    self.handle_client_message(cid, request) if not request.is_auth else self.handle_authenticate(cid, request)
-
-                # Unauthenticated - require credentials on input
-                else:
-                    self.handle_authenticate(cid, request)
+                self.handle_authenticate(cid, request)
 
             logger.info('Response returned cid:`%s`, time:`%s`', cid, _now()-now)
 
@@ -397,8 +394,8 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def opened(self, _now=datetime.utcnow, _timedelta=timedelta):
-        logger.info('New connection from %s (%s) to %s (%s needs_auth:%s)', self._peer_address, self._peer_fqdn,
-            self._local_address, self.config.name, self.config.needs_auth)
+        logger.info('New connection from %s (%s) to %s (%s)', self._peer_address, self._peer_fqdn,
+            self._local_address, self.config.name)
 
         if not self.config.needs_auth:
             with self.update_lock:
@@ -409,8 +406,8 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def closed(self, code, reason=None):
-        logger.info('Closing connection from %s (%s) to %s (%s %s %s)', self._peer_address, self._peer_fqdn,
-            self._local_address, self.ext_client_id or 'no credentials required for', self.config.name, self.pub_client_id)
+        logger.info('Closing connection from %s (%s) to %s (%s %s %s)',
+            self._peer_address, self._peer_fqdn, self._local_address, self.ext_client_id, self.config.name, self.pub_client_id)
 
         if self.config.needs_auth:
             self.unregister_auth_client()
