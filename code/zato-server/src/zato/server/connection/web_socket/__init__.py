@@ -145,7 +145,7 @@ class WebSocket(_WebSocket):
                 msg.in_reply_to = meta.get('in_reply_to')
                 msg.is_auth = False
 
-        _data = parsed.get('data', {}).get('input')
+        _data = parsed.get('data', {})
         msg.data =_data['response'] if msg.action == _response else _data
 
         return msg
