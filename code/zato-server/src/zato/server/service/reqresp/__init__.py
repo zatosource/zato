@@ -260,7 +260,7 @@ class SimpleIOPayload(SIOConverter):
         """ Called when the user wants to set the payload to a bunch of attributes.
         """
         names = None
-        if isinstance(attrs, (dict, KeyedTuple)):
+        if isinstance(attrs, (dict, KeyedTuple, WritableKeyedTuple)):
             names = attrs.keys()
         elif self._is_sqlalchemy(attrs):
             names = attrs._sa_class_manager.keys()
