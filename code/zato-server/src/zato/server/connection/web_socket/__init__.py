@@ -75,6 +75,7 @@ class WebSocket(_WebSocket):
         self.ext_client_id = None
         self.ext_client_name = None
         self.connection_time = self.last_seen = datetime.utcnow()
+        self.sec_type = self.config.sec_type
 
         # Responses to previously sent requests - keyed by request IDs
         self.responses_received = {}
@@ -157,7 +158,7 @@ class WebSocket(_WebSocket):
 # ################################################################################################################################
 
     def authenticate(self, cid, request):
-        if self.config.auth_func(request.cid, request.sec_type, {'username':request.username, 'secret':request.secret},
+        if self.config.auth_func(request.cid, self.sec_type, {'username':request.username, 'secret':request.secret},
             self.config.sec_name):
 
             with self.update_lock:
