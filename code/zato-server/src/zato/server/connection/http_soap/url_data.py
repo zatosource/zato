@@ -200,7 +200,7 @@ class URLData(OAuthDataStore):
 # ################################################################################################################################
 
     def authenticate_web_socket(self, cid, sec_def_type, auth, sec_name, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH,
-        _jwt=SEC_DEF_TYPE.JWT, _vault_ws=VAULT.WEB_SOCKET):
+        _jwt=SEC_DEF_TYPE.JWT, _vault_ws=SEC_DEF_TYPE.VAULT):
         """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
         """
 
