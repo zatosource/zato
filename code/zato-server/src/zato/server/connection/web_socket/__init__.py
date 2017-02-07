@@ -161,7 +161,7 @@ class WebSocket(_WebSocket):
 
     def authenticate(self, cid, request):
         if self.config.auth_func(request.cid, self.sec_type, {'username':request.username, 'secret':request.secret},
-            self.config.sec_name):
+            self.config.sec_name, self.config.vault_conn_default_auth_method):
 
             with self.update_lock:
                 self.token = 'ws.token.{}'.format(new_cid())
