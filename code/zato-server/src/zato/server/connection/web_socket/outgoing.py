@@ -35,7 +35,7 @@ class OutgoingWebSocket(object):
 
     def invoke(self, request, id=None, channel=None, pattern=None):
         if not any((id, channel, pattern)):
-            raise ValueError('At least one of `id, `channel` or `pattern` parameters is required')
+            raise ValueError('At least one of `id`, `channel` or `pattern` parameters is required')
 
         is_by_ext_id = bool(id)
         is_by_channel = bool(channel)
