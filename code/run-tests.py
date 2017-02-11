@@ -13,7 +13,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 from json import loads
 from uuid import uuid4
-import logging, glob, os
+import logging, glob, os, sys
 
 # Click
 import click
@@ -155,7 +155,7 @@ def _apitests():
         os.environ.update(**conn_info)
         apitest_cmd = 'apitest'
         tests_dir = os.path.join(curdir, 'apitest')
-        run('{} run {}'.format(apitest_cmd, tests_dir))
+        sys.exit(run('{} run {}'.format(apitest_cmd, tests_dir)).returncode)
 
 @click.command()
 def apitests():
