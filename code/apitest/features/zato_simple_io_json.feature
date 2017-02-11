@@ -183,3 +183,41 @@ Feature: simple-io.json
     And JSON Pointer "/response/should_d" is False
 
 # ################################################################################################################################
+
+  Scenario: Unicode datatype
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+    Given URL path "/zato/checks/json/zato.checks.sio.unicode-service"
+
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/uni_a" in request is "a"
+    Given JSON Pointer "/uni_b" in request is "b"
+
+    When the URL is invoked
+    Then status is "200"
+
+    And JSON Pointer "/response/uni_c" is "c"
+    And JSON Pointer "/response/uni_d" is "d"
+
+# ################################################################################################################################
+
+  Scenario: UTC datatype
+    Given address "$ZATO_API_TEST_SERVER"
+    Given Basic Auth "$ZATO_API_TEST_PUBAPI_USER" "$ZATO_API_TEST_PUBAPI_PASSWORD"
+
+    Given URL path "/zato/checks/json/zato.checks.sio.utc-service"
+
+    Given format "JSON"
+    Given request is "{}"
+    Given JSON Pointer "/utc1" in request is "2019-01-26T22:33:44+00:00"
+    Given JSON Pointer "/utc2" in request is "2023-12-19T21:31:41+00:00"
+
+    When the URL is invoked
+    Then status is "200"
+
+    And JSON Pointer "/response/utc1" is "1234-11-22T01:02:03"
+    And JSON Pointer "/response/utc2" is "2918-03-19T21:22:23"
+
+# ################################################################################################################################
