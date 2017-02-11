@@ -199,26 +199,33 @@ class URLData(OAuthDataStore):
 
 # ################################################################################################################################
 
-    def authenticate_web_socket(self, cid, sec_def_type, auth, sec_name, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH,
-        _jwt=SEC_DEF_TYPE.JWT, _vault_ws=VAULT.WEB_SOCKET):
+    def authenticate_web_socket(self, cid, sec_def_type, auth, sec_name, vault_conn_default_auth_method,
+        _basic_auth=SEC_DEF_TYPE.BASIC_AUTH, _jwt=SEC_DEF_TYPE.JWT, _vault_sec_def_type=SEC_DEF_TYPE.VAULT,
+        _vault_ws=VAULT.WEB_SOCKET):
         """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
         """
+
         if sec_def_type == _basic_auth:
             auth_func = self._handle_security_basic_auth
             get_func = self.basic_auth_get
             headers = {'HTTP_AUTHORIZATION': 'Basic {}'.format('{}:{}'.format(auth['username'], auth['secret']).encode('base64'))}
+
         elif sec_def_type == _jwt:
             auth_func = self._handle_security_jwt
             get_func = self.jwt_get
             headers = {'HTTP_AUTHORIZATION': 'Bearer {}'.format(auth['secret'])}
-        else:
+
+        elif sec_def_type == _vault_sec_def_type:
             auth_func = self._handle_security_vault_conn_sec
             get_func = self.vault_conn_sec_get
 
             # The defauly header is a dummy one
             headers = {'zato.http.response.headers':{}}
-            for key, header in _vault_ws[sec_def_type].iteritems():
+            for key, header in _vault_ws[vault_conn_default_auth_method].iteritems():
                 headers[header] = auth[key]
+
+        else:
+            raise ValueError('Unrecognized sec_def_type:`{}`'.format(sec_def_type))
 
         return auth_func(cid, get_func(sec_name)['config'], None, None, headers, enforce_auth=False)
 
