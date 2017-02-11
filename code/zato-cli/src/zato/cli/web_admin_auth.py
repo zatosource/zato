@@ -102,7 +102,6 @@ class CreateUser(_WebAdminAuthCommand):
 
         try:
             Command().handle(interactive=self.is_interactive, **options)
-            UpdatePassword(args).execute(args, called_from_wrapper=True)
         except Exception, e:
             self.logger.error('Could not create the user, details: `%s`', format_exc(e))
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
