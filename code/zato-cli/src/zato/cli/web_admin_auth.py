@@ -98,7 +98,9 @@ class CreateUser(_WebAdminAuthCommand):
         Command.stdout = CreateUser._FakeStdout(self.logger)
         Command.stdin = CreateUser._FakeStdin()
 
-        options = {} if self.is_interactive else {'username':self.args.username, 'email':self.args.email}
+        options = {'verbosity':0} if self.is_interactive else {
+            'username':self.args.username, 'email':self.args.email, 'verbosity':0
+        }
 
         try:
             Command().handle(interactive=self.is_interactive, **options)
