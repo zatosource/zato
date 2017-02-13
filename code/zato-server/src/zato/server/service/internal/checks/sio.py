@@ -12,7 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from nose.tools import eq_
 
 # Zato
-from zato.server.service import AsIs, CSV, Bool, Boolean, Dict, Int, Integer, List, ListOfDicts, Nested, Service, Unicode, UTC
+from zato.server.service import AsIs, CSV, Bool, Boolean, Dict, fixed_width as fw, Int, Integer, List, ListOfDicts, Nested, \
+     Service, Unicode, UTC
 from zato.server.service.internal.checks import CheckService
 
 # ################################################################################################################################
@@ -785,5 +786,36 @@ class CheckSIO(CheckService):
         self.xml_check_no_force_type()
         self.xml_check_unicode()
         self.xml_check_utc()
+
+# ################################################################################################################################
+
+class FixedWidthString(Service):
+    class SimpleIO:
+        input_required = (fw.String(1, 'a'), fw.String(2, 'b'), fw.String(3, 'c'), fw.String(4, 'd'))
+        output_required = (fw.String(1, 'aa'), fw.String(2, 'bb'), fw.String(3, 'cc'), fw.String(4, 'dd'))
+
+    def handle(self):
+
+        expected1 = [
+            {'key':'a', 'value':'a'},
+            {'key':'b', 'value':'bb'},
+            {'key':'c', 'value':'ccc'},
+            {'key':'d', 'value':'dddd'},
+        ]
+
+        expected2 = [
+            {'key':'a', 'value':'A'},
+            {'key':'b', 'value':'BB'},
+            {'key':'c', 'value':'CCC'},
+            {'key':'d', 'value':'DDDD'},
+        ]
+
+        eq_(self.request.input[0], expected1)
+        eq_(self.request.input[1], expected2)
+
+        self.request.payload.aa = 'q'
+        self.request.payload.bb = 'w'
+        self.request.payload.cc = 'e'
+        self.request.payload.dd = 'r'
 
 # ################################################################################################################################
