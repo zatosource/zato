@@ -747,7 +747,12 @@ class Create(ZatoCommand):
 
     def add_check(self, session, cluster, service, pubapi_sec):
 
-        for data_format in (DATA_FORMAT.JSON, DATA_FORMAT.XML):
+        if 'fixed-width' in service.name:
+            data_formats = [DATA_FORMAT.FIXED_WIDTH]
+        else:
+            data_formats = [DATA_FORMAT.JSON, DATA_FORMAT.XML]
+
+        for data_format in data_formats:
 
             name = 'zato.checks.{}.{}'.format(data_format, service.name)
             url_path = '/zato/checks/{}/{}'.format(data_format, service.name)

@@ -790,6 +790,7 @@ class CheckSIO(CheckService):
 # ################################################################################################################################
 
 class FixedWidthString(Service):
+
     class SimpleIO:
         input_required = (fw.String(1, 'a'), fw.String(2, 'b'), fw.String(3, 'c'), fw.String(4, 'd'))
         output_required = (fw.String(1, 'aa'), fw.String(2, 'bb'), fw.String(3, 'cc'), fw.String(4, 'dd'))
