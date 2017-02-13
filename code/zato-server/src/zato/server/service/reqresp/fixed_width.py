@@ -236,6 +236,12 @@ class FixedWidth(object):
 
 # ################################################################################################################################
 
+    def to_dict(self):
+        """ Returns input data serialized to a dictionary.
+        """
+
+# ################################################################################################################################
+
     def _serialize_line(self, response, _right=PADDING.RIGHT):
         """ Serializes to string a single line out fixed-width data.
         """

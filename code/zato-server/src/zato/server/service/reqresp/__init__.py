@@ -32,6 +32,7 @@ from sqlalchemy.util import KeyedTuple
 # Zato
 from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, SIMPLE_IO, simple_types, TRACE1, ZatoException, ZATO_OK
 from zato.common.util import make_repr
+from zato.server.service.reqresp.fixed_width import FixedWidth
 from zato.server.service.reqresp.sio import AsIs, convert_param, ForceType, ServiceInput, SIOConverter
 
 logger = logging.getLogger(__name__)
@@ -90,12 +91,12 @@ class Request(SIOConverter):
         self.merge_channel_params = True
         self.params_priority = PARAMS_PRIORITY.DEFAULT
 
-    def init(self, is_sio, cid, sio, data_format, transport, wsgi_environ):
+    def init(self, is_sio, cid, sio, data_format, transport, wsgi_environ, _sio_format=SIMPLE_IO.FORMAT):
         """ Initializes the object with an invocation-specific data.
         """
 
         if is_sio:
-            self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
+            self.is_xml = data_format == _sio_format.XML
             self.data_format = data_format
             self.transport = transport
             self._wsgi_environ = wsgi_environ
@@ -106,6 +107,7 @@ class Request(SIOConverter):
             default_value = getattr(sio, 'default_value', NO_DEFAULT_VALUE)
             use_text = getattr(sio, 'use_text', True)
             use_channel_params_only = getattr(sio, 'use_channel_params_only', False)
+            is_fixed_width = True if data_format == _sio_format.FIXED_WIDTH else False
 
             if self.simple_io_config:
                 self.has_simple_io_config = True
@@ -123,12 +125,12 @@ class Request(SIOConverter):
                 if self.payload == '' and not self.channel_params:
                     raise ZatoException(cid, 'Missing input')
 
-                required_params.update(self.get_params(
-                    required_list, use_channel_params_only, path_prefix, default_value, use_text))
+                required_params.update(self.get_all_params(
+                    required_list, use_channel_params_only, path_prefix, default_value, use_text, is_fixed_width))
 
             if optional_list:
-                optional_params = self.get_params(
-                    optional_list, use_channel_params_only, path_prefix, default_value, use_text, False)
+                optional_params = self.get_all_params(
+                    optional_list, use_channel_params_only, path_prefix, default_value, use_text, is_fixed_width, False)
             else:
                 optional_params = {}
 
@@ -144,16 +146,15 @@ class Request(SIOConverter):
             if self.merge_channel_params:
                 self.input.update(self.channel_params)
 
-    def get_params(self, params_to_visit, use_channel_params_only, path_prefix='', default_value=NO_DEFAULT_VALUE,
-            use_text=True, is_required=True):
-        """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
+    def _get_params(self, payload, params_to_visit, path_prefix, default_value, use_text, is_required):
+        """ Returns parameters from request data. For JSON and XML, it works the whole of input. For fixed-width,
+        it works with a single line of input at a time.
         """
         params = {}
-
         for param in params_to_visit:
             try:
                 param_name, value = convert_param(
-                    self.cid, '' if use_channel_params_only else self.payload, param, self.data_format, is_required,
+                    self.cid, payload, param, self.data_format, is_required,
                     default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
                     self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes, self.params_priority)
                 params[param_name] = value
@@ -165,6 +166,38 @@ class Request(SIOConverter):
                 raise Exception(msg)
 
         return params
+
+    def get_all_params(self, params_to_visit, use_channel_params_only, path_prefix='', default_value=NO_DEFAULT_VALUE,
+            use_text=True, is_fixed_width=False, is_required=True):
+        """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
+        """
+
+        if is_fixed_width:
+            fw = FixedWidth(params_to_visit, self.payload)
+            params = list(fw)
+            print(111, params)
+            return params
+
+            '''
+            payload = self.payload.splitlines()
+
+            # Multi-line fixed-width
+            if len(payload) > 1:
+                params = []
+                for line in payload:
+                    params.append(self._get_params(line, params_to_visit, path_prefix, default_value, use_text, is_required))
+                return params
+
+            # Single-line fixed-width
+            else:
+                return self._get_params(self.payload, params_to_visit, path_prefix, default_value, use_text, is_required)
+                '''
+
+        # Not fixed-width, e.g. JSON or XML
+        else:
+            return self._get_params(
+                '' if use_channel_params_only else self.payload, params_to_visit, path_prefix, default_value,
+                use_text, is_required)
 
     def deepcopy(self):
         """ Returns a deep copy of self.
