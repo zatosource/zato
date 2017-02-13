@@ -95,7 +95,7 @@ def _nosetests():
 def nosetests():
     _nosetests()
 
-def _apitests():
+def _apitests(tags):
 
     # First check out if we have a process running on localhost:17010.
     # If we do, check out if it appears to belong to a server.
@@ -152,14 +152,17 @@ def _apitests():
         logger.warn('Cannot run API tests, could not obtain conn info from local path nor environment.')
 
     else:
+        if tags:
+            conn_info['ZATO_APITEST_TAGS'] = ' '.join(tags)
         os.environ.update(**conn_info)
         apitest_cmd = 'apitest'
         tests_dir = os.path.join(curdir, 'apitest')
         sys.exit(run('{} run {}'.format(apitest_cmd, tests_dir)).returncode)
 
 @click.command()
-def apitests():
-    _apitests()
+@click.option('--tags', '-t', multiple=True)
+def apitests(tags):
+    _apitests(tags)
 
 @click.command()
 def all():
