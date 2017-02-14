@@ -14,7 +14,7 @@ Feature: SimpleIO FixedWidth
     Given URL path "/zato/checks/fixed-width/zato.checks.sio.fixed-width-string"
 
     Given format "RAW"
-    Given request is "abbcccdddd\nABBCCCDDDD"
+    Given request "fixed-width-string.txt"
 
     When the URL is invoked
     Then status is "200"

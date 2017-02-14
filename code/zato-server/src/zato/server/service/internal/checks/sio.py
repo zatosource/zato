@@ -813,8 +813,13 @@ class FixedWidthString(Service):
             'd': 'DDDD'
         })
 
-        for line in self.request.input:
-            self.logger.warn('333 %r %r %r %r', line.a, line.b, line.c, line.d)
+        for idx, line in enumerate(self.request.input):
+
+            _expected_line = expected[idx]
+
+            for key, expected_value in _expected_line.items():
+                given_value = getattr(line, key)
+                eq_(given_value, expected_value)
 
         #eq_(self.request.input[0], expected1)
         #eq_(self.request.input[1], expected2)
