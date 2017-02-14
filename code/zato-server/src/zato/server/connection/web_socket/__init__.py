@@ -375,6 +375,7 @@ class WebSocket(_WebSocket):
             logger.warn(format_exc(e))
 
     def received_message(self, message):
+        logger.info('Received message %r', message.data)
         try:
             spawn(self._received_message, deepcopy(message.data))
         except Exception, e:

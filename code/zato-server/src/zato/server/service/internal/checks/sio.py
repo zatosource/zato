@@ -793,30 +793,37 @@ class FixedWidthString(Service):
 
     class SimpleIO:
         input_required = (fw.String(1, 'a'), fw.String(2, 'b'), fw.String(3, 'c'), fw.String(4, 'd'))
-        output_required = (fw.String(1, 'aa'), fw.String(2, 'bb'), fw.String(3, 'cc'), fw.String(4, 'dd'))
+        #output_required = (fw.String(1, 'aa'), fw.String(2, 'bb'), fw.String(3, 'cc'), fw.String(4, 'dd'))
 
     def handle(self):
 
-        expected1 = [
-            {'key':'a', 'value':'a'},
-            {'key':'b', 'value':'bb'},
-            {'key':'c', 'value':'ccc'},
-            {'key':'d', 'value':'dddd'},
-        ]
+        expected = []
 
-        expected2 = [
-            {'key':'a', 'value':'A'},
-            {'key':'b', 'value':'BB'},
-            {'key':'c', 'value':'CCC'},
-            {'key':'d', 'value':'DDDD'},
-        ]
+        expected.append({
+            'a': 'a',
+            'b': 'bb',
+            'c': 'ccc',
+            'd': 'dddd'
+        })
 
-        eq_(self.request.input[0], expected1)
-        eq_(self.request.input[1], expected2)
+        expected.append({
+            'a': 'A',
+            'b': 'BB',
+            'c': 'CCC',
+            'd': 'DDDD'
+        })
 
+        for line in self.request.input:
+            self.logger.warn('333 %r %r %r %r', line.a, line.b, line.c, line.d)
+
+        #eq_(self.request.input[0], expected1)
+        #eq_(self.request.input[1], expected2)
+
+        '''
         self.request.payload.aa = 'q'
         self.request.payload.bb = 'w'
         self.request.payload.cc = 'e'
         self.request.payload.dd = 'r'
+        '''
 
 # ################################################################################################################################
