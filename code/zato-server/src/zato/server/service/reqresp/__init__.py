@@ -71,11 +71,12 @@ class Request(SIOConverter):
                  'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
                  '_wsgi_environ', 'channel_params', 'merge_channel_params')
 
-    def __init__(self, logger, simple_io_config={}, data_format=None, transport=None):
+    def __init__(self, logger, simple_io_config={}, data_format=None, transport=None,
+            _dt_fixed_width=SIMPLE_IO.FORMAT.FIXED_WIDTH):
         self.logger = logger
         self.payload = ''
         self.raw_request = ''
-        self.input = ServiceInput()
+        self.input = {} # Will be overwritten in self.init if necessary
         self.cid = None
         self.simple_io_config = simple_io_config
         self.has_simple_io_config = False
@@ -91,70 +92,91 @@ class Request(SIOConverter):
         self.merge_channel_params = True
         self.params_priority = PARAMS_PRIORITY.DEFAULT
 
-    def init(self, is_sio, cid, sio, data_format, transport, wsgi_environ, _sio_format=SIMPLE_IO.FORMAT):
+# ################################################################################################################################
+
+    def init(self, is_sio, cid, sio, data_format, transport, wsgi_environ, _dt_fixed_width=SIMPLE_IO.FORMAT.FIXED_WIDTH):
         """ Initializes the object with an invocation-specific data.
         """
+        self.input = FixedWidth() if data_format == _dt_fixed_width else ServiceInput()
 
         if is_sio:
-            self.is_xml = data_format == _sio_format.XML
-            self.data_format = data_format
-            self.transport = transport
-            self._wsgi_environ = wsgi_environ
-
-            path_prefix = getattr(sio, 'request_elem', 'request')
-            required_list = getattr(sio, 'input_required', [])
-            optional_list = getattr(sio, 'input_optional', [])
-            default_value = getattr(sio, 'default_value', NO_DEFAULT_VALUE)
-            use_text = getattr(sio, 'use_text', True)
-            use_channel_params_only = getattr(sio, 'use_channel_params_only', False)
-            is_fixed_width = True if data_format == _sio_format.FIXED_WIDTH else False
-
-            if self.simple_io_config:
-                self.has_simple_io_config = True
-                self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
-                self.int_parameters = self.simple_io_config.get('int_parameters', [])
-                self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
-            else:
-                self.payload = self.raw_request
-
-            required_params = {}
-
-            if required_list:
-
-                # Needs to check for this exact default value to prevent a FutureWarning in 'if not self.payload'
-                if self.payload == '' and not self.channel_params:
-                    raise ZatoException(cid, 'Missing input')
-
-                required_params.update(self.get_all_params(
-                    required_list, use_channel_params_only, path_prefix, default_value, use_text, is_fixed_width))
-
-            if optional_list:
-                optional_params = self.get_all_params(
-                    optional_list, use_channel_params_only, path_prefix, default_value, use_text, is_fixed_width, False)
-            else:
-                optional_params = {}
-
-            self.input.update(required_params)
-            self.input.update(optional_params)
-
-            for param, value in self.channel_params.iteritems():
-                if param not in self.input:
-                    self.input[param] = value
+            (self.init_list_sio if data_format == _dt_fixed_width else self.init_flat_sio)(
+                cid, sio, data_format, transport, wsgi_environ, getattr(sio, 'input_required', []))
 
         # We merge channel params in if requested even if it's not SIO
         else:
             if self.merge_channel_params:
                 self.input.update(self.channel_params)
 
-    def _get_params(self, payload, params_to_visit, path_prefix, default_value, use_text, is_required):
-        """ Returns parameters from request data. For JSON and XML, it works the whole of input. For fixed-width,
-        it works with a single line of input at a time.
+# ################################################################################################################################
+
+    def init_list_sio(self, cid, sio, data_format, transport, wsgi_environ, required_list):
+        """ Initializes list-like SIO requests, e.g. fixed-width ones.
+        """
+        self.input.definition = required_list
+        self.input.raw_data = self.payload
+        self.input.set_up()
+
+# ################################################################################################################################
+
+    def init_flat_sio(self, cid, sio, data_format, transport, wsgi_environ, required_list):
+        """ Initializes flat SIO requests, i.e. not list ones.
+        """
+        self.is_xml = data_format == SIMPLE_IO.FORMAT.XML
+        self.data_format = data_format
+        self.transport = transport
+        self._wsgi_environ = wsgi_environ
+
+        path_prefix = getattr(sio, 'request_elem', 'request')
+        optional_list = getattr(sio, 'input_optional', [])
+        default_value = getattr(sio, 'default_value', NO_DEFAULT_VALUE)
+        use_text = getattr(sio, 'use_text', True)
+        use_channel_params_only = getattr(sio, 'use_channel_params_only', False)
+
+        if self.simple_io_config:
+            self.has_simple_io_config = True
+            self.bool_parameter_prefixes = self.simple_io_config.get('bool_parameter_prefixes', [])
+            self.int_parameters = self.simple_io_config.get('int_parameters', [])
+            self.int_parameter_suffixes = self.simple_io_config.get('int_parameter_suffixes', [])
+        else:
+            self.payload = self.raw_request
+
+        required_params = {}
+
+        if required_list:
+
+            # Needs to check for this exact default value to prevent a FutureWarning in 'if not self.payload'
+            if self.payload == '' and not self.channel_params:
+                raise ZatoException(cid, 'Missing input')
+
+            required_params.update(self.get_params(
+                required_list, use_channel_params_only, path_prefix, default_value, use_text))
+
+        if optional_list:
+            optional_params = self.get_params(
+                optional_list, use_channel_params_only, path_prefix, default_value, use_text, False)
+        else:
+            optional_params = {}
+
+        self.input.update(required_params)
+        self.input.update(optional_params)
+
+        for param, value in self.channel_params.iteritems():
+            if param not in self.input:
+                self.input[param] = value
+
+# ################################################################################################################################
+
+    def get_params(self, params_to_visit, use_channel_params_only, path_prefix='', default_value=NO_DEFAULT_VALUE,
+            use_text=True, is_required=True):
+        """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
         """
         params = {}
+
         for param in params_to_visit:
             try:
                 param_name, value = convert_param(
-                    self.cid, payload, param, self.data_format, is_required,
+                    self.cid, '' if use_channel_params_only else self.payload, param, self.data_format, is_required,
                     default_value, path_prefix, use_text, self.channel_params, self.has_simple_io_config,
                     self.bool_parameter_prefixes, self.int_parameters, self.int_parameter_suffixes, self.params_priority)
                 params[param_name] = value
@@ -167,37 +189,7 @@ class Request(SIOConverter):
 
         return params
 
-    def get_all_params(self, params_to_visit, use_channel_params_only, path_prefix='', default_value=NO_DEFAULT_VALUE,
-            use_text=True, is_fixed_width=False, is_required=True):
-        """ Gets all requested parameters from a message. Will raise ParsingException if any is missing.
-        """
-
-        if is_fixed_width:
-            fw = FixedWidth(params_to_visit, self.payload)
-            params = list(fw)
-            print(111, params)
-            return params
-
-            '''
-            payload = self.payload.splitlines()
-
-            # Multi-line fixed-width
-            if len(payload) > 1:
-                params = []
-                for line in payload:
-                    params.append(self._get_params(line, params_to_visit, path_prefix, default_value, use_text, is_required))
-                return params
-
-            # Single-line fixed-width
-            else:
-                return self._get_params(self.payload, params_to_visit, path_prefix, default_value, use_text, is_required)
-                '''
-
-        # Not fixed-width, e.g. JSON or XML
-        else:
-            return self._get_params(
-                '' if use_channel_params_only else self.payload, params_to_visit, path_prefix, default_value,
-                use_text, is_required)
+# ################################################################################################################################
 
     def deepcopy(self):
         """ Returns a deep copy of self.
@@ -211,6 +203,8 @@ class Request(SIOConverter):
             setattr(request, name, deepcopy(getattr(self, name)))
 
         return request
+
+# ################################################################################################################################
 
     def bunchified(self):
         """ Returns a bunchified (converted into bunch.Bunch) version of self.raw_request,
@@ -274,14 +268,15 @@ class SimpleIOPayload(SIOConverter):
     def _is_sqlalchemy(self, item):
         return hasattr(item, '_sa_class_manager')
 
-    def set_expected_attrs(self, required_list, optional_list):
+    def set_expected_attrs(self, required_list, optional_list, _dt_fixed_width=SIMPLE_IO.FORMAT.FIXED_WIDTH):
         """ Dynamically assigns all the expected attributes to self. Setting a value
         of an attribute will actually add data to self.zato_output.
         """
-        for name in chain(required_list, optional_list):
-            if isinstance(name, ForceType):
-                name = name.name
-            setattr(self, name, '')
+        if self.zato_data_format != _dt_fixed_width:
+            for name in chain(required_list, optional_list):
+                if isinstance(name, ForceType):
+                    name = name.name
+                setattr(self, name, '')
 
     def set_payload_attrs(self, attrs):
         """ Called when the user wants to set the payload to a bunch of attributes.

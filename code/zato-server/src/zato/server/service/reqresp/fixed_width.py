@@ -198,9 +198,16 @@ class Time(_BaseTime):
 class FixedWidth(object):
     """ Parses fixed-width data, whole files and individual lines alike, and returns iterators or lists to read contents from.
     """
-    def __init__(self, definition, raw_data=None):
+    def __init__(self, definition=None, raw_data=None):
         self.definition = definition
         self.raw_data = raw_data
+
+        if self.definition:
+            self.set_up()
+
+# ################################################################################################################################
+
+    def set_up(self):
         self.matcher = re_compile(''.join(elem.pattern for elem in self.definition))
         self.line_class = self.get_line_class([elem._name for elem in self.definition])
 
