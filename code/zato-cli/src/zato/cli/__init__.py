@@ -7,13 +7,18 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
-import json, shutil
+import json
+import shutil
 from cStringIO import StringIO
 from getpass import getpass, getuser
 from socket import gethostname
 
 # stdlib
-import logging, os, sys, tempfile, time
+import logging
+import os
+import sys
+import tempfile
+import time
 from datetime import datetime
 
 # Importing
@@ -30,7 +35,7 @@ from zato.common.util import get_engine_url, get_full_stack, get_session
 
 ################################################################################
 
-_opts_odb_type = 'Operational database type, must be one of {}'.format(odb.SUPPORTED_DB_TYPES) # noqa
+_opts_odb_type = 'Operational database type, must be one of {}'.format(odb.SUPPORTED_DB_TYPES)  # noqa
 _opts_odb_host = 'Operational database host'
 _opts_odb_port = 'Operational database port'
 _opts_odb_user = 'Operational database user'
@@ -43,8 +48,8 @@ _opts_kvdb_port = 'Key/value DB port'
 
 ca_defaults = {
     'organization': 'My Company',
-    'organizational_unit': 'My Unit', # When it's an optional argument
-    'organizational-unit': 'My Unit', # When it's a required one
+    'organizational_unit': 'My Unit',  # When it's an optional argument
+    'organizational-unit': 'My Unit',  # When it's a required one
     'locality': 'My Town',
     'state_or_province': 'My State',
     'country': 'US'
@@ -54,33 +59,35 @@ default_ca_name = 'Sample CA'
 default_common_name = 'localhost'
 
 common_odb_opts = [
-    {'name':'odb_type', 'help':_opts_odb_type, 'choices':odb.SUPPORTED_DB_TYPES}, # noqa
-    {'name':'--odb_host', 'help':_opts_odb_host},
-    {'name':'--odb_port', 'help':_opts_odb_port},
-    {'name':'--odb_user', 'help':_opts_odb_user},
-    {'name':'--odb_db_name', 'help':_opts_odb_db_name},
-    {'name':'--postgresql_schema', 'help':_opts_odb_schema + ' (PostgreSQL only)'},
-    {'name':'--odb_password', 'help':'ODB database password'},
+    {'name': 'odb_type', 'help': _opts_odb_type, 'choices': odb.SUPPORTED_DB_TYPES},  # noqa
+    {'name': '--odb_host', 'help': _opts_odb_host},
+    {'name': '--odb_port', 'help': _opts_odb_port},
+    {'name': '--odb_user', 'help': _opts_odb_user},
+    {'name': '--odb_db_name', 'help': _opts_odb_db_name},
+    {'name': '--postgresql_schema', 'help': _opts_odb_schema + ' (PostgreSQL only)'},
+    {'name': '--odb_password', 'help': 'ODB database password'},
 ]
 
 common_ca_create_opts = [
-    {'name':'--organization', 'help':'Organization name (defaults to {organization})'.format(**ca_defaults)},
-    {'name':'--locality', 'help':'Locality name (defaults to {locality})'.format(**ca_defaults)},
-    {'name':'--state-or-province', 'help':'State or province name (defaults to {state_or_province})'.format(**ca_defaults)},
-    {'name':'--country', 'help':'Country (defaults to {country})'.format(**ca_defaults)},
-    {'name':'--common-name', 'help':'Common name (defaults to {default})'.format(default=default_common_name)},
+    {'name': '--organization', 'help': 'Organization name (defaults to {organization})'.format(**ca_defaults)},
+    {'name': '--locality', 'help': 'Locality name (defaults to {locality})'.format(**ca_defaults)},
+    {'name': '--state-or-province',
+        'help': 'State or province name (defaults to {state_or_province})'.format(**ca_defaults)},
+    {'name': '--country', 'help': 'Country (defaults to {country})'.format(**ca_defaults)},
+    {'name': '--common-name', 'help': 'Common name (defaults to {default})'.format(default=default_common_name)},
 ]
 
 kvdb_opts = [
-    {'name':'kvdb_host', 'help':_opts_kvdb_host},
-    {'name':'kvdb_port', 'help':_opts_kvdb_port},
-    {'name':'--kvdb_password', 'help':'Key/value database password'},
+    {'name': 'kvdb_host', 'help': _opts_kvdb_host},
+    {'name': 'kvdb_port', 'help': _opts_kvdb_port},
+    {'name': '--kvdb_password', 'help': 'Key/value database password'},
 ]
+
 
 def get_tech_account_opts(help_suffix='to use for connecting to clusters'):
     return [
-        {'name':'tech_account_name', 'help':'Technical account name {}'.format(help_suffix)},
-        {'name':'--tech_account_password', 'help':'Technical account password'},
+        {'name': 'tech_account_name', 'help': 'Technical account name {}'.format(help_suffix)},
+        {'name': '--tech_account_password', 'help': 'Technical account password'},
     ]
 
 common_logging_conf_contents = """
@@ -225,9 +232,10 @@ formatters:
         (): zato.common.util.ColorFormatter
 
 version: 1
-""" # nopep8
+"""  # nopep8
 
 # ######################################################################################################################
+
 
 def run_command(args):
     command_class = {}
@@ -265,6 +273,7 @@ def run_command(args):
     command_class[args.command](args).run(args)
 
 ################################################################################
+
 
 class ZatoCommand(object):
     """ A base class for all Zato CLI commands. Handles common things like parsing
@@ -304,7 +313,9 @@ class ZatoCommand(object):
         FOUND_PIDFILE = 19
 
     class COMPONENTS(object):
+
         class _ComponentName(object):
+
             def __init__(self, code, name):
                 self.code = code
                 self.name = name
@@ -329,21 +340,21 @@ class ZatoCommand(object):
 
     def reset_logger(self, args, reload_=False):
         if reload_:
-            logging.shutdown() # noqa
-            reload(logging) # noqa
+            logging.shutdown()  # noqa
+            reload(logging)  # noqa
 
-        self.logger = logging.getLogger(self.__class__.__name__) # noqa
-        self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO) # noqa
+        self.logger = logging.getLogger(self.__class__.__name__)  # noqa
+        self.logger.setLevel(logging.DEBUG if self.verbose else logging.INFO)  # noqa
         self.logger.handlers[:] = []
 
-        console_handler = logging.StreamHandler(sys.stdout) # noqa
-        console_formatter = logging.Formatter('%(message)s') # noqa
+        console_handler = logging.StreamHandler(sys.stdout)  # noqa
+        console_formatter = logging.Formatter('%(message)s')  # noqa
         console_handler.setFormatter(console_formatter)
         self.logger.addHandler(console_handler)
 
         if args.store_log:
-            verbose_handler = logging.FileHandler('zato.{}.log'.format(util.fs_safe_now())) # noqa
-            verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s') # noqa
+            verbose_handler = logging.FileHandler('zato.{}.log'.format(util.fs_safe_now()))  # noqa
+            verbose_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')  # noqa
             verbose_handler.setFormatter(verbose_formatter)
             self.logger.addHandler(verbose_handler)
 
@@ -375,17 +386,17 @@ class ZatoCommand(object):
 
     def _get_now(self, time_=None):
         if not time_:
-            time_ = time.gmtime() # noqa
+            time_ = time.gmtime()  # noqa
 
-        return time.strftime('%Y-%m-%d_%H-%M-%S', time_) # noqa
+        return time.strftime('%Y-%m-%d_%H-%M-%S', time_)  # noqa
 
     def _get_user_host(self):
         return getuser() + '@' + gethostname()
 
     def store_initial_info(self, target_dir, component):
-        info = {'version': common.version, # noqa
+        info = {'version': common.version,  # noqa
                 'created_user_host': self._get_user_host(),
-                'created_ts': datetime.utcnow().isoformat(), # noqa
+                'created_ts': datetime.utcnow().isoformat(),  # noqa
                 'component': component
                 }
         open(os.path.join(target_dir, ZATO_INFO_FILE), 'wb').write(json.dumps(info))
@@ -393,7 +404,7 @@ class ZatoCommand(object):
     def store_config(self, args):
         """ Stores the config options in a config file for a later use.
         """
-        now = util.fs_safe_now() # noqa
+        now = util.fs_safe_now()  # noqa
         file_name = 'zato.{}.config'.format(now)
         file_args = StringIO()
 
@@ -410,7 +421,7 @@ class ZatoCommand(object):
             file_name=os.path.abspath(file_name)))
 
     def _get_engine(self, args):
-        connect_args = {'application_name':util.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
+        connect_args = {'application_name': util.get_component_name('enmasse')} if args.odb_type == 'postgresql' else {}
         return sqlalchemy.create_engine(get_engine_url(args), connect_args=connect_args)
 
     def _get_session(self, engine):
@@ -451,10 +462,10 @@ class ZatoCommand(object):
                         # before we got to this point and it's OK to skip it.
                         continue
                     else:
-                        msg = ('Directory {} is not empty, please re-run the command ' + # noqa
-                              'in an empty directory').format(work_dir) # noqa
+                        msg = ('Directory {} is not empty, please re-run the command ' +  # noqa
+                              'in an empty directory').format(work_dir)  # noqa
                         self.logger.info(msg)
-                        sys.exit(self.SYS_ERROR.DIR_NOT_EMPTY) # noqa
+                        sys.exit(self.SYS_ERROR.DIR_NOT_EMPTY)  # noqa
 
             # Do we need the directory to contain any specific files?
             if self.file_needed:
@@ -462,7 +473,7 @@ class ZatoCommand(object):
                 if not os.path.exists(full_path):
                     msg = 'Could not find file {}'.format(full_path)
                     self.logger.info(msg)
-                    sys.exit(self.SYS_ERROR.FILE_MISSING) # noqa
+                    sys.exit(self.SYS_ERROR.FILE_MISSING)  # noqa
 
             check_password = []
             for opt_dict in self.opts:
@@ -535,9 +546,11 @@ class ZatoCommand(object):
         """
         return cli_util.get_server_client_auth(config, repo_dir)
 
+
 class FromConfig(ZatoCommand):
     """ Executes commands from a command config file.
     """
+
     def execute(self, args):
         """ Runs the command with arguments read from a config file.
         """
@@ -553,6 +566,7 @@ class FromConfig(ZatoCommand):
             setattr(args, arg, value)
 
         run_command(args)
+
 
 class CACreateCommand(ZatoCommand):
     """ A base class for all commands that create new crypto material.
@@ -592,13 +606,13 @@ class CACreateCommand(ZatoCommand):
         template_args['common_name'] = self._get_arg(args, 'common_name', default_common_name)
         template_args['target_dir'] = self.target_dir
 
-        f = tempfile.NamedTemporaryFile() # noqa
+        f = tempfile.NamedTemporaryFile()  # noqa
         f.write(openssl_template.format(**template_args))
         f.flush()
 
         file_args = {
-            'now':now,
-            'target_dir':self.target_dir
+            'now': now,
+            'target_dir': self.target_dir
         }
 
         for arg in('cluster_name', 'server_name', 'scheduler_name'):
@@ -678,6 +692,7 @@ class CACreateCommand(ZatoCommand):
         # what the format_args were.
         return format_args
 
+
 class ManageCommand(ZatoCommand):
     add_config_file = False
 
@@ -694,7 +709,7 @@ class ManageCommand(ZatoCommand):
     def _on_lb(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Should be implemented by subclasses')
 
-    _on_web_admin = _on_server = _on_lb
+    _on_scheduler = _on_web_admin = _on_server = _on_lb
 
     def execute(self, args):
 
@@ -709,7 +724,7 @@ class ManageCommand(ZatoCommand):
             msg = """Directory {} doesn't seem to belong to a Zato component. Expected one of the following files to exist {}""".format(
                 self.component_dir, sorted(self.command_files))
             self.logger.info(msg)
-            sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT) # noqa
+            sys.exit(self.SYS_ERROR.NOT_A_ZATO_COMPONENT)  # noqa
 
         found = list(found)[0]
         json_data = json.load(open(os.path.join(self.component_dir, found)))
