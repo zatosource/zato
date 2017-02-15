@@ -231,6 +231,7 @@ class SimpleIOPayload(SIOConverter):
         self.zato_logger = logger
         self.zato_data_format = data_format
         self.zato_is_xml = self.zato_data_format == SIMPLE_IO.FORMAT.XML
+        self.zato_is_fixed_width = self.zato_data_format == SIMPLE_IO.FORMAT.FIXED_WIDTH
         self.zato_output = []
         self.zato_required = [(True, name) for name in required_list]
         self.zato_optional = [(False, name) for name in optional_list]
@@ -272,7 +273,7 @@ class SimpleIOPayload(SIOConverter):
         """ Dynamically assigns all the expected attributes to self. Setting a value
         of an attribute will actually add data to self.zato_output.
         """
-        if self.zato_data_format != _dt_fixed_width:
+        if not self.zato_is_fixed_width:
             for name in chain(required_list, optional_list):
                 if isinstance(name, ForceType):
                     name = name.name
@@ -342,6 +343,9 @@ class SimpleIOPayload(SIOConverter):
         """ Gets the actual payload's value converted to a string representing
         either XML or JSON.
         """
+        if self.zato_is_fixed_width:
+            return
+
         if self.zato_is_xml:
             if self.zato_output_repeated:
                 value = Element('item_list')
@@ -490,10 +494,13 @@ class Response(object):
     def _get_payload(self):
         return self._payload
 
-    def _set_payload(self, value):
+    def _set_payload(self, value, _dt_fixed_width=SIMPLE_IO.FORMAT.FIXED_WIDTH):
         """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
         the dicts are matched and transformed according to the SIO definition.
         """
+        if self.data_format == _dt_fixed_width:
+            return
+
         if isinstance(value, direct_payload) and not isinstance(value, KeyedTuple):
             self._payload = value
         else:
