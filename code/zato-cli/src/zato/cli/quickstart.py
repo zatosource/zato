@@ -393,9 +393,9 @@ class Create(ZatoCommand):
         create_web_admin_args.ca_certs_path = web_admin_crypto_loc.ca_certs_path
         create_web_admin_args.admin_invoke_password = admin_invoke_password
 
-        password = generate_password()
+        web_admin_password = generate_password()
         admin_created = create_web_admin.Create(create_web_admin_args).execute(
-            create_web_admin_args, False, password, True)
+            create_web_admin_args, False, web_admin_password, True)
 
         # Need to reset the logger here because executing the create_web_admin command
         # loads the web admin's logger which doesn't like that of ours.
@@ -425,8 +425,8 @@ class Create(ZatoCommand):
         create_scheduler_args.ca_certs_path = scheduler_crypto_loc.ca_certs_path
         create_scheduler_args.cluster_id = cluster_id
 
-        password = generate_password()
-        create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, password, True)
+        scheduler_password = generate_password()
+        create_scheduler.Create(create_scheduler_args).execute(create_scheduler_args, False, scheduler_password, True)
         self.logger.info('[{}/{}] Scheduler created'.format(next_step.next(), total_steps))
 
 # ################################################################################################################################
@@ -476,7 +476,7 @@ class Create(ZatoCommand):
         self.logger.info('Quickstart cluster {} created'.format(cluster_name))
 
         if admin_created:
-            self.logger.info('Web admin user:[admin], password:[{}]'.format(password))
+            self.logger.info('Web admin user:[admin], password:[{}]'.format(web_admin_password))
         else:
             self.logger.info('User [admin] already exists in the ODB')
 

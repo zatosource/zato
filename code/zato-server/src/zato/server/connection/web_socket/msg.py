@@ -31,11 +31,6 @@ copy_not_found = b'Not found'
 
 error_response = {
 
-    FORBIDDEN: {
-        DATA_FORMAT.JSON: dumps({'error': copy_forbidden}),
-        DATA_FORMAT.XML: xml_error_template.format(copy_forbidden)
-    },
-
     NOT_FOUND: {
         DATA_FORMAT.JSON: dumps({'error': copy_not_found}),
         DATA_FORMAT.XML: xml_error_template.format(copy_not_found)
@@ -46,12 +41,13 @@ error_response = {
 # ################################################################################################################################
 
 class MSG_PREFIX:
-    _COMMON = 'zato.ws.server.{}'
+    _COMMON = 'zato.ws.srv.{}'
 
-    REQ_TO_CLIENT = _COMMON.format('req-client')
-    RESP_AUTH = _COMMON.format('resp-auth')
-    RESP_SERVICE_INVOKE_OK = _COMMON.format('resp-ok')
-    RESP_SERVICE_INVOKE_ERROR = _COMMON.format('resp-err')
+    REQ_TO_CLIENT = _COMMON.format('rq-client')
+    RESP_AUTH = _COMMON.format('rsp-auth')
+    RESP_OK = _COMMON.format('rsp-ok')
+    MSG_ERR = _COMMON.format('msg-err') # A message from server indicating an error, no response from client is expected
+    RESP_ERROR = _COMMON.format('rsp-err') # As above but in response to a previous request from client
 
 # ################################################################################################################################
 
@@ -91,17 +87,21 @@ class ServerMessage(object):
         self.data = Bunch()
 
         if self.is_response:
-            self.meta.in_reply_to = in_reply_to
             self.meta.status = status
+            if in_reply_to:
+                self.meta.in_reply_to = in_reply_to
 
         if error_message:
             self.meta.error_message = error_message
 
     def serialize(self):
-        return dumps({
-            'meta': self.meta,
-            'data': self.data,
-        })
+        """ Serialize server message to client. Note that we make it as small as possible because control messages
+        in WebSockets (opcode >= 0x07) must have at most 125 bytes.
+        """
+        msg = {'meta': self.meta}
+        if self.data:
+            msg['data'] = self.data
+        return dumps(msg)
 
 # ################################################################################################################################
 
@@ -114,14 +114,14 @@ class AuthenticateResponse(ServerMessage):
 
 class OKResponse(ServerMessage):
     def __init__(self, cid, in_reply_to, data, *ignored_args, **ignored_kwargs):
-        super(OKResponse, self).__init__(MSG_PREFIX.RESP_SERVICE_INVOKE_OK, cid, in_reply_to)
+        super(OKResponse, self).__init__(MSG_PREFIX.RESP_OK, cid, in_reply_to)
         self.data = data
 
 # ################################################################################################################################
 
 class ErrorResponse(ServerMessage):
     def __init__(self, cid, in_reply_to, status, error_message):
-        super(ErrorResponse, self).__init__(MSG_PREFIX.RESP_SERVICE_INVOKE_ERROR, cid, in_reply_to, status, error_message)
+        super(ErrorResponse, self).__init__(MSG_PREFIX.RESP_ERROR, cid, in_reply_to, status, error_message)
         self.data = {'cid': cid}
 
 # ################################################################################################################################
@@ -131,6 +131,15 @@ class ClientInvokeRequest(ServerMessage):
 
     def __init__(self, cid, data):
         super(ClientInvokeRequest, self).__init__(MSG_PREFIX.REQ_TO_CLIENT, cid)
+        self.data = data
+
+# ################################################################################################################################
+
+class Forbidden(ServerMessage):
+    is_response = True
+
+    def __init__(self, cid, data):
+        super(Forbidden, self).__init__(MSG_PREFIX.MSG_ERR, cid, status=FORBIDDEN)
         self.data = data
 
 # ################################################################################################################################

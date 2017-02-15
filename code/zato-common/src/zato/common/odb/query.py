@@ -1397,11 +1397,13 @@ def _channel_web_socket(session, cluster_id):
         ChannelWebSocket.data_format, ChannelWebSocket.service_id, ChannelWebSocket.security_id,
         ChannelWebSocket.new_token_wait_time, ChannelWebSocket.token_ttl,
         SecurityBase.sec_type,
+        VaultConnection.default_auth_method.label('vault_conn_default_auth_method'),
         SecurityBase.name.label('sec_name'),
         Service.name.label('service_name'),
         ).\
         outerjoin(Service, Service.id==ChannelWebSocket.service_id).\
         outerjoin(SecurityBase, SecurityBase.id==ChannelWebSocket.security_id).\
+        outerjoin(VaultConnection, SecurityBase.id==VaultConnection.id).\
         filter(Cluster.id==ChannelWebSocket.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(ChannelWebSocket.name)

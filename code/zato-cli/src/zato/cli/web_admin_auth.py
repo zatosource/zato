@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import json, os, sys
+from traceback import format_exc
 
 # Zato
 from zato.admin.zato_settings import update_globals
@@ -49,15 +50,18 @@ class CreateUser(_WebAdminAuthCommand):
         super(CreateUser, self).__init__(*args, **kwargs)
         self.is_interactive = True
 
+    # Class django.contrib.auth.management.commands.createsuperuser.Command needs self.stding and self.stdout
+    # so we fake them here.
     class _FakeStdout(object):
-        """ django.contrib.auth.management.commands.createsuperuser.Command needs a self.stdout
-        so we fake it here
-        """
         def __init__(self, logger):
             self.logger = logger
 
         def write(self, msg):
             self.logger.info(msg.strip())
+
+    class _FakeStdin(object):
+        def isatty(self):
+            return True
 
     def is_password_required(self):
         return not self.is_interactive
@@ -89,15 +93,19 @@ class CreateUser(_WebAdminAuthCommand):
     def execute(self, args):
 
         from django.contrib.auth.management.commands.createsuperuser import Command
-        Command.stdout = CreateUser._FakeStdout(self.logger)
+        self.reset_logger(args, True)
 
-        options = {} if self.is_interactive else {'username':self.args.username, 'email':self.args.email}
+        Command.stdout = CreateUser._FakeStdout(self.logger)
+        Command.stdin = CreateUser._FakeStdin()
+
+        options = {'verbosity':0} if self.is_interactive else {
+            'username':self.args.username, 'email':self.args.email, 'verbosity':0
+        }
 
         try:
             Command().handle(interactive=self.is_interactive, **options)
-            UpdatePassword(args).execute(args, called_from_wrapper=True)
         except Exception, e:
-            self.logger.error('Could not create the user, details: `%s`', e.message)
+            self.logger.error('Could not create the user, details: `%s`', format_exc(e))
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
         else:
             self._ok(args)

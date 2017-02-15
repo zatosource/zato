@@ -44,7 +44,12 @@ class TimeUtil(object):
     def utcnow(self, format='YYYY-MM-DD HH:mm:ss', needs_format=True):
         """ Returns now in UTC formatted as given in 'format'.
         """
-        now = arrow.utcnow()
+        return self.now(format, 'UTC', needs_format)
+
+    def now(self, format='YYYY-MM-DD HH:mm:ss', tz='UTC', needs_format=True):
+        """ Returns now in a specified timezone.
+        """
+        now = arrow.now(tz=tz)
         if needs_format:
             return now.format(format)
         return now
