@@ -37,7 +37,7 @@ class CreateForm(DataFormatForm):
             if name.upper() == name:
                 self.fields['token_format'].choices.append([name.lower(), name])
 
-        add_security_select(self, security_list, field_name='security_id', needs_rbac=False)
+        add_security_select(self, security_list, field_name='security_id', needs_no_security=False, needs_rbac=False)
         add_services(self, req)
 
 class EditForm(CreateForm):
