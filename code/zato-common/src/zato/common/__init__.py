@@ -853,9 +853,9 @@ VAULT.METHOD_HEADER = {
 }
 
 VAULT.WEB_SOCKET = {
-    'vault_github': {'secret': VAULT.HEADERS.TOKEN_GH},
-    'vault_token': {'secret': VAULT.HEADERS.TOKEN_VAULT},
-    'vault_username_password': {
+    'github': {'secret': VAULT.HEADERS.TOKEN_GH},
+    'token': {'secret': VAULT.HEADERS.TOKEN_VAULT},
+    'username-password': {
         'username': VAULT.HEADERS.USERNAME,
         'secret': VAULT.HEADERS.PASSWORD,
     }

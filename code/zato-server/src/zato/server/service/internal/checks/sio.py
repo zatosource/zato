@@ -282,19 +282,19 @@ class ListOfDictsService(CheckTargetService):
         output_required = (ListOfDicts('lod3'), ListOfDicts('lod4'))
 
     def handle(self):
-        eq_(self.request.input.lod1[0]['key111'], 'value111')
-        eq_(self.request.input.lod1[0]['key112'], 'value112')
-        eq_(self.request.input.lod1[1]['key121'], 'value121')
-        eq_(self.request.input.lod1[1]['key122'], 'value122')
+        eq_(self.request.input.lod1[0]['k111'], 'v111')
+        eq_(self.request.input.lod1[0]['k112'], 'v112')
+        eq_(self.request.input.lod1[1]['k121'], 'v121')
+        eq_(self.request.input.lod1[1]['k122'], 'v122')
 
-        eq_(self.request.input.lod2[0]['key211'], 'value211')
-        eq_(self.request.input.lod2[0]['key212'], 'value212')
-        eq_(self.request.input.lod2[1]['key221'], 'value221')
-        eq_(self.request.input.lod2[1]['key222'], 'value222')
+        eq_(self.request.input.lod2[0]['k211'], 'v211')
+        eq_(self.request.input.lod2[0]['k212'], 'v212')
+        eq_(self.request.input.lod2[1]['k221'], 'v221')
+        eq_(self.request.input.lod2[1]['k222'], 'v222')
 
     def set_payload(self):
-        self.response.payload.lod3 = [{'key311':'value311', 'key312':'value312'}, {'key321':'value321', 'key322':'value322'}]
-        self.response.payload.lod4 = [{'key411':'value411', 'key412':'value412'}, {'key421':'value421', 'key422':'value422'}]
+        self.response.payload.lod3 = [{'k311':'v311', 'k312':'v312'}, {'k321':'v321', 'k322':'v322'}]
+        self.response.payload.lod4 = [{'k411':'v411', 'k412':'v412'}, {'k421':'v421', 'k422':'v422'}]
 
 # ################################################################################################################################
 
@@ -448,19 +448,19 @@ class CheckSIO(CheckService):
 
     def json_check_list_of_dicts(self):
         response = self.invoke_check_json('zato.checks.sio.list-of-dicts-service', {
-            'lod1': [{'key111':'value111', 'key112':'value112'}, {'key121':'value121', 'key122':'value122'}],
-            'lod2': [{'key211':'value211', 'key212':'value212'}, {'key221':'value221', 'key222':'value222'}],
+            'lod1': [{'k111':'v111', 'k112':'v112'}, {'k121':'v121', 'k122':'v122'}],
+            'lod2': [{'k211':'v211', 'k212':'v212'}, {'k221':'v221', 'k222':'v222'}],
         })
 
-        eq_(response.lod3[0]['key311'], 'value311')
-        eq_(response.lod3[0]['key312'], 'value312')
-        eq_(response.lod3[1]['key321'], 'value321')
-        eq_(response.lod3[1]['key322'], 'value322')
+        eq_(response.lod3[0]['k311'], 'value311')
+        eq_(response.lod3[0]['k312'], 'value312')
+        eq_(response.lod3[1]['k321'], 'value321')
+        eq_(response.lod3[1]['k322'], 'value322')
 
-        eq_(response.lod4[0]['key411'], 'value411')
-        eq_(response.lod4[0]['key412'], 'value412')
-        eq_(response.lod4[1]['key421'], 'value421')
-        eq_(response.lod4[1]['key422'], 'value422')
+        eq_(response.lod4[0]['k411'], 'v411')
+        eq_(response.lod4[0]['k412'], 'v412')
+        eq_(response.lod4[1]['k421'], 'v421')
+        eq_(response.lod4[1]['k422'], 'v422')
 
     def json_check_no_force_type(self):
         response = self.invoke_check_json('zato.checks.sio.no-force-type-service', {
