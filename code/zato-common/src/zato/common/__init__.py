@@ -32,6 +32,11 @@ from candv import Constants, ValueConstant
 from lxml import etree
 from lxml.objectify import ObjectPath as _ObjectPath
 
+# Zato
+from zato.vault.client import VAULT
+
+# For pyflakes, otherwise it doesn't know that other parts of Zato import VAULT from here
+VAULT = VAULT
 
 # ##############################################################################
 # Version
@@ -831,43 +836,6 @@ class WEB_SOCKET:
         AUTHENTICATE = 'authenticate'
         INVOKE_SERVICE = 'invoke-service'
         CLIENT_RESPONSE = 'client-response'
-
-class VAULT:
-    class DEFAULT:
-        TIMEOUT = 10
-        URL = 'http://localhost:8200'
-
-    class HEADERS:
-        TOKEN_VAULT = 'HTTP_X_ZATO_VAULT_TOKEN'
-        TOKEN_GH = 'HTTP_X_ZATO_VAULT_TOKEN_GITHUB'
-        USERNAME = 'HTTP_X_ZATO_VAULT_USERNAME'
-        PASSWORD = 'HTTP_X_ZATO_VAULT_PASSWORD'
-        TOKEN_RESPONSE = 'X-Zato-Vault-Token'
-        TOKEN_RESPONSE_LEASE = 'X-Zato-Vault-Token-Lease-Duration'
-
-    class AUTH_METHOD:
-        GITHUB = NameId('GitHub', 'github')
-        TOKEN = NameId('Token', 'token')
-        USERNAME_PASSWORD = NameId('Username/password', 'username-password')
-
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.GITHUB, self.TOKEN, self.USERNAME_PASSWORD))
-
-VAULT.METHOD_HEADER = {
-    VAULT.AUTH_METHOD.GITHUB.id: VAULT.HEADERS.TOKEN_GH,
-    VAULT.AUTH_METHOD.TOKEN.id: VAULT.HEADERS.TOKEN_VAULT,
-    VAULT.AUTH_METHOD.USERNAME_PASSWORD.id: (VAULT.HEADERS.USERNAME, VAULT.HEADERS.PASSWORD),
-}
-
-VAULT.WEB_SOCKET = {
-    'github': {'secret': VAULT.HEADERS.TOKEN_GH},
-    'token': {'secret': VAULT.HEADERS.TOKEN_VAULT},
-    'username-password': {
-        'username': VAULT.HEADERS.USERNAME,
-        'secret': VAULT.HEADERS.PASSWORD,
-    }
-}
 
 class APISPEC:
     OPEN_API_V2 = 'openapi-v2'
