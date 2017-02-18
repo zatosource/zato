@@ -359,6 +359,7 @@ class Attrs(type):
 
 class DATA_FORMAT(Attrs):
     DICT = 'dict'
+    FIXED_WIDTH = 'fixed-width'
     XML = 'xml'
     JSON = 'json'
     CSV = 'csv'
@@ -372,9 +373,11 @@ class DATA_FORMAT(Attrs):
 
 # TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
 class SIMPLE_IO:
+
     class FORMAT(Attrs):
-        XML = DATA_FORMAT.XML
         JSON = DATA_FORMAT.JSON
+        XML = DATA_FORMAT.XML
+        FIXED_WIDTH = DATA_FORMAT.FIXED_WIDTH
 
     class INT_PARAMETERS:
         VALUES = ['id']
@@ -382,6 +385,11 @@ class SIMPLE_IO:
 
     class BOOL_PARAMETERS:
         SUFFIXES = ['is_', 'needs_', 'should_']
+
+    HTTP_SOAP_FORMAT = OrderedDict()
+    HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
+    HTTP_SOAP_FORMAT[DATA_FORMAT.XML] = 'XML'
+    HTTP_SOAP_FORMAT[DATA_FORMAT.FIXED_WIDTH] = 'Fixed-width'
 
 class DEPLOYMENT_STATUS(Attrs):
     DEPLOYED = 'deployed'

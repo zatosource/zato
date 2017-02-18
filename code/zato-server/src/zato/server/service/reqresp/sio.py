@@ -392,10 +392,21 @@ def convert_from_xml(payload, param_name, cid, is_required, is_complex, default_
 
     return value
 
+# ################################################################################################################################
+
+def convert_from_fixed_width(payload, param_name, cid, *ignored):
+    print(111, payload)
+    print(222, param_name)
+    print(333, cid)
+    print(444, ignored)
+
+# ################################################################################################################################
+
 convert_impl = {
     DATA_FORMAT.JSON: convert_from_json,
     DATA_FORMAT.XML: convert_from_xml,
     DATA_FORMAT.DICT: convert_from_dict,
+    #DATA_FORMAT.FIXED_WIDTH: convert_from_fixed_width,
     None: convert_from_dict,
 }
 
