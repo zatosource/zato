@@ -592,7 +592,6 @@ class TestParser(TestCase):
         self.compare_line(expected1, actual1)
         self.compare_line(expected2, actual2)
 
-
 # ################################################################################################################################
 
 class TestSerialize(TestCase):

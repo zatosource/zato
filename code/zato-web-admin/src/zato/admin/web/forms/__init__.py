@@ -125,9 +125,9 @@ class DataFormatForm(forms.Form):
         super(DataFormatForm, self).__init__(*args, **kwargs)
         self.fields['data_format'].choices = []
         self.fields['data_format'].choices.append(INITIAL_CHOICES)
-        for name in sorted(dir(SIMPLE_IO.FORMAT)):
-            if name.upper() == name:
-                self.fields['data_format'].choices.append([name.lower(), name])
+
+        for code, name in SIMPLE_IO.HTTP_SOAP_FORMAT.iteritems():
+            self.fields['data_format'].choices.append([code, name])
 
 # ################################################################################################################################
 
