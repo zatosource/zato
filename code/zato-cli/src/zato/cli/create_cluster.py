@@ -93,6 +93,7 @@ zato_services = {
     'zato.checks.sio.utc-service': 'zato.server.service.internal.checks.sio.UTCService',
     'zato.checks.sio.unicode-service': 'zato.server.service.internal.checks.sio.UnicodeService',
     'zato.checks.sio.fixed-width-string': 'zato.server.service.internal.checks.sio.FixedWidthString',
+    'zato.checks.sio.fixed-width-string-multi-line': 'zato.server.service.internal.checks.sio.FixedWidthStringMultiLine',
 
     # Cloud - AWS - S3
     'zato.cloud.aws.s3.create':'zato.server.service.internal.cloud.aws.s3.Create',

@@ -249,14 +249,15 @@ class FixedWidth(object):
 
 # ################################################################################################################################
 
-    def _serialize_line(self, response, _right=PADDING.RIGHT):
-        """ Serializes to string a single line out fixed-width data.
+    def _serialize_line(self, line, _right=PADDING.RIGHT, _list_like=(list, tuple)):
+        """ Serializes to string a single line out of fixed-width data.
         """
-        line = StringIO()
+        out = StringIO()
         try:
-            for item in self.definition:
+            is_list = isinstance(line, _list_like)
+            for idx, item in enumerate(self.definition):
 
-                value = item.to_string(getattr(response, item._name))
+                value = item.to_string(line[idx] if is_list else getattr(line, item._name))
                 value_len = len(value)
 
                 if value_len < item._len:
@@ -265,20 +266,23 @@ class FixedWidth(object):
                     else:
                         value = value.rjust(item._len, item._fill_char)
 
-                line.write(value)
+                out.write(value)
 
-            return line.getvalue()
+            return out.getvalue()
 
         finally:
-            line.close()
+            out.close()
 
 # ################################################################################################################################
 
     def serialize(self, response):
         """ Serializes to string one or more lines of fixed-width data.
         """
-        out = [self._serialize_line(line) for line in response] if \
-            isinstance(response, list) else [self._serialize_line(response)]
+        if isinstance(response, list):
+            out = [self._serialize_line(line) for line in response]
+        else:
+            out = [self._serialize_line(response)]
+
         return '\n'.join(out)
 
 # ################################################################################################################################

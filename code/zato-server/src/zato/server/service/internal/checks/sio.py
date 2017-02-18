@@ -821,6 +821,46 @@ class FixedWidthString(Service):
                 given_value = getattr(line, key)
                 eq_(given_value, expected_value)
 
-        #
+        self.response.payload.aa = 'a'
+        self.response.payload.bb = 'b'
+        self.response.payload.cc = 'c'
+        self.response.payload.dd = 'd'
+
+# ################################################################################################################################
+
+class FixedWidthStringMultiLine(Service):
+
+    class SimpleIO:
+        input_required = (fw.String(1, 'a'), fw.String(2, 'b'), fw.String(3, 'c'), fw.String(4, 'd'))
+        output_required = (fw.String(1, 'aa'), fw.String(2, 'bb'), fw.String(3, 'cc'), fw.String(4, 'dd'))
+
+    def handle(self):
+
+        expected = []
+
+        expected.append({
+            'a': 'a',
+            'b': 'b',
+            'c': 'c',
+            'd': 'd'
+        })
+
+        expected.append({
+            'a': 'A',
+            'b': 'B',
+            'c': 'C',
+            'd': 'D'
+        })
+
+        for idx, line in enumerate(self.request.input):
+
+            _expected_line = expected[idx]
+
+            for key, expected_value in _expected_line.items():
+                given_value = getattr(line, key)
+                eq_(given_value, expected_value)
+
+        self.response.payload.append(['1', '2', '3', '4'])
+        self.response.payload.append(['5', '66', '77', '88'])
 
 # ################################################################################################################################
