@@ -35,7 +35,6 @@ from zato.common.broker_message import SERVICE
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import get_response_value, new_cid, payload_from_request, service_name_from_impl, uncamelify
 from zato.server.connection import request_response, slow_response
-from zato.server.connection.amqp.outgoing import PublisherFacade
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
@@ -235,7 +234,7 @@ class Service(object):
         self.servers = self.server.servers
 
         # Queues
-        out_amqp = PublisherFacade(self.broker_client)
+        #out_amqp = PublisherFacade(self.broker_client)
         out_jms_wmq = WMQFacade(self.broker_client)
         out_zmq = ZMQFacade(self.server)
 
@@ -249,7 +248,7 @@ class Service(object):
         out_ftp, out_odoo, out_plain_http, out_soap = self.worker_store.worker_config.outgoing_connections()
 
         self.out = self.outgoing = Outgoing(
-            out_amqp, out_ftp, out_jms_wmq, out_odoo, out_plain_http, out_soap, out_sql,
+            None, out_ftp, out_jms_wmq, out_odoo, out_plain_http, out_soap, out_sql,
             self.worker_store.stomp_outconn_api, out_zmq, self.worker_store.outgoing_web_sockets)
 
         # Cloud

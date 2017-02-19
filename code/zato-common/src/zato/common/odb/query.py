@@ -355,7 +355,7 @@ def xpath_sec_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def _def_amqp(session, cluster_id):
+def _definition_amqp(session, cluster_id):
     return session.query(
         ConnDefAMQP.name, ConnDefAMQP.id, ConnDefAMQP.host,
         ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
@@ -364,18 +364,18 @@ def _def_amqp(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(ConnDefAMQP.name)
 
-def def_amqp(session, cluster_id, id):
+def definition_amqp(session, cluster_id, id):
     """ A particular AMQP definition
     """
-    return _def_amqp(session, cluster_id).\
+    return _definition_amqp(session, cluster_id).\
         filter(ConnDefAMQP.id==id).\
         one()
 
 @query_wrapper
-def def_amqp_list(session, cluster_id, needs_columns=False):
+def definition_amqp_list(session, cluster_id, needs_columns=False):
     """ AMQP connection definitions.
     """
-    return _def_amqp(session, cluster_id)
+    return _definition_amqp(session, cluster_id)
 
 # ################################################################################################################################
 

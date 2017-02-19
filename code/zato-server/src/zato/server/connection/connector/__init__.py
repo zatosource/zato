@@ -32,12 +32,13 @@ class connector_type:
         zmq = 'ZeroMQ channel'
 
     class out:
-        zmq = 'ZeroMQ outgoing'
         vault_conn = 'Vault connection'
+        zmq = 'ZeroMQ outgoing'
 
     class duplex:
-        zmq_v01 = 'ZeroMQ MDP v0.1'
+        amqp = 'AMQP'
         web_socket = 'WebSocket'
+        zmq_v01 = 'ZeroMQ MDP v0.1'
 
 class Inactive(Exception):
     pass

@@ -15,7 +15,7 @@ from uuid import uuid4
 # Zato
 from zato.common.broker_message import DEFINITION
 from zato.common.odb.model import ConnDefAMQP
-from zato.common.odb.query import def_amqp, def_amqp_list
+from zato.common.odb.query import definition_amqp, definition_amqp_list
 from zato.server.service import Service
 from zato.server.service.internal import AdminService, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
@@ -27,7 +27,7 @@ model = ConnDefAMQP
 label = 'an AMQP definition'
 broker_message = DEFINITION
 broker_message_prefix = 'AMQP_'
-list_func = def_amqp_list
+list_func = definition_amqp_list
 skip_input_params = ('password',)
 
 # ################################################################################################################################
@@ -38,7 +38,7 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
     if service_type == 'create_edit':
         with closing(self.odb.session()) as session:
-            input.password = def_amqp(session, instance.cluster_id, instance.id).password
+            input.password = definition_amqp(session, instance.cluster_id, instance.id).password
 
 # ################################################################################################################################
 
