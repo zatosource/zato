@@ -43,10 +43,6 @@ class ConfigLoader(object):
         # Pub/sub
         self.pubsub = PubSubAPI(RedisPubSub(self.kvdb.conn))
 
-        # Repo location so that AMQP subprocesses know where to read
-        # the server's configuration from.
-        self.config.repo_location = self.repo_location
-
         #
         # Cassandra - start
         #
@@ -98,8 +94,24 @@ class ConfigLoader(object):
         self.config.service = ConfigDict.from_query('service_list', query)
 
         #
+        # Definitions - start
+        #
+
+        # AMQP
+        query = self.odb.get_definition_amqp_list(server.cluster.id, True)
+        self.config.definition_amqp = ConfigDict.from_query('definition_amqp', query)
+
+        #
+        # Definitions - end
+        #
+
+        #
         # Channels - start
         #
+
+        # AMQP
+        query = self.odb.get_channel_amqp_list(server.cluster.id, True)
+        self.config.channel_amqp = ConfigDict.from_query('channel_amqp', query)
 
         # STOMP
         query = self.odb.get_channel_stomp_list(server.cluster.id, True)

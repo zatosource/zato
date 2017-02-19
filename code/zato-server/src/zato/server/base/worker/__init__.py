@@ -50,6 +50,7 @@ from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_pa
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, \
      store_tls, update_apikey_username, update_bind_port, visit_py_source
 from zato.server.base.worker.common import WorkerImpl
+from zato.server.connection.amqp import ConnectorAMQP
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -181,6 +182,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket)
         self.outgoing_web_sockets = OutgoingWebSocket(self.server.cluster_id, self.server.servers, self.server.odb)
 
+        # AMQP
+        self.amqp_api = ConnectorStore(connector_type.duplex.amqp, ConnectorAMQP)
+
         # Vault connections
         self.vault_conn_api = VaultConnAPI()
 
@@ -254,6 +258,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # WebSocket
         self.init_web_socket()
+
+        # AMQP
+        self.init_amqp()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
@@ -613,7 +620,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def init_web_socket(self):
         """ Initializes all WebSocket connections.
         """
-
         # Channels
         for name, data in self.worker_config.channel_web_socket.items():
 
@@ -624,6 +630,19 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 self.request_dispatcher.url_data.authenticate_web_socket)
 
         self.web_socket_api.start()
+
+# ################################################################################################################################
+
+    def init_amqp(self):
+        """ Initializes all AMQP connections.
+        """
+        for name, data in self.worker_config.definition_amqp.items():
+
+            # Definitions as such are always active. It's channels or outconns that can be inactive.
+            data.config.is_active = True
+            self.amqp_api.create(name, bunchify(data.config), self.on_message_invoke_service)
+
+        self.amqp_api.start()
 
 # ################################################################################################################################
 
@@ -1204,8 +1223,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_message_invoke_service(self, msg, channel, action, args=None, **kwargs):
-        """ Triggered by external processes, such as AMQP or the singleton's scheduler,
-        creates a new service instance and invokes it.
+        """ Triggered by external events, such as messages sent through connectots. Creates a new service instance and invokes it.
         """
         zato_ctx = msg.get('zato_ctx', {})
         target = zato_ctx.get('zato.request_ctx.target', '')
