@@ -107,6 +107,9 @@ zato_services = {
     'zato.cloud.openstack.swift.edit':'zato.server.service.internal.cloud.openstack.swift.Edit',
     'zato.cloud.openstack.swift.get-list':'zato.server.service.internal.cloud.openstack.swift.GetList',
 
+    # Connectors - AMQP
+    'zato.connector.amqp.create':'zato.server.service.internal.connector.amqp.Create',
+
     # Definitions - AMQP
     'zato.definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',
     'zato.definition.amqp.create':'zato.server.service.internal.definition.amqp.Create',

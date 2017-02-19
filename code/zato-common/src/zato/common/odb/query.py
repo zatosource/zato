@@ -360,7 +360,6 @@ def _def_amqp(session, cluster_id):
         ConnDefAMQP.name, ConnDefAMQP.id, ConnDefAMQP.host,
         ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
         ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat, ConnDefAMQP.password).\
-        filter(ConnDefAMQP.def_type=='amqp').\
         filter(Cluster.id==ConnDefAMQP.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(ConnDefAMQP.name)
