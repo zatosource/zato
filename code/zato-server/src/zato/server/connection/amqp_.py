@@ -56,7 +56,7 @@ class ConnectorAMQP(Connector):
         self.is_connected = self.conn.connected
 
     def _stop(self):
-        logger.warn('_stop %s', self)
+        self.conn.release()
 
     def _get_conn_string(self, needs_password=True):
         return 'amqp://{}:{}@{}:{}{}'.format(self.config.username, self.config.password if needs_password else SECRET_SHADOW,
