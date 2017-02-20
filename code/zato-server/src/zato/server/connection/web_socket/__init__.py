@@ -129,7 +129,7 @@ class WebSocket(_WebSocket):
         if meta:
             meta = bunchify(meta)
 
-            msg.action = meta.action
+            msg.action = meta.get('action', _response)
             msg.id = meta.id
             msg.timestamp = meta.timestamp
             msg.token = meta.get('token') # Optional because it won't exist during first authentication
