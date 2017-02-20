@@ -9,11 +9,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
 
 # gevent
-from gevent import spawn
+from gevent import sleep, spawn
 from gevent.lock import RLock
 
 # Zato
@@ -78,11 +79,13 @@ class Connector(object):
         self.id = self.config.id
         self.is_active = self.config.is_active
         self.is_inactive = not self.is_active
+        self.is_connected = False
 
+        self.keep_connecting = True
         self.keep_running = False
         self.lock = RLock()
 
-        # Must be provided by subclasses
+        # May be provided by subclasses
         self.conn = None
 
 # ################################################################################################################################
@@ -96,10 +99,44 @@ class Connector(object):
 
 # ################################################################################################################################
 
+    def _start_loop(self):
+        """ Establishes a connection to the external resource in a loop that keeps running as long as self.is_connected is False.
+        The flag must be set to True in a subclass's self._start method.
+        """
+        attempts = 0
+        log_each = 10
+        start = datetime.utcnow()
+
+        try:
+            while self.keep_connecting:
+                while not self.is_connected:
+                    try:
+                        self._start()
+                    except Exception, e:
+                        logger.warn(format_exc(e))
+                        sleep(2)
+
+                    # We go here if ._start did not set self.is_conneted to True
+                    attempts += 1
+                    if attempts % log_each == 0:
+                        logger.warn('Could not connect to %s (%s) after %s attempts, time spent so far: %s',
+                            self.get_log_details(), self.name, attempts, datetime.utcnow() - start)
+
+                # Ok, break from the outermost loop
+                self.keep_connecting = False
+
+        except KeyboardInterrupt:
+            self.keep_connecting = False
+
+# ################################################################################################################################
+
     def _start(self):
         raise NotImplementedError('Must be implemented in subclasses')
 
-    _send = _start
+# ################################################################################################################################
+
+    def _send(self):
+        raise NotImplementedError('Must be implemented in subclasses')
 
 # ################################################################################################################################
 
@@ -124,7 +161,7 @@ class Connector(object):
 # ################################################################################################################################
 
     def _spawn_start(self):
-        spawn(self._start).get()
+        spawn(self._start_loop).get()
 
 # ################################################################################################################################
 
@@ -136,7 +173,7 @@ class Connector(object):
                 if self.start_in_greenlet:
                     spawn_greenlet(self._spawn_start)
                 else:
-                    self._start()
+                    self._start_loop()
             except Exception, e:
                 logger.warn(format_exc(e))
 
@@ -144,6 +181,7 @@ class Connector(object):
 
     def stop(self):
         with self._start_stop_logger('Stopping',' Stopped'):
+            self.keep_connecting = False # Set to False in case .stop is called before the connection was established
             self.keep_running = False
             self._stop()
 
