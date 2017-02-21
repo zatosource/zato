@@ -252,10 +252,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         """ Initializes parts of the server that don't depend on whether the
         server's been allowed to join the cluster or not.
         """
-        self.worker_store = WorkerStore(self.config, self)
-        self.worker_store.invoke_matcher.read_config(self.fs_server_config.invoke_patterns_allowed)
-        self.worker_store.target_matcher.read_config(self.fs_server_config.invoke_target_patterns_allowed)
-
         # Patterns to match during deployment
         self.service_store.patterns_matcher.read_config(self.fs_server_config.deploy_patterns_allowed)
 
@@ -362,13 +358,23 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         # Looked up upfront here and assigned to services in their store
         self.enforce_service_invokes = asbool(self.fs_server_config.misc.enforce_service_invokes)
 
-        # For server-server communication
+        # For server-to-server communication
+        self.servers = Servers(self.odb, self.cluster.name)
         logger.info('Preferred address of `%s@%s` (pid: %s) is `http%s://%s:%s`', self.name,
             self.cluster.name, self.pid, 's' if use_tls else '', self.preferred_address,
             self.port)
 
-        self.servers = Servers(self.odb, self.cluster.name)
+        # Reads in all configuration from ODB
+        self.worker_store = WorkerStore(self.config, self)
+        self.worker_store.invoke_matcher.read_config(self.fs_server_config.invoke_patterns_allowed)
+        self.worker_store.target_matcher.read_config(self.fs_server_config.invoke_target_patterns_allowed)
+        self.set_up_config(server)
+
+        # Deploys services
         is_first, locally_deployed = self._after_init_common(server)
+
+        # Starts conectors
+        self.worker_store.init()
 
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()
@@ -389,7 +395,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
-        self._after_init_accepted(server, locally_deployed)
+        self._after_init_accepted(locally_deployed)
 
         broker_callbacks = {
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,

@@ -29,7 +29,7 @@ class ConfigLoader(object):
 
 # ################################################################################################################################
 
-    def _after_init_accepted(self, server, locally_deployed):
+    def set_up_config(self, server):
 
         # Which components are enabled
         self.component_enabled.stats = asbool(self.fs_server_config.component_enabled.stats)
@@ -342,9 +342,12 @@ class ConfigLoader(object):
         # Assign config to worker
         self.worker_store.worker_config = self.config
         self.worker_store.pubsub = self.pubsub
-        self.worker_store.init()
 
-        # Deployed missing services found on other servers
+# ################################################################################################################################
+
+    def _after_init_accepted(self, locally_deployed):
+
+        # Deploy missing services found on other servers
         if locally_deployed:
             self.deploy_missing_services(locally_deployed)
 

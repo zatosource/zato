@@ -30,6 +30,7 @@ class AMQP(WorkerImpl):
     def __init__(self):
         super(AMQP, self).__init__()
         self.amqp_api = None
+        self.amqp_pool_size = -1 # Will be set in WorkerStore
 
 # ################################################################################################################################
 
@@ -53,6 +54,7 @@ class AMQP(WorkerImpl):
 
     def on_broker_msg_DEFINITION_AMQP_CREATE(self, msg):
         if self.server.zato_lock_manager.acquire(msg.config_cid, ttl=10, block=False):
+            msg.pool_size = self.amqp_pool_size
             start_connectors(self, 'zato.connector.amqp_.start', msg)
 
 # ################################################################################################################################
