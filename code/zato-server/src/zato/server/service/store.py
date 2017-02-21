@@ -320,6 +320,32 @@ class ServiceStore(InitializingObject):
 
         class_.add_http_method_handlers()
 
+        # Set up enforcement of what other services a given service can invoke
+        try:
+            class_.invokes
+        except AttributeError:
+            class_.invokes = []
+
+        # Set up all attributes that do not have to be assigned to each instance separately
+        # and can be shared as class attributes.
+
+        class_._enforce_service_invokes = self.server.enforce_service_invokes
+
+        try:
+            class_.SimpleIO
+            class_.has_sio = True
+        except AttributeError:
+            class_.has_sio = False
+
+        class_.odb = self.server.worker_store.server.odb
+        class_.kvdb = self.server.worker_store.kvdb
+        class_.pubsub = self.server.worker_store.pubsub
+        class_.cloud.openstack.swift = self.server.worker_store.worker_config.cloud_openstack_swift
+        class_.cloud.aws.s3 = self.server.worker_store.worker_config.cloud_aws_s3
+        class_.component_enabled_cassandra = self.server.fs_server_config.component_enabled.cassandra
+        class_.component_enabled_email = self.server.fs_server_config.component_enabled.email
+        class_.component_enabled_search = self.server.fs_server_config.component_enabled.search
+
         name = class_.get_name()
         impl_name = class_.get_impl_name()
 
@@ -349,38 +375,32 @@ class ServiceStore(InitializingObject):
 
 # ################################################################################################################################
 
+    def on_worker_initialized(self):
+        """ Executed after a worker has been fully initialized, e.g. all connectors are started and references to these objects
+        can be assigned as class-wide attributes to services.
+        """
+
+# ################################################################################################################################
+
     def _visit_module(self, mod, is_internal, fs_location, needs_odb_deployment=True):
         """ Actually imports services from a module object.
         """
         deployed = []
-
         try:
             for name in sorted(dir(mod)):
                 with self.update_lock:
                     item = getattr(mod, name)
 
                     if self._should_deploy(name, item):
-
-                        # Set up enforcement of what other services a given service can invoke
-                        try:
-                            item.invokes
-                        except AttributeError:
-                            item.invokes = []
-
-                        setattr(item, '_enforce_service_invokes', self.server.enforce_service_invokes)
-
-                        should_add = item.before_add_to_store(logger)
-                        if should_add:
+                        if item.before_add_to_store(logger):
                             self._visit_class(mod, deployed, item, fs_location, is_internal)
                         else:
-                            msg = 'Skipping `{}` from `{}`, should_add:`{}` is not True'.format(
-                                item, fs_location, should_add)
-                            logger.info(msg)
+                            logger.info('Skipping `%s` from `%s`', item, fs_location)
 
         except Exception, e:
-            msg = 'Exception while visit mod:`{}`, is_internal:`{}`, fs_location:`{}`, e:`{}`'.format(
+            logger.error(
+                'Exception while visit mod:`%s`, is_internal:`%s`, fs_location:`%s`, e:`%s`',
                 mod, is_internal, fs_location, format_exc(e))
-            logger.error(msg)
         finally:
             return deployed
 

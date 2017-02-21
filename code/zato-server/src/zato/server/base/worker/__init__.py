@@ -184,6 +184,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # AMQP
         self.amqp_api = ConnectorStore(connector_type.duplex.amqp, ConnectorAMQP)
+        self.amqp_pool_size = int(self.server.fs_server_config.amqp.pool_size)
 
         # Vault connections
         self.vault_conn_api = VaultConnAPI()
@@ -640,6 +641,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
             # Definitions as such are always active. It's channels or outconns that can be inactive.
             data.config.is_active = True
+            data.config.pool_size = self.amqp_pool_size
             self.amqp_api.create(name, bunchify(data.config), self.on_message_invoke_service)
 
         self.amqp_api.start()

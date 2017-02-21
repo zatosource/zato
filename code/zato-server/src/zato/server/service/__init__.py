@@ -78,6 +78,27 @@ Int = Integer
 
 # ################################################################################################################################
 
+class ComponentDisabled(object):
+    """ Indicates that a given component is disabled. Any attempts to make use of it will raise an exception
+    pointing to configuration stanza that needs to be updated in order to make use of that component.
+    """
+    def __init__(self, name, config_key):
+        self.name = name
+        self.config_key = config_key
+
+    def __nonzero__(self):
+        """ Always return False in boolean comparison since the very existence of this object
+        means that its underlying component is not enabled.
+        """
+        return False
+
+    def __getattribute__(self, name):
+        raise ValueError(
+            'Component `{}` is disabled. Enable it by setting components_enabled.{} to True and restarting servers.'.format(
+                self.name, self.config_key))
+
+# ################################################################################################################################
+
 class ChannelInfo(object):
     """ Conveys information abouts the channel that a service is invoked through.
     Available in services as self.channel or self.chan.
@@ -136,18 +157,29 @@ class Service(object):
     invokes = []
     http_method_handlers = {}
 
+    # Class-wide attributes shared by all services thus created here instead of assigning to self.
+    out = outgoing = Outgoing()
+    cloud = Cloud()
+    components_enabled = None
+    odb = None
+    kvdb = None
+    pubsub = None
+    cassandra_conn = ComponentDisabled('Cassandra connections', 'cassandra')
+    cassandra_query = ComponentDisabled('Cassandra queries', 'cassandra')
+    email = ComponentDisabled('E-mail', 'email')
+    search = ComponentDisabled('Search', 'search')
+
+    # For invoking other servers directly
+    servers = None
+
     def __init__(self, *ignored_args, **ignored_kwargs):
         self.logger = logging.getLogger(self.get_name())
         self.server = None
         self.broker_client = None
-        self.pubsub = None
         self.channel = None
         self.cid = None
         self.in_reply_to = None
-        self.out = self.outgoing = None
-        self.cloud = None
         self.worker_store = None
-        self.odb = None
         self.data_format = None
         self.transport = None
         self.wsgi_environ = None
@@ -224,22 +256,30 @@ class Service(object):
     def _init(self):
         """ Actually initializes the service.
         """
-        self.odb = self.worker_store.server.odb
-        self.kvdb = self.worker_store.kvdb
-        self.pubsub = self.worker_store.pubsub
-
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
-
-        # For invoking other servers directly
-        self.servers = self.server.servers
-
-        # Queues
-        #out_amqp = PublisherFacade(self.broker_client)
-        out_jms_wmq = WMQFacade(self.broker_client)
-        out_zmq = ZMQFacade(self.server)
 
         # Patterns
         self.patterns = PatternsFacade(self)
+
+        # The if's below are meant to be written in this way because we don't want any unnecessary attribute lookups
+        # and method calls in this method - it's called each time a service is executed.
+
+        if self.component_enabled_cassandra:
+            if not Service.cassandra_conn:
+                Service.cassandra_conn = self.server.worker_store.cassandra_api
+            if not Service.cassandra_query:
+                Service.cassandra_query = self.server.worker_store.cassandra_query_api
+
+        if self.component_enabled_email:
+            if not Service.email:
+                Service.email = EMailAPI(self.server.worker_store.email_smtp_api, self.server.worker_store.email_imap_api)
+
+        if self.component_enabled_search:
+            if not Service.search:
+                Service.search = SearchAPI(self.server.worker_store.search_es_api, self.server.worker_store.search_solr_api)
+
+        out_jms_wmq = WMQFacade(self.broker_client)
+        out_zmq = ZMQFacade(self.server)
 
         # SQL
         out_sql = self.worker_store.sql_pool_store
@@ -251,26 +291,11 @@ class Service(object):
             None, out_ftp, out_jms_wmq, out_odoo, out_plain_http, out_soap, out_sql,
             self.worker_store.stomp_outconn_api, out_zmq, self.worker_store.outgoing_web_sockets)
 
-        # Cloud
-        self.cloud = Cloud()
-        self.cloud.openstack.swift = self.worker_store.worker_config.cloud_openstack_swift
-        self.cloud.aws.s3 = self.worker_store.worker_config.cloud_aws_s3
-
-        # Cassandra
-        self.cassandra_conn = self.worker_store.cassandra_api
-        self.cassandra_query = self.worker_store.cassandra_query_api
-
-        # E-mail
-        self.email = EMailAPI(self.worker_store.email_smtp_api, self.worker_store.email_imap_api)
-
-        # Search
-        self.search = SearchAPI(self.worker_store.search_es_api, self.worker_store.search_solr_api)
-
-        is_sio = hasattr(self, 'SimpleIO')
         self.request.http.init(self.wsgi_environ)
 
-        if is_sio:
-            self.request.init(is_sio, self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ)
+        # self.is_sio attribute is set by ServiceStore during deployment
+        if self.has_sio:
+            self.request.init(True, self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
 
         self.msg = MessageFacade(self.worker_store.msg_ns_store,

@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 
 # Kombu
-from kombu import Connection
+from kombu import Connection, pools
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, Transport
 
 # Zato
@@ -55,6 +55,14 @@ class ConnectorAMQP(Connector):
         self.conn.connect()
         self.is_connected = self.conn.connected
 
+        # Create a custom pool of producers with up to amqp.pool_size objects (as defined in server.conf)
+        if self.is_connected:
+            self._create_producers()
+
+    def _create_producers(self):
+        self._amqp_connections = pools.Connections(limit=self.config.pool_size)
+        self._amqp_prodcuers = pools.Producers(limit=self._amqp_connections.limit)
+
     def _stop(self):
         self.conn.release()
 
@@ -66,6 +74,10 @@ class ConnectorAMQP(Connector):
         return self._get_conn_string(False)
 
     def invoke(self, name, *args, **kwargs):
-        logger.warn('invoke %s', self)
+        with self._amqp_connections[self.conn].acquire(block=True) as conn:
+            logger.warn('invoke %s', self)
+            logger.warn('invoke %s', conn)
+            logger.warn('invoke %s', args)
+            logger.warn('invoke %s', kwargs)
 
 # ################################################################################################################################
