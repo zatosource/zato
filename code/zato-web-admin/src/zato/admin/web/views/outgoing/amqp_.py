@@ -20,7 +20,7 @@ from anyjson import dumps
 
 # Zato
 from zato.admin.settings import delivery_friendly_name
-from zato.admin.web.forms.outgoing.amqp import CreateForm, EditForm
+from zato.admin.web.forms.outgoing.amqp_ import CreateForm, EditForm
 from zato.admin.web.views import Delete as _Delete, get_definition_list, \
      Index as _Index, method_allowed
 from zato.common.odb.model import OutgoingAMQP
@@ -48,7 +48,7 @@ def _get_edit_create_message(params, prefix=''):
 def _edit_create_response(client, verb, id, name, delivery_mode_text, def_id, cluster_id):
     response = client.invoke('zato.definition.amqp.get-by-id', {'id':def_id, 'cluster_id': cluster_id})
     return_data = {'id': id,
-                   'message': 'Successfully {0} the outgoing AMQP connection [{1}]'.format(verb, name),
+                   'message': 'Successfully {} the outgoing AMQP connection `{}`'.format(verb, name),
                    'delivery_mode_text': delivery_mode_text,
                    'def_name': response.data.name
                 }
@@ -95,7 +95,7 @@ def create(req):
         return _edit_create_response(req.zato.client, 'created', response.data.id,
             req.POST['name'], delivery_mode_text, req.POST['def_id'], req.POST['cluster_id'])
     except Exception, e:
-        msg = 'Could not create an outgoing AMQP connection, e:[{e}]'.format(e=format_exc(e))
+        msg = 'Could not create an outgoing AMQP connection, e:`{}`'.format(format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -109,7 +109,7 @@ def edit(req):
         return _edit_create_response(req.zato.client, 'updated', req.POST['id'], req.POST['edit-name'],
             delivery_mode_text, req.POST['edit-def_id'], req.POST['cluster_id'])
     except Exception, e:
-        msg = 'Could not update the outgoing AMQP connection, e:[{e}]'.format(e=format_exc(e))
+        msg = 'Could not update the outgoing AMQP connection, e:`{}`'.format(format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 

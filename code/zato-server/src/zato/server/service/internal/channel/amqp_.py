@@ -26,6 +26,7 @@ class _AMQPService(AdminService):
 class GetList(AdminService):
     """ Returns a list of AMQP channels.
     """
+    name = 'zato.channel.amqp.get-list'
     _filter_by = ChannelAMQP.name,
 
     class SimpleIO(GetListAdminSIO):
@@ -46,6 +47,8 @@ class GetList(AdminService):
 class Create(AdminService):
     """ Creates a new AMQP channel.
     """
+    name = 'zato.channel.amqp.create'
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_amqp_create_request'
         response_elem = 'zato_channel_amqp_create_response'
@@ -108,6 +111,8 @@ class Create(AdminService):
 class Edit(_AMQPService):
     """ Updates an AMQP channel.
     """
+    name = 'zato.channel.amqp.edit'
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_amqp_edit_request'
         response_elem = 'zato_channel_amqp_edit_response'
@@ -172,6 +177,8 @@ class Edit(_AMQPService):
 class Delete(_AMQPService):
     """ Deletes an AMQP channel.
     """
+    name = 'zato.channel.amqp.delete'
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_amqp_delete_request'
         response_elem = 'zato_channel_amqp_delete_response'

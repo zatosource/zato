@@ -15,7 +15,7 @@ from bunch import Bunch
 from zato.common import zato_namespace
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service.internal import GetListAdminSIO
-from zato.server.service.internal.definition.amqp import GetList, GetByID, Create, Edit, Delete, ChangePassword
+from zato.server.service.internal.definition.amqp_ import GetList, GetByID, Create, Edit, Delete, ChangePassword
 
 ################################################################################
 
