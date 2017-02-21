@@ -17,7 +17,7 @@ from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
 from zato.common.odb.model import ChannelAMQP, Service
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service.internal import GetListAdminSIO
-from zato.server.service.internal.channel.amqp import Create, Edit, Delete, GetList
+from zato.server.service.internal.channel.amqp_ import Create, Edit, Delete, GetList
 
 # ##############################################################################
 

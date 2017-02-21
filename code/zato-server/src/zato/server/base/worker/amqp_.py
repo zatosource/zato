@@ -53,7 +53,7 @@ class AMQP(WorkerImpl):
 
     def on_broker_msg_DEFINITION_AMQP_CREATE(self, msg):
         if self.server.zato_lock_manager.acquire(msg.config_cid, ttl=10, block=False):
-            start_connectors(self, 'zato.connector.amqp.start', msg)
+            start_connectors(self, 'zato.connector.amqp_.start', msg)
 
 # ################################################################################################################################
 

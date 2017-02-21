@@ -39,12 +39,12 @@ from zato.common.odb.query import cloud_openstack_swift_list, notif_cloud_openst
 from zato.common.util import get_client_from_server_conf
 from zato.server.service import ForceType
 from zato.server.service.internal import http_soap as http_soap_mod
-from zato.server.service.internal.channel import amqp as channel_amqp_mod
+from zato.server.service.internal.channel import amqp_ as channel_amqp_mod
 from zato.server.service.internal.channel import jms_wmq as channel_jms_wmq_mod
 from zato.server.service.internal.channel import zmq as channel_zmq_mod
 from zato.server.service.internal.cloud.aws import s3 as cloud_aws_s3
 from zato.server.service.internal.cloud.openstack import swift as cloud_openstack_swift_mod
-from zato.server.service.internal.definition import amqp as definition_amqp_mod
+from zato.server.service.internal.definition import amqp_ as definition_amqp_mod
 from zato.server.service.internal.definition import jms_wmq as definition_jms_wmq_mod
 from zato.server.service.internal.definition import cassandra as definition_cassandra_mod
 from zato.server.service.internal.email import imap as email_imap_mod
@@ -54,7 +54,7 @@ from zato.server.service.internal.message import namespace as namespace_mod
 from zato.server.service.internal.message import xpath as xpath_mod
 from zato.server.service.internal.notif.cloud.openstack import swift as notif_cloud_openstack_swift_mod
 from zato.server.service.internal.notif import sql as notif_sql_mod
-from zato.server.service.internal.outgoing import amqp as outgoing_amqp_mod
+from zato.server.service.internal.outgoing import amqp_ as outgoing_amqp_mod
 from zato.server.service.internal.outgoing import ftp as outgoing_ftp_mod
 from zato.server.service.internal.outgoing import jms_wmq as outgoing_jms_wmq_mod
 from zato.server.service.internal.outgoing import odoo as outgoing_odoo_mod

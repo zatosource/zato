@@ -63,7 +63,27 @@ class EventLogger(object):
 
 # ################################################################################################################################
 
+class Outgoing(object):
+    """ An outgoing connection running within a connector.
+    """
+    def __init__(self):
+        self.lock = RLock()
+
+    def create(self, msg):
+        logger.warn('111 %r', msg)
+
+    def edit(self, msg):
+        logger.warn('222 %r', msg)
+
+    def delete(self, msg):
+        logger.warn('333 %r', msg)
+
+# ################################################################################################################################
+
 class Connector(object):
+    """ A connector for long running background connections, such as WebSockets or AMQP. Includes means to run channels
+    and outgoing connections.
+    """
 
     # Whether that connector's start method should be called in its own greenlet
     start_in_greenlet = False

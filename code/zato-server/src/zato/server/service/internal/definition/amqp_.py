@@ -17,7 +17,7 @@ from zato.common.broker_message import DEFINITION
 from zato.common.odb.model import ConnDefAMQP
 from zato.common.odb.query import definition_amqp, definition_amqp_list
 from zato.server.service import Service
-from zato.server.service.internal import AdminService, ChangePasswordBase
+from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
@@ -49,22 +49,26 @@ def instance_hook(self, input, instance, attrs):
 # ################################################################################################################################
 
 class GetList(AdminService):
+    name = 'zato.definition.amqp.get-list'
     _filter_by = ConnDefAMQP.name,
     __metaclass__ = GetListMeta
 
 # ################################################################################################################################
 
 class Create(AdminService):
+    name = 'zato.definition.amqp.create'
     __metaclass__ = CreateEditMeta
 
 # ################################################################################################################################
 
 class Edit(AdminService):
+    name = 'zato.definition.amqp.edit'
     __metaclass__ = CreateEditMeta
 
 # ################################################################################################################################
 
 class Delete(AdminService):
+    name = 'zato.definition.amqp.delete'
     __metaclass__ = DeleteMeta
 
 # ################################################################################################################################
@@ -72,6 +76,8 @@ class Delete(AdminService):
 class ChangePassword(ChangePasswordBase):
     """ Changes the password of an AMQP connection definition.
     """
+    name = 'zato.definition.amqp.change-password'
+
     class SimpleIO(ChangePasswordBase.SimpleIO):
         request_elem = 'zato_definition_amqp_change_password_request'
         response_elem = 'zato_definition_amqp_change_password_response'
@@ -81,5 +87,25 @@ class ChangePassword(ChangePasswordBase):
             instance.password = password
 
         return self._handle(ConnDefAMQP, _auth, DEFINITION.AMQP_CHANGE_PASSWORD.value)
+
+# ################################################################################################################################
+
+class GetByID(AdminService):
+    """ Returns a particular AMQP definition by its ID.
+    """
+    name = 'zato.definition.amqp.get-by-id'
+
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_definition_amqp_get_by_id_request'
+        response_elem = 'zato_definition_amqp_get_by_id_response'
+        input_required = ('id', 'cluster_id')
+        output_required = ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat')
+
+    def get_data(self, session):
+        return definition_amqp(session, self.request.input.cluster_id, self.request.input.id)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload = self.get_data(session)
 
 # ################################################################################################################################
