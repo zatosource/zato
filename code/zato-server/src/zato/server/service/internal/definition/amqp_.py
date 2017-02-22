@@ -22,7 +22,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
 
-elem = 'channel_web_socket'
+elem = 'definition_amqp'
 model = ConnDefAMQP
 label = 'an AMQP definition'
 broker_message = DEFINITION
