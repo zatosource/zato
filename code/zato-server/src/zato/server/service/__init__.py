@@ -78,27 +78,6 @@ Int = Integer
 
 # ################################################################################################################################
 
-class ComponentDisabled(object):
-    """ Indicates that a given component is disabled. Any attempts to make use of it will raise an exception
-    pointing to configuration stanza that needs to be updated in order to make use of that component.
-    """
-    def __init__(self, name, config_key):
-        self.name = name
-        self.config_key = config_key
-
-    def __nonzero__(self):
-        """ Always return False in boolean comparison since the very existence of this object
-        means that its underlying component is not enabled.
-        """
-        return False
-
-    def __getattribute__(self, name):
-        raise ValueError(
-            'Component `{}` is disabled. Enable it by setting components_enabled.{} to True and restarting servers.'.format(
-                self.name, self.config_key))
-
-# ################################################################################################################################
-
 class ChannelInfo(object):
     """ Conveys information abouts the channel that a service is invoked through.
     Available in services as self.channel or self.chan.
@@ -158,20 +137,23 @@ class Service(object):
     http_method_handlers = {}
 
     # Class-wide attributes shared by all services thus created here instead of assigning to self.
-    out = outgoing = Outgoing()
     cloud = Cloud()
-    components_enabled = None
     odb = None
     kvdb = None
     pubsub = None
-    msg_ns_store = None
-    ns_store = None
-    json_pointer_store = None
-    xpath_store = None
-    cassandra_conn = ComponentDisabled('Cassandra connections', 'cassandra')
-    cassandra_query = ComponentDisabled('Cassandra queries', 'cassandra')
-    email = ComponentDisabled('E-mail', 'email')
-    search = ComponentDisabled('Search', 'search')
+    cassandra_conn = None
+    cassandra_query = None
+    email = None
+    search = None
+
+    _worker_store = None
+    _worker_config = None
+    _msg_ns_store = None
+    _ns_store = None
+    _json_pointer_store = None
+    _xpath_store = None
+    _out_ftp = None
+    _out_plain_http = None
 
     # For invoking other servers directly
     servers = None
@@ -183,7 +165,6 @@ class Service(object):
         self.channel = None
         self.cid = None
         self.in_reply_to = None
-        self.worker_store = None
         self.data_format = None
         self.transport = None
         self.wsgi_environ = None
@@ -207,6 +188,19 @@ class Service(object):
         self.listnav = ListNav
         self.has_validate_input = False
         self.has_validate_output = False
+
+        self.out = self.outgoing = Outgoing(
+            None, #PublisherFacade(self.broker_client),
+            self._out_ftp,
+            WMQFacade(self.broker_client) if self.component_enabled_websphere_mq else None,
+            self._worker_config.out_odoo,
+            self._out_plain_http,
+            self._worker_config.out_soap,
+            self._worker_store.sql_pool_store,
+            self._worker_store.stomp_outconn_api,
+            ZMQFacade(self.server) if self.component_enabled_zeromq else None,
+            self._worker_store.outgoing_web_sockets,
+        )
 
     @staticmethod
     def get_name_static(class_):
@@ -258,58 +252,46 @@ class Service(object):
                 method = name.replace('handle_', '')
                 class_.http_method_handlers[method] = getattr(class_, name)
 
-    def _init(self):
+    def _init(self, is_http=False):
         """ Actually initializes the service.
         """
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
-
-        # Patterns
-        self.patterns = PatternsFacade(self)
 
         # The if's below are meant to be written in this way because we don't want any unnecessary attribute lookups
         # and method calls in this method - it's invoked each time a service is executed.
 
         if self.component_enabled_cassandra:
             if not Service.cassandra_conn:
-                Service.cassandra_conn = self.server.worker_store.cassandra_api
+                Service.cassandra_conn = self._worker_store.cassandra_api
             if not Service.cassandra_query:
-                Service.cassandra_query = self.server.worker_store.cassandra_query_api
+                Service.cassandra_query = self._worker_store.cassandra_query_api
 
         if self.component_enabled_email:
             if not Service.email:
-                Service.email = EMailAPI(self.server.worker_store.email_smtp_api, self.server.worker_store.email_imap_api)
+                Service.email = EMailAPI(self._worker_store.email_smtp_api, self._worker_store.email_imap_api)
 
         if self.component_enabled_search:
             if not Service.search:
-                Service.search = SearchAPI(self.server.worker_store.search_es_api, self.server.worker_store.search_solr_api)
+                Service.search = SearchAPI(self._worker_store.search_es_api, self._worker_store.search_solr_api)
 
         if self.component_enabled_msg_path:
             self.msg = MessageFacade(
-                self.json_pointer_store, self.xpath_store, self.msg_ns_store, self.request.payload, self.time)
+                self._json_pointer_store, self._xpath_store, self._msg_ns_store, self.request.payload, self.time)
 
-        out_jms_wmq = WMQFacade(self.broker_client)
-        out_zmq = ZMQFacade(self.server)
+        if self.component_enabled_patterns:
+            self.patterns = PatternsFacade(self)
 
-        # SQL
-        out_sql = self.worker_store.sql_pool_store
-
-        # Regular outconns
-        out_ftp, out_odoo, out_plain_http, out_soap = self.worker_store.worker_config.outgoing_connections()
-
-        self.out = self.outgoing = Outgoing(
-            None, out_ftp, out_jms_wmq, out_odoo, out_plain_http, out_soap, out_sql,
-            self.worker_store.stomp_outconn_api, out_zmq, self.worker_store.outgoing_web_sockets)
-
-        self.request.http.init(self.wsgi_environ)
+        if is_http:
+            self.request.http.init(self.wsgi_environ)
 
         # self.is_sio attribute is set by ServiceStore during deployment
         if self.has_sio:
             self.request.init(True, self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
 
-    def set_response_data(self, service, **kwargs):
+    def set_response_data(self, service, _raw_types=(basestring, dict, list, tuple, EtreeElement, ObjectifiedElement), **kwargs):
         response = service.response.payload
-        if not isinstance(response, (basestring, dict, list, tuple, EtreeElement, ObjectifiedElement)):
+        if not isinstance(response, _raw_types):
             response = response.getvalue(serialize=kwargs['serialize'])
             if kwargs['as_bunch']:
                 response = bunchify(response)
@@ -367,7 +349,7 @@ class Service(object):
         return name, target
 
     def update_handle(self, set_response_func, service, raw_request, channel, data_format,
-            transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
+                      transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
 
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
@@ -384,13 +366,13 @@ class Service(object):
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
         service.update(service, channel, server, broker_client,
-            worker_store, cid, payload, raw_request, transport,
-            simple_io_config, data_format, wsgi_environ,
-            job_type=job_type,
-            channel_params=channel_params,
-            merge_channel_params=merge_channel_params,
-            params_priority=params_priority, in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None),
-            environ=kwargs.get('environ'))
+                       worker_store, cid, payload, raw_request, transport,
+                       simple_io_config, data_format, wsgi_environ,
+                       job_type=job_type,
+                       channel_params=channel_params,
+                       merge_channel_params=merge_channel_params,
+                       params_priority=params_priority, in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None),
+                       environ=kwargs.get('environ'))
 
         # It's possible the call will be completely filtered out
         if service.accept():
@@ -458,20 +440,23 @@ class Service(object):
         return response
 
     def invoke_by_impl_name(self, impl_name, payload='', channel=CHANNEL.INVOKE, data_format=DATA_FORMAT.DICT,
-            transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
+                            transport=None, serialize=False, as_bunch=False, timeout=None, raise_timeout=True, **kwargs):
         """ Invokes a service synchronously by its implementation name (full dotted Python name).
         """
-        orig_impl_name = impl_name
-        impl_name, target = self.extract_target(impl_name)
+        if self.component_enabled_target_matcher:
 
-        # It's possible we are being invoked through self.invoke or self.invoke_by_id
-        target = target or kwargs.get('target', '')
+            orig_impl_name = impl_name
+            impl_name, target = self.extract_target(impl_name)
 
-        if not self.worker_store.target_matcher.is_allowed(target):
-            raise ZatoException(self.cid, 'Invocation target `{}` not allowed ({})'.format(target, orig_impl_name))
+            # It's possible we are being invoked through self.invoke or self.invoke_by_id
+            target = target or kwargs.get('target', '')
 
-        if not self.worker_store.invoke_matcher.is_allowed(impl_name):
-            raise ZatoException(self.cid, 'Service `{}` (impl_name) cannot be invoked'.format(impl_name))
+            if not self._worker_store.target_matcher.is_allowed(target):
+                raise ZatoException(self.cid, 'Invocation target `{}` not allowed ({})'.format(target, orig_impl_name))
+
+        if self.component_enabled_invoke_matcher:
+            if not self._worker_store.invoke_matcher.is_allowed(impl_name):
+                raise ZatoException(self.cid, 'Service `{}` (impl_name) cannot be invoked'.format(impl_name))
 
         if self.impl_name == impl_name:
             msg = 'A service cannot invoke itself, name:[{}]'.format(self.name)
@@ -485,7 +470,7 @@ class Service(object):
         set_response_func = kwargs.pop('set_response_func', service.set_response_data)
 
         invoke_args = (set_response_func, service, payload, channel, data_format, transport, self.server,
-                        self.broker_client, self.worker_store, kwargs.pop('cid', self.cid), self.request.simple_io_config)
+                       self.broker_client, self._worker_store, kwargs.pop('cid', self.cid), self.request.simple_io_config)
 
         kwargs.update({'serialize':serialize, 'as_bunch':as_bunch})
 
@@ -508,8 +493,9 @@ class Service(object):
     def invoke(self, name, *args, **kwargs):
         """ Invokes a service synchronously by its name.
         """
-        name, target = self.extract_target(name)
-        kwargs['target'] = target
+        if self.component_enabled_target_matcher:
+            name, target = self.extract_target(name)
+            kwargs['target'] = target
 
         if self._enforce_service_invokes and self.invokes:
             if name not in self.invokes:
@@ -522,24 +508,27 @@ class Service(object):
     def invoke_by_id(self, service_id, *args, **kwargs):
         """ Invokes a service synchronously by its ID.
         """
-        service_id, target = self.extract_target(service_id)
-        kwargs['target'] = target
+        if self.component_enabled_target_matcher:
+            service_id, target = self.extract_target(service_id)
+            kwargs['target'] = target
 
         return self.invoke_by_impl_name(self.server.service_store.id_to_impl_name[service_id], *args, **kwargs)
 
     def invoke_async(self, name, payload='', channel=CHANNEL.INVOKE_ASYNC, data_format=DATA_FORMAT.DICT,
-            transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, callback=None,
-            zato_ctx={}, environ={}):
+                     transport=None, expiration=BROKER.DEFAULT_EXPIRATION, to_json_string=False, cid=None, callback=None,
+                     zato_ctx={}, environ={}):
         """ Invokes a service asynchronously by its name.
         """
-        name, target = self.extract_target(name)
-        zato_ctx['zato.request_ctx.target'] = target
+        if self.component_enabled_target_matcher:
+            name, target = self.extract_target(name)
+            zato_ctx['zato.request_ctx.target'] = target
 
         # Let's first find out if the service can be invoked at all
         impl_name = self.server.service_store.name_to_impl_name[name]
 
-        if not self.worker_store.invoke_matcher.is_allowed(impl_name):
-            raise ZatoException(self.cid, 'Service `{}` (impl_name) cannot be invoked'.format(impl_name))
+        if self.component_enabled_invoke_matcher:
+            if not self._worker_store.invoke_matcher.is_allowed(impl_name):
+                raise ZatoException(self.cid, 'Service `{}` (impl_name) cannot be invoked'.format(impl_name))
 
         if to_json_string:
             payload = dumps(payload)
@@ -614,7 +603,7 @@ class Service(object):
                 pipe.rpush('{}{}'.format(KVDB.SERVICE_TIME_RAW, self.name), self.processing_time)
 
                 key = '{}{}:{}'.format(KVDB.SERVICE_TIME_RAW_BY_MINUTE,
-                    self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
+                                       self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
                 pipe.rpush(key, self.processing_time)
 
                 # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds)
@@ -800,11 +789,11 @@ class Service(object):
             msg[payload_key] = suppressed_msg
 
         attrs = ('channel', 'cid', 'data_format', 'environ', 'impl_name',
-             'invocation_time', 'job_type', 'name', 'slow_threshold', 'usage', 'wsgi_environ')
+                 'invocation_time', 'job_type', 'name', 'slow_threshold', 'usage', 'wsgi_environ')
 
         if is_response:
             attrs += ('handle_return_time', 'processing_time', 'processing_time_raw',
-                'zato.http.response.headers')
+                      'zato.http.response.headers')
 
         for attr in attrs:
             if attr not in suppress_keys:
@@ -825,16 +814,16 @@ class Service(object):
 # ################################################################################################################################
 
     @staticmethod
-    def update(service, channel_type, server, broker_client, worker_store, cid, payload,
+    def update(service, channel_type, server, broker_client, _ignored, cid, payload,
                raw_request, transport=None, simple_io_config=None, data_format=None,
                wsgi_environ={}, job_type=None, channel_params=None,
-               merge_channel_params=True, params_priority=None, in_reply_to=None, environ=None, init=True):
+               merge_channel_params=True, params_priority=None, in_reply_to=None, environ=None, init=True,
+               http_soap=CHANNEL.HTTP_SOAP):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
         service.server = server
         service.broker_client = broker_client
-        service.worker_store = worker_store
         service.cid = cid
         service.request.payload = payload
         service.request.raw_request = raw_request
@@ -860,13 +849,13 @@ class Service(object):
         channel_item = wsgi_environ.get('zato.http.channel_item', {})
         sec_def_info = wsgi_environ.get('zato.sec_def', {})
 
-        service.channel = service.chan = ChannelInfo(channel_item.get('id'), channel_item.get('name'), channel_type,
+        service.channel = service.chan = ChannelInfo(
+            channel_item.get('id'), channel_item.get('name'), channel_type,
             channel_item.get('is_internal'), channel_item.get('match_target'),
             ChannelSecurityInfo(sec_def_info.get('id'), sec_def_info.get('name'), sec_def_info.get('type'),
-                sec_def_info.get('username'), sec_def_info.get('impl')),
-            channel_item)
+                sec_def_info.get('username'), sec_def_info.get('impl')), channel_item)
 
         if init:
-            service._init()
+            service._init(channel_type==http_soap)
 
 # ################################################################################################################################

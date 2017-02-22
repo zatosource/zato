@@ -342,15 +342,25 @@ class ServiceStore(InitializingObject):
         class_.pubsub = self.server.worker_store.pubsub
         class_.cloud.openstack.swift = self.server.worker_store.worker_config.cloud_openstack_swift
         class_.cloud.aws.s3 = self.server.worker_store.worker_config.cloud_aws_s3
+        class_._out_ftp = self.server.worker_store.worker_config.out_ftp
 
-        class_.msg_ns_store = self.server.worker_store.worker_config.msg_ns_store
-        class_.json_pointer_store = self.server.worker_store.worker_config.json_pointer_store
-        class_.xpath_store = self.server.worker_store.worker_config.xpath_store
+        class_._worker_store = self.server.worker_store
+        class_._worker_config = self.server.worker_store.worker_config
+        class_._msg_ns_store = self.server.worker_store.worker_config.msg_ns_store
+        class_._json_pointer_store = self.server.worker_store.worker_config.json_pointer_store
+        class_._xpath_store = self.server.worker_store.worker_config.xpath_store
 
         class_.component_enabled_cassandra = self.server.fs_server_config.component_enabled.cassandra
         class_.component_enabled_email = self.server.fs_server_config.component_enabled.email
         class_.component_enabled_search = self.server.fs_server_config.component_enabled.search
         class_.component_enabled_msg_path = self.server.fs_server_config.component_enabled.msg_path
+        class_.component_enabled_websphere_mq = self.server.fs_server_config.component_enabled.websphere_mq
+        class_.component_enabled_odoo = self.server.fs_server_config.component_enabled.odoo
+        class_.component_enabled_stomp = self.server.fs_server_config.component_enabled.stomp
+        class_.component_enabled_zeromq = self.server.fs_server_config.component_enabled.zeromq
+        class_.component_enabled_patterns = self.server.fs_server_config.component_enabled.patterns
+        class_.component_enabled_target_matcher = self.server.fs_server_config.component_enabled.target_matcher
+        class_.component_enabled_invoke_matcher = self.server.fs_server_config.component_enabled.invoke_matcher
 
         name = class_.get_name()
         impl_name = class_.get_impl_name()
