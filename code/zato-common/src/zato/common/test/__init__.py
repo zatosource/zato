@@ -203,9 +203,10 @@ class FakeServiceStore(object):
 class FakeServer(object):
     """ A fake mock server used in test cases.
     """
-    def __init__(self, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None):
+    def __init__(self, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None, worker_store=None):
         self.kvdb = FakeKVDB()
         self.service_store = FakeServiceStore(service_store_name_to_impl_name, service_store_impl_name_to_service)
+        self.worker_store = worker_store
         self.fs_server_config = Bunch()
         self.fs_server_config.misc = Bunch()
         self.fs_server_config.misc.zeromq_connect_sleep = 0.1
@@ -237,7 +238,14 @@ class ServiceTestCase(TestCase):
         """ Sets up a service's invocation environment, then invokes and returns
         an instance of the service.
         """
+        class_.component_enabled_cassandra = True
+        class_.component_enabled_email = True
+        class_.component_enabled_search = True
+        class_.component_enabled_msg_path = True
+        class_.has_sio = getattr(class_, 'SimpleIO', False)
+
         instance = class_()
+
         worker_store = MagicMock()
         worker_store.worker_config = MagicMock
         worker_store.worker_config.outgoing_connections = MagicMock(return_value=(None, None, None, None))
@@ -252,7 +260,7 @@ class ServiceTestCase(TestCase):
         }
 
         class_.update(
-            instance, channel, FakeServer(service_store_name_to_impl_name, service_store_impl_name_to_service),
+            instance, channel, FakeServer(service_store_name_to_impl_name, service_store_impl_name_to_service, worker_store),
             None, worker_store, new_cid(), request_data, request_data, simple_io_config=simple_io_config,
             data_format=data_format, job_type=job_type)
 
