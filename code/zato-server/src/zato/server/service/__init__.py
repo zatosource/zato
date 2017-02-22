@@ -164,6 +164,10 @@ class Service(object):
     odb = None
     kvdb = None
     pubsub = None
+    msg_ns_store = None
+    ns_store = None
+    json_pointer_store = None
+    xpath_store = None
     cassandra_conn = ComponentDisabled('Cassandra connections', 'cassandra')
     cassandra_query = ComponentDisabled('Cassandra queries', 'cassandra')
     email = ComponentDisabled('E-mail', 'email')
@@ -195,6 +199,7 @@ class Service(object):
         self.slow_threshold = maxint # After how many ms to consider the response came too late
         self.name = self.__class__.get_name()
         self.impl_name = self.__class__.get_impl_name()
+        self.msg = None
         self.time = None
         self.patterns = None
         self.user_config = None
@@ -262,7 +267,7 @@ class Service(object):
         self.patterns = PatternsFacade(self)
 
         # The if's below are meant to be written in this way because we don't want any unnecessary attribute lookups
-        # and method calls in this method - it's called each time a service is executed.
+        # and method calls in this method - it's invoked each time a service is executed.
 
         if self.component_enabled_cassandra:
             if not Service.cassandra_conn:
@@ -277,6 +282,10 @@ class Service(object):
         if self.component_enabled_search:
             if not Service.search:
                 Service.search = SearchAPI(self.server.worker_store.search_es_api, self.server.worker_store.search_solr_api)
+
+        if self.component_enabled_msg_path:
+            self.msg = MessageFacade(
+                self.json_pointer_store, self.xpath_store, self.msg_ns_store, self.request.payload, self.time)
 
         out_jms_wmq = WMQFacade(self.broker_client)
         out_zmq = ZMQFacade(self.server)
@@ -297,10 +306,6 @@ class Service(object):
         if self.has_sio:
             self.request.init(True, self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
-
-        self.msg = MessageFacade(self.worker_store.msg_ns_store,
-            self.worker_store.json_pointer_store, self.worker_store.xpath_store, self.worker_store.msg_ns_store,
-            self.request.payload, self.time)
 
     def set_response_data(self, service, **kwargs):
         response = service.response.payload

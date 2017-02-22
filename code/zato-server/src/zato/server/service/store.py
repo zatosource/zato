@@ -342,9 +342,15 @@ class ServiceStore(InitializingObject):
         class_.pubsub = self.server.worker_store.pubsub
         class_.cloud.openstack.swift = self.server.worker_store.worker_config.cloud_openstack_swift
         class_.cloud.aws.s3 = self.server.worker_store.worker_config.cloud_aws_s3
+
+        class_.msg_ns_store = self.server.worker_store.worker_config.msg_ns_store
+        class_.json_pointer_store = self.server.worker_store.worker_config.json_pointer_store
+        class_.xpath_store = self.server.worker_store.worker_config.xpath_store
+
         class_.component_enabled_cassandra = self.server.fs_server_config.component_enabled.cassandra
         class_.component_enabled_email = self.server.fs_server_config.component_enabled.email
         class_.component_enabled_search = self.server.fs_server_config.component_enabled.search
+        class_.component_enabled_msg_path = self.server.fs_server_config.component_enabled.msg_path
 
         name = class_.get_name()
         impl_name = class_.get_impl_name()

@@ -68,7 +68,6 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.web_socket.outgoing import OutgoingWebSocket
 from zato.server.connection.vault import VaultConnAPI
-from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
@@ -152,9 +151,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Statistics maintenance
         self.stats_maint = MaintenanceTool(self.kvdb.conn)
 
-        self.msg_ns_store = NamespaceStore()
-        self.json_pointer_store = JSONPointerStore()
-        self.xpath_store = XPathStore()
+        self.msg_ns_store = self.worker_config.msg_ns_store
+        self.json_pointer_store = self.worker_config.json_pointer_store
+        self.xpath_store = self.worker_config.xpath_store
 
         # CassandraOutconnSTOMPConnStore
         self.cassandra_api = CassandraAPI(CassandraConnStore())
