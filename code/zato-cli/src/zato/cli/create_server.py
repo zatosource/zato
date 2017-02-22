@@ -189,6 +189,10 @@ custom_auth_list_service=
 stats=True
 slow_response=True
 live_msg_browser=False
+cassandra=True
+email=True
+search=True
+msg_path=True
 
 [live_msg_browser]
 include_internal=False
@@ -208,6 +212,9 @@ heartbeat=3
 workers_pool_initial = 10
 workers_pool_mult = 2
 workers_pool_max = 250
+
+[amqp]
+pool_size=200
 
 [updates]
 notify_major_versions=True
