@@ -20,6 +20,7 @@ from zato.common import MISC
 from zato.common.pubsub import PubSubAPI, RedisPubSub
 from zato.server.config import ConfigDict
 from zato.server.connection.http_soap.url_data import Matcher
+from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 
 # ################################################################################################################################
 
@@ -338,6 +339,11 @@ class ConfigLoader(object):
         # E-mail - IMAP
         query = self.odb.get_email_imap_list(server.cluster.id, True)
         self.config.email_imap = ConfigDict.from_query('email_imap', query)
+
+        # Message paths
+        self.config.msg_ns_store = NamespaceStore()
+        self.config.json_pointer_store = JSONPointerStore()
+        self.config.xpath_store = XPathStore()
 
         # Assign config to worker
         self.worker_store.worker_config = self.config
