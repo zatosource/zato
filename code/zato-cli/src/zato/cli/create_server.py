@@ -193,6 +193,13 @@ cassandra=True
 email=True
 search=True
 msg_path=True
+websphere_mq=True
+odoo=True
+stomp=True
+zeromq=True
+patterns=True
+target_matcher=True
+invoke_matcher=True
 
 [live_msg_browser]
 include_internal=False

@@ -67,13 +67,13 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def _init(self):
+    def _init(self, is_http):
         if self._filter_by:
             self._search_tool = SearchTool(self._filter_by)
 
         self.ipc_api = self.server.ipc_api
 
-        super(AdminService, self)._init()
+        super(AdminService, self)._init(is_http)
 
 # ################################################################################################################################
 
