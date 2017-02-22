@@ -17,8 +17,6 @@ from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service.internal import GetListAdminSIO
 from zato.server.service.internal.definition.amqp_ import GetList, GetByID, Create, Edit, Delete, ChangePassword
 
-print(333, GetList.SimpleIO)
-
 # ################################################################################################################################
 
 class GetListTestCase(ServiceTestCase):
@@ -42,10 +40,8 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.response_elem, 'zato_definition_amqp_get_list_response')
         self.assertEquals(self.sio.input_required, ('cluster_id',))
         self.assertEquals(self.sio.input_optional, GetListAdminSIO.input_optional)
-        self.assertEquals(self.sio.output_required, ('id', 'name', 'host', 'port', 'vhost', 'username', 'frame_max', 'heartbeat'))
-        self.assertEquals(self.sio.output_repeated, (True))
+        self.assertEquals(self.sio.output_required, ('frame_max', 'heartbeat', 'host', 'id', 'name', 'port', 'username', 'vhost'))
         self.assertEquals(self.sio.namespace, zato_namespace)
-        self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
 
     def xtest_impl(self):
         self.assertEquals(self.service_class.get_name(), 'zato.definition.amqp.get-list')
