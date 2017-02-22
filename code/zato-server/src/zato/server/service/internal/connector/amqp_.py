@@ -14,8 +14,11 @@ from zato.server.service import Service
 # ################################################################################################################################
 
 class Start(Service):
-    """ Starts an AMQP connection. TODO: make it a zato.server.connector.amqp.start service.
+    """ Starts an AMQP connection.
     """
+    # We assign the name explicitly because otherwise it is turned into zato.connector.amqp-.start (note - instead of _).
+    name = 'zato.connector.amqp_.start'
+
     class SimpleIO(object):
         input_required = ('cluster_id', 'frame_max', 'heartbeat', 'host', 'id', 'name', 'port', 'username', 'vhost', 'password')
         input_optional = ('old_name',)

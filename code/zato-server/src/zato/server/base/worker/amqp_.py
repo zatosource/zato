@@ -27,10 +27,6 @@ logger = getLogger(__name__)
 class AMQP(WorkerImpl):
     """ AMQP-related functionality for worker objects.
     """
-    def __init__(self):
-        super(AMQP, self).__init__()
-        self.amqp_api = None
-        self.amqp_pool_size = -1 # Will be set in WorkerStore
 
 # ################################################################################################################################
 
@@ -86,5 +82,23 @@ class AMQP(WorkerImpl):
         with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=5):
             self.amqp_api.delete(msg.name)
             '''
+
+# ################################################################################################################################
+
+    def on_broker_msg_OUTGOING_AMQP_CREATE(self, msg):
+        with self.update_lock:
+            self.amqp_out_name_to_def[msg.name] = msg.def_name
+
+# ################################################################################################################################
+
+    def amqp_invoke(self, msg, out_name, exchange='/', routing_key=None, properties=None, headers=None):
+        """ Invokes a remote AMQP broker sending it a message with the specified routing key to an exchange through
+        a named outgoing connection. Optionally, lower-level details can be provided in properties and they will be
+        provided directly to the underlying AMQP library (kombu). Headers are AMQP headers attached to each message.
+        """
+        with self.update_lock:
+            def_name = self.amqp_out_name_to_def[out_name]
+
+        self.amqp_api.invoke(def_name, msg, exchange, routing_key, properties, headers)
 
 # ################################################################################################################################

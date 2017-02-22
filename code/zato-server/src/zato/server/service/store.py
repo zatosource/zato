@@ -343,6 +343,7 @@ class ServiceStore(InitializingObject):
         class_.cloud.openstack.swift = self.server.worker_store.worker_config.cloud_openstack_swift
         class_.cloud.aws.s3 = self.server.worker_store.worker_config.cloud_aws_s3
         class_._out_ftp = self.server.worker_store.worker_config.out_ftp
+        class_.amqp.invoke = class_.amqp.send = self.server.worker_store.amqp_invoke
 
         class_._worker_store = self.server.worker_store
         class_._worker_config = self.server.worker_store.worker_config
