@@ -116,6 +116,14 @@ class ChannelSecurityInfo(object):
 
 # ################################################################################################################################
 
+class AMQPFacade(object):
+    """ Introduced solely to let service access outgoing connections through self.out.amqp.invoke
+    rather than self.out.amqp_invoke. The .send method is kept for pre-3.0 backward-compatibility.
+    """
+    __slots__ = ('send', 'invoke')
+
+# ################################################################################################################################
+
 class PatternsFacade(object):
     """ The API through which services make use of integration patterns.
     """
@@ -147,6 +155,7 @@ class Service(object):
     cassandra_query = None
     email = None
     search = None
+    amqp = AMQPFacade()
 
     _worker_store = None
     _worker_config = None
@@ -192,7 +201,7 @@ class Service(object):
         self.has_validate_output = False
 
         self.out = self.outgoing = Outgoing(
-            None, #PublisherFacade(self.broker_client),
+            self.amqp,
             self._out_ftp,
             WMQFacade(self.broker_client) if self.component_enabled_websphere_mq else None,
             self._worker_config.out_odoo,

@@ -61,7 +61,7 @@ class ConnectorAMQP(Connector):
 
     def _create_producers(self):
         self._amqp_connections = pools.Connections(limit=self.config.pool_size)
-        self._amqp_prodcuers = pools.Producers(limit=self._amqp_connections.limit)
+        self._amqp_producers = pools.Producers(limit=self._amqp_connections.limit)
 
     def _stop(self):
         self.conn.release()
@@ -73,11 +73,8 @@ class ConnectorAMQP(Connector):
     def get_log_details(self):
         return self._get_conn_string(False)
 
-    def invoke(self, name, *args, **kwargs):
-        with self._amqp_connections[self.conn].acquire(block=True) as conn:
-            logger.warn('invoke %s', self)
-            logger.warn('invoke %s', conn)
-            logger.warn('invoke %s', args)
-            logger.warn('invoke %s', kwargs)
+    def invoke(self, msg, exchange='/', routing_key=None, properties=None, headers=None):
+        with self._amqp_producers[self.conn].acquire(block=True) as producer:
+            producer.publish(msg, routing_key, exchange=exchange)
 
 # ################################################################################################################################

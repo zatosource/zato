@@ -90,6 +90,7 @@ class Create(AdminService):
                 session.commit()
 
                 input.action = OUTGOING.AMQP_CREATE.value
+                input.def_name = item.def_.name
                 self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
@@ -154,6 +155,7 @@ class Edit(AdminService):
                 session.commit()
 
                 input.action = OUTGOING.AMQP_EDIT.value
+                input.def_name = item.def_.name
                 self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
@@ -182,13 +184,17 @@ class Delete(AdminService):
                     filter(OutgoingAMQP.id==self.request.input.id).\
                     one()
 
+                item_id = item.id
+                def_name = item.def_.name
+
                 session.delete(item)
                 session.commit()
 
                 self.broker_client.publish({
                     'action': OUTGOING.AMQP_DELETE.value,
                     'name': item.name,
-                    'id':item.id
+                    'id':item_id,
+                    'def_name':def_name,
                 })
 
             except Exception, e:
