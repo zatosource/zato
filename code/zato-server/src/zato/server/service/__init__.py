@@ -119,6 +119,8 @@ class ChannelSecurityInfo(object):
 class PatternsFacade(object):
     """ The API through which services make use of integration patterns.
     """
+    __slots__ = ('invoke_retry', 'fanout', 'parallel')
+
     def __init__(self, invoking_service):
         self.invoke_retry = InvokeRetry(invoking_service)
         self.fanout = FanOut(invoking_service)
@@ -349,7 +351,7 @@ class Service(object):
         return name, target
 
     def update_handle(self, set_response_func, service, raw_request, channel, data_format,
-                      transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
+            transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
 
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
@@ -366,13 +368,10 @@ class Service(object):
         params_priority = kwargs.get('params_priority', PARAMS_PRIORITY.DEFAULT)
 
         service.update(service, channel, server, broker_client,
-                       worker_store, cid, payload, raw_request, transport,
-                       simple_io_config, data_format, wsgi_environ,
-                       job_type=job_type,
-                       channel_params=channel_params,
-                       merge_channel_params=merge_channel_params,
-                       params_priority=params_priority, in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None),
-                       environ=kwargs.get('environ'))
+            worker_store, cid, payload, raw_request, transport, simple_io_config, data_format, wsgi_environ,
+            job_type=job_type, channel_params=channel_params,
+            merge_channel_params=merge_channel_params, params_priority=params_priority,
+            in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'))
 
         # It's possible the call will be completely filtered out
         if service.accept():
