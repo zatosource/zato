@@ -33,8 +33,10 @@ class ConnectorAMQP(Connector):
 
     def _start(self):
 
-        # Subclasses below are needed so as to be able to return per-greenlet/thread/process/definition information
-        # in zato.* properties and, except for zato.version, this information is not available on module level.
+        # Subclasses below are needed so as to be able to return per-greenlet/thread/process/definition
+        # information in an AMQO connection's zato.* properties and, except for zato.version,
+        # this information is not available on module level hence the classes are declared here,
+        # in particular, we need access to self.config.name which is available only in run-time.
 
         class _PyAMQPConnection(PyAMQPConnection):
             def __init__(_py_amqp_self, *args, **kwargs):
@@ -55,11 +57,7 @@ class ConnectorAMQP(Connector):
         self.conn.connect()
         self.is_connected = self.conn.connected
 
-        # Create a custom pool of producers with up to amqp.pool_size objects (as defined in server.conf)
-        if self.is_connected:
-            self._create_producers()
-
-    def _create_producers(self):
+    def create_outconns(self):
         self._amqp_connections = pools.Connections(limit=self.config.pool_size)
         self._amqp_producers = pools.Producers(limit=self._amqp_connections.limit)
 
@@ -73,7 +71,7 @@ class ConnectorAMQP(Connector):
     def get_log_details(self):
         return self._get_conn_string(False)
 
-    def invoke(self, msg, exchange='/', routing_key=None, properties=None, headers=None):
+    def invoke(self, out_name, msg, exchange='/', routing_key=None, properties=None, headers=None):
         with self._amqp_producers[self.conn].acquire(block=True) as producer:
             producer.publish(msg, routing_key, exchange=exchange)
 

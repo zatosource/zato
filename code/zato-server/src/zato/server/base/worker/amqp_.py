@@ -99,6 +99,6 @@ class AMQP(WorkerImpl):
         with self.update_lock:
             def_name = self.amqp_out_name_to_def[out_name]
 
-        self.amqp_api.invoke(def_name, msg, exchange, routing_key, properties, headers)
+        self.amqp_api.invoke(def_name, out_name, msg, exchange, routing_key, properties, headers)
 
 # ################################################################################################################################

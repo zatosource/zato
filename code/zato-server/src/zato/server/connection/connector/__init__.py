@@ -88,13 +88,16 @@ class Connector(object):
     # Whether that connector's start method should be called in its own greenlet
     start_in_greenlet = False
 
-    def __init__(self, name, type, config, on_message_callback=None, auth_func=None):
+    def __init__(self, name, type, config, on_message_callback=None, auth_func=None, channels=None, outconns=None):
         self.name = name
         self.type = type
         self.config = config
         self.on_message_callback = on_message_callback # Invoked by channels for each message received
         self.auth_func = auth_func # Invoked by channels that need to authenticate users
         self.service = config.get('service_name') # Service to invoke by channels for each message received
+
+        self.channels = channels or []
+        self.outconns = outconns or []
 
         self.id = self.config.id
         self.is_active = self.config.is_active
@@ -145,8 +148,25 @@ class Connector(object):
                 # Ok, break from the outermost loop
                 self.keep_connecting = False
 
+            # Now that we are connected we can create all channels and outgoing connections depending on this connector.
+            if self.channels:
+                self.create_channels()
+
+            if self.outconns:
+                self.create_outconns()
+
         except KeyboardInterrupt:
             self.keep_connecting = False
+
+# ################################################################################################################################
+
+    def create_channels(self):
+        pass
+
+# ################################################################################################################################
+
+    def create_outconns(self):
+        logger.warn
 
 # ################################################################################################################################
 
@@ -244,9 +264,12 @@ class ConnectorStore(object):
         self.connectors = {}
         self.lock = RLock()
 
-    def create(self, name, config, on_message_callback=None, auth_func=None):
+    def create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None):
         with self.lock:
-            self.connectors[name] = self.connector_class(name, self.type, config, on_message_callback, auth_func)
+            self.connectors[name] = self.connector_class(
+                name, self.type, config, on_message_callback, auth_func, channels, outconns)
+            self.channels = channels
+            self.outconns = outconns
 
     def edit(self, old_name, config, *ignored_args):
         with self.lock:
