@@ -268,6 +268,16 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def _config_to_dict(self, config_list, key='name'):
+        """ Converts a list of dictionaries produced by ConfigDict instances to a dictionary keyed with 'key' elements.
+        """
+        out = {}
+        for elem in config_list:
+            out[elem.pop(key)] = elem
+        return out
+
+# ################################################################################################################################
+
     def set_broker_client(self, broker_client):
         self.broker_client = broker_client
 
@@ -652,7 +662,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             data.config.is_active = True
             data.config.pool_size = self.amqp_pool_size
             self.amqp_api.create(def_name, bunchify(data.config), self.on_message_invoke_service,
-                channels=None, outconns=outconns)
+                channels=None, outconns=self._config_to_dict(outconns))
 
         self.amqp_api.start()
 
