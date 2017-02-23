@@ -31,6 +31,8 @@ class ConnectorAMQP(Connector):
     """
     start_in_greenlet = True
 
+# ################################################################################################################################
+
     def _start(self):
 
         # Subclasses below are needed so as to be able to return per-greenlet/thread/process/definition
@@ -57,19 +59,37 @@ class ConnectorAMQP(Connector):
         self.conn.connect()
         self.is_connected = self.conn.connected
 
-    def create_outconns(self):
+        if self.is_connected:
+            self._create_amqp_objects()
+
+# ################################################################################################################################
+
+    def _create_amqp_objects(self):
         self._amqp_connections = pools.Connections(limit=self.config.pool_size)
         self._amqp_producers = pools.Producers(limit=self._amqp_connections.limit)
 
+# ################################################################################################################################
+
     def _stop(self):
         self.conn.release()
+
+# ################################################################################################################################
 
     def _get_conn_string(self, needs_password=True):
         return 'amqp://{}:{}@{}:{}{}'.format(self.config.username, self.config.password if needs_password else SECRET_SHADOW,
             self.config.host, self.config.port, self.config.vhost)
 
+# ################################################################################################################################
+
     def get_log_details(self):
         return self._get_conn_string(False)
+
+# ################################################################################################################################
+
+    def create_outconn(self, config):
+        pass
+
+# ################################################################################################################################
 
     def invoke(self, out_name, msg, exchange='/', routing_key=None, properties=None, headers=None):
         with self._amqp_producers[self.conn].acquire(block=True) as producer:

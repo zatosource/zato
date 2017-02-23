@@ -88,6 +88,7 @@ class AMQP(WorkerImpl):
     def on_broker_msg_OUTGOING_AMQP_CREATE(self, msg):
         with self.update_lock:
             self.amqp_out_name_to_def[msg.name] = msg.def_name
+            self.amqp_api.create_outconn(msg.def_name, msg)
 
 # ################################################################################################################################
 
