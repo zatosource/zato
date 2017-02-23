@@ -52,7 +52,7 @@ Feature: simple-io.json
     When the URL is invoked
     Then status is "200"
 
-    Then response is equal to "{"response":{"bool1":false, "bool2":true}}"
+    Then JSON response is equal to "{"response":{"bool1":false, "bool2":true}}"
 
 # ################################################################################################################################
 
