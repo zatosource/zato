@@ -82,7 +82,7 @@ class Create(AdminService):
                 item.priority = input.priority
                 item.content_type = input.content_type
                 item.content_encoding = input.content_encoding
-                item.expiration = input.expiration
+                item.expiration = int(input.expiration) if input.expiration else None
                 item.user_id = input.user_id
                 item.app_id = input.app_id
 
@@ -147,7 +147,7 @@ class Edit(AdminService):
                 item.priority = input.priority
                 item.content_type = input.content_type
                 item.content_encoding = input.content_encoding
-                item.expiration = input.expiration
+                item.expiration = int(input.expiration) if input.expiration else None
                 item.user_id = input.user_id
                 item.app_id = input.app_id
 

@@ -18,13 +18,15 @@ from kombu.transport.pyamqp import Connection as PyAMQPConnection, Transport
 # Zato
 from zato.common import SECRET_SHADOW, version
 from zato.common.util import get_component_name
-from zato.server.connection.connector import Connector
+from zato.server.connection.connector import Connector, Inactive
 
 # ################################################################################################################################
 
 logger = getLogger(__name__)
 
 # ################################################################################################################################
+
+_default_out_keys=('app_id', 'content_encoding', 'content_type', 'delivery_mode', 'expiration', 'priority', 'user_id')
 
 class ConnectorAMQP(Connector):
     """ An AMQP connector under which channels or outgoing connections run.
@@ -91,8 +93,35 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def invoke(self, out_name, msg, exchange='/', routing_key=None, properties=None, headers=None):
-        with self._amqp_producers[self.conn].acquire(block=True) as producer:
-            producer.publish(msg, routing_key, exchange=exchange)
+    def invoke(self, out_name, msg, exchange='/', routing_key=None, properties=None, headers=None,
+            _default_out_keys=_default_out_keys, **kwargs):
+        """ Synchronously publishes a message to an AMQP broker.
+        """
+        # Don't do anything if this connection is not active
+        outconn_config = self.outconns[out_name]
+        if not outconn_config['is_active']:
+            raise Inactive('Connection is inactive `{}` ({})'.format(out_name, self._get_conn_string(False)))
+
+        acquire_block = kwargs.pop('acquire_block', True)
+        acquire_timeout = kwargs.pop('acquire_block', None)
+
+        # Dictionary of kwargs is built based on user input falling back to the defaults
+        # as specified in the outgoing connection's configuration.
+        properties = properties or {}
+        kwargs = {'exchange':exchange, 'routing_key':routing_key}
+
+        for key in _default_out_keys:
+            # The last 'or None' is needed because outconn_config[key] may return '' which is considered
+            # to be a valid value by kombu/pyamqp but not by AMQP brokers. For instance with user_id=''
+            # RabbitMQ will complain that this value is not the same as the one used to open the connection,
+            # however, it will accept the message with user_id=None, thus it is added at the end.
+            kwargs[key] = properties.pop(key, None) or outconn_config[key] or None
+
+        # Merge in anything that is still left in user-defined properties.
+        if properties:
+            kwargs.update(properties)
+
+        with self._amqp_producers[self.conn].acquire(acquire_block, acquire_timeout) as producer:
+            return producer.publish(msg, headers=headers, **kwargs)
 
 # ################################################################################################################################

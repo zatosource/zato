@@ -922,7 +922,7 @@ class OutgoingAMQP(Base):
 
     content_type = Column(String(200), nullable=True)
     content_encoding = Column(String(200), nullable=True)
-    expiration = Column(String(20), nullable=True)
+    expiration = Column(Integer(), nullable=True)
     user_id = Column(String(200), nullable=True)
     app_id = Column(String(200), nullable=True)
 

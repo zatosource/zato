@@ -14,6 +14,9 @@ from logging import getLogger
 # Bunch
 from bunch import bunchify
 
+# gevent
+from gevent import spawn
+
 # Zato
 from zato.common.util import start_connectors
 from zato.server.base.worker.common import WorkerImpl
@@ -100,6 +103,9 @@ class AMQP(WorkerImpl):
         with self.update_lock:
             def_name = self.amqp_out_name_to_def[out_name]
 
-        self.amqp_api.invoke(def_name, out_name, msg, exchange, routing_key, properties, headers)
+        return self.amqp_api.invoke(def_name, out_name, msg, exchange, routing_key, properties, headers)
+
+    def amqp_invoke_async(self, *args, **kwargs):
+        return spawn(self.amqp_invoke, *args, **kwargs)
 
 # ################################################################################################################################
