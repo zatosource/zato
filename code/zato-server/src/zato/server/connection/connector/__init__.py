@@ -166,7 +166,17 @@ class Connector(object):
 # ################################################################################################################################
 
     def create_outconns(self):
-        logger.warn
+        pass
+
+# ################################################################################################################################
+
+    def create_channel(self, config):
+        pass
+
+# ################################################################################################################################
+
+    def create_outconn(self, config):
+        pass
 
 # ################################################################################################################################
 
@@ -264,22 +274,44 @@ class ConnectorStore(object):
         self.connectors = {}
         self.lock = RLock()
 
+# ################################################################################################################################
+
     def create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None):
         with self.lock:
             self.connectors[name] = self.connector_class(
                 name, self.type, config, on_message_callback, auth_func, channels, outconns)
-            self.channels = channels
-            self.outconns = outconns
+
+# ################################################################################################################################
 
     def edit(self, old_name, config, *ignored_args):
         with self.lock:
             self.connectors[old_name].edit(old_name, config)
             self.connectors[config.name] =  self.connectors.pop(old_name)
 
+# ################################################################################################################################
+
     def delete(self, name):
         with self.lock:
             self.connectors[name].stop()
             del self.connectors[name]
+
+# ################################################################################################################################
+
+    def create_outconn(self, name, config):
+        with self.lock:
+            self.connectors[name].create_outconn(config)
+
+# ################################################################################################################################
+
+    def edit_outconn(self, name, outconn_config):
+        logger.warn('aaa222 %s %s', name, config)
+
+# ################################################################################################################################
+
+    def delete_outconn(self, name, outconn_config):
+        logger.warn('aaa333 %s %s', name, config)
+
+# ################################################################################################################################
 
     def start(self, name=None):
         with self.lock:
@@ -290,6 +322,8 @@ class ConnectorStore(object):
                     continue
 
                 c.start()
+
+# ################################################################################################################################
 
     def invoke(self, name, *args, **kwargs):
         return self.connectors[name].invoke(*args, **kwargs)
