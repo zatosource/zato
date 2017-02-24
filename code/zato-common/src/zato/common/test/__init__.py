@@ -165,8 +165,20 @@ def enrich_with_static_config(object_):
     """
     object_.component_enabled_websphere_mq = True
     object_.component_enabled_zeromq = True
+    object_.component_enabled_patterns = True
+    object_.component_enabled_target_matcher = True
+    object_.component_enabled_invoke_matcher = True
+
+    def target_match(*args, **kwargs):
+        return True
+
+    is_allowed = target_match
+
     object_._worker_config = Bunch(out_odoo=None, out_soap=None)
-    object_._worker_store = Bunch(sql_pool_store=None, stomp_outconn_api=None, outgoing_web_sockets=None)
+    object_._worker_store = Bunch(
+        sql_pool_store=None, stomp_outconn_api=None, outgoing_web_sockets=None, cassandra_api=None,
+        cassandra_query_api=None, email_smtp_api=None, email_imap_api=None, search_es_api=None, search_solr_api=None,
+        target_matcher=Bunch(target_match=target_match, is_allowed=is_allowed), invoke_matcher=Bunch(is_allowed=is_allowed))
 
 # ################################################################################################################################
 

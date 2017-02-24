@@ -183,7 +183,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # AMQP
         self.amqp_api = ConnectorStore(connector_type.duplex.amqp, ConnectorAMQP)
-        self.amqp_pool_size = int(self.server.fs_server_config.amqp.pool_size)
+        self.amqp_pool_size = self.server.fs_server_config.amqp.pool_size
         self.amqp_out_name_to_def = {} # Maps outgoing connection names to definition names, i.e. to connector names        
 
         # Vault connections

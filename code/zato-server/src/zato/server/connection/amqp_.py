@@ -67,8 +67,7 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def _create_amqp_objects(self):
-        self._amqp_connections = pools.Connections(limit=self.config.pool_size)
-        self._amqp_producers = pools.Producers(limit=self._amqp_connections.limit)
+        self._amqp_producers = pools.Producers(limit=self.config.pool_size)
 
 # ################################################################################################################################
 

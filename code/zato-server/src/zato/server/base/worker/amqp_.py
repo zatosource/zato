@@ -12,12 +12,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 from traceback import format_exc
 
-# Bunch
-from bunch import bunchify
-
-# gevent
-from gevent import spawn
-
 # Zato
 from zato.common.util import spawn_greenlet, start_connectors
 from zato.server.base.worker.common import WorkerImpl
@@ -34,58 +28,38 @@ class AMQP(WorkerImpl):
 
 # ################################################################################################################################
 
-    def amqp_connection_create_edit(self, name, msg, action, lock_timeout, start):
-        '''
-        with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=lock_timeout):
-            func = getattr(self.amqp_api, action)
-            func(name, msg, self.on_message_invoke_service, self.request_dispatcher.url_data.authenticate_web_socket)
-            '''
-
-# ################################################################################################################################
-
-    def amqp_connection_create(self, msg):
-        logger.warn('111 %s', msg)
-        '''
-        self.amqp_connection_create_edit(msg.name, msg, 'create', 0, True)
-        self.amqp_api.start(msg.name)
-        '''
-
-# ################################################################################################################################
-
     def on_broker_msg_DEFINITION_AMQP_CREATE(self, msg):
-        if self.server.zato_lock_manager.acquire(msg.config_cid, ttl=10, block=False):
-            msg.pool_size = self.amqp_pool_size
-            start_connectors(self, 'zato.connector.amqp_.start', msg)
+        start_connectors(self, 'zato.connector.amqp_.start', msg)
 
 # ################################################################################################################################
 
     def on_broker_msg_DEFINITION_AMQP_EDIT(self, msg):
-        logger.warn('222 %s', msg)
-        '''
-        # Each worker uses a unique bind port
-        msg = bunchify(msg)
-        update_bind_port(msg, self.worker_idx)
 
-        self.amqp_connection_create_edit(msg.old_name, msg, 'edit', 5, False)
-        '''
+        with self.update_lock:
+
+            # Update outconn -> definition mappings
+            for out_name, def_name in self.amqp_out_name_to_def.items():
+                if def_name == msg.old_name:
+                    self.amqp_out_name_to_def[out_name] = msg.name
+
+            # Update definition itself
+            self.amqp_api.edit(msg.old_name, msg)
 
 # ################################################################################################################################
 
     def on_broker_msg_DEFINITION_AMQP_DELETE(self, msg):
-        logger.warn('333 %s', msg)
-        '''
-        with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=5):
+        with self.update_lock:
+            for out_name, def_name in self.amqp_out_name_to_def.items():
+                if def_name == msg.name:
+                    del self.amqp_out_name_to_def[out_name]
+
             self.amqp_api.delete(msg.name)
-            '''
 
 # ################################################################################################################################
 
     def on_broker_msg_DEFINITION_AMQP_CHANGE_PASSWORD(self, msg):
-        logger.warn('444 %s', msg)
-        '''
-        with self.server.zato_lock_manager(msg.config_cid, ttl=10, block=5):
-            self.amqp_api.delete(msg.name)
-            '''
+        with self.update_lock:
+            self.amqp_api.change_password(msg.name, msg)
 
 # ################################################################################################################################
 

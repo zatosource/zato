@@ -16,7 +16,6 @@ from uuid import uuid4
 from zato.common.broker_message import DEFINITION
 from zato.common.odb.model import ConnDefAMQP
 from zato.common.odb.query import definition_amqp, definition_amqp_list
-from zato.server.service import Service
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -37,6 +36,7 @@ def broker_message_hook(self, input, instance, attrs, service_type):
     input.config_cid = 'definition.amqp.{}.{}.{}'.format(service_type, input.source_server, self.cid)
 
     if service_type == 'create_edit':
+        input.pool_size = self.server.fs_server_config.amqp.pool_size
         with closing(self.odb.session()) as session:
             input.password = definition_amqp(session, instance.cluster_id, instance.id).password
 
