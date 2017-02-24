@@ -25,8 +25,10 @@ import gevent
 from zato.common import BROKER, CHANNEL, DATA_FORMAT
 from zato.common.broker_message import SERVICE
 from zato.common.util import new_cid
-from zato.common.test import ServiceTestCase, rand_int, rand_string
+from zato.common.test import enrich_with_static_config, ServiceTestCase, rand_int, rand_string
 from zato.server.service.internal.pattern.invoke_retry import InvokeRetry
+
+enrich_with_static_config(InvokeRetry)
 
 logger = getLogger(__name__)
 

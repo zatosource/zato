@@ -15,8 +15,10 @@ from unittest import TestCase
 from bunch import Bunch
 
 # Zato
-from zato.common.test import rand_string
+from zato.common.test import enrich_with_static_config, rand_string
 from zato.server.service.internal.updates import CheckUpdates, delta_major_days, delta_minor_days, msg, url_latest, url_version
+
+enrich_with_static_config(CheckUpdates)
 
 # ################################################################################################################################
 

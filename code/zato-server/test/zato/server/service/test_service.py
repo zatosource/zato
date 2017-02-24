@@ -29,13 +29,14 @@ from nose.tools import eq_
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, PARAMS_PRIORITY, SCHEDULER, URL_TYPE
-from zato.common.test import rand_string, ServiceTestCase
+from zato.common.test import enrich_with_static_config, rand_string, ServiceTestCase
 from zato.server.service import List, Service
 from zato.server.service.internal.helpers import InputLogger
 from zato.server.service.reqresp import HTTPRequestData, Request
 
 logger = getLogger(__name__)
 faker = Faker()
+enrich_with_static_config(Service)
 
 # ################################################################################################################################
 
