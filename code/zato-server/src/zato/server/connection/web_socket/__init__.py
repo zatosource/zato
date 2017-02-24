@@ -504,6 +504,7 @@ class ChannelWebSocket(Connector):
 
     def _start(self):
         self.server = WebSocketServer(self.config, self.auth_func, self.on_message_callback)
+        self.is_connected = True
         self.server.serve_forever()
 
     def _stop(self):
