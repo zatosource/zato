@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import getLogger
+from traceback import format_exc
 
 # Bunch
 from bunch import bunchify
@@ -18,7 +19,7 @@ from bunch import bunchify
 from gevent import spawn
 
 # Zato
-from zato.common.util import start_connectors
+from zato.common.util import spawn_greenlet, start_connectors
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
@@ -95,6 +96,21 @@ class AMQP(WorkerImpl):
 
 # ################################################################################################################################
 
+    def on_broker_msg_OUTGOING_AMQP_EDIT(self, msg):
+        with self.update_lock:
+            del self.amqp_out_name_to_def[msg.old_name]
+            self.amqp_out_name_to_def[msg.name] = msg.def_name
+            self.amqp_api.edit_outconn(msg.def_name, msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_OUTGOING_AMQP_DELETE(self, msg):
+        with self.update_lock:
+            del self.amqp_out_name_to_def[msg.name]
+            self.amqp_api.delete_outconn(msg.def_name, msg)
+
+# ################################################################################################################################
+
     def amqp_invoke(self, msg, out_name, exchange='/', routing_key=None, properties=None, headers=None):
         """ Invokes a remote AMQP broker sending it a message with the specified routing key to an exchange through
         a named outgoing connection. Optionally, lower-level details can be provided in properties and they will be
@@ -105,7 +121,13 @@ class AMQP(WorkerImpl):
 
         return self.amqp_api.invoke(def_name, out_name, msg, exchange, routing_key, properties, headers)
 
+    def _amqp_invoke_async(self, *args, **kwargs):
+        try:
+            self.amqp_invoke(*args, **kwargs)
+        except Exception, e:
+            logger.warn(format_exc(e))
+
     def amqp_invoke_async(self, *args, **kwargs):
-        return spawn(self.amqp_invoke, *args, **kwargs)
+        spawn_greenlet(self._amqp_invoke_async, *args, **kwargs)
 
 # ################################################################################################################################

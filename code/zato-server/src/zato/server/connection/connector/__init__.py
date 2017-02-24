@@ -96,8 +96,8 @@ class Connector(object):
         self.auth_func = auth_func # Invoked by channels that need to authenticate users
         self.service = config.get('service_name') # Service to invoke by channels for each message received
 
-        self.channels = channels or []
-        self.outconns = outconns or []
+        self.channels = channels or {}
+        self.outconns = outconns or {}
 
         self.id = self.config.id
         self.is_active = self.config.is_active
@@ -171,12 +171,24 @@ class Connector(object):
 # ################################################################################################################################
 
     def create_channel(self, config):
-        pass
+        raise NotImplementedError('May be implemented in subclasses')
+
+    def edit_channel(self, config):
+        raise NotImplementedError('May be implemented in subclasses')
+
+    def delete_channel(self, config):
+        raise NotImplementedError('May be implemented in subclasses')
 
 # ################################################################################################################################
 
     def create_outconn(self, config):
-        pass
+        raise NotImplementedError('May be implemented in subclasses')
+
+    def edit_outconn(self, config):
+        raise NotImplementedError('May be implemented in subclasses')
+
+    def delete_outconn(self, config):
+        raise NotImplementedError('May be implemented in subclasses')
 
 # ################################################################################################################################
 
@@ -303,13 +315,15 @@ class ConnectorStore(object):
 
 # ################################################################################################################################
 
-    def edit_outconn(self, name, outconn_config):
-        logger.warn('aaa222 %s %s', name, config)
+    def edit_outconn(self, name, config):
+        with self.lock:
+            self.connectors[name].edit_outconn(config)
 
 # ################################################################################################################################
 
-    def delete_outconn(self, name, outconn_config):
-        logger.warn('aaa333 %s %s', name, config)
+    def delete_outconn(self, name, config):
+        with self.lock:
+            self.connectors[name].delete_outconn(config)
 
 # ################################################################################################################################
 

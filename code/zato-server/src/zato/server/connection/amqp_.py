@@ -89,7 +89,17 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def create_outconn(self, config):
-        pass
+        with self.lock:
+            self.outconns[config.name] = config
+
+    def edit_outconn(self, config):
+        with self.lock:
+            del self.outconns[config.old_name]
+            self.outconns[config.name] = config
+
+    def delete_outconn(self, config):
+        with self.lock:
+            del self.outconns[config.name]
 
 # ################################################################################################################################
 
@@ -97,8 +107,10 @@ class ConnectorAMQP(Connector):
             _default_out_keys=_default_out_keys, **kwargs):
         """ Synchronously publishes a message to an AMQP broker.
         """
+        with self.lock:
+            outconn_config = self.outconns[out_name]
+
         # Don't do anything if this connection is not active
-        outconn_config = self.outconns[out_name]
         if not outconn_config['is_active']:
             raise Inactive('Connection is inactive `{}` ({})'.format(out_name, self._get_conn_string(False)))
 

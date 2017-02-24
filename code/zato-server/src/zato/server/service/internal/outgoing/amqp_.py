@@ -56,6 +56,7 @@ class Create(AdminService):
 
         input.delivery_mode = int(input.delivery_mode)
         input.priority = int(input.priority)
+        input.expiration = int(input.expiration) if input.expiration else None
 
         if not(input.priority >= 0 and input.priority <= 9):
             msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(input.priority))
@@ -82,7 +83,7 @@ class Create(AdminService):
                 item.priority = input.priority
                 item.content_type = input.content_type
                 item.content_encoding = input.content_encoding
-                item.expiration = int(input.expiration) if input.expiration else None
+                item.expiration = input.expiration
                 item.user_id = input.user_id
                 item.app_id = input.app_id
 
@@ -120,6 +121,7 @@ class Edit(AdminService):
 
         input.delivery_mode = int(input.delivery_mode)
         input.priority = int(input.priority)
+        input.expiration = int(input.expiration) if input.expiration else None
 
         if not(input.priority >= 0 and input.priority <= 9):
             msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(input.priority))
@@ -140,6 +142,7 @@ class Edit(AdminService):
 
             try:
                 item = session.query(OutgoingAMQP).filter_by(id=input.id).one()
+                old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
                 item.def_id = input.def_id
@@ -147,7 +150,7 @@ class Edit(AdminService):
                 item.priority = input.priority
                 item.content_type = input.content_type
                 item.content_encoding = input.content_encoding
-                item.expiration = int(input.expiration) if input.expiration else None
+                item.expiration = input.expiration
                 item.user_id = input.user_id
                 item.app_id = input.app_id
 
@@ -156,6 +159,7 @@ class Edit(AdminService):
 
                 input.action = OUTGOING.AMQP_EDIT.value
                 input.def_name = item.def_.name
+                input.old_name = old_name
                 self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
