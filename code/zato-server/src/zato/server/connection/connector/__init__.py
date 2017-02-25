@@ -14,9 +14,6 @@ from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
 
-# Bunch
-from bunch import bunchify
-
 # gevent
 from gevent import sleep, spawn
 from gevent.lock import RLock
@@ -95,6 +92,7 @@ class Connector(object):
         self.keep_connecting = True
         self.keep_running = False
         self.lock = RLock()
+        self.id_self = hex(id(self))
 
         # May be provided by subclasses
         self.conn = None
@@ -106,7 +104,7 @@ class Connector(object):
         """
         return ''
 
-    get_prev_log_details = get_log_details
+    _get_conn_string = get_prev_log_details = get_log_details
 
 # ################################################################################################################################
 
@@ -124,14 +122,25 @@ class Connector(object):
                     try:
                         self._start()
                     except Exception, e:
-                        logger.warn(format_exc(e))
+
+                        # Ok, we are not connected but it's possible that self.keep_connecting is already False,
+                        # for instance, because someone deleted us even before we connected to the remote end.
+                        # In this case, self.is_connected will never be True so we cannot loop indefinitely.
+                        # Instead, we just need to return from the method to stop the connection attempts.
+                        if not self.keep_connecting:
+                            return
+
+                        logger.warn('Caught %s exception `%s` (id:%s) (`%s` %s)',
+                            self.type, e.message, self.id_self, self.name, self.get_log_details())
                         sleep(2)
 
-                    # We go here if ._start did not set self.is_conneted to True
-                    attempts += 1
-                    if attempts % log_each == 0:
-                        logger.warn('Could not connect to %s (%s) after %s attempts, time spent so far: %s',
-                            self.get_log_details(), self.name, attempts, datetime.utcnow() - start)
+                    # We go here if ._start did not set self.is_conneted to True.
+                    # The if below is needed because we could have connected in between the sleep call and now.
+                    if not self.is_connected:
+                        attempts += 1
+                        if attempts % log_each == 0:
+                            logger.warn('Could not connect to %s (%s) after %s attempts, time spent so far: %s (id:%s)',
+                                self.get_log_details(), self.name, attempts, datetime.utcnow() - start, self.id_self)
 
                 # Ok, break from the outermost loop
                 self.keep_connecting = False
@@ -199,28 +208,34 @@ class Connector(object):
 # ################################################################################################################################
 
     def _start_stop_logger(self, enter_verb, exit_verb, predicate_func=None):
-        return EventLogger(enter_verb, exit_verb, self._debug_start_stop, self._info_start_stop, predicate_func)
+        return EventLogger(enter_verb, exit_verb, self._info_start_stop, self._info_start_stop, predicate_func)
 
-    def _debug_start_stop(self, verb):
-        logger.debug('%s %s connector `%s`', verb, self.type, self.name)
-
-    def _info_start_stop(self, verb, predicate):
+    def _info_start_stop(self, verb, predicate=None):
         log_details = self.get_prev_log_details() if 'Stop' in verb else self.get_log_details()
 
         # We cannot always log that the connector started or stopped because actions take place asynchronously,
         # in background. Thus we may receive a predicate function that will block until it is safe to emit a log entry.
-        if predicate:
-            predicate()
+        if 'Start' in verb and predicate:
+            if not predicate():
+                return
 
-        logger.info('%s %s connector `%s`%s', verb, self.type, self.name, ' ({})'.format(log_details) if log_details else '')
+        logger.info(
+            '%s %s connector `%s` (id:%s) %s', verb, self.type, self.name, self.id_self,
+            ' ({})'.format(log_details) if log_details else '')
 
 # ################################################################################################################################
 
     def _wait_until_connected(self):
         """ Sleeps undefinitely until self.is_connected is True. Used as a predicate in self._start_stop_logger.
+        Returns True if self.is_connected is True at the time of this method's completion. It may be False if we are
+        told to stop connecting from layers above us.
         """
         while not self.is_connected:
             sleep(0.1)
+            if not self.keep_connecting:
+                return
+
+        return True
 
 # ################################################################################################################################
 
@@ -246,43 +261,10 @@ class Connector(object):
 
     def stop(self):
         with self._start_stop_logger('Stopping',' Stopped'):
+            self._stop()
+            self.is_connected = False
             self.keep_connecting = False # Set to False in case .stop is called before the connection was established
             self.keep_running = False
-            self.is_connected = False
-            self._stop()
-
-# ################################################################################################################################
-
-    def restart(self):
-        """ Stops and starts the connector, must be called with self.lock held.
-        """
-        self.stop()
-        self.start()
-
-# ################################################################################################################################
-
-    def _edit(self, old_name, config):
-        """ Updated configuration of and restarts the connector. Must be called only from methods that hold self.lock.
-        """
-        if self.config.get('address'):
-            config.prev_address = self.config.address
-        self.name = config.name
-        self.config = config
-        self.restart()
-
-# ################################################################################################################################
-
-    def edit(self, old_name, config):
-        with self.lock:
-            self._edit_connector(old_name, config)
-
-# ################################################################################################################################
-
-    def change_password(self, config):
-        with self.lock:
-            new_config = bunchify(deepcopy(self.config))
-            new_config.password = config.password
-            self._edit(new_config.name, new_config)
 
 # ################################################################################################################################
 
@@ -303,30 +285,53 @@ class ConnectorStore(object):
 
 # ################################################################################################################################
 
-    def create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None):
+    def _create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None, needs_start=False):
+        connector = self.connector_class(name, self.type, config, on_message_callback, auth_func, channels, outconns)
+        self.connectors[name] = connector
+        if needs_start:
+            connector.start()
+
+# ################################################################################################################################
+
+    def create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None, needs_start=False):
         with self.lock:
-            self.connectors[name] = self.connector_class(
-                name, self.type, config, on_message_callback, auth_func, channels, outconns)
+            self._create(name, config, on_message_callback, auth_func, channels, outconns, needs_start)
+
+# ################################################################################################################################
+
+    def _edit(self, old_name, config):
+        connector = self._delete(old_name)
+        self._create(
+            config.name, config, connector.on_message_callback, connector.auth_func, connector.channels,
+            connector.outconns, True)
 
 # ################################################################################################################################
 
     def edit(self, old_name, config, *ignored_args):
         with self.lock:
-            self.connectors[old_name].edit(old_name, config)
-            self.connectors[config.name] =  self.connectors.pop(old_name)
+            self._edit(old_name, config)
+
+# ################################################################################################################################
+
+    def _delete(self, name):
+        connector = self.connectors[name]
+        connector.stop()
+        del self.connectors[name]
+        return connector
 
 # ################################################################################################################################
 
     def delete(self, name):
         with self.lock:
-            self.connectors[name].stop()
-            del self.connectors[name]
+            self._delete(name)
 
 # ################################################################################################################################
 
     def change_password(self, name, config):
         with self.lock:
-            self.connectors[name].change_password(config)
+            new_config = deepcopy(self.connectors[name].config)
+            new_config.password = config.password
+            self._edit(new_config.name, new_config)
 
 # ################################################################################################################################
 
