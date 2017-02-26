@@ -64,6 +64,14 @@ class ConnectorAMQP(Connector):
         if self.is_connected:
             self._create_amqp_objects()
 
+        # Close the connection object which was needed only to confirm that the remote end can be reached.
+        # Then in run-time, when connections are needed by producers or consumers, they will be opened by kombu anyway.
+        # In this manner we can at least know rightaway that something is wrong with the connection's definition
+        # without having to wait for when a producer/consumer is first time used. Naturally, it is possible that the connection
+        # will work now but then it won't when it's needed but this is unrelated to the fact that if we can report
+        # now that the connection won't work now, then we should do it.
+        self._stop()
+
 # ################################################################################################################################
 
     def _create_amqp_objects(self):
