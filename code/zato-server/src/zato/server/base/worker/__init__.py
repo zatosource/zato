@@ -654,6 +654,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         for def_name, data in self.worker_config.definition_amqp.items():
 
+            channels = self.worker_config.channel_amqp.get_config_list(_name_matches(def_name))
             outconns = self.worker_config.out_amqp.get_config_list(_name_matches(def_name))
             for outconn in outconns:
                 self.amqp_out_name_to_def[outconn['name']] = def_name
@@ -662,7 +663,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             data.config.is_active = True
             data.config.pool_size = self.amqp_pool_size
             self.amqp_api.create(def_name, bunchify(data.config), self.on_message_invoke_service,
-                channels=None, outconns=self._config_to_dict(outconns))
+                channels=self._config_to_dict(channels), outconns=self._config_to_dict(outconns))
 
         self.amqp_api.start()
 

@@ -20,8 +20,7 @@ from anyjson import dumps
 
 # Zato
 from zato.admin.web.forms.channel.amqp_ import CreateForm, EditForm
-from zato.admin.web.views import Delete as _Delete, get_definition_list, \
-     Index as _Index, method_allowed
+from zato.admin.web.views import Delete as _Delete, get_definition_list, Index as _Index, method_allowed
 from zato.common.odb.model import ChannelAMQP
 
 logger = logging.getLogger(__name__)

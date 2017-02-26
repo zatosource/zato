@@ -18,10 +18,7 @@ from zato.common.odb.model import ChannelAMQP, Cluster, ConnDefAMQP, Service
 from zato.common.odb.query import channel_amqp_list
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
-class _AMQPService(AdminService):
-    def delete_channel(self, channel):
-        msg = {'action': CHANNEL.AMQP_DELETE.value, 'name': channel.name, 'id':channel.id}
-        self.broker_client.publish(msg, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL)
+# ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns a list of AMQP channels.
@@ -43,6 +40,8 @@ class GetList(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
+
+# ################################################################################################################################
 
 class Create(AdminService):
     """ Creates a new AMQP channel.
@@ -69,7 +68,7 @@ class Create(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('An AMQP channel [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An AMQP channel `{}` already exists on this cluster'.format(input.name))
 
             # Is the service's name correct?
             service = session.query(Service).\
@@ -79,7 +78,7 @@ class Create(AdminService):
                 first()
 
             if not service:
-                msg = 'Service [{0}] does not exist on this cluster'.format(input.service)
+                msg = 'Service `{}` does not exist on this cluster'.format(input.service)
                 raise Exception(msg)
 
             try:
@@ -95,20 +94,22 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
 
-                if item.is_active:
-                    start_connector(self.server.repo_location, item.id, item.def_id)
+                input.action = CHANNEL.AMQP_CREATE.value
+                input.def_name = item.def_.name
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = 'Could not create an AMQP channel, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not create an AMQP channel, e:`%s`', format_exc(e))
                 session.rollback()
 
                 raise
 
-class Edit(_AMQPService):
+# ################################################################################################################################
+
+class Edit(AdminService):
     """ Updates an AMQP channel.
     """
     name = 'zato.channel.amqp.edit'
@@ -134,7 +135,7 @@ class Edit(_AMQPService):
                 first()
 
             if existing_one:
-                raise Exception('An AMQP channel [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An AMQP channel `{}` already exists on this cluster'.format(input.name))
 
             # Is the service's name correct?
             service = session.query(Service).\
@@ -149,6 +150,7 @@ class Edit(_AMQPService):
 
             try:
                 item = session.query(ChannelAMQP).filter_by(id=input.id).one()
+                old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
                 item.queue = input.queue
@@ -160,21 +162,23 @@ class Edit(_AMQPService):
                 session.add(item)
                 session.commit()
 
-                self.delete_channel(item)
-                if item.is_active:
-                    start_connector(self.server.repo_location, item.id, item.def_id)
+                input.action = CHANNEL.AMQP_CREATE.value
+                input.def_name = item.def_.name
+                input.old_name = old_name
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = 'Could not update the AMQP definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not update the AMQP definition, e:`%s`', format_exc(e))
                 session.rollback()
 
                 raise
 
-class Delete(_AMQPService):
+# ################################################################################################################################
+
+class Delete(AdminService):
     """ Deletes an AMQP channel.
     """
     name = 'zato.channel.amqp.delete'
@@ -187,18 +191,27 @@ class Delete(_AMQPService):
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                channel = session.query(ChannelAMQP).\
+                item = session.query(ChannelAMQP).\
                     filter(ChannelAMQP.id==self.request.input.id).\
                     one()
 
-                session.delete(channel)
+                item_id = item.id
+                def_name = item.def_.name
+
+                session.delete(item)
                 session.commit()
 
-                self.delete_channel(channel)
+                self.broker_client.publish({
+                    'action': CHANNEL.AMQP_DELETE.value,
+                    'name': item.name,
+                    'id':item_id,
+                    'def_name':def_name,
+                })
 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the AMQP channel, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not delete the AMQP channel, e:`%s`', format_exc(e))
 
                 raise
+
+# ################################################################################################################################
