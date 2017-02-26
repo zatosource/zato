@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import getLogger
+from traceback import format_exc
 
 # Kombu
 from kombu import Connection, pools
@@ -60,27 +61,33 @@ class ConnectorAMQP(Connector):
         self.conn = _AMQPConnection(self._get_conn_string())
         self.conn.connect()
         self.is_connected = self.conn.connected
+        self._producers = []
 
         if self.is_connected:
             self._create_amqp_objects()
 
-        # Close the connection object which was needed only to confirm that the remote end can be reached.
-        # Then in run-time, when connections are needed by producers or consumers, they will be opened by kombu anyway.
-        # In this manner we can at least know rightaway that something is wrong with the connection's definition
-        # without having to wait for when a producer/consumer is first time used. Naturally, it is possible that the connection
-        # will work now but then it won't when it's needed but this is unrelated to the fact that if we can report
-        # now that the connection won't work now, then we should do it.
-        self._stop()
+            # Close the connection object which was needed only to confirm that the remote end can be reached.
+            # Then in run-time, when connections are needed by producers or consumers, they will be opened by kombu anyway.
+            # In this manner we can at least know rightaway that something is wrong with the connection's definition
+            # without having to wait for when a producer/consumer is first time used. Naturally, it is possible
+            # that the connection will work now but then it won't when it's needed but this is unrelated to the fact
+            # that if we can report now that the connection won't work now, then we should do it so that an error message
+            # can be logged as early as possible.
+            self.conn.close()
 
 # ################################################################################################################################
 
     def _create_amqp_objects(self):
-        self._amqp_producers = pools.Producers(limit=self.config.pool_size)
+        self._producers = pools.Producers(limit=self.config.pool_size)
 
 # ################################################################################################################################
 
     def _stop(self):
-        self.conn.release()
+        try:
+            for pool in self._producers.values():
+                pool.connections.force_close_all()
+        except Exception, e:
+            logger.warn(format_exc(e))
 
 # ################################################################################################################################
 
@@ -140,7 +147,7 @@ class ConnectorAMQP(Connector):
         if properties:
             kwargs.update(properties)
 
-        with self._amqp_producers[self.conn].acquire(acquire_block, acquire_timeout) as producer:
+        with self._producers[self.conn].acquire(acquire_block, acquire_timeout) as producer:
             return producer.publish(msg, headers=headers, **kwargs)
 
 # ################################################################################################################################

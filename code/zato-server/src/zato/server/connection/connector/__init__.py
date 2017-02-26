@@ -131,7 +131,7 @@ class Connector(object):
                             return
 
                         logger.warn('Caught %s exception `%s` (id:%s) (`%s` %s)',
-                            self.type, e.message, self.id_self, self.name, self.get_log_details())
+                            self.type, format_exc(e), self.id_self, self.name, self.get_log_details())
                         sleep(2)
 
                     # We go here if ._start did not set self.is_conneted to True.
