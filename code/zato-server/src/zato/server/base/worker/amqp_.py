@@ -94,6 +94,24 @@ class AMQP(WorkerImpl):
 
 # ################################################################################################################################
 
+    def on_broker_msg_CHANNEL_AMQP_CREATE(self, msg):
+        with self.update_lock:
+            self.amqp_api.create_channel(msg.def_name, msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_CHANNEL_AMQP_EDIT(self, msg):
+        with self.update_lock:
+            self.amqp_api.edit_channel(msg.def_name, msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_CHANNEL_AMQP_DELETE(self, msg):
+        with self.update_lock:
+            self.amqp_api.delete_channel(msg.def_name, msg)
+
+# ################################################################################################################################
+
     def amqp_invoke(self, msg, out_name, exchange='/', routing_key=None, properties=None, headers=None):
         """ Invokes a remote AMQP broker sending it a message with the specified routing key to an exchange through
         a named outgoing connection. Optionally, lower-level details can be provided in properties and they will be

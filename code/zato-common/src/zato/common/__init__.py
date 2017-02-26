@@ -386,6 +386,10 @@ class SIMPLE_IO:
     class BOOL_PARAMETERS:
         SUFFIXES = ['is_', 'needs_', 'should_']
 
+    COMMON_FORMAT = OrderedDict()
+    COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
+    COMMON_FORMAT[DATA_FORMAT.XML] = 'XML'
+
     HTTP_SOAP_FORMAT = OrderedDict()
     HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
     HTTP_SOAP_FORMAT[DATA_FORMAT.XML] = 'XML'

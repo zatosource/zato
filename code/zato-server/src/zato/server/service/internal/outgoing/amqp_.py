@@ -19,6 +19,8 @@ from zato.common.odb.query import out_amqp_list
 from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
+# ################################################################################################################################
+
 class GetList(AdminService):
     """ Returns a list of outgoing AMQP connections.
     """
@@ -38,6 +40,8 @@ class GetList(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
+
+# ################################################################################################################################
 
 class Create(AdminService):
     """ Creates a new outgoing AMQP connection.
@@ -102,6 +106,8 @@ class Create(AdminService):
                 session.rollback()
 
                 raise
+
+# ################################################################################################################################
 
 class Edit(AdminService):
     """ Updates an outgoing AMQP connection.
@@ -171,6 +177,8 @@ class Edit(AdminService):
 
                 raise
 
+# ################################################################################################################################
+
 class Delete(AdminService):
     """ Deletes an outgoing AMQP connection.
     """
@@ -206,3 +214,5 @@ class Delete(AdminService):
                 self.logger.error('Could not delete the outgoing AMQP connection, e:`%s`', format_exc(e))
 
                 raise
+
+# ################################################################################################################################
