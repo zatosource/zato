@@ -215,7 +215,7 @@ class Connector(object):
 
         # We cannot always log that the connector started or stopped because actions take place asynchronously,
         # in background. Thus we may receive a predicate function that will block until it is safe to emit a log entry.
-        if 'Start' in verb and predicate:
+        if verb == 'Started' and predicate:
             if not predicate():
                 return
 
