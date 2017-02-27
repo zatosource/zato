@@ -12,6 +12,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from logging import getLogger
 from traceback import format_exc
 
+# gevent
+from gevent import sleep, spawn
+
 # Kombu
 from kombu import Connection, Consumer as _Consumer, pools, Queue
 from kombu.mixins import ConsumerMixin
@@ -107,12 +110,17 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
+    def _on_message(self, body, msg):
+        # type: (str, Any)
+        msg.ack()
+
+# ################################################################################################################################
+
     def on_message(self, body, msg):
+        # type: (str, Any)
         """ Invoked each time a messages is taken off an AMQP queue.
         """
-        logger.warn('Got body: `%s`', body)
-        logger.warn('Got msg:  `%s`', msg)
-        msg.ack()
+        spawn(self._on_message, body, msg)
 
 # ################################################################################################################################
 
