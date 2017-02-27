@@ -13,6 +13,7 @@ from copy import deepcopy
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
+from typing import Dict
 
 # gevent
 from gevent import sleep, spawn
@@ -74,19 +75,22 @@ class Connector(object):
     start_in_greenlet = False
 
     def __init__(self, name, type, config, on_message_callback=None, auth_func=None, channels=None, outconns=None):
+        # type: (str, str, dict, Callable, Callable, dict, dict) -> None
         self.name = name
         self.type = type
         self.config = config
         self.on_message_callback = on_message_callback # Invoked by channels for each message received
         self.auth_func = auth_func # Invoked by channels that need to authenticate users
-        self.service = config.get('service_name') # Service to invoke by channels for each message received
+
+        # Service to invoke by channels for each message received
+        self.service = config.get('service_name')
 
         self.channels = channels or {}
         self.outconns = outconns or {}
 
         self.id = self.config.id
-        self.is_active = self.config.is_active
-        self.is_inactive = not self.is_active
+        self.is_active = self.config.is_active # type: bool
+        self.is_inactive = not self.is_active # type: bool
         self.is_connected = False
 
         self.keep_connecting = True
