@@ -13,12 +13,13 @@ from logging import getLogger
 from traceback import format_exc
 
 # Kombu
-from kombu import Connection, pools
+from kombu import Connection, Consumer as _Consumer, pools, Queue
+from kombu.mixins import ConsumerMixin
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, Transport
 
 # Zato
 from zato.common import SECRET_SHADOW, version
-from zato.common.util import get_component_name
+from zato.common.util import get_component_name, spawn_greenlet
 from zato.server.connection.connector import Connector, Inactive
 
 # ################################################################################################################################
@@ -28,6 +29,34 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 _default_out_keys=('app_id', 'content_encoding', 'content_type', 'delivery_mode', 'expiration', 'priority', 'user_id')
+
+# ################################################################################################################################
+
+class Consumer(object):
+    """ Consumes messages from AMQP queues. There is one Consumer object for each Zato AMQP channel.
+    """
+    def __init__(self, conn, config, on_message):
+        # type: (Any, dict, Callable)
+        self.conn = conn
+        self.queue = [Queue(config['queue'])]
+        self.on_message = [on_message]
+        self.keep_running = True
+
+    def start(self):
+        try:
+            consumer = _Consumer(self.conn, queues=self.queue, callbacks=self.on_message)
+            consumer.consume()
+
+            while self.keep_running:
+                try:
+                    self.conn.drain_events(timeout=2)
+                except self.conn.connection_errors:
+                    self.conn.heartbeat_check()
+
+        except Exception, e:
+            logger.warn(format_exc(e))
+
+# ################################################################################################################################
 
 class ConnectorAMQP(Connector):
     """ An AMQP connector under which channels or outgoing connections run.
@@ -58,18 +87,10 @@ class ConnectorAMQP(Connector):
             def get_transport_cls(self):
                 return _AMQPTransport
 
-        self.conn = _AMQPConnection(self._get_conn_string())
+        self._AMQPConnection = _AMQPConnection
+        self.conn = _AMQPConnection(self._get_conn_string(), frame_max=self.config.frame_max, heartbeat=self.config.heartbeat)
         self.conn.connect()
         self.is_connected = self.conn.connected
-        self._producers = []
-
-# ################################################################################################################################
-
-    def _create_amqp_objects(self):
-        self._producers = pools.Producers(limit=self.config.pool_size)
-
-    def create_outconns(self):
-        self._create_amqp_objects()
 
         # Close the connection object which was needed only to confirm that the remote end can be reached.
         # Then in run-time, when connections are needed by producers or consumers, they will be opened by kombu anyway.
@@ -79,6 +100,45 @@ class ConnectorAMQP(Connector):
         # that if we can already report that the connection won't work now, then we should do it so that an error message
         # can be logged as early as possible.
         self.conn.close()
+
+        self._consumers = []
+        self._producers = []
+        self._queue_name_to_consumer = {}
+
+# ################################################################################################################################
+
+    def on_message(self, body, msg):
+        """ Invoked each time a messages is taken off an AMQP queue.
+        """
+        logger.warn('Got body: `%s`', body)
+        logger.warn('Got msg:  `%s`', msg)
+        msg.ack()
+
+# ################################################################################################################################
+
+    def _create_consumer(self, config):
+        # type: (str)
+        """ Creates an AMQP consumer for a specific queue and starts it.
+        """
+        with self._AMQPConnection(self._get_conn_string()) as conn:
+            consumer = Consumer(conn, config, self.on_message)
+            logger.warn('Got consumer %s', consumer)
+            consumer.start()
+
+# ################################################################################################################################
+
+    def create_channels(self):
+        """ Sets up AMQP consumers and producers.
+        """
+        for channel_name, config in self.channels.iteritems():
+            spawn_greenlet(self._create_consumer, config)
+
+# ################################################################################################################################
+
+    def create_outconns(self):
+        """ Sets up AMQP producers for outgoing connections.
+        """
+        self._producers = pools.Producers(limit=self.config.pool_size)
 
 # ################################################################################################################################
 
