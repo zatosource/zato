@@ -849,6 +849,10 @@ class PADDING:
     LEFT = 'left'
     RIGHT = 'right'
 
+class AMQP:
+    class DEFAULT:
+        POOL_SIZE = 50
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'

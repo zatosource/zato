@@ -56,9 +56,9 @@ class Consumer(object):
     def start(self):
         try:
             consumer = self._get_consumer()
-            timeout = 1 # Eventually this can be made configurable
             gevent_sleep = sleep
             has_conn = True
+            timeout = self.config.heartbeat
 
             while self.keep_running:
                 try:
@@ -113,6 +113,10 @@ class ConnectorAMQP(Connector):
             def get_transport_cls(self):
                 return _AMQPTransport
 
+        self._consumers = []
+        self._producers = {}
+        self._queue_name_to_consumer = {}
+
         self.config.conn_class = _AMQPConnection
         self.config.conn_url = self._get_conn_string()
         self.conn = self.config.conn_class(self.config.conn_url, frame_max=self.config.frame_max, heartbeat=self.config.heartbeat)
@@ -127,10 +131,6 @@ class ConnectorAMQP(Connector):
         # that if we can already report that the connection won't work now, then we should do it so that an error message
         # can be logged as early as possible.
         self.conn.close()
-
-        self._consumers = []
-        self._producers = []
-        self._queue_name_to_consumer = {}
 
 # ################################################################################################################################
 
@@ -157,7 +157,10 @@ class ConnectorAMQP(Connector):
         for channel_name, config in self.channels.iteritems():
             config.conn_class = self.config.conn_class
             config.conn_url = self.config.conn_url
-            for x in xrange(1):
+            config.heartbeat = self.config.heartbeat or 1 # We always require some heartbeat value
+            logger.warn(config)
+
+            for x in xrange(config.pool_size):
                 spawn(self._create_consumer, config)
 
 # ################################################################################################################################

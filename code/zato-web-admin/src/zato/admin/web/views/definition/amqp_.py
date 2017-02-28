@@ -48,7 +48,7 @@ class _CreateEdit(CreateEdit):
         output_required = ('id',)
 
     def success_message(self, item):
-        return 'Successfully {0} the AMQP definition [{1}]'.format(self.verb, item.name)
+        return 'Successfully {} the AMQP definition `{}`'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'def-amqp-create'
