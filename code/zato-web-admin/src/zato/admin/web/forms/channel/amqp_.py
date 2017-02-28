@@ -24,7 +24,8 @@ class CreateForm(DataFormatForm):
     def_id = forms.ChoiceField(widget=forms.Select())
     queue = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     consumer_tag_prefix = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
-    pool_size = forms.CharField(initial=AMQP.DEFAULT.POOL_SIZE, widget=forms.TextInput(attrs={'style':'width:10%'}))
+    pool_size = forms.CharField(
+        initial=AMQP.DEFAULT.POOL_SIZE, widget=forms.TextInput(attrs={'style':'width:10%', 'class':'required'}))
     service = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
 
     def __init__(self, prefix=None, post_data=None, req=None):

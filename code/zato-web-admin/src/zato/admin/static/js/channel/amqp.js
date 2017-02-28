@@ -21,7 +21,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.ChannelAMQP;
     $.fn.zato.data_table.new_row_func = $.fn.zato.channel.amqp.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['name', 'def_id', 'queue', 'consumer_tag_prefix', 'service']);
+    $.fn.zato.data_table.setup_forms(['name', 'def_id', 'queue', 'consumer_tag_prefix', 'pool_size', 'service']);
 })
 
 $.fn.zato.channel.amqp.create = function() {
