@@ -8,15 +8,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# pika
-from pika.spec import FRAME_MAX_SIZE, PORT
-
 # Django
 from django import forms
 
 # Zato
 from zato.common.util import make_repr
 
+# Defaults per AMQP spec
+FRAME_MAX_SIZE = 131072
+PORT = 5672
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
