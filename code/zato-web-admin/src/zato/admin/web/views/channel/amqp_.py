@@ -38,6 +38,7 @@ def _get_edit_create_message(params, prefix=''):
         'consumer_tag_prefix': params[prefix + 'consumer_tag_prefix'],
         'service': params[prefix + 'service'],
         'pool_size': params.get(prefix + 'pool_size'),
+        'ack_mode': params.get(prefix + 'ack_mode'),
         'data_format': params.get(prefix + 'data_format'),
     }
 
@@ -60,7 +61,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 'def_name', 'def_id', 'service_name',
-            'pool_size', 'data_format')
+            'pool_size', 'ack_mode', 'data_format')
         output_repeated = True
 
     def handle(self):

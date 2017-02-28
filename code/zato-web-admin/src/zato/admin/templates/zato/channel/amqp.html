@@ -31,6 +31,7 @@
             'queue',
             'consumer_tag_prefix',
             'pool_size',
+            'ack_mode',
             'service',
             '_edit',
             '_delete',
@@ -74,6 +75,7 @@
                         <th><a href="#">Queue</a></th>
                         <th><a href="#">Consumer tag prefix</a></th>
                         <th><a href="#">Pool size</a></th>
+                        <th><a href="#">Ack mode</a></th>
                         <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -94,6 +96,7 @@
                         <td>{{ item.queue }}</td>
                         <td>{{ item.consumer_tag_prefix }}</td>
                         <td>{{ item.pool_size }}</td>
+                        <td>{{ item.ack_mode }}</td>
                         <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         <td><a href="javascript:$.fn.zato.channel.amqp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.amqp.delete_('{{ item.id }}')">Delete</a></td>
@@ -105,7 +108,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='15'>No results</td>
+                        <td colspan='16'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -142,6 +145,11 @@
                         <tr>
                             <td style="vertical-align:middle">Consumer tag prefix</td>
                             <td>{{ create_form.consumer_tag_prefix }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Ack mode</td>
+                            <td>{{ create_form.ack_mode }}</td>
                         </tr>
 
                         <tr>
@@ -198,6 +206,11 @@
                         <tr>
                             <td style="vertical-align:middle">Consumer tag prefix</td>
                             <td>{{ edit_form.consumer_tag_prefix }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Ack mode</td>
+                            <td>{{ edit_form.ack_mode }}</td>
                         </tr>
 
                         <tr>

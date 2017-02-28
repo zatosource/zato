@@ -26,12 +26,17 @@ class CreateForm(DataFormatForm):
     consumer_tag_prefix = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     pool_size = forms.CharField(
         initial=AMQP.DEFAULT.POOL_SIZE, widget=forms.TextInput(attrs={'style':'width:10%', 'class':'required'}))
+    ack_mode = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:20%'}))
     service = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:100%'}))
 
     def __init__(self, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         self.fields['def_id'].choices = []
         add_services(self, req)
+
+        self.fields['ack_mode'].choices = []
+        for item in AMQP.ACK_MODE:
+            self.fields['ack_mode'].choices.append([item.id, item.name])
 
     def set_def_id(self, def_ids):
         # Sort AMQP definitions by their names.

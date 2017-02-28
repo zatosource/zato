@@ -31,7 +31,7 @@ class GetList(AdminService):
         response_elem = 'zato_channel_amqp_get_list_response'
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 'def_name', 'def_id', 'service_name',
-            'pool_size')
+            'pool_size', 'ack_mode')
         output_optional = ('data_format',)
 
     def get_data(self, session):
@@ -51,7 +51,8 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_channel_amqp_create_request'
         response_elem = 'zato_channel_amqp_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service', 'pool_size')
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service', 'pool_size',
+            'ack_mode')
         input_optional = ('data_format',)
         output_required = ('id', 'name')
 
@@ -90,6 +91,7 @@ class Create(AdminService):
                 item.def_id = input.def_id
                 item.service = service
                 item.pool_size = input.pool_size
+                item.ack_mode = input.ack_mode
                 item.data_format = input.data_format
 
                 session.add(item)
@@ -119,7 +121,7 @@ class Edit(AdminService):
         request_elem = 'zato_channel_amqp_edit_request'
         response_elem = 'zato_channel_amqp_edit_response'
         input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service',
-            'pool_size')
+            'pool_size', 'ack_mode')
         input_optional = ('data_format',)
         output_required = ('id', 'name')
 
@@ -160,6 +162,7 @@ class Edit(AdminService):
                 item.def_id = input.def_id
                 item.service = service
                 item.pool_size = input.pool_size
+                item.ack_mode = input.ack_mode
                 item.data_format = input.data_format
 
                 session.add(item)
