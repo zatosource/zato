@@ -853,6 +853,14 @@ class AMQP:
     class DEFAULT:
         POOL_SIZE = 50
 
+    class ACK_MODE:
+        ACK = NameId('Ack', 'ack')
+        NO_ACK = NameId('No ack', 'no-ack')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.ACK, self.NO_ACK))
+
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.
 NO_DEFAULT_VALUE = 'NO_DEFAULT_VALUE'

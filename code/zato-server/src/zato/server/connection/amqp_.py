@@ -21,7 +21,7 @@ from kombu.mixins import ConsumerMixin
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, Transport
 
 # Zato
-from zato.common import SECRET_SHADOW, version
+from zato.common import AMQP, SECRET_SHADOW, version
 from zato.common.util import get_component_name, spawn_greenlet
 from zato.server.connection.connector import Connector, Inactive
 
@@ -35,6 +35,13 @@ _default_out_keys=('app_id', 'content_encoding', 'content_type', 'delivery_mode'
 
 # ################################################################################################################################
 
+no_ack = {
+    AMQP.ACK_MODE.ACK.id: False,
+    AMQP.ACK_MODE.NO_ACK.id: True,
+}
+
+# ################################################################################################################################
+
 class Consumer(object):
     """ Consumes messages from AMQP queues. There is one Consumer object for each Zato AMQP channel.
     """
@@ -45,11 +52,11 @@ class Consumer(object):
         self.on_message = [on_message]
         self.keep_running = True
 
-    def _get_consumer(self):
+    def _get_consumer(self, _no_ack=no_ack):
         """ Creates a new connection and consumer to an AMQP broker.
         """
         conn = self.config.conn_class(self.config.conn_url)
-        consumer = _Consumer(conn, queues=self.queue, callbacks=self.on_message,
+        consumer = _Consumer(conn, queues=self.queue, callbacks=self.on_message, no_ack=_no_ack[self.config.ack_mode],
             tag_prefix='{}/{}'.format(self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))
         consumer.consume()
         return consumer
