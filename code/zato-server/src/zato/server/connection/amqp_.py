@@ -38,26 +38,49 @@ _default_out_keys=('app_id', 'content_encoding', 'content_type', 'delivery_mode'
 class Consumer(object):
     """ Consumes messages from AMQP queues. There is one Consumer object for each Zato AMQP channel.
     """
-    def __init__(self, conn, config, on_message):
-        # type: (Any, dict, Callable)
-        self.conn = conn
-        self.queue = [Queue(config['queue'])]
+    def __init__(self, config, on_message):
+        # type: (dict, Callable)
+        self.config = config
+        self.queue = [Queue(self.config.queue)]
         self.on_message = [on_message]
         self.keep_running = True
 
+    def _get_consumer(self):
+        """ Creates a new connection and consumer to an AMQP broker.
+        """
+        conn = self.config.conn_class(self.config.conn_url)
+        consumer = _Consumer(conn, queues=self.queue, callbacks=self.on_message)
+        consumer.consume()
+        return consumer
+
     def start(self):
         try:
-            consumer = _Consumer(self.conn, queues=self.queue, callbacks=self.on_message)
-            consumer.consume()
+            consumer = self._get_consumer()
+            timeout = 1 # Eventually this can be made configurable
+            gevent_sleep = sleep
+            has_conn = True
 
             while self.keep_running:
                 try:
-                    self.conn.drain_events(timeout=2)
-                except self.conn.connection_errors:
-                    self.conn.heartbeat_check()
+                    consumer.connection.drain_events(timeout=timeout)
+                except consumer.connection.connection_errors:
+                    try:
+                        consumer.connection.heartbeat_check()
+                    except Exception, e:
+                        logger.warn('Exception in heartbeat, e:`%s`', format_exc(e))
+                        has_conn = False
+                        gevent_sleep(timeout)
+                    else:
+                        # If there was not any exception but we did not have a previous connection
+                        # it means that a previously established connection was broken so we need to recreate it.
+                        # one 
+                        if not has_conn:
+                            consumer.connection.close()
+                            consumer = self._get_consumer()
+                            has_conn = True
 
         except Exception, e:
-            logger.warn(format_exc(e))
+            logger.warn('Unrecoverable exception in consumer, e:`%s`', format_exc(e))
 
 # ################################################################################################################################
 
@@ -90,8 +113,9 @@ class ConnectorAMQP(Connector):
             def get_transport_cls(self):
                 return _AMQPTransport
 
-        self._AMQPConnection = _AMQPConnection
-        self.conn = _AMQPConnection(self._get_conn_string(), frame_max=self.config.frame_max, heartbeat=self.config.heartbeat)
+        self.config.conn_class = _AMQPConnection
+        self.config.conn_url = self._get_conn_string()
+        self.conn = self.config.conn_class(self.config.conn_url, frame_max=self.config.frame_max, heartbeat=self.config.heartbeat)
         self.conn.connect()
         self.is_connected = self.conn.connected
 
@@ -110,17 +134,11 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _on_message(self, body, msg):
-        # type: (str, Any)
-        msg.ack()
-
-# ################################################################################################################################
-
     def on_message(self, body, msg):
         # type: (str, Any)
         """ Invoked each time a messages is taken off an AMQP queue.
         """
-        spawn(self._on_message, body, msg)
+        msg.ack()
 
 # ################################################################################################################################
 
@@ -128,10 +146,8 @@ class ConnectorAMQP(Connector):
         # type: (str)
         """ Creates an AMQP consumer for a specific queue and starts it.
         """
-        with self._AMQPConnection(self._get_conn_string()) as conn:
-            consumer = Consumer(conn, config, self.on_message)
-            logger.warn('Got consumer %s', consumer)
-            consumer.start()
+        consumer = Consumer(config, self.on_message)
+        consumer.start()
 
 # ################################################################################################################################
 
@@ -139,7 +155,10 @@ class ConnectorAMQP(Connector):
         """ Sets up AMQP consumers and producers.
         """
         for channel_name, config in self.channels.iteritems():
-            spawn_greenlet(self._create_consumer, config)
+            config.conn_class = self.config.conn_class
+            config.conn_url = self.config.conn_url
+            for x in xrange(1):
+                spawn(self._create_consumer, config)
 
 # ################################################################################################################################
 
