@@ -925,6 +925,7 @@ class OutgoingAMQP(Base):
     expiration = Column(Integer(), nullable=True)
     user_id = Column(String(200), nullable=True)
     app_id = Column(String(200), nullable=True)
+    pool_size = Column(SmallInteger(), nullable=False)
 
     def_id = Column(Integer, ForeignKey('conn_def_amqp.id', ondelete='CASCADE'), nullable=False)
     def_ = relationship(ConnDefAMQP, backref=backref('out_conns_amqp', cascade='all, delete, delete-orphan'))
@@ -1106,6 +1107,7 @@ class ChannelAMQP(Base):
     is_active = Column(Boolean(), nullable=False)
     queue = Column(String(200), nullable=False)
     consumer_tag_prefix = Column(String(200), nullable=False)
+    pool_size = Column(Integer, nullable=False)
     data_format = Column(String(20), nullable=True)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)
