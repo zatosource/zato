@@ -49,7 +49,8 @@ class Consumer(object):
         """ Creates a new connection and consumer to an AMQP broker.
         """
         conn = self.config.conn_class(self.config.conn_url)
-        consumer = _Consumer(conn, queues=self.queue, callbacks=self.on_message)
+        consumer = _Consumer(conn, queues=self.queue, callbacks=self.on_message,
+            tag_prefix='{}/{}'.format(self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))
         consumer.consume()
         return consumer
 
@@ -101,7 +102,7 @@ class ConnectorAMQP(Connector):
         class _PyAMQPConnection(PyAMQPConnection):
             def __init__(_py_amqp_self, *args, **kwargs):
                 super(_PyAMQPConnection, _py_amqp_self).__init__(client_properties={
-                    'zato.component':get_component_name('amqp'),
+                    'zato.component':get_component_name('amqp-conn'),
                     'zato.version':version,
                     'zato.definition.name':self.config.name,
                 }, *args, **kwargs)
