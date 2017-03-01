@@ -37,9 +37,6 @@ class ConfigLoader(object):
         self.component_enabled.slow_response = asbool(self.fs_server_config.component_enabled.slow_response)
         self.component_enabled.live_msg_browser = asbool(self.fs_server_config.component_enabled.live_msg_browser)
 
-        # AMQP
-        self.fs_server_config.amqp.pool_size = int(self.fs_server_config.amqp.pool_size)
-
         # Details of what is enabled in live message browser
         self.live_msg_browser = self.fs_server_config.live_msg_browser
         self.live_msg_browser.include_internal = asbool(self.live_msg_browser.include_internal)

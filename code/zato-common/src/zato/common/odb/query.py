@@ -409,7 +409,7 @@ def _out_amqp(session, cluster_id):
     return session.query(
         OutgoingAMQP.id, OutgoingAMQP.name, OutgoingAMQP.is_active,
         OutgoingAMQP.delivery_mode, OutgoingAMQP.priority, OutgoingAMQP.content_type,
-        OutgoingAMQP.content_encoding, OutgoingAMQP.expiration, OutgoingAMQP.user_id,
+        OutgoingAMQP.content_encoding, OutgoingAMQP.expiration, OutgoingAMQP.pool_size, OutgoingAMQP.user_id,
         OutgoingAMQP.app_id, ConnDefAMQP.name.label('def_name'), OutgoingAMQP.def_id).\
         filter(OutgoingAMQP.def_id==ConnDefAMQP.id).\
         filter(ConnDefAMQP.id==OutgoingAMQP.def_id).\

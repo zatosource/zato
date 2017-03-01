@@ -22,9 +22,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, \
+from zato.common import AMQP, CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, \
      MSG_PATTERN_TYPE, ODOO, PUB_SUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
-from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
+from zato.common.odb import WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
 make_class_dictable(Base)
@@ -918,7 +918,7 @@ class OutgoingAMQP(Base):
     is_active = Column(Boolean(), nullable=False)
 
     delivery_mode = Column(SmallInteger(), nullable=False)
-    priority = Column(SmallInteger(), server_default=str(AMQP_DEFAULT_PRIORITY), nullable=False)
+    priority = Column(SmallInteger(), server_default=str(AMQP.DEFAULT.PRIORITY), nullable=False)
 
     content_type = Column(String(200), nullable=True)
     content_encoding = Column(String(200), nullable=True)

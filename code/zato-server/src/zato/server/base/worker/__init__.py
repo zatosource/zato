@@ -183,7 +183,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # AMQP
         self.amqp_api = ConnectorStore(connector_type.duplex.amqp, ConnectorAMQP)
-        self.amqp_pool_size = self.server.fs_server_config.amqp.pool_size
         self.amqp_out_name_to_def = {} # Maps outgoing connection names to definition names, i.e. to connector names        
 
         # Vault connections
@@ -661,7 +660,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
             # Definitions as such are always active. It's channels or outconns that can be inactive.
             data.config.is_active = True
-            data.config.pool_size = self.amqp_pool_size
             self.amqp_api.create(def_name, bunchify(data.config), self.on_message_invoke_service,
                 channels=self._config_to_dict(channels), outconns=self._config_to_dict(outconns))
 

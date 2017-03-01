@@ -220,9 +220,6 @@ workers_pool_initial = 10
 workers_pool_mult = 2
 workers_pool_max = 250
 
-[amqp]
-pool_size=200
-
 [updates]
 notify_major_versions=True
 notify_minor_versions=True

@@ -31,7 +31,7 @@ class GetList(AdminService):
         request_elem = 'zato_outgoing_amqp_get_list_request'
         response_elem = 'zato_outgoing_amqp_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority', 'def_name')
+        output_required = ('id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority', 'def_name', 'pool_size')
         output_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
 
     def get_data(self, session):
@@ -51,7 +51,7 @@ class Create(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_amqp_create_request'
         response_elem = 'zato_outgoing_amqp_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority', 'pool_size')
         input_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
         output_required = ('id', 'name')
 
@@ -88,6 +88,7 @@ class Create(AdminService):
                 item.content_type = input.content_type
                 item.content_encoding = input.content_encoding
                 item.expiration = input.expiration
+                item.pool_size = input.pool_size
                 item.user_id = input.user_id
                 item.app_id = input.app_id
 
@@ -117,7 +118,7 @@ class Edit(AdminService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_amqp_edit_request'
         response_elem = 'zato_outgoing_amqp_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', Integer('priority'))
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority', 'pool_size')
         input_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
         output_required = ('id', 'name')
 
@@ -157,6 +158,7 @@ class Edit(AdminService):
                 item.content_type = input.content_type
                 item.content_encoding = input.content_encoding
                 item.expiration = input.expiration
+                item.pool_size = input.pool_size
                 item.user_id = input.user_id
                 item.app_id = input.app_id
 
