@@ -41,6 +41,7 @@ def _get_edit_create_message(params, prefix=''):
         'content_type': params.get(prefix + 'content_type'),
         'content_encoding': params.get(prefix + 'content_encoding'),
         'expiration': params.get(prefix + 'expiration'),
+        'pool_size': params.get(prefix + 'pool_size'),
         'user_id': params.get(prefix + 'user_id'),
         'app_id': params.get(prefix + 'app_id'),
     }
@@ -64,8 +65,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'delivery_mode', 'priority',
-            'content_type', 'content_encoding', 'expiration', 'user_id', 'app_id', 'delivery_mode_text', 'def_name', 'def_id')
+        output_required = ('id', 'name', 'is_active', 'delivery_mode', 'priority', 'content_type', 'content_encoding',
+            'expiration', 'pool_size', 'user_id', 'app_id', 'delivery_mode_text', 'def_name', 'def_id')
         output_repeated = True
 
     def handle(self):

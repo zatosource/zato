@@ -127,7 +127,7 @@ class ConnectorAMQP(Connector):
 
         self.config.conn_class = _AMQPConnection
         self.config.conn_url = self._get_conn_string()
-        self.conn = self.config.conn_class(self.config.conn_url, frame_max=self.config.frame_max, heartbeat=self.config.heartbeat)
+        self.conn = self.config.conn_class(self.config.conn_url, frame_max=self.config.frame_max, heartbeat=0)#self.config.heartbeat)
         self.conn.connect()
         self.is_connected = self.conn.connected
 
@@ -166,7 +166,6 @@ class ConnectorAMQP(Connector):
             config.conn_class = self.config.conn_class
             config.conn_url = self.config.conn_url
             config.heartbeat = self.config.heartbeat or 1 # We always require some heartbeat value
-            logger.warn(config)
 
             for x in xrange(config.pool_size):
                 spawn(self._create_consumer, config)
@@ -176,7 +175,8 @@ class ConnectorAMQP(Connector):
     def create_outconns(self):
         """ Sets up AMQP producers for outgoing connections.
         """
-        self._producers = pools.Producers(limit=self.config.pool_size)
+        for out_name, config in self.outconns.iteritems():
+            self._producers[out_name] = pools.Producers(limit=config.pool_size)
 
 # ################################################################################################################################
 
@@ -245,7 +245,7 @@ class ConnectorAMQP(Connector):
         if properties:
             kwargs.update(properties)
 
-        with self._producers[self.conn].acquire(acquire_block, acquire_timeout) as producer:
+        with self._producers[out_name][self.conn].acquire(acquire_block, acquire_timeout) as producer:
             return producer.publish(msg, headers=headers, **kwargs)
 
 # ################################################################################################################################

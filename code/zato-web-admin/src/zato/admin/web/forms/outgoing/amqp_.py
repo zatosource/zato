@@ -16,17 +16,18 @@ from django import forms
 
 # Zato
 from zato.admin.settings import delivery_friendly_name
-from zato.common.odb import AMQP_DEFAULT_PRIORITY
-
+from zato.common import AMQP
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     delivery_mode = forms.ChoiceField(widget=forms.Select())
-    priority = forms.CharField(initial=AMQP_DEFAULT_PRIORITY, widget=forms.TextInput(attrs={'style':'width:5%'}))
+    priority = forms.CharField(initial=AMQP.DEFAULT.PRIORITY, widget=forms.TextInput(attrs={'style':'width:5%'}))
     content_type = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     content_encoding = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     expiration = forms.CharField(widget=forms.TextInput(attrs={'style':'width:20%'}))
+    pool_size = forms.CharField(
+        initial=AMQP.DEFAULT.POOL_SIZE, widget=forms.TextInput(attrs={'style':'width:10%', 'class':'required'}))
     user_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     app_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     def_id = forms.ChoiceField(widget=forms.Select())

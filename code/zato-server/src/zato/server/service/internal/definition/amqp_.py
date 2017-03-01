@@ -36,7 +36,6 @@ def broker_message_hook(self, input, instance, attrs, service_type):
     input.config_cid = 'definition.amqp.{}.{}.{}'.format(service_type, input.source_server, self.cid)
 
     if service_type == 'create_edit':
-        input.pool_size = self.server.fs_server_config.amqp.pool_size
         with closing(self.odb.session()) as session:
             input.password = definition_amqp(session, instance.cluster_id, instance.id).password
 
