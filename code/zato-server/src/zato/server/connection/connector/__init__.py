@@ -85,8 +85,8 @@ class Connector(object):
         # Service to invoke by channels for each message received
         self.service = config.get('service_name')
 
-        self.channels = channels or {}
-        self.outconns = outconns or {}
+        self.channels = channels or {} # type: dict
+        self.outconns = outconns or {} # type: dict
 
         self.id = self.config.id
         self.is_active = self.config.is_active # type: bool

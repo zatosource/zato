@@ -272,7 +272,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         out = {}
         for elem in config_list:
-            out[elem.pop(key)] = elem
+            out[elem[key]] = elem
         return out
 
 # ################################################################################################################################
@@ -658,7 +658,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             for outconn in outconns:
                 self.amqp_out_name_to_def[outconn['name']] = def_name
 
-            # Definitions as such are always active. It's channels or outconns that can be inactive.
+            # AMQP definitions as such are always active. It's channels or outconns that can be inactive.
             data.config.is_active = True
             self.amqp_api.create(def_name, bunchify(data.config), self.on_message_invoke_service,
                 channels=self._config_to_dict(channels), outconns=self._config_to_dict(outconns))

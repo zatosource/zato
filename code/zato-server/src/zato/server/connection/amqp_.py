@@ -99,17 +99,17 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _start(self):
-
-        # Subclasses below are needed so as to be able to return per-greenlet/thread/process/definition
-        # information in an AMQO connection's zato.* properties and, except for zato.version,
-        # this information is not available on module level hence the classes are declared here,
-        # in particular, we need access to self.config.name which is available only in run-time.
+    def _get_conn_class(self, suffix):
+        """ Subclasses below are needed so as to be able to return per-greenlet/thread/process/definition
+        information in an AMQO connection's zato.* properties and, except for zato.version,
+        this information is not available on module level hence the classes are declared here,
+        in particular, we need access to self.config.name and suffix which are available only in run-time.
+        """
 
         class _PyAMQPConnection(PyAMQPConnection):
             def __init__(_py_amqp_self, *args, **kwargs):
                 super(_PyAMQPConnection, _py_amqp_self).__init__(client_properties={
-                    'zato.component':get_component_name('amqp-conn'),
+                    'zato.component':'{}/{}'.format(get_component_name('amqp-conn'), suffix),
                     'zato.version':version,
                     'zato.definition.name':self.config.name,
                 }, *args, **kwargs)
@@ -121,15 +121,18 @@ class ConnectorAMQP(Connector):
             def get_transport_cls(self):
                 return _AMQPTransport
 
+        return _AMQPConnection
+
+# ################################################################################################################################
+
+    def _start(self):
         self._consumers = []
         self._producers = {}
-        self._queue_name_to_consumer = {}
-
-        self.config.conn_class = _AMQPConnection
         self.config.conn_url = self._get_conn_string()
-        self.conn = self.config.conn_class(self.config.conn_url, frame_max=self.config.frame_max, heartbeat=0)#self.config.heartbeat)
-        self.conn.connect()
-        self.is_connected = self.conn.connected
+
+        test_conn = self._get_conn_class('test-conn')(self.config.conn_url, frame_max=self.config.frame_max)
+        test_conn.connect()
+        self.is_connected = test_conn.connected
 
         # Close the connection object which was needed only to confirm that the remote end can be reached.
         # Then in run-time, when connections are needed by producers or consumers, they will be opened by kombu anyway.
@@ -138,7 +141,7 @@ class ConnectorAMQP(Connector):
         # that the connection will work now but then it won't when it's needed but this is unrelated to the fact
         # that if we can already report that the connection won't work now, then we should do it so that an error message
         # can be logged as early as possible.
-        self.conn.close()
+        test_conn.close()
 
 # ################################################################################################################################
 
@@ -163,7 +166,7 @@ class ConnectorAMQP(Connector):
         """ Sets up AMQP consumers and producers.
         """
         for channel_name, config in self.channels.iteritems():
-            config.conn_class = self.config.conn_class
+            config.conn_class = self._get_conn_class('channel/{}'.format(channel_name))
             config.conn_url = self.config.conn_url
             config.heartbeat = self.config.heartbeat or 1 # We always require some heartbeat value
 
@@ -175,15 +178,33 @@ class ConnectorAMQP(Connector):
     def create_outconns(self):
         """ Sets up AMQP producers for outgoing connections.
         """
-        for out_name, config in self.outconns.iteritems():
-            self._producers[out_name] = pools.Producers(limit=config.pool_size)
+        for config in self.outconns.itervalues():
+            self.create_outconn(config)
+
+# ################################################################################################################################
+
+    def _create_producers(self, out_name, config):
+        # type: (str, dict)
+        conn = self._get_conn_class('out/{}'.format(out_name))(self.config.conn_url, frame_max=self.config.frame_max)
+        self._producers[out_name] = {
+            'pool': pools.Producers(limit=config.pool_size),
+            'conn': conn,
+        }
+
+# ################################################################################################################################
+
+    def _stop_producers(self, config):
+        # type: (dict)
+        config['conn'].close()
+        for pool in config['pool'].itervalues():
+            pool.force_close_all()
 
 # ################################################################################################################################
 
     def _stop(self):
         try:
-            for pool in self._producers.values():
-                pool.connections.force_close_all()
+            for config in self._producers.itervalues():
+                self._stop_producers(config)
         except Exception, e:
             logger.warn(format_exc(e))
 
@@ -203,15 +224,17 @@ class ConnectorAMQP(Connector):
     def create_outconn(self, config):
         with self.lock:
             self.outconns[config.name] = config
+            self._create_producers(config.name, config)
 
     def edit_outconn(self, config):
         with self.lock:
-            del self.outconns[config.old_name]
+            self._stop_producers(self._producers.pop(config.old_name))
             self.outconns[config.name] = config
+            self._create_producers(config.name, config)
 
     def delete_outconn(self, config):
         with self.lock:
-            del self.outconns[config.name]
+            self._stop_producers(self._producers.pop(config.name))
 
 # ################################################################################################################################
 
@@ -245,7 +268,8 @@ class ConnectorAMQP(Connector):
         if properties:
             kwargs.update(properties)
 
-        with self._producers[out_name][self.conn].acquire(acquire_block, acquire_timeout) as producer:
+        out_config = self._producers[out_name]
+        with out_config['pool'][out_config['conn']].acquire(acquire_block, acquire_timeout) as producer:
             return producer.publish(msg, headers=headers, **kwargs)
 
 # ################################################################################################################################
