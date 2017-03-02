@@ -693,7 +693,7 @@ class ManageCommand(ZatoCommand):
     def _on_lb(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError('Should be implemented by subclasses')
 
-    _on_web_admin = _on_server = _on_lb
+    _on_web_admin = _on_server = _on_scheduler = _on_lb
 
     def execute(self, args):
 
