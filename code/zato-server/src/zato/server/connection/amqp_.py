@@ -219,7 +219,7 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def _stop(self):
-        self._stop_channels()
+        self._stop_consumers()
         self._stop_producers()
 
 # ################################################################################################################################
@@ -291,9 +291,9 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _stop_channels(self):
+    def _stop_consumers(self):
         for config in self.channels.values():
-            self._delete_channel(config)
+            self._delete_channel(config, False)
 
 # ################################################################################################################################
 
@@ -343,7 +343,7 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _delete_channel(self, config):
+    def _delete_channel(self, config, delete_from_channels=True):
         # type: (dict)
         """ Deletes a channel. Must be called with self.lock held.
         """
@@ -365,7 +365,11 @@ class ConnectorAMQP(Connector):
         logger.info('Stopped %s/%s %s for channel `%s` in AMQP connector `%s`', total, total, noun, config.name, self.config.name)
 
         del self._consumers[config.name]
-        del self.channels[config.name]
+
+        # Note that we do not always delete from self.channels because they may be needed in our super-class,
+        # in particular, in its self.edit method.
+        if delete_from_channels:
+            del self.channels[config.name]
 
 # ################################################################################################################################
 
