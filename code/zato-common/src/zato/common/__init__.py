@@ -851,7 +851,7 @@ class PADDING:
 
 class AMQP:
     class DEFAULT:
-        POOL_SIZE = 50
+        POOL_SIZE = 10
         PRIORITY = 5
 
     class ACK_MODE:
