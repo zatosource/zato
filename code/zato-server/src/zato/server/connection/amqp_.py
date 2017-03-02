@@ -99,7 +99,7 @@ class Consumer(object):
             consumer = self._get_consumer()
             gevent_sleep = sleep
             has_conn = True
-            timeout = self.config.heartbeat
+            timeout = 1
 
             while self.keep_running:
                 try:
@@ -203,7 +203,6 @@ class ConnectorAMQP(Connector):
         for channel_name, config in self.channels.iteritems():
             config.conn_class = self._get_conn_class('channel/{}'.format(channel_name))
             config.conn_url = self.config.conn_url
-            config.heartbeat = self.config.heartbeat or 1 # We always require some heartbeat value
 
             for x in xrange(config.pool_size):
                 spawn(self._create_consumer, config)
@@ -211,15 +210,19 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def create_outconns(self):
-        """ Sets up AMQP producers for outgoing connections.
+        """ Sets up AMQP producers for outgoing connections. Called when the connector starts up thus it only creates producers
+        because self.outconns entries are already available.
         """
-        for config in self.outconns.itervalues():
-            self._create_producers(config)
+        with self.lock:
+            for config in self.outconns.itervalues():
+                self._create_producers(config)
 
 # ################################################################################################################################
 
     def _create_producers(self, config):
         # type: (dict)
+        """ Creates outgoing AMQP producers using kombu.
+        """
         config.conn_url = self.config.conn_url
         config.frame_max = self.config.frame_max
         config.get_conn_class_func = self._get_conn_class
@@ -227,24 +230,14 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def _stop_producers(self, config):
-        '''
-        # type: (dict)
-        config['conn'].close()
-        for pool in config['pool'].itervalues():
-            pool.force_close_all()
-            '''
+    def _stop_producers(self):
+        for producer in self._producers.itervalues():
+            producer.stop()
 
 # ################################################################################################################################
 
     def _stop(self):
-        '''
-        try:
-            for config in self._producers.itervalues():
-                self._stop_producers(config)
-        except Exception, e:
-            logger.warn(format_exc(e))
-            '''
+        self._stop_producers()
 
 # ################################################################################################################################
 
@@ -259,29 +252,45 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
+    def _create_outconn(self, config):
+        """ Creates an outgoing connection. Must be called with self.lock held.
+        """
+        self.outconns[config.name] = config
+        self._create_producers(config)
+
+# ################################################################################################################################
+
     def create_outconn(self, config):
+        """ Creates an outgoing connection. Must be called with self.lock held.
+        """
         with self.lock:
-            self.outconns[config.name] = config
-            #self._create_producers(config.name, config)
-            #'''
+            self._create_outconn(config)
 
 # ################################################################################################################################
 
     def edit_outconn(self, config):
-        '''
+        """ Obtains self.lock and updates an outgoing connection.
+        """
         with self.lock:
-            self._stop_producers(self._producers.pop(config.old_name))
-            self.outconns[config.name] = config
-            self._create_producers(config.name, config)
-            '''
+            self._delete_outconn(config)
+            self._create_outconn(config)
+
+# ################################################################################################################################
+
+    def _delete_outconn(self, config):
+        """ Deletes an outgoing connection. Must be called with self.lock held.
+        """
+        self._producers[config.name].stop()
+        del self.outconns[config.name]
+        del self._producers[config.name]
 
 # ################################################################################################################################
 
     def delete_outconn(self, config):
+        """ Obtains self.lock and deletes an outgoing connection.
+        """
         with self.lock:
-            self._producers[config.name].stop()
-            del self.outconns[config.name]
-            del self._producers[config.name]
+            self._delete_outconn(config)
 
 # ################################################################################################################################
 
