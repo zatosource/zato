@@ -225,7 +225,7 @@ class Connector(object):
 
         logger.info(
             '%s %s connector `%s` (id:%s) %s', verb, self.type, self.name, self.id_self,
-            ' ({})'.format(log_details) if log_details else '')
+            ' ({})'.format(log_details if log_details else self.get_log_details()))
 
 # ################################################################################################################################
 
@@ -336,6 +336,24 @@ class ConnectorStore(object):
             new_config = deepcopy(self.connectors[name].config)
             new_config.password = config.password
             self._edit(new_config.name, new_config)
+
+# ################################################################################################################################
+
+    def create_channel(self, name, config):
+        with self.lock:
+            self.connectors[name].create_channel(config)
+
+# ################################################################################################################################
+
+    def edit_channel(self, name, config):
+        with self.lock:
+            self.connectors[name].edit_channel(config)
+
+# ################################################################################################################################
+
+    def delete_channel(self, name, config):
+        with self.lock:
+            self.connectors[name].delete_channel(config)
 
 # ################################################################################################################################
 

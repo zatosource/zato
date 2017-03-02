@@ -168,7 +168,7 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
 
-                input.action = CHANNEL.AMQP_CREATE.value
+                input.action = CHANNEL.AMQP_EDIT.value
                 input.def_name = item.def_.name
                 input.old_name = old_name
                 self.broker_client.publish(input)
