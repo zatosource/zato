@@ -23,12 +23,11 @@ from gevent import sleep, spawn
 
 # Kombu
 from kombu import Connection, Consumer as _Consumer, pools, Queue
-from kombu.mixins import ConsumerMixin
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, Transport
 
 # Zato
 from zato.common import AMQP, SECRET_SHADOW, version
-from zato.common.util import get_component_name, spawn_greenlet
+from zato.common.util import get_component_name
 from zato.server.connection.connector import Connector, Inactive
 
 # ################################################################################################################################
@@ -126,8 +125,6 @@ class Consumer(object):
                 # to the server at all, which will likely mean that it is down,
                 if self.keep_running:
                     _gevent_sleep(2)
-            else:
-                has_conn = True
 
         if err_conn_attempts > 0:
             noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
@@ -220,7 +217,7 @@ class Consumer(object):
             # self.timeout is multiplied by 2 because it's used twice in the main loop in self.start
             # plus a bit of additional time is added.
             now = datetime.utcnow()
-            delta = seconds=(self.timeout * 2) + 0.2
+            delta = (self.timeout * 2) + 0.2
             until = now + timedelta(seconds=delta)
 
             while now < until:
