@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from datetime import datetime, timedelta
 from logging import getLogger
 from traceback import format_exc
 
@@ -49,6 +50,7 @@ class _AMQPProducers(object):
     def __init__(self, config):
         # type: (dict)
         self.config = config
+        self.name = self.config.name
         self.get_conn_class_func = config.get_conn_class_func
         self.name = config.name
         self.conn = self.get_conn_class_func(
@@ -81,9 +83,14 @@ class Consumer(object):
     def __init__(self, config, on_message):
         # type: (dict, Callable)
         self.config = config
+        self.name = self.config.name
         self.queue = [Queue(self.config.queue)]
         self.on_message = [on_message]
         self.keep_running = True
+        self.is_stopped = False
+        self.timeout = 1
+
+# ################################################################################################################################
 
     def _get_consumer(self, _no_ack=no_ack):
         """ Creates a new connection and consumer to an AMQP broker.
@@ -94,12 +101,14 @@ class Consumer(object):
         consumer.consume()
         return consumer
 
+# ################################################################################################################################
+
     def start(self):
         try:
             consumer = self._get_consumer()
             gevent_sleep = sleep
             has_conn = True
-            timeout = 1
+            timeout = self.timeout
 
             while self.keep_running:
                 try:
@@ -120,8 +129,36 @@ class Consumer(object):
                             consumer = self._get_consumer()
                             has_conn = True
 
+            # Set to True if we break out of the main loop.
+            self.is_stopped = True
+
         except Exception, e:
             logger.warn('Unrecoverable exception in consumer, e:`%s`', format_exc(e))
+
+# ################################################################################################################################
+
+    def stop(self):
+        """ Stops the consumer and wait for the confirmation that it actually is not running anymore.
+        """
+        self.keep_running = False
+
+        # Wait until actually stopped.
+        if not self.is_stopped:
+
+            # self.timeout is multiplied by 2 because it's used twice in the main loop in self.start
+            now = datetime.utcnow()
+            delta = seconds=(self.timeout * 2) + 0.5
+            until = now + timedelta(seconds=delta)
+
+            while now < until:
+                sleep(0.1)
+                now = datetime.utcnow()
+                if self.is_stopped:
+                    return
+
+            # If we get here it means that we did not stop in the time expected, raise an exception in that case.
+            raise Exception('Connections for channel `{}` did not stop in the expected time of {}s.'.format(
+                self.name, delta))
 
 # ################################################################################################################################
 
@@ -159,7 +196,7 @@ class ConnectorAMQP(Connector):
 # ################################################################################################################################
 
     def _start(self):
-        self._consumers = []
+        self._consumers = {}
         self._producers = {}
         self.config.conn_url = self._get_conn_string()
 
@@ -193,6 +230,7 @@ class ConnectorAMQP(Connector):
         """ Creates an AMQP consumer for a specific queue and starts it.
         """
         consumer = Consumer(config, self.on_message)
+        self._consumers[config.name] = consumer
         consumer.start()
 
 # ################################################################################################################################
@@ -232,11 +270,24 @@ class ConnectorAMQP(Connector):
 
     def _stop_producers(self):
         for producer in self._producers.itervalues():
-            producer.stop()
+            try:
+                producer.stop()
+            except Exception, e:
+                logger.warn('Could not stop AMQP producer `%s`, e:`%s`', producer.name, format_exc(e))
+
+# ################################################################################################################################
+
+    def _stop_consumers(self):
+        for consumer in self._consumers.itervalues():
+            try:
+                consumer.stop()
+            except Exception, e:
+                logger.warn('Could not stop AMQP consumer `%s`, e:`%s`', consumer.name, format_exc(e))
 
 # ################################################################################################################################
 
     def _stop(self):
+        self._stop_consumers()
         self._stop_producers()
 
 # ################################################################################################################################
