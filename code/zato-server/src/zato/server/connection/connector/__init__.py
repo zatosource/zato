@@ -290,6 +290,7 @@ class ConnectorStore(object):
 # ################################################################################################################################
 
     def _create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None, needs_start=False):
+        # type: (str, dict, Callable, Callable, dict, dict, bool)
         connector = self.connector_class(name, self.type, config, on_message_callback, auth_func, channels, outconns)
         self.connectors[name] = connector
         if needs_start:
@@ -298,12 +299,14 @@ class ConnectorStore(object):
 # ################################################################################################################################
 
     def create(self, name, config, on_message_callback=None, auth_func=None, channels=None, outconns=None, needs_start=False):
+        # type: (str, dict, Callable, Callable, dict, dict, bool)
         with self.lock:
             self._create(name, config, on_message_callback, auth_func, channels, outconns, needs_start)
 
 # ################################################################################################################################
 
     def _edit(self, old_name, config):
+        # type: (str, dict)
         connector = self._delete(old_name)
         self._create(
             config.name, config, connector.on_message_callback, connector.auth_func, connector.channels,
@@ -312,12 +315,14 @@ class ConnectorStore(object):
 # ################################################################################################################################
 
     def edit(self, old_name, config, *ignored_args):
+        # type: (str, Any)
         with self.lock:
             self._edit(old_name, config)
 
 # ################################################################################################################################
 
     def _delete(self, name):
+        # type: (str)
         connector = self.connectors[name]
         connector.stop()
         del self.connectors[name]
@@ -326,12 +331,14 @@ class ConnectorStore(object):
 # ################################################################################################################################
 
     def delete(self, name):
+        # type: (str)
         with self.lock:
             self._delete(name)
 
 # ################################################################################################################################
 
     def change_password(self, name, config):
+        # type: (str, dict)
         with self.lock:
             new_config = deepcopy(self.connectors[name].config)
             new_config.password = config.password
@@ -340,42 +347,49 @@ class ConnectorStore(object):
 # ################################################################################################################################
 
     def create_channel(self, name, config):
+        # type: (str, dict)
         with self.lock:
             self.connectors[name].create_channel(config)
 
 # ################################################################################################################################
 
     def edit_channel(self, name, config):
+        # type: (str, dict)
         with self.lock:
             self.connectors[name].edit_channel(config)
 
 # ################################################################################################################################
 
     def delete_channel(self, name, config):
+        # type: (str, dict)
         with self.lock:
             self.connectors[name].delete_channel(config)
 
 # ################################################################################################################################
 
     def create_outconn(self, name, config):
+        # type: (str, dict)
         with self.lock:
             self.connectors[name].create_outconn(config)
 
 # ################################################################################################################################
 
     def edit_outconn(self, name, config):
+        # type: (str, dict)
         with self.lock:
             self.connectors[name].edit_outconn(config)
 
 # ################################################################################################################################
 
     def delete_outconn(self, name, config):
+        # type: (str, dict)
         with self.lock:
             self.connectors[name].delete_outconn(config)
 
 # ################################################################################################################################
 
     def start(self, name=None):
+        # type: (str)
         with self.lock:
             for c in self.connectors.values():
 
@@ -388,6 +402,7 @@ class ConnectorStore(object):
 # ################################################################################################################################
 
     def invoke(self, name, *args, **kwargs):
+        # type: (str, Any, Any)
         return self.connectors[name].invoke(*args, **kwargs)
 
 # ################################################################################################################################
