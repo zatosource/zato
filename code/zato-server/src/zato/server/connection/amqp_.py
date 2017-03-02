@@ -10,8 +10,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from datetime import datetime, timedelta
+from exceptions import IOError, OSError
 from logging import getLogger
+from socket import error as socket_error
 from traceback import format_exc
+
+# amqp
+from amqp.exceptions import ConnectionError as AMQPConnectionError
 
 # gevent
 from gevent import sleep, spawn
@@ -88,47 +93,114 @@ class Consumer(object):
         self.on_message = [on_message]
         self.keep_running = True
         self.is_stopped = False
-        self.timeout = 0.2
+        self.timeout = 0.35
 
 # ################################################################################################################################
 
-    def _get_consumer(self, _no_ack=no_ack):
+    def _get_consumer(self, _no_ack=no_ack, _gevent_sleep=sleep):
         """ Creates a new connection and consumer to an AMQP broker.
         """
-        conn = self.config.conn_class(self.config.conn_url)
-        consumer = _Consumer(conn, queues=self.queue, callbacks=self.on_message, no_ack=_no_ack[self.config.ack_mode],
-            tag_prefix='{}/{}'.format(self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))
-        consumer.consume()
+
+        # We cannot assume that we will obtain the consumer right-away. For instance, the remote end
+        # may be currently available when we are starting. It's OK to block indefinitely (or until self.keep_running is False)
+        # because we run in our own greenlet.
+        consumer = None
+        err_conn_attempts = 0
+
+        while not consumer:
+            if not self.keep_running:
+                break
+
+            try:
+                conn = self.config.conn_class(self.config.conn_url)
+                consumer = _Consumer(conn, queues=self.queue, callbacks=self.on_message, no_ack=_no_ack[self.config.ack_mode],
+                    tag_prefix='{}/{}'.format(self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))
+                consumer.consume()
+            except Exception, e:
+                err_conn_attempts += 1
+                noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
+                logger.info('Could not create an AMQP consumer for channel `%s` (%s %s so far), e:`%s`',
+                    self.name, err_conn_attempts, noun, format_exc(e))
+
+                # It's fine to sleep for a longer time because if this exception happens it means that we cannot connect
+                # to the server at all, which will likely mean that it is down,
+                if self.keep_running:
+                    _gevent_sleep(2)
+            else:
+                has_conn = True
+
+        if err_conn_attempts > 0:
+            noun = 'attempts' if err_conn_attempts > 1 else 'attempt'
+            logger.info('Created an AMQP consumer for channel `%s` after %s %s', self.name, err_conn_attempts, noun)
+
         return consumer
 
 # ################################################################################################################################
 
-    def start(self):
+    def start(self, conn_errors=(socket_error, IOError, OSError), _gevent_sleep=sleep):
+        """ Runs the AMQP consumer's mainloop.
+        """
         try:
+
+            # Flag global to the mainloop indicating whether we have an active connection now.
+            has_conn = False
+
             consumer = self._get_consumer()
-            gevent_sleep = sleep
             has_conn = True
+
+            # Local aliases.
             timeout = self.timeout
+
+            # Since heartbeats run frequently (self.timeout may be a fraction of a second), we don't want to log each
+            # and every error. Instead we log errors each log_every times.
+            hb_errors_so_far = 0
+            log_every = 20
 
             while self.keep_running:
                 try:
+
+                    # Do not assume the consumer still has the connection, it may have been already closed, we don't know.
+                    if not consumer.connection:
+                        consumer = self._get_consumer()
                     consumer.connection.drain_events(timeout=timeout)
-                except consumer.connection.connection_errors:
+
+                # Special-case AMQP-level connection errors and recreate the connection if any is caught.
+                except AMQPConnectionError, e:
+                    logger.warn('Caught AMQP connection error in mainloop e:`%s`', format_exc(e))
+                    if consumer.connection:
+                        consumer.connection.close()
+                        consumer = self._get_consumer()
+
+                # Regular network-level errors - assume the AMQP connection is still fine and treat it
+                # as an opportunity to perform the heartbeat.
+                except conn_errors, e:
+
                     try:
                         consumer.connection.heartbeat_check()
                     except Exception, e:
-                        logger.warn('Exception in heartbeat, e:`%s`', format_exc(e))
-                        has_conn = False
-                        gevent_sleep(timeout)
-                    else:
-                        # If there was not any exception but we did not have a previous connection
-                        # it means that a previously established connection was broken so we need to recreate it.
-                        # one 
-                        if not has_conn:
-                            consumer.connection.close()
-                            consumer = self._get_consumer()
-                            has_conn = True
+                        hb_errors_so_far += 1
+                        if hb_errors_so_far % log_every == 0:
+                            logger.warn('Exception in heartbeat (%s so far), e:`%s`', hb_errors_so_far, format_exc(e))
 
+                        # Ok, we've lost the connection, set the flag to False and sleep for some time then.
+                        if not consumer.connection:
+                            has_conn = False
+
+                        if self.keep_running:
+                            _gevent_sleep(timeout)
+                    else:
+                        # Reset heartbeat errors counter since we have apparently succeeded.
+                        hb_errors_so_far = 0
+
+                        # If there was not any exception but we did not have a previous connection it means that a previously
+                        # established connection was broken so we need to recreate it.
+                        # But, we do it only if we are still told to keep running.
+                        if self.keep_running:
+                            if not has_conn:
+                                consumer = self._get_consumer()
+                                has_conn = True
+
+            logger.warn('Closing connection for `%s`', consumer)
             consumer.connection.close()
             self.is_stopped = True # Set to True if we break out of the main loop.
 
