@@ -92,6 +92,7 @@ class Consumer(object):
         self.on_message = [on_message]
         self.keep_running = True
         self.is_stopped = False
+        self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
         self.timeout = 0.35
 
 # ################################################################################################################################
@@ -139,11 +140,9 @@ class Consumer(object):
         """
         try:
 
-            # Flag global to the mainloop indicating whether we have an active connection now.
-            has_conn = False
-
+            connection = None
             consumer = self._get_consumer()
-            has_conn = True
+            self.is_connected = True
 
             # Local aliases.
             timeout = self.timeout
@@ -156,16 +155,21 @@ class Consumer(object):
             while self.keep_running:
                 try:
 
+                    connection = consumer.connection
+
                     # Do not assume the consumer still has the connection, it may have been already closed, we don't know.
-                    if not consumer.connection:
+                    # Unfortunately, the only way to check it is to invoke the method and catch AttributeError
+                    # if connection is already None.
+                    try:
+                        connection.drain_events(timeout=timeout)
+                    except AttributeError:
                         consumer = self._get_consumer()
-                    consumer.connection.drain_events(timeout=timeout)
 
                 # Special-case AMQP-level connection errors and recreate the connection if any is caught.
                 except AMQPConnectionError, e:
                     logger.warn('Caught AMQP connection error in mainloop e:`%s`', format_exc(e))
-                    if consumer.connection:
-                        consumer.connection.close()
+                    if connection:
+                        connection.close()
                         consumer = self._get_consumer()
 
                 # Regular network-level errors - assume the AMQP connection is still fine and treat it
@@ -173,15 +177,15 @@ class Consumer(object):
                 except conn_errors, e:
 
                     try:
-                        consumer.connection.heartbeat_check()
+                        connection.heartbeat_check()
                     except Exception, e:
                         hb_errors_so_far += 1
                         if hb_errors_so_far % log_every == 0:
                             logger.warn('Exception in heartbeat (%s so far), e:`%s`', hb_errors_so_far, format_exc(e))
 
                         # Ok, we've lost the connection, set the flag to False and sleep for some time then.
-                        if not consumer.connection:
-                            has_conn = False
+                        if not connection:
+                            self.is_connected = False
 
                         if self.keep_running:
                             _gevent_sleep(timeout)
@@ -193,12 +197,13 @@ class Consumer(object):
                         # established connection was broken so we need to recreate it.
                         # But, we do it only if we are still told to keep running.
                         if self.keep_running:
-                            if not has_conn:
+                            if not self.is_connected:
                                 consumer = self._get_consumer()
-                                has_conn = True
+                                self.is_connected = True
 
-            logger.warn('Closing connection for `%s`', consumer)
-            consumer.connection.close()
+            if connection:
+                logger.info('Closing connection for `%s`', consumer)
+                connection.close()
             self.is_stopped = True # Set to True if we break out of the main loop.
 
         except Exception, e:
@@ -225,6 +230,9 @@ class Consumer(object):
                 now = datetime.utcnow()
                 if self.is_stopped:
                     return
+
+            if not self.is_connected:
+                return
 
             # If we get here it means that we did not stop in the time expected, raise an exception in that case.
             raise Exception('Consumer for channel `{}` did not stop in the expected time of {}s.'.format(
