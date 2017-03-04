@@ -67,7 +67,7 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.input_required, ('cluster_id',))
         self.assertEquals(self.sio.input_optional, GetListAdminSIO.input_optional)
         self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix',
-            'def_name', 'def_id', 'service_name'))
+            'def_name', 'def_id', 'service_name', 'pool_size', 'ack_mode'))
         self.assertEquals(self.sio.output_optional, ('data_format',))
         self.assertEquals(self.sio.namespace, zato_namespace)
 
@@ -93,7 +93,8 @@ class CreateTestCase(_Base):
     def test_sio(self):
         self.assertEquals(self.sio.request_elem, 'zato_channel_amqp_create_request')
         self.assertEquals(self.sio.response_elem, 'zato_channel_amqp_create_response')
-        self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service'))
+        self.assertEquals(self.sio.input_required,
+            ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service', 'pool_size', 'ack_mode'))
         self.assertEquals(self.sio.input_optional, ('data_format',))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
@@ -121,7 +122,9 @@ class EditTestCase(_Base):
     def test_sio(self):
         self.assertEquals(self.sio.request_elem, 'zato_channel_amqp_edit_request')
         self.assertEquals(self.sio.response_elem, 'zato_channel_amqp_edit_response')
-        self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service'))
+        self.assertEquals(self.sio.input_required,
+            ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service', 'pool_size',
+             'ack_mode'))
         self.assertEquals(self.sio.input_optional, ('data_format',))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
