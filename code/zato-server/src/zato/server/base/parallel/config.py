@@ -288,7 +288,7 @@ class ConfigLoader(object):
             hs_item['replace_patterns_xpath'] = item.replace_patterns_xpath
 
             hs_item['match_target'] = '{}{}{}'.format(hs_item['soap_action'], MISC.SEPARATOR, hs_item['url_path'])
-            hs_item['match_target_compiled'] = Matcher(hs_item['match_target'], self)
+            hs_item['match_target_compiled'] = Matcher(hs_item['match_target'])
 
             http_soap.append(hs_item)
 
