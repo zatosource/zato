@@ -134,7 +134,7 @@ class RequestDispatcher(object):
         is postponed until a concrete transport-specific handler is invoked.
         """
         # Needed in later steps
-        path_info = wsgi_environ['PATH_INFO']
+        path_info = wsgi_environ['PATH_INFO'].decode('utf-8')
         soap_action = wsgi_environ.get('HTTP_SOAPACTION', '')
 
         # Fix up SOAP action - turns "my:soap:action" into my:soap:action,
@@ -146,7 +146,7 @@ class RequestDispatcher(object):
         # This gives us the URL info and security data - but note that here
         # we still haven't validated credentials, only matched the URL.
         # Credentials are checked in a call to self.url_data.check_security
-        url_match, channel_item = self.url_data.match(path_info, soap_action)
+        url_match, channel_item = self.url_data.match(path_info, soap_action, bool(soap_action))
 
         if channel_item:
             logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))

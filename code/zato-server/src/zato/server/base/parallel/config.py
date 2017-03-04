@@ -19,8 +19,8 @@ from zato.bunch import Bunch
 from zato.common import MISC
 from zato.common.pubsub import PubSubAPI, RedisPubSub
 from zato.server.config import ConfigDict
-from zato.server.connection.http_soap.url_data import Matcher
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
+from zato.url_dispatcher import Matcher
 
 # ################################################################################################################################
 
@@ -280,15 +280,15 @@ class ConfigLoader(object):
         http_soap = []
         for item in self.odb.get_http_soap_list(server.cluster.id, 'channel'):
 
-            hs_item = Bunch()
+            hs_item = {}
             for key in item.keys():
                 hs_item[key] = getattr(item, key)
 
-            hs_item.replace_patterns_json_pointer = item.replace_patterns_json_pointer
-            hs_item.replace_patterns_xpath = item.replace_patterns_xpath
+            hs_item['replace_patterns_json_pointer'] = item.replace_patterns_json_pointer
+            hs_item['replace_patterns_xpath'] = item.replace_patterns_xpath
 
-            hs_item.match_target = '{}{}{}'.format(hs_item.soap_action, MISC.SEPARATOR, hs_item.url_path)
-            hs_item.match_target_compiled = Matcher(hs_item.match_target)
+            hs_item['match_target'] = '{}{}{}'.format(hs_item['soap_action'], MISC.SEPARATOR, hs_item['url_path'])
+            hs_item['match_target_compiled'] = Matcher(hs_item['match_target'], self)
 
             http_soap.append(hs_item)
 
