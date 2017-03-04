@@ -39,7 +39,7 @@ from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition, update_apikey_username
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.jwt import JWT
-from zato.url_dispatcher import CyURLData
+from zato.url_dispatcher import CyURLData, Matcher
 
 logger = logging.getLogger(__name__)
 
@@ -1209,9 +1209,9 @@ class URLData(CyURLData):
         channel_item['replace_patterns_json_pointer'] = old_data.get('replace_patterns_json_pointer', [])
         channel_item['replace_patterns_xpath'] = old_data.get('replace_patterns_xpath', [])
 
-        channel_item['service_impl_name'] = msg.impl_name
+        channel_item['service_impl_name'] = msg['impl_name']
         channel_item['match_target'] = match_target
-        channel_item['match_target_compiled'] = Matcher(channel_item.match_target)
+        channel_item['match_target_compiled'] = Matcher(channel_item['match_target'])
 
         return channel_item
 
