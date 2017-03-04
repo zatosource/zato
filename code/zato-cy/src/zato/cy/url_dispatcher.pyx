@@ -104,7 +104,7 @@ cdef class Matcher(object):
 cdef class CyURLData(object):
 
     cdef:
-        tuple channel_data
+        public list channel_data
         dict url_path_cache
         dict url_target_cache
         bint has_trace1

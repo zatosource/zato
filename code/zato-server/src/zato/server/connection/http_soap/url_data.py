@@ -57,7 +57,7 @@ class URLData(CyURLData):
                  openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
                  vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
                  jwt_secret=None, vault_conn_api=None):
-        super(URLData, self).__init__(tuple(sorted(channel_data, key=itemgetter('name'))))
+        super(URLData, self).__init__(channel_data)
         self.worker = worker
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
@@ -98,6 +98,9 @@ class URLData(CyURLData):
 
         dispatcher.listen_for_updates(SECURITY, self.dispatcher_callback)
         dispatcher.listen_for_updates(VAULT_BROKER_MSG, self.dispatcher_callback)
+
+        # Needs always to be sorted by name in case of conflicts in paths resolution
+        self.sort_channel_data()
 
 # ################################################################################################################################
 
@@ -659,7 +662,7 @@ class URLData(CyURLData):
     def _delete_channel_data(self, sec_type, sec_name):
         match_idx = ZATO_NONE
         for item in self.channel_data:
-            if item.get('sec_type') == sec_type and item.security_name == sec_name:
+            if item.get('sec_type') == sec_type and item['security_name'] == sec_name:
                 match_idx = self.channel_data.index(item)
 
         # No error, let's delete channel info
@@ -1180,6 +1183,11 @@ class URLData(CyURLData):
 
 # ################################################################################################################################
 
+    def sort_channel_data(self):
+        self.channel_data = sorted(self.channel_data, key=itemgetter('name'))
+
+# ################################################################################################################################
+
     def _channel_item_from_msg(self, msg, match_target, old_data={}):
         """ Creates a channel info bunch out of an incoming CREATE_EDIT message.
         """
@@ -1237,6 +1245,7 @@ class URLData(CyURLData):
         self.channel_data.append(self._channel_item_from_msg(msg, match_target, old_data))
         self.url_sec[match_target] = self._sec_info_from_msg(msg)
         self.url_path_cache.pop(match_target, None)
+        self.sort_channel_data()
 
     def _delete_channel(self, msg):
         """ Deletes a channel, both its core data and the related security definition. Clears relevant
@@ -1248,7 +1257,7 @@ class URLData(CyURLData):
         # In case of an internal error, we won't have the match all
         match_idx = ZATO_NONE
         for item in self.channel_data:
-            if item.match_target == old_match_target:
+            if item['match_target'] == old_match_target:
                 match_idx = self.channel_data.index(item)
 
         # No error, let's delete channel info
@@ -1262,6 +1271,9 @@ class URLData(CyURLData):
 
         # Delete from URL cache
         self.url_path_cache.pop(old_match_target, None)
+
+        # Re-sort all elements to match against
+        self.sort_channel_data()
 
         return old_data
 
@@ -1360,33 +1372,33 @@ class URLData(CyURLData):
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_CONFIG(self, msg):
         for item in self.channel_data:
-            if item.id == msg.id:
-                item.audit_max_payload = msg.audit_max_payload
+            if item['id'] == msg.id:
+                item['audit_max_payload'] = msg.audit_max_payload
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_STATE(self, msg):
         for item in self.channel_data:
-            if item.id == msg.id:
-                item.audit_enabled = msg.audit_enabled
+            if item['id'] == msg.id:
+                item['audit_enabled'] = msg.audit_enabled
                 break
 
     def on_broker_msg_CHANNEL_HTTP_SOAP_AUDIT_PATTERNS(self, msg):
         for item in self.channel_data:
-            if item.id == msg.id:
-                item.audit_repl_patt_type = msg.audit_repl_patt_type
+            if item['id'] == msg.id:
+                item['audit_repl_patt_type'] = msg.audit_repl_patt_type
 
-                if item.audit_repl_patt_type == MSG_PATTERN_TYPE.JSON_POINTER.id:
-                    item.replace_patterns_json_pointer = msg.pattern_list
+                if item['audit_repl_patt_type'] == MSG_PATTERN_TYPE.JSON_POINTER.id:
+                    item['replace_patterns_json_pointer'] = msg.pattern_list
                 else:
-                    item.replace_patterns_xpath = msg.pattern_list
+                    item['replace_patterns_xpath'] = msg.pattern_list
 
                 break
 
     def _yield_pattern_list(self, msg):
         for item in self.channel_data:
             if msg.msg_pattern_type == MSG_PATTERN_TYPE.JSON_POINTER.id:
-                pattern_list = item.replace_patterns_json_pointer
+                pattern_list = item['replace_patterns_json_pointer']
             else:
-                pattern_list = item.replace_patterns_xpath
+                pattern_list = item['replace_patterns_xpath']
 
             if pattern_list:
                 yield item, pattern_list
@@ -1408,7 +1420,7 @@ class URLData(CyURLData):
                     # It's OK, this item wasn't using that particular JSON Pointer
                     pass
 
-                yield item.id, pattern_list
+                yield item['id'], pattern_list
 
 # ################################################################################################################################
 
