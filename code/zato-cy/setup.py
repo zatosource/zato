@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2015 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2017, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
+
+from __future__ import absolute_import, division, print_function
 
 # flake8: noqa
 import os
@@ -16,7 +18,6 @@ _version_py = os.path.normpath(os.path.join(curdir, '..', '.version.py'))
 _locals = {}
 execfile(_version_py, _locals)
 version = _locals['version']
-
 
 setup(
       name = 'zato-cy',
@@ -31,7 +32,8 @@ setup(
 
       namespace_packages = ['zato'],
       ext_modules = cythonize([
-          Extension(name='zato.bunch', sources=['src/zato/cy/bunch.pyx'])
+          Extension(name='zato.bunch', sources=['src/zato/cy/bunch.pyx']),
+          Extension(name='zato.url_dispatcher', sources=['src/zato/cy/url_dispatcher.pyx']),
         ]),
 
       zip_safe = False,
