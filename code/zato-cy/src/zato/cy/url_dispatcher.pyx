@@ -43,19 +43,17 @@ cdef class Matcher(object):
     of '/permission/user/(?P<user_id>\\w+)/group/(?P<group_id>\\w+)$' which in runtime is used for matching.
     """
     cdef:
-        list group_names
-        unicode pattern
-        object matcher
-        object caller
+        public list group_names
+        public unicode pattern
+        public object matcher
         object match_func
         public bint is_static, is_internal
         object _brace_pattern
         object _elem_re_template
 
-    def __init__(self, pattern, caller):
+    def __init__(self, pattern):
         self.group_names = []
         self.pattern = pattern
-        self.caller = caller
         self.matcher = None
         self.is_static = True
         self._brace_pattern = re_compile('\{[a-zA-Z0-9 _\$.\-|=~^]+\}')
@@ -105,7 +103,7 @@ cdef class CyURLData(object):
 
     cdef:
         public list channel_data
-        dict url_path_cache
+        public dict url_path_cache
         dict url_target_cache
         bint has_trace1
 
