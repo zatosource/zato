@@ -125,7 +125,7 @@ cdef class CyURLData(object):
         cdef dict item
         cdef object item_bunch
         cdef unicode target
-        cdef unicode target_cache_key = (url_path+soap_action) if has_soap_action else url_path
+        cdef unicode target_cache_key = (url_path + soap_action) if has_soap_action else url_path
 
         try:
             target = self.url_target_cache[target_cache_key]
