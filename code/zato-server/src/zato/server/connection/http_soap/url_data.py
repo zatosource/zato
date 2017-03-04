@@ -13,7 +13,7 @@ import logging
 from datetime import datetime
 from hashlib import sha256
 from json import dumps, loads
-from operator import attrgetter
+from operator import itemgetter
 from threading import RLock
 from traceback import format_exc
 
@@ -39,57 +39,17 @@ from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition, update_apikey_username
 from zato.server.connection.http_soap import Forbidden, Unauthorized
 from zato.server.jwt import JWT
+from zato.url_dispatcher import CyURLData
 
 logger = logging.getLogger(__name__)
 
 _internal_url_path_indicator = '{}/zato/'.format(MISC.SEPARATOR)
 
-class Matcher(object):
-    """ Matches incoming URL paths in requests received against the pattern it's configured to react to.
-    For instance, '/permission/user/{user_id}/group/{group_id}' gets translated and compiled to the regex
-    of '/permission/user/(?P<user_id>\\w+)/group/(?P<group_id>\\w+)$' which in runtime is used for matching.
-    """
-    def __init__(self, pattern):
-        self.group_names = []
-        self.pattern = pattern
-        self.matcher = None
-        self.is_static = True
-        self._brace_pattern = re_compile('\{[a-zA-Z0-9 _\$.\-|=~^]+\}')
-        self._elem_re_template = r'(?P<{}>[a-zA-Z0-9 _\$.\-|=~^]+)'
-        self._set_up_matcher(self.pattern)
-
-    def __str__(self):
-        return '<{} at {} {} {}>'.format(self.__class__.__name__, hex(id(self)), self.pattern, self.matcher)
-
-    __repr__ = __str__
-
-    def _set_up_matcher(self, pattern):
-        orig_groups = self._brace_pattern.findall(pattern)
-        groups = [elem.replace('{', '').replace('}', '') for elem in orig_groups]
-        groups = [[elem, self._elem_re_template.format(elem)] for elem in groups]
-
-        for idx, (group, re) in enumerate(groups):
-            pattern = pattern.replace(orig_groups[idx], re)
-
-        self.group_names.extend([elem[0] for elem in groups])
-        self.matcher = re_compile(pattern + '$')
-
-        # No groups = URL is static and has no dynamic variables in the pattern
-        self.is_static = not bool(self.group_names)
-
-        # URL path contains /zato = this is a path to an internal service
-        self.is_internal = _internal_url_path_indicator in self.pattern
-
-    def match(self, value):
-        m = self.matcher.match(value)
-        if m:
-            return dict(zip(self.group_names, m.groups()))
-
 class OAuthStore(object):
     def __init__(self, oauth_config):
         self.oauth_config = oauth_config
 
-class URLData(OAuthDataStore):
+class URLData(CyURLData):
     """ Performs URL matching and security checks.
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
@@ -97,8 +57,8 @@ class URLData(OAuthDataStore):
                  openstack_config=None, xpath_sec_config=None, tls_channel_sec_config=None, tls_key_cert_config=None, \
                  vault_conn_sec_config=None, kvdb=None, broker_client=None, odb=None, json_pointer_store=None, xpath_store=None,
                  jwt_secret=None, vault_conn_api=None):
+        super(URLData, self).__init__(tuple(sorted(channel_data, key=itemgetter('name'))))
         self.worker = worker
-        self.channel_data = SortedListWithKey(channel_data, key=attrgetter('name'))
         self.url_sec = url_sec
         self.basic_auth_config = basic_auth_config
         self.jwt_config = jwt_config
@@ -135,8 +95,6 @@ class URLData(OAuthDataStore):
         self._oauth_server = OAuthServer(self)
         self._oauth_server.add_signature_method(OAuthSignatureMethod_HMAC_SHA1())
         self._oauth_server.add_signature_method(OAuthSignatureMethod_PLAINTEXT())
-
-        self.url_path_cache = {}
 
         dispatcher.listen_for_updates(SECURITY, self.dispatcher_callback)
         dispatcher.listen_for_updates(VAULT_BROKER_MSG, self.dispatcher_callback)
@@ -605,37 +563,6 @@ class URLData(OAuthDataStore):
                 return vault_response
             else:
                 self._enforce_vault_sec(cid, sec_def.name)
-
-# ################################################################################################################################
-
-    def match(self, url_path, soap_action, has_trace1=logger.isEnabledFor(TRACE1)):
-        """ Attemps to match the combination of SOAP Action and URL path against
-        the list of HTTP channel targets.
-        """
-        target = '{}{}{}'.format(soap_action, self._target_separator, url_path)
-
-        # Return from cache if already seen
-        try:
-            return {}, self.url_path_cache[target]
-        except KeyError:
-            needs_user = not url_path.startswith('/zato')
-
-            for item in self.channel_data:
-                if needs_user and item.match_target_compiled.is_internal:
-                    continue
-
-                match = item.match_target_compiled.match(target)
-                if match is not None:
-                    if has_trace1:
-                        logger.log(TRACE1, 'Matched target:`%s` with:`%r` and `%r`', target, match, item)
-
-                    # Cache that URL if it's a static one, i.e. does not contain dynamically computed variables
-                    if item.match_target_compiled.is_static:
-                        self.url_path_cache[target] = item
-
-                    return match, item
-
-            return None, None
 
 # ################################################################################################################################
 
@@ -1256,7 +1183,7 @@ class URLData(OAuthDataStore):
     def _channel_item_from_msg(self, msg, match_target, old_data={}):
         """ Creates a channel info bunch out of an incoming CREATE_EDIT message.
         """
-        channel_item = Bunch()
+        channel_item = {}
         for name in('connection', 'content_type', 'data_format', 'host', 'id', 'has_rbac', 'impl_name', 'is_active',
             'is_internal', 'merge_url_params_req', 'method', 'name', 'params_pri', 'ping_method', 'pool_size', 'service_id',
             'service_name', 'soap_action', 'soap_version', 'transport', 'url_params_pri', 'url_path', 'sec_use_rbac'):
@@ -1268,15 +1195,15 @@ class URLData(OAuthDataStore):
             channel_item['security_id'] = msg['security_id']
             channel_item['security_name'] = msg['security_name']
 
-        channel_item.audit_enabled = old_data.get('audit_enabled', False)
-        channel_item.audit_max_payload = old_data.get('audit_max_payload', 0)
-        channel_item.audit_repl_patt_type = old_data.get('audit_repl_patt_type', None)
-        channel_item.replace_patterns_json_pointer = old_data.get('replace_patterns_json_pointer', [])
-        channel_item.replace_patterns_xpath = old_data.get('replace_patterns_xpath', [])
+        channel_item['audit_enabled'] = old_data.get('audit_enabled', False)
+        channel_item['audit_max_payload'] = old_data.get('audit_max_payload', 0)
+        channel_item['audit_repl_patt_type'] = old_data.get('audit_repl_patt_type', None)
+        channel_item['replace_patterns_json_pointer'] = old_data.get('replace_patterns_json_pointer', [])
+        channel_item['replace_patterns_xpath'] = old_data.get('replace_patterns_xpath', [])
 
-        channel_item.service_impl_name = msg.impl_name
-        channel_item.match_target = match_target
-        channel_item.match_target_compiled = Matcher(channel_item.match_target)
+        channel_item['service_impl_name'] = msg.impl_name
+        channel_item['match_target'] = match_target
+        channel_item['match_target_compiled'] = Matcher(channel_item.match_target)
 
         return channel_item
 
@@ -1307,7 +1234,7 @@ class URLData(OAuthDataStore):
         Clears out URL cache for that entry, if it existed at all.
         """
         match_target = '{}{}{}'.format(msg.soap_action, MISC.SEPARATOR, msg.url_path)
-        self.channel_data.add(self._channel_item_from_msg(msg, match_target, old_data))
+        self.channel_data.append(self._channel_item_from_msg(msg, match_target, old_data))
         self.url_sec[match_target] = self._sec_info_from_msg(msg)
         self.url_path_cache.pop(match_target, None)
 
