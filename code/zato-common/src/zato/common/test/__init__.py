@@ -168,6 +168,7 @@ def enrich_with_static_config(object_):
     object_.component_enabled_patterns = True
     object_.component_enabled_target_matcher = True
     object_.component_enabled_invoke_matcher = True
+    object_.get_name()
 
     def target_match(*args, **kwargs):
         return True
@@ -315,6 +316,9 @@ class ServiceTestCase(TestCase):
 
         instance = class_()
 
+        server = MagicMock()
+        server.component_enabled.stats = False
+
         worker_store = MagicMock()
         worker_store.worker_config = MagicMock
         worker_store.worker_config.outgoing_connections = MagicMock(return_value=(None, None, None, None))
@@ -353,10 +357,13 @@ class ServiceTestCase(TestCase):
             instance.broker_client = FakeBrokerClient()
             instance.broker_client.publish = broker_client_publish
 
-        instance.call_hooks('before')
-        instance.handle()
-        instance.call_hooks('after')
+        def set_response_func(*args, **kwargs):
+            print(111, args, kwargs)
 
+        instance.handle()
+        #instance.update_handle(
+        #    set_response_func, instance, request_data, channel, data_format, None, server, None, worker_store, new_cid(),
+        #    None)
         return instance
 
     def _check_sio_request_input(self, instance, request_data):

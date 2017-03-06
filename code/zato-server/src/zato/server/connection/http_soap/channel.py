@@ -31,6 +31,7 @@ from zato.server.connection.http_soap import BadRequest, ClientHTTPError, Forbid
 from zato.server.service.internal import AdminService
 
 logger = logging.getLogger(__name__)
+_has_debug = logger.isEnabledFor(logging.DEBUG)
 
 _status_bad_request = b'{} {}'.format(BAD_REQUEST, HTTP_RESPONSES[BAD_REQUEST])
 _status_internal_server_error = b'{} {}'.format(INTERNAL_SERVER_ERROR, HTTP_RESPONSES[INTERNAL_SERVER_ERROR])
@@ -127,7 +128,8 @@ class RequestDispatcher(object):
         return soap_action
 
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
-        no_url_match=(None, False), _response_404=response_404):
+        no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,
+        _http_soap_action='HTTP_SOAPACTION'):
         """ Base method for dispatching incoming HTTP/SOAP messages. If the security
         configuration is one of the technical account or HTTP basic auth,
         the security validation is being performed. Otherwise, that step
@@ -135,12 +137,11 @@ class RequestDispatcher(object):
         """
         # Needed in later steps
         path_info = wsgi_environ['PATH_INFO'].decode('utf-8')
-        soap_action = wsgi_environ.get('HTTP_SOAPACTION', '')
 
-        # Fix up SOAP action - turns "my:soap:action" into my:soap:action,
-        # that is, strips it out of surrounding quotes, if any.
-        if soap_action:
-            soap_action = self._handle_quotes_soap_action(soap_action)
+        if _http_soap_action in wsgi_environ:
+            soap_action = self._handle_quotes_soap_action(wsgi_environ[_http_soap_action])
+        else:
+            soap_action = ''
 
         # Can we recognize this combination of URL path and SOAP action at all?
         # This gives us the URL info and security data - but note that here
@@ -148,7 +149,7 @@ class RequestDispatcher(object):
         # Credentials are checked in a call to self.url_data.check_security
         url_match, channel_item = self.url_data.match(path_info, soap_action, bool(soap_action))
 
-        if channel_item:
+        if _has_debug and channel_item:
             logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))
 
         # This is needed in parallel.py's on_wsgi_request
@@ -299,12 +300,21 @@ class RequestHandler(object):
 
         return service.response
 
-    def create_channel_params(self, path_params, channel_item, wsgi_environ, raw_request, post_data=None):
+    def create_channel_params(self, path_params, channel_item, wsgi_environ, raw_request, post_data=None, _has_debug=_has_debug):
         """ Collects parameters specific to this channel (HTTP) and updates wsgi_environ
         with HTTP-specific data.
         """
         qs = wsgi_environ.get('QUERY_STRING')
-        qs = QueryDict(qs, encoding='utf-8')
+        if qs:
+            qs = QueryDict(qs, encoding='utf-8')
+            _qs = {}
+            for key, value in qs.iterlists():
+                if len(value) > 1:
+                    _qs[key] = value
+                else:
+                    _qs[key] = value[0]
+        else:
+            _qs = {}
 
         # Whoever called us has already parsed POST for us so we just use it as is
         if post_data:
@@ -315,26 +325,26 @@ class RequestHandler(object):
             else:
                 post = QueryDict(None, encoding='utf-8')
 
-        _qs = {}
-        for key, value in qs.iterlists():
-            if len(value) > 1:
-                _qs[key] = value
+        if channel_item.url_params_pri == URL_PARAMS_PRIORITY.QS_OVER_PATH:
+            if _qs:
+                path_params.update((key, value) for key, value in _qs.items())
+            channel_params = path_params
+        else:
+            if _qs:
+                channel_params = dict((key, value) for key, value in _qs.items())
             else:
-                _qs[key] = value[0]
+                channel_params = {}
+            channel_params.update(path_params)
+
+        if _has_debug:
+            logger.debug('channel_params `%s`, path_params `%s`, _qs `%s`', channel_params, path_params, _qs)
 
         wsgi_environ['zato.http.GET'] = _qs
         wsgi_environ['zato.http.POST'] = post
 
-        if channel_item.url_params_pri == URL_PARAMS_PRIORITY.QS_OVER_PATH:
-            path_params.update((key, value) for key, value in _qs.items())
-            channel_params = path_params
-        else:
-            channel_params = dict((key, value) for key, value in _qs.items())
-            channel_params.update(path_params)
-
-        logger.debug('channel_params `%s`, path_params `%s`, _qs `%s`', channel_params, path_params, _qs)
-
         return channel_params
+
+
 
     def handle(self, cid, url_match, channel_item, wsgi_environ, raw_request, worker_store, simple_io_config, post_data,
             path_info, soap_action, channel_type=CHANNEL.HTTP_SOAP, _response_404=response_404):

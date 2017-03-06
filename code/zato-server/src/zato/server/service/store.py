@@ -40,15 +40,105 @@ except ImportError:
 from springpython.context import InitializingObject
 
 # Zato
-from zato.common import DONT_DEPLOY_ATTR_NAME, SourceInfo, TRACE1
+from zato.common import DONT_DEPLOY_ATTR_NAME, KVDB, SourceInfo, TRACE1
 from zato.common.match import Matcher
 from zato.common.util import decompress, deployment_info, fs_safe_now, import_module_from_path, is_python_file, visit_py_source
-from zato.server.service import Service
+from zato.server.service import after_handle_hooks, after_job_hooks, before_handle_hooks, before_job_hooks, Service, \
+    zato_no_op_marker
 from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+hook_methods = ('accept',) + before_handle_hooks + after_handle_hooks + before_job_hooks + after_job_hooks
+
+def set_up_class_attributes(class_, service_store=None, name=None):
+    class_.add_http_method_handlers()
+
+    # Set up enforcement of what other services a given service can invoke
+    try:
+        class_.invokes
+    except AttributeError:
+        class_.invokes = []
+
+    try:
+        class_.SimpleIO
+        class_.has_sio = True
+    except AttributeError:
+        class_.has_sio = False
+
+    # May be None during unit-tests. Not every one will provide it because it's not always needed in a given test.
+    if service_store:
+
+        # Set up all attributes that do not have to be assigned to each instance separately
+        # and can be shared as class attributes.
+        class_._enforce_service_invokes = service_store.server.enforce_service_invokes
+
+        class_.odb = service_store.server.worker_store.server.odb
+        class_.kvdb = service_store.server.worker_store.kvdb
+        class_.pubsub = service_store.server.worker_store.pubsub
+        class_.cloud.openstack.swift = service_store.server.worker_store.worker_config.cloud_openstack_swift
+        class_.cloud.aws.s3 = service_store.server.worker_store.worker_config.cloud_aws_s3
+        class_._out_ftp = service_store.server.worker_store.worker_config.out_ftp
+        class_.amqp.invoke = class_.amqp.send = service_store.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat
+        class_.amqp.invoke_async = class_.amqp.send = service_store.server.worker_store.amqp_invoke_async
+
+        class_._worker_store = service_store.server.worker_store
+        class_._worker_config = service_store.server.worker_store.worker_config
+        class_._msg_ns_store = service_store.server.worker_store.worker_config.msg_ns_store
+        class_._json_pointer_store = service_store.server.worker_store.worker_config.json_pointer_store
+        class_._xpath_store = service_store.server.worker_store.worker_config.xpath_store
+
+        _req_resp_freq_key = '%s%s' % (KVDB.REQ_RESP_SAMPLE, name)
+        class_._req_resp_freq = int(service_store.server.kvdb.conn.hget(_req_resp_freq_key, 'freq') or 0)
+
+        class_.component_enabled_cassandra = service_store.server.fs_server_config.component_enabled.cassandra
+        class_.component_enabled_email = service_store.server.fs_server_config.component_enabled.email
+        class_.component_enabled_search = service_store.server.fs_server_config.component_enabled.search
+        class_.component_enabled_msg_path = service_store.server.fs_server_config.component_enabled.msg_path
+        class_.component_enabled_websphere_mq = service_store.server.fs_server_config.component_enabled.websphere_mq
+        class_.component_enabled_odoo = service_store.server.fs_server_config.component_enabled.odoo
+        class_.component_enabled_stomp = service_store.server.fs_server_config.component_enabled.stomp
+        class_.component_enabled_zeromq = service_store.server.fs_server_config.component_enabled.zeromq
+        class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
+        class_.component_enabled_target_matcher = service_store.server.fs_server_config.component_enabled.target_matcher
+        class_.component_enabled_invoke_matcher = service_store.server.fs_server_config.component_enabled.invoke_matcher
+
+    # Replace hook methods with None if they have not been overridden by users.
+    # Each method's .im_func.func_defaults attribute will be a one-element tuple in the form such as ('_zato_no_op_marker',)
+    # if it's not been redefined from parent class. We replace it with None and Service.update_handle does not call
+    # the hook if it's not been defined by user thus not incurring overhead of function calls that cost even if no-op.
+
+    class_._before_job_hooks = []
+    class_._after_job_hooks = []
+
+    for func_name in hook_methods:
+        func = getattr(class_, func_name, None)
+        if func and inspect.ismethod(func):
+            func_defaults = func.im_func.func_defaults
+
+            # Replace with None ..
+            if func_defaults and isinstance(func_defaults, tuple) and zato_no_op_marker in func_defaults:
+                impl = None
+
+            # .. or use the method as is.
+            else:
+                impl = func
+
+            # Assign to class either the replaced value or the original one.
+            setattr(class_, func_name, impl)
+
+            if impl and func_name in before_job_hooks:
+                class_._before_job_hooks.append(impl)
+
+            if impl and func_name in after_job_hooks:
+                class_._after_job_hooks.append(impl)
+
+    class_._has_before_job_hooks = bool(class_._before_job_hooks)
+    class_._has_after_job_hooks = bool(class_._after_job_hooks)
 
 # ################################################################################################################################
 
@@ -318,54 +408,10 @@ class ServiceStore(InitializingObject):
         timestamp = datetime.utcnow()
         depl_info = dumps(deployment_info('service-store', str(class_), timestamp.isoformat(), fs_location))
 
-        class_.add_http_method_handlers()
-
-        # Set up enforcement of what other services a given service can invoke
-        try:
-            class_.invokes
-        except AttributeError:
-            class_.invokes = []
-
-        # Set up all attributes that do not have to be assigned to each instance separately
-        # and can be shared as class attributes.
-
-        class_._enforce_service_invokes = self.server.enforce_service_invokes
-
-        try:
-            class_.SimpleIO
-            class_.has_sio = True
-        except AttributeError:
-            class_.has_sio = False
-
-        class_.odb = self.server.worker_store.server.odb
-        class_.kvdb = self.server.worker_store.kvdb
-        class_.pubsub = self.server.worker_store.pubsub
-        class_.cloud.openstack.swift = self.server.worker_store.worker_config.cloud_openstack_swift
-        class_.cloud.aws.s3 = self.server.worker_store.worker_config.cloud_aws_s3
-        class_._out_ftp = self.server.worker_store.worker_config.out_ftp
-        class_.amqp.invoke = class_.amqp.send = self.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat
-        class_.amqp.invoke_async = class_.amqp.send = self.server.worker_store.amqp_invoke_async
-
-        class_._worker_store = self.server.worker_store
-        class_._worker_config = self.server.worker_store.worker_config
-        class_._msg_ns_store = self.server.worker_store.worker_config.msg_ns_store
-        class_._json_pointer_store = self.server.worker_store.worker_config.json_pointer_store
-        class_._xpath_store = self.server.worker_store.worker_config.xpath_store
-
-        class_.component_enabled_cassandra = self.server.fs_server_config.component_enabled.cassandra
-        class_.component_enabled_email = self.server.fs_server_config.component_enabled.email
-        class_.component_enabled_search = self.server.fs_server_config.component_enabled.search
-        class_.component_enabled_msg_path = self.server.fs_server_config.component_enabled.msg_path
-        class_.component_enabled_websphere_mq = self.server.fs_server_config.component_enabled.websphere_mq
-        class_.component_enabled_odoo = self.server.fs_server_config.component_enabled.odoo
-        class_.component_enabled_stomp = self.server.fs_server_config.component_enabled.stomp
-        class_.component_enabled_zeromq = self.server.fs_server_config.component_enabled.zeromq
-        class_.component_enabled_patterns = self.server.fs_server_config.component_enabled.patterns
-        class_.component_enabled_target_matcher = self.server.fs_server_config.component_enabled.target_matcher
-        class_.component_enabled_invoke_matcher = self.server.fs_server_config.component_enabled.invoke_matcher
-
         name = class_.get_name()
         impl_name = class_.get_impl_name()
+
+        set_up_class_attributes(class_, self, name)
 
         self.services[impl_name] = {}
         self.services[impl_name]['name'] = name

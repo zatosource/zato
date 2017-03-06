@@ -18,9 +18,6 @@ from bunch import Bunch
 # nose
 from nose.tools import eq_
 
-# sortedcontainers
-from sortedcontainers import SortedList
-
 # Zato
 from zato.common import DATA_FORMAT, MISC, URL_TYPE, ZATO_NONE
 from zato.common.test import rand_string

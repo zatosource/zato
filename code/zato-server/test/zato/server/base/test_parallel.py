@@ -19,9 +19,6 @@ from unittest import TestCase
 # Bunch
 from bunch import Bunch
 
-# mock
-from mock import patch
-
 # nose
 from nose.tools import eq_
 
@@ -32,7 +29,7 @@ from pytz import UTC
 from tzlocal import get_localzone
 
 # Zato
-from zato.common import ACCESS_LOG_DT_FORMAT, CHANNEL, DATA_FORMAT, ZATO_NONE
+from zato.common import CHANNEL, DATA_FORMAT, ZATO_NONE
 from zato.common.broker_message import CHANNEL as CHANNEL_BROKER_MESSAGE, SERVICE
 from zato.common.odb.api import ODBManager
 from zato.common.test import rand_int, rand_string
@@ -40,6 +37,7 @@ from zato.common.util import new_cid, utcnow
 from zato.server.connection.http_soap.channel import RequestDispatcher
 from zato.server.connection.http_soap.url_data import URLData
 from zato.server.base.parallel import ParallelServer
+from zato.server.base.parallel.http import ACCESS_LOG_DT_FORMAT
 
 # ################################################################################################################################
 
@@ -233,6 +231,7 @@ class AuditTestCase(TestCase):
 
                     ps = ParallelServer()
                     ps.worker_store = ws
+                    ps.request_dispatcher_dispatch = ws.request_dispatcher.dispatch
                     ps.on_wsgi_request(wsgi_environ, StartResponse(), cid=expected_cid)
 
                     if expected_audit_enabled:
@@ -330,114 +329,123 @@ class AuditTestCase(TestCase):
 class HTTPAccessLogTestCase(TestCase):
     def test_access_log(self):
 
-        def _utcnow(self):
+        def _utcnow():
             return datetime(year=2014, month=1, day=12, hour=16, minute=22, second=12, tzinfo=UTC)
 
         local_tz = get_localzone()
-        _now = _utcnow(None)
+        _now = _utcnow()
 
         local_dt = _now.replace(tzinfo=UTC).astimezone(local_tz)
         local_dt = local_tz.normalize(local_dt)
 
         request_timestamp = local_dt.strftime(ACCESS_LOG_DT_FORMAT)
 
-        with patch('arrow.factory.ArrowFactory.utcnow', _utcnow):
-            response = rand_string() * rand_int()
-            cid = new_cid()
-            cluster_id = 1
+        response = rand_string() * rand_int()
+        cid = new_cid()
+        cluster_id = 1
 
-            channel_name = rand_string()
-            url_path = '/{}'.format(rand_string())
-            user_agent = rand_string()
-            http_version = rand_string()
-            request_method = rand_string()
-            remote_ip = '10.{}.{}.{}'.format(rand_int(), rand_int(), rand_int())
-            req_timestamp_utc = utcnow()
+        channel_name = rand_string()
+        url_path = '/{}'.format(rand_string())
+        user_agent = rand_string()
+        http_version = rand_string()
+        request_method = rand_string()
+        remote_ip = '10.{}.{}.{}'.format(rand_int(), rand_int(), rand_int())
+        req_timestamp_utc = utcnow()
 
-            channel_item = {
-                'name': channel_name,
-                'audit_enabled': False,
-                'is_active': True,
-                'transport': 'plain_http',
-                'data_format': None,
-                'match_target': url_path,
-                'method': '',
-            }
+        channel_item = {
+            'name': channel_name,
+            'audit_enabled': False,
+            'is_active': True,
+            'transport': 'plain_http',
+            'data_format': None,
+            'match_target': url_path,
+            'method': '',
+        }
 
-            wsgi_environ = {
-                'gunicorn.socket': FakeGunicornSocket(None, None),
-                'wsgi.url_scheme': 'http',
-                'wsgi.input': StringIO(response),
+        wsgi_environ = {
+            'gunicorn.socket': FakeGunicornSocket(None, None),
+            'wsgi.url_scheme': 'http',
+            'wsgi.input': StringIO(response),
 
-                'zato.http.response.status': httplib.OK,
-                'zato.http.channel_item': channel_item,
-                'zato.request_timestamp_utc': req_timestamp_utc,
+            'zato.http.response.status': httplib.OK,
+            'zato.http.channel_item': channel_item,
+            'zato.request_timestamp_utc': req_timestamp_utc,
 
-                'HTTP_X_FORWARDED_FOR': remote_ip,
-                'PATH_INFO': url_path,
-                'REQUEST_METHOD': request_method,
-                'SERVER_PROTOCOL': http_version,
-                'HTTP_USER_AGENT': user_agent,
-            }
+            'HTTP_X_FORWARDED_FOR': remote_ip,
+            'PATH_INFO': url_path,
+            'REQUEST_METHOD': request_method,
+            'SERVER_PROTOCOL': http_version,
+            'HTTP_USER_AGENT': user_agent,
+        }
 
-            class FakeBrokerClient(object):
-                def __init__(self):
-                    self.msg = None
+        class FakeBrokerClient(object):
+            def __init__(self):
+                self.msg = None
 
-                def publish(self, msg):
-                    self.msg = msg
+            def publish(self, msg):
+                self.msg = msg
 
-            class FakeODB(ODBManager):
-                def __init__(self):
-                    self.msg = None
-                    self.cluster = Bunch(id=cluster_id)
+        class FakeODB(ODBManager):
+            def __init__(self):
+                self.msg = None
+                self.cluster = Bunch(id=cluster_id)
 
-            class FakeURLData(URLData):
-                def __init__(self):
-                    self.url_sec = {url_path: Bunch(sec_def=ZATO_NONE, sec_use_rbac=False)}
+        class FakeURLData(URLData):
+            def __init__(self):
+                self.url_sec = {url_path: Bunch(sec_def=ZATO_NONE, sec_use_rbac=False)}
 
-                def match(self, *ignored_args, **ignored_kwargs):
-                    return True, channel_item
+            def match(self, *ignored_args, **ignored_kwargs):
+                return True, channel_item
 
-            class FakeRequestHandler(object):
-                def handle(self, *ignored_args, **ignored_kwargs):
-                    return Bunch(payload=response, content_type='text/plain', headers={}, status_code=httplib.OK)
+        class FakeRequestHandler(object):
+            def handle(self, *ignored_args, **ignored_kwargs):
+                return Bunch(payload=response, content_type='text/plain', headers={}, status_code=httplib.OK)
 
-            class FakeAccessLogger(object):
-                def __init__(self):
-                    self.extra = {}
+        class FakeAccessLogger(object):
+            def __init__(self):
+                self.level = object()
+                self.msg = object()
+                self.args = object()
+                self.exc_info = object()
+                self.extra = object()
 
-                def info(self, msg, extra):
-                    self.extra = extra
+            def _log(self, level, msg, args, exc_info, extra):
+                self.level = level
+                self.msg = msg
+                self.args
+                self.exc_info = exc_info
+                self.extra = extra
 
-                def isEnabledFor(self, ignored):
-                    return True
+            def isEnabledFor(self, ignored):
+                return True
 
-            bc = FakeBrokerClient()
-            ws = FakeWorkerStore()
-            ws.request_dispatcher = RequestDispatcher()
-            ws.request_dispatcher.request_handler = FakeRequestHandler()
-            ws.request_dispatcher.url_data = FakeURLData()
-            ws.request_dispatcher.url_data.broker_client = bc
-            ws.request_dispatcher.url_data.odb = FakeODB()
+        bc = FakeBrokerClient()
+        ws = FakeWorkerStore()
+        ws.request_dispatcher = RequestDispatcher()
+        ws.request_dispatcher.request_handler = FakeRequestHandler()
+        ws.request_dispatcher.url_data = FakeURLData()
+        ws.request_dispatcher.url_data.broker_client = bc
+        ws.request_dispatcher.url_data.odb = FakeODB()
 
-            ps = ParallelServer()
-            ps.worker_store = ws
-            ps.access_logger = FakeAccessLogger()
-            ps.on_wsgi_request(wsgi_environ, StartResponse(), cid=cid)
+        ps = ParallelServer()
+        ps.worker_store = ws
+        ps.request_dispatcher_dispatch = ws.request_dispatcher.dispatch
+        ps.access_logger = FakeAccessLogger()
+        ps.access_logger_log = ps.access_logger._log
+        ps.on_wsgi_request(wsgi_environ, StartResponse(), cid=cid, _utcnow=_utcnow)
 
-            extra = Bunch(ps.access_logger.extra)
+        extra = Bunch(ps.access_logger.extra)
 
-            eq_(extra.channel_name, channel_name)
-            eq_(extra.user_agent, user_agent)
-            eq_(extra.status_code, '200')
-            eq_(extra.http_version, http_version)
-            eq_(extra.response_size, len(response))
-            eq_(extra.path, url_path)
-            eq_(extra.cid_resp_time, '{}/0.0'.format(cid)) # It's 0.0 because we mock utcnow to be a constant value
-            eq_(extra.method, request_method)
-            eq_(extra.remote_ip, remote_ip)
-            eq_(extra.req_timestamp_utc, '12/Jan/2014:16:22:12 +0000')
-            eq_(extra.req_timestamp, request_timestamp)
+        eq_(extra.channel_name, channel_name)
+        eq_(extra.user_agent, user_agent)
+        eq_(extra.status_code, '200')
+        eq_(extra.http_version, http_version)
+        eq_(extra.response_size, len(response))
+        eq_(extra.path, url_path)
+        eq_(extra.cid_resp_time, '{}/0.0'.format(cid)) # It's 0.0 because we mock utcnow to be a constant value
+        eq_(extra.method, request_method)
+        eq_(extra.remote_ip, remote_ip)
+        eq_(extra.req_timestamp_utc, '12/Jan/2014:16:22:12 +0000')
+        eq_(extra.req_timestamp, request_timestamp)
 
 # ################################################################################################################################

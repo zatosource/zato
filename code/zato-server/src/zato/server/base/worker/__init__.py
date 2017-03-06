@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, inspect, os, sys
-from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
 from inspect import isclass

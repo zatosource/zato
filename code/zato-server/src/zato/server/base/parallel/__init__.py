@@ -96,6 +96,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.kvdb = None
         self.startup_jobs = None
         self.worker_store = None
+        self.request_dispatcher_dispatch = None
         self.deployment_lock_expires = None
         self.deployment_lock_timeout = None
         self.deployment_key = ''
@@ -125,6 +126,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.user_ctx_lock = gevent.lock.RLock()
 
         self.access_logger = logging.getLogger('zato_access_log')
+        self.access_logger_log = self.access_logger._log
         self.needs_access_log = self.access_logger.isEnabledFor(INFO)
 
         # The main config store
@@ -373,8 +375,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         # Deploys services
         is_first, locally_deployed = self._after_init_common(server)
 
-        # Starts conectors
+        # Initializes worker store, including connectors
         self.worker_store.init()
+        self.request_dispatcher_dispatch = self.worker_store.request_dispatcher.dispatch
 
         # Normalize hot-deploy configuration
         self.hot_deploy_config = Bunch()

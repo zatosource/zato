@@ -306,7 +306,7 @@ class SimpleIOPayload(SIOConverter):
         self.zato_output.append(item)
         self.zato_output_repeated = True
 
-    def _getvalue(self, name, item, is_sa_namedtuple, is_required, leave_as_is):
+    def _getvalue(self, name, item, is_sa_namedtuple, is_required, leave_as_is, _DEBUG=logging.DEBUG, _TRACE1=TRACE1):
         """ Returns an element's value if any has been provided while taking
         into account the differences between dictionaries and other formats
         as well as the type conversions.
@@ -321,11 +321,12 @@ class SimpleIOPayload(SIOConverter):
         if isinstance(elem_value, basestring) and not elem_value:
             msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
             if is_required:
-                self.zato_logger.debug(msg)
+                if self.zato_logger.isEnabledFor(_DEBUG):
+                    self.zato_logger.debug(msg)
                 raise ZatoException(self.zato_cid, msg)
             else:
-                if self.zato_logger.isEnabledFor(TRACE1):
-                    self.zato_logger.log(TRACE1, msg)
+                if self.zato_logger.isEnabledFor(_TRACE1):
+                    self.zato_logger.log(_TRACE1, msg)
 
         if leave_as_is:
             return elem_value
@@ -502,6 +503,23 @@ class Response(object):
         """ Strings, lists and tuples are assigned as-is. Dicts as well if SIO is not used. However, if SIO is used
         the dicts are matched and transformed according to the SIO definition.
         """
+
+        if isinstance(value, dict):
+            if self.outgoing_declared:
+                self._payload.set_payload_attrs(value)
+            else:
+                self._payload = value
+        else:
+            if isinstance(value, direct_payload) and not isinstance(value, KeyedTuple):
+                self._payload = value
+            else:
+                if not self.outgoing_declared:
+                    raise Exception("Can't set payload, there's no output_required nor output_optional declared")
+                self._payload.set_payload_attrs(value)
+
+        '''
+        return
+
         if isinstance(value, direct_payload) and not isinstance(value, KeyedTuple):
             self._payload = value
         else:
@@ -513,7 +531,7 @@ class Response(object):
             else:
                 if not self.outgoing_declared:
                     raise Exception("Can't set payload, there's no output_required nor output_optional declared")
-                self._payload.set_payload_attrs(value)
+                self._payload.set_payload_attrs(value)'''
 
     payload = property(_get_payload, _set_payload)
 

@@ -21,19 +21,13 @@ from traceback import format_exc
 from oauth.oauth import OAuthDataStore, OAuthConsumer, OAuthRequest, OAuthServer, OAuthSignatureMethod_HMAC_SHA1, \
      OAuthSignatureMethod_PLAINTEXT, OAuthToken
 
-# regex
-from regex import compile as re_compile
-
 # sec-wall
 from secwall.server import on_basic_auth, on_wsse_pwd
 from secwall.wsse import WSSE
 
-# SortedContainers
-from sortedcontainers import SortedListWithKey
-
 # Zato
 from zato.bunch import Bunch
-from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, TRACE1, URL_TYPE, VAULT, ZATO_NONE
+from zato.common import AUDIT_LOG, DATA_FORMAT, MISC, MSG_PATTERN_TYPE, SEC_DEF_TYPE, URL_TYPE, VAULT, ZATO_NONE
 from zato.common.broker_message import code_to_name, CHANNEL, SECURITY, VAULT as VAULT_BROKER_MSG
 from zato.common.dispatch import dispatcher
 from zato.common.util import parse_tls_channel_security_definition, update_apikey_username
@@ -49,7 +43,7 @@ class OAuthStore(object):
     def __init__(self, oauth_config):
         self.oauth_config = oauth_config
 
-class URLData(CyURLData):
+class URLData(CyURLData, OAuthDataStore):
     """ Performs URL matching and security checks.
     """
     def __init__(self, worker, channel_data=None, url_sec=None, basic_auth_config=None, jwt_config=None, ntlm_config=None, \
