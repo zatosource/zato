@@ -355,28 +355,27 @@ def xpath_sec_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def _def_amqp(session, cluster_id):
+def _definition_amqp(session, cluster_id):
     return session.query(
         ConnDefAMQP.name, ConnDefAMQP.id, ConnDefAMQP.host,
         ConnDefAMQP.port, ConnDefAMQP.vhost, ConnDefAMQP.username,
         ConnDefAMQP.frame_max, ConnDefAMQP.heartbeat, ConnDefAMQP.password).\
-        filter(ConnDefAMQP.def_type=='amqp').\
         filter(Cluster.id==ConnDefAMQP.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(ConnDefAMQP.name)
 
-def def_amqp(session, cluster_id, id):
+def definition_amqp(session, cluster_id, id):
     """ A particular AMQP definition
     """
-    return _def_amqp(session, cluster_id).\
+    return _definition_amqp(session, cluster_id).\
         filter(ConnDefAMQP.id==id).\
         one()
 
 @query_wrapper
-def def_amqp_list(session, cluster_id, needs_columns=False):
+def definition_amqp_list(session, cluster_id, needs_columns=False):
     """ AMQP connection definitions.
     """
-    return _def_amqp(session, cluster_id)
+    return _definition_amqp(session, cluster_id)
 
 # ################################################################################################################################
 
@@ -410,7 +409,7 @@ def _out_amqp(session, cluster_id):
     return session.query(
         OutgoingAMQP.id, OutgoingAMQP.name, OutgoingAMQP.is_active,
         OutgoingAMQP.delivery_mode, OutgoingAMQP.priority, OutgoingAMQP.content_type,
-        OutgoingAMQP.content_encoding, OutgoingAMQP.expiration, OutgoingAMQP.user_id,
+        OutgoingAMQP.content_encoding, OutgoingAMQP.expiration, OutgoingAMQP.pool_size, OutgoingAMQP.user_id,
         OutgoingAMQP.app_id, ConnDefAMQP.name.label('def_name'), OutgoingAMQP.def_id).\
         filter(OutgoingAMQP.def_id==ConnDefAMQP.id).\
         filter(ConnDefAMQP.id==OutgoingAMQP.def_id).\
@@ -471,6 +470,7 @@ def _channel_amqp(session, cluster_id):
         ChannelAMQP.id, ChannelAMQP.name, ChannelAMQP.is_active,
         ChannelAMQP.queue, ChannelAMQP.consumer_tag_prefix,
         ConnDefAMQP.name.label('def_name'), ChannelAMQP.def_id,
+        ChannelAMQP.pool_size, ChannelAMQP.ack_mode,
         ChannelAMQP.data_format,
         Service.name.label('service_name'),
         Service.impl_name.label('service_impl_name')).\

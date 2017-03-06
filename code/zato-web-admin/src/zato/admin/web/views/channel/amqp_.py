@@ -19,9 +19,8 @@ from django.http import HttpResponse, HttpResponseServerError
 from anyjson import dumps
 
 # Zato
-from zato.admin.web.forms.channel.amqp import CreateForm, EditForm
-from zato.admin.web.views import Delete as _Delete, get_definition_list, \
-     Index as _Index, method_allowed
+from zato.admin.web.forms.channel.amqp_ import CreateForm, EditForm
+from zato.admin.web.views import Delete as _Delete, get_definition_list, Index as _Index, method_allowed
 from zato.common.odb.model import ChannelAMQP
 
 logger = logging.getLogger(__name__)
@@ -38,13 +37,15 @@ def _get_edit_create_message(params, prefix=''):
         'queue': params[prefix + 'queue'],
         'consumer_tag_prefix': params[prefix + 'consumer_tag_prefix'],
         'service': params[prefix + 'service'],
+        'pool_size': params.get(prefix + 'pool_size'),
+        'ack_mode': params.get(prefix + 'ack_mode'),
         'data_format': params.get(prefix + 'data_format'),
     }
 
 def _edit_create_response(client, verb, id, name, def_id, cluster_id):
     response = client.invoke('zato.definition.amqp.get-by-id', {'id':def_id, 'cluster_id':cluster_id})
     return_data = {'id': id,
-                   'message': 'Successfully {0} the AMQP channel [{1}]'.format(verb, name),
+                   'message': 'Successfully {} the AMQP channel `{}`'.format(verb, name),
                    'def_name': response.data.name
                 }
     return HttpResponse(dumps(return_data), content_type='application/javascript')
@@ -59,8 +60,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix',
-            'def_name', 'def_id', 'service_name', 'data_format')
+        output_required = ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix', 'def_name', 'def_id', 'service_name',
+            'pool_size', 'ack_mode', 'data_format')
         output_repeated = True
 
     def handle(self):
@@ -84,7 +85,7 @@ def create(req):
         return _edit_create_response(req.zato.client, 'created', response.data.id,
             req.POST['name'], req.POST['def_id'], req.POST['cluster_id'])
     except Exception, e:
-        msg = 'Could not create an AMQP channel, e:[{e}]'.format(e=format_exc(e))
+        msg = 'Could not create an AMQP channel, e:`{}`'.format(format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
@@ -97,7 +98,7 @@ def edit(req):
             req.POST['edit-def_id'], req.POST['cluster_id'])
 
     except Exception, e:
-        msg = 'Could not update the AMQP channel, e:[{e}]'.format(e=format_exc(e))
+        msg = 'Could not update the AMQP channel, e:`{}`'.format(format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 

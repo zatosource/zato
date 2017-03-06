@@ -128,8 +128,6 @@ SECONDS_IN_DAY = 86400 # 60 seconds * 60 minutes * 24 hours (and we ignore leap 
 scheduler_date_time_format = '%Y-%m-%d %H:%M:%S'
 soap_date_time_format = '%Y-%m-%dT%H:%M:%S.%fZ'
 
-ACCESS_LOG_DT_FORMAT = '%d/%b/%Y:%H:%M:%S %z'
-
 # TODO: Classes that have this attribute defined (no matter the value) will not be deployed
 # onto servers.
 DONT_DEPLOY_ATTR_NAME = 'zato_dont_import'
@@ -385,6 +383,10 @@ class SIMPLE_IO:
 
     class BOOL_PARAMETERS:
         SUFFIXES = ['is_', 'needs_', 'should_']
+
+    COMMON_FORMAT = OrderedDict()
+    COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
+    COMMON_FORMAT[DATA_FORMAT.XML] = 'XML'
 
     HTTP_SOAP_FORMAT = OrderedDict()
     HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
@@ -844,6 +846,19 @@ class APISPEC:
 class PADDING:
     LEFT = 'left'
     RIGHT = 'right'
+
+class AMQP:
+    class DEFAULT:
+        POOL_SIZE = 10
+        PRIORITY = 5
+
+    class ACK_MODE:
+        ACK = NameId('Ack', 'ack')
+        NO_ACK = NameId('No ack', 'no-ack')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.ACK, self.NO_ACK))
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

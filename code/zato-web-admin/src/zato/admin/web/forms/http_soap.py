@@ -15,7 +15,7 @@ from django import forms
 from zato.admin.web.forms import add_security_select, add_services, SearchForm as _ChooseClusterForm, DataFormatForm, \
      INITIAL_CHOICES
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, \
-     MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
+     MISC, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SIMPLE_IO, SOAP_VERSIONS, URL_PARAMS_PRIORITY, ZATO_NONE
 
 params_priority = (
     (PARAMS_PRIORITY.CHANNEL_PARAMS_OVER_MSG, 'URL over message'),
@@ -49,6 +49,7 @@ class CreateForm(DataFormatForm):
     content_type = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     connection = forms.CharField(widget=forms.HiddenInput())
     transport = forms.CharField(widget=forms.HiddenInput())
+    data_formats_allowed = SIMPLE_IO.HTTP_SOAP_FORMAT
 
     def __init__(self, security_list=[], sec_tls_ca_cert_list={}, soap_versions=SOAP_VERSIONS,
             prefix=None, post_data=None, req=None):

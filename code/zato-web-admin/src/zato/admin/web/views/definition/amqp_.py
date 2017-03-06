@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2011 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2017, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -14,7 +14,7 @@ import logging
 # Zato
 from zato.admin.web.views import change_password as _change_password
 from zato.admin.web.forms import ChangePasswordForm
-from zato.admin.web.forms.definition.amqp import CreateForm, EditForm
+from zato.admin.web.forms.definition.amqp_ import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import ConnDefAMQP
 
@@ -48,7 +48,7 @@ class _CreateEdit(CreateEdit):
         output_required = ('id',)
 
     def success_message(self, item):
-        return 'Successfully {0} the AMQP definition [{1}]'.format(self.verb, item.name)
+        return 'Successfully {} the AMQP definition `{}`'.format(self.verb, item.name)
 
 class Create(_CreateEdit):
     url_name = 'def-amqp-create'

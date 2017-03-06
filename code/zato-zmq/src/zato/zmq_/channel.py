@@ -70,6 +70,10 @@ class MDPv01(Base):
 
         # Run the MDP broker
         self.impl = Broker(self.config, self.on_message_callback)
+
+        # Notify parent class that we are connected now.
+        self.is_connected = True
+
         self.impl.serve_forever()
 
 # ################################################################################################################################

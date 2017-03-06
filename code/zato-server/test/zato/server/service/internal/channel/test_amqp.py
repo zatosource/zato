@@ -13,11 +13,9 @@ from bunch import Bunch
 
 # Zato
 from zato.common import zato_namespace
-from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
-from zato.common.odb.model import ChannelAMQP, Service
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service.internal import GetListAdminSIO
-from zato.server.service.internal.channel.amqp import Create, Edit, Delete, GetList
+from zato.server.service.internal.channel.amqp_ import Create, Edit, Delete, GetList
 
 # ##############################################################################
 
@@ -38,7 +36,7 @@ class _Base(ServiceTestCase):
 
         return fake_start_connector
 
-# ##############################################################################
+# ################################################################################################################################
 
 class GetListTestCase(ServiceTestCase):
 
@@ -67,17 +65,11 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.input_required, ('cluster_id',))
         self.assertEquals(self.sio.input_optional, GetListAdminSIO.input_optional)
         self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'queue', 'consumer_tag_prefix',
-            'def_name', 'def_id', 'service_name'))
+            'def_name', 'def_id', 'service_name', 'pool_size', 'ack_mode'))
         self.assertEquals(self.sio.output_optional, ('data_format',))
         self.assertEquals(self.sio.namespace, zato_namespace)
 
-    def test_impl(self):
-        self.assertEquals(self.service_class.get_name(), 'zato.channel.amqp.get-list')
-        self.check_impl_list(self.service_class, ChannelAMQP,
-            self.get_request_data(), self.get_response_data(),
-            self.sio.request_elem, self.sio.response_elem)
-
-# ##############################################################################
+# ################################################################################################################################
 
 class CreateTestCase(_Base):
 
@@ -87,11 +79,6 @@ class CreateTestCase(_Base):
         self.id = rand_int()
         self.def_id = rand_int()
         self.name = rand_string()
-        self.mock_data = {
-            'odb': [{'session.query.filter.filter.filter.first': False},
-                    {'session.query.filter.filter.first': Service()},
-                    ],
-            }
 
     def get_request_data(self):
         return {'cluster_id':rand_int(), 'name':self.name, 'is_active':rand_bool(), 'def_id':self.def_id,
@@ -102,17 +89,17 @@ class CreateTestCase(_Base):
         return Bunch({'id':self.id, 'name':self.name})
 
     def test_sio(self):
-
         self.assertEquals(self.sio.request_elem, 'zato_channel_amqp_create_request')
         self.assertEquals(self.sio.response_elem, 'zato_channel_amqp_create_response')
-        self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service'))
+        self.assertEquals(self.sio.input_required,
+            ('cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service', 'pool_size', 'ack_mode'))
         self.assertEquals(self.sio.input_optional, ('data_format',))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
 
-# ##############################################################################
+# ################################################################################################################################
 
 class EditTestCase(_Base):
 
@@ -122,17 +109,6 @@ class EditTestCase(_Base):
         self.id = rand_int()
         self.def_id = rand_int()
         self.name = rand_string()
-        self.mock_data = {
-            'odb': [{'session.query.filter.filter.filter.filter.first': False},
-                    {'session.query.filter.filter.first': Service()},
-                    {'session.query.filter_by.one': ChannelAMQP(self.id)},
-                    ]
-            }
-
-    def broker_client_publish(self, msg, msg_type):
-        self.assertEquals(msg['action'], CHANNEL.AMQP_DELETE.value)
-        self.assertEquals(msg['name'], self.name)
-        self.assertEquals(msg_type, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL)
 
     def get_request_data(self):
         return {'id': self.id, 'cluster_id':rand_int(), 'name':self.name, 'is_active':rand_bool(), 'queue':rand_string(),
@@ -144,14 +120,16 @@ class EditTestCase(_Base):
     def test_sio(self):
         self.assertEquals(self.sio.request_elem, 'zato_channel_amqp_edit_request')
         self.assertEquals(self.sio.response_elem, 'zato_channel_amqp_edit_response')
-        self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service'))
+        self.assertEquals(self.sio.input_required,
+            ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'queue', 'consumer_tag_prefix', 'service', 'pool_size',
+             'ack_mode'))
         self.assertEquals(self.sio.input_optional, ('data_format',))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
 
-# ##############################################################################
+# ################################################################################################################################
 
 class DeleteTestCase(_Base):
 
@@ -160,16 +138,6 @@ class DeleteTestCase(_Base):
         self.sio = self.service_class.SimpleIO
         self.id = rand_int()
         self.name = rand_string()
-        self.mock_data = {
-            'odb': [{'session.query.filter.one': ChannelAMQP(self.id, self.name)}
-                    ]
-            }
-
-    def broker_client_publish(self, msg, msg_type):
-        self.assertEquals(msg['action'], CHANNEL.AMQP_DELETE.value)
-        self.assertEquals(msg['id'], self.id)
-        self.assertEquals(msg['name'], self.name)
-        self.assertEquals(msg_type, MESSAGE_TYPE.TO_AMQP_CONNECTOR_ALL)
 
     def get_request_data(self):
         return {'id': self.id}
@@ -186,7 +154,4 @@ class DeleteTestCase(_Base):
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
         self.assertRaises(AttributeError, getattr, self.sio, 'output_repeated')
 
-    def test_impl(self):
-        self.assertEquals(self.service_class.get_name(), 'zato.channel.amqp.delete')
-        self.check_impl(self.service_class, self.get_request_data(), self.get_response_data(),
-                            self.sio.response_elem, self.mock_data)
+# ################################################################################################################################

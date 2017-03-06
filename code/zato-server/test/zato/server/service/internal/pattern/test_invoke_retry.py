@@ -21,12 +21,19 @@ from bunch import Bunch
 # gevent
 import gevent
 
+# Mock
+from mock import MagicMock
+
 # Zato
 from zato.common import BROKER, CHANNEL, DATA_FORMAT
 from zato.common.broker_message import SERVICE
 from zato.common.util import new_cid
-from zato.common.test import ServiceTestCase, rand_int, rand_string
+from zato.common.test import enrich_with_static_config, ServiceTestCase, rand_int, rand_string
+from zato.server.service import Service
 from zato.server.service.internal.pattern.invoke_retry import InvokeRetry
+from zato.server.service.store import set_up_class_attributes
+
+enrich_with_static_config(InvokeRetry)
 
 logger = getLogger(__name__)
 
@@ -50,7 +57,7 @@ class InvokeRetryTestCase(ServiceTestCase):
 
             expected_response = 'expected_response_{}'.format(rand_string()) if is_ok else None
 
-            class Ping(object):
+            class Ping(Service):
                 name = 'zato.ping'
 
                 def __init__(self):
@@ -68,6 +75,10 @@ class InvokeRetryTestCase(ServiceTestCase):
                     return expected_response
 
                 post_handle = validate_output = handle = validate_input = call_hooks = pre_handle = update
+
+            set_up_class_attributes(Ping)
+            Ping.server = MagicMock()
+            Ping.kvdb = MagicMock()
 
             callback = rand_string()
             target = 'zato.ping'
