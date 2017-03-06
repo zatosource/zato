@@ -101,14 +101,15 @@ class ConfigDict(object):
 
             return config_dict
 
-    def get_config_list(self):
+    def get_config_list(self, predicate=lambda value: value):
         """ Returns a list of deepcopied config Bunch objects.
         """
         with self.lock:
             out = []
-            for value in self._impl.values():
+            for value in self.values():
                 config = value['config']
-                out.append(deepcopy(config))
+                if predicate(config):
+                    out.append(deepcopy(config))
 
         return out
 

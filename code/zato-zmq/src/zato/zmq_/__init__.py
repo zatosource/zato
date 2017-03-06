@@ -31,6 +31,9 @@ class Base(Connector):
         socket_method = getattr(self.impl, self.config.socket_method)
         socket_method(self.config.address)
 
+        # Notify parent class that we are connected now.
+        self.is_connected = True
+
     def _start(self):
         self.conn = self
         self.ctx = zmq.Context()

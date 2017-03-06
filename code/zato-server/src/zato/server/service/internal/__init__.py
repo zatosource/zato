@@ -67,13 +67,13 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def _init(self):
+    def _init(self, is_http):
         if self._filter_by:
             self._search_tool = SearchTool(self._filter_by)
 
         self.ipc_api = self.server.ipc_api
 
-        super(AdminService, self)._init()
+        super(AdminService, self)._init(is_http)
 
 # ################################################################################################################################
 
@@ -179,7 +179,7 @@ class AdminSIO(object):
 
 class GetListAdminSIO(object):
     namespace = zato_namespace
-    input_optional = ('paginate', 'cur_page', 'query')
+    input_optional = ('cur_page', 'paginate', 'query')
 
 # ################################################################################################################################
 
@@ -190,6 +190,15 @@ class Ping(AdminService):
 
     def handle(self):
         self.response.payload.pong = 'zato'
+
+    def after_handle(self):
+        """ A no-op method because zato.ping can be used in benchmarks and the parent's .before/after_handle
+        would constitute about 10-15% of the overhead each. With typical admin services it is fine because
+        they are rarely used but in benchmarking, this is unnecessary and misleading seeing as they do things
+        that user-defined services don't do.
+        """
+
+    before_handle = after_handle
 
 # ################################################################################################################################
 

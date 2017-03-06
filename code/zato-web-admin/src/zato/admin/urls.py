@@ -17,14 +17,14 @@ from django.views.static import serve as django_static_serve
 # Zato
 from zato.admin import settings
 from zato.admin.web.views import account, cluster, docs, http_soap, kvdb, load_balancer, main, scheduler, service, stats
-from zato.admin.web.views.channel import amqp as channel_amqp
+from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import stomp as channel_stomp
 from zato.admin.web.views.channel import web_socket as channel_web_socket
 from zato.admin.web.views.channel import zmq as channel_zmq
 from zato.admin.web.views.cloud.aws import s3 as cloud_aws_s3
 from zato.admin.web.views.cloud.openstack import swift as cloud_openstack_swift
-from zato.admin.web.views.definition import amqp as def_amqp
+from zato.admin.web.views.definition import amqp_ as def_amqp
 from zato.admin.web.views.definition import cassandra as def_cassandra
 from zato.admin.web.views.definition import jms_wmq as def_jms_wmq
 from zato.admin.web.views.email import imap as email_imap
@@ -33,7 +33,7 @@ from zato.admin.web.views.kvdb.data_dict import dictionary, impexp, translation
 from zato.admin.web.views.message import json_pointer, live_browser, namespace, xpath
 from zato.admin.web.views.notif.cloud.openstack import swift as notif_cloud_openstack_swift
 from zato.admin.web.views.notif import sql as notif_sql
-from zato.admin.web.views.outgoing import amqp as out_amqp
+from zato.admin.web.views.outgoing import amqp_ as out_amqp
 from zato.admin.web.views.outgoing import ftp as out_ftp
 from zato.admin.web.views.outgoing import jms_wmq as out_jms_wmq
 from zato.admin.web.views.outgoing import odoo as out_odoo

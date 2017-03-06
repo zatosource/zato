@@ -16,7 +16,7 @@ from zato.common import zato_namespace
 from zato.common.test import rand_bool, rand_int, rand_string, ServiceTestCase
 from zato.server.service import AsIs, Integer
 from zato.server.service.internal import GetListAdminSIO
-from zato.server.service.internal.outgoing.amqp import Create, Edit, Delete, GetList
+from zato.server.service.internal.outgoing.amqp_ import Create, Edit, Delete, GetList
 
 ##############################################################################
 
@@ -43,7 +43,8 @@ class GetListTestCase(ServiceTestCase):
         self.assertEquals(self.sio.response_elem, 'zato_outgoing_amqp_get_list_response')
         self.assertEquals(self.sio.input_required, ('cluster_id',))
         self.assertEquals(self.sio.input_optional, GetListAdminSIO.input_optional)
-        self.assertEquals(self.sio.output_required, ('id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority', 'def_name'))
+        self.assertEquals(self.sio.output_required,
+            ('id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority', 'def_name', 'pool_size'))
         self.assertEquals(self.sio.output_optional, ('content_type', 'content_encoding', 'expiration',
             self.wrap_force_type(AsIs('user_id')), self.wrap_force_type(AsIs('app_id'))))
         self.assertEquals(self.sio.namespace, zato_namespace)
@@ -71,9 +72,10 @@ class CreateTestCase(ServiceTestCase):
 
         self.assertEquals(self.sio.request_elem, 'zato_outgoing_amqp_create_request')
         self.assertEquals(self.sio.response_elem, 'zato_outgoing_amqp_create_response')
-        self.assertEquals(self.sio.input_required, ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority'))
+        self.assertEquals(self.sio.input_required,
+            ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority', 'pool_size'))
         self.assertEquals(self.sio.input_optional, ('content_type', 'content_encoding', 'expiration',
-                                                    self.wrap_force_type(AsIs('user_id')), self.wrap_force_type(AsIs('app_id'))))
+            self.wrap_force_type(AsIs('user_id')), self.wrap_force_type(AsIs('app_id'))))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
@@ -103,9 +105,9 @@ class EditTestCase(ServiceTestCase):
         self.assertEquals(self.sio.request_elem, 'zato_outgoing_amqp_edit_request')
         self.assertEquals(self.sio.response_elem, 'zato_outgoing_amqp_edit_response')
         self.assertEquals(self.sio.input_required, ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode',
-                                                    self.wrap_force_type(Integer('priority'))))
+            self.wrap_force_type(Integer('priority')), 'pool_size'))
         self.assertEquals(self.sio.input_optional, ('content_type', 'content_encoding', 'expiration',
-                                                    self.wrap_force_type(AsIs('user_id')), self.wrap_force_type(AsIs('app_id'))))
+            self.wrap_force_type(AsIs('user_id')), self.wrap_force_type(AsIs('app_id'))))
         self.assertEquals(self.sio.output_required, ('id', 'name'))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
