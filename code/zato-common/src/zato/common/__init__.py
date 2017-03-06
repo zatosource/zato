@@ -128,8 +128,6 @@ SECONDS_IN_DAY = 86400 # 60 seconds * 60 minutes * 24 hours (and we ignore leap 
 scheduler_date_time_format = '%Y-%m-%d %H:%M:%S'
 soap_date_time_format = '%Y-%m-%dT%H:%M:%S.%fZ'
 
-ACCESS_LOG_DT_FORMAT = '%d/%b/%Y:%H:%M:%S %z'
-
 # TODO: Classes that have this attribute defined (no matter the value) will not be deployed
 # onto servers.
 DONT_DEPLOY_ATTR_NAME = 'zato_dont_import'

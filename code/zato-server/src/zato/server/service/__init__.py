@@ -34,7 +34,7 @@ from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRI
 from zato.common.broker_message import SERVICE
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import get_response_value, new_cid, payload_from_request, service_name_from_impl, uncamelify
-from zato.server.connection import request_response, slow_response
+from zato.server.connection import slow_response
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
@@ -75,6 +75,33 @@ NOT_GIVEN = 'ZATO_NOT_GIVEN'
 # Back compat
 Bool = Boolean
 Int = Integer
+
+# ################################################################################################################################
+
+# Hook methods whose func.im_func.func_defaults contains this argument will be assumed to have not been overridden by users
+# and ServiceStore will be allowed to override them with None so that they will not be called in Service.update_handle
+# which significantly improves performance (~30%).
+zato_no_op_marker = 'zato_no_op_marker'
+
+before_job_hooks = ('before_job', 'before_one_time_job', 'before_interval_based_job', 'before_cron_style_job')
+after_job_hooks = ('after_job', 'after_one_time_job', 'after_interval_based_job', 'after_cron_style_job')
+before_handle_hooks = ('before_handle',)
+after_handle_hooks = ('after_handle', 'finalize_handle')
+
+# The almost identical methods below are defined separately because they are used in critical paths
+# where every if counts.
+
+def call_hook_no_service(hook):
+    try:
+        hook()
+    except Exception, e:
+        logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc(e))
+
+def call_hook_with_service(hook, service):
+    try:
+        hook(service)
+    except Exception, e:
+        logger.error('Can\'t run hook `%s`, e:`%s`', hook, format_exc(e))
 
 # ################################################################################################################################
 
@@ -166,11 +193,21 @@ class Service(object):
     _out_ftp = None
     _out_plain_http = None
 
+    _req_resp_freq = 0
+    _has_before_job_hooks = None
+    _has_after_job_hooks = None
+    _before_job_hooks = []
+    _after_job_hooks = []
+
     # For invoking other servers directly
     servers = None
 
-    def __init__(self, *ignored_args, **ignored_kwargs):
-        self.logger = logging.getLogger(self.get_name())
+    def __init__(self, _get_logger=logging.getLogger, _Bunch=Bunch, _Request=Request, _Response=Response,
+            _DictNav=DictNav, _ListNav=ListNav, _Outgoing=Outgoing, _WMQFacade=WMQFacade, _ZMQFacade=ZMQFacade,
+            *ignored_args, **ignored_kwargs):
+        self.name = self.__class__.__service_name # Will be set through .get_name by Service Store
+        self.impl_name = self.__class__.__service_impl_name # Ditto
+        self.logger = _get_logger(self.name)
         self.server = None
         self.broker_client = None
         self.channel = None
@@ -180,30 +217,28 @@ class Service(object):
         self.transport = None
         self.wsgi_environ = None
         self.job_type = None
-        self.environ = Bunch()
-        self.request = Request(self.logger)
-        self.response = Response(self.logger)
+        self.environ = _Bunch()
+        self.request = _Request(self.logger)
+        self.response = _Response(self.logger)
         self.invocation_time = None # When was the service invoked
         self.handle_return_time = None # When did its 'handle' method finished processing the request
         self.processing_time_raw = None # A timedelta object with the processing time up to microseconds
         self.processing_time = None # Processing time in milliseconds
         self.usage = 0 # How many times the service has been invoked
         self.slow_threshold = maxint # After how many ms to consider the response came too late
-        self.name = self.__class__.get_name()
-        self.impl_name = self.__class__.get_impl_name()
         self.msg = None
         self.time = None
         self.patterns = None
         self.user_config = None
-        self.dictnav = DictNav
-        self.listnav = ListNav
+        self.dictnav = _DictNav
+        self.listnav = _ListNav
         self.has_validate_input = False
         self.has_validate_output = False
 
-        self.out = self.outgoing = Outgoing(
+        self.out = self.outgoing = _Outgoing(
             self.amqp,
             self._out_ftp,
-            WMQFacade(self.broker_client) if self.component_enabled_websphere_mq else None,
+            _WMQFacade(self.broker_client) if self.component_enabled_websphere_mq else None,
             self._worker_config.out_odoo,
             self._out_plain_http,
             self._worker_config.out_soap,
@@ -222,21 +257,21 @@ class Service(object):
         """ Returns a service's name, settings its .name attribute along. This will
         be called once while the service is being deployed.
         """
-        if not hasattr(class_, '__name'):
+        if not hasattr(class_, '__service_name'):
             name = getattr(class_, 'name', None)
             if not name:
                 name = service_name_from_impl(class_.get_impl_name())
                 name = class_.convert_impl_name(name)
 
-            class_.__name = name
+            class_.__service_name = name
 
-        return class_.__name
+        return class_.__service_name
 
     @classmethod
     def get_impl_name(class_):
-        if not hasattr(class_, '__impl_name'):
-            class_.__impl_name = '{}.{}'.format(class_.__module__, class_.__name__)
-        return class_.__impl_name
+        if not hasattr(class_, '__service_impl_name'):
+            class_.__service_impl_name = '{}.{}'.format(class_.__module__, class_.__name__)
+        return class_.__service_impl_name
 
     @staticmethod
     def convert_impl_name(name):
@@ -269,7 +304,9 @@ class Service(object):
         self.slow_threshold = self.server.service_store.services[self.impl_name]['slow_threshold']
 
         # The if's below are meant to be written in this way because we don't want any unnecessary attribute lookups
-        # and method calls in this method - it's invoked each time a service is executed.
+        # and method calls in this method - it's invoked each time a service is executed. The attributes are set
+        # for the whole of the Service class each time it is discovered they are needed. It cannot be done in ServiceStore
+        # because at the time that ServiceStore executes the worker config may still not be ready.
 
         if self.component_enabled_cassandra:
             if not Service.cassandra_conn:
@@ -360,7 +397,10 @@ class Service(object):
         return name, target
 
     def update_handle(self, set_response_func, service, raw_request, channel, data_format,
-            transport, server, broker_client, worker_store, cid, simple_io_config, *args, **kwargs):
+            transport, server, broker_client, worker_store, cid, simple_io_config, _utcnow=datetime.utcnow,
+            _call_hook_with_service=call_hook_with_service, _call_hook_no_service=call_hook_no_service,
+            _CHANNEL_SCHEDULER=CHANNEL.SCHEDULER, _pattern_channels=(CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL),
+            *args, **kwargs):
 
         wsgi_environ = kwargs.get('wsgi_environ', {})
         payload = wsgi_environ.get('zato.request.payload')
@@ -382,35 +422,59 @@ class Service(object):
             merge_channel_params=merge_channel_params, params_priority=params_priority,
             in_reply_to=wsgi_environ.get('zato.request_ctx.in_reply_to', None), environ=kwargs.get('environ'))
 
-        # It's possible the call will be completely filtered out
-        if service.accept():
+        # It's possible the call will be completely filtered out. The uncommonly looking not self.accept shortcuts
+        # if ServiceStore replaces self.accept with None in the most common case of this method's not being
+        # implemented by user services.
+        if (not self.accept) or service.accept():
 
             # Assume everything goes fine
             e, exc_formatted = None, None
 
             try:
 
-                #has_live_msg_browser = self.server.component_enabled.live_msg_browser
-                #if has_live_msg_browser and 'qqq' in service.get_name():
-                #    service._notify_msg_browser('before hooks')
+                if service.server.component_enabled.stats:
+                    service.usage = service.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, service.name))
+                service.invocation_time = _utcnow()
 
-                service.pre_handle()
-                service.call_hooks('before')
+                # All hooks are optional so we check if they have not been replaced with None by ServiceStore.
 
-                service.validate_input()
+                # Call before job hooks if any are defined and we are called from the scheduler
+                if service._has_before_job_hooks and self.channel.type == _CHANNEL_SCHEDULER:
+                    for elem in service._before_job_hooks:
+                        if elem:
+                            _call_hook_with_service(elem, service)
 
-                #if has_live_msg_browser and 'qqq' in service.get_name():
-                #    service._notify_msg_browser('service')
+                # Called before .handle - catches exceptions
+                if service.before_handle:
+                    _call_hook_no_service(service.before_handle)
 
+                # Called before .handle - does not catch exceptions
+                if service.validate_input:
+                    service.validate_input()
+
+                # This is the place where the service is invoked
                 self._invoke(service, channel)
-                service.validate_output()
 
-                service.call_hooks('after')
+                # Called after .handle - does not catch exceptions
+                if service.validate_output:
+                    service.validate_output()
+
+                # Called after .handle - catches exceptions
+                if service.after_handle:
+                    _call_hook_no_service(service.after_handle)
+
+                # Call before job hooks if any are defined and we are called from the scheduler
+                if service._has_after_job_hooks and self.channel.type == _CHANNEL_SCHEDULER:
+                    for elem in service._after_job_hooks:
+                        if elem:
+                            _call_hook_with_service(elem, service)
+
+                # Internal method - always defined and called
                 service.post_handle()
-                service.call_hooks('finalize')
 
-                #if has_live_msg_browser and 'qqq' in service.get_name():
-                #    service._notify_msg_browser('after hooks')
+                # Optional, almost never overridden.
+                if service.finalize_handle:
+                    _call_hook_no_service(service.finalize_handle)
 
             except Exception, e:
                 exc_formatted = format_exc(e)
@@ -421,7 +485,7 @@ class Service(object):
                     response = set_response_func(service, data_format=data_format, transport=transport, **kwargs)
 
                     # If this was fan-out/fan-in we need to always notify our callbacks no matter the result
-                    if channel in (CHANNEL.FANOUT_CALL, CHANNEL.PARALLEL_EXEC_CALL):
+                    if channel in _pattern_channels:
                         func = self.patterns.fanout.on_call_finished if channel == CHANNEL.FANOUT_CALL else \
                             self.patterns.parallel.on_call_finished
                         spawn(func, self, service.response.payload, exc_formatted)
@@ -576,16 +640,9 @@ class Service(object):
 
         return cid
 
-    def pre_handle(self):
-        """ An internal method run just before the service sets to process the payload.
-        Used for incrementing the service's usage count and storing the service invocation time.
-        """
-        if self.server.component_enabled.stats:
-            self.usage = self.kvdb.conn.incr('{}{}'.format(KVDB.SERVICE_USAGE, self.name))
-
-        self.invocation_time = datetime.utcnow()
-
-    def post_handle(self, _get_response_value=get_response_value):
+    def post_handle(self, _get_response_value=get_response_value, _utcnow=datetime.utcnow,
+        _service_time_basic=KVDB.SERVICE_TIME_BASIC, _service_time_raw=KVDB.SERVICE_TIME_RAW,
+        _service_time_raw_by_minute=KVDB.SERVICE_TIME_RAW_BY_MINUTE):
         """ An internal method executed after the service has completed and has
         a response ready to return. Updates its statistics and, optionally, stores
         a sample request/response pair.
@@ -595,7 +652,7 @@ class Service(object):
         # Statistics
         #
 
-        self.handle_return_time = datetime.utcnow()
+        self.handle_return_time = _utcnow()
         self.processing_time_raw = self.handle_return_time - self.invocation_time
 
         if self.server.component_enabled.stats:
@@ -607,11 +664,11 @@ class Service(object):
 
             with self.kvdb.conn.pipeline() as pipe:
 
-                pipe.hset('{}{}'.format(KVDB.SERVICE_TIME_BASIC, self.name), 'last', self.processing_time)
-                pipe.rpush('{}{}'.format(KVDB.SERVICE_TIME_RAW, self.name), self.processing_time)
+                pipe.hset('%s%s' % (_service_time_basic, self.name), 'last', self.processing_time)
+                pipe.rpush('%s%s' % (_service_time_raw, self.name), self.processing_time)
 
-                key = '{}{}:{}'.format(KVDB.SERVICE_TIME_RAW_BY_MINUTE,
-                                       self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
+                key = '%s%s:%s' % (_service_time_raw_by_minute,
+                    self.name, self.handle_return_time.strftime('%Y:%m:%d:%H:%M'))
                 pipe.rpush(key, self.processing_time)
 
                 # .. we'll have 5 minutes (5 * 60 seconds = 300 seconds)
@@ -619,14 +676,13 @@ class Service(object):
 
                 # Note that we need Redis 2.1.3+ otherwise the key has just been overwritten
                 pipe.expire(key, 300)
-
                 pipe.execute()
 
         #
         # Sample requests/responses
         #
-        key, freq = request_response.should_store(self.kvdb, self.usage, self.name)
-        if freq:
+
+        if self._req_resp_freq and self.usage % self._req_resp_freq == 0:
 
             data = {
                 'cid': self.cid,
@@ -635,7 +691,7 @@ class Service(object):
                 'req': self.request.raw_request or '',
                 'resp':_get_response_value(self.response), # TODO: Don't parse it here and a moment later below
             }
-            request_response.store(self.kvdb, key, self.usage, freq, **data)
+            self.kvdb.conn.hmset(key, data)
 
         #
         # Slow responses
@@ -675,38 +731,10 @@ class Service(object):
 
 # ################################################################################################################################
 
-    def accept(self):
+    def accept(self, _zato_no_op_marker=zato_no_op_marker):
         return True
 
 # ################################################################################################################################
-
-    def call_job_hooks(self, prefix):
-        if self.channel.type == CHANNEL.SCHEDULER and prefix != 'finalize':
-            try:
-                getattr(self, '{}_job'.format(prefix))()
-            except Exception, e:
-                self.logger.error("Can't run {}_job, e:[{}]".format(prefix, format_exc(e)))
-            else:
-                try:
-                    func_name = '{}_{}_job'.format(prefix, self.job_type)
-                    func = getattr(self, func_name)
-                    func()
-                except Exception, e:
-                    self.logger.error("Can't run {}, e:[{}]".format(func_name, format_exc(e)))
-
-    def call_handle(self, prefix):
-        try:
-            getattr(self, '{}_handle'.format(prefix))()
-        except Exception, e:
-            self.logger.error('Can\'t run %s_handle of `%s`, e:`%s`', prefix, self, format_exc(e))
-
-    def call_hooks(self, prefix):
-        if prefix == 'before':
-            self.call_job_hooks(prefix)
-            self.call_handle(prefix)
-        else:
-            self.call_handle(prefix)
-            self.call_job_hooks(prefix)
 
     @classmethod
     def before_add_to_store(cls, logger):
@@ -714,56 +742,56 @@ class Service(object):
         """
         return True
 
-    def before_job(self):
+    def before_job(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked  if the service has been defined as a job's invocation target,
         regardless of the job's type.
         """
 
-    def before_one_time_job(self):
+    def before_one_time_job(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked if the service has been defined as a one-time job's
         invocation target.
         """
 
-    def before_interval_based_job(self):
+    def before_interval_based_job(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked if the service has been defined as an interval-based job's
         invocation target.
         """
 
-    def before_cron_style_job(self):
+    def before_cron_style_job(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked if the service has been defined as a cron-style job's
         invocation target.
         """
 
-    def before_handle(self, *args, **kwargs):
+    def before_handle(self, _zato_no_op_marker=zato_no_op_marker, *args, **kwargs):
         """ Invoked just before the actual service receives the request data.
         """
 
-    def after_job(self):
+    def after_job(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked  if the service has been defined as a job's invocation target,
         regardless of the job's type.
         """
 
-    def after_one_time_job(self):
+    def after_one_time_job(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked if the service has been defined as a one-time job's
         invocation target.
         """
 
-    def after_interval_based_job(self):
+    def after_interval_based_job(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked if the service has been defined as an interval-based job's
         invocation target.
         """
 
-    def after_cron_style_job(self):
+    def after_cron_style_job(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked if the service has been defined as a cron-style job's
         invocation target.
         """
 
-    def after_handle(self):
+    def after_handle(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked right after the actual service has been invoked, regardless
         of whether the service raised an exception or not.
         """
 
-    def finalize_handle(self):
+    def finalize_handle(self, _zato_no_op_marker=zato_no_op_marker):
         """ Offers the last chance to influence the service's operations.
         """
 
@@ -772,11 +800,11 @@ class Service(object):
         """ Invoked right after the class has been added to the service store.
         """
 
-    def validate_input(self):
+    def validate_input(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked right before handle. Any exception raised means handle will not be called.
         """
 
-    def validate_output(self):
+    def validate_output(self, _zato_no_op_marker=zato_no_op_marker):
         """ Invoked right after handle. Any exception raised means further hooks will not be called.
         """
 

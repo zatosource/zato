@@ -16,7 +16,7 @@ from traceback import format_exc
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import ConnDefAMQP, OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
-from zato.server.service import AsIs, Integer
+from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################

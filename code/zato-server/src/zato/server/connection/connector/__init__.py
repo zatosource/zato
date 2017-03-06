@@ -13,7 +13,6 @@ from copy import deepcopy
 from datetime import datetime
 from logging import getLogger
 from traceback import format_exc
-from typing import Dict
 
 # gevent
 from gevent import sleep, spawn

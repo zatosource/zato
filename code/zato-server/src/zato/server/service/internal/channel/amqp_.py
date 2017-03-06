@@ -13,7 +13,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common.broker_message import CHANNEL, MESSAGE_TYPE
+from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelAMQP, Cluster, ConnDefAMQP, Service
 from zato.common.odb.query import channel_amqp_list
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
