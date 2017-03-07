@@ -21,7 +21,7 @@ from threading import current_thread
 # gevent
 from gevent import sleep, spawn
 
-# portalocket
+# portalocker
 from portalocker import lock, LockException, LOCK_NB, LOCK_EX, unlock
 
 # SQLAlchemy
