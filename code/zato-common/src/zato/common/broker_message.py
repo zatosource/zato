@@ -398,7 +398,7 @@ class RBAC(Constants):
     ROLE_PERMISSION_DELETE = ValueConstant('')
 
 class VAULT(Constants):
-    code_start = 105600
+    code_start = 105400
 
     CONNECTION_CREATE = ValueConstant('')
     CONNECTION_EDIT = ValueConstant('')
@@ -407,6 +407,25 @@ class VAULT(Constants):
     POLICY_CREATE = ValueConstant('')
     POLICY_EDIT = ValueConstant('')
     POLICY_DELETE = ValueConstant('')
+
+class PUB_SUB(Constants):
+    code_start = 105600
+
+    OWNER_CREATE = ValueConstant('')
+    OWNER_EDIT = ValueConstant('')
+    OWNER_DELETE = ValueConstant('')
+
+    ENDPOINT_CREATE = ValueConstant('')
+    ENDPOINT_EDIT = ValueConstant('')
+    ENDPOINT_DELETE = ValueConstant('')
+
+    ENDPOINT_OWNER_CREATE = ValueConstant('')
+    ENDPOINT_OWNER_EDIT = ValueConstant('')
+    ENDPOINT_OWNER_DELETE = ValueConstant('')
+
+    ENDPOINT_ROLE_CREATE = ValueConstant('')
+    ENDPOINT_ROLE_EDIT = ValueConstant('')
+    ENDPOINT_ROLE_DELETE = ValueConstant('')
 
 code_to_name = {}
 

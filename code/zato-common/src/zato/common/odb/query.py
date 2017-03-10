@@ -25,10 +25,10 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, \
      IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
-     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, \
-     RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, \
-     TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, \
-     XPath, XPathSecurity
+     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubEndpoint, PubSubEndpointOwner, PubSubEndpointRole, \
+     PubSubOwner, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, \
+     Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, \
+     WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, XPath, XPathSecurity
 
 # ################################################################################################################################
 
@@ -116,7 +116,10 @@ def internal_channel_list(session, cluster_id):
     return session.query(
         HTTPSOAP.soap_action, Service.name).\
         filter(HTTPSOAP.cluster_id==Cluster.id).\
-        filter(HTTPSOAP.service_id==Service.id).filter(Service.is_internal==True).filter(Cluster.id==cluster_id).filter(Cluster.id==HTTPSOAP.cluster_id) # noqa
+        filter(HTTPSOAP.service_id==Service.id).\
+        filter(Service.is_internal==True).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==HTTPSOAP.cluster_id)
 
 # ################################################################################################################################
 
@@ -1495,5 +1498,75 @@ def vault_connection_list(session, cluster_id, needs_columns=False):
     """ A list of Vault connections.
     """
     return _vault_connection(session, cluster_id)
+
+# ################################################################################################################################
+
+def _pubsub_owner(session, cluster_id):
+    return session.query(PubSubOwner.id, PubSubOwner.is_internal, PubSubOwner.name,
+            PubSubOwner.parent_id).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==PubSubOwner.cluster_id).\
+        order_by(PubSubOwner.name)
+
+def pubsub_owner(session, cluster_id, id):
+    """ An individual pub/sub owner.
+    """
+    return _pubsub_owner(session, cluster_id).\
+        filter(PubSubOwner.id==id).\
+        one()
+
+@query_wrapper
+def pubsub_owner_list(session, cluster_id, needs_columns=False):
+    """ A list of pub/sub owners.
+    """
+    return _pubsub_owner(session, cluster_id)
+
+# ################################################################################################################################
+
+def _pubsub_endpoint(session, cluster_id):
+    return session.query(PubSubEndpoint.id, PubSubEndpoint.is_internal).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==PubSubEndpoint.cluster_id).\
+        order_by(PubSubEndpoint.id)
+
+def pubsub_endpoint(session, cluster_id, id):
+    """ An individual pub/sub endpoint.
+    """
+    return _pubsub_endpoint(session, cluster_id).\
+        filter(PubSubEndpoint.id==id).\
+        one()
+
+@query_wrapper
+def pubsub_endpoint_list(session, cluster_id, needs_columns=False):
+    """ A list of pub/sub endpoints.
+    """
+    return _pubsub_endpoint(session, cluster_id)
+
+# ################################################################################################################################
+
+def _pubsub_endpoint_owner(session, cluster_id, endpoint_id, owner_id):
+    q = session.query(PubSubEndpointOwner.id, PubSubEndpointOwner.role).\
+        filter(Cluster.id==cluster_id)
+
+    if endpoint_id:
+        q = q.filter(PubSubEndpointOwner.endpoint_id==endpoint_id)
+
+    if owner_id:
+        q = q.filter(PubSubEndpointOwner.owner_id==owner_id)
+
+    q = q.order_by(PubSubEndpointOwner.id)
+
+def pubsub_endpoint_owner(session, cluster_id, endpoint_id, owner_id):
+    """ An individual association of a pub/sub endpoint and role.
+    """
+    return _pubsub_endpoint_owner(session, cluster_id, endpoint_id, owner_id).\
+        filter(PubSubEndpointOwner.id==id).\
+        one()
+
+@query_wrapper
+def pubsub_endpoint_owner_list(session, cluster_id, endpoint_id, owner_id):
+    """ A list of pub/sub endpoints and roles associations.
+    """
+    return _pubsub_endpoint_owner(session, cluster_id, endpoint_id, owner_id)
 
 # ################################################################################################################################

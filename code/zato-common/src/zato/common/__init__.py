@@ -18,6 +18,7 @@ from numbers import Number
 from string import Template
 from sys import maxint
 from traceback import format_exc
+from uuid import uuid4
 
 # boto
 from boto.s3.key import Key
@@ -665,6 +666,17 @@ class PUB_SUB:
     DEFAULT_IS_FIFO = True
     DEFAULT_MAX_DEPTH = 500
     DEFAULT_MAX_BACKLOG = 1000
+
+    class OWNER_ROLE:
+        OWNER = 'owner'
+
+    class ID_CTX:
+        DEFAULT_NAME = 'id'
+        DEFAULT_VALUE_GEN = staticmethod(lambda prefix: 'prefix.{}'.format(uuid4().hex))
+
+    class ENDPOINT_ROLE:
+        PUBLISHER = 'publisher'
+        SUBSCRIBER = 'subscriber'
 
     class QUEUE_TYPE:
         MESSAGE = 'message'
