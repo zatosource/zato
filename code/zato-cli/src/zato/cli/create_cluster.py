@@ -19,8 +19,9 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import DATA_FORMAT, SIMPLE_IO, WEB_SOCKET
-from zato.common.odb.model import ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, RBACPermission, RBACRole, Service, \
+from zato.common import DATA_FORMAT, PUB_SUB, SIMPLE_IO, WEB_SOCKET
+from zato.common.odb.model import ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, PubSubEndpointOwner, \
+     PubSubEndpointRole, PubSubIDContext, PubSubOwner, RBACPermission, RBACRole, Service, \
      WSSDefinition
 from zato.common.util import get_http_json_channel, get_http_soap_channel
 
@@ -277,10 +278,24 @@ zato_services = {
     'zato.pubsub.consumers.get-info':'zato.server.service.internal.pubsub.consumers.GetInfo',
     'zato.pubsub.consumers.get-list':'zato.server.service.internal.pubsub.consumers.GetList',
 
+    # Publish/subscribe - endpoints
+    'zato.pubsub.endpoint.create':'zato.server.service.internal.pubsub.endpoint.Create',
+    'zato.pubsub.endpoint.delete':'zato.server.service.internal.pubsub.endpoint.Delete',
+    'zato.pubsub.endpoint.edit':'zato.server.service.internal.pubsub.endpoint.Edit',
+    'zato.pubsub.endpoint.get':'zato.server.service.internal.pubsub.endpoint.Get',
+    'zato.pubsub.endpoint.get-list':'zato.server.service.internal.pubsub.endpoint.GetList',
+
     # Publish/subscribe - messages
-    'zato.pubsub.message.create.delete':'zato.server.service.internal.pubsub.message.Delete',
-    'zato.pubsub.message.create.get':'zato.server.service.internal.pubsub.message.Get',
-    'zato.pubsub.message.create.get-list':'zato.server.service.internal.pubsub.message.GetList',
+    'zato.pubsub.message.delete':'zato.server.service.internal.pubsub.message.Delete',
+    'zato.pubsub.message.get':'zato.server.service.internal.pubsub.message.Get',
+    'zato.pubsub.message.get-list':'zato.server.service.internal.pubsub.message.GetList',
+
+    # Publish/subscribe - owners
+    'zato.pubsub.owner.create':'zato.server.service.internal.pubsub.owner.Create',
+    'zato.pubsub.owner.delete':'zato.server.service.internal.pubsub.owner.Delete',
+    'zato.pubsub.owner.edit':'zato.server.service.internal.pubsub.owner.Edit',
+    'zato.pubsub.owner.get':'zato.server.service.internal.pubsub.owner.Get',
+    'zato.pubsub.owner.get-list':'zato.server.service.internal.pubsub.owner.GetList',
 
     # Publish/subscribe - producers
     'zato.pubsub.producers.create':'zato.server.service.internal.pubsub.producers.Create',
@@ -533,9 +548,11 @@ class Create(ZatoCommand):
 
         self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec)
         self.add_ping_services(session, cluster)
-        self.add_default_pubsub_accounts(session, cluster)
         self.add_default_rbac_permissions(session, cluster)
         self.add_default_rbac_roles(session, cluster)
+
+        self.add_default_pubsub_accounts(session, cluster)
+        self.add_default_pubsub_config(session, cluster)
 
         try:
             session.commit()
@@ -764,3 +781,50 @@ class Create(ZatoCommand):
             channel = HTTPSOAP(None, name, True, True, 'channel', 'plain_http', None, url_path, None, '', None, data_format,
                 merge_url_params_req=True, service=service, cluster=cluster, security=pubapi_sec)
             session.add(channel)
+
+    def add_default_pubsub_config(self, session, cluster):
+        """ Adds default configuration for pub/sub endpoints and owners.
+        """
+
+        # Done in services
+        root = PubSubOwner()
+        root.name = 'zato.root'
+        root.is_internal = True
+        root.cluster = cluster
+
+        # Done in services
+        service = PubSubOwner()
+        service.name = 'zato.service'
+        service.is_internal = True
+        service.parent = root
+        service.cluster = cluster
+
+        # Done in services
+        endpoint = PubSubEndpoint()
+        endpoint.is_internal = True
+
+        # Done in services
+        endpoint_owner = PubSubEndpointOwner()
+        endpoint_owner.role = PUB_SUB.OWNER_ROLE.OWNER
+        endpoint_owner.endpoint = endpoint
+        endpoint_owner.owner = service
+        endpoint_owner.cluster = cluster
+
+        # ...
+        endpoint_role = PubSubEndpointRole()
+        endpoint_role.role = PUB_SUB.ENDPOINT_ROLE.PUBLISHER
+        endpoint_role.endpoint = endpoint
+        endpoint_role.cluster = cluster
+
+        # ...
+        id_ctx = PubSubIDContext()
+        id_ctx.name = 'id'
+        id_ctx.value = PUB_SUB.ID_CTX.DEFAULT_VALUE_GEN('service')
+        id_ctx.endpoint = endpoint
+        id_ctx.cluster = cluster
+
+        session.add(root)
+        session.add(service)
+        session.add(endpoint)
+        session.add(endpoint_owner)
+        session.add(id_ctx)

@@ -19,7 +19,7 @@ from dictalchemy import make_class_dictable
 from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, LargeBinary, Sequence, SmallInteger, String, \
      Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import backref, relationship
+from sqlalchemy.orm import backref, relation, relationship
 
 # Zato
 from zato.common import AMQP, CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, \
@@ -2115,5 +2115,127 @@ class WebSocketSubscription(Base):
     server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=True)
     server = relationship(
         Server, backref=backref('sub_web_socket_clients', order_by=pattern, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class PubSubOwner(Base):
+    """ Owners to whom endpoints will be assigned. An owner can be an arbitrary entity, a customer, an application
+    or perhaps Zato components.
+    """
+    __tablename__ = 'pubsub_owner'
+    __table_args__ = (
+        Index('pubs_owner_nm', 'name', 'parent_id', 'cluster_id', unique=True),
+        Index('pubs_owner_parent_id', 'parent_id', unique=False),
+        Index('pubs_owner_cluster_id', 'cluster_id', unique=False),
+    {})
+
+    id = Column(Integer, Sequence('pubsub_owner_seq'), primary_key=True)
+    is_internal = Column(Boolean(), nullable=False)
+    name = Column(String(200), nullable=False)
+
+    parent_id = Column(Integer, ForeignKey('pubsub_owner.id', ondelete='CASCADE'), nullable=True)
+    parent = relation('PubSubOwner', remote_side=[id])
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
+    cluster = relationship(Cluster, backref=backref('pubsub_owners', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class PubSubEndpoint(Base):
+    """ An individual endpoint participating in publish/subscribe scenarios.
+    """
+    __tablename__ = 'pubsub_endpoint'
+
+    # This ID is used for SQL joins only, actual business IDs are in PubSubIDContext
+    id = Column(Integer, Sequence('pubsub_owner_seq'), primary_key=True)
+    is_internal = Column(Boolean(), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
+    cluster = relationship(Cluster, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class PubSubEndpointOwner(Base):
+    """ Relations between owners and endpoints, i.e. who owns what and under what role.
+    """
+    __tablename__ = 'pubsub_endpoint_owner'
+    __table_args__ = (
+        Index('pubs_endp_end_owner_idx', 'endpoint_id', 'owner_id', 'role', unique=True),
+        Index('pubs_endp_end_owner_role_idx', 'role', unique=False),
+    {})
+
+    id = Column(Integer, Sequence('pubsub_endpoint_owner_seq'), primary_key=True)
+
+    # Under what role this owner owns the endpoint, i.e. some owners will be the primary ones, some may be temporary
+    role = Column(String(200), nullable=False)
+
+    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
+    endpoint = relationship(
+        PubSubEndpoint, backref=backref('pusub_endpoint_owner_endpoints', order_by=role, cascade='all, delete, delete-orphan'))
+
+    owner_id = Column(Integer, ForeignKey('pubsub_owner.id', ondelete='CASCADE'), nullable=False)
+    owner = relationship(
+        PubSubOwner, backref=backref('pusub_endpoint_owner_owners', order_by=role, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
+    cluster = relationship(Cluster, backref=backref('pubsub_endpoint_owners', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class PubSubEndpointRole(Base):
+    """ A given endpoint's role in pub/sub, e.g. publisher or subscriber (but is not fixed to these two alone).
+    """
+    __tablename__ = 'pubsub_endpoint_role'
+    __table_args__ = (
+        Index('pubsub_endpoint_role_endp_idx', 'endpoint_id', 'role', unique=True),
+    {})
+
+    id = Column(Integer, Sequence('pubsub_endpoint_role_seq'), primary_key=True)
+    role = Column(String(200), nullable=False)
+
+    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
+    endpoint = relationship(
+        PubSubEndpoint, backref=backref('pusub_endpoint_roles', order_by=role, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
+    cluster = relationship(
+        Cluster, backref=backref('pubsub_endpoint_roles', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class PubSubIDContext(Base):
+    """ A set of identifiers assigned to an endpoint by its owners.
+    """
+    __tablename__ = 'pubsub_id_ctx'
+    __table_args__ = (
+        Index('pubsub_id_ctx_name_value', 'name', 'value', unique=False),
+        UniqueConstraint('name', 'value', 'endpoint_id'),
+    {})
+
+    id = Column(Integer, Sequence('pubsub_id_ctx_seq'), primary_key=True)
+
+    # An arbitrary label assigned to this identifier
+    name = Column(String(200), nullable=False)
+
+    # One of IDs of this endpoint assigned by its owner
+    value = Column(String(200), nullable=False)
+
+    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
+    endpoint = relationship(
+        PubSubEndpoint, backref=backref('pubsub_id_ctx_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
+    cluster = relationship(
+        Cluster, backref=backref('pubsub_endpoint_context_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+#class PubSubLocation(Base):
+#    pass
+
+# ################################################################################################################################
+
+#class PubSubTag(Base):
+#    pass
 
 # ################################################################################################################################
