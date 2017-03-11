@@ -427,6 +427,10 @@ class PUB_SUB(Constants):
     ENDPOINT_ROLE_EDIT = ValueConstant('')
     ENDPOINT_ROLE_DELETE = ValueConstant('')
 
+    ID_CONTEXT_CREATE = ValueConstant('')
+    ID_CONTEXT_EDIT = ValueConstant('')
+    ID_CONTEXT_DELETE = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'
