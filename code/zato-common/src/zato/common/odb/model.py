@@ -2230,6 +2230,43 @@ class PubSubIDContext(Base):
 
 # ################################################################################################################################
 
+class PubSubSubscription(Base):
+    """ Stores high-level information about what an endpoint subscribes to.
+    """
+    __tablename__ = 'pubsub_sub'
+    __table_args__ = (
+        Index('pubsb_sub_patt_clust_idx', 'cluster_id', unique=False),
+        Index('pubsb_sub_patt_clust_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
+    {})
+
+    id = Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True)
+    is_internal = Column(Boolean(), nullable=False)
+    protocol = Column(String(200), nullable=False) # REST, AMQP etc.
+    data_format = Column(String(20), nullable=False) # JSON, XML etc.
+
+    is_durable = Column(Boolean(), nullable=False)
+    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
+
+    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
+    endpoint = relationship(
+        PubSubEndpoint, backref=backref('pubsub_sub_list', order_by=pattern, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
+    cluster = relationship(
+        Cluster, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+    zzz 3 rsdf 
+    make it point to an outgoing REST/AMQP connection
+
+# ################################################################################################################################
+
+class PubSubSubscriptionItem(Base):
+    """ Each PubSubSubscription has 1:n key/value pairs it subsribes to, kept in this table.
+    """
+    __tablename__ = 'pubsub_item'
+
+# ################################################################################################################################
+
 #class PubSubLocation(Base):
 #    pass
 
