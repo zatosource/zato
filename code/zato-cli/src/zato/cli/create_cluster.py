@@ -785,45 +785,44 @@ class Create(ZatoCommand):
     def add_default_pubsub_config(self, session, cluster):
         """ Adds default configuration for pub/sub endpoints and owners.
         """
+        zato_root = PubSubOwner()
+        zato_root.name = 'zato.root'
+        zato_root.is_internal = True
+        zato_root.cluster = cluster
 
-        # Done in services
-        root = PubSubOwner()
-        root.name = 'zato.root'
-        root.is_internal = True
-        root.cluster = cluster
+        user_root = PubSubOwner()
+        user_root.name = 'user.root'
+        user_root.is_internal = False
+        user_root.cluster = cluster
 
-        # Done in services
         service = PubSubOwner()
         service.name = 'zato.service'
         service.is_internal = True
-        service.parent = root
+        service.parent = zato_
         service.cluster = cluster
 
-        # Done in services
         endpoint = PubSubEndpoint()
         endpoint.is_internal = True
 
-        # Done in services
         endpoint_owner = PubSubEndpointOwner()
         endpoint_owner.role = PUB_SUB.OWNER_ROLE.OWNER
         endpoint_owner.endpoint = endpoint
         endpoint_owner.owner = service
         endpoint_owner.cluster = cluster
 
-        # ...
         endpoint_role = PubSubEndpointRole()
         endpoint_role.role = PUB_SUB.ENDPOINT_ROLE.PUBLISHER
         endpoint_role.endpoint = endpoint
         endpoint_role.cluster = cluster
 
-        # ...
         id_ctx = PubSubIDContext()
         id_ctx.name = 'id'
         id_ctx.value = PUB_SUB.ID_CTX.DEFAULT_VALUE_GEN('service')
         id_ctx.endpoint = endpoint
         id_ctx.cluster = cluster
 
-        session.add(root)
+        session.add(zato_root)
+        session.add(user_root)
         session.add(service)
         session.add(endpoint)
         session.add(endpoint_owner)

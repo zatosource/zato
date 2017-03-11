@@ -31,6 +31,7 @@ class GetList(AdminService):
         response_elem = 'zato_pubsub_endpoint_owner_get_list_response'
         input_required = ('cluster_id',)
         input_optional = ('endpoint_id', 'owner_id')
+        output_required = ('id', 'role', 'endpoint_id', 'owner_id')
 
     def get_data(self, session):
         input = self.request.input
