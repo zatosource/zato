@@ -798,7 +798,7 @@ class Create(ZatoCommand):
         service = PubSubOwner()
         service.name = 'zato.service'
         service.is_internal = True
-        service.parent = zato_
+        service.parent = zato_root
         service.cluster = cluster
 
         endpoint = PubSubEndpoint()
