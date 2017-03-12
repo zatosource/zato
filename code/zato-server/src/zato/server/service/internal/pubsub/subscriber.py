@@ -10,12 +10,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from datetime import datetime
 from traceback import format_exc
+from urlparse import urlparse
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, PUB_SUB
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointRole, PubSubEndpointOwner, PubSubOwner, PubSubSubscription, \
      PubSubSubscriptionItem
+from zato.common.util import new_cid
 from zato.server.service import Dict, Service
 
 # ################################################################################################################################
@@ -38,6 +41,7 @@ class Subscribe(Service):
         input = self.request.input
         data_format = input.get('data_format', DATA_FORMAT.JSON)
         cluster_id = self.server.cluster_id
+        sub_key = new_cid()
 
         self.logger.warn('\n' + str(self.request.input))
 
@@ -89,6 +93,8 @@ class Subscribe(Service):
             endpoint_role.cluster_id = cluster_id
 
             subscription = PubSubSubscription()
+            subscription.creation_time = datetime.utcnow()
+            subscription.sub_key = sub_key
             subscription.is_active = True
             subscription.is_internal = input.is_internal
             subscription.protocol = PUB_SUB.PROTOCOL.HTTP_SOAP # TODO: Add AMQP
@@ -100,9 +106,13 @@ class Subscribe(Service):
 
             if input.callback:
                 # TODO: Create HTTP outconn
-                pass
+                parsed = urlparse(input.callback)
+                print(333, parsed)
+                print(333, parsed.username)
+                print(333, parsed.password)
 
             subscription_item = PubSubSubscriptionItem()
+            subscription_item.is_active = True
             subscription_item.by_msg_attr = True
             subscription_item.by_pub_attr = False
             subscription_item.has_glob = '*' in input.pattern
@@ -116,8 +126,9 @@ class Subscribe(Service):
             session.add(subscription)
             session.add(subscription_item)
 
-            session.commit()
+            #session.commit()
 
+            self.logger.info('Created a new subscription `%s`', sub_key)
 
         #self.response.payload = ''
 
