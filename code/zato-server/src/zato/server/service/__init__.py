@@ -33,7 +33,7 @@ from zato.bunch import Bunch
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, ZatoException
 from zato.common.broker_message import SERVICE
 from zato.common.nav import DictNav, ListNav
-from zato.common.util import get_response_value, new_cid, payload_from_request, service_name_from_impl, uncamelify
+from zato.common.util import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify
 from zato.server.connection import slow_response
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
@@ -109,16 +109,20 @@ class ChannelInfo(object):
     """ Conveys information abouts the channel that a service is invoked through.
     Available in services as self.channel or self.chan.
     """
-    __slots__ = ('id', 'name', 'type', 'is_internal', 'match_target', 'impl', 'security', 'sec')
+    __slots__ = ('id', 'name', 'type', 'data_format', 'is_internal', 'match_target', 'impl', 'security', 'sec')
 
-    def __init__(self, id, name, type, is_internal, match_target, security, impl):
+    def __init__(self, id, name, type, data_format, is_internal, match_target, security, impl):
         self.id = id
         self.name = name
         self.type = type
+        self.data_format = data_format
         self.is_internal = is_internal
         self.match_target = match_target
         self.security = self.sec = security
         self.impl = impl
+
+    def __repr__(self):
+        return make_repr(self)
 
 # ################################################################################################################################
 
@@ -887,7 +891,7 @@ class Service(object):
 
         service.channel = service.chan = ChannelInfo(
             channel_item.get('id'), channel_item.get('name'), channel_type,
-            channel_item.get('is_internal'), channel_item.get('match_target'),
+            channel_item.get('data_format'), channel_item.get('is_internal'), channel_item.get('match_target'),
             ChannelSecurityInfo(sec_def_info.get('id'), sec_def_info.get('name'), sec_def_info.get('type'),
                 sec_def_info.get('username'), sec_def_info.get('impl')), channel_item)
 
