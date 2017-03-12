@@ -24,7 +24,7 @@ class GetList(AdminService):
     """ Returns a list of pub/sub endpoint/role pairs.
     """
     name = 'zato.pubsub.endpoint-owner.get-list'
-    _filter_by = PubSubEndpointRole.name,
+    _filter_by = PubSubEndpointRole.id,
 
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_pubsub_endpoint_role_get_list_request'
