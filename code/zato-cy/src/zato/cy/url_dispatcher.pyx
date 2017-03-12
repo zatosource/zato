@@ -135,7 +135,7 @@ cdef class CyURLData(object):
 
         # Return from cache if already seen
         try:
-            return self.url_path_cache[target]
+            return {}, self.url_path_cache[target]
         except KeyError:
             needs_user = not url_path.startswith('/zato')
 
@@ -157,9 +157,9 @@ cdef class CyURLData(object):
 
                     # Cache that URL if it's a static one, i.e. does not contain dynamically computed variables
                     if matcher.is_static:
-                        self.url_path_cache[target] = (match, item_bunch)
+                        self.url_path_cache[target] = item_bunch
 
-                    return match, item_bunch
+                    return {}, item_bunch
 
             return None, None
 
