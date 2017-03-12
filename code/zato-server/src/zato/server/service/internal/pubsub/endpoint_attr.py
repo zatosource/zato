@@ -10,24 +10,24 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.common.broker_message import PUB_SUB
-from zato.common.odb.model import PubSubIDContext
-from zato.common.odb.query import pubsub_id_context_list
+from zato.common.odb.model import PubSubEndpointAttr
+from zato.common.odb.query import pubsub_endpoint_attr_list
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
 
-elem = 'pubsub_id_context'
-model = PubSubIDContext
-label = 'a publish/subscribe ID context'
+elem = 'pubsub_endpoint_attr'
+model = PubSubEndpointAttr
+label = 'a publish/subscribe endpoint attribute'
 broker_message = PUB_SUB
-broker_message_prefix = 'ID_CONTEXT_'
-list_func = pubsub_id_context_list
+broker_message_prefix = 'ENDPOINT_ATTR_'
+list_func = pubsub_endpoint_attr_list
 
 # ################################################################################################################################
 
 class Get(AdminService):
-    name = 'zato.pubsub.id-context.get'
+    name = 'zato.pubsub.endpoint-attr.get'
 
     def handle(self):
         raise NotImplemented()
@@ -35,26 +35,26 @@ class Get(AdminService):
 # ################################################################################################################################
 
 class GetList(AdminService):
-    name = 'zato.pubsub.id-context.get-list'
-    _filter_by = PubSubIDContext.name,
+    name = 'zato.pubsub.endpoint-attr.get-list'
+    _filter_by = PubSubEndpointAttr.name,
     __metaclass__ = GetListMeta
 
 # ################################################################################################################################
 
 class Create(AdminService):
-    name = 'zato.pubsub.id-context.create'
+    name = 'zato.pubsub.endpoint-attr.create'
     __metaclass__ = CreateEditMeta
 
 # ################################################################################################################################
 
 class Edit(AdminService):
-    name = 'zato.pubsub.id-context.edit'
+    name = 'zato.pubsub.endpoint-attr.edit'
     __metaclass__ = CreateEditMeta
 
 # ################################################################################################################################
 
 class Delete(AdminService):
-    name = 'zato.pubsub.id-context.delete'
+    name = 'zato.pubsub.endpoint-attr.delete'
     __metaclass__ = DeleteMeta
 
 # ################################################################################################################################

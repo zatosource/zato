@@ -419,6 +419,10 @@ class PUB_SUB(Constants):
     ENDPOINT_EDIT = ValueConstant('')
     ENDPOINT_DELETE = ValueConstant('')
 
+    ENDPOINT_ATTR_CREATE = ValueConstant('')
+    ENDPOINT_ATTR_EDIT = ValueConstant('')
+    ENDPOINT_ATTR_DELETE = ValueConstant('')
+
     ENDPOINT_OWNER_CREATE = ValueConstant('')
     ENDPOINT_OWNER_EDIT = ValueConstant('')
     ENDPOINT_OWNER_DELETE = ValueConstant('')
@@ -426,10 +430,6 @@ class PUB_SUB(Constants):
     ENDPOINT_ROLE_CREATE = ValueConstant('')
     ENDPOINT_ROLE_EDIT = ValueConstant('')
     ENDPOINT_ROLE_DELETE = ValueConstant('')
-
-    ID_CONTEXT_CREATE = ValueConstant('')
-    ID_CONTEXT_EDIT = ValueConstant('')
-    ID_CONTEXT_DELETE = ValueConstant('')
 
 code_to_name = {}
 

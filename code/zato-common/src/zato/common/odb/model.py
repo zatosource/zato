@@ -2203,26 +2203,26 @@ class PubSubEndpointRole(Base):
 
 # ################################################################################################################################
 
-class PubSubIDContext(Base):
-    """ A set of identifiers assigned to an endpoint by its owners.
+class PubSubEndpointAttr(Base):
+    """ A set of key/value attributes assigned to a pub/sub endpoint.
     """
-    __tablename__ = 'pubsub_id_ctx'
+    __tablename__ = 'pubsub_endpoint_attr'
     __table_args__ = (
-        Index('pubsub_id_ctx_name_value', 'name', 'value', unique=False),
-        UniqueConstraint('name', 'value', 'endpoint_id'),
+        Index('pubsub_id_ctx_name_value', 'key', 'value', unique=False),
+        UniqueConstraint('key', 'value', 'endpoint_id'),
     {})
 
     id = Column(Integer, Sequence('pubsub_id_ctx_seq'), primary_key=True)
 
     # An arbitrary label assigned to this identifier
-    name = Column(String(200), nullable=False)
+    key = Column(String(200), nullable=False)
 
     # One of IDs of this endpoint assigned by its owner
     value = Column(String(200), nullable=False)
 
     endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
     endpoint = relationship(
-        PubSubEndpoint, backref=backref('pubsub_id_ctx_list', order_by=name, cascade='all, delete, delete-orphan'))
+        PubSubEndpoint, backref=backref('pubsub_id_ctx_list', order_by=key, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
     cluster = relationship(
@@ -2249,14 +2249,31 @@ class PubSubSubscription(Base):
 
     endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
     endpoint = relationship(
-        PubSubEndpoint, backref=backref('pubsub_sub_list', order_by=pattern, cascade='all, delete, delete-orphan'))
+        PubSubEndpoint, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
     cluster = relationship(
         Cluster, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    zzz 3 rsdf 
-    make it point to an outgoing REST/AMQP connection
+    out_http_soap_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
+    out_http_soap = relationship(
+        HTTPSOAP, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
+
+    out_amqp_id = Column(Integer, ForeignKey('out_amqp.id', ondelete='CASCADE'), nullable=False)
+    out_http_soap = relationship(
+        HTTPSOAP, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
+
+    ws_client_id = Column(Integer, ForeignKey('web_socket_client.id', ondelete='CASCADE'), nullable=True)
+    ws_client = relationship(
+        WebSocketClient, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
+
+    ws_channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
+    ws_channel = relationship(
+        ChannelWebSocket, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
+
+    ws_server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=True)
+    ws_server = relationship(
+        Server, backref=backref('pubsub_ws_clients', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -2265,14 +2282,29 @@ class PubSubSubscriptionItem(Base):
     """
     __tablename__ = 'pubsub_item'
 
+    __table_args__ = (
+        Index('pubsb_item_key_idx', 'key', unique=False),
+        Index('pubsb_item_kv_idx', 'key', 'value', unique=False),
+        Index('pubsb_item_kv_sub_idx', 'key', 'value', 'subscription_id', unique=True),
+    {})
+
+    id = Column(Integer, Sequence('pubsub_item_seq'), primary_key=True)
+    by_pub_attr = Column(Boolean(), nullable=False)
+    by_msg_attr = Column(Boolean(), nullable=False)
+
+    # Key to subscribe by
+    key = Column(String(200), nullable=False)
+
+    # Value to match the key with
+    value = Column(String(200), nullable=False)
+
+    subscription_id = Column(Integer, ForeignKey('pubsub_sub.id', ondelete='CASCADE'), nullable=False)
+    subscription = relationship(
+        PubSubSubscription, backref=backref('items', order_by=key, cascade='all, delete, delete-orphan'))
+
 # ################################################################################################################################
 
 #class PubSubLocation(Base):
-#    pass
-
-# ################################################################################################################################
-
-#class PubSubTag(Base):
 #    pass
 
 # ################################################################################################################################

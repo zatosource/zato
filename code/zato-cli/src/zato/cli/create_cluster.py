@@ -20,8 +20,8 @@ from sqlalchemy.exc import IntegrityError
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
 from zato.common import DATA_FORMAT, PUB_SUB, SIMPLE_IO, WEB_SOCKET
-from zato.common.odb.model import ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, PubSubEndpointOwner, \
-     PubSubEndpointRole, PubSubIDContext, PubSubOwner, RBACPermission, RBACRole, Service, \
+from zato.common.odb.model import ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, PubSubEndpointAttr, \
+     PubSubEndpointOwner, PubSubEndpointRole, PubSubOwner, RBACPermission, RBACRole, Service, \
      WSSDefinition
 from zato.common.util import get_http_json_channel, get_http_soap_channel
 
@@ -815,15 +815,15 @@ class Create(ZatoCommand):
         endpoint_role.endpoint = endpoint
         endpoint_role.cluster = cluster
 
-        id_ctx = PubSubIDContext()
-        id_ctx.name = 'id'
-        id_ctx.value = PUB_SUB.ID_CTX.DEFAULT_VALUE_GEN('service')
-        id_ctx.endpoint = endpoint
-        id_ctx.cluster = cluster
+        id_attr = PubSubEndpointAttr()
+        id_attr.key = 'id'
+        id_attr.value = PUB_SUB.ENDPOINT_ATTR.DEFAULT_VALUE_FUNC('service')
+        id_attr.endpoint = endpoint
+        id_attr.cluster = cluster
 
         session.add(zato_root)
         session.add(user_root)
         session.add(service)
         session.add(endpoint)
         session.add(endpoint_owner)
-        session.add(id_ctx)
+        session.add(id_attr)

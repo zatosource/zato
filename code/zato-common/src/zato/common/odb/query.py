@@ -25,8 +25,8 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, \
      IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
-     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubEndpoint, PubSubEndpointOwner, PubSubEndpointRole, \
-     PubSubIDContext, PubSubOwner, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, \
+     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubEndpoint, PubSubEndpointAttr, PubSubEndpointOwner, \
+     PubSubEndpointRole, PubSubOwner, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, \
      SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, \
      TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, XPath, XPathSecurity
 
@@ -1596,27 +1596,27 @@ def pubsub_endpoint_role_list(session, cluster_id, endpoint_id):
 
 # ################################################################################################################################
 
-def _pubsub_id_context(session, cluster_id, endpoint_id):
-    q = session.query(PubSubIDContext.id, PubSubIDContext.name, PubSubIDContext.value,
-        PubSubIDContext.endpoint_id).\
+def _pubsub_endpoint_attr(session, cluster_id, endpoint_id):
+    q = session.query(PubSubEndpointAttr.id, PubSubEndpointAttr.key, PubSubEndpointAttr.value,
+        PubSubEndpointAttr.endpoint_id).\
         filter(Cluster.id==cluster_id)
 
     if endpoint_id:
-        q = q.filter(PubSubIDContext.endpoint_id==endpoint_id)
+        q = q.filter(PubSubEndpointAttr.endpoint_id==endpoint_id)
 
-    q = q.order_by(PubSubIDContext.id)
+    q = q.order_by(PubSubEndpointAttr.id)
 
-def pubsub_id_context(session, cluster_id, endpoint_id):
+def pubsub_endpoint_attr(session, cluster_id, endpoint_id):
     """ An individual ID context item.
     """
-    return _pubsub_id_context(session, cluster_id, endpoint_id).\
-        filter(PubSubIDContext.id==id).\
+    return _pubsub_endpoint_attr(session, cluster_id, endpoint_id).\
+        filter(PubSubEndpointAttr.id==id).\
         one()
 
 @query_wrapper
-def pubsub_id_context_list(session, cluster_id, endpoint_id):
+def pubsub_endpoint_attr_list(session, cluster_id, endpoint_id):
     """ A list of ID context items.
     """
-    return _pubsub_id_context(session, cluster_id, endpoint_id)
+    return _pubsub_endpoint_attr(session, cluster_id, endpoint_id)
 
 # ################################################################################################################################

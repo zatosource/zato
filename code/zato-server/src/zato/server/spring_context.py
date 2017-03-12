@@ -93,6 +93,9 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.pubsub',
             'zato.server.service.internal.pubsub.consumers',
             'zato.server.service.internal.pubsub.endpoint',
+            'zato.server.service.internal.pubsub.endpoint_attr',
+            'zato.server.service.internal.pubsub.endpoint_owner',
+            'zato.server.service.internal.pubsub.endpoint_role',
             'zato.server.service.internal.pubsub.message',
             'zato.server.service.internal.pubsub.owner',
             'zato.server.service.internal.pubsub.producers',
@@ -143,7 +146,7 @@ class ZatoContext(PythonConfig):
 
     @Object
     def bool_parameter_prefixes(self):
-        return SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES
+        return SIMPLE_IO.BOOL_PARAMETERS.PREFIXES
 
     # #######################################################
     # SQL
