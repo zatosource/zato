@@ -36,7 +36,7 @@ class Get(AdminService):
 
 class GetList(AdminService):
     name = 'zato.pubsub.endpoint-attr.get-list'
-    _filter_by = PubSubEndpointAttr.name,
+    _filter_by = PubSubEndpointAttr.key,
     __metaclass__ = GetListMeta
 
 # ################################################################################################################################
