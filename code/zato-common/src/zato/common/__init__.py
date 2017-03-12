@@ -383,7 +383,7 @@ class SIMPLE_IO:
         SUFFIXES = ['_id', '_count', '_size', '_timeout']
 
     class BOOL_PARAMETERS:
-        SUFFIXES = ['is_', 'needs_', 'should_']
+        PREFIXES = ['is_', 'needs_', 'should_', 'by_']
 
     COMMON_FORMAT = OrderedDict()
     COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
@@ -670,9 +670,9 @@ class PUB_SUB:
     class OWNER_ROLE:
         OWNER = 'owner'
 
-    class ID_CTX:
+    class ENDPOINT_ATTR:
         DEFAULT_NAME = 'id'
-        DEFAULT_VALUE_GEN = staticmethod(lambda prefix: 'prefix.{}'.format(uuid4().hex))
+        DEFAULT_VALUE_FUNC = staticmethod(lambda prefix: 'prefix.{}'.format(uuid4().hex))
 
     class ENDPOINT_ROLE:
         PUBLISHER = 'publisher'
