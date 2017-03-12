@@ -363,11 +363,12 @@ class DATA_FORMAT(Attrs):
     JSON = 'json'
     CSV = 'csv'
     POST = 'post'
+    SOAP = 'soap'
 
     class __metaclass__(type):
         def __iter__(self):
-            # Note that DICT isn't included because it's never exposed to external world as-is,
-            # it's only used so that services can invoke each other directly
+            # Note that DICT and other attributes aren't included because they're never exposed to external world as-is,
+            # they may at most only used so that services can invoke each other directly
             return iter((self.XML, self.JSON, self.CSV, self.POST))
 
 # TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
@@ -666,6 +667,10 @@ class PUB_SUB:
     DEFAULT_IS_FIFO = True
     DEFAULT_MAX_DEPTH = 500
     DEFAULT_MAX_BACKLOG = 1000
+
+    class PROTOCOL:
+        AMQP = 'amqp'
+        HTTP_SOAP = 'http-soap'
 
     class OWNER_ROLE:
         OWNER = 'owner'

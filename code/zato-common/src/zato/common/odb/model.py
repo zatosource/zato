@@ -2124,7 +2124,7 @@ class PubSubOwner(Base):
     """
     __tablename__ = 'pubsub_owner'
     __table_args__ = (
-        Index('pubs_owner_nm', 'name', 'parent_id', 'cluster_id', unique=True),
+        Index('pubs_owner_nm_parent_clust', 'name', 'parent_id', 'cluster_id', unique=True),
         Index('pubs_owner_parent_id', 'parent_id', unique=False),
         Index('pubs_owner_cluster_id', 'cluster_id', unique=False),
     {})
@@ -2146,7 +2146,7 @@ class PubSubEndpoint(Base):
     """
     __tablename__ = 'pubsub_endpoint'
 
-    # This ID is used for SQL joins only, actual business IDs are in PubSubIDContext
+    # This ID is used for SQL joins only, actual business IDs are in PubSubEndpointAttr
     id = Column(Integer, Sequence('pubsub_owner_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False)
 
@@ -2240,11 +2240,16 @@ class PubSubSubscription(Base):
     {})
 
     id = Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True)
-    is_internal = Column(Boolean(), nullable=False)
-    protocol = Column(String(200), nullable=False) # REST, AMQP etc.
-    data_format = Column(String(20), nullable=False) # JSON, XML etc.
+    is_active = Column(Boolean(), nullable=False)
 
-    is_durable = Column(Boolean(), nullable=False)
+    creation_time = Column(DateTime(), nullable=False)
+    sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
+    
+    is_internal = Column(Boolean(), nullable=False)
+    protocol = Column(String(200), nullable=False) # HTTP/SOAP, AMQP etc.
+    data_format = Column(String(20), nullable=False) # JSON, XML, SOAP etc.
+
+    is_durable = Column(Boolean(), nullable=False) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
 
     endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
@@ -2255,11 +2260,11 @@ class PubSubSubscription(Base):
     cluster = relationship(
         Cluster, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    out_http_soap_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=False)
+    out_http_soap_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)
     out_http_soap = relationship(
         HTTPSOAP, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
 
-    out_amqp_id = Column(Integer, ForeignKey('out_amqp.id', ondelete='CASCADE'), nullable=False)
+    out_amqp_id = Column(Integer, ForeignKey('out_amqp.id', ondelete='CASCADE'), nullable=True)
     out_http_soap = relationship(
         HTTPSOAP, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
 
@@ -2289,8 +2294,10 @@ class PubSubSubscriptionItem(Base):
     {})
 
     id = Column(Integer, Sequence('pubsub_item_seq'), primary_key=True)
+    is_active = Column(Boolean(), nullable=False)
     by_pub_attr = Column(Boolean(), nullable=False)
     by_msg_attr = Column(Boolean(), nullable=False)
+    has_glob = Column(Boolean(), nullable=False)
 
     # Key to subscribe by
     key = Column(String(200), nullable=False)
