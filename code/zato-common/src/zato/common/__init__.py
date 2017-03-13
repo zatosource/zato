@@ -509,6 +509,10 @@ class CHANNEL(Attrs):
     WORKER = 'worker'
     ZMQ = 'zmq'
 
+class CONNECTION:
+    CHANNEL = 'channel'
+    OUTGOING = 'outgoing'
+
 class INVOCATION_TARGET(Attrs):
     CHANNEL_AMQP = 'channel-amqp'
     CHANNEL_WMQ = 'channel-wmq'
@@ -936,18 +940,21 @@ class ConnectionException(ZatoException):
 class TimeoutException(ConnectionException):
     pass
 
-class HTTPException(ZatoException):
+class StatusAwareException(ZatoException):
     """ Raised when the underlying error condition can be easily expressed
     as one of the HTTP status codes.
     """
     def __init__(self, cid, msg, status):
-        super(HTTPException, self).__init__(cid, msg)
+        super(StatusAwareException, self).__init__(cid, msg)
         self.status = status
         self.reason = HTTP_RESPONSES[status]
 
     def __repr__(self):
         return '<{} at {} cid:`{}`, status:`{}`, msg:`{}`>'.format(
             self.__class__.__name__, hex(id(self)), self.cid, self.status, self.msg)
+
+class HTTPException(StatusAwareException):
+    pass
 
 class ParsingException(ZatoException):
     """ Raised when the error is to do with parsing of documents, such as an input

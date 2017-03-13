@@ -15,7 +15,7 @@ from traceback import format_exc
 from urlparse import urlparse
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, PUB_SUB
+from zato.common import CHANNEL, DATA_FORMAT, PUB_SUB, ZatoException
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointRole, PubSubEndpointOwner, PubSubOwner, PubSubSubscription, \
      PubSubSubscriptionItem
 from zato.common.util import new_cid
@@ -26,7 +26,7 @@ from zato.server.service import Dict, Service
 class CommonSimpleIO:
     input_required = ('name',)
     input_optional = ('callback', 'api_key_header', 'api_key', 'pattern', Dict('patterns'))
-    output_optional = ('sub_key',)
+    output_optional = ('sub_key', 'message')
 
 # ################################################################################################################################
 
@@ -107,6 +107,10 @@ class Subscribe(Service):
             if input.callback:
                 # TODO: Create HTTP outconn
                 parsed = urlparse(input.callback)
+
+                if parsed.username and not parsed.password:
+                    raise ZatoException(self.cid, 'Password is required if username is')
+
                 print(333, parsed)
                 print(333, parsed.username)
                 print(333, parsed.password)
@@ -143,6 +147,10 @@ class ExternalSubscribe(Service):
     def handle(self):
         input = self.request.input
         input.is_internal = False
-        self.response.payload = self.invoke(Subscribe.get_name(), input)
+
+        try:
+            self.response.payload = self.invoke(Subscribe.get_name(), input)
+        except ZatoException, e:
+            self.response.payload.message = e.message
 
 # ################################################################################################################################
