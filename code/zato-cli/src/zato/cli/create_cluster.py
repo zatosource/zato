@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import DATA_FORMAT, PUB_SUB, SIMPLE_IO, WEB_SOCKET
+from zato.common import CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, PUB_SUB, SIMPLE_IO, URL_TYPE, WEB_SOCKET
 from zato.common.odb.model import ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, PubSubEndpointAttr, \
      PubSubEndpointOwner, PubSubEndpointRole, PubSubOwner, RBACPermission, RBACRole, Service, \
      WSSDefinition
@@ -285,6 +285,27 @@ zato_services = {
     'zato.pubsub.endpoint.get':'zato.server.service.internal.pubsub.endpoint.Get',
     'zato.pubsub.endpoint.get-list':'zato.server.service.internal.pubsub.endpoint.GetList',
 
+    # Publish/subscribe - endpoint attributes
+    'zato.pubsub.endpoint-attr.create':'zato.server.service.internal.pubsub.endpoint-attr.Create',
+    'zato.pubsub.endpoint-attr.delete':'zato.server.service.internal.pubsub.endpoint-attr.Delete',
+    'zato.pubsub.endpoint-attr.edit':'zato.server.service.internal.pubsub.endpoint-attr.Edit',
+    'zato.pubsub.endpoint-attr.get':'zato.server.service.internal.pubsub.endpoint-attr.Get',
+    'zato.pubsub.endpoint-attr.get-list':'zato.server.service.internal.pubsub.endpoint-attr.GetList',
+
+    # Publish/subscribe - endpoint owners
+    'zato.pubsub.endpoint-owner.create':'zato.server.service.internal.pubsub.endpoint-owner.Create',
+    'zato.pubsub.endpoint-owner.delete':'zato.server.service.internal.pubsub.endpoint-owner.Delete',
+    'zato.pubsub.endpoint-owner.edit':'zato.server.service.internal.pubsub.endpoint-owner.Edit',
+    'zato.pubsub.endpoint-owner.get':'zato.server.service.internal.pubsub.endpoint-owner.Get',
+    'zato.pubsub.endpoint-owner.get-list':'zato.server.service.internal.pubsub.endpoint-owner.GetList',
+
+    # Publish/subscribe - endpoint roles
+    'zato.pubsub.endpoint-role.create':'zato.server.service.internal.pubsub.endpoint-role.Create',
+    'zato.pubsub.endpoint-role.delete':'zato.server.service.internal.pubsub.endpoint-role.Delete',
+    'zato.pubsub.endpoint-role.edit':'zato.server.service.internal.pubsub.endpoint-role.Edit',
+    'zato.pubsub.endpoint-role.get':'zato.server.service.internal.pubsub.endpoint-role.Get',
+    'zato.pubsub.endpoint-role.get-list':'zato.server.service.internal.pubsub.endpoint-role.GetList',
+
     # Publish/subscribe - messages
     'zato.pubsub.message.delete':'zato.server.service.internal.pubsub.message.Delete',
     'zato.pubsub.message.get':'zato.server.service.internal.pubsub.message.Get',
@@ -303,6 +324,13 @@ zato_services = {
     'zato.pubsub.producers.edit':'zato.server.service.internal.pubsub.producers.Edit',
     'zato.pubsub.producers.get-info':'zato.server.service.internal.pubsub.producers.GetInfo',
     'zato.pubsub.producers.get-list':'zato.server.service.internal.pubsub.producers.GetList',
+
+    # Publish/subscribe - subscribers
+    'zato.pubsub.subscriber.external-subscribe':'zato.server.service.internal.pubsub.subscriber.ExternalSubscribe',
+    'zato.pubsub.subscriber.json-external-subscribe':'zato.server.service.internal.pubsub.subscriber.JSONExternalSubscribe',
+    'zato.pubsub.subscriber.soap-external-subscribe':'zato.server.service.internal.pubsub.subscriber.SOAPExternalSubscribe',
+    'zato.pubsub.subscriber.subscribe':'zato.server.service.internal.pubsub.subscriber.Subscribe',
+    'zato.pubsub.subscriber.xml-external-subscribe':'zato.server.service.internal.pubsub.subscriber.XMLExternalSubscribe',
 
     # Query - Cassandra
     'zato.query.cassandra.create':'zato.server.service.internal.query.cassandra.Create',
@@ -546,13 +574,17 @@ class Create(ZatoCommand):
             uuid4().hex, msg_browser_defaults.TOKEN_TTL, cluster)
         session.add(live_browser_sec)
 
-        self.add_internal_services(session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec)
+        # Services used to handle pub/sub subscriptions.
+        pubsub_services = []
+
+        self.add_internal_services(
+            session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec, pubsub_services)
         self.add_ping_services(session, cluster)
         self.add_default_rbac_permissions(session, cluster)
         self.add_default_rbac_roles(session, cluster)
 
         self.add_default_pubsub_accounts(session, cluster)
-        self.add_default_pubsub_config(session, cluster)
+        self.add_default_pubsub_config(session, cluster, pubsub_services)
 
         try:
             session.commit()
@@ -573,7 +605,8 @@ class Create(ZatoCommand):
             else:
                 self.logger.info('OK')
 
-    def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec):
+    def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec,
+        pubsub_services):
         """ Adds these Zato internal services that can be accessed through SOAP requests.
         """
 
@@ -614,6 +647,11 @@ class Create(ZatoCommand):
 
             elif 'check' in name:
                 self.add_check(session, cluster, service, pubapi_sec)
+
+            elif 'subscribe' in name:
+                for item in ('json', 'xml', 'soap'):
+                    if item in name:
+                        pubsub_services.append(service)
 
             session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))
             session.add(get_http_json_channel(name, service, cluster, pubapi_sec))
@@ -782,7 +820,7 @@ class Create(ZatoCommand):
                 merge_url_params_req=True, service=service, cluster=cluster, security=pubapi_sec)
             session.add(channel)
 
-    def add_default_pubsub_config(self, session, cluster):
+    def add_default_pubsub_config(self, session, cluster, pubsub_services):
         """ Adds default configuration for pub/sub endpoints and owners.
         """
         zato_root = PubSubOwner()
@@ -795,11 +833,11 @@ class Create(ZatoCommand):
         user_root.is_internal = False
         user_root.cluster = cluster
 
-        service = PubSubOwner()
-        service.name = 'zato.service'
-        service.is_internal = True
-        service.parent = zato_root
-        service.cluster = cluster
+        owner = PubSubOwner()
+        owner.name = 'zato.service'
+        owner.is_internal = True
+        owner.parent = zato_root
+        owner.cluster = cluster
 
         endpoint = PubSubEndpoint()
         endpoint.is_internal = True
@@ -807,7 +845,7 @@ class Create(ZatoCommand):
         endpoint_owner = PubSubEndpointOwner()
         endpoint_owner.role = PUB_SUB.OWNER_ROLE.OWNER
         endpoint_owner.endpoint = endpoint
-        endpoint_owner.owner = service
+        endpoint_owner.owner = owner
         endpoint_owner.cluster = cluster
 
         endpoint_role = PubSubEndpointRole()
@@ -820,6 +858,33 @@ class Create(ZatoCommand):
         id_attr.value = PUB_SUB.ENDPOINT_ATTR.DEFAULT_VALUE_FUNC('service')
         id_attr.endpoint = endpoint
         id_attr.cluster = cluster
+
+        channel_names = {
+            'zato.pubsub.subscriber.json-external-subscribe': '/pubsub/subscribe',
+            'zato.pubsub.subscriber.xml-external-subscribe': '/pubsub/subscribe/xml',
+            'zato.pubsub.subscriber.soap-external-subscribe': '/pubsub/subscribe/soap',
+        }
+
+        transports = {
+            DATA_FORMAT.JSON: URL_TYPE.PLAIN_HTTP,
+            DATA_FORMAT.XML: URL_TYPE.PLAIN_HTTP,
+            DATA_FORMAT.SOAP: URL_TYPE.SOAP,
+        }
+
+        for service in pubsub_services:
+
+            channel_name = channel_names[service.name]
+            data_format = service.name.replace('zato.pubsub.subscriber.', '').replace('-external-subscribe', '')
+
+            sec_name = sec_username = 'pubsub.subscribe.{}'.format(data_format)
+            sec = HTTPBasicAuth(None, sec_name, True, sec_username, 'Zato pub/sub', uuid4().hex, cluster)
+
+            channel = HTTPSOAP(None, channel_name, True, True, CONNECTION.CHANNEL, transports[data_format],
+                None, channel_name, None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster,
+                security=sec, serialization_type=HTTP_SOAP_SERIALIZATION_TYPE.STRING_VALUE.id)
+
+            session.add(sec)
+            session.add(channel)
 
         session.add(zato_root)
         session.add(user_root)

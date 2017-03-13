@@ -99,6 +99,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.pubsub.message',
             'zato.server.service.internal.pubsub.owner',
             'zato.server.service.internal.pubsub.producers',
+            'zato.server.service.internal.pubsub.subscriber',
             'zato.server.service.internal.pubsub.topics',
             'zato.server.service.internal.query.cassandra',
             'zato.server.service.internal.scheduler',
