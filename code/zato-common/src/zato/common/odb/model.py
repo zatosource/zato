@@ -22,8 +22,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relation, relationship
 
 # Zato
-from zato.common import AMQP, CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, \
-     MSG_PATTERN_TYPE, ODOO, PUB_SUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
+from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, \
+     MSG_PATTERN_TYPE, ODOO, PUB_SUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -500,16 +500,17 @@ class HTTPSOAP(Base):
     """ An incoming or outgoing HTTP/SOAP connection.
     """
     __tablename__ = 'http_soap'
-    __table_args__ = (UniqueConstraint('name', 'connection', 'transport', 'cluster_id'),
-                      UniqueConstraint('url_path', 'host', 'connection', 'soap_action', 'cluster_id'), {})
+    __table_args__ = (
+        UniqueConstraint('name', 'connection', 'transport', 'cluster_id'),
+        Index('path_host_conn_act_clus_idx', 'url_path', 'host', 'connection', 'soap_action', 'cluster_id', unique=True), {})
 
     id = Column(Integer, Sequence('http_soap_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
 
-    connection = Column(Enum('channel', 'outgoing', name='http_soap_connection'), nullable=False)
-    transport = Column(Enum('plain_http', 'soap', name='http_soap_transport'), nullable=False)
+    connection = Column(Enum(CONNECTION.CHANNEL, CONNECTION.OUTGOING, name='http_soap_connection'), nullable=False)
+    transport = Column(Enum(URL_TYPE.PLAIN_HTTP, URL_TYPE.SOAP, name='http_soap_transport'), nullable=False)
 
     host = Column(String(200), nullable=True)
     url_path = Column(String(200), nullable=False)
