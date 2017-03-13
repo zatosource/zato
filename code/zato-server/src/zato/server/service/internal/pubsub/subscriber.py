@@ -11,22 +11,23 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from datetime import datetime
-from traceback import format_exc
+from httplib import BAD_REQUEST, OK
 from urlparse import urlparse
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, PUB_SUB, ZatoException
-from zato.common.odb.model import PubSubEndpoint, PubSubEndpointRole, PubSubEndpointOwner, PubSubOwner, PubSubSubscription, \
-     PubSubSubscriptionItem
-from zato.common.util import new_cid
+from zato.common import CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, PUB_SUB, StatusAwareException, URL_TYPE
+from zato.common.odb.model import HTTPSOAP, PubSubEndpoint, PubSubEndpointRole, \
+     PubSubEndpointOwner, PubSubOwner, PubSubSubscription, PubSubSubscriptionItem
+from zato.common.util import fs_safe_name, new_cid
 from zato.server.service import Dict, Service
 
 # ################################################################################################################################
 
 class CommonSimpleIO:
     input_required = ('name',)
-    input_optional = ('callback', 'api_key_header', 'api_key', 'pattern', Dict('patterns'))
-    output_optional = ('sub_key', 'message')
+    input_optional = ('callback', 'api_key_header', 'api_key', 'pattern', Dict('patterns'), 'soap_action',
+        'transport', 'data_format')
+    output_optional = ('sub_key', 'message', 'status')
 
 # ################################################################################################################################
 
@@ -39,11 +40,8 @@ class Subscribe(Service):
 
     def handle(self):
         input = self.request.input
-        data_format = input.get('data_format', DATA_FORMAT.JSON)
         cluster_id = self.server.cluster_id
         sub_key = new_cid()
-
-        self.logger.warn('\n' + str(self.request.input))
 
         # Look up owner by name of create the owner if that name doesn't exist yet.
         with closing(self.odb.session()) as session:
@@ -98,22 +96,44 @@ class Subscribe(Service):
             subscription.is_active = True
             subscription.is_internal = input.is_internal
             subscription.protocol = PUB_SUB.PROTOCOL.HTTP_SOAP # TODO: Add AMQP
-            subscription.data_format = data_format
+            subscription.data_format = input.data_format
             subscription.is_durable = True
             subscription.has_gd = False # TODO: Add GD
             subscription.endpoint = endpoint
             subscription.cluster_id = cluster_id
+
+            outconn = None
 
             if input.callback:
                 # TODO: Create HTTP outconn
                 parsed = urlparse(input.callback)
 
                 if parsed.username and not parsed.password:
-                    raise ZatoException(self.cid, 'Password is required if username is')
+                    raise StatusAwareException(self.cid, 'Password is required if username is provided', BAD_REQUEST)
 
-                print(333, parsed)
-                print(333, parsed.username)
-                print(333, parsed.password)
+                # Check if we already have this outgoing connection, if not, create it along with credentials, if any.
+                outconn = session.query(HTTPSOAP).\
+                    filter(HTTPSOAP.url_path==parsed.path).\
+                    filter(HTTPSOAP.host==parsed.netloc).\
+                    filter(HTTPSOAP.connection=='outgoing').\
+                    filter(HTTPSOAP.soap_action==input.soap_action).\
+                    filter(HTTPSOAP.cluster_id==cluster_id).\
+                    first()
+
+                if not outconn:
+                    outconn = HTTPSOAP()
+                    outconn.name = 'zato.pubsub.{}.{}'.format(fs_safe_name(self.time.utcnow()), fs_safe_name(input.name))[:60]
+                    outconn.is_active = True
+                    outconn.is_internal = input.is_internal
+                    outconn.connection = CONNECTION.OUTGOING
+                    outconn.transport = input.transport
+                    outconn.host = parsed.netloc
+                    outconn.url_path = parsed.path
+                    outconn.method = 'POST'
+                    outconn.soap_action = input.soap_action
+                    outconn.data_format = input.data_format
+                    outconn.serialization_type = HTTP_SOAP_SERIALIZATION_TYPE.STRING_VALUE.id
+                    outconn.cluster_id = self.server.cluster_id
 
             subscription_item = PubSubSubscriptionItem()
             subscription_item.is_active = True
@@ -122,6 +142,7 @@ class Subscribe(Service):
             subscription_item.has_glob = '*' in input.pattern
             subscription_item.key = 'default'
             subscription_item.value = 'dummy-{}'.format(self.time.utcnow())
+            subscription_item.subscription = subscription
 
             session.add(owner)
             session.add(endpoint)
@@ -130,27 +151,63 @@ class Subscribe(Service):
             session.add(subscription)
             session.add(subscription_item)
 
-            #session.commit()
+            # Outconn is optional because it may have existed already
+            if outconn:
+                session.add(outconn)
 
-            self.logger.info('Created a new subscription `%s`', sub_key)
+            # All set, we can commit now
+            session.commit()
 
-        #self.response.payload = ''
+            self.logger.info('Created a new subscription:`%s`', sub_key)
+
+        self.response.payload.sub_key = sub_key
 
 # ################################################################################################################################
 
 class ExternalSubscribe(Service):
-    """ Lets external endpoints subscribe using HTTP.
+    """ Base class for external subscriptions to pub/sub.
     """
     class SimpleIO(CommonSimpleIO):
         pass
 
-    def handle(self):
+    def _handle(self, transport, data_format):
         input = self.request.input
         input.is_internal = False
+        input.transport = transport
+        input.data_format = data_format
 
         try:
-            self.response.payload = self.invoke(Subscribe.get_name(), input)
-        except ZatoException, e:
+            data = self.invoke(Subscribe.get_name(), input, as_bunch=True)
+            self.response.payload.sub_key = data.response.sub_key
+            self.response.payload.message = 'OK'
+            self.response.payload.status = OK
+        except StatusAwareException, e:
             self.response.payload.message = e.message
+            self.response.payload.status = e.status
+            self.response.status_code = e.status
+
+# ################################################################################################################################
+
+class JSONExternalSubscribe(ExternalSubscribe):
+    """ Lets external endpoints subscribe using HTTP/JSON.
+    """
+    def handle(self):
+        return super(JSONExternalSubscribe, self)._handle(URL_TYPE.PLAIN_HTTP, DATA_FORMAT.JSON)
+
+# ################################################################################################################################
+
+class XMLExternalSubscribe(ExternalSubscribe):
+    """ Lets external endpoints subscribe using HTTP/XML.
+    """
+    def handle(self):
+        return super(XMLExternalSubscribe, self)._handle(URL_TYPE.PLAIN_HTTP, DATA_FORMAT.XML)
+
+# ################################################################################################################################
+
+class SOAPExternalSubscribe(ExternalSubscribe):
+    """ Lets external endpoints subscribe using HTTP/SOAP.
+    """
+    def handle(self):
+        return super(XMLExternalSubscribe, self)._handle(URL_TYPE.SOAP, DATA_FORMAT.XML)
 
 # ################################################################################################################################
