@@ -17,7 +17,7 @@ from paste.util.converters import asbool
 # Zato
 from zato.bunch import Bunch
 from zato.common import MISC
-from zato.common.pubsub import PubSubAPI, RedisPubSub
+from zato.common.pubsub import PubSubAPI, SQLPubSub
 from zato.server.config import ConfigDict
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
@@ -42,7 +42,7 @@ class ConfigLoader(object):
         self.live_msg_browser.include_internal = asbool(self.live_msg_browser.include_internal)
 
         # Pub/sub
-        self.pubsub = PubSubAPI(RedisPubSub(self.kvdb.conn))
+        self.pubsub = PubSubAPI(SQLPubSub(self.odb, self.invoke_outconn_http))
 
         #
         # Cassandra - start

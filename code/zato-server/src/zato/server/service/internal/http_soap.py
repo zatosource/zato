@@ -127,6 +127,7 @@ class Create(_CreateEdit):
         input.sec_use_rbac = input.security_id == ZATO_SEC_USE_RBAC
         input.security_id = input.security_id if input.security_id not in (ZATO_NONE, ZATO_SEC_USE_RBAC) else None
         input.soap_action = input.soap_action if input.soap_action else ''
+        input.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
 
         if not input.url_path.startswith('/'):
             msg = 'URL path:[{}] must start with a slash /'.format(input.url_path)
@@ -183,7 +184,7 @@ class Create(_CreateEdit):
                 item.url_params_pri = input.get('url_params_pri') or URL_PARAMS_PRIORITY.DEFAULT
                 item.params_pri = input.get('params_pri') or PARAMS_PRIORITY.DEFAULT
                 item.serialization_type = input.get('serialization_type') or HTTP_SOAP_SERIALIZATION_TYPE.DEFAULT.id
-                item.timeout = input.get('timeout') or MISC.DEFAULT_HTTP_TIMEOUT
+                item.timeout = input.timeout
                 item.has_rbac = input.get('has_rbac') or input.sec_use_rbac or False
                 item.content_type = input.get('content_type')
                 item.sec_use_rbac = input.sec_use_rbac

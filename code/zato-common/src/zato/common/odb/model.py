@@ -2296,6 +2296,7 @@ class PubSubSubscriptionItem(Base):
 
     id = Column(Integer, Sequence('pubsub_item_seq'), primary_key=True)
     is_active = Column(Boolean(), nullable=False)
+    # TODO: by_publisher_attr = Column(Boolean(), nullable=False)
     by_pub_attr = Column(Boolean(), nullable=False)
     by_msg_attr = Column(Boolean(), nullable=False)
     has_glob = Column(Boolean(), nullable=False)

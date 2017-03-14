@@ -279,7 +279,7 @@ class WebSocket(_WebSocket):
             'data_format': _data_format,
             'service': service_name,
             'payload': data,
-            'environ': {'pub_client_id': self.pub_client_id},
+            'environ': {'pub_client_id': self.pub_client_id, 'client_name':self.ext_client_name, 'client_id':self.ext_client_id},
         }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=False)
 
 # ################################################################################################################################

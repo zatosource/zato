@@ -120,7 +120,6 @@ from zato.common.odb.query import _service as _service
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
-
 logging.addLevelName(TRACE1, "TRACE1")
 
 _repr_template = Template('<$class_name at $mem_loc$attrs>')
@@ -1031,6 +1030,14 @@ def validate_xpath(expr):
     """
     etree.XPath(expr)
     return True
+
+# ################################################################################################################################
+
+def get_free_port(start=30000):
+    port = start
+    while is_port_taken(port):
+        port += 1
+    return port
 
 # ################################################################################################################################
 
