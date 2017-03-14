@@ -531,6 +531,11 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def invoke_outconn_http(self, name, request):
+        logger.warn('AAA %s %s', name, request)
+
+# ################################################################################################################################
+
     @staticmethod
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.

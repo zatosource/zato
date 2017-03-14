@@ -25,8 +25,8 @@ from zato.server.service import Dict, Service
 
 class CommonSimpleIO:
     input_required = ('name',)
-    input_optional = ('callback', 'api_key_header', 'api_key', 'pattern', Dict('patterns'), 'soap_action',
-        'transport', 'data_format')
+    input_optional = ('transport', 'data_format', 'callback', 'api_key_header', 'api_key', 'pattern', Dict('patterns'),
+        'soap_action', 'soap_version')
     output_optional = ('sub_key', 'message', 'status')
 
 # ################################################################################################################################
@@ -42,6 +42,7 @@ class Subscribe(Service):
         input = self.request.input
         cluster_id = self.server.cluster_id
         sub_key = new_cid()
+        soap_version = input.get('soap_version') or '1.2'
 
         # Look up owner by name of create the owner if that name doesn't exist yet.
         with closing(self.odb.session()) as session:
@@ -90,6 +91,45 @@ class Subscribe(Service):
             endpoint_role.role = PUB_SUB.ENDPOINT_ROLE.SUBSCRIBER
             endpoint_role.cluster_id = cluster_id
 
+            outconn = None
+            outconn_id = None
+
+            if input.callback:
+                # TODO: Create HTTP outconn
+                parsed = urlparse(input.callback)
+
+                if parsed.username and not parsed.password:
+                    raise StatusAwareException(self.cid, 'Password is required if username is provided', BAD_REQUEST)
+
+                host_full = '{}://{}'.format(parsed.scheme, parsed.netloc)
+
+                # Check if we already have this outgoing connection, if not, create it along with credentials, if any.
+                outconn = session.query(HTTPSOAP).\
+                    filter(HTTPSOAP.url_path==parsed.path).\
+                    filter(HTTPSOAP.host==host_full).\
+                    filter(HTTPSOAP.connection=='outgoing').\
+                    filter(HTTPSOAP.soap_action==input.soap_action).\
+                    filter(HTTPSOAP.cluster_id==cluster_id).\
+                    first()
+
+                if outconn:
+                    outconn_id = outconn.id
+                else:
+                    outconn_id = self.invoke('zato.http-soap.create', {
+                        'name': 'zato.pubsub.{}.{}'.format(fs_safe_name(self.time.utcnow()), fs_safe_name(input.name))[:60],
+                        'is_active': True,
+                        'is_internal': input.is_internal,
+                        'connection': CONNECTION.OUTGOING,
+                        'transport': input.transport,
+                        'host': host_full,
+                        'url_path': parsed.path,
+                        'soap_action': input.soap_action,
+                        'soap_version': soap_version,
+                        'data_format': input.data_format,
+                        'serialization_type': HTTP_SOAP_SERIALIZATION_TYPE.STRING_VALUE.id,
+                        'cluster_id': self.server.cluster_id,
+                    }, as_bunch=True).zato_http_soap_create_response.id
+
             subscription = PubSubSubscription()
             subscription.creation_time = datetime.utcnow()
             subscription.sub_key = sub_key
@@ -100,48 +140,17 @@ class Subscribe(Service):
             subscription.is_durable = True
             subscription.has_gd = False # TODO: Add GD
             subscription.endpoint = endpoint
+            subscription.out_http_soap_id = outconn_id
             subscription.cluster_id = cluster_id
-
-            outconn = None
-
-            if input.callback:
-                # TODO: Create HTTP outconn
-                parsed = urlparse(input.callback)
-
-                if parsed.username and not parsed.password:
-                    raise StatusAwareException(self.cid, 'Password is required if username is provided', BAD_REQUEST)
-
-                # Check if we already have this outgoing connection, if not, create it along with credentials, if any.
-                outconn = session.query(HTTPSOAP).\
-                    filter(HTTPSOAP.url_path==parsed.path).\
-                    filter(HTTPSOAP.host==parsed.netloc).\
-                    filter(HTTPSOAP.connection=='outgoing').\
-                    filter(HTTPSOAP.soap_action==input.soap_action).\
-                    filter(HTTPSOAP.cluster_id==cluster_id).\
-                    first()
-
-                if not outconn:
-                    outconn = HTTPSOAP()
-                    outconn.name = 'zato.pubsub.{}.{}'.format(fs_safe_name(self.time.utcnow()), fs_safe_name(input.name))[:60]
-                    outconn.is_active = True
-                    outconn.is_internal = input.is_internal
-                    outconn.connection = CONNECTION.OUTGOING
-                    outconn.transport = input.transport
-                    outconn.host = parsed.netloc
-                    outconn.url_path = parsed.path
-                    outconn.method = 'POST'
-                    outconn.soap_action = input.soap_action
-                    outconn.data_format = input.data_format
-                    outconn.serialization_type = HTTP_SOAP_SERIALIZATION_TYPE.STRING_VALUE.id
-                    outconn.cluster_id = self.server.cluster_id
 
             subscription_item = PubSubSubscriptionItem()
             subscription_item.is_active = True
             subscription_item.by_msg_attr = True
+            # TODO: subscription_item.by_publisher_attr = False
             subscription_item.by_pub_attr = False
             subscription_item.has_glob = '*' in input.pattern
             subscription_item.key = 'default'
-            subscription_item.value = 'dummy-{}'.format(self.time.utcnow())
+            subscription_item.value = input.pattern
             subscription_item.subscription = subscription
 
             session.add(owner)
@@ -150,10 +159,6 @@ class Subscribe(Service):
             session.add(endpoint_role)
             session.add(subscription)
             session.add(subscription_item)
-
-            # Outconn is optional because it may have existed already
-            if outconn:
-                session.add(outconn)
 
             # All set, we can commit now
             session.commit()
@@ -208,6 +213,6 @@ class SOAPExternalSubscribe(ExternalSubscribe):
     """ Lets external endpoints subscribe using HTTP/SOAP.
     """
     def handle(self):
-        return super(XMLExternalSubscribe, self)._handle(URL_TYPE.SOAP, DATA_FORMAT.XML)
+        return super(SOAPExternalSubscribe, self)._handle(URL_TYPE.SOAP, DATA_FORMAT.XML)
 
 # ################################################################################################################################

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2014 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2017, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Core publish/subscribe features
 
 # stdlib
+from contextlib import closing
 from datetime import datetime, timedelta
 from json import dumps, loads
 from logging import getLogger
@@ -25,6 +26,7 @@ from gevent.lock import RLock
 from zato.common import PUB_SUB, ZATO_NONE, ZATO_NOT_GIVEN
 from zato.common.kvdb import LuaContainer
 from zato.common.pubsub import lua
+from zato.common.odb.model import PubSubSubscription
 from zato.common.util import datetime_to_seconds, make_repr, new_cid
 
 # ################################################################################################################################
@@ -419,453 +421,16 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-class RedisPubSub(PubSub, LuaContainer):
-    """ Publish/subscribe based on Redis.
-    """
-    # Main public API
-    LUA_PUBLISH = 'lua-publish'
-    LUA_GET_FROM_CONSUMER_QUEUE = 'lua-get-from-consumer-queue'
-    LUA_REJECT = 'lua-reject'
-    LUA_ACK_DELETE = 'lua-ack-delete'
-
-    # Background tasks
-    LUA_DELETE_EXPIRED_TOPIC = 'lua-delete-expired-topic'
-    LUA_DELETE_EXPIRED_CONSUMER = 'lua-delete-expired-consumer'
-    LUA_MOVE_TO_TARGET_QUEUES = 'lua-move-to-target-queues'
-
-    # Message browsing
-    LUA_GET_MESSAGE_LIST = 'lua-get-message-list'
-
-    # Message deleting
-    LUA_DELETE_FROM_TOPIC = 'lua-delete-from-topic'
-
-# ################################################################################################################################
-
-    def __init__(self, kvdb, key_prefix='zato:pubsub:'):
-        super(RedisPubSub, self).__init__()
-        self.kvdb = kvdb
-        self.lua_programs = {}
-
-        self.MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'zset:msg-ids:{}')
-        self.BACKLOG_FULL_KEY = '{}{}'.format(key_prefix, 'hash:backlog-full')
-        self.CONSUMER_MSG_IDS_PREFIX = '{}{}'.format(key_prefix, 'list:consumer:msg-ids:{}')
-        self.CONSUMER_IN_FLIGHT_IDS_PREFIX = '{}{}'.format(key_prefix, 'set:consumer:in-flight:ids:{}')
-        self.CONSUMER_IN_FLIGHT_DATA_PREFIX = '{}{}'.format(key_prefix, 'hash:consumer:in-flight:data:{}')
-        self.MSG_VALUES_KEY = '{}{}'.format(key_prefix, 'hash:msg-values')
-        self.MSG_METADATA_KEY = '{}{}'.format(key_prefix, 'hash:msg-metadata')
-        self.MSG_EXPIRE_AT_KEY = '{}{}'.format(key_prefix, 'hash:msg-expire-at') # In UTC
-        self.UNACK_COUNTER_KEY = '{}{}'.format(key_prefix, 'hash:unack-counter')
-        self.LAST_PUB_TIME_KEY = '{}{}'.format(key_prefix, 'hash:last-pub-time') # In UTC
-        self.LAST_SEEN_CONSUMER_KEY = '{}{}'.format(key_prefix, 'hash:last-seen-consumer') # In UTC
-        self.LAST_SEEN_PRODUCER_KEY = '{}{}'.format(key_prefix, 'hash:last-seen-producer') # In UTC
-
-        self.add_lua_program(self.LUA_PUBLISH, lua.lua_publish)
-        self.add_lua_program(self.LUA_MOVE_TO_TARGET_QUEUES, lua.lua_move_to_target_queues)
-        self.add_lua_program(self.LUA_GET_FROM_CONSUMER_QUEUE, lua.lua_get_from_cons_queue)
-        self.add_lua_program(self.LUA_REJECT, lua.lua_reject)
-        self.add_lua_program(self.LUA_ACK_DELETE, lua.lua_ack_delete)
-        self.add_lua_program(self.LUA_DELETE_EXPIRED_TOPIC, lua.lua_delete_expired_topic)
-        self.add_lua_program(self.LUA_DELETE_EXPIRED_CONSUMER, lua.lua_delete_expired_consumer)
-        self.add_lua_program(self.LUA_GET_MESSAGE_LIST, lua.lua_get_message_list)
-        self.add_lua_program(self.LUA_DELETE_FROM_TOPIC, lua.lua_delete_from_topic)
-
-# ################################################################################################################################
-
-    def ping(self):
-        """ Pings the pub/sub backend.
-        """
-        return self.kvdb.ping()
-
-# ################################################################################################################################
-
-    def validate_sub_key(self, sub_key):
-        """ Returns a client_id by its matching subscription key or raises PubSubException if sub_key could not be found.
-        Must be called with self.update_lock held.
-        """
-        with self.update_lock:
-            # Grab the client's ID if it's a valid subscription key.
-            if not self.sub_to_cons.get(sub_key):
-                msg = 'Invalid sub_key `{}`'.format(sub_key)
-                self.logger.warn(msg)
-                raise PubSubException(msg)
-
-            return True
-
-# ################################################################################################################################
-
-    # Overridden from the base class
-
-    def delete_topic_metadata(self, topic):
-        self.kvdb.hdel(self.LAST_PUB_TIME_KEY, topic.name)
-
-    def delete_consumer_metadata(self, client):
-        self.kvdb.hdel(self.LAST_SEEN_CONSUMER_KEY, client.id)
-
-    def delete_producer_metadata(self, client):
-        self.kvdb.hdel(self.LAST_SEEN_PRODUCER_KEY, client.id)
-
-# ################################################################################################################################
-
-    def _raise_cant_publish_error(self, ctx):
-        raise PermissionDenied("Permision denied. Can't publish to `{}`".format(ctx.topic))
+class SQLPubSub(PubSub):
+    def __init__(self, conn, invoke_outconn_http):
+        self.conn = conn
+        self.invoke_outconn_http = invoke_outconn_http
 
     def publish(self, ctx):
-        """ Publishes a message on a selected topic.
-        """
-        # Note that the client always receives the same response but logs contain details
-        with self.update_lock:
-            if not ctx.topic in self.topics:
-                self.logger.warn('Permision denied. No such topic `%s`, publisher `%s`', ctx.topic, ctx.client_id)
-                self._raise_cant_publish_error(ctx)
+        logger.warn('zzz %s', ctx)
 
-            if not ctx.client_id in self.topic_to_prod.get(ctx.topic, []):
-                self.logger.warn('Permision denied. Producer `%s` cannot publish to `%s`', ctx.client_id, ctx.topic)
-                self._raise_cant_publish_error(ctx)
-
-            if not self.topics[ctx.topic].is_active:
-                self.logger.warn('Topic `%s` is not active. Producer `%s`.', ctx.topic, ctx.client_id)
-                self._raise_cant_publish_error(ctx)
-
-            if not self.producers[ctx.client_id].is_active:
-                self.logger.warn('Producer `%s` is not active. Producer `%s`.', ctx.client_id, ctx.topic)
-                self._raise_cant_publish_error(ctx)
-
-        if self.get_topic_depth(ctx.topic) >= self.topics[ctx.topic].max_depth:
-            self.logger.warn('Topic full, `%s`, max depth `%s`', ctx.topic, self.topics[ctx.topic].max_depth)
-            raise ItemFull('Topic full', ctx.topic, self.topics[ctx.topic].max_depth)
-
-        id_key = self.MSG_IDS_PREFIX.format(ctx.topic)
-
-        # Each message will carry information what topic it's intended for
-        ctx.msg.topic = ctx.topic
-
-        # The score is built by prefixing the number of milliseconds since UNIX epoch with message's priority. Hence higher
-        # priority messages will get higher score whereas messages of equal priority will be still scored according
-        # to their time of being published. But in the latter case this is still approximate with a high rate of publications
-        # so if guarantees regarding the order of messages are required the messages should be arranged
-        # in sequences on client side.
-
-        now_seconds = datetime_to_seconds(datetime.utcnow())
-        score = '{}{}'.format(ctx.msg.priority, now_seconds)
-
-        try:
-            self.run_lua(
-                self.LUA_PUBLISH, [
-                    id_key, self.MSG_VALUES_KEY, self.MSG_METADATA_KEY, self.MSG_EXPIRE_AT_KEY, self.LAST_PUB_TIME_KEY,
-                       self.LAST_SEEN_PRODUCER_KEY],
-                    [score, ctx.msg.msg_id, ctx.msg.expire_at_utc.isoformat(), ctx.msg.payload, ctx.msg.to_json(),
-                       ctx.topic, datetime.utcnow().isoformat(), ctx.client_id])
-        except Exception, e:
-            self.logger.error('Pub error `%s`', format_exc(e))
-            raise
-        else:
-            self.logger.info('Published `%s` to `%s`, exp `%s`', ctx.msg.msg_id, ctx.topic, ctx.msg.expire_at_utc.isoformat())
-            return ctx
-
-# ################################################################################################################################
-
-    def subscribe(self, ctx, sub_key=None):
-        """ Subscribes the client to one or more topics, or topic patterns. Returns subscription key
-        to use in subsequent calls to fetch messages by.
-        """
-        sub_key = sub_key or new_cid()
-        with self.update_lock:
-            for topic in ctx.topics:
-                # TODO: Resolve topic here - it can be a pattern instead of a concrete name
-                self.add_subscription(sub_key, ctx.client_id, topic)
-
-        self.logger.info('Client `%s` sub to topics `%s`', ctx.client_id, ', '.join(ctx.topics))
-        return sub_key
-
-# ################################################################################################################################
-
-    def get(self, ctx):
-        self.logger.debug('Get by sub_key `%s`', ctx.sub_key)
-
-        with self.in_flight_lock:
-            with self.update_lock:
-
-                # Ignoring the result, we just check if this sub_key is valid
-                self.validate_sub_key(ctx.sub_key)
-
-                # Don't let the client get new messages if the depth of the in-flight queue reached its maximum.
-                consumer = self.get_consumer_by_sub_key(ctx.sub_key)
-                if self.get_consumer_queue_in_flight_depth(ctx.sub_key) >= consumer.max_depth:
-                    self.logger.warn('In-flight queue full, `%s`, max depth `%s`', consumer.name, consumer.max_depth)
-                    raise ItemFull('In-flight queue full ({max_depth}/{max_depth})'.format(max_depth=consumer.max_depth),
-                        consumer.name, consumer.max_depth)
-
-                # Now that the client is known to be a valid one we can get all their messages
-                cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
-                cons_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(ctx.sub_key)
-                cons_in_flight_data = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
-
-                messages = self.run_lua(
-                    self.LUA_GET_FROM_CONSUMER_QUEUE,
-                    [cons_queue, cons_in_flight_ids, cons_in_flight_data, self.LAST_SEEN_CONSUMER_KEY,
-                         self.MSG_METADATA_KEY, self.MSG_VALUES_KEY],
-                    [ctx.max_batch_size, datetime.utcnow().isoformat(), self.sub_to_cons[ctx.sub_key]])
-
-                self.logger.debug('Get messages `%s`:`%r`', ctx.sub_key, messages)
-
-                for msg in messages:
-
-                    if self.logger.isEnabledFor(logging.DEBUG):
-                        self.logger.debug('Get result: sub_key `%s`, msg `%s`', ctx.sub_key, msg)
-                    else:
-                        self.logger.info('Get result: sub_key `%s`, metadata `%s`', ctx.sub_key, msg[1])
-
-                    payload = msg[0][0] if msg[0] else None
-                    metadata = loads(msg[1][0])
-
-                    if ctx.get_format == PUB_SUB.GET_FORMAT.JSON.id:
-                        yield {'payload': payload, 'metadata':metadata}
-                    else:
-                        yield Message(payload=payload, **metadata)
-
-# ################################################################################################################################
-
-    def acknowledge_delete(self, ctx, is_delete=False):
-        """ Consumer confirms and accepts one or more message.
-        """
-        # Check comment in self.reject on why validating sub_key alone suffices.
-        self.validate_sub_key(ctx.sub_key)
-
-        cons_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(ctx.sub_key)
-        cons_in_flight_data = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
-        cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
-
-        result = self.run_lua(
-            self.LUA_ACK_DELETE,
-            keys=[
-                cons_in_flight_ids, cons_in_flight_data, self.UNACK_COUNTER_KEY, self.MSG_VALUES_KEY,
-                self.MSG_EXPIRE_AT_KEY, self.MSG_METADATA_KEY, cons_queue],
-            args=[int(is_delete)] + ctx.msg_ids)
-
-        self.logger.info(
-            '%s: result `%s` for sub_key `%s` with msgs `%s`',
-              'Del from queue' if is_delete else 'Ack', result, ctx.sub_key, ', '.join(ctx.msg_ids))
-
-        return result
-
-    def reject(self, ctx):
-        """ Rejects a set of messages for a given consumer. The messages will be placed back onto consumer's queue
-        and delivered again at a later time.
-        """
-        # We only validate that this subscription key is valid. Each consumer has its own
-        # hashmap of on-flight messages so if they know the sub key, meaning they know the username/password,
-        # if any, the worst they can do is to attempt to reject IDs that don't exist.
-        # But as long as they don't know each other's subscription keys they can't reject each other's messages.
-        self.validate_sub_key(ctx.sub_key)
-
-        cons_queue = self.CONSUMER_MSG_IDS_PREFIX.format(ctx.sub_key)
-        cons_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(ctx.sub_key)
-        cons_in_flight_data = self.CONSUMER_IN_FLIGHT_DATA_PREFIX.format(ctx.sub_key)
-
-        result = self.run_lua(self.LUA_REJECT, keys=[cons_queue, cons_in_flight_ids, cons_in_flight_data], args=ctx.msg_ids)
-
-        if self.logger.isEnabledFor(logging.DEBUG):
-            self.logger.info(
-                'Reject result `%s` for `%s` with `%s`', result, ctx.sub_key, ', '.join(ctx.msg_ids))
-
-        return result
-
-# ################################################################################################################################
-
-    def delete_expired(self):
-        """ Deletes expired messages. For each topic and its subscribers a Lua program is called to find expired
-        messages and delete all traces of them.
-        """
-        with self.update_lock:
-
-            now = datetime.utcnow().isoformat()
-
-            # Delete from topic queues - needed if there are no subscribers
-            for topic in self.topics:
-                keys = [self.MSG_IDS_PREFIX.format(topic), self.MSG_VALUES_KEY, self.MSG_METADATA_KEY, self.MSG_EXPIRE_AT_KEY]
-
-                self.logger.info('Delete expired (topic) `%r` for keys `%s`',
-                    self.run_lua(self.LUA_DELETE_EXPIRED_TOPIC, keys=keys, args=[now]), keys)
-
-            # Delete from consumer queues
-            for consumer in self.cons_to_topic:
-                sub_key = self.cons_to_sub[consumer]
-                consumer_msg_ids = self.CONSUMER_MSG_IDS_PREFIX.format(sub_key)
-                consumer_in_flight_ids = self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key)
-
-                keys = [consumer_msg_ids, consumer_in_flight_ids, self.MSG_VALUES_KEY, self.MSG_EXPIRE_AT_KEY,
-                        self.UNACK_COUNTER_KEY]
-
-                self.logger.info('Delete expired (consumer) `%r` for keys `%s`',
-                    self.run_lua(self.LUA_DELETE_EXPIRED_CONSUMER, keys=keys, args=[now]), keys)
-
-# ############################################################################################################################
-
-    def move_to_target_queues(self):
-        """ Invoked periodically in order to fetch data sent to a topic and move it to each consumer's queue.
-        """
-        # TODO: We currently deliver messages to each consumer. However, we also need to support
-        # the delivery to only one consumer chosen randomly from each of the subscribed ones.
-
-        with self.update_lock:
-
-            out = []
-
-            for topic in self.topic_to_prod:
-
-                source_queue = self.MSG_IDS_PREFIX.format(topic)
-                topic_info = self.topics[topic]
-
-                # There are as many keys as there are arguments - items on idx 3 and above are related and come in pairs.
-
-                # Keys the Lua program will operate on
-                keys = []
-                keys.append(source_queue)
-                keys.append(self.BACKLOG_FULL_KEY)
-                keys.append(self.UNACK_COUNTER_KEY)
-
-                # Lua program's args
-                args = []
-                args.append(int(topic_info.is_fifo)) # So it's easy to cast it to bool in Lua
-                args.append(topic_info.max_depth)
-                args.append(maxint)
-
-                consumers = self.topic_to_cons.get(topic, [])
-                if consumers:
-                    for consumer in consumers:
-                        sub_key = self.cons_to_sub[consumer]
-                        self.logger.debug('Move: Found sub `%s` for topic `%s` by consumer `%s`', sub_key, topic, consumer)
-
-                        keys.append(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
-                        args.append(self.consumers[consumer].max_depth)
-
-                    move_result = self.run_lua(self.LUA_MOVE_TO_TARGET_QUEUES, keys, args)
-                    if move_result:
-                        self.logger.info('Move: result `%s`, keys `%s`', move_result, ', '.join(keys))
-                        out.append(move_result)
-
-                else:
-                    self.logger.info('Move: no consumers for topic `%s`', topic)
-
-            return out
-
-# ################################################################################################################################
-
-    def get_topic_depth(self, topic):
-        """ Returns current depth of a topic. Doesn't held onto any locks so by the time the data is returned to the caller
-        the depth may have already changed.
-        """
-        return self.kvdb.zcard(self.MSG_IDS_PREFIX.format(topic))
-
-    def get_consumer_queue_current_depth(self, sub_key):
-        """ Returns current depth of a consumer's queue. Doesn't held onto any locks so by the time the data
-        is returned to the caller the depth may have already changed.
-        """
-        return self.kvdb.llen(self.CONSUMER_MSG_IDS_PREFIX.format(sub_key))
-
-    def get_consumer_queue_in_flight_depth(self, sub_key):
-        """ Returns current depth of an in-flight consumer's queue. Doesn't held onto any locks so by the time the data
-        is returned to the caller the depth may have already changed.
-        """
-        return self.kvdb.scard(self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key))
-
-    def get_consumer_by_sub_key(self, sub_key):
-        return self.consumers.get(self.sub_to_cons.get(sub_key, ZATO_NONE))
-
-    def get_consumer_by_client_id(self, client_id):
-        return self.consumers.get(client_id, ZATO_NONE)
-
-    def get_consumers_count(self, topic):
-        """ Returns the number of consumers allowed to get messages from a given topic.
-        """
-        return len(self.topic_to_cons.get(topic, []))
-
-    def get_last_pub_time(self, topic):
-        """ Returns timestamp of the last publication to a topic, if any.
-        """
-        return self.kvdb.hget(self.LAST_PUB_TIME_KEY, topic)
-
-    def get_producer_last_seen(self, client_id):
-        """ Returns timestamp of the last time a producer published a message, regardless of its topic.
-        """
-        return self.kvdb.hget(self.LAST_SEEN_PRODUCER_KEY, client_id)
-
-    def get_consumer_last_seen(self, client_id):
-        """ Returns timestamp of the last time a consumer got a message, regardless of its topic.
-        """
-        return self.kvdb.hget(self.LAST_SEEN_CONSUMER_KEY, client_id)
-
-    def get_producers_count(self, topic):
-        """ Returns the number of producers allowed to publish messages to a topic.
-        """
-        return len(self.topic_to_prod.get(topic, []))
-
-    def get_producer_by_sub_key(self, sub_key):
-        return self.producers.get(self.sub_to_cons.get(sub_key, ZATO_NONE))
-
-# ################################################################################################################################
-
-    def get_consumer_queue_message_list(self, sub_key):
-        """ Returns all messages from a given consumer queue by its subscriber's key.
-        """
-        for item in self.run_lua(
-            self.LUA_GET_MESSAGE_LIST, [
-                self.CONSUMER_MSG_IDS_PREFIX.format(sub_key), self.MSG_METADATA_KEY], [PUB_SUB.MESSAGE_SOURCE.CONSUMER_QUEUE.id]):
-            yield Message(**loads(item))
-
-    def get_consumer_in_flight_message_list(self, sub_key):
-        """ Returns all in-flight message IDs from a given consumer queue by its subscriber's key.
-        """
-        return self.kvdb.smembers(self.CONSUMER_IN_FLIGHT_IDS_PREFIX.format(sub_key))
-
-    def get_topic_message_list(self, source_name):
-        """ Returns all messages from a given topic.
-        """
-        for item in self.run_lua(
-            self.LUA_GET_MESSAGE_LIST, [
-                self.MSG_IDS_PREFIX.format(source_name), self.MSG_METADATA_KEY], [PUB_SUB.MESSAGE_SOURCE.TOPIC.id]):
-            yield Message(**loads(item))
-
-    def delete_from_topic(self, source_name, msg_id):
-        """ The message is deleted from a topic and if there are no subscriptions to a topic
-        it's also removed from Redis keys holding the message's metadada and payload.
-        """
-        with self.update_lock:
-            # Let's find subscriptions to this topic. If there aren't any subscriptions, we call a Lua function
-            # that deletes not only the message from topic but also any other piece of information regarding it.
-            has_consumers = True if source_name in self.topic_to_cons else False
-            result = self.run_lua(
-                self.LUA_DELETE_FROM_TOPIC,
-                  [self.MSG_IDS_PREFIX.format(source_name), self.MSG_VALUES_KEY, self.MSG_METADATA_KEY, self.MSG_EXPIRE_AT_KEY],
-                  [int(has_consumers), msg_id])
-
-            self.logger.info(
-                'Del from topic: result `%s`, source_name `%s`, msg_id `%s`, has_consumers `%s`',
-                  result, source_name, msg_id, has_consumers)
-
-    def delete_from_consumer_queue(self, sub_key, msg_ids):
-        """ Deleting a message from a consumer's queue works exactly like acknowledging it.
-        """
-        return self.acknowledge_delete(AckCtx(sub_key, msg_ids), True)
-
-    def get_message(self, msg_id):
-        """ Returns payload of a message along with its metadata.
-        """
-        out = {'payload': self.kvdb.hget(self.MSG_VALUES_KEY, msg_id)}
-        out.update(loads(self.kvdb.hget(self.MSG_METADATA_KEY, msg_id)))
-
-        return out
-
-    def get_callback_consumers(self):
-        """ Returns these consumers who specified their messages should be delivered through callback URLs.
-        """
-        with self.update_lock:
-            for consumer in self.consumers.values():
-                if not consumer.is_active:
-                    continue
-
-                if consumer.delivery_mode == PUB_SUB.DELIVERY_MODE.CALLBACK_URL.id:
-                    yield consumer
+        with closing(self.conn.session()) as session:
+            logger.warn('aaa %s', session)
 
 # ################################################################################################################################
 
@@ -874,10 +439,10 @@ class PubSubAPI(object):
     """
     def __init__(self, impl):
         self.impl = impl
-        """:type: zato.common.pubsub.RedisPubSub"""
 
-    def publish(self, payload, topic, mime_type=None, priority=None, expiration=None, msg_id=None, expire_at=None, client_id=None):
-        """ Publishes a message by a given to a given topic using a set of parameters provided.
+    def publish(self, payload, topic, mime_type=None, priority=None, expiration=None, msg_id=None, expire_at=None,
+        client_id=None):
+        """ Publishes a message to a given topic using a set of parameters provided.
         """
         client_id = client_id or self.get_default_producer().id
         ctx = PubCtx()
@@ -885,7 +450,7 @@ class PubSubAPI(object):
         ctx.topic = topic
         ctx.msg = Message(
             payload, topic, mime_type or PUB_SUB.DEFAULT_MIME_TYPE, priority or PUB_SUB.DEFAULT_PRIORITY,
-            expiration or PUB_SUB.DEFAULT_EXPIRATION, msg_id, self.impl.producers[client_id].name)
+            expiration or PUB_SUB.DEFAULT_EXPIRATION, msg_id, 'dummy-producer')#self.impl.producers[client_id].name)
 
         return self.impl.publish(ctx)
 
