@@ -18,14 +18,12 @@ from bunch import Bunch
 # nose
 from nose.tools import eq_
 
-# sortedcontainers
-from sortedcontainers import SortedList
-
 # Zato
 from zato.common import DATA_FORMAT, MISC, URL_TYPE, ZATO_NONE
 from zato.common.test import rand_string
 from zato.common.util import new_cid, payload_from_request
 from zato.server.connection.http_soap import Unauthorized, url_data
+from zato.url_dispatcher import Matcher
 
 # ################################################################################################################################
 
@@ -73,12 +71,12 @@ class URLDataTestCase(TestCase):
     def test_match(self):
         ud = url_data.URLData(None, [])
 
-        soap_action1 = uuid4().hex
-        url_path1 = uuid4().hex
+        soap_action1 = uuid4().hex.decode('utf-8')
+        url_path1 = uuid4().hex.decode('utf-8')
         match_target1 = '{}{}{}'.format(soap_action1, MISC.SEPARATOR, url_path1)
 
-        soap_action2 = uuid4().hex
-        url_path2 = uuid4().hex
+        soap_action2 = uuid4().hex.decode('utf-8')
+        url_path2 = uuid4().hex.decode('utf-8')
         match_target2 = '{}{}{}'.format(soap_action2, MISC.SEPARATOR, url_path2)
 
         soap_action3 = ''
@@ -88,34 +86,34 @@ class URLDataTestCase(TestCase):
         item1 = Bunch()
         item1.name = 'name-2'
         item1.match_target = match_target1
-        item1.match_target_compiled = url_data.Matcher(item1.match_target)
+        item1.match_target_compiled = Matcher(item1.match_target)
 
         item2 = Bunch()
         item2.name = 'name-1'
         item2.match_target = match_target2
-        item2.match_target_compiled = url_data.Matcher(item2.match_target)
+        item2.match_target_compiled = Matcher(item2.match_target)
 
         item3 = Bunch()
         item3.name = 'name-3'
         item3.match_target = match_target3
-        item3.match_target_compiled = url_data.Matcher(item3.match_target)
+        item3.match_target_compiled = Matcher(item3.match_target)
 
         # Note that we append in the order the 'name' attribute dictates
         # because .channel_data is a sorted list.
-        ud.channel_data.append(item2)
-        ud.channel_data.append(item1)
-        ud.channel_data.append(item3)
+        ud.channel_data.append(dict(item2))
+        ud.channel_data.append(dict(item1))
+        ud.channel_data.append(dict(item3))
 
-        match, _ = ud.match(url_path1, soap_action1)
+        match, _ = ud.match(url_path1, soap_action1, True)
         eq_(match, {})
 
-        match, _ = ud.match(url_path2, soap_action2)
+        match, _ = ud.match(url_path2, soap_action2, True)
         eq_(match, {})
 
-        match, _ = ud.match('/customer/123/order/456', soap_action3)
+        match, _ = ud.match('/customer/123/order/456', soap_action3, True)
         eq_(sorted(match.items()), [(u'cid', u'123'), (u'oid', u'456')])
 
-        match, _ = ud.match('/foo/bar', '')
+        match, _ = ud.match('/foo/bar', '', False)
         self.assertIsNone(match)
 
     def test_match_greedy(self):
@@ -137,23 +135,23 @@ class URLDataTestCase(TestCase):
         item1 = Bunch()
         item1.name = 'name-1'
         item1.match_target = match_target1
-        item1.match_target_compiled = url_data.Matcher(item1.match_target)
+        item1.match_target_compiled = Matcher(item1.match_target)
 
         item2 = Bunch()
         item2.name = 'name-2'
         item2.match_target = match_target2
-        item2.match_target_compiled = url_data.Matcher(item2.match_target)
+        item2.match_target_compiled = Matcher(item2.match_target)
 
         item3 = Bunch()
         item3.name = 'name-3'
         item3.match_target = match_target3
-        item3.match_target_compiled = url_data.Matcher(item3.match_target)
+        item3.match_target_compiled = Matcher(item3.match_target)
 
-        ud.channel_data.append(item1)
-        ud.channel_data.append(item2)
-        ud.channel_data.append(item3)
+        ud.channel_data.append(dict(item1))
+        ud.channel_data.append(dict(item2))
+        ud.channel_data.append(dict(item3))
 
-        match, info = ud.match('/customer/123/order/456', '')
+        match, info = ud.match('/customer/123/order/456', '', False)
         eq_(sorted(match.items()), [('cid', '123'), ('oid', '456')])
         eq_(info.match_target, ':::/customer/{cid}/order/{oid}')
         eq_(sorted(info.match_target_compiled.group_names), ['cid','oid'])
@@ -162,14 +160,14 @@ class URLDataTestCase(TestCase):
             info.match_target_compiled.matcher.pattern,
             ':::/customer/(?P<cid>[a-zA-Z0-9 _\\$.\\-|=~^]+)/order/(?P<oid>[a-zA-Z0-9 _\\$.\\-|=~^]+)$')
 
-        match, info = ud.match('/customer/abc', '')
+        match, info = ud.match('/customer/abc', '', False)
         eq_(sorted(match.items()), [('cid', 'abc')])
         eq_(info.match_target, ':::/customer/{cid}')
         eq_(sorted(info.match_target_compiled.group_names), ['cid'])
         eq_(info.match_target_compiled.pattern, ':::/customer/{cid}')
         eq_(info.match_target_compiled.matcher.pattern, ':::/customer/(?P<cid>[a-zA-Z0-9 _\\$.\\-|=~^]+)$')
 
-        match, info = ud.match('/customer/QWERTY/order', 'aaabbbccc')
+        match, info = ud.match('/customer/QWERTY/order', 'aaabbbccc', True)
         eq_(sorted(match.items()), [('cid', 'QWERTY')])
         eq_(info.match_target, 'aaabbbccc:::/customer/{cid}/order')
         eq_(sorted(info.match_target_compiled.group_names), ['cid'])
@@ -191,11 +189,11 @@ class URLDataTestCase(TestCase):
             item1 = Bunch()
             item1.name = 'name-1'
             item1.match_target = match_target1
-            item1.match_target_compiled = url_data.Matcher(item1.match_target)
+            item1.match_target_compiled = Matcher(item1.match_target)
 
-            ud.channel_data.append(item1)
+            ud.channel_data.append(dict(item1))
 
-            match, info = ud.match('/customer/{}'.format(cid), '')
+            match, info = ud.match('/customer/{}'.format(cid), '', False)
             self.assertTrue(bool(match), 'bool(match) is not True, cid:`{}`'.format(cid))
 
             eq_(sorted(match.items()), [('cid', cid)])
@@ -217,11 +215,11 @@ class URLDataTestCase(TestCase):
         item3 = Bunch()
         item3.name = 'name-3'
         item3.match_target = match_target3
-        item3.match_target_compiled = url_data.Matcher(item3.match_target)
+        item3.match_target_compiled = Matcher(item3.match_target)
 
-        ud.channel_data.append(item3)
+        ud.channel_data.append(dict(item3))
 
-        match, _ = ud.match('/customer/1 23/order/4 56', soap_action3)
+        match, _ = ud.match('/customer/1 23/order/4 56', soap_action3, True)
         eq_(sorted(match.items()), [(u'cid', u'1 23'), (u'oid', u'4 56')])
 
 # ################################################################################################################################
@@ -284,7 +282,7 @@ class URLDataTestCase(TestCase):
             match_target1: wrapper1,
         }
 
-        ud = url_data.URLData(None, url_sec=url_sec)
+        ud = url_data.URLData(None, [], url_sec=url_sec)
         ud._handle_security_basic_auth = dummy_basic_auth
 
         ud.check_security(
@@ -300,7 +298,7 @@ class URLDataTestCase(TestCase):
 
         dummy_basic_auth = DummyBasicAuth()
 
-        ud = url_data.URLData(None, url_sec=url_sec)
+        ud = url_data.URLData(None, [], url_sec=url_sec)
         ud._handle_security_basic_auth = dummy_basic_auth
 
         eq_(dummy_basic_auth.cid, ZATO_NONE)
@@ -339,7 +337,7 @@ class URLDataTestCase(TestCase):
                 target_match2: url_info2,
             }
 
-            ud = url_data.URLData(None, url_sec=url_sec)
+            ud = url_data.URLData(None, [], url_sec=url_sec)
 
             msg_attrs = {
                 'key1': uuid4().hex,
@@ -370,7 +368,7 @@ class URLDataTestCase(TestCase):
             self.assertNotIn('key3', ud_url_info2.sec_def)
             self.assertNotIn('unexisting-key', ud_url_info2.sec_def)
 
-            ud = url_data.URLData(None, url_sec=url_sec)
+            ud = url_data.URLData(None, [], url_sec=url_sec)
             ud._update_url_sec(msg, 'basic_auth', True)
 
             try:
@@ -423,7 +421,7 @@ class URLDataTestCase(TestCase):
 # ################################################################################################################################
 
     def test_update_basic_auth(self):
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.basic_auth_config = {}
 
         name1 = uuid4().hex
@@ -446,7 +444,7 @@ class URLDataTestCase(TestCase):
 
     def test_handle_security_apikey(self):
         username, password = uuid4().hex, uuid4().hex
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         cid = new_cid()
         sec_def = Bunch(username=username, password=password)
         path_info = '/'
@@ -495,7 +493,7 @@ class URLDataTestCase(TestCase):
             xml_username = valid_username if is_valid else rand_string()
 
             cid = rand_string()
-            ud = url_data.URLData(None, )
+            ud = url_data.URLData(None, [])
             sec_def = Bunch(username=valid_username, password=password, username_expr=username_expr, password_expr=password_expr)
 
             xml = """<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:foo="http://foo.example.com">
@@ -527,7 +525,7 @@ class URLDataTestCase(TestCase):
 
         dummy_lock = DummyLock()
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.url_sec_lock = dummy_lock
         ud.apikey_config = {name1: value1}
 
@@ -545,7 +543,7 @@ class URLDataTestCase(TestCase):
         dummy_lock = DummyLock()
         dummy_update_apikey = Dummy_update_apikey()
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.url_sec_lock = dummy_lock
         ud._update_apikey = dummy_update_apikey
 
@@ -573,7 +571,7 @@ class URLDataTestCase(TestCase):
 
         old_name = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.apikey_config = {old_name: uuid4().hex}
         ud.url_sec_lock = dummy_lock
         ud._update_apikey = dummy_update_apikey
@@ -616,7 +614,7 @@ class URLDataTestCase(TestCase):
 
         name = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.apikey_config = {name: uuid4().hex}
         ud.url_sec_lock = dummy_lock
         ud._update_apikey = dummy_update_apikey
@@ -656,7 +654,7 @@ class URLDataTestCase(TestCase):
         old_password = uuid4().hex
         new_pasword = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.apikey_config = {name: {'config':{'password':old_password}}}
         ud.url_sec_lock = dummy_lock
         ud._update_url_sec = dummy_update_url_sec
@@ -689,7 +687,7 @@ class URLDataTestCase(TestCase):
 
         dummy_lock = DummyLock()
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.url_sec_lock = dummy_lock
         ud.basic_auth_config = {name1: value1}
 
@@ -707,7 +705,7 @@ class URLDataTestCase(TestCase):
         dummy_lock = DummyLock()
         dummy_update_basic_auth = Dummy_update_basic_auth()
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.url_sec_lock = dummy_lock
         ud._update_basic_auth = dummy_update_basic_auth
 
@@ -735,7 +733,7 @@ class URLDataTestCase(TestCase):
 
         old_name = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.basic_auth_config = {old_name: uuid4().hex}
         ud.url_sec_lock = dummy_lock
         ud._update_basic_auth = dummy_update_basic_auth
@@ -778,7 +776,7 @@ class URLDataTestCase(TestCase):
 
         name = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.basic_auth_config = {name: uuid4().hex}
         ud.url_sec_lock = dummy_lock
         ud._update_basic_auth = dummy_update_basic_auth
@@ -818,7 +816,7 @@ class URLDataTestCase(TestCase):
         old_password = uuid4().hex
         new_pasword = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.basic_auth_config = {name: {'config':{'password':old_password}}}
         ud.url_sec_lock = dummy_lock
         ud._update_url_sec = dummy_update_url_sec
@@ -846,7 +844,7 @@ class URLDataTestCase(TestCase):
 # ################################################################################################################################
 
     def test_update_ntlm(self):
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.ntlm_config = {}
 
         name1 = uuid4().hex
@@ -873,7 +871,7 @@ class URLDataTestCase(TestCase):
 
         dummy_lock = DummyLock()
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.url_sec_lock = dummy_lock
         ud.ntlm_config = {name1: value1}
 
@@ -891,7 +889,7 @@ class URLDataTestCase(TestCase):
         dummy_lock = DummyLock()
         dummy_update_ntlm = Dummy_update_ntlm()
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.url_sec_lock = dummy_lock
         ud._update_ntlm = dummy_update_ntlm
 
@@ -919,7 +917,7 @@ class URLDataTestCase(TestCase):
 
         old_name = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.ntlm_config = {old_name: uuid4().hex}
         ud.url_sec_lock = dummy_lock
         ud._update_ntlm = dummy_update_ntlm
@@ -962,7 +960,7 @@ class URLDataTestCase(TestCase):
 
         name = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.ntlm_config = {name: uuid4().hex}
         ud.url_sec_lock = dummy_lock
         ud._update_ntlm = dummy_update_ntlm
@@ -1002,7 +1000,7 @@ class URLDataTestCase(TestCase):
         old_password = uuid4().hex
         new_pasword = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.ntlm_config = {name: {'config':{'password':old_password}}}
         ud.url_sec_lock = dummy_lock
         ud._update_url_sec = dummy_update_url_sec
@@ -1030,7 +1028,7 @@ class URLDataTestCase(TestCase):
 # ################################################################################################################################
 
     def test_update_tech_acc(self):
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.tech_acc_config = {}
 
         name1 = uuid4().hex
@@ -1057,7 +1055,7 @@ class URLDataTestCase(TestCase):
 
         dummy_lock = DummyLock()
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.url_sec_lock = dummy_lock
         ud.tech_acc_config = {name1: value1}
 
@@ -1075,7 +1073,7 @@ class URLDataTestCase(TestCase):
         dummy_lock = DummyLock()
         dummy_update_tech_acc = Dummy_update_tech_acc()
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.url_sec_lock = dummy_lock
         ud._update_tech_acc = dummy_update_tech_acc
 
@@ -1103,7 +1101,7 @@ class URLDataTestCase(TestCase):
 
         old_name = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.tech_acc_config = {old_name: uuid4().hex}
         ud.url_sec_lock = dummy_lock
         ud._update_tech_acc = dummy_update_tech_acc
@@ -1146,7 +1144,7 @@ class URLDataTestCase(TestCase):
 
         name = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.tech_acc_config = {name: uuid4().hex}
         ud.url_sec_lock = dummy_lock
         ud._update_tech_acc = dummy_update_tech_acc
@@ -1186,7 +1184,7 @@ class URLDataTestCase(TestCase):
         old_password = uuid4().hex
         new_pasword = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.tech_acc_config = {name: {'config':{'password':old_password}}}
         ud.url_sec_lock = dummy_lock
         ud._update_url_sec = dummy_update_url_sec
@@ -1215,7 +1213,7 @@ class URLDataTestCase(TestCase):
 # ################################################################################################################################
 
     def test_update_wss(self):
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.wss_config = {}
 
         name1 = uuid4().hex
@@ -1242,7 +1240,7 @@ class URLDataTestCase(TestCase):
 
         dummy_lock = DummyLock()
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.url_sec_lock = dummy_lock
         ud.wss_config = {name1: value1}
 
@@ -1260,7 +1258,7 @@ class URLDataTestCase(TestCase):
         dummy_lock = DummyLock()
         dummy_update_wss = Dummy_update_wss()
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.url_sec_lock = dummy_lock
         ud._update_wss = dummy_update_wss
 
@@ -1288,7 +1286,7 @@ class URLDataTestCase(TestCase):
 
         old_name = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.wss_config = {old_name: uuid4().hex}
         ud.url_sec_lock = dummy_lock
         ud._update_wss = dummy_update_wss
@@ -1331,7 +1329,7 @@ class URLDataTestCase(TestCase):
 
         name = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.wss_config = {name: uuid4().hex}
         ud.url_sec_lock = dummy_lock
         ud._update_wss = dummy_update_wss
@@ -1371,7 +1369,7 @@ class URLDataTestCase(TestCase):
         old_password = uuid4().hex
         new_pasword = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.wss_config = {name: {'config':{'password':old_password}}}
         ud.url_sec_lock = dummy_lock
         ud._update_url_sec = dummy_update_url_sec
@@ -1401,7 +1399,7 @@ class URLDataTestCase(TestCase):
     def test_channel_item_from_msg(self):
 
         def get_msg(needs_security_id):
-            msg = Bunch()
+            msg = {}
 
             for name in('connection', 'data_format', 'has_rbac', 'host', 'id', 'is_active', 'is_internal', 'method', 'name',
                 'ping_method', 'pool_size', 'service_id', 'impl_name', 'service_name', 'soap_action', 'soap_version',
@@ -1421,8 +1419,8 @@ class URLDataTestCase(TestCase):
 
         def check_channel_item(match_target, msg, channel_item, needs_security_id):
 
-            eq_(channel_item.service_impl_name, msg.impl_name)
-            eq_(channel_item.match_target, match_target)
+            eq_(channel_item['service_impl_name'], msg['impl_name'])
+            eq_(channel_item['match_target'], match_target)
 
             for name in('connection', 'data_format', 'has_rbac', 'host', 'id', 'is_active',
                 'is_internal', 'method', 'name', 'ping_method', 'pool_size',
@@ -1440,8 +1438,8 @@ class URLDataTestCase(TestCase):
 
         for needs_security_id in(True, False):
             msg = get_msg(needs_security_id)
-            match_target = uuid4().hex
-            channel_item = url_data.URLData(None, )._channel_item_from_msg(msg, match_target)
+            match_target = uuid4().hex.decode('utf-8')
+            channel_item = url_data.URLData(None, [])._channel_item_from_msg(msg, match_target)
             check_channel_item(match_target, msg, channel_item, needs_security_id)
 
 # ################################################################################################################################
@@ -1464,7 +1462,7 @@ class URLDataTestCase(TestCase):
             msg.transport = uuid4().hex
             msg.sec_use_rbac = False
 
-            ud = url_data.URLData(None, )
+            ud = url_data.URLData(None, [])
             ud.basic_auth_config = basic_auth_config
 
             sec_info = ud._sec_info_from_msg(msg)
@@ -1483,7 +1481,7 @@ class URLDataTestCase(TestCase):
 
     def test_create_channel(self):
 
-        channel_item = uuid4().hex
+        channel_item = {'name': uuid4().hex}
         sec_info = uuid4().hex
         soap_action = uuid4().hex
         url_path = uuid4().hex
@@ -1499,10 +1497,9 @@ class URLDataTestCase(TestCase):
         msg.soap_action = soap_action
         msg.url_path = url_path
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud._channel_item_from_msg = _dummy_channel_item_from_msg
         ud._sec_info_from_msg = _dummy_sec_info_from_msg
-        ud.channel_data = SortedList()
         ud.url_sec = {}
 
         ud._create_channel(msg, {})
@@ -1522,14 +1519,17 @@ class URLDataTestCase(TestCase):
 
         item1 = Bunch()
         item1.match_target = uuid4().hex
+        item1.name = uuid4().hex
 
         item2 = Bunch()
         item2.match_target = '{}{}{}'.format(old_soap_action, MISC.SEPARATOR, old_url_path)
+        item2.name = uuid4().hex
 
         item3 = Bunch()
         item3.match_target = uuid4().hex
+        item3.name = uuid4().hex
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.channel_data = [item1, item2, item3]
 
         ud.url_sec = {}
@@ -1554,7 +1554,7 @@ class URLDataTestCase(TestCase):
         dummy_delete_channel = Dummy_delete_channel(no_old_name_msg)
         dummy_create_channel = Dummy_create_channel()
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.url_sec_lock = dummy_lock
         ud._delete_channel = dummy_delete_channel
         ud._create_channel = dummy_create_channel
@@ -1586,7 +1586,7 @@ class URLDataTestCase(TestCase):
         dummy_lock = DummyLock()
         dummy_delete_channel = Dummy_delete_channel()
 
-        ud = url_data.URLData(None, )
+        ud = url_data.URLData(None, [])
         ud.url_sec_lock = dummy_lock
         ud._delete_channel = dummy_delete_channel
 

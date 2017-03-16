@@ -129,7 +129,7 @@ class WebSocket(_WebSocket):
         if meta:
             meta = bunchify(meta)
 
-            msg.action = meta.action
+            msg.action = meta.get('action', _response)
             msg.id = meta.id
             msg.timestamp = meta.timestamp
             msg.token = meta.get('token') # Optional because it won't exist during first authentication
@@ -375,6 +375,7 @@ class WebSocket(_WebSocket):
             logger.warn(format_exc(e))
 
     def received_message(self, message):
+        logger.info('Received message %r', message.data)
         try:
             spawn(self._received_message, deepcopy(message.data))
         except Exception, e:
@@ -503,6 +504,7 @@ class ChannelWebSocket(Connector):
 
     def _start(self):
         self.server = WebSocketServer(self.config, self.auth_func, self.on_message_callback)
+        self.is_connected = True
         self.server.serve_forever()
 
     def _stop(self):

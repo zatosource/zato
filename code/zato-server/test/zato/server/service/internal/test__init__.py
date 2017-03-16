@@ -13,8 +13,12 @@ from bunch import Bunch
 
 # Zato
 from zato.common import zato_namespace
-from zato.common.test import rand_int, rand_string, ServiceTestCase
+from zato.common.test import enrich_with_static_config, rand_int, rand_string, ServiceTestCase
 from zato.server.service.internal import Ping, Ping2, ChangePasswordBase
+
+enrich_with_static_config(Ping)
+enrich_with_static_config(Ping2)
+enrich_with_static_config(ChangePasswordBase)
 
 ##############################################################################
 

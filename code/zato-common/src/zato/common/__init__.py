@@ -32,6 +32,11 @@ from candv import Constants, ValueConstant
 from lxml import etree
 from lxml.objectify import ObjectPath as _ObjectPath
 
+# Zato
+from zato.vault.client import VAULT
+
+# For pyflakes, otherwise it doesn't know that other parts of Zato import VAULT from here
+VAULT = VAULT
 
 # ##############################################################################
 # Version
@@ -122,8 +127,6 @@ SECONDS_IN_DAY = 86400 # 60 seconds * 60 minutes * 24 hours (and we ignore leap 
 
 scheduler_date_time_format = '%Y-%m-%d %H:%M:%S'
 soap_date_time_format = '%Y-%m-%dT%H:%M:%S.%fZ'
-
-ACCESS_LOG_DT_FORMAT = '%d/%b/%Y:%H:%M:%S %z'
 
 # TODO: Classes that have this attribute defined (no matter the value) will not be deployed
 # onto servers.
@@ -354,6 +357,7 @@ class Attrs(type):
 
 class DATA_FORMAT(Attrs):
     DICT = 'dict'
+    FIXED_WIDTH = 'fixed-width'
     XML = 'xml'
     JSON = 'json'
     CSV = 'csv'
@@ -367,9 +371,11 @@ class DATA_FORMAT(Attrs):
 
 # TODO: SIMPLE_IO.FORMAT should be done away with in favour of plain DATA_FORMAT
 class SIMPLE_IO:
+
     class FORMAT(Attrs):
-        XML = DATA_FORMAT.XML
         JSON = DATA_FORMAT.JSON
+        XML = DATA_FORMAT.XML
+        FIXED_WIDTH = DATA_FORMAT.FIXED_WIDTH
 
     class INT_PARAMETERS:
         VALUES = ['id']
@@ -377,6 +383,15 @@ class SIMPLE_IO:
 
     class BOOL_PARAMETERS:
         SUFFIXES = ['is_', 'needs_', 'should_']
+
+    COMMON_FORMAT = OrderedDict()
+    COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'
+    COMMON_FORMAT[DATA_FORMAT.XML] = 'XML'
+
+    HTTP_SOAP_FORMAT = OrderedDict()
+    HTTP_SOAP_FORMAT[DATA_FORMAT.JSON] = 'JSON'
+    HTTP_SOAP_FORMAT[DATA_FORMAT.XML] = 'XML'
+    HTTP_SOAP_FORMAT[DATA_FORMAT.FIXED_WIDTH] = 'Fixed-width'
 
 class DEPLOYMENT_STATUS(Attrs):
     DEPLOYED = 'deployed'
@@ -824,43 +839,6 @@ class WEB_SOCKET:
         INVOKE_SERVICE = 'invoke-service'
         CLIENT_RESPONSE = 'client-response'
 
-class VAULT:
-    class DEFAULT:
-        TIMEOUT = 10
-        URL = 'http://localhost:8200'
-
-    class HEADERS:
-        TOKEN_VAULT = 'HTTP_X_ZATO_VAULT_TOKEN'
-        TOKEN_GH = 'HTTP_X_ZATO_VAULT_TOKEN_GITHUB'
-        USERNAME = 'HTTP_X_ZATO_VAULT_USERNAME'
-        PASSWORD = 'HTTP_X_ZATO_VAULT_PASSWORD'
-        TOKEN_RESPONSE = 'X-Zato-Vault-Token'
-        TOKEN_RESPONSE_LEASE = 'X-Zato-Vault-Token-Lease-Duration'
-
-    class AUTH_METHOD:
-        GITHUB = NameId('GitHub', 'github')
-        TOKEN = NameId('Token', 'token')
-        USERNAME_PASSWORD = NameId('Username/password', 'username-password')
-
-        class __metaclass__(type):
-            def __iter__(self):
-                return iter((self.GITHUB, self.TOKEN, self.USERNAME_PASSWORD))
-
-VAULT.METHOD_HEADER = {
-    VAULT.AUTH_METHOD.GITHUB.id: VAULT.HEADERS.TOKEN_GH,
-    VAULT.AUTH_METHOD.TOKEN.id: VAULT.HEADERS.TOKEN_VAULT,
-    VAULT.AUTH_METHOD.USERNAME_PASSWORD.id: (VAULT.HEADERS.USERNAME, VAULT.HEADERS.PASSWORD),
-}
-
-VAULT.WEB_SOCKET = {
-    'github': {'secret': VAULT.HEADERS.TOKEN_GH},
-    'token': {'secret': VAULT.HEADERS.TOKEN_VAULT},
-    'username-password': {
-        'username': VAULT.HEADERS.USERNAME,
-        'secret': VAULT.HEADERS.PASSWORD,
-    }
-}
-
 class APISPEC:
     OPEN_API_V2 = 'openapi-v2'
     NAMESPACE_NULL = ''
@@ -868,6 +846,19 @@ class APISPEC:
 class PADDING:
     LEFT = 'left'
     RIGHT = 'right'
+
+class AMQP:
+    class DEFAULT:
+        POOL_SIZE = 10
+        PRIORITY = 5
+
+    class ACK_MODE:
+        ACK = NameId('Ack', 'ack')
+        NO_ACK = NameId('No ack', 'no-ack')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.ACK, self.NO_ACK))
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

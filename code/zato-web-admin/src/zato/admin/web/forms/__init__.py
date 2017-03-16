@@ -120,14 +120,15 @@ class ChangePasswordForm(forms.Form):
 
 class DataFormatForm(forms.Form):
     data_format = forms.ChoiceField(widget=forms.Select())
+    data_formats_allowed = None
 
     def __init__(self, *args, **kwargs):
         super(DataFormatForm, self).__init__(*args, **kwargs)
         self.fields['data_format'].choices = []
         self.fields['data_format'].choices.append(INITIAL_CHOICES)
-        for name in sorted(dir(SIMPLE_IO.FORMAT)):
-            if name.upper() == name:
-                self.fields['data_format'].choices.append([name.lower(), name])
+
+        for code, name in (self.data_formats_allowed or SIMPLE_IO.COMMON_FORMAT).iteritems():
+            self.fields['data_format'].choices.append([code, name])
 
 # ################################################################################################################################
 

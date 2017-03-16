@@ -43,10 +43,10 @@ zato_services = {
     'zato.apispec.pub.frontend':'zato.server.service.internal.apispec.pub.Frontend',
 
     # Channels - AMQP
-    'zato.channel.amqp.create':'zato.server.service.internal.channel.amqp.Create',
-    'zato.channel.amqp.delete':'zato.server.service.internal.channel.amqp.Delete',
-    'zato.channel.amqp.edit':'zato.server.service.internal.channel.amqp.Edit',
-    'zato.channel.amqp.get-list':'zato.server.service.internal.channel.amqp.GetList',
+    'zato.channel.amqp.create':'zato.server.service.internal.channel.amqp_.Create',
+    'zato.channel.amqp.delete':'zato.server.service.internal.channel.amqp_.Delete',
+    'zato.channel.amqp.edit':'zato.server.service.internal.channel.amqp_.Edit',
+    'zato.channel.amqp.get-list':'zato.server.service.internal.channel.amqp_.GetList',
 
     # Channels - JMS WebSphere MQ
     'zato.channel.jms-wmq.create':'zato.server.service.internal.channel.jms_wmq.Create',
@@ -92,6 +92,8 @@ zato_services = {
     'zato.checks.sio.no-force-type-service': 'zato.server.service.internal.checks.sio.NoForceTypeService',
     'zato.checks.sio.utc-service': 'zato.server.service.internal.checks.sio.UTCService',
     'zato.checks.sio.unicode-service': 'zato.server.service.internal.checks.sio.UnicodeService',
+    'zato.checks.sio.fixed-width-string': 'zato.server.service.internal.checks.sio.FixedWidthString',
+    'zato.checks.sio.fixed-width-string-multi-line': 'zato.server.service.internal.checks.sio.FixedWidthStringMultiLine',
 
     # Cloud - AWS - S3
     'zato.cloud.aws.s3.create':'zato.server.service.internal.cloud.aws.s3.Create',
@@ -105,13 +107,16 @@ zato_services = {
     'zato.cloud.openstack.swift.edit':'zato.server.service.internal.cloud.openstack.swift.Edit',
     'zato.cloud.openstack.swift.get-list':'zato.server.service.internal.cloud.openstack.swift.GetList',
 
+    # Connectors - AMQP
+    'zato.connector.amqp.create':'zato.server.service.internal.connector.amqp_.Create',
+
     # Definitions - AMQP
-    'zato.definition.amqp.change-password':'zato.server.service.internal.definition.amqp.ChangePassword',
-    'zato.definition.amqp.create':'zato.server.service.internal.definition.amqp.Create',
-    'zato.definition.amqp.delete':'zato.server.service.internal.definition.amqp.Delete',
-    'zato.definition.amqp.edit':'zato.server.service.internal.definition.amqp.Edit',
-    'zato.definition.amqp.get-by-id':'zato.server.service.internal.definition.amqp.GetByID',
-    'zato.definition.amqp.get-list':'zato.server.service.internal.definition.amqp.GetList',
+    'zato.definition.amqp.change-password':'zato.server.service.internal.definition.amqp_.ChangePassword',
+    'zato.definition.amqp.create':'zato.server.service.internal.definition.amqp_.Create',
+    'zato.definition.amqp.delete':'zato.server.service.internal.definition.amqp_.Delete',
+    'zato.definition.amqp.edit':'zato.server.service.internal.definition.amqp_.Edit',
+    'zato.definition.amqp.get-by-id':'zato.server.service.internal.definition.amqp_.GetByID',
+    'zato.definition.amqp.get-list':'zato.server.service.internal.definition.amqp_.GetList',
 
     # Definitions - Cassandra
     'zato.definition.cassandra.create':'zato.server.service.internal.definition.cassandra.Create',
@@ -219,10 +224,10 @@ zato_services = {
     'zato.notif.cloud.sql.get-list': 'zato.server.service.internal.notif.cloud.sql.GetList',
 
     # Outgoing connections - AMQP
-    'zato.outgoing.amqp.create':'zato.server.service.internal.outgoing.amqp.Create',
-    'zato.outgoing.amqp.delete':'zato.server.service.internal.outgoing.amqp.Delete',
-    'zato.outgoing.amqp.edit':'zato.server.service.internal.outgoing.amqp.Edit',
-    'zato.outgoing.amqp.get-list':'zato.server.service.internal.outgoing.amqp.GetList',
+    'zato.outgoing.amqp.create':'zato.server.service.internal.outgoing.amqp_.Create',
+    'zato.outgoing.amqp.delete':'zato.server.service.internal.outgoing.amqp_.Delete',
+    'zato.outgoing.amqp.edit':'zato.server.service.internal.outgoing.amqp_.Edit',
+    'zato.outgoing.amqp.get-list':'zato.server.service.internal.outgoing.amqp_.GetList',
 
     # Outgoing connections - FTP
     'zato.outgoing.ftp.change-password':'zato.server.service.internal.outgoing.ftp.ChangePassword',
@@ -746,7 +751,12 @@ class Create(ZatoCommand):
 
     def add_check(self, session, cluster, service, pubapi_sec):
 
-        for data_format in (DATA_FORMAT.JSON, DATA_FORMAT.XML):
+        if 'fixed-width' in service.name:
+            data_formats = [DATA_FORMAT.FIXED_WIDTH]
+        else:
+            data_formats = [DATA_FORMAT.JSON, DATA_FORMAT.XML]
+
+        for data_format in data_formats:
 
             name = 'zato.checks.{}.{}'.format(data_format, service.name)
             url_path = '/zato/checks/{}/{}'.format(data_format, service.name)

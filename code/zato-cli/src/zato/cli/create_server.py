@@ -190,6 +190,17 @@ custom_auth_list_service=
 stats=True
 slow_response=True
 live_msg_browser=False
+cassandra=True
+email=True
+search=True
+msg_path=True
+websphere_mq=False
+odoo=True
+stomp=True
+zeromq=True
+patterns=True
+target_matcher=False
+invoke_matcher=False
 
 [live_msg_browser]
 include_internal=False
