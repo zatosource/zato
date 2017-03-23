@@ -10,7 +10,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging, inspect, os, sys
-from copy import deepcopy
 from datetime import datetime
 from errno import ENOENT
 from inspect import isclass
@@ -50,6 +49,7 @@ from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_pa
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, \
      store_tls, update_apikey_username, update_bind_port, visit_py_source
 from zato.server.base.worker.common import WorkerImpl
+from zato.server.connection.amqp_ import ConnectorAMQP
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -67,7 +67,6 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.web_socket.outgoing import OutgoingWebSocket
 from zato.server.connection.vault import VaultConnAPI
-from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
@@ -151,9 +150,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Statistics maintenance
         self.stats_maint = MaintenanceTool(self.kvdb.conn)
 
-        self.msg_ns_store = NamespaceStore()
-        self.json_pointer_store = JSONPointerStore()
-        self.xpath_store = XPathStore()
+        self.msg_ns_store = self.worker_config.msg_ns_store
+        self.json_pointer_store = self.worker_config.json_pointer_store
+        self.xpath_store = self.worker_config.xpath_store
 
         # CassandraOutconnSTOMPConnStore
         self.cassandra_api = CassandraAPI(CassandraConnStore())
@@ -180,6 +179,10 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # WebSocket
         self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket)
         self.outgoing_web_sockets = OutgoingWebSocket(self.server.cluster_id, self.server.servers, self.server.odb)
+
+        # AMQP
+        self.amqp_api = ConnectorStore(connector_type.duplex.amqp, ConnectorAMQP)
+        self.amqp_out_name_to_def = {} # Maps outgoing connection names to definition names, i.e. to connector names        
 
         # Vault connections
         self.vault_conn_api = VaultConnAPI()
@@ -232,7 +235,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.request_dispatcher = RequestDispatcher(simple_io_config=self.worker_config.simple_io,
             return_tracebacks=self.server.return_tracebacks, default_error_message=self.server.default_error_message)
         self.request_dispatcher.url_data = URLData(
-            self, deepcopy(self.worker_config.http_soap),
+            self, self.worker_config.http_soap,
             self.server.odb.get_url_security(self.server.cluster_id, 'channel')[0],
             self.worker_config.basic_auth, self.worker_config.jwt, self.worker_config.ntlm, self.worker_config.oauth,
             self.worker_config.tech_acc, self.worker_config.wss, self.worker_config.apikey, self.worker_config.aws,
@@ -255,8 +258,21 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # WebSocket
         self.init_web_socket()
 
+        # AMQP
+        self.init_amqp()
+
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
+
+# ################################################################################################################################
+
+    def _config_to_dict(self, config_list, key='name'):
+        """ Converts a list of dictionaries produced by ConfigDict instances to a dictionary keyed with 'key' elements.
+        """
+        out = {}
+        for elem in config_list:
+            out[elem[key]] = elem
+        return out
 
 # ################################################################################################################################
 
@@ -613,7 +629,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def init_web_socket(self):
         """ Initializes all WebSocket connections.
         """
-
         # Channels
         for name, data in self.worker_config.channel_web_socket.items():
 
@@ -624,6 +639,30 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 self.request_dispatcher.url_data.authenticate_web_socket)
 
         self.web_socket_api.start()
+
+# ################################################################################################################################
+
+    def init_amqp(self):
+        """ Initializes all AMQP connections.
+        """
+        def _name_matches(def_name):
+            def _inner(config):
+                return config['def_name']==def_name
+            return _inner
+
+        for def_name, data in self.worker_config.definition_amqp.items():
+
+            channels = self.worker_config.channel_amqp.get_config_list(_name_matches(def_name))
+            outconns = self.worker_config.out_amqp.get_config_list(_name_matches(def_name))
+            for outconn in outconns:
+                self.amqp_out_name_to_def[outconn['name']] = def_name
+
+            # AMQP definitions as such are always active. It's channels or outconns that can be inactive.
+            data.config.is_active = True
+            self.amqp_api.create(def_name, bunchify(data.config), self.on_message_invoke_service,
+                channels=self._config_to_dict(channels), outconns=self._config_to_dict(outconns))
+
+        self.amqp_api.start()
 
 # ################################################################################################################################
 
@@ -1204,8 +1243,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def on_message_invoke_service(self, msg, channel, action, args=None, **kwargs):
-        """ Triggered by external processes, such as AMQP or the singleton's scheduler,
-        creates a new service instance and invokes it.
+        """ Triggered by external events, such as messages sent through connectots. Creates a new service instance and invokes it.
         """
         zato_ctx = msg.get('zato_ctx', {})
         target = zato_ctx.get('zato.request_ctx.target', '')
@@ -1292,9 +1330,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def on_broker_msg_SCHEDULER_JOB_EXECUTED(self, msg, args=None):
         return self.on_message_invoke_service(msg, CHANNEL.SCHEDULER, 'SCHEDULER_JOB_EXECUTED', args)
-
-    def on_broker_msg_CHANNEL_AMQP_MESSAGE_RECEIVED(self, msg, args=None):
-        return self.on_message_invoke_service(msg, CHANNEL.AMQP, 'CHANNEL_AMQP_MESSAGE_RECEIVED', args)
 
     def on_broker_msg_CHANNEL_JMS_WMQ_MESSAGE_RECEIVED(self, msg, args=None):
         return self.on_message_invoke_service(msg, CHANNEL.JMS_WMQ, 'CHANNEL_JMS_WMQ_MESSAGE_RECEIVED', args)

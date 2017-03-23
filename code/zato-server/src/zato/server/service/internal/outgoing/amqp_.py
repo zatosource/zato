@@ -13,28 +13,25 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common.broker_message import MESSAGE_TYPE, OUTGOING
+from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import ConnDefAMQP, OutgoingAMQP
 from zato.common.odb.query import out_amqp_list
-from zato.server.connection.amqp.outgoing import start_connector
-from zato.server.service import AsIs, Integer
+from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
-class _AMQPService(AdminService):
-    def delete_outgoing(self, outgoing):
-        msg = {'action': OUTGOING.AMQP_DELETE.value, 'name': outgoing.name, 'id':outgoing.id}
-        self.broker_client.publish(msg, MESSAGE_TYPE.TO_AMQP_PUBLISHING_CONNECTOR_ALL)
+# ################################################################################################################################
 
 class GetList(AdminService):
     """ Returns a list of outgoing AMQP connections.
     """
+    name = 'zato.outgoing.amqp.get-list'
     _filter_by = OutgoingAMQP.name,
 
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_outgoing_amqp_get_list_request'
         response_elem = 'zato_outgoing_amqp_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority', 'def_name')
+        output_required = ('id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority', 'def_name', 'pool_size')
         output_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
 
     def get_data(self, session):
@@ -44,13 +41,17 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+# ################################################################################################################################
+
 class Create(AdminService):
     """ Creates a new outgoing AMQP connection.
     """
+    name = 'zato.outgoing.amqp.create'
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_amqp_create_request'
         response_elem = 'zato_outgoing_amqp_create_response'
-        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority')
+        input_required = ('cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority', 'pool_size')
         input_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
         output_required = ('id', 'name')
 
@@ -59,6 +60,7 @@ class Create(AdminService):
 
         input.delivery_mode = int(input.delivery_mode)
         input.priority = int(input.priority)
+        input.expiration = int(input.expiration) if input.expiration else None
 
         if not(input.priority >= 0 and input.priority <= 9):
             msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(input.priority))
@@ -74,7 +76,7 @@ class Create(AdminService):
                 first()
 
             if existing_one:
-                raise Exception('An outgoing AMQP connection [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing AMQP connection `{}` already exists on this cluster'.format(input.name))
 
             try:
                 item = OutgoingAMQP()
@@ -86,32 +88,37 @@ class Create(AdminService):
                 item.content_type = input.content_type
                 item.content_encoding = input.content_encoding
                 item.expiration = input.expiration
+                item.pool_size = input.pool_size
                 item.user_id = input.user_id
                 item.app_id = input.app_id
 
                 session.add(item)
                 session.commit()
 
-                if item.is_active:
-                    start_connector(self.server.repo_location, item.id, item.def_id)
+                input.action = OUTGOING.AMQP_CREATE.value
+                input.def_name = item.def_.name
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = "Could not create an outgoing AMQP connection, e:[{e}]".format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not create an outgoing AMQP connection, e:`%s`', format_exc(e))
                 session.rollback()
 
                 raise
 
-class Edit(_AMQPService):
+# ################################################################################################################################
+
+class Edit(AdminService):
     """ Updates an outgoing AMQP connection.
     """
+    name = 'zato.outgoing.amqp.edit'
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_amqp_edit_request'
         response_elem = 'zato_outgoing_amqp_edit_response'
-        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', Integer('priority'))
+        input_required = ('id', 'cluster_id', 'name', 'is_active', 'def_id', 'delivery_mode', 'priority', 'pool_size')
         input_optional = ('content_type', 'content_encoding', 'expiration', AsIs('user_id'), AsIs('app_id'))
         output_required = ('id', 'name')
 
@@ -121,6 +128,7 @@ class Edit(_AMQPService):
 
         input.delivery_mode = int(input.delivery_mode)
         input.priority = int(input.priority)
+        input.expiration = int(input.expiration) if input.expiration else None
 
         if not(input.priority >= 0 and input.priority <= 9):
             msg = 'Priority should be between 0 and 9, not [{0}]'.format(repr(input.priority))
@@ -137,10 +145,11 @@ class Edit(_AMQPService):
                 first()
 
             if existing_one:
-                raise Exception('An outgoing AMQP connection [{0}] already exists on this cluster'.format(input.name))
+                raise Exception('An outgoing AMQP connection `{}` already exists on this cluster'.format(input.name))
 
             try:
                 item = session.query(OutgoingAMQP).filter_by(id=input.id).one()
+                old_name = item.name
                 item.name = input.name
                 item.is_active = input.is_active
                 item.def_id = input.def_id
@@ -149,30 +158,34 @@ class Edit(_AMQPService):
                 item.content_type = input.content_type
                 item.content_encoding = input.content_encoding
                 item.expiration = input.expiration
+                item.pool_size = input.pool_size
                 item.user_id = input.user_id
                 item.app_id = input.app_id
 
                 session.add(item)
                 session.commit()
 
-                self.delete_outgoing(item)
-
-                if item.is_active:
-                    start_connector(self.server.repo_location, item.id, item.def_id)
+                input.action = OUTGOING.AMQP_EDIT.value
+                input.def_name = item.def_.name
+                input.old_name = old_name
+                self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
 
             except Exception, e:
-                msg = 'Could not update the AMQP definition, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not update the outgoing AMQP connection, e:`%s`', format_exc(e))
                 session.rollback()
 
                 raise
 
-class Delete(_AMQPService):
+# ################################################################################################################################
+
+class Delete(AdminService):
     """ Deletes an outgoing AMQP connection.
     """
+    name = 'zato.outgoing.amqp.delete'
+
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_amqp_delete_request'
         response_elem = 'zato_outgoing_amqp_delete_response'
@@ -181,18 +194,27 @@ class Delete(_AMQPService):
     def handle(self):
         with closing(self.odb.session()) as session:
             try:
-                channel = session.query(OutgoingAMQP).\
+                item = session.query(OutgoingAMQP).\
                     filter(OutgoingAMQP.id==self.request.input.id).\
                     one()
 
-                session.delete(channel)
+                item_id = item.id
+                def_name = item.def_.name
+
+                session.delete(item)
                 session.commit()
 
-                self.delete_outgoing(channel)
+                self.broker_client.publish({
+                    'action': OUTGOING.AMQP_DELETE.value,
+                    'name': item.name,
+                    'id':item_id,
+                    'def_name':def_name,
+                })
 
             except Exception, e:
                 session.rollback()
-                msg = 'Could not delete the outgoing AMQP connection, e:[{e}]'.format(e=format_exc(e))
-                self.logger.error(msg)
+                self.logger.error('Could not delete the outgoing AMQP connection, e:`%s`', format_exc(e))
 
                 raise
+
+# ################################################################################################################################

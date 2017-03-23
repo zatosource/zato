@@ -1541,7 +1541,7 @@ def timeouting_popen(command, timeout, timeout_msg, rc_non_zero_msg, common_msg=
 
 def spawn_greenlet(callable, *args, **kwargs):
     """ Spawns a new greenlet and wait up to timeout seconds for its response. It is expected that the response never arrives
-    because that means that there were no errors.
+    because if it does, it means that there were some errors.
     """
     try:
         g = spawn(callable, *args, **kwargs)

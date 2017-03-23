@@ -907,17 +907,17 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
-    def get_def_amqp(self, cluster_id, def_id):
+    def get_definition_amqp(self, cluster_id, def_id):
         """ Returns an AMQP definition's details.
         """
         with closing(self.session()) as session:
-            return query.def_amqp(session, cluster_id, def_id)
+            return query.definition_amqp(session, cluster_id, def_id)
 
-    def get_def_amqp_list(self, cluster_id, needs_columns=False):
+    def get_definition_amqp_list(self, cluster_id, needs_columns=False):
         """ Returns a list of AMQP definitions on the given cluster.
         """
         with closing(self.session()) as session:
-            return query.def_amqp_list(session, cluster_id, needs_columns)
+            return query.definition_amqp_list(session, cluster_id, needs_columns)
 
     def get_out_amqp(self, cluster_id, out_id):
         """ Returns an outgoing AMQP connection's details.

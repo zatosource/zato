@@ -137,8 +137,14 @@ class WebSocket(_WebSocket):
             # self.ext_client_id and self.ext_client_name will exist after authenticate action
             # so we use them if they are available but fall back to meta.client_id and meta.client_name during
             # the very authenticate action.
-            msg.ext_client_id = self.ext_client_id or meta.client_id
-            msg.ext_client_name = self.ext_client_name or meta.get('client_name')
+            if meta.get('client_id'):
+                self.ext_client_id = meta.client_id
+
+            if meta.get('client_name'):
+                self.ext_client_name = meta.client_name
+
+            msg.ext_client_id = self.ext_client_id
+            msg.ext_client_name = self.ext_client_name
 
             if msg.action == _auth:
                 msg.username = meta.get('username')
@@ -504,6 +510,7 @@ class ChannelWebSocket(Connector):
 
     def _start(self):
         self.server = WebSocketServer(self.config, self.auth_func, self.on_message_callback)
+        self.is_connected = True
         self.server.serve_forever()
 
     def _stop(self):
