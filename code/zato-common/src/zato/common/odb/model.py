@@ -22,9 +22,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, \
+from zato.common import AMQP, CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, \
      MSG_PATTERN_TYPE, ODOO, PUB_SUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
-from zato.common.odb import AMQP_DEFAULT_PRIORITY, WMQ_DEFAULT_PRIORITY
+from zato.common.odb import WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
 make_class_dictable(Base)
@@ -826,13 +826,11 @@ class ConnDefAMQP(Base):
     """ An AMQP connection definition.
     """
     __tablename__ = 'conn_def_amqp'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id', 'def_type'), {})
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
 
     id = Column(Integer, Sequence('conn_def_amqp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
-    # TODO is_active = Column(Boolean(), nullable=False)
 
-    def_type = Column(String(10), nullable=False)
     host = Column(String(200), nullable=False)
     port = Column(Integer(), nullable=False)
     vhost = Column(String(200), nullable=False)
@@ -844,12 +842,10 @@ class ConnDefAMQP(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('amqp_conn_defs', order_by=name, cascade='all, delete, delete-orphan'))
 
-    def __init__(self, id=None, name=None, def_type=None, host=None, port=None,
-                 vhost=None, username=None, password=None, frame_max=None,
-                 heartbeat=None, cluster_id=None):
+    def __init__(self, id=None, name=None, host=None, port=None, vhost=None, username=None, password=None, frame_max=None,
+            heartbeat=None, cluster_id=None):
         self.id = id
         self.name = name
-        self.def_type = def_type
         self.host = host
         self.port = port
         self.vhost = vhost
@@ -922,13 +918,14 @@ class OutgoingAMQP(Base):
     is_active = Column(Boolean(), nullable=False)
 
     delivery_mode = Column(SmallInteger(), nullable=False)
-    priority = Column(SmallInteger(), server_default=str(AMQP_DEFAULT_PRIORITY), nullable=False)
+    priority = Column(SmallInteger(), server_default=str(AMQP.DEFAULT.PRIORITY), nullable=False)
 
     content_type = Column(String(200), nullable=True)
     content_encoding = Column(String(200), nullable=True)
-    expiration = Column(String(20), nullable=True)
+    expiration = Column(Integer(), nullable=True)
     user_id = Column(String(200), nullable=True)
     app_id = Column(String(200), nullable=True)
+    pool_size = Column(SmallInteger(), nullable=False)
 
     def_id = Column(Integer, ForeignKey('conn_def_amqp.id', ondelete='CASCADE'), nullable=False)
     def_ = relationship(ConnDefAMQP, backref=backref('out_conns_amqp', cascade='all, delete, delete-orphan'))
@@ -1110,6 +1107,8 @@ class ChannelAMQP(Base):
     is_active = Column(Boolean(), nullable=False)
     queue = Column(String(200), nullable=False)
     consumer_tag_prefix = Column(String(200), nullable=False)
+    pool_size = Column(Integer, nullable=False)
+    ack_mode = Column(String(20), nullable=False)
     data_format = Column(String(20), nullable=True)
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=False)

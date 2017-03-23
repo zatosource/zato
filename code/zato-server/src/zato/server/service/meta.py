@@ -194,6 +194,11 @@ class AdminServiceMeta(type):
                 if skip_name in attr_names:
                     attr_names.remove(skip_name)
 
+        SimpleIO.input_required = tuple(sorted(SimpleIO.input_required))
+        SimpleIO.input_optional = tuple(sorted(SimpleIO.input_optional))
+        SimpleIO.output_required = tuple(sorted(SimpleIO.output_required))
+        SimpleIO.output_optional = tuple(sorted(SimpleIO.input_required))
+
         return SimpleIO
 
 class GetListMeta(AdminServiceMeta):

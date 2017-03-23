@@ -30,6 +30,8 @@
             'def_name',
             'queue',
             'consumer_tag_prefix',
+            'pool_size',
+            'ack_mode',
             'service',
             '_edit',
             '_delete',
@@ -72,6 +74,8 @@
                         <th><a href="#">Definition</a></th>
                         <th><a href="#">Queue</a></th>
                         <th><a href="#">Consumer tag prefix</a></th>
+                        <th><a href="#">Pool size</a></th>
+                        <th><a href="#">Ack mode</a></th>
                         <th><a href="#">Service</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -91,6 +95,8 @@
                         <td>{{ item.def_name }}</td>
                         <td>{{ item.queue }}</td>
                         <td>{{ item.consumer_tag_prefix }}</td>
+                        <td>{{ item.pool_size }}</td>
+                        <td>{{ item.ack_mode }}</td>
                         <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
                         <td><a href="javascript:$.fn.zato.channel.amqp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.channel.amqp.delete_('{{ item.id }}')">Delete</a></td>
@@ -102,7 +108,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='13'>No results</td>
+                        <td colspan='16'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -120,37 +126,47 @@
                             <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
-                    
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ create_form.is_active }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Definition</td>
                             <td>{{ create_form.def_id }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Queue</td>
                             <td>{{ create_form.queue }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Consumer tag prefix</td>
                             <td>{{ create_form.consumer_tag_prefix }}</td>
                         </tr>
-                        
+
+                        <tr>
+                            <td style="vertical-align:middle">Ack mode</td>
+                            <td>{{ create_form.ack_mode }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Pool size</td>
+                            <td>{{ create_form.pool_size }}</td>
+                        </tr>
+
                         <tr>
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ create_form.service }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Data format</td>
                             <td>{{ create_form.data_format }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -171,32 +187,42 @@
                             <td style="vertical-align:middle;width:20%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
-                    
+
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ edit_form.is_active }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Definition</td>
                             <td>{{ edit_form.def_id }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Queue</td>
                             <td>{{ edit_form.queue }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Consumer tag prefix</td>
                             <td>{{ edit_form.consumer_tag_prefix }}</td>
                         </tr>
-                        
+
+                        <tr>
+                            <td style="vertical-align:middle">Ack mode</td>
+                            <td>{{ edit_form.ack_mode }}</td>
+                        </tr>
+
+                        <tr>
+                            <td style="vertical-align:middle">Pool size</td>
+                            <td>{{ edit_form.pool_size }}</td>
+                        </tr>
+
                         <tr>
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.service }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Data format</td>
                             <td>{{ edit_form.data_format }}</td>

@@ -38,11 +38,17 @@ from zato.common.log_message import CID_LENGTH
 from zato.common.odb import model
 from zato.common.util import is_port_taken, new_cid
 
+# ################################################################################################################################
+
 def rand_bool():
     return choice((True, False))
 
+# ################################################################################################################################
+
 def rand_csv(count=3):
     return ','.join(str(elem) for elem in rand_int(count=count))
+
+# ################################################################################################################################
 
 def rand_dict():
     out = {}
@@ -53,6 +59,8 @@ def rand_dict():
 
     return out
 
+# ################################################################################################################################
+
 def rand_list():
     out = []
     funcs = [rand_bool, rand_int, rand_string]
@@ -62,19 +70,27 @@ def rand_list():
 
     return out
 
+# ################################################################################################################################
+
 def rand_list_of_dicts():
     out = []
     for x in range(rand_int(30)):
         out.append(rand_dict())
     return out
 
+# ################################################################################################################################
+
 def rand_opaque():
     return rand_object()
 
 rand_nested = rand_opaque
 
+# ################################################################################################################################
+
 def rand_datetime():
     return datetime.utcnow().isoformat() # Random in the sense of not repeating
+
+# ################################################################################################################################
 
 def rand_int(start=1, stop=100, count=1):
     if count == 1:
@@ -82,8 +98,12 @@ def rand_int(start=1, stop=100, count=1):
     else:
         return [randint(start, stop) for x in range(count)]
 
+# ################################################################################################################################
+
 def rand_float(start=1.0, stop=100.0):
     return float(rand_int(start, stop))
+
+# ################################################################################################################################
 
 def rand_string(count=1):
     if count == 1:
@@ -91,17 +111,25 @@ def rand_string(count=1):
     else:
         return ['a' + uuid4().hex for x in range(count)]
 
+# ################################################################################################################################
+
 def rand_unicode():
     return u'ϠϡϢϣϤϥϦϧϨϩϪϫϬϭ'
 
+# ################################################################################################################################
+
 def rand_object():
     return object()
+
+# ################################################################################################################################
 
 def rand_date_utc(as_string=False):
     value = datetime.utcnow() # Now is as random as any other date
     if as_string:
         return value.isoformat()
     return value
+
+# ################################################################################################################################
 
 def is_like_cid(cid):
     """ Raises ValueError if the cid given on input does not look like a genuine CID
@@ -117,6 +145,8 @@ def is_like_cid(cid):
 
     return True
 
+# ################################################################################################################################
+
 def get_free_tcp_port(start=40000, stop=40500):
     """ Iterates between start and stop, returning first free TCP port. Must not be used except for tests because
     it comes with a race condition - another process may want to bind the port we find before our caller does.
@@ -126,6 +156,32 @@ def get_free_tcp_port(start=40000, stop=40500):
             return port
     else:
         raise Exception('Could not find any free TCP port between {} and {}'.format(start, stop))
+
+# ################################################################################################################################
+
+def enrich_with_static_config(object_):
+    """ Adds to an object (service instance or class) all attributes that are added by service store.
+    Useful during tests since there is no service store around to do it.
+    """
+    object_.component_enabled_websphere_mq = True
+    object_.component_enabled_zeromq = True
+    object_.component_enabled_patterns = True
+    object_.component_enabled_target_matcher = True
+    object_.component_enabled_invoke_matcher = True
+    object_.get_name()
+
+    def target_match(*args, **kwargs):
+        return True
+
+    is_allowed = target_match
+
+    object_._worker_config = Bunch(out_odoo=None, out_soap=None)
+    object_._worker_store = Bunch(
+        sql_pool_store=None, stomp_outconn_api=None, outgoing_web_sockets=None, cassandra_api=None,
+        cassandra_query_api=None, email_smtp_api=None, email_imap_api=None, search_es_api=None, search_solr_api=None,
+        target_matcher=Bunch(target_match=target_match, is_allowed=is_allowed), invoke_matcher=Bunch(is_allowed=is_allowed))
+
+# ################################################################################################################################
 
 class Expected(object):
     """ A container for the data a test expects the service to return.
@@ -142,6 +198,8 @@ class Expected(object):
         else:
             return self.data[0]
 
+# ################################################################################################################################
+
 class FakeBrokerClient(object):
 
     def __init__(self):
@@ -156,6 +214,8 @@ class FakeBrokerClient(object):
     def invoke_async(self, *args, **kwargs):
         self.invoke_async_args.append(args)
         self.invoke_async_kwargs.append(kwargs)
+
+# ################################################################################################################################
 
 class FakeKVDB(object):
 
@@ -187,9 +247,13 @@ class FakeKVDB(object):
     def translate(self, *ignored_args, **ignored_kwargs):
         raise NotImplementedError()
 
+# ################################################################################################################################
+
 class FakeServices(object):
     def __getitem__(self, ignored):
         return {'slow_threshold': 1234}
+
+# ################################################################################################################################
 
 class FakeServiceStore(object):
     def __init__(self, name_to_impl_name=None, impl_name_to_service=None):
@@ -200,12 +264,15 @@ class FakeServiceStore(object):
     def new_instance(self, impl_name, is_active=True):
         return self.impl_name_to_service[impl_name](), is_active
 
+# ################################################################################################################################
+
 class FakeServer(object):
     """ A fake mock server used in test cases.
     """
-    def __init__(self, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None):
+    def __init__(self, service_store_name_to_impl_name=None, service_store_impl_name_to_service=None, worker_store=None):
         self.kvdb = FakeKVDB()
         self.service_store = FakeServiceStore(service_store_name_to_impl_name, service_store_impl_name_to_service)
+        self.worker_store = worker_store
         self.fs_server_config = Bunch()
         self.fs_server_config.misc = Bunch()
         self.fs_server_config.misc.zeromq_connect_sleep = 0.1
@@ -219,6 +286,8 @@ class FakeServer(object):
         self.ipc_api = None
         self.component_enabled = Bunch(live_msg_browser=True)
 
+# ################################################################################################################################
+
 class ForceTypeWrapper(object):
     """ Makes comparison between two ForceType elements use their names.
     """
@@ -230,6 +299,8 @@ class ForceTypeWrapper(object):
         # of a SIO attribute.
         return cmp(self.value.name, getattr(other, 'name', other))
 
+# ################################################################################################################################
+
 class ServiceTestCase(TestCase):
 
     def invoke(self, class_, request_data, expected, mock_data={}, channel=CHANNEL.HTTP_SOAP, job_type=None,
@@ -237,7 +308,17 @@ class ServiceTestCase(TestCase):
         """ Sets up a service's invocation environment, then invokes and returns
         an instance of the service.
         """
+        class_.component_enabled_cassandra = True
+        class_.component_enabled_email = True
+        class_.component_enabled_search = True
+        class_.component_enabled_msg_path = True
+        class_.has_sio = getattr(class_, 'SimpleIO', False)
+
         instance = class_()
+
+        server = MagicMock()
+        server.component_enabled.stats = False
+
         worker_store = MagicMock()
         worker_store.worker_config = MagicMock
         worker_store.worker_config.outgoing_connections = MagicMock(return_value=(None, None, None, None))
@@ -252,7 +333,7 @@ class ServiceTestCase(TestCase):
         }
 
         class_.update(
-            instance, channel, FakeServer(service_store_name_to_impl_name, service_store_impl_name_to_service),
+            instance, channel, FakeServer(service_store_name_to_impl_name, service_store_impl_name_to_service, worker_store),
             None, worker_store, new_cid(), request_data, request_data, simple_io_config=simple_io_config,
             data_format=data_format, job_type=job_type)
 
@@ -276,10 +357,13 @@ class ServiceTestCase(TestCase):
             instance.broker_client = FakeBrokerClient()
             instance.broker_client.publish = broker_client_publish
 
-        instance.call_hooks('before')
-        instance.handle()
-        instance.call_hooks('after')
+        def set_response_func(*args, **kwargs):
+            print(111, args, kwargs)
 
+        instance.handle()
+        #instance.update_handle(
+        #    set_response_func, instance, request_data, channel, data_format, None, server, None, worker_store, new_cid(),
+        #    None)
         return instance
 
     def _check_sio_request_input(self, instance, request_data):
@@ -340,6 +424,8 @@ class ServiceTestCase(TestCase):
     def wrap_force_type(self, elem):
         return ForceTypeWrapper(elem)
 
+# ################################################################################################################################
+
 class ODBTestCase(TestCase):
 
     def setUp(self):
@@ -348,3 +434,5 @@ class ODBTestCase(TestCase):
 
     def tearDown(self):
         model.Base.metadata.drop_all(self.engine)
+
+# ################################################################################################################################

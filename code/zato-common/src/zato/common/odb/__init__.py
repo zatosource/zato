@@ -21,7 +21,6 @@ from zato.common import ping_queries
 
 logger = logging.getLogger(__name__)
 
-AMQP_DEFAULT_PRIORITY = 5
 WMQ_DEFAULT_PRIORITY = 5
 
 # ODB version

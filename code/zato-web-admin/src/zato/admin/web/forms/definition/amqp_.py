@@ -8,15 +8,15 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# pika
-from pika.spec import FRAME_MAX_SIZE, PORT
-
 # Django
 from django import forms
 
 # Zato
 from zato.common.util import make_repr
 
+# Defaults per AMQP spec
+FRAME_MAX_SIZE = 131072
+PORT = 5672
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -25,7 +25,7 @@ class CreateForm(forms.Form):
     vhost = forms.CharField(initial='/', widget=forms.TextInput(attrs={'style':'width:50%'}))
     username = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
     frame_max = forms.CharField(initial=FRAME_MAX_SIZE, widget=forms.TextInput(attrs={'style':'width:20%'}))
-    heartbeat = forms.CharField(initial=0, widget=forms.TextInput(attrs={'style':'width:10%'}))
+    heartbeat = forms.CharField(initial=1, widget=forms.TextInput(attrs={'style':'width:10%'}))
 
     def __repr__(self):
         return make_repr(self)

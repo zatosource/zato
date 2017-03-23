@@ -71,8 +71,7 @@ class MessageFacade(object):
     """ An object through which services access all the message-related features,
     such as namespaces, JSON Pointer or XPath.
     """
-    def __init__(self, msg_ns_store=None, json_pointer_store=None, xpath_store=None, ns_store=None, payload=None, time_util=None):
-        self._ns = msg_ns_store
+    def __init__(self, json_pointer_store=None, xpath_store=None, ns_store=None, payload=None, time_util=None):
         self._json_pointer_store = json_pointer_store
         self._xpath_store = xpath_store
         self._ns_store = ns_store

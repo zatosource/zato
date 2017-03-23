@@ -10,11 +10,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from unittest import TestCase
 
 # Zato
+from zato.common.test import enrich_with_static_config
 from zato.server.service.internal.notif.cloud.openstack.swift import RunNotifier
 
 class SwiftTestCase(TestCase):
     def test_name_matches(self):
 
+        enrich_with_static_config(RunNotifier)
         service = RunNotifier()
 
         test_data = (
