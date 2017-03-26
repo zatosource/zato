@@ -43,6 +43,7 @@ class KeyExpiredError(KeyError):
 
 # ################################################################################################################################
 
+
 cdef class Entry:
     """ Represents an individual value stored in a cache.
     """
@@ -85,6 +86,7 @@ cdef class Cache(object):
     cdef:
         public long max_size
         public long max_item_size
+        public bint extend_expiry_on_get
         public bint extend_expiry_on_set
         public dict _data
         public list _index
@@ -106,9 +108,10 @@ cdef class Cache(object):
         self.set_ops = 0
         self.get_ops = 0
 
-    def __init__(self, max_size=None, max_item_size=None, extend_expiry_on_set=True, lock=None):
+    def __init__(self, max_size=None, max_item_size=None, extend_expiry_on_get=True, extend_expiry_on_set=True, lock=None):
         self.max_size = max_size or CACHE.DEFAULT_SIZE
         self.max_item_size = max_item_size or CACHE.MAX_ITEM_SIZE
+        self.extend_expiry_on_get = extend_expiry_on_get
         self.extend_expiry_on_set = extend_expiry_on_set
         self._lock = lock or RLock()
         self.hits_per_position.update(dict((key, 0) for key in xrange(self.max_size)))
@@ -178,6 +181,8 @@ cdef class Cache(object):
     cpdef delete(self, str key):
         with self._lock:
             self._delete(key)
+
+    __del__ = delete
 
 # ################################################################################################################################
 
@@ -346,7 +351,11 @@ cdef class Cache(object):
                 entry.last_read = _now
                 entry.hits += 1
 
-                # If details are requested, add key and its current position to data returned
+                # The entry exists and has not expired so now, if we are configured to, prolong its expiration time
+                if self.extend_expiry_on_get and entry.expiry:
+                    entry.expires_at = _now + entry.expiry
+
+                # If details are requested, add current position of key to data returned
                 if details:
                     entry.key = key
                     entry.position = index_idx
@@ -385,3 +394,23 @@ cdef class Cache(object):
         return deleted
 
 # ################################################################################################################################
+
+def main():
+
+    from datetime import datetime
+
+    for x in range(100):
+
+        n = 1000 * 100
+        cache = Cache(1000, 200)
+        start = datetime.utcnow()
+
+        for num in xrange(n):
+            num = str(num)
+            cache.set('key'+num, 'value1')
+            cache.set('key'+num, 'value2')
+            cache.set('key'+num, 'value3')
+            cache.set('key'+num, 'value4')
+            cache.set('key'+num, 'value5')
+
+        print(x, str(datetime.utcnow() - start), cache.hits, cache.misses)
