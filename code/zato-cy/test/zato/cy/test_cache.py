@@ -164,6 +164,71 @@ class CacheTestCace(TestCase):
 
 # ################################################################################################################################
 
+    def test_set_already_exists_extend_expiry_on_get_true(self):
+
+        key1, expected1 = 'key1', 'value1'
+        expected1_new = 'value1_new'
+
+        # sleep_time is less then expiry but we sleep twice below so the total time
+        # is greater than expiry and would have made the key expire
+        # had it not been for extend_expiry_on_get=True
+
+        expiry = 0.05
+        sleep_time = expiry - expiry * 0.01
+
+        c = Cache(extend_expiry_on_get=True)
+        c.set(key1, expected1, expiry)
+
+        sleep(sleep_time)
+
+        returned1_a = c.get(key1)
+        returned1_b = c.get(key1, True)
+
+        self.assertEquals(returned1_a, expected1)
+        self.assertEquals(len(c), 1)
+        self.assertEquals(returned1_b.value, expected1)
+
+        sleep(sleep_time)
+
+        returned1_a = c.get(key1)
+        returned1_b = c.get(key1, True)
+
+        self.assertEquals(returned1_a, expected1)
+        self.assertEquals(len(c), 1)
+        self.assertEquals(returned1_b.value, expected1)
+
+# ################################################################################################################################
+
+    def test_set_already_exists_extend_expiry_on_get_false(self):
+
+        key1, expected1 = 'key1', 'value1'
+        expected1_new = 'value1_new'
+
+        # Unlike in test_set_already_exists_extend_expiry_on_get_false,
+        # in this test case extend_expiry_on_get=False so .get won't extend it.
+
+        expiry = 0.05
+        sleep_time = expiry - expiry * 0.01
+
+        c = Cache(extend_expiry_on_get=False)
+        c.set(key1, expected1, expiry)
+
+        sleep(sleep_time)
+
+        returned1_a = c.get(key1)
+        returned1_b = c.get(key1, True)
+
+        self.assertEquals(returned1_a, expected1)
+        self.assertEquals(len(c), 1)
+        self.assertEquals(returned1_b.value, expected1)
+
+        sleep(sleep_time)
+
+        self.assertRaises(KeyExpiredError, c.get, key1)
+        self.assertRaises(KeyError, c.get, key1, True)
+
+# ################################################################################################################################
+
     def test_set_already_exists_extend_expiry_on_set_true(self):
 
         key1, expected1 = 'key1', 'value1'
