@@ -26,7 +26,7 @@ from kombu import Connection, Consumer as _Consumer, pools, Queue
 from kombu.transport.pyamqp import Connection as PyAMQPConnection, Transport
 
 # Zato
-from zato.common import AMQP, SECRET_SHADOW, version
+from zato.common import AMQP, CHANNEL, SECRET_SHADOW, version
 from zato.common.util import get_component_name
 from zato.server.connection.connector import Connector, Inactive
 
@@ -42,8 +42,17 @@ _default_out_keys=('app_id', 'content_encoding', 'content_type', 'delivery_mode'
 
 no_ack = {
     AMQP.ACK_MODE.ACK.id: False,
-    AMQP.ACK_MODE.NO_ACK.id: True,
+    AMQP.ACK_MODE.REJECT.id: True,
 }
+
+# ################################################################################################################################
+
+class _AMQPMessage(object):
+    __slots__ = ('body', 'impl')
+
+    def __init__(self, body, impl):
+        self.body = body
+        self.impl = impl
 
 # ################################################################################################################################
 
@@ -84,16 +93,22 @@ class _AMQPProducers(object):
 class Consumer(object):
     """ Consumes messages from AMQP queues. There is one Consumer object for each Zato AMQP channel.
     """
-    def __init__(self, config, on_message):
+    def __init__(self, config, on_amqp_message):
         # type: (dict, Callable)
         self.config = config
         self.name = self.config.name
         self.queue = [Queue(self.config.queue)]
-        self.on_message = [on_message]
+        self.on_amqp_message = on_amqp_message
         self.keep_running = True
         self.is_stopped = False
         self.is_connected = False # Instance-level flag indicating whether we have an active connection now.
         self.timeout = 0.35
+
+    def _on_amqp_message(self, body, msg):
+        try:
+            return self.on_amqp_message(body, msg, self.name, self.config)
+        except Exception, e:
+            logger.warn(format_exc(e))
 
 # ################################################################################################################################
 
@@ -113,8 +128,9 @@ class Consumer(object):
 
             try:
                 conn = self.config.conn_class(self.config.conn_url)
-                consumer = _Consumer(conn, queues=self.queue, callbacks=self.on_message, no_ack=_no_ack[self.config.ack_mode],
-                    tag_prefix='{}/{}'.format(self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))
+                consumer = _Consumer(conn, queues=self.queue, callbacks=[self._on_amqp_message],
+                    no_ack=_no_ack[self.config.ack_mode], tag_prefix='{}/{}'.format(
+                        self.config.consumer_tag_prefix, get_component_name('amqp-consumer')))
                 consumer.consume()
             except Exception, e:
                 err_conn_attempts += 1
@@ -301,11 +317,25 @@ class ConnectorAMQP(Connector):
 
 # ################################################################################################################################
 
-    def on_message(self, body, msg):
-        # type: (str, Any)
+    def on_amqp_message(self, body, msg, channel_name, channel_config, _AMQPMessage=_AMQPMessage, _CHANNEL_AMQP=CHANNEL.AMQP,
+        _RECEIVED='RECEIVED', _ZATO_ACK_MODE_ACK=AMQP.ACK_MODE.ACK.id):
         """ Invoked each time a message is taken off an AMQP queue.
         """
-        msg.ack()
+        self.on_message_callback(
+            channel_config['service_name'], body, channel=_CHANNEL_AMQP,
+            data_format=channel_config['data_format'],
+            zato_ctx={'zato.channel_item': {
+                'id': channel_config.id,
+                'name': channel_config.name,
+                'is_internal': False,
+                'amqp_msg': msg,
+            }})
+
+        if msg._state == _RECEIVED:
+            if channel_config['ack_mode'] == _ZATO_ACK_MODE_ACK:
+                msg.ack()
+            else:
+                msg.reject()
 
 # ################################################################################################################################
 
@@ -351,7 +381,7 @@ class ConnectorAMQP(Connector):
         # type: (str)
         """ Creates an AMQP consumer for a specific queue and starts it.
         """
-        consumer = Consumer(config, self.on_message)
+        consumer = Consumer(config, self.on_amqp_message)
         self._consumers.setdefault(config.name, []).append(consumer)
         consumer.start()
 
