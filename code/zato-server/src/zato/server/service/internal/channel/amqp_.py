@@ -99,6 +99,7 @@ class Create(AdminService):
 
                 input.action = CHANNEL.AMQP_CREATE.value
                 input.def_name = item.def_.name
+                input.service_name = service.name
                 self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
@@ -171,6 +172,7 @@ class Edit(AdminService):
                 input.action = CHANNEL.AMQP_EDIT.value
                 input.def_name = item.def_.name
                 input.old_name = old_name
+                input.service_name = service.name
                 self.broker_client.publish(input)
 
                 self.response.payload.id = item.id
