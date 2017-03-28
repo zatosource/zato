@@ -854,11 +854,11 @@ class AMQP:
 
     class ACK_MODE:
         ACK = NameId('Ack', 'ack')
-        NO_ACK = NameId('No ack', 'no-ack')
+        REJECT = NameId('Reject', 'reject')
 
         class __metaclass__(type):
             def __iter__(self):
-                return iter((self.ACK, self.NO_ACK))
+                return iter((self.ACK, self.REJECT))
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

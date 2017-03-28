@@ -153,7 +153,7 @@ class RequestDispatcher(object):
             logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))
 
         # This is needed in parallel.py's on_wsgi_request
-        wsgi_environ['zato.http.channel_item'] = channel_item
+        wsgi_environ['zato.channel_item'] = channel_item
 
         payload = wsgi_environ['wsgi.input'].read()
 

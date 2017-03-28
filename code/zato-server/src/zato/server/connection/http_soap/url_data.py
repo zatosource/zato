@@ -1310,7 +1310,7 @@ class URLData(CyURLData, OAuthDataStore):
         # TODO: There should be another copy of WSGI environ added with password masked out
         env = wsgi_environ.items()
         for elem in env:
-            if elem[0] == 'zato.http.channel_item':
+            if elem[0] == 'zato.channel_item':
                 elem[1]['password'] = AUDIT_LOG.REPLACE_WITH
 
         return dumps({key: repr(value) for key, value in env})
