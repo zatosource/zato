@@ -659,7 +659,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
             # AMQP definitions as such are always active. It's channels or outconns that can be inactive.
             data.config.is_active = True
-            self.amqp_api.create(def_name, bunchify(data.config), self.on_message_invoke_service,
+            self.amqp_api.create(def_name, bunchify(data.config), self.invoke,
                 channels=self._config_to_dict(channels), outconns=self._config_to_dict(outconns))
 
         self.amqp_api.start()
@@ -1230,22 +1230,25 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def invoke(self, service, payload, **kwargs):
         """ Invokes a service by its name with request on input.
         """
+        channel = kwargs.get('channel', CHANNEL.WORKER)
+
         return self.on_message_invoke_service({
-            'channel': kwargs.get('channel', CHANNEL.WORKER),
+            'channel': channel,
             'payload': payload,
             'data_format': kwargs.get('data_format'),
             'service': service,
             'cid': new_cid(),
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
-        }, CHANNEL.WORKER, None, needs_response=True, serialize=kwargs.get('serialize', True))
+            'zato_ctx': kwargs.get('zato_ctx'),
+        }, channel, None, needs_response=True, serialize=kwargs.get('serialize', True))
 
 # ################################################################################################################################
 
     def on_message_invoke_service(self, msg, channel, action, args=None, **kwargs):
         """ Triggered by external events, such as messages sent through connectots. Creates a new service instance and invokes it.
         """
-        zato_ctx = msg.get('zato_ctx', {})
+        zato_ctx = msg.get('zato_ctx') or {}
         target = zato_ctx.get('zato.request_ctx.target', '')
         cid = msg['cid']
 
@@ -1287,6 +1290,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'zato.request_ctx.fanout_cid':zato_ctx.get('fanout_cid'),
             'zato.request_ctx.parallel_exec_cid':zato_ctx.get('parallel_exec_cid'),
         }
+
+        if zato_ctx:
+            wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
 
         data_format = msg.get('data_format')
         transport = msg.get('transport')

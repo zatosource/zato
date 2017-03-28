@@ -26,7 +26,7 @@ from zato.common.odb.model import Server, WebSocketClient, WebSocketSubscription
 
 # ################################################################################################################################
 
-_wsgi_ignore = ('HTTP_ACCEPT', 'zato.oauth.post_data', 'zato.http.channel_item', 'zato.http.response.headers', 'zato.http.GET',
+_wsgi_ignore = ('HTTP_ACCEPT', 'zato.oauth.post_data', 'zato.channel_item', 'zato.http.response.headers', 'zato.http.GET',
     'zato.http.POST')
 _wsgi_sub_dicts = ('zato.http.response.headers', 'zato.http.GET', 'zato.http.POST')
 
