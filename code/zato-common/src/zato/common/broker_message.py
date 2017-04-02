@@ -408,6 +408,13 @@ class VAULT(Constants):
     POLICY_EDIT = ValueConstant('')
     POLICY_DELETE = ValueConstant('')
 
+class CACHE(Constants):
+    code_start = 106000
+
+    BUILTIN_CREATE = ValueConstant('')
+    BUILTIN_EDIT = ValueConstant('')
+    BUILTIN_DELETE = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

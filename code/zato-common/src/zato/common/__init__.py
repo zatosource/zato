@@ -405,6 +405,19 @@ class SERVER_UP_STATUS(Attrs):
     RUNNING = 'running'
     CLEAN_DOWN = 'clean-down'
 
+class CACHE:
+    class DEFAULT:
+        MAX_SIZE = 10000
+        MAX_ITEM_SIZE = 10 # In kilo-characters for string/unicode, kilobytes otherwise
+
+    class SYNC_METHOD:
+        ASYNC = NameId('Asynchronous', 'async')
+        SYNC_3PC = NameId('Synchronous 3PC', 'sync_3pc')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.ASYNC, self.SYNC_3PC))
+
 class KVDB(Attrs):
     SEPARATOR = ':::'
 
