@@ -264,6 +264,12 @@ zato_services = {
     'zato.outgoing.zmq.edit':'zato.server.service.internal.outgoing.zmq.Edit',
     'zato.outgoing.zmq.get-list':'zato.server.service.internal.outgoing.zmq.GetList',
 
+    # Cache - Built-in
+    'zato.cache.builtin.create': 'zato.server.service.internal.cache.builtin.Create',
+    'zato.cache.builtin.edit': 'zato.server.service.internal.cache.builtin.Edit',
+    'zato.cache.builtin.delete': 'zato.server.service.internal.cache.builtin.Delete',
+    'zato.cache.builtin.get-list': 'zato.server.service.internal.cache.builtin.GetList',
+
     # Publish/subscribe - init
     'zato.pubsub.delete-expired':'zato.server.service.internal.pubsub.DeleteExpired',
     'zato.pubsub.invoke-callbacks':'zato.server.service.internal.pubsub.InvokeCallbacks',

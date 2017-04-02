@@ -20,7 +20,7 @@ from sqlalchemy.sql.expression import case
 # Zato
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
      URL_PARAMS_PRIORITY
-from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, CassandraQuery, ChannelAMQP, \
+from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CacheBuiltin, CassandraConn, CassandraQuery, ChannelAMQP, \
      ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
      DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, \
      IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
@@ -1364,6 +1364,27 @@ def rbac_role_permission_list(session, cluster_id, needs_columns=False):
     """ A list of permissions for roles against services.
     """
     return _rbac_role_permission(session, cluster_id)
+
+# ################################################################################################################################
+
+def _cache_builtin(session, cluster_id):
+    return session.query(CacheBuiltin).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==CacheBuiltin.cluster_id).\
+        order_by(CacheBuiltin.name)
+
+def cache_builtin(session, cluster_id, id):
+    """ An individual cache definition.
+    """
+    return _cache_builtin(session, cluster_id).\
+        filter(CacheBuiltin.id==id).\
+        one()
+
+@query_wrapper
+def cache_builtin_list(session, cluster_id, needs_columns=False):
+    """ A list of cache definitions.
+    """
+    return _cache_builtin(session, cluster_id)
 
 # ################################################################################################################################
 

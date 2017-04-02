@@ -16,8 +16,8 @@ from json import dumps
 from dictalchemy import make_class_dictable
 
 # SQLAlchemy
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, LargeBinary, Sequence, SmallInteger, String, \
-     Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, LargeBinary, Sequence, SmallInteger, \
+     String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
@@ -819,6 +819,27 @@ class CronStyleJob(Base):
         self.id = id
         self.job = job
         self.cron_definition = cron_definition
+
+# ################################################################################################################################
+
+class CacheBuiltin(Base):
+    """ Cache definitions using mechanisms built into Zato.
+    """
+    __tablename__ = 'cache_builtin'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('cache_builtin_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    max_size = Column(Integer(), nullable=False)
+    max_item_size = Column(Float(precision=3), nullable=False)
+    extend_expiry_on_get = Column(Boolean(), nullable=False)
+    extend_expiry_on_set = Column(Boolean(), nullable=False)
+    sync_method = Column(String(20), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('cache_builtin_list', order_by=name, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 

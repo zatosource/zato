@@ -25,7 +25,7 @@ from sqlalchemy import Boolean, Integer
 # Zato
 from zato.common import NO_DEFAULT_VALUE, ZATO_NOT_GIVEN
 from zato.common.odb.model import Base, Cluster
-from zato.server.service import Bool as BoolSIO, Int as IntSIO
+from zato.server.service import AsIs, Bool as BoolSIO, Int as IntSIO
 from zato.server.service.internal import AdminSIO, GetListAdminSIO
 
 logger = getLogger(__name__)
@@ -86,10 +86,17 @@ def get_io(attrs, elems_name, is_edit, is_required, is_output, is_get_list, has_
 
             for k, v in sa_to_sio.items():
                 if isinstance(column.type, k):
-                    columns.append(v(column.name))
+                    if column.name in attrs.request_as_is:
+                        wrapper = AsIs
+                    else:
+                        wrapper = v
+                    columns.append(wrapper(column.name))
                     break
             else:
-                columns.append(column.name)
+                if column.name in attrs.request_as_is:
+                    columns.append(AsIs(column.name))
+                else:
+                    columns.append(column.name)
 
         # Override whatever objects it used to be
         elems = columns
@@ -120,6 +127,7 @@ def update_attrs(cls, name, attrs):
     attrs.create_edit_input_required_extra = getattr(mod, 'create_edit_input_required_extra', [])
     attrs.create_edit_rewrite = getattr(mod, 'create_edit_rewrite', [])
     attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
+    attrs.request_as_is = getattr(mod, 'request_as_is', [])
 
     default_value = getattr(mod, 'default_value', singleton)
     default_value = NO_DEFAULT_VALUE if default_value is singleton else default_value

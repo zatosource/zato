@@ -178,6 +178,16 @@
                             </ul>
                         </li>
                         <li>
+                            <span class="like-a">Cache &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url "cache-builtin" %}?cluster={{ cluster_id|default:'' }}">Built-in</a></li>
+                                <!--
+                                <li class='wide'><a href="{% url "cache-builtin" %}?cluster={{ cluster_id|default:'' }}">Memcached</a></li>
+                                <li class='wide'><a href="{% url "cache-builtin" %}?cluster={{ cluster_id|default:'' }}">Redis</a></li>
+                                -->
+                            </ul>
+                        </li>
+                        <li>
                             <span class="like-a">Search &rarr;</span>
                             <ul>
                                 <li class='wide'><a href="{% url "search-es" %}?cluster={{ cluster_id|default:'' }}">ElasticSearch</a></li>
