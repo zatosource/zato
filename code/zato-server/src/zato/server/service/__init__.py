@@ -234,6 +234,7 @@ class Service(object):
         self.listnav = _ListNav
         self.has_validate_input = False
         self.has_validate_output = False
+        self.cache = None
 
         self.out = self.outgoing = _Outgoing(
             self.amqp,
