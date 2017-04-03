@@ -31,7 +31,7 @@ class AMQP(WorkerImpl):
     def amqp_connection_create(self, msg):
         msg.is_active = True
         with self.update_lock:
-            self.amqp_api.create(msg.name, msg, self.on_message_invoke_service, needs_start=True)
+            self.amqp_api.create(msg.name, msg, self.invoke, needs_start=True)
 
     def on_broker_msg_DEFINITION_AMQP_CREATE(self, msg):
         start_connectors(self, 'zato.connector.amqp_.start', msg)
