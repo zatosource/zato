@@ -43,7 +43,7 @@ try:
     execfile(_version_py, _locals)
     version = _locals['version']
 except IOError:
-    version = '2.0.7'
+    version = '2.0.8'
 
 # The namespace for use in all Zato's own services.
 zato_namespace = 'https://zato.io/ns/20130518'

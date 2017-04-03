@@ -17,7 +17,7 @@ try:
     execfile(_version_py, _locals)
     version = _locals['version']
 except IOError:
-    version = '2.0.7'
+    version = '2.0.8'
 
 long_description = description = 'Convenience Python client for Zato ESB and app server (https://zato.io)'
 
