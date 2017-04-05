@@ -180,7 +180,7 @@
                         <li>
                             <span class="like-a">Cache &rarr;</span>
                             <ul>
-                                <li class='wide'><a href="{% url "cache-builtin" %}?cluster={{ cluster_id|default:'' }}">Built-in</a></li>
+                                <li class='wide'><a href="{% url "cache-builtin" %}?cluster={{ cluster_id|default:'' }}">Built-in<br/>(no replication)</a></li>
                                 <!--
                                 <li class='wide'><a href="{% url "cache-builtin" %}?cluster={{ cluster_id|default:'' }}">Memcached</a></li>
                                 <li class='wide'><a href="{% url "cache-builtin" %}?cluster={{ cluster_id|default:'' }}">Redis</a></li>
