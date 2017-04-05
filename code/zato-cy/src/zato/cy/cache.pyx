@@ -21,6 +21,9 @@ from cpython.sequence cimport PySequence_ITEM
 from libc.stdint cimport uint64_t
 from posix.time cimport timeval, timezone, gettimeofday
 
+# Zato
+from zato.common import CACHE as _COMMON_CACHE
+
 # gevent
 from gevent.lock import RLock
 
@@ -32,8 +35,8 @@ value_types = (int, long, float, basestring, Decimal, bytes)
 # ################################################################################################################################
 
 class CACHE:
-    DEFAULT_SIZE = 2000
-    MAX_ITEM_SIZE = PyInt_GetMax() # By default objects have no practical length limit
+    DEFAULT_SIZE = _COMMON_CACHE.DEFAULT.MAX_SIZE
+    MAX_ITEM_SIZE = _COMMON_CACHE.DEFAULT.MAX_ITEM_SIZE
 
 # ################################################################################################################################
 
