@@ -13,8 +13,7 @@ from unittest import main as unittest_main, TestCase
 from uuid import uuid4
 
 # Zato
-sys.path.insert(0, '.')
-from cache import Cache, KeyExpiredError
+from zato.cache import Cache, KeyExpiredError
 
 # ################################################################################################################################
 
