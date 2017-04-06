@@ -16,7 +16,7 @@ from zato.common.odb.query import cache_builtin_list
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
-elem = 'cache_built'
+elem = 'cache_builtin'
 model = CacheBuiltin
 label = 'a cache definition'
 broker_message = CACHE

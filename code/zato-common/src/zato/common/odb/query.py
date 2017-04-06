@@ -20,8 +20,8 @@ from sqlalchemy.sql.expression import case
 # Zato
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
      URL_PARAMS_PRIORITY
-from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CacheBuiltin, CassandraConn, CassandraQuery, ChannelAMQP, \
-     ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
+from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CassandraConn, CassandraQuery, \
+     ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
      DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, \
      IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
@@ -1368,9 +1368,14 @@ def rbac_role_permission_list(session, cluster_id, needs_columns=False):
 # ################################################################################################################################
 
 def _cache_builtin(session, cluster_id):
-    return session.query(CacheBuiltin).\
+    return session.query(
+        CacheBuiltin.id, CacheBuiltin.name, CacheBuiltin.is_active,
+        CacheBuiltin.is_default, CacheBuiltin.cache_type, CacheBuiltin.max_size,
+        CacheBuiltin.max_item_size, CacheBuiltin.extend_expiry_on_get, CacheBuiltin.extend_expiry_on_set,
+        CacheBuiltin.sync_method).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==CacheBuiltin.cluster_id).\
+        filter(Cache.id==CacheBuiltin.id).\
         order_by(CacheBuiltin.name)
 
 def cache_builtin(session, cluster_id, id):

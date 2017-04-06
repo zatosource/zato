@@ -44,7 +44,7 @@ $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? "Yes":"No");
-    row += String.format('<td>{0}</td>', item.cur_size);
+    row += String.format('<td>{0}</td>', "<span class='form_hint'>(n/a)</span>");
     row += String.format('<td>{0}</td>', item.max_size);
     row += String.format('<td>{0}</td>', item.max_item_size);
     row += String.format('<td>{0}</td>', extend_expiry_on_get ? "Yes":"No");
@@ -66,7 +66,7 @@ $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
 
 $.fn.zato.cache.builtin.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Cache definition [{0}] deleted',
-        'Are you sure you want to delete the cache definition [{0}]?',
+        'Cache definition `{0}` deleted',
+        'Are you sure you want to delete the cache definition `{0}`?',
         true);
 }

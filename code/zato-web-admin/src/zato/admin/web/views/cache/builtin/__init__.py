@@ -22,15 +22,15 @@ logger = logging.getLogger(__name__)
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'cache-builtin'
-    template = 'zato/cache/builtin.html'
+    template = 'zato/cache/builtin/index.html'
     service_name = 'zato.cache.builtin.get-list'
     output_class = CacheBuiltin
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'max_size', 'max_item_size', 'extend_expiry_on_get', 'extend_expiry_on_set',
-            'sync_method')
+        output_required = ('id', 'name', 'is_active', 'is_default' 'max_size', 'max_item_size', 'extend_expiry_on_get',
+            'extend_expiry_on_set', 'sync_method', 'cache_type')
         output_repeated = True
 
     def handle(self):
@@ -45,8 +45,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'name', 'is_active', 'max_size', 'max_item_size', 'extend_expiry_on_get', 'extend_expiry_on_set',
-            'sync_method')
+        input_required = ('name', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
+            'extend_expiry_on_set', 'sync_method', 'cache_type')
         output_required = ('id', 'name')
 
     def success_message(self, item):
