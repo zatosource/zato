@@ -904,12 +904,19 @@ urlpatterns += [
 
     url(r'^zato/cache/builtin/$',
         login_required(cache_builtin.Index()), name=cache_builtin.Index.url_name),
+
     url(r'^zato/cache/builtin/create/$',
         login_required(cache_builtin.Create()), name=cache_builtin.Create.url_name),
+
     url(r'^zato/cache/builtin/edit/$',
         login_required(cache_builtin.Edit()), name=cache_builtin.Edit.url_name),
+
     url(r'^zato/cache/builtin/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cache_builtin.Delete()), name=cache_builtin.Delete.url_name),
+
+    url(r'^zato/cache/builtin/details/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cache_builtin.DetailsIndex()), name=cache_builtin.DetailsIndex.url_name),
+
     ]
 
 # ################################################################################################################################

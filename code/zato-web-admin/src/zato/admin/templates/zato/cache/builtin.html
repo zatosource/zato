@@ -86,7 +86,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>{{ item.name }}</td>
+                        <td><a href="{% url "cache-builtin-details" item.id cluster_id %} ">{{ item.name }}</a></td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.current_size }}</td>
                         <td>{{ item.max_size }}</td>
