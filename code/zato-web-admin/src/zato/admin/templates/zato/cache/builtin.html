@@ -119,7 +119,7 @@
                 <form action="{% url "cache-builtin-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:30%" ">Name</td>
+                            <td style="vertical-align:middle; width:30%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
@@ -142,7 +142,7 @@
                             <br/>
                             <span class="form_hint">Default: {{ default_max_item_size }}
                             <br/>
-                            (kilo-characters or kilobytes)
+                            (characters or bytes)
                             </span>
                             </td>
                             <td>{{ create_form.max_item_size }} </td>
