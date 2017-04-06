@@ -408,7 +408,7 @@ class SERVER_UP_STATUS(Attrs):
 class CACHE:
     class DEFAULT:
         MAX_SIZE = 10000
-        MAX_ITEM_SIZE = 10 # In kilo-characters for string/unicode, kilobytes otherwise
+        MAX_ITEM_SIZE = 1000 # In characters for string/unicode, bytes otherwise
 
     class SYNC_METHOD:
         ASYNC = NameId('Asynchronous', 'async')
