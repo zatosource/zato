@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 # stdlib
+import inspect
 from datetime import datetime
 from decimal import Decimal
 from sys import getsizeof, maxint
@@ -21,6 +22,9 @@ from cpython.sequence cimport PySequence_ITEM
 from libc.stdint cimport uint64_t
 from posix.time cimport timeval, timezone, gettimeofday
 
+# six
+from six import binary_type, integer_types, string_types, text_type
+
 # Zato
 from zato.common import CACHE as _COMMON_CACHE
 
@@ -29,8 +33,8 @@ from gevent.lock import RLock
 
 # ################################################################################################################################
 
-key_types = (int, long, basestring)
-value_types = (int, long, float, basestring, Decimal, bytes)
+len_values = (binary_type,) + string_types + (text_type,)
+key_types = len_values + integer_types
 
 # ################################################################################################################################
 
@@ -46,15 +50,14 @@ class KeyExpiredError(KeyError):
 
 # ################################################################################################################################
 
-
 cdef class Entry:
     """ Represents an individual value stored in a cache.
     """
     cdef:
 
         # The actual key and  contents
-        public str key
-        public str value
+        public object key
+        public object value
 
         # When was the value last read
         public double last_read
@@ -89,6 +92,7 @@ cdef class Cache(object):
     cdef:
         public long max_size
         public long max_item_size
+        public bint has_max_item_size
         public bint extend_expiry_on_get
         public bint extend_expiry_on_set
         public dict _data
@@ -114,6 +118,7 @@ cdef class Cache(object):
     def __init__(self, max_size=None, max_item_size=None, extend_expiry_on_get=True, extend_expiry_on_set=True, lock=None):
         self.max_size = max_size or CACHE.DEFAULT_SIZE
         self.max_item_size = max_item_size or CACHE.MAX_ITEM_SIZE
+        self.has_max_item_size = self.max_item_size > 0
         self.extend_expiry_on_get = extend_expiry_on_get
         self.extend_expiry_on_set = extend_expiry_on_set
         self._lock = lock or RLock()
@@ -240,7 +245,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cdef _set(self, str key, value, expiry, _getsizeof=getsizeof, _key_types=key_types, _value_types=value_types):
+    cdef _set(self, object key, value, expiry, _getsizeof=getsizeof, _key_types=key_types, _len_values=len_values):
 
         cdef Entry entry
         cdef double _now = self._get_timestamp()
@@ -248,6 +253,16 @@ cdef class Cache(object):
         cdef Py_ssize_t index_idx
         cdef bint old_key_eq
         cdef long hits_per_position
+        cdef long len_value
+
+        if not isinstance(key, _key_types):
+            raise ValueError('Key must be an instance of one of {}'.format(key_types))
+
+        if self.has_max_item_size:
+            if isinstance(value, _len_values):
+                len_value = len(value)
+                if len_value > self.max_item_size:
+                    raise ValueError('Value too long {} > {}'.format(len_value, self.max_item_size))
 
         # Update total # of .set operations
         self.set_ops += 1
@@ -397,23 +412,3 @@ cdef class Cache(object):
         return deleted
 
 # ################################################################################################################################
-
-def main():
-
-    from datetime import datetime
-
-    for x in range(100):
-
-        n = 1000 * 100
-        cache = Cache(1000, 200)
-        start = datetime.utcnow()
-
-        for num in xrange(n):
-            num = str(num)
-            cache.set('key'+num, 'value1')
-            cache.set('key'+num, 'value2')
-            cache.set('key'+num, 'value3')
-            cache.set('key'+num, 'value4')
-            cache.set('key'+num, 'value5')
-
-        print(x, str(datetime.utcnow() - start), cache.hits, cache.misses)

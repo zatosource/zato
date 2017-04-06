@@ -8,6 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 # stdlib
 import sys
+from decimal import Decimal
 from time import sleep
 from unittest import main as unittest_main, TestCase
 from uuid import uuid4
@@ -172,7 +173,7 @@ class CacheTestCace(TestCase):
         # is greater than expiry and would have made the key expire
         # had it not been for extend_expiry_on_get=True
 
-        expiry = 0.05
+        expiry = 0.5
         sleep_time = expiry - expiry * 0.01
 
         c = Cache(extend_expiry_on_get=True)
@@ -206,7 +207,7 @@ class CacheTestCace(TestCase):
         # Unlike in test_set_already_exists_extend_expiry_on_get_false,
         # in this test case extend_expiry_on_get=False so .get won't extend it.
 
-        expiry = 0.05
+        expiry = 0.5
         sleep_time = expiry - expiry * 0.01
 
         c = Cache(extend_expiry_on_get=False)
@@ -392,6 +393,93 @@ class CacheTestCace(TestCase):
         deleted = c.delete_expired()
         self.assertEquals(sorted(deleted), [key1, key3])
         self.assertListEqual(c._expired_on_op, [])
+
+# ################################################################################################################################
+
+    def test_max_item_size_no_exception(self):
+
+        key1, expected1 = 'key1', 'value1'
+        key2, expected2 = 'key2', 'value2'
+        key3, expected3 = 'key3', 'value3'
+
+        c = Cache(max_item_size=6)
+
+        # No exception should be raised by the calls below as all values are not greater than max_item_size
+        c.set(key1, expected1)
+        c.set(key2, expected2)
+        c.set(key3, expected3)
+
+# ################################################################################################################################
+
+    def test_max_item_size_str_value_exceeded(self):
+
+        key1, expected1 = 'key1', 'value1'
+        key2, expected2 = 'key2', 'value2'
+        key3, expected3 = 'key3', 'value33'
+
+        c = Cache(max_item_size=6)
+
+        # The first two must succeed
+        c.set(key1, expected1)
+        c.set(key2, expected2)
+
+        # This fails because expected3 is > than max_item_size
+        try:
+            c.set(key3, expected3)
+        except ValueError, e:
+            self.assertEquals(e.message, 'Value too long 7 > 6')
+        else:
+            self.fail('Expected aValueError to be raised')
+
+# ################################################################################################################################
+
+    def test_max_item_size_number_value(self):
+
+        key1, expected1 = 'key1', sys.maxint
+        key2, expected2 = 'key2', 10.0 ** 10
+        key3, expected3 = 'key3', Decimal(2.2 ** 2.2)
+        key4, expected4 = 'key4', 123.45j+6789
+
+        c = Cache(max_item_size=1)
+
+        # No exception should be raised by the calls below as all values are numbers
+
+        c.set(key1, expected1)
+        c.set(key2, expected2)
+        c.set(key3, expected3)
+        c.set(key4, expected4)
+
+        returned1 = c.get(key1)
+        self.assertEquals(returned1, expected1)
+
+        returned2 = c.get(key2)
+        self.assertEquals(returned2, expected2)
+
+        returned3 = c.get(key3)
+        self.assertEquals(returned3, expected3)
+
+        returned4 = c.get(key4)
+        self.assertEquals(returned4, expected4)
+
+
+# ################################################################################################################################
+
+    def test_max_item_size_python_object(self):
+
+        class MyClass(object):
+            a = '1' * 10000
+            b = 2.0 ** 20
+
+        instance = MyClass()
+        key1, expected1 = 'key1', instance
+
+        c = Cache(max_item_size=1)
+
+        # No exception should be raised by the calls below value is a non-string Python object
+        c.set(key1, expected1)
+
+        returned1 = c.get(key1)
+        self.assertIs(returned1, expected1)
 
 # ################################################################################################################################
 
