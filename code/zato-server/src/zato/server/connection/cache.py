@@ -36,9 +36,11 @@ class CacheAPI(object):
     def __init__(self):
         self.lock = RLock()
         self.default = _NotConfiguredAPI()
+        self.caches = {}
         self._set_api_calls()
 
-    def _set_if_default(self, config, cache):
+    def _maybe_set_default(self, config, cache):
+        logger.warn(config)
         if config.is_default:
             self.default = cache
             self._set_api_calls()
@@ -49,19 +51,21 @@ class CacheAPI(object):
 
 # ################################################################################################################################
 
-class BuiltinAPI(CacheAPI):
-    """ Holds all built-in caches.
-    """
-    def __init__(self):
-        super(BuiltinAPI, self).__init__()
-        self.caches = {}
-
-# ################################################################################################################################
-
     def _create(self, config):
         cache = Cache(config.max_size, config.max_item_size, config.extend_expiry_on_get, config.extend_expiry_on_set)
         self.caches[config.name] = cache
-        self._set_if_default(config, cache)
+        self._maybe_set_default(config, cache)
+
+# ################################################################################################################################
+
+    def _edit(self, config):
+        logger.warn('333 %s', config)
+        logger.warn('222 %r', config)
+
+# ################################################################################################################################
+
+    def _delete(self):
+        pass
 
 # ################################################################################################################################
 
@@ -71,19 +75,9 @@ class BuiltinAPI(CacheAPI):
 
 # ################################################################################################################################
 
-    def _edit(self, config):
-        logger.warn('333 %s', config)
-
-# ################################################################################################################################
-
     def edit(self, config):
         with self.lock:
             self._edit(config)
-
-# ################################################################################################################################
-
-    def _delete(self):
-        pass
 
 # ################################################################################################################################
 
@@ -99,7 +93,6 @@ class BuiltinAPI(CacheAPI):
 
     def clear(self):
         pass
-
 
 # ################################################################################################################################
 

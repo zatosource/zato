@@ -338,6 +338,9 @@ class Service(object):
             self.request.init(True, self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
 
+        # Cache is always enabled
+        self.cache = self._worker_store.cache_api
+
     def set_response_data(self, service, _raw_types=(basestring, dict, list, tuple, EtreeElement, ObjectifiedElement), **kwargs):
         response = service.response.payload
         if not isinstance(response, _raw_types):
