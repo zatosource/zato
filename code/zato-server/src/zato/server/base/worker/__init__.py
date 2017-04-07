@@ -50,7 +50,7 @@ from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_pa
      store_tls, update_apikey_username, update_bind_port, visit_py_source
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
-from zato.server.connection.cache import BuiltinAPI
+from zato.server.connection.cache import CacheAPI
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -183,13 +183,13 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # AMQP
         self.amqp_api = ConnectorStore(connector_type.duplex.amqp, ConnectorAMQP)
-        self.amqp_out_name_to_def = {} # Maps outgoing connection names to definition names, i.e. to connector names        
+        self.amqp_out_name_to_def = {} # Maps outgoing connection names to definition names, i.e. to connector names
 
         # Vault connections
         self.vault_conn_api = VaultConnAPI()
 
         # Caches
-        self.cache_builtin_api = BuiltinAPI()
+        self.cache_api = CacheAPI()
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
@@ -714,8 +714,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def init_caches(self):
         for value in self.worker_config.cache_builtin.values():
-            #self.vault_conn_api.create(bunchify(value['config']))
-            self.cache_builtin_api.create(bunchify(value['config']))
+            self.cache_api.create(bunchify(value['config']))
 
 # ################################################################################################################################
 

@@ -386,7 +386,7 @@ cdef class Cache(object):
 # ################################################################################################################################
 
     cpdef list delete_expired(self):
-        """ Deletes all entries expired as of now. Also, deletes all entries possibly found to have expired by .get or .set calls. 
+        """ Deletes all entries expired as of now. Also, deletes all entries possibly found to have expired by .get or .set calls.
         """
         cdef list deleted
         cdef double _now = self._get_timestamp()
