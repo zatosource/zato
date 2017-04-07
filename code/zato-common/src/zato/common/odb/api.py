@@ -1091,6 +1091,20 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_cache_builtin(self, cluster_id, id):
+        """ Returns a built-in cache definition's details.
+        """
+        with closing(self.session()) as session:
+            return query.cache_builtin(session, cluster_id, id)
+
+    def get_cache_builtin_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of built-in cache definitions.
+        """
+        with closing(self.session()) as session:
+            return query.cache_builtin_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
     def get_namespace_list(self, cluster_id, needs_columns=False):
         """ Returns a list of XML namespaces.
         """
