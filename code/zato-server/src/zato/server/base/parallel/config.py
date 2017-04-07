@@ -130,6 +130,10 @@ class ConfigLoader(object):
         query = self.odb.get_out_amqp_list(server.cluster.id, True)
         self.config.out_amqp = ConfigDict.from_query('out_amqp', query)
 
+        # Caches
+        query = self.odb.get_cache_builtin_list(server.cluster.id, True)
+        self.config.cache_builtin = ConfigDict.from_query('cache_builtin', query)
+
         # FTP
         query = self.odb.get_out_ftp_list(server.cluster.id, True)
         self.config.out_ftp = ConfigDict.from_query('out_ftp', query)

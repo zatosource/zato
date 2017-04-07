@@ -22,7 +22,6 @@ label = 'a cache definition'
 broker_message = CACHE
 broker_message_prefix = 'BUILTIN_'
 list_func = cache_builtin_list
-request_as_is = ('max_size', 'max_item_size')
 
 def instance_hook(service, input, instance, attrs):
     instance.sync_method = _COMMON_CACHE.SYNC_METHOD.ASYNC.id
