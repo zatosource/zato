@@ -51,10 +51,8 @@ class CacheAPI(object):
 
 # ################################################################################################################################
 
-    def _create(self, config):
-        cache = Cache(config.max_size, config.max_item_size, config.extend_expiry_on_get, config.extend_expiry_on_set)
-        self.caches[config.name] = cache
-        self._maybe_set_default(config, cache)
+    def _create_builtin(self, config):
+        return Cache(config.max_size, config.max_item_size, config.extend_expiry_on_get, config.extend_expiry_on_set)
 
 # ################################################################################################################################
 
@@ -71,7 +69,10 @@ class CacheAPI(object):
 
     def create(self, config):
         with self.lock:
-            self._create(config)
+            func = getattr(self, '_create_{}'.format(config.cache_type))
+            cache = func(config)
+            self.caches[config.name] = cache
+            self._maybe_set_default(config, cache)
 
 # ################################################################################################################################
 
