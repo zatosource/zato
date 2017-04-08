@@ -24,9 +24,10 @@ class CreateForm(forms.Form):
     max_item_size = forms.CharField(
         initial=CACHE.DEFAULT.MAX_ITEM_SIZE, widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
     extend_expiry_on_get = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
-    extend_expiry_on_set = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'})) 
+    extend_expiry_on_set = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_default = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     extend_expiry_on_get = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     extend_expiry_on_set = forms.BooleanField(required=False, widget=forms.CheckboxInput())

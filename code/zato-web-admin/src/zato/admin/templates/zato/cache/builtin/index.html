@@ -22,6 +22,7 @@
             '_selection',
             'name',
             '_is_active',
+            '_is_default',
             'cur_size',
             'max_size',
             'max_item_size',
@@ -31,6 +32,7 @@
             '_delete',
             'id',
             'is_active',
+            'is_default',
             'extend_expiry_on_get',
             'extend_expiry_on_set',
             'sync_method',
@@ -66,6 +68,7 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
+                        <th><a href="#">Default</a></th>
                         <th><a href="#">Current size</a></th>
                         <th><a href="#">Max size</a></th>
                         <th><a href="#">Max item size</a></th>
@@ -73,6 +76,7 @@
                         <th><a href="#">Extend exp. on set</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -88,6 +92,7 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td><a href="{% url "cache-builtin-details" item.id cluster_id %} ">{{ item.name }}</a></td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
+                        <td>{{ item.is_default|yesno:'Yes,No' }}</td>
                         <td>{{ item.current_size }}</td>
                         <td>{{ item.max_size }}</td>
                         <td>{{ item.max_item_size }}</td>
@@ -97,6 +102,7 @@
                         <td><a href="javascript:$.fn.zato.cache.builtin.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.is_default }}</td>
                         <td class='ignore'>{{ item.extend_expiry_on_get }}</td>
                         <td class='ignore'>{{ item.extend_expiry_on_set }}</td>
                         <td class='ignore'>{{ item.sync_method }}</td>

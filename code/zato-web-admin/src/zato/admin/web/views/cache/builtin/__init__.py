@@ -29,7 +29,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'is_default' 'max_size', 'max_item_size', 'extend_expiry_on_get',
+        output_required = ('id', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
             'extend_expiry_on_set', 'sync_method', 'cache_type')
         output_repeated = True
 
