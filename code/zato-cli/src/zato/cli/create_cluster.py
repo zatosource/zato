@@ -19,9 +19,9 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import DATA_FORMAT, SIMPLE_IO, WEB_SOCKET
-from zato.common.odb.model import ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, RBACPermission, RBACRole, Service, \
-     WSSDefinition
+from zato.common import CACHE, DATA_FORMAT, SIMPLE_IO, WEB_SOCKET
+from zato.common.odb.model import CacheBuiltin, ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, RBACPermission, \
+     RBACRole, Service, WSSDefinition
 from zato.common.util import get_http_json_channel, get_http_soap_channel
 
 msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
@@ -542,13 +542,14 @@ class Create(ZatoCommand):
         self.add_default_pubsub_accounts(session, cluster)
         self.add_default_rbac_permissions(session, cluster)
         self.add_default_rbac_roles(session, cluster)
+        self.add_default_cache(session, cluster)
 
         try:
             session.commit()
         except IntegrityError, e:
-            msg = 'Cluster name [{}] already exists'.format(cluster.name)
+            msg = 'SQL IntegrityError caught `{}`'.format(e.message)
             if self.verbose:
-                msg += '. Caught an exception:[{}]'.format(format_exc(e).decode('utf-8'))
+                msg += '\nDetails:`{}`'.format(format_exc(e).decode('utf-8'))
                 self.logger.error(msg)
             self.logger.error(msg)
             session.rollback()
@@ -724,6 +725,22 @@ class Create(ZatoCommand):
         item.name = 'Root'
         item.parent_id = None
         item.cluster = cluster
+        session.add(item)
+
+    def add_default_cache(self, session, cluster):
+        """ Adds default cache to cluster.
+        """
+        item = CacheBuiltin()
+        item.cluster = cluster
+        item.name = 'default'
+        item.is_active = True
+        item.is_default = True
+        item.max_size = CACHE.DEFAULT.MAX_SIZE
+        item.max_item_size = CACHE.DEFAULT.MAX_ITEM_SIZE
+        item.extend_expiry_on_get = True
+        item.extend_expiry_on_set = True
+        item.cache_type = CACHE.TYPE.BUILTIN
+        item.sync_method = CACHE.SYNC_METHOD.ASYNC.id
         session.add(item)
 
     def add_pubsub_rest_handler(self, session, cluster, service):
