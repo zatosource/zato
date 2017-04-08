@@ -37,6 +37,7 @@ $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
     }
 
     var is_active = item.is_active == true
+    var is_default = item.is_default == true
     var extend_expiry_on_get = item.extend_expiry_on_get == true
     var extend_expiry_on_set = item.extend_expiry_on_set == true
 
@@ -44,6 +45,7 @@ $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? "Yes":"No");
+    row += String.format('<td>{0}</td>', is_default ? "Yes":"No");
     row += String.format('<td>{0}</td>', "<span class='form_hint'>(n/a)</span>");
     row += String.format('<td>{0}</td>', item.max_size);
     row += String.format('<td>{0}</td>', item.max_item_size);
@@ -53,6 +55,7 @@ $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.cache.builtin.delete_({0});'>Delete</a>", item.id));
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
+    row += String.format("<td class='ignore'>{0}</td>", is_default);
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.extend_expiry_on_get);
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.extend_expiry_on_set);
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.sync_method);
