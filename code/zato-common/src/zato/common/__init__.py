@@ -171,7 +171,7 @@ HTTP_RESPONSES[TOO_MANY_REQUESTS] = 'Too Many Requests'
 TRUE_FALSE = 'true_false'
 FALSE_TRUE = 'false_true'
 
-# If self.response.payload 
+# If self.response.payload
 simple_types = (basestring, dict, list, tuple, bool, Number)
 
 # Queries to use in pinging the databases.
@@ -406,6 +406,10 @@ class SERVER_UP_STATUS(Attrs):
     CLEAN_DOWN = 'clean-down'
 
 class CACHE:
+
+    class TYPE:
+        BUILTIN = 'builtin'
+
     class DEFAULT:
         MAX_SIZE = 10000
         MAX_ITEM_SIZE = 1000 # In characters for string/unicode, bytes otherwise
