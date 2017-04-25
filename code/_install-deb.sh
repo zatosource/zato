@@ -61,12 +61,13 @@ symlink_py 'scipy'
 export CYTHON=$CURDIR/bin/cython
 
 sudo pip install --upgrade pip
+sudo pip install setuptools==35.0.1
 sudo pip install virtualenv==1.9.1
 sudo pip install zato-apitest
 
 virtualenv . --no-pip
 
-$CURDIR/bin/python bootstrap.py -v 1.7.0
+$CURDIR/bin/python bootstrap.py
 $CURDIR/bin/buildout
 
 echo
