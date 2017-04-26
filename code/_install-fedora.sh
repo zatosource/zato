@@ -16,10 +16,13 @@ bash $CURDIR/clean.sh
 sudo yum -y install git bzr gcc-gfortran haproxy \
     gcc-c++ atlas-devel atlas blas-devel  \
     bzip2 bzip2-devel libffi libffi-devel \
-    libevent-devel libgfortran lapack-devel lapack \
+    libevent-devel libev libev-devel libgfortran lapack-devel lapack \
     libyaml-devel libxml2-devel libxslt-devel suitesparse \
-    openssl openssl-devel python-devel numpy \
-    scipy python-zdaemon swig uuid-devel uuid
+    openssl openssl-devel postgresql-devel python-devel numpy \
+    scipy swig uuid-devel uuid
+
+curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
+sudo python get-pip.py
 
 mkdir $CURDIR/zato_extra_paths
 
@@ -28,14 +31,14 @@ symlink_py 'scipy'
 
 export CYTHON=$CURDIR/bin/cython
 
-sudo pip-python install --upgrade pip
-sudo pip-python install distribute==0.6.49
-sudo pip-python install virtualenv==1.9.1
-sudo pip-python install zato-apitest
+sudo pip install --upgrade pip
+sudo pip install setuptools==35.0.1
+sudo pip install virtualenv==1.9.1
+sudo pip install zato-apitest
 
-virtualenv .
+virtualenv . --no-pip
 
-$CURDIR/bin/python bootstrap.py -v 1.7.0
+$CURDIR/bin/python bootstrap.py
 $CURDIR/bin/buildout
 
 echo
