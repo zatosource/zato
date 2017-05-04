@@ -700,7 +700,7 @@ class _Base(Service):
 
             # Note that we are using the same format that regular 404 does
             raise NotFound(self.cid, '[{}] Unknown URL:[{}] or SOAP action:[]'.format(
-                self.cid, self.wsgi_environ['zato.http.channel_item']['url_path']))
+                self.cid, self.wsgi_environ['zato.channel_item']['url_path']))
 
 # ################################################################################################################################
 

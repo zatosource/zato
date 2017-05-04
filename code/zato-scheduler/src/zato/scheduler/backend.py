@@ -98,7 +98,7 @@ class Job(object):
 
     def clone(self):
         return Job(self.id, self.name, self.type, self.interval, self.start_time, self.callback, self.cb_kwargs, self.max_repeats,
-            self.on_max_repeats_reached_cb, self.is_active, True)
+            self.on_max_repeats_reached_cb, self.is_active, True, self.cron_definition)
 
     def get_start_time(self, start_time):
         """ Converts initial start time to the time the job should be invoked next.
