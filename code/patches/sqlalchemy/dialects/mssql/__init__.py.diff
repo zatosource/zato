@@ -1,0 +1,21 @@
+--- sqlalchemy/dialects/mssql/__init__.py.orig	2017-04-03 09:52:55.325163317 +0200
++++ sqlalchemy/dialects/mssql/__init__.py	2017-04-03 09:53:18.116938643 +0200
+@@ -3,17 +3,17 @@
+ # <see AUTHORS file>
+ #
+ # This module is part of SQLAlchemy and is released under
+ # the MIT License: http://www.opensource.org/licenses/mit-license.php
+ 
+ from sqlalchemy.dialects.mssql import base, pyodbc, adodbapi, \
+     pymssql, zxjdbc, mxodbc
+ 
+-base.dialect = pyodbc.dialect
++base.dialect = pymssql.dialect
+ 
+ from sqlalchemy.dialects.mssql.base import \
+     INTEGER, BIGINT, SMALLINT, TINYINT, VARCHAR, NVARCHAR, CHAR, \
+     NCHAR, TEXT, NTEXT, DECIMAL, NUMERIC, FLOAT, DATETIME,\
+     DATETIME2, DATETIMEOFFSET, DATE, TIME, SMALLDATETIME, \
+     BINARY, VARBINARY, BIT, REAL, IMAGE, TIMESTAMP,\
+     MONEY, SMALLMONEY, UNIQUEIDENTIFIER, SQL_VARIANT, dialect
+ 

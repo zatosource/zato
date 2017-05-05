@@ -47,7 +47,7 @@ engine_friendly_name = {
     'mysql+pymysql': 'MySQL',
 
     # These are not supported /yet/.
-    # 'mssql': 'MS SQL Server',
+    'mssql': 'MS SQL Server',
     # 'access': 'MS Access',
     # 'firebird': 'Firebird',
     # 'db2': 'DB2',
@@ -58,6 +58,7 @@ odb_engine_friendly_name = {
     'postgresql+pg8000': 'PostgreSQL',
     'oracle': 'Oracle',
     'mysql+pymysql': 'MySQL',
+    'mssql': 'MS SQL Server',
 }
 
 django_sqlalchemy_engine = {
@@ -65,7 +66,8 @@ django_sqlalchemy_engine = {
     'mysql':'mysql',
     'oracle':'oracle',
     'sqlite':'sqlite3',
-    'dummy':'dummy'
+    'dummy':'dummy',
+    'mssql':'mssql'
 }
 
 sqlalchemy_django_engine = dict((v,k) for k,v in django_sqlalchemy_engine.items())
