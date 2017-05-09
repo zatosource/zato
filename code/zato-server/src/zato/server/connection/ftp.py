@@ -16,13 +16,60 @@ from traceback import format_exc
 
 # pyfilesystem
 from fs.ftpfs import FTPFS, _GLOBAL_DEFAULT_TIMEOUT
+from fs.errors import RemoteConnectionError
+
+from socket import error as socket_error
+from ftplib import FTP_TLS
 
 # Zato
 from zato.common import Inactive, SECRET_SHADOW, TRACE1
 
 logger = logging.getLogger(__name__)
 
+class FTP_TLS_IgnoreHost(FTP_TLS, object):
+    def makepasv(self):
+        _, port = super(FTP_TLS_IgnoreHost, self).makepasv()
+        return self.host, port
+
+    def storbinary(self, cmd, fp, blocksize=8192, callback=None, rest=None):
+        self.voidcmd('TYPE I')
+        conn = self.transfercmd(cmd, rest)
+        try:
+            while 1:
+                buf = fp.read(blocksize)
+                if not buf:
+                    break
+                conn.sendall(buf)
+                if callback:
+                    callback(buf)
+        finally:
+            conn.close()
+        return self.voidresp()
+
+class FTPSFS(FTPFS):
+
+    def __repr__(self):
+        return "FTPSFS({!r}, port={!r})".format(self.host, self.port)
+
+    def _open_ftp(self):
+        _ftp = FTP_TLS_IgnoreHost()
+        try:
+            _ftp.connect(self.host, self.port, self.timeout)
+            _ftp.auth()
+            _ftp.prot_p()
+            _ftp.login(self.user, self.passwd, self.acct)
+            _ftp.set_debuglevel(2)
+        except socket_error:
+            raise RemoteConnectionError()
+        return _ftp
+
 class FTPFacade(FTPFS):
+    """ A thin wrapper around fs's FTPFS so it looks like the other Zato connection objects.
+    """
+    def conn(self):
+        return self
+
+class FTPSFacade(FTPSFS):
     """ A thin wrapper around fs's FTPFS so it looks like the other Zato connection objects.
     """
     def conn(self):
@@ -68,7 +115,11 @@ class FTPStore(object):
             params = self.conn_params[name]
             if params.is_active:
                 timeout = float(params.timeout) if params.timeout else _GLOBAL_DEFAULT_TIMEOUT
-                return FTPFacade(params.host, params.user, params.get('password'), params.acct, timeout, int(params.port), params.dircache)
+
+                if params.use_ftps:
+                    return FTPSFacade(params.host, params.user, params.get('password'), params.acct, timeout, int(params.port), params.dircache)
+                else:
+                    return FTPFacade(params.host, params.user, params.get('password'), params.acct, timeout, int(params.port), params.dircache)
             else:
                 raise Inactive(params.name)
 
