@@ -572,7 +572,7 @@ def _out_ftp(session, cluster_id):
     return session.query(
         OutgoingFTP.id, OutgoingFTP.name, OutgoingFTP.is_active,
         OutgoingFTP.host, OutgoingFTP.port, OutgoingFTP.user, OutgoingFTP.password,
-        OutgoingFTP.acct, OutgoingFTP.timeout, OutgoingFTP.dircache).\
+        OutgoingFTP.acct, OutgoingFTP.timeout, OutgoingFTP.dircache, OutgoingFTP.use_ftps).\
         filter(Cluster.id==OutgoingFTP.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(OutgoingFTP.name)
