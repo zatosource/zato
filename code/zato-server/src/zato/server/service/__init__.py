@@ -246,6 +246,7 @@ class Service(object):
             self._worker_store.stomp_outconn_api,
             ZMQFacade(self.server) if self.component_enabled_zeromq else None,
             self._worker_store.outgoing_web_sockets,
+            self._worker_store.vault_conn_api,
         )
 
     @staticmethod
