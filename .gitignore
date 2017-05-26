@@ -1,10 +1,9 @@
-code/.coverage
-code/.idea/
 code/.installed.cfg
 code/bin/*
 code/build/*
 code/develop-eggs/*
 code/eggs/*
+code/env-zato
 code/downloads/*
 code/include/*
 code/lib/*

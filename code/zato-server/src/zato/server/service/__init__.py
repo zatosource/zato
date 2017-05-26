@@ -43,7 +43,7 @@ from zato.server.message import MessageFacade
 from zato.server.pattern.fanout import FanOut
 from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.pattern.parallel import ParallelExec
-from zato.server.service.reqresp import Cloud, Outgoing, Request, Response
+from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request, Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, Float, ForceType, Integer, List, ListOfDicts, Nested, \
@@ -117,8 +117,8 @@ class ChannelInfo(object):
         self.type = type
         self.is_internal = is_internal
         self.match_target = match_target
-        self.security = self.sec = security
         self.impl = impl
+        self.security = self.sec = security
 
 # ################################################################################################################################
 
@@ -247,6 +247,7 @@ class Service(object):
             self._worker_store.stomp_outconn_api,
             ZMQFacade(self.server) if self.component_enabled_zeromq else None,
             self._worker_store.outgoing_web_sockets,
+            self._worker_store.vault_conn_api,
         )
 
     @staticmethod
@@ -858,7 +859,7 @@ class Service(object):
                raw_request, transport=None, simple_io_config=None, data_format=None,
                wsgi_environ={}, job_type=None, channel_params=None,
                merge_channel_params=True, params_priority=None, in_reply_to=None, environ=None, init=True,
-               http_soap=CHANNEL.HTTP_SOAP):
+               http_soap=CHANNEL.HTTP_SOAP, _CHANNEL_AMQP=CHANNEL.AMQP):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
@@ -886,8 +887,11 @@ class Service(object):
         service.in_reply_to = in_reply_to
         service.environ = environ or {}
 
-        channel_item = wsgi_environ.get('zato.http.channel_item', {})
+        channel_item = wsgi_environ.get('zato.channel_item', {})
         sec_def_info = wsgi_environ.get('zato.sec_def', {})
+
+        if channel_type == _CHANNEL_AMQP:
+            service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
 
         service.channel = service.chan = ChannelInfo(
             channel_item.get('id'), channel_item.get('name'), channel_type,

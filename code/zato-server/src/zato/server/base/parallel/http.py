@@ -68,7 +68,7 @@ class HTTPHandler(object):
             payload = error_msg if self.return_tracebacks else self.default_error_message
             raise
 
-        channel_item = wsgi_environ['zato.http.channel_item']
+        channel_item = wsgi_environ['zato.channel_item']
 
         if channel_item:
 
@@ -76,7 +76,7 @@ class HTTPHandler(object):
             channel_name = channel_item.get('name', '-')
 
             # Note that this call is asynchronous and we do it the last possible moment.
-            if wsgi_environ['zato.http.channel_item'].get('audit_enabled'):
+            if wsgi_environ['zato.channel_item'].get('audit_enabled'):
                 self.worker_store.request_dispatcher.url_data.audit_set_response(cid, payload, wsgi_environ)
 
         else:
