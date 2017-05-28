@@ -24,6 +24,8 @@ broker_message_prefix = 'BUILTIN_'
 list_func = cache_builtin_list
 
 def instance_hook(service, input, instance, attrs):
+    for k, v in sorted(attrs.items()):
+        service.logger.warn('zzz111 %s %s %r', instance.is_default, k, v)
     instance.sync_method = _COMMON_CACHE.SYNC_METHOD.ASYNC.id
 
 class GetList(AdminService):
