@@ -128,6 +128,7 @@ def update_attrs(cls, name, attrs):
     attrs.create_edit_rewrite = getattr(mod, 'create_edit_rewrite', [])
     attrs.check_existing_one = getattr(mod, 'check_existing_one', True)
     attrs.request_as_is = getattr(mod, 'request_as_is', [])
+    attrs._meta_session = None
 
     default_value = getattr(mod, 'default_value', singleton)
     default_value = NO_DEFAULT_VALUE if default_value is singleton else default_value
@@ -256,6 +257,7 @@ class CreateEditMeta(AdminServiceMeta):
 
             with closing(self.odb.session()) as session:
                 try:
+                    attrs._meta_session = session
 
                     if attrs.check_existing_one:
 
@@ -337,10 +339,14 @@ class DeleteMeta(AdminServiceMeta):
     def handle(attrs):
         def handle_impl(self):
             with closing(self.odb.session()) as session:
+                attrs._meta_session = session
                 try:
                     instance = session.query(attrs.model).\
                         filter(attrs.model.id==self.request.input.id).\
                         one()
+
+                    if attrs.instance_hook:
+                        attrs.instance_hook(self, input, instance, attrs)
 
                     session.delete(instance)
                     session.commit()

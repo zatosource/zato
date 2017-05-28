@@ -2037,6 +2037,17 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def on_broker_msg_CACHE_BUILTIN_CREATE(self, msg):
+        self.cache_api.create(msg)
+
+    def on_broker_msg_CACHE_BUILTIN_EDIT(self, msg):
+        self.cache_api.edit(msg)
+
+    def on_broker_msg_CACHE_BUILTIN_DELETE(self, msg):
+        self.cache_api.delete(msg)
+
+# ################################################################################################################################
+
     def on_ipc_message(self, msg):
 
         # If there is target_pid we cannot continue if we are not the recipient.

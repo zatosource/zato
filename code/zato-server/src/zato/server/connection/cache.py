@@ -40,7 +40,7 @@ class CacheAPI(object):
         self._set_api_calls()
 
     def _maybe_set_default(self, config, cache):
-        logger.warn(config)
+        logger.warn('555 %r', config)
         if config.is_default:
             self.default = cache
             self._set_api_calls()
@@ -82,7 +82,7 @@ class CacheAPI(object):
 
 # ################################################################################################################################
 
-    def delete(self):
+    def delete(self, config):
         pass
 
 # ################################################################################################################################
