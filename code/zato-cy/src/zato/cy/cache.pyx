@@ -116,13 +116,21 @@ cdef class Cache(object):
         self.get_ops = 0
 
     def __init__(self, max_size=None, max_item_size=None, extend_expiry_on_get=True, extend_expiry_on_set=True, lock=None):
+        self._lock = lock or RLock()
+        with self._lock:
+            self._update_config(max_size, max_item_size, extend_expiry_on_get, extend_expiry_on_set)
+
+    def _update_config(self, max_size, max_item_size, extend_expiry_on_get, extend_expiry_on_set):
         self.max_size = max_size or CACHE.DEFAULT_SIZE
         self.max_item_size = max_item_size or CACHE.MAX_ITEM_SIZE
         self.has_max_item_size = self.max_item_size > 0
         self.extend_expiry_on_get = extend_expiry_on_get
         self.extend_expiry_on_set = extend_expiry_on_set
-        self._lock = lock or RLock()
         self.hits_per_position.update(dict((key, 0) for key in xrange(self.max_size)))
+
+    def update_config(self, config):
+        with self._lock:
+            self._update_config(config.max_size, config.max_item_size, config.extend_expiry_on_get, config.extend_expiry_on_set)
 
 # ################################################################################################################################
 
