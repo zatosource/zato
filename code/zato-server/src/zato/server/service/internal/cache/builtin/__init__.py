@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.common import CACHE as _COMMON_CACHE
 from zato.common.broker_message import CACHE
-from zato.common.odb.model import CacheBuiltin
+from zato.common.odb.model import Cache, CacheBuiltin
 from zato.common.odb.query import cache_builtin_list
 from zato.server.service.internal import AdminService
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
@@ -24,8 +24,16 @@ broker_message_prefix = 'BUILTIN_'
 list_func = cache_builtin_list
 
 def instance_hook(service, input, instance, attrs):
-    for k, v in sorted(attrs.items()):
-        service.logger.warn('zzz111 %s %s %r', instance.is_default, k, v)
+
+    # If the cache instance currently saved is the default one, find all other definitions and make sure they are not default.
+    if attrs.is_create_edit and instance.is_default:
+
+        with attrs._meta_session.no_autoflush:
+            attrs._meta_session.query(Cache).\
+                filter(Cache.is_default.is_(True)).\
+                filter(Cache.id.isnot(instance.id)).\
+                update({'is_default':False})
+
     instance.sync_method = _COMMON_CACHE.SYNC_METHOD.ASYNC.id
 
 class GetList(AdminService):
