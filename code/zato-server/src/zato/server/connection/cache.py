@@ -40,7 +40,6 @@ class CacheAPI(object):
         self._set_api_calls()
 
     def _maybe_set_default(self, config, cache):
-        logger.warn('555 %r', config)
         if config.is_default:
             self.default = cache
             self._set_api_calls()
@@ -56,23 +55,23 @@ class CacheAPI(object):
 
 # ################################################################################################################################
 
-    def _edit(self, config):
-        logger.warn('333 %s', config)
-        logger.warn('222 %r', config)
-
-# ################################################################################################################################
-
-    def _delete(self):
-        pass
+    def _create(self, config):
+        func = getattr(self, '_create_{}'.format(config.cache_type))
+        cache = func(config)
+        self.caches[config.name] = cache
+        self._maybe_set_default(config, cache)
 
 # ################################################################################################################################
 
     def create(self, config):
         with self.lock:
-            func = getattr(self, '_create_{}'.format(config.cache_type))
-            cache = func(config)
-            self.caches[config.name] = cache
-            self._maybe_set_default(config, cache)
+            self._create(config)
+
+# ################################################################################################################################
+
+    def _edit(self, config):
+        self._delete(config.old_name)
+        self._create(config)
 
 # ################################################################################################################################
 
@@ -82,22 +81,29 @@ class CacheAPI(object):
 
 # ################################################################################################################################
 
+    def _delete(self, name):
+        del self.caches[name]
+
+# ################################################################################################################################
+
     def delete(self, config):
-        pass
+        with self.lock:
+            self._delete(config.name)
 
 # ################################################################################################################################
 
-    def _clear(self):
-        pass
+    def _clear(self, name):
+        self.caches[name].clear()
 
 # ################################################################################################################################
 
-    def clear(self):
-        pass
+    def clear(self, name):
+        with self.lock:
+            self._clear(name)
 
 # ################################################################################################################################
 
     def get_size(self, name):
-        pass
+        return len(self.caches[name])
 
 # ################################################################################################################################
