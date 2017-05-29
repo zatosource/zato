@@ -240,7 +240,7 @@ class Service(object):
             self._out_ftp,
             _WMQFacade(self.broker_client) if self.component_enabled_websphere_mq else None,
             self._worker_config.out_odoo,
-            self._out_plain_http,
+            self._worker_config.out_plain_http,
             self._worker_config.out_soap,
             self._worker_store.sql_pool_store,
             self._worker_store.stomp_outconn_api,
