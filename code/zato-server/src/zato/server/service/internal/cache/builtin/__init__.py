@@ -22,8 +22,11 @@ label = 'a cache definition'
 broker_message = CACHE
 broker_message_prefix = 'BUILTIN_'
 list_func = cache_builtin_list
+output_optional_extra = ['current_size']
 
-def instance_hook(service, input, instance, attrs):
+# ################################################################################################################################
+
+def instance_hook(self, input, instance, attrs):
 
     # If the cache instance currently saved is the default one, find all other definitions and make sure they are not default.
     if attrs.is_create_edit and instance.is_default:
@@ -36,15 +39,32 @@ def instance_hook(service, input, instance, attrs):
 
     instance.sync_method = _COMMON_CACHE.SYNC_METHOD.ASYNC.id
 
+# ################################################################################################################################
+
+def response_hook(self, input, _ignored, attrs, service_type):
+    if service_type == 'get_list':
+        for item in self.response.payload:
+            item.current_size = self.cache.get_size(item.name)
+
+# ################################################################################################################################
+
 class GetList(AdminService):
     _filter_by = CacheBuiltin.name,
     __metaclass__ = GetListMeta
 
+# ################################################################################################################################
+
 class Create(AdminService):
     __metaclass__ = CreateEditMeta
+
+# ################################################################################################################################
 
 class Edit(AdminService):
     __metaclass__ = CreateEditMeta
 
+# ################################################################################################################################
+
 class Delete(AdminService):
     __metaclass__ = DeleteMeta
+
+# ################################################################################################################################

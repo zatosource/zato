@@ -838,6 +838,9 @@ class Cache(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('cache_list', order_by=name, cascade='all, delete, delete-orphan'))
 
+    def __init__(self):
+        self.current_size = 0 # Not used by the DB
+
 # ################################################################################################################################
 
 class CacheBuiltin(Cache):
