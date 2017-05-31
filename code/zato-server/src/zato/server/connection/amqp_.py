@@ -42,7 +42,7 @@ _default_out_keys=('app_id', 'content_encoding', 'content_type', 'delivery_mode'
 
 no_ack = {
     AMQP.ACK_MODE.ACK.id: False,
-    AMQP.ACK_MODE.REJECT.id: True,
+    AMQP.ACK_MODE.REJECT.id: False,
 }
 
 # ################################################################################################################################
