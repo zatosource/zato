@@ -68,7 +68,7 @@ class WebSocket(_WebSocket):
         super(WebSocket, self).__init__(*args, **kwargs)
         self.container = container
         self.config = config
-        self.is_authenticated = False
+        self.has_session_opened = False
         self._token = None
         self.update_lock = RLock()
         self.pub_client_id = 'ws.{}'.format(new_cid())
@@ -119,7 +119,7 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def parse_json(self, data, _auth=WEB_SOCKET.ACTION.AUTHENTICATE, _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
+    def parse_json(self, data, _create_session=WEB_SOCKET.ACTION.CREATE_SESSION, _response=WEB_SOCKET.ACTION.CLIENT_RESPONSE):
 
         parsed = loads(data)
         msg = ClientMessage()
@@ -134,9 +134,9 @@ class WebSocket(_WebSocket):
             msg.timestamp = meta.timestamp
             msg.token = meta.get('token') # Optional because it won't exist during first authentication
 
-            # self.ext_client_id and self.ext_client_name will exist after authenticate action
+            # self.ext_client_id and self.ext_client_name will exist after create-session action
             # so we use them if they are available but fall back to meta.client_id and meta.client_name during
-            # the very authenticate action.
+            # the very create-session action.
             if meta.get('client_id'):
                 self.ext_client_id = meta.client_id
 
@@ -146,9 +146,12 @@ class WebSocket(_WebSocket):
             msg.ext_client_id = self.ext_client_id
             msg.ext_client_name = self.ext_client_name
 
-            if msg.action == _auth:
+            if msg.action == _create_session:
                 msg.username = meta.get('username')
-                msg.secret = meta.secret
+
+                # Secret is optional because WS channels may be without credentials attached
+                msg.secret = meta.secret if self.config.needs_auth else ''
+
                 msg.is_auth = True
             else:
                 msg.in_reply_to = meta.get('in_reply_to')
@@ -165,13 +168,20 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def authenticate(self, cid, request):
-        if self.config.auth_func(request.cid, self.sec_type, {'username':request.username, 'secret':request.secret},
-            self.config.sec_name, self.config.vault_conn_default_auth_method):
+    def create_session(self, cid, request):
+
+        if not self.config.needs_auth:
+            can_create_session = True
+        else:
+            can_create_session = self.config.auth_func(
+                request.cid, self.sec_type, {'username':request.username, 'secret':request.secret}, self.config.sec_name,
+                self.config.vault_conn_default_auth_method)
+
+        if can_create_session:
 
             with self.update_lock:
                 self.token = 'ws.token.{}'.format(new_cid())
-                self.is_authenticated = True
+                self.has_session_opened = True
                 self.ext_client_id = request.ext_client_id
                 self.ext_client_name = request.ext_client_name
 
@@ -254,16 +264,16 @@ class WebSocket(_WebSocket):
     def unregister_auth_client(self):
         """ Unregisters an already registered peer in ODB.
         """
-        if self.is_authenticated:
+        if self.has_session_opened:
             self.invoke_service(new_cid(), 'zato.channel.web-socket.client.delete-by-pub-id', {
                 'pub_client_id': self.pub_client_id,
             }, needs_response=True)
 
 # ################################################################################################################################
 
-    def handle_authenticate(self, cid, request):
+    def handle_create_session(self, cid, request):
         if request.is_auth:
-            response = self.authenticate(cid, request)
+            response = self.create_session(cid, request)
             if response:
                 self.send(response)
                 self.register_auth_client()
@@ -355,7 +365,7 @@ class WebSocket(_WebSocket):
             # If client is authenticated, allow it to re-authenticate, which grants a new token, or to invoke a service.
             # Otherwise, authentication is required.
 
-            if self.is_authenticated:
+            if self.has_session_opened:
 
                 # Reject request if an already existing token was not given on input, it should have been
                 # because the client is authenticated after all.
@@ -369,11 +379,11 @@ class WebSocket(_WebSocket):
                     return
 
                 # Ok, we can proceed
-                self.handle_client_message(cid, request) if not request.is_auth else self.handle_authenticate(cid, request)
+                self.handle_client_message(cid, request) if not request.is_auth else self.handle_create_session(cid, request)
 
             # Unauthenticated - require credentials on input
             else:
-                self.handle_authenticate(cid, request)
+                self.handle_create_session(cid, request)
 
             logger.info('Response returned cid:`%s`, time:`%s`', cid, _now()-now)
 
@@ -397,16 +407,16 @@ class WebSocket(_WebSocket):
 
 # ################################################################################################################################
 
-    def _ensure_authenticated(self, _now=datetime.utcnow):
-        """ Runs in its own greenlet and waits for an authentication request to arrive by self.authenticate_by,
-        which is a timestamp object. If self.is_authenticated is not True by that time, connection to the remote end
+    def _ensure_session_created(self, _now=datetime.utcnow):
+        """ Runs in its own greenlet and waits for an authentication request to arrive by self.create_session_by,
+        which is a timestamp object. If self.has_session_opened is not True by that time, connection to the remote end
         is closed.
         """
-        if self._wait_for_event(self.config.new_token_wait_time, lambda: self.is_authenticated):
+        if self._wait_for_event(self.config.new_token_wait_time, lambda: self.has_session_opened):
             return
 
-        # We get here if self.is_authenticated has not been set to True by self.authenticate_by
-        self.on_forbidden('did not authenticate within {}s'.format(self.config.new_token_wait_time))
+        # We get here if self.has_session_opened has not been set to True by self.create_session_by
+        self.on_forbidden('did not create session within {}s'.format(self.config.new_token_wait_time))
 
 # ################################################################################################################################
 
@@ -424,11 +434,7 @@ class WebSocket(_WebSocket):
         logger.info('New connection from %s (%s) to %s (%s)', self._peer_address, self._peer_fqdn,
             self._local_address, self.config.name)
 
-        if not self.config.needs_auth:
-            with self.update_lock:
-                self.is_authenticated = True
-        else:
-            spawn(self._ensure_authenticated)
+        spawn(self._ensure_session_created)
 
 # ################################################################################################################################
 

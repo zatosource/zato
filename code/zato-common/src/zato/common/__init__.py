@@ -171,7 +171,7 @@ HTTP_RESPONSES[TOO_MANY_REQUESTS] = 'Too Many Requests'
 TRUE_FALSE = 'true_false'
 FALSE_TRUE = 'false_true'
 
-# If self.response.payload 
+# If self.response.payload
 simple_types = (basestring, dict, list, tuple, bool, Number)
 
 # Queries to use in pinging the databases.
@@ -835,9 +835,9 @@ class WEB_SOCKET:
         MSG_BROWSER = MSG_BROWSER_PREFIX + '{}'
 
     class ACTION:
-        AUTHENTICATE = 'authenticate'
-        INVOKE_SERVICE = 'invoke-service'
         CLIENT_RESPONSE = 'client-response'
+        CREATE_SESSION = 'create-session'
+        INVOKE_SERVICE = 'invoke-service'
 
 class APISPEC:
     OPEN_API_V2 = 'openapi-v2'
