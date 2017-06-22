@@ -92,8 +92,8 @@ class WebSocket(_WebSocket):
         _peer_fqdn = '(Unknown)'
 
         try:
-            _peer_host = socket.gethostbyaddr(_peer_address[0])[0]
-            _peer_fqdn = socket.getfqdn(_peer_host)
+            self._peer_host = socket.gethostbyaddr(_peer_address[0])[0]
+            _peer_fqdn = socket.getfqdn(self._peer_host)
         except Exception, e:
             logger.warn(format_exc(e))
         finally:
@@ -295,7 +295,11 @@ class WebSocket(_WebSocket):
             'data_format': _data_format,
             'service': service_name,
             'payload': data,
-            'environ': {'pub_client_id': self.pub_client_id},
+            'environ': {
+                'pub_client_id': self.pub_client_id,
+                'peer_host': self._peer_host,
+                'peer_fqdn': self._peer_fqdn,
+            },
         }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=False)
 
 # ################################################################################################################################
