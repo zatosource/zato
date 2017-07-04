@@ -64,10 +64,11 @@ class TokenInfo(object):
 class WebSocket(_WebSocket):
     """ Encapsulates information about an individual connection from a WebSocket client.
     """
-    def __init__(self, container, config, *args, **kwargs):
-        super(WebSocket, self).__init__(*args, **kwargs)
+    def __init__(self, container, config, _unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs):
+        super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
         self.container = container
         self.config = config
+        self.initial_http_wsgi_environ = wsgi_environ
         self.has_session_opened = False
         self._token = None
         self.update_lock = RLock()
@@ -299,6 +300,7 @@ class WebSocket(_WebSocket):
                 'pub_client_id': self.pub_client_id,
                 'peer_host': self._peer_host,
                 'peer_fqdn': self._peer_fqdn,
+                'initial_http_wsgi_environ': self.initial_http_wsgi_environ
             },
         }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=False)
 
@@ -479,11 +481,14 @@ class WebSocketContainer(WebSocketWSGIApplication):
 
     def __call__(self, environ, start_response):
 
-        if environ['PATH_INFO'] != self.config.path:
-            start_response(http404, {})
-            return [error_response[NOT_FOUND][self.config.data_format]]
+        try:
+            if environ['PATH_INFO'] != self.config.path:
+                start_response(http404, {})
+                return [error_response[NOT_FOUND][self.config.data_format]]
 
-        super(WebSocketContainer, self).__call__(environ, start_response)
+            super(WebSocketContainer, self).__call__(environ, start_response)
+        except Exception, e:
+            logger.warn('Could not execute __call__, e:`%s`', format_exc(e))
 
     def invoke_client(self, cid, pub_client_id, request):
         return self.clients[pub_client_id].invoke_client(cid, request)
