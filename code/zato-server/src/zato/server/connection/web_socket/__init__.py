@@ -48,6 +48,10 @@ http404 = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
 
 # ################################################################################################################################
 
+_wsgi_drop_keys = ('ws4py.socket', 'wsgi.errors', 'wsgi.input')
+
+# ################################################################################################################################
+
 class TokenInfo(object):
     def __init__(self, value, ttl, _now=datetime.utcnow):
         self.value = value
@@ -81,6 +85,10 @@ class WebSocket(_WebSocket):
         self.pings_missed_threshold = self.config.get('pings_missed_threshold', 5)
         self.ping_last_response_time = None
 
+        # Drop WSGI keys pointing to complex Python objects such as sockets
+        for name in _wsgi_drop_keys:
+            self.initial_http_wsgi_environ.pop(name, None)
+
         # Responses to previously sent requests - keyed by request IDs
         self.responses_received = {}
 
@@ -89,6 +97,13 @@ class WebSocket(_WebSocket):
 
         _peer_address = self.sock.getpeername()
         self._peer_address = '{}:{}'.format(_peer_address[0], _peer_address[1])
+
+        self.forwarded_for = self.initial_http_wsgi_environ.get('HTTP_X_FORWARDED_FOR')
+
+        if self.forwarded_for:
+            self.forwarded_for_fqdn = socket.getfqdn(self.forwarded_for)
+        else:
+            self.forwarded_for_fqdn = '(Unknown)'
 
         _peer_fqdn = '(Unknown)'
 
@@ -300,6 +315,8 @@ class WebSocket(_WebSocket):
                 'pub_client_id': self.pub_client_id,
                 'peer_host': self._peer_host,
                 'peer_fqdn': self._peer_fqdn,
+                'forwarded_for': self.forwarded_for,
+                'forwarded_for_fqdn': self.forwarded_for_fqdn,
                 'initial_http_wsgi_environ': self.initial_http_wsgi_environ
             },
         }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=False)
