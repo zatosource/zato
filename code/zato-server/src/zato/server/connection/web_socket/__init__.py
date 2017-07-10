@@ -312,12 +312,18 @@ class WebSocket(_WebSocket):
             'service': service_name,
             'payload': data,
             'environ': {
+                'ws_channel_config': self.config,
                 'pub_client_id': self.pub_client_id,
+                'ext_client_id': self.ext_client_id,
+                'ext_client_name': self.ext_client_name,
+                'connection_time': self.connection_time,
+                'pings_missed': self.pings_missed,
+                'pings_missed_threshold': self.pings_missed_threshold,
                 'peer_host': self._peer_host,
                 'peer_fqdn': self._peer_fqdn,
                 'forwarded_for': self.forwarded_for,
                 'forwarded_for_fqdn': self.forwarded_for_fqdn,
-                'initial_http_wsgi_environ': self.initial_http_wsgi_environ
+                'initial_http_wsgi_environ': self.initial_http_wsgi_environ,
             },
         }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=False)
 

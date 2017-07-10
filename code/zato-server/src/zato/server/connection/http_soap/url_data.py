@@ -528,7 +528,7 @@ class URLData(CyURLData, OAuthDataStore):
                     'sec_def': sec_def,
                     'body': body,
                     'environ': wsgi_environ
-                }, data_format=DATA_FORMAT.DICT, serialize=False)['response']
+                }, data_format=DATA_FORMAT.DICT, serialize=False)
 
                 vault_response = self._vault_conn_by_method(client, response['method'], response['headers'])
 
