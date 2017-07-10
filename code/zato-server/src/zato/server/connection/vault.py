@@ -94,8 +94,8 @@ class _Client(Client):
         response = self.lookup_token(client_token)
         return _from_vault('auth_token', response, 'data', 'id', False)
 
-    def _auth_username_password(self, username, password, _from_vault=VaultResponse.from_vault):
-        return _from_vault('auth_userpass', self.auth_userpass(username, password, use_token=False))
+    def _auth_username_password(self, username, password, mount_point='userpass', _from_vault=VaultResponse.from_vault):
+        return _from_vault('auth_userpass', self.auth_userpass(username, password, mount_point, use_token=False))
 
     def _auth_github(self, gh_token, _from_vault=VaultResponse.from_vault):
         return _from_vault('auth_github', self.auth_github(gh_token, use_token=False))
