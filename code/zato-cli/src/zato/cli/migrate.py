@@ -269,9 +269,19 @@ class Migrate(ManageCommand):
 
 # ################################################################################################################################
 
+    def migrate_d25de71c(self):
+        self.logger.info('Migrating from d25de71c to %s', zato_version_number_full)
+
+# ################################################################################################################################
+
     def _on_component(self, args):
         info = self.get_zato_info()
         full_component_version = info.version
+
+        # Special case
+        if 'd25de71c' in full_component_version:
+            self.migrate_d25de71c()
+            return
 
         short_component_version = self._ensure_proper_version(full_component_version)
 
