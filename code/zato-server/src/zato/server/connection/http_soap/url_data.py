@@ -519,8 +519,6 @@ class URLData(CyURLData, OAuthDataStore):
         sec_def_config = self.vault_conn_sec_config[sec_def.name]['config']
         client = self.worker.vault_conn_api.get_client(sec_def.name)
 
-        #return auth_func(cid, get_func(sec_name)['config'], None, None, headers, enforce_auth=False)
-
         try:
 
             #
