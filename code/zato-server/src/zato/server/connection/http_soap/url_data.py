@@ -155,11 +155,13 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def authenticate_web_socket(self, cid, sec_def_type, auth, sec_name, vault_conn_default_auth_method,
-        initial_http_wsgi_environ, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH, _jwt=SEC_DEF_TYPE.JWT, _vault_sec_def_type=SEC_DEF_TYPE.VAULT,
+        initial_http_wsgi_environ, initial_headers=None, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH, _jwt=SEC_DEF_TYPE.JWT,
+        _vault_sec_def_type=SEC_DEF_TYPE.VAULT,
         _vault_ws=VAULT.WEB_SOCKET):
         """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
         """
-        headers = {'zato.ws.initial_http_wsgi_environ': initial_http_wsgi_environ}
+        headers = initial_headers if initial_headers is not None else {}
+        headers['zato.ws.initial_http_wsgi_environ'] =initial_http_wsgi_environ
 
         if sec_def_type == _basic_auth:
             auth_func = self._handle_security_basic_auth
@@ -177,8 +179,9 @@ class URLData(CyURLData, OAuthDataStore):
             get_func = self.vault_conn_sec_get
 
             headers['zato.http.response.headers'] = {}
-            for key, header in _vault_ws[vault_conn_default_auth_method].iteritems():
-                headers[header] = auth[key]
+            for header_info in _vault_ws.itervalues():
+                for key, header in header_info.iteritems():
+                    headers[header] = auth[key]
 
         else:
             raise ValueError('Unrecognized sec_def_type:`{}`'.format(sec_def_type))
