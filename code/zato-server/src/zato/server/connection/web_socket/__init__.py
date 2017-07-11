@@ -191,7 +191,7 @@ class WebSocket(_WebSocket):
         else:
             can_create_session = self.config.auth_func(
                 request.cid, self.sec_type, {'username':request.username, 'secret':request.secret}, self.config.sec_name,
-                self.config.vault_conn_default_auth_method)
+                self.config.vault_conn_default_auth_method, self.initial_http_wsgi_environ)
 
         if can_create_session:
 
@@ -313,6 +313,7 @@ class WebSocket(_WebSocket):
             'payload': data,
             'environ': {
                 'ws_channel_config': self.config,
+                'ws_token': self.token,
                 'pub_client_id': self.pub_client_id,
                 'ext_client_id': self.ext_client_id,
                 'ext_client_name': self.ext_client_name,
