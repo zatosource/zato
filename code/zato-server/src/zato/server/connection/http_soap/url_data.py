@@ -260,7 +260,7 @@ class URLData(CyURLData, OAuthDataStore):
                 return False
 
         token = authorization.split('Bearer ', 1)[1]
-        result = JWT(self.kvdb, self.odb, self.jwt_secret).validate(token.encode('utf8'))
+        result = JWT(self.kvdb, self.odb, self.jwt_secret).validate(sec_def.username, token.encode('utf8'))
 
         if not result.valid:
             if enforce_auth:
@@ -588,17 +588,17 @@ class URLData(CyURLData, OAuthDataStore):
                 for client_def in worker_store.rbac.role_id_to_client_def[role_id]:
                     _, sec_type, sec_name = client_def.split(sep)
 
-                    sec = Bunch()
-                    sec.is_active = True
-                    sec.transport = plain_http
-                    sec.sec_use_rbac = False
-                    sec.sec_def = self.sec_config_getter[sec_type](sec_name)['config']
+                    _sec = Bunch()
+                    _sec.is_active = True
+                    _sec.transport = plain_http
+                    _sec.sec_use_rbac = False
+                    _sec.sec_def = self.sec_config_getter[sec_type](sec_name)['config']
 
                     is_allowed = self.check_security(
-                        sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
+                        _sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
 
                     if is_allowed:
-                        self.enrich_with_sec_data(wsgi_environ, sec.sec_def, sec_type)
+                        self.enrich_with_sec_data(wsgi_environ, _sec.sec_def, sec_type)
                         break
 
         if not is_allowed:
