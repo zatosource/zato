@@ -2037,6 +2037,8 @@ class ChannelWebSocket(Base):
         self.cluster = cluster
         self.security_id = security_id
         self.security = security
+        self.service_name = None # Not used by DB
+        self.sec_type = None # Not used by DB
 
 # ################################################################################################################################
 
