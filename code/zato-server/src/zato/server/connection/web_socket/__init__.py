@@ -386,7 +386,11 @@ class WebSocket(_WebSocket):
         else:
             response = OKResponse(cid, msg.id, service_response)
 
-        self.send(response.serialize())
+        serialized = response.serialize()
+
+        logger.info('Sending response %s', serialized)
+
+        self.send(serialized)
 
 # ################################################################################################################################
 
