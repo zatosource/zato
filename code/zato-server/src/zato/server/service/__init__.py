@@ -32,6 +32,7 @@ from gevent import Timeout, spawn
 from zato.bunch import Bunch
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, ZatoException
 from zato.common.broker_message import SERVICE
+from zato.common.exception import Reportable
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import get_response_value, new_cid, payload_from_request, service_name_from_impl, uncamelify
 from zato.server.connection import slow_response
@@ -497,7 +498,10 @@ class Service(object):
                     logger.warn('Exception in service `%s`, e:`%s`', service.name, format_exc(resp_e))
 
                     if e:
-                        raise Exception(exc_formatted)
+                        if isinstance(e, Reportable):
+                            raise e
+                        else:
+                            raise Exception(exc_formatted)
                     raise resp_e
 
                 else:
