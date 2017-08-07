@@ -33,6 +33,7 @@ from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Zato
 from zato.common import CHANNEL, DATA_FORMAT, SEC_DEF_TYPE, WEB_SOCKET
+from zato.common.exception import Reportable
 from zato.common.util import new_cid
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientInvokeRequest, ClientMessage, copy_forbidden, \
@@ -378,11 +379,18 @@ class WebSocket(_WebSocket):
             service_response = self.invoke_service(cid, self.config.service_name, msg.data)
         except Exception, e:
 
-            logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, e:`%s`', self.config.service_name, msg.id,
-                cid, format_exc(e))
+            logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, e:`%s`',
+                self.config.service_name, msg.id, cid, format_exc(e))
 
-            response = ErrorResponse(cid, msg.id, INTERNAL_SERVER_ERROR,
-                    'Could not invoke service `{}`, id:`{}`, cid:`{}`'.format(self.config.service_name, msg.id, cid))
+            if isinstance(e, Reportable):
+                status = e.status
+                error_message = e.msg
+            else:
+                status = INTERNAL_SERVER_ERROR
+                error_message = 'Could not invoke service `{}`, id:`{}`, cid:`{}`'.format(self.config.service_name, msg.id, cid)
+
+            response = ErrorResponse(cid, msg.id, status, error_message)
+
         else:
             response = OKResponse(cid, msg.id, service_response)
 
