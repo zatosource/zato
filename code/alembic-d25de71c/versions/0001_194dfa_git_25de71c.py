@@ -32,9 +32,9 @@ def upgrade():
     #
 
     # Drop old tables
+    op.drop_table(model.OutgoingAMQP.__tablename__)
     op.drop_table(model.ChannelAMQP.__tablename__)
     op.drop_table(model.ConnDefAMQP.__tablename__)
-    op.drop_table(model.OutgoingAMQP.__tablename__)
 
     # Recreate in reverse order so that foreign keys can be added in op.create_table operation
 
@@ -42,6 +42,8 @@ def upgrade():
     op.create_table(
         model.ConnDefAMQP.__tablename__,
         sa.Column('id', sa.Integer(), sa.Sequence('conn_def_amqp_seq'), nullable=False, primary_key=True),
+        sa.Column('name', sa.String(200), nullable=False),
+        sa.Column('host', sa.String(200), nullable=False),
         sa.Column('port', sa.Integer(), nullable=False),
         sa.Column('vhost', sa.String(200), nullable=False),
         sa.Column('username', sa.String(200), nullable=False),
@@ -64,11 +66,11 @@ def upgrade():
         sa.Column('ack_mode', sa.String(20), nullable=False),
         sa.Column('data_format', sa.String(20), nullable=True),
 
+        sa.Column('def_id', sa.Integer(),
+            sa.ForeignKey('conn_def_amqp.id', name='chan_conn_def_amqp_fkey', ondelete='CASCADE'), nullable=False),
+
         sa.Column('service_id', sa.Integer(),
             sa.ForeignKey('service.id', name='chan_amqp_service_id_fkey', ondelete='CASCADE'), nullable=False),
-
-        sa.Column('cluster_id', sa.Integer(),
-            sa.ForeignKey('cluster.id', name='chan_amqp_cluster_id_fkey', ondelete='CASCADE'), nullable=False),
         )
 
     # Outgoing connections
@@ -86,15 +88,15 @@ def upgrade():
         sa.Column('app_id', sa.String(200), nullable=True),
         sa.Column('pool_size', sa.SmallInteger(), nullable=False),
 
-        sa.Column('cluster_id', sa.Integer(),
-            sa.ForeignKey('conn_def_amqp.id', name='conn_def_amqp_fkey', ondelete='CASCADE'), nullable=False),
-        )
+        sa.Column('def_id', sa.Integer(),
+            sa.ForeignKey('conn_def_amqp.id', name='out_conn_def_amqp_fkey', ondelete='CASCADE'), nullable=False),
+    )
 
     # SQLite doesn't support these operations
 
     if not is_sqlite():
         op.create_unique_constraint('conn_def_amqp_uq1', model.ConnDefAMQP.__tablename__, ['name', 'cluster_id'])
-        op.create_unique_constraint('channel_amqp_uq1', model.ChannelAMQP.__tablename__, ['name', 'cluster_id'])
+        op.create_unique_constraint('channel_amqp_uq1', model.ChannelAMQP.__tablename__, ['name', 'def_id'])
         op.create_unique_constraint('out_amqp_uq1', model.OutgoingAMQP.__tablename__, ['name', 'def_id'])
 
 def downgrade():

@@ -405,7 +405,7 @@ class Migrate(ManageCommand):
                 for key, value in new_config[section].items():
                     new_cp.set(section, key, value)
 
-            server_conf = open(server_conf_path+'2', 'w')
+            server_conf = open(server_conf_path, 'w')
             new_cp.write(server_conf)
             server_conf.close()
 
