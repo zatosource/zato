@@ -12,6 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import json, os, sys
 from ast import literal_eval
 from ConfigParser import ConfigParser
+from contextlib import closing
 from cStringIO import StringIO
 from datetime import datetime
 
@@ -22,7 +23,7 @@ from bunch import bunchify
 from zato.cli import common_logging_conf_contents, ManageCommand
 from zato.cli.create_server import lua_zato_rename_if_exists, server_conf_template, user_conf_contents
 from zato.common import version as zato_version, ZATO_INFO_FILE
-from zato.common.util import get_zato_command
+from zato.common.util import get_crypto_manager_from_server_config, get_odb_session_from_server_config, get_zato_command
 
 zato_version_number_full = zato_version.replace('Zato ', '')
 zato_version_number = zato_version_number_full[:3]
@@ -33,6 +34,50 @@ zato_version_number = zato_version_number_full[:3]
 MIGRATION_PATHS = {
     '1.1': '2.0'
 }
+
+# ################################################################################################################################
+
+class _MigrateInfoRow(object):
+    def __init__(self, timestamp, from_, to, from_full, to_full):
+        self.timestamp = timestamp
+        self.from_ = from_
+        self.to = to
+        self.from_full = from_full
+        self.to_full = to_full
+
+# ################################################################################################################################
+
+class MigrateInfo(object):
+    def __init__(self, path):
+        self.path = path
+        self.rows = []
+        self.parse()
+
+    def parse(self):
+        if os.path.exists(self.path):
+            rows = open(self.path, 'r').readlines()
+        else:
+            rows = []
+
+        for row in rows:
+            self.rows.append(_MigrateInfoRow(*row.split(';')))
+
+    def __contains__(self, to):
+        for row in self.rows:
+            if row.to == to:
+                return True
+
+    def add(self, from_, to, full_component_version, zato_version_number_full):
+        """ Appends a new entry to the migration log.
+        """
+        now = datetime.utcnow().isoformat()
+
+        # A CSV row for the new entry
+        row = '{};{};{};{};{}\n'.format(now, from_, to, full_component_version, zato_version_number_full)
+
+        f = open(self.path, 'a')
+        f.write(row)
+        f.close()
 
 # ################################################################################################################################
 
@@ -269,20 +314,175 @@ class Migrate(ManageCommand):
 
 # ################################################################################################################################
 
+    def migrate_from_d25de71c_to_3_0_server(self):
+
+        def migrate_from_d25de71c_to_3_0_server_server_conf(_self):
+            self.logger.info('Updating server.conf')
+
+            def _reset_alembic_log(logger, config, repo_dir):
+                session = get_odb_session_from_server_config(config, get_crypto_manager_from_server_config(config, repo_dir))
+
+                with closing(session) as session:
+                    query = 'SELECT version_num FROM alembic_version'
+                    result = session.execute(query).fetchone()
+
+                    # Check if there is any previous migration and if there is one that indicates
+                    # that migrations from previous versions were run (i.e.. from 2.0), delete them.
+                    if result:
+
+                        # There will be only one row
+                        current_revision = result[0]
+
+                        # All revisions for commit d25de71c have this label in their names
+                        if 'git_25de71c' not in current_revision:
+
+                            # Log to user
+                            logger.info('Removing old Alembic revisions')
+
+                            # Actually delete
+                            query = 'DELETE FROM alembic_version'
+                            session.execute(query)
+
+                    # Commit all changes
+                    session.commit()
+
+            def update_misc(logger, section):
+                logger.info('Updating [misc]')
+
+                section['return_tracebacks'] = True
+                section['default_error_message'] = 'An error has occurred'
+
+            def update_component_enabled(logger, section):
+                logger.info('Updating [component_enabled]')
+
+                section['cassandra'] = True
+                section['email'] = True
+                section['search'] = True
+                section['msg_path'] = True
+                section['websphere_mq'] = True
+                section['odoo'] = True
+                section['stomp'] = False
+                section['zeromq'] = True
+                section['patterns'] = True
+                section['target_matcher'] = False
+                section['invoke_matcher'] = False
+
+
+            update_handlers = {
+                'misc': update_misc,
+                'component_enabled': update_component_enabled,
+            }
+
+            repo_dir = os.path.join(_self.component_dir, 'config', 'repo')
+            server_conf_path = os.path.join(repo_dir, 'server.conf')
+
+            old_config = ConfigParser()
+            old_config.read(server_conf_path)
+
+            new_config = {}
+
+            # Add configuration
+            for section in old_config.sections():
+                section_dict = dict(old_config.items(section))
+                if section in update_handlers:
+                    update_handlers[section](_self.logger, section_dict)
+                new_config[section] = section_dict
+
+            # Reset Alembic log
+            _reset_alembic_log(_self.logger, bunchify(new_config), repo_dir)
+
+            # Write out updated config file
+
+            all_sections = ('main', 'crypto', 'odb', 'hot_deploy', 'deploy_patterns_allowed', 'invoke_patterns_allowed',
+                'invoke_target_patterns_allowed', 'singleton', 'spring', 'misc', 'stats', 'kvdb', 'startup_services_first_worker',
+                'startup_services_any_worker', 'pubsub', 'profiler', 'user_config', 'newrelic', 'sentry', 'rbac',
+                'component_enabled', 'live_msg_browser', 'content_type', 'zeromq_mdp', 'updates', 'preferred_address',
+                'apispec', 'os_environ')
+
+            new_cp = ConfigParser()
+            for section in all_sections:
+                new_cp.add_section(section)
+                for key, value in new_config[section].items():
+                    new_cp.set(section, key, value)
+
+            server_conf = open(server_conf_path, 'w')
+            new_cp.write(server_conf)
+            server_conf.close()
+
+        migrate_from_d25de71c_to_3_0_server_server_conf(self)
+
+# ################################################################################################################################
+
+    def migrate_from_d25de71c_to_3_0_web_admin(self):
+        self.logger.info('Component is up to date, migration skipped')
+
+# ################################################################################################################################
+
+    def migrate_from_d25de71c_to_3_0_load_balancer(self):
+        self.logger.info('Component is up to date, migration skipped')
+
+# ################################################################################################################################
+
+    def migrate_d25de71c(self, component, full_component_version):
+
+        # Git log revision we are migrating to
+        to = zato_version_number_full.split('+rev.')[1]
+
+        migrate_info = self.get_migrate_info()
+        if to in migrate_info:
+            self.logger.info('Nothing to do, component already migrated to %s', zato_version_number_full)
+            #return
+
+        self.logger.info('Migrating from d25de71c to %s', zato_version_number_full)
+
+        # Migrate the component
+        func = getattr(self, 'migrate_from_d25de71c_to_3_0_{}'.format(component))
+        func()
+
+        # Store information about what we have just migrated
+
+        from_ = 'd25de71c'
+        migrate_info.add(from_, to, full_component_version, zato_version_number_full)
+
+        self.logger.info('Done')
+
+# ################################################################################################################################
+
+    def get_migrate_info(self):
+        return MigrateInfo(os.path.join(self.component_dir, 'config', 'repo', 'migrate-info.txt'))
+
+# ################################################################################################################################
+
     def _on_component(self, args):
         info = self.get_zato_info()
         full_component_version = info.version
 
-        short_component_version = self._ensure_proper_version(full_component_version)
+        # Special case
+        if 'd25de71c' in full_component_version:
+            self.migrate_d25de71c(info.component.lower(), full_component_version)
+            return
 
-        self.logger.debug('Migrating %s from %s to %s', self.component_dir, full_component_version, zato_version_number_full)
+        elif 'Zato 3.0' in full_component_version:
+            self.logger.info('Migrating from %s to %s', full_component_version, zato_version_number_full)
 
-        getattr(self, 'migrate_from_{}_to_{}_{}'.format(short_component_version.replace('.', '_'),
-            zato_version_number.replace('.', '_'), info.component.lower()))()
+            # This is where additional migrations will be added over time
+            pass
 
-        self.update_zato_info(info)
+            self.logger.info('Done')
 
-        self.logger.info('Migrated %s from %s to %s', self.component_dir, full_component_version, zato_version_number_full)
+        # Old 2.0 path that will be removed because 3.0-based migrations do not need to support 1.1 -> 2.0 upgrades.
+        else:
+
+            short_component_version = self._ensure_proper_version(full_component_version)
+
+            self.logger.debug('Migrating %s from %s to %s', self.component_dir, full_component_version, zato_version_number_full)
+
+            getattr(self, 'migrate_from_{}_to_{}_{}'.format(short_component_version.replace('.', '_'),
+                zato_version_number.replace('.', '_'), info.component.lower()))()
+
+            self.update_zato_info(info)
+
+            self.logger.info('Migrated %s from %s to %s', self.component_dir, full_component_version, zato_version_number_full)
 
     _on_server = _on_lb = _on_web_admin = _on_component
 
