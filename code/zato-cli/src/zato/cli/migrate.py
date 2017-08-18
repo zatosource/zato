@@ -431,7 +431,7 @@ class Migrate(ManageCommand):
         migrate_info = self.get_migrate_info()
         if to in migrate_info:
             self.logger.info('Nothing to do, component already migrated to %s', zato_version_number_full)
-            #return
+            return
 
         self.logger.info('Migrating from d25de71c to %s', zato_version_number_full)
 
