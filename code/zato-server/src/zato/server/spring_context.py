@@ -121,6 +121,8 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.security.xpath',
             'zato.server.service.internal.server',
             'zato.server.service.internal.service',
+            'zato.server.service.internal.sms',
+            'zato.server.service.internal.sms.twilio',
             'zato.server.service.internal.stats',
             'zato.server.service.internal.stats.summary',
             'zato.server.service.internal.stats.trends',
