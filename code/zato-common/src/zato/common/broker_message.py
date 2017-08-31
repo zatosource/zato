@@ -408,6 +408,14 @@ class VAULT(Constants):
     POLICY_EDIT = ValueConstant('')
     POLICY_DELETE = ValueConstant('')
 
+class SMS(Constants):
+    code_start = 106000
+
+    TWILIO_CREATE = ValueConstant('')
+    TWILIO_EDIT = ValueConstant('')
+    TWILIO_DELETE = ValueConstant('')
+
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

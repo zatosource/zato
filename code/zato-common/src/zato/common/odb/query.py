@@ -26,8 +26,8 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
      OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, \
-     RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, \
-     TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, \
+     RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, TechnicalAccount, \
+     TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, \
      XPath, XPathSecurity
 
 # ################################################################################################################################
@@ -1495,5 +1495,21 @@ def vault_connection_list(session, cluster_id, needs_columns=False):
     """ A list of Vault connections.
     """
     return _vault_connection(session, cluster_id)
+
+# ################################################################################################################################
+
+def _sms_twilio(session, cluster_id):
+    """ SMS Twilio connections.
+    """
+    return session.query(SMSTwilio).\
+        filter(Cluster.id==SMSTwilio.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(SMSTwilio.name)
+
+@query_wrapper
+def sms_twilio_list(session, cluster_id, needs_columns=False):
+    """ All the SMS Twilio connections.
+    """
+    return _sms_twilio(session, cluster_id)
 
 # ################################################################################################################################
