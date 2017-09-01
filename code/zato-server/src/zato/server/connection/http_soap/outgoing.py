@@ -407,35 +407,40 @@ class SudsSOAPWrapper(BaseHTTPSOAPWrapper):
 
         logger.info('About to add a client to `%s` (%s)', self.address, self.conn_type)
 
-        # Lazily-imported here to make sure gevent monkey patches everything well in advance
-        from suds.client import Client
-        from suds.transport.https import HttpAuthenticated
-        from suds.transport.https import WindowsHttpAuthenticated
-        from suds.wsse import Security, UsernameToken
+        try:
 
-        sec_type = self.config['sec_type']
+            # Lazily-imported here to make sure gevent monkey patches everything well in advance
+            from suds.client import Client
+            from suds.transport.https import HttpAuthenticated
+            from suds.transport.https import WindowsHttpAuthenticated
+            from suds.wsse import Security, UsernameToken
 
-        if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
-            transport = HttpAuthenticated(**self.suds_auth)
+            sec_type = self.config['sec_type']
 
-        elif sec_type == SEC_DEF_TYPE.NTLM:
-            transport = WindowsHttpAuthenticated(**self.suds_auth)
+            if sec_type == SEC_DEF_TYPE.BASIC_AUTH:
+                transport = HttpAuthenticated(**self.suds_auth)
 
-        elif sec_type == SEC_DEF_TYPE.WSS:
-            security = Security()
-            token = UsernameToken(self.suds_auth['username'], self.suds_auth['password'])
-            security.tokens.append(token)
+            elif sec_type == SEC_DEF_TYPE.NTLM:
+                transport = WindowsHttpAuthenticated(**self.suds_auth)
 
-            client = Client(self.address, autoblend=True, wsse=security)
+            elif sec_type == SEC_DEF_TYPE.WSS:
+                security = Security()
+                token = UsernameToken(self.suds_auth['username'], self.suds_auth['password'])
+                security.tokens.append(token)
 
-        if sec_type in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM):
-            client = Client(self.address, autoblend=True, transport=transport)
+                client = Client(self.address, autoblend=True, wsse=security)
 
-        # Still could be either none at all or WSS
-        if not sec_type:
-            client = Client(self.address, autoblend=True, timeout=self.config['timeout'])
+            if sec_type in(SEC_DEF_TYPE.BASIC_AUTH, SEC_DEF_TYPE.NTLM):
+                client = Client(self.address, autoblend=True, transport=transport)
 
-        self.client.put_client(client)
+            # Still could be either none at all or WSS
+            if not sec_type:
+                client = Client(self.address, autoblend=True, timeout=self.config['timeout'])
+
+            self.client.put_client(client)
+
+        except Exception, e:
+            logger.warn('Error while adding a SOAP client to `%s` (%s) e:`%s`', self.address, self.conn_type, format_exc(e))
 
     def build_client_queue(self):
 
