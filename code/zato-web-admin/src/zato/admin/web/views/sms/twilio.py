@@ -11,20 +11,25 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
-# elasticutils
-from elasticutils import DEFAULT_TIMEOUT
+# Django
+from django.http import HttpResponse, HttpResponseServerError
+from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.sms.twilio import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
 from zato.common.odb.model import SMSTwilio
 
+# ################################################################################################################################
+
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
 
 class Index(_Index):
     method_allowed = 'GET'
     url_name = 'sms-twilio'
-    template = 'zato/sms/twilio.html'
+    template = 'zato/sms/twilio/index.html'
     service_name = 'zato.sms.twilio.get-list'
     output_class = SMSTwilio
     paginate = True
@@ -41,6 +46,8 @@ class Index(_Index):
             'edit_form': EditForm(prefix='edit'),
         }
 
+# ################################################################################################################################
+
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
@@ -52,16 +59,63 @@ class _CreateEdit(CreateEdit):
     def success_message(self, item):
         return 'Successfully {} the SMS Twilio connection `{}`'.format(self.verb, item.name)
 
+# ################################################################################################################################
+
 class Create(_CreateEdit):
     url_name = 'sms-twilio-create'
     service_name = 'zato.sms.twilio.create'
+
+# ################################################################################################################################
 
 class Edit(_CreateEdit):
     url_name = 'sms-twilio-edit'
     form_prefix = 'edit-'
     service_name = 'zato.sms.twilio.edit'
 
+# ################################################################################################################################
+
 class Delete(_Delete):
     url_name = 'sms-twilio-delete'
     error_message = 'Could not delete the SMS Twilio connection'
     service_name = 'zato.sms.twilio.delete'
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+def send_message(req, cluster_id, conn_id, name_slug):
+
+    response = req.zato.client.invoke('zato.sms.twilio.get', {
+        'cluster_id': cluster_id,
+        'id': conn_id,
+    })
+
+    if not response.ok:
+        raise Exception(response.details)
+
+    return_data = {
+        'cluster_id': cluster_id,
+        'name_slug': name_slug,
+        'item': response.data
+    }
+
+    return TemplateResponse(req, 'zato/sms/twilio/send-message.html', return_data)
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def send_message_action(req, cluster_id, conn_id, name_slug):
+
+    try:
+        request = {'cluster_id': req.zato.cluster_id}
+        request.update({k:v for k, v in req.POST.items() if k and v})
+        response = req.zato.client.invoke('zato.pubsub.topics.publish', request)
+
+        if response.ok:
+            msg = 'Published message `{}` to topic `{}`'.format(response.data.msg_id, req.POST['name'])
+            return HttpResponse(dumps({'msg': msg}), content_type='application/javascript')
+        else:
+            raise Exception(response.details)
+    except Exception, e:
+        msg = 'Caught an exception, e:`{}`'.format(format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
