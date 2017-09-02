@@ -120,7 +120,7 @@ def send_message_action(req, cluster_id, conn_id, name_slug):
         response = req.zato.client.invoke('zato.sms.twilio.send-message', request)
 
         if response.ok:
-            return HttpResponse(dumps({'msg': 'OK, sent'}), content_type='application/javascript')
+            return HttpResponse(dumps({'msg': 'OK, message sent successfully.'}), content_type='application/javascript')
         else:
             raise Exception(response.details)
     except Exception, e:
