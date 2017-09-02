@@ -52,7 +52,7 @@ class Delete(AdminService):
 # ################################################################################################################################
 
 class Get(AdminService):
-    """ Returns basic information regarding a message from a topic or a consumer queue.
+    """ Returns details of an SMS Twilio connection.
     """
     class SimpleIO(AdminSIO):
         request_elem = 'zato_sms_twilio_get_request'
@@ -64,5 +64,19 @@ class Get(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
             self.response.payload = sms_twilio(session, self.request.input.cluster_id, self.request.input.id)
+
+# ################################################################################################################################
+
+class SendMessage(AdminService):
+    """ Sends a text message through an SMS Twilio connection.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_sms_twilio_send_message_request'
+        response_elem = 'zato_sms_twilio_send_message_response'
+        input_required = ('cluster_id', 'id', 'from_', 'to', 'body')
+
+    def handle(self):
+        item = self.invoke(Get.get_name(), payload=self.request.input, as_bunch=True).zato_sms_twilio_get_response
+        self.out.sms.twilio[item.name].conn.send(self.request.input.body, self.request.input.to, self.request.input.from_)
 
 # ################################################################################################################################

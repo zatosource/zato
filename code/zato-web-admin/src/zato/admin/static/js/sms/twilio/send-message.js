@@ -1,5 +1,11 @@
 $(document).ready(function() {
 
+    _.each(['body', 'from_', 'to'], function(name) {
+        $.fn.zato.data_table.set_field_required('#' + name);
+    });
+
+    $('#send_message_form').bValidator();
+
     var _callback = function(data, status, xhr){
         var success = status == 'success';
         var msg = success ? data.msg : data.responseText;

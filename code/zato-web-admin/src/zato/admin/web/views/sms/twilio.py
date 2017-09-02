@@ -10,6 +10,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from json import dumps
+from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -95,7 +97,8 @@ def send_message(req, cluster_id, conn_id, name_slug):
     return_data = {
         'cluster_id': cluster_id,
         'name_slug': name_slug,
-        'item': response.data
+        'item': response.data,
+        'conn_id': conn_id
     }
 
     return TemplateResponse(req, 'zato/sms/twilio/send-message.html', return_data)
@@ -106,13 +109,18 @@ def send_message(req, cluster_id, conn_id, name_slug):
 def send_message_action(req, cluster_id, conn_id, name_slug):
 
     try:
-        request = {'cluster_id': req.zato.cluster_id}
-        request.update({k:v for k, v in req.POST.items() if k and v})
-        response = req.zato.client.invoke('zato.pubsub.topics.publish', request)
+        request = {
+            'cluster_id': req.zato.cluster_id,
+            'id': req.POST['id'],
+            'from_': req.POST['from_'],
+            'to': req.POST['to'],
+            'body': req.POST['body'],
+        }
+
+        response = req.zato.client.invoke('zato.sms.twilio.send-message', request)
 
         if response.ok:
-            msg = 'Published message `{}` to topic `{}`'.format(response.data.msg_id, req.POST['name'])
-            return HttpResponse(dumps({'msg': msg}), content_type='application/javascript')
+            return HttpResponse(dumps({'msg': 'OK, sent'}), content_type='application/javascript')
         else:
             raise Exception(response.details)
     except Exception, e:
