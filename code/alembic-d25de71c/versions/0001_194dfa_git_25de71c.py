@@ -1,6 +1,6 @@
 """Upgrading from d25de71c to 3.0.
 
-Revision ID: 194dfa550662
+Revision ID: 0001_194dfa_git_25de71c
 Revises: None
 Create Date: 2017-08-17 11:43:00.833139
 
