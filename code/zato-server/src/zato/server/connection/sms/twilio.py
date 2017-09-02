@@ -38,8 +38,8 @@ def send(twilio_messages, config):
         """
         return twilio_messages.create(**dict({
             'body': _zato_body,
-            'to': _zato_to or config.default_to or kwargs.get('to', None),
-            'from_': _zato_from or config.default_from or kwargs.get('from_', None),
+            'to': _zato_to or config.default_to or kwargs.pop('to', None),
+            'from_': _zato_from or config.default_from or kwargs.pop('from_', None),
         }, **kwargs))
 
     return _send
