@@ -39,6 +39,7 @@ from zato.server.connection import slow_response
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
+from zato.server.connection.sms import SMSAPI
 from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.message import MessageFacade
 from zato.server.pattern.fanout import FanOut
@@ -248,6 +249,7 @@ class Service(object):
             ZMQFacade(self.server) if self.component_enabled_zeromq else None,
             self._worker_store.outgoing_web_sockets,
             self._worker_store.vault_conn_api,
+            SMSAPI(self._worker_store.sms_twilio_api) if self.component_enabled_sms else None,
         )
 
     @staticmethod
@@ -323,7 +325,6 @@ class Service(object):
         if self.component_enabled_search:
             if not Service.search:
                 Service.search = SearchAPI(self._worker_store.search_es_api, self._worker_store.search_solr_api)
-
         if self.component_enabled_msg_path:
             self.msg = MessageFacade(
                 self._json_pointer_store, self._xpath_store, self._msg_ns_store, self.request.payload, self.time)

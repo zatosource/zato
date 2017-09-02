@@ -200,6 +200,7 @@ zeromq=True
 patterns=True
 target_matcher=False
 invoke_matcher=False
+sms=True
 
 [live_msg_browser]
 include_internal=False
