@@ -1033,6 +1033,11 @@ urlpatterns += [
     url(r'^zato/sms/twilio/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(twilio.Delete()), name=twilio.Delete.url_name),
 
+    url(r'^zato/sms/twilio/send/cluster/(?P<cluster_id>.*)/conn/(?P<conn_id>.*)/(?P<name_slug>.*)$',
+        login_required(twilio.send_message), name='sms-twilio-send-message'),
+    url(r'^zato/sms/twilio/send/action/cluster/(?P<cluster_id>.*)/conn/(?P<conn_id>.*)/(?P<name_slug>.*)$',
+        login_required(twilio.send_message_action), name='sms-twilio-send-message-action'),
+
     ]
 
 # ################################################################################################################################

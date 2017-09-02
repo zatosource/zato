@@ -13,7 +13,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/sms/twilio.js"></script>
+    <script type="text/javascript" src="/static/js/sms/twilio/index.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -24,6 +24,7 @@
             '_is_active',
             '_default_from',
             '_default_to',
+            '_send_message',
             '_edit',
             '_delete',
             'id',
@@ -68,6 +69,7 @@
                         <th><a href="#">Default to</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -86,6 +88,7 @@
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.default_from|default:'<span class="form_hint">(None)</span>' }}</td>
                         <td>{{ item.default_to|default:'<span class="form_hint">(None)</span>' }}</td>
+                        <td><a href="{% url "sms-twilio-send-message" cluster_id item.id item.name|slugify %}">Send a message</a></td>
                         <td><a href="javascript:$.fn.zato.sms.twilio.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.sms.twilio.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -98,7 +101,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='12'>No results</td>
+                        <td colspan='13'>No results</td>
                     </tr>
                 {% endif %}
 

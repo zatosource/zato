@@ -1506,6 +1506,13 @@ def _sms_twilio(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(SMSTwilio.name)
 
+def sms_twilio(session, cluster_id, id):
+    """ An individual SMS Twilio connection.
+    """
+    return _sms_twilio(session, cluster_id).\
+        filter(SMSTwilio.id==id).\
+        one()
+
 @query_wrapper
 def sms_twilio_list(session, cluster_id, needs_columns=False):
     """ All the SMS Twilio connections.
