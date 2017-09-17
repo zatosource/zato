@@ -77,6 +77,7 @@ class SendMessage(AdminService):
 
     def handle(self):
         item = self.invoke(Get.get_name(), payload=self.request.input, as_bunch=True).zato_sms_twilio_get_response
-        self.out.sms.twilio[item.name].conn.send(self.request.input.body, self.request.input.to, self.request.input.from_)
+        msg = self.out.sms.twilio[item.name].conn.send(self.request.input.body, self.request.input.to, self.request.input.from_)
+        self.logger.info('Sent message %s', msg)
 
 # ################################################################################################################################
