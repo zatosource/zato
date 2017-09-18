@@ -73,6 +73,17 @@ class ConfigLoader(object):
         #
 
         #
+        # SMS - start
+        #
+
+        query = self.odb.get_sms_twilio_list(server.cluster.id, True)
+        self.config.sms_twilio = ConfigDict.from_query('sms_twilio', query)
+
+        #
+        # SMS - end
+        #
+
+        #
         # Cloud - start
         #
 
