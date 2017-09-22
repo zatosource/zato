@@ -55,7 +55,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'address', 'service_name', 'token_format', 'data_format', 'is_internal', 
+        input_required = ('name', 'is_active', 'address', 'service_name', 'token_format', 'data_format', 'is_internal',
             'security_id', 'new_token_wait_time', 'token_ttl')
         output_required = ('id', 'name')
 

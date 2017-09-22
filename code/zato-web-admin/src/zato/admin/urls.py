@@ -50,6 +50,7 @@ from zato.admin.web.views.pubsub import producers as pubsub_producers
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
+from zato.admin.web.views.sms import twilio
 from zato.admin.web.views.security import apikey, aws, basic_auth, jwt, ntlm, oauth, openstack as openstack_security, rbac, \
      tech_account, wss, xpath as xpath_sec
 from zato.admin.web.views.security.tls import ca_cert as tls_ca_cert, channel as tls_channel, key_cert as tls_key_cert
@@ -1040,6 +1041,32 @@ urlpatterns += [
         login_required(email_smtp.ping), name='smtp-email-ping'),
     url(r'^zato/email/smtp/change-password/$',
         login_required(email_smtp.change_password), name='email-smtp-change-password'),
+
+    ]
+
+# ################################################################################################################################
+
+#   SMS
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. Twilio
+
+    url(r'^zato/sms/twilio/$',
+        login_required(twilio.Index()), name=twilio.Index.url_name),
+    url(r'^zato/sms/twilio/create/$',
+        login_required(twilio.Create()), name=twilio.Create.url_name),
+    url(r'^zato/sms/twilio/edit/$',
+        login_required(twilio.Edit()), name=twilio.Edit.url_name),
+    url(r'^zato/sms/twilio/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(twilio.Delete()), name=twilio.Delete.url_name),
+
+    url(r'^zato/sms/twilio/send/cluster/(?P<cluster_id>.*)/conn/(?P<conn_id>.*)/(?P<name_slug>.*)$',
+        login_required(twilio.send_message), name='sms-twilio-send-message'),
+    url(r'^zato/sms/twilio/send/action/cluster/(?P<cluster_id>.*)/conn/(?P<conn_id>.*)/(?P<name_slug>.*)$',
+        login_required(twilio.send_message_action), name='sms-twilio-send-message-action'),
 
     ]
 

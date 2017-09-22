@@ -88,7 +88,7 @@ class JWT(object):
 
 # ################################################################################################################################
 
-    def validate(self, token):
+    def validate(self, expected_username, token):
         """ Check if the given token is (still) valid.
 
         1. Look for the token in Cache without decrypting/decoding it.
@@ -103,12 +103,17 @@ class JWT(object):
             decrypted = self.fernet.decrypt(token)
             token_data = bunchify(jwt.decode(decrypted, self.secret))
 
-            # renew the token expiration
-            self.cache.put(token, token, token_data.ttl, async=True)
+            if token_data.username == expected_username:
 
-            return Bunch(valid=True, token=token_data)
+                # Renew the token expiration
+                self.cache.put(token, token, token_data.ttl, async=True)
+                return Bunch(valid=True, token=token_data)
+
+            else:
+                return Bunch(valid=False, message='Unexpected user for token found')
+
         else:
-            return Bunch(valid=False, message='Invalid Token')
+            return Bunch(valid=False, message='Invalid token')
 
 # ################################################################################################################################
 

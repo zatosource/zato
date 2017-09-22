@@ -408,6 +408,13 @@ class VAULT(Constants):
     POLICY_EDIT = ValueConstant('')
     POLICY_DELETE = ValueConstant('')
 
+class SMS(Constants):
+    code_start = 106000
+
+    TWILIO_CREATE = ValueConstant('')
+    TWILIO_EDIT = ValueConstant('')
+    TWILIO_DELETE = ValueConstant('')
+
 class CACHE(Constants):
     code_start = 106000
 

@@ -32,12 +32,14 @@ from gevent import Timeout, spawn
 from zato.bunch import Bunch
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, ZatoException
 from zato.common.broker_message import SERVICE
+from zato.common.exception import Reportable
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import get_response_value, new_cid, payload_from_request, service_name_from_impl, uncamelify
 from zato.server.connection import slow_response
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
+from zato.server.connection.sms import SMSAPI
 from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.message import MessageFacade
 from zato.server.pattern.fanout import FanOut
@@ -248,6 +250,7 @@ class Service(object):
             ZMQFacade(self.server) if self.component_enabled_zeromq else None,
             self._worker_store.outgoing_web_sockets,
             self._worker_store.vault_conn_api,
+            SMSAPI(self._worker_store.sms_twilio_api) if self.component_enabled_sms else None,
         )
 
     @staticmethod
@@ -323,7 +326,6 @@ class Service(object):
         if self.component_enabled_search:
             if not Service.search:
                 Service.search = SearchAPI(self._worker_store.search_es_api, self._worker_store.search_solr_api)
-
         if self.component_enabled_msg_path:
             self.msg = MessageFacade(
                 self._json_pointer_store, self._xpath_store, self._msg_ns_store, self.request.payload, self.time)
@@ -501,7 +503,10 @@ class Service(object):
                     logger.warn('Exception in service `%s`, e:`%s`', service.name, format_exc(resp_e))
 
                     if e:
-                        raise Exception(exc_formatted)
+                        if isinstance(e, Reportable):
+                            raise e
+                        else:
+                            raise Exception(exc_formatted)
                     raise resp_e
 
                 else:
@@ -732,7 +737,7 @@ class Service(object):
         ttl - defaults to 20 seconds and is the max time the lock will be held
         block - how long (in seconds) we will wait to acquire the lock before giving up
         """
-        return self.server.zato_lock_manager(name, ttl=ttl, block=block)
+        return self.server.zato_lock_manager(name or self.name, ttl=ttl, block=block)
 
 # ################################################################################################################################
 
