@@ -10,8 +10,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from logging import LogRecord
+from sys import exc_info
 
-def logging_Logger_log(self, level, msg, args, exc_info=None, extra=None, _LogRecord=LogRecord):
+def logging_Logger_log(self, level, msg, args, exc_info=None, extra=None, _LogRecord=LogRecord, _exc_info=exc_info):
     """ Overrides logging.Logger._log to gain a tiny but tangible performance boost (1%-3%).
     """
     try:
@@ -21,7 +22,7 @@ def logging_Logger_log(self, level, msg, args, exc_info=None, extra=None, _LogRe
 
     if exc_info:
         if not isinstance(exc_info, tuple):
-            exc_info = sys.exc_info()
+            exc_info = _exc_info()
 
     record = _LogRecord(self.name, level, fn, lno, msg, args, exc_info, func)
 
