@@ -63,6 +63,7 @@ from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
+from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
@@ -168,6 +169,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
         self.search_solr_api = SolrAPI(SolrConnStore())
 
+        # SMS
+        self.sms_twilio_api = TwilioAPI(TwilioConnStore())
+
         # E-mail
         self.email_smtp_api = SMTPAPI(SMTPConnStore())
         self.email_imap_api = IMAPAPI(IMAPConnStore())
@@ -210,6 +214,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Search
         self.init_search_es()
         self.init_search_solr()
+
+        # SMS
+        self.init_sms_twilio()
 
         # E-mail
         self.init_email_smtp()
@@ -542,6 +549,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
                 api.create(k, v.config)
             except Exception, e:
                 logger.warn('Could not create {} connection `%s`, e:`%s`'.format(name), k, format_exc(e))
+
+# ################################################################################################################################
+
+    def init_sms_twilio(self):
+        self.init_simple(self.worker_config.sms_twilio, self.sms_twilio_api, 'a Twilio')
 
 # ################################################################################################################################
 

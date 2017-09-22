@@ -130,7 +130,9 @@ Examples:
             if not found_agent_pidfile:
                 self.start_component(
                     'zato.agent.load_balancer.main', 'load-balancer', os.path.join(self.config_dir, 'repo'), stop_haproxy)
+                return
 
+        # Will be returned if either of pidfiles was found
         sys.exit(self.SYS_ERROR.FOUND_PIDFILE)
 
     def _on_web_admin(self, *ignored):

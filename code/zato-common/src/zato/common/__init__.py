@@ -852,9 +852,9 @@ class WEB_SOCKET:
         MSG_BROWSER = MSG_BROWSER_PREFIX + '{}'
 
     class ACTION:
-        AUTHENTICATE = 'authenticate'
-        INVOKE_SERVICE = 'invoke-service'
         CLIENT_RESPONSE = 'client-response'
+        CREATE_SESSION = 'create-session'
+        INVOKE_SERVICE = 'invoke-service'
 
 class APISPEC:
     OPEN_API_V2 = 'openapi-v2'

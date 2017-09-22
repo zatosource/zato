@@ -83,6 +83,7 @@ def set_up_class_attributes(class_, service_store=None, name=None):
         class_.cloud.openstack.swift = service_store.server.worker_store.worker_config.cloud_openstack_swift
         class_.cloud.aws.s3 = service_store.server.worker_store.worker_config.cloud_aws_s3
         class_._out_ftp = service_store.server.worker_store.worker_config.out_ftp
+        class_._out_plain_http = service_store.server.worker_store.worker_config.out_plain_http
         class_.amqp.invoke = class_.amqp.send = service_store.server.worker_store.amqp_invoke # .send is for pre-3.0 backward compat
         class_.amqp.invoke_async = class_.amqp.send = service_store.server.worker_store.amqp_invoke_async
 
@@ -106,6 +107,7 @@ def set_up_class_attributes(class_, service_store=None, name=None):
         class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
         class_.component_enabled_target_matcher = service_store.server.fs_server_config.component_enabled.target_matcher
         class_.component_enabled_invoke_matcher = service_store.server.fs_server_config.component_enabled.invoke_matcher
+        class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
 
     # Replace hook methods with None if they have not been overridden by users.
     # Each method's .im_func.func_defaults attribute will be a one-element tuple in the form such as ('_zato_no_op_marker',)

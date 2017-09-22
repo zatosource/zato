@@ -155,29 +155,33 @@ class URLData(CyURLData, OAuthDataStore):
 # ################################################################################################################################
 
     def authenticate_web_socket(self, cid, sec_def_type, auth, sec_name, vault_conn_default_auth_method,
-        _basic_auth=SEC_DEF_TYPE.BASIC_AUTH, _jwt=SEC_DEF_TYPE.JWT, _vault_sec_def_type=SEC_DEF_TYPE.VAULT,
+        initial_http_wsgi_environ, initial_headers=None, _basic_auth=SEC_DEF_TYPE.BASIC_AUTH, _jwt=SEC_DEF_TYPE.JWT,
+        _vault_sec_def_type=SEC_DEF_TYPE.VAULT,
         _vault_ws=VAULT.WEB_SOCKET):
         """ Authenticates a WebSocket-based connection using HTTP Basic Auth credentials.
         """
+        headers = initial_headers if initial_headers is not None else {}
+        headers['zato.ws.initial_http_wsgi_environ'] =initial_http_wsgi_environ
 
         if sec_def_type == _basic_auth:
             auth_func = self._handle_security_basic_auth
             get_func = self.basic_auth_get
-            headers = {'HTTP_AUTHORIZATION': 'Basic {}'.format('{}:{}'.format(auth['username'], auth['secret']).encode('base64'))}
+            headers['HTTP_AUTHORIZATION'] = 'Basic {}'.format(
+                '{}:{}'.format(auth['username'], auth['secret']).encode('base64'))
 
         elif sec_def_type == _jwt:
             auth_func = self._handle_security_jwt
             get_func = self.jwt_get
-            headers = {'HTTP_AUTHORIZATION': 'Bearer {}'.format(auth['secret'])}
+            headers['HTTP_AUTHORIZATION'] ='Bearer {}'.format(auth['secret'])
 
         elif sec_def_type == _vault_sec_def_type:
             auth_func = self._handle_security_vault_conn_sec
             get_func = self.vault_conn_sec_get
 
-            # The defauly header is a dummy one
-            headers = {'zato.http.response.headers':{}}
-            for key, header in _vault_ws[vault_conn_default_auth_method].iteritems():
-                headers[header] = auth[key]
+            headers['zato.http.response.headers'] = {}
+            for header_info in _vault_ws.itervalues():
+                for key, header in header_info.iteritems():
+                    headers[header] = auth[key]
 
         else:
             raise ValueError('Unrecognized sec_def_type:`{}`'.format(sec_def_type))
@@ -256,7 +260,7 @@ class URLData(CyURLData, OAuthDataStore):
                 return False
 
         token = authorization.split('Bearer ', 1)[1]
-        result = JWT(self.kvdb, self.odb, self.jwt_secret).validate(token.encode('utf8'))
+        result = JWT(self.kvdb, self.odb, self.jwt_secret).validate(sec_def.username, token.encode('utf8'))
 
         if not result.valid:
             if enforce_auth:
@@ -528,7 +532,7 @@ class URLData(CyURLData, OAuthDataStore):
                     'sec_def': sec_def,
                     'body': body,
                     'environ': wsgi_environ
-                }, data_format=DATA_FORMAT.DICT, serialize=False)['response']
+                }, data_format=DATA_FORMAT.DICT, serialize=False)
 
                 vault_response = self._vault_conn_by_method(client, response['method'], response['headers'])
 
@@ -584,17 +588,17 @@ class URLData(CyURLData, OAuthDataStore):
                 for client_def in worker_store.rbac.role_id_to_client_def[role_id]:
                     _, sec_type, sec_name = client_def.split(sep)
 
-                    sec = Bunch()
-                    sec.is_active = True
-                    sec.transport = plain_http
-                    sec.sec_use_rbac = False
-                    sec.sec_def = self.sec_config_getter[sec_type](sec_name)['config']
+                    _sec = Bunch()
+                    _sec.is_active = True
+                    _sec.transport = plain_http
+                    _sec.sec_use_rbac = False
+                    _sec.sec_def = self.sec_config_getter[sec_type](sec_name)['config']
 
                     is_allowed = self.check_security(
-                        sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
+                        _sec, cid, channel_item, path_info, payload, wsgi_environ, post_data, worker_store, False)
 
                     if is_allowed:
-                        self.enrich_with_sec_data(wsgi_environ, sec.sec_def, sec_type)
+                        self.enrich_with_sec_data(wsgi_environ, _sec.sec_def, sec_type)
                         break
 
         if not is_allowed:
