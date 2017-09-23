@@ -37,8 +37,6 @@ def instance_hook(self, input, instance, attrs):
                 filter(Cache.id.isnot(instance.id)).\
                 update({'is_default':False})
 
-    instance.sync_method = _COMMON_CACHE.SYNC_METHOD.ASYNC.id
-
 # ################################################################################################################################
 
 def response_hook(self, input, _ignored, attrs, service_type):

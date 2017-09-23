@@ -414,13 +414,21 @@ class CACHE:
         MAX_SIZE = 10000
         MAX_ITEM_SIZE = 1000 # In characters for string/unicode, bytes otherwise
 
-    class SYNC_METHOD:
-        ASYNC = NameId('Asynchronous', 'async')
-        SYNC_3PC = NameId('Synchronous 3PC', 'sync_3pc')
+    class PERSISTENT_STORAGE:
+        NO_PERSISTENT_STORAGE = NameId('No persistent storage', 'no-persistent-storage')
+        SQL = NameId('SQL', 'sql')
 
         class __metaclass__(type):
             def __iter__(self):
-                return iter((self.ASYNC, self.SYNC_3PC))
+                return iter((self.NO_PERSISTENT_STORAGE, self.SQL))
+
+    class SYNC_METHOD:
+        NO_SYNC = NameId('No synchronization', 'no-sync')
+        IN_BACKGROUND = NameId('In background', 'in-background')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.NO_SYNC, self.IN_BACKGROUND))
 
 class KVDB(Attrs):
     SEPARATOR = ':::'

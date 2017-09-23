@@ -1372,7 +1372,7 @@ def _cache_builtin(session, cluster_id):
         CacheBuiltin.id, CacheBuiltin.name, CacheBuiltin.is_active,
         CacheBuiltin.is_default, CacheBuiltin.cache_type, CacheBuiltin.max_size,
         CacheBuiltin.max_item_size, CacheBuiltin.extend_expiry_on_get, CacheBuiltin.extend_expiry_on_set,
-        CacheBuiltin.sync_method).\
+        CacheBuiltin.sync_method, CacheBuiltin.persistent_storage).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==CacheBuiltin.cluster_id).\
         filter(Cache.id==CacheBuiltin.id).\

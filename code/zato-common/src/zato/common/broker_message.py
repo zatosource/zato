@@ -416,7 +416,7 @@ class SMS(Constants):
     TWILIO_DELETE = ValueConstant('')
 
 class CACHE(Constants):
-    code_start = 106000
+    code_start = 106400
 
     BUILTIN_CREATE = ValueConstant('')
     BUILTIN_EDIT = ValueConstant('')
