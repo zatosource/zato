@@ -13,6 +13,7 @@ from django import forms
 
 # Zato
 from zato.common import CACHE
+from zato.admin.web.forms import add_select
 
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
@@ -25,6 +26,13 @@ class CreateForm(forms.Form):
         initial=CACHE.DEFAULT.MAX_ITEM_SIZE, widget=forms.TextInput(attrs={'class':'required', 'style':'width:15%'}))
     extend_expiry_on_get = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     extend_expiry_on_set = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    sync_method = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:50%'}))
+    persistent_storage = forms.ChoiceField(widget=forms.Select(attrs={'style':'width:50%'}))
+
+    def __init__(self, prefix=None, post_data=None, req=None):
+        super(CreateForm, self).__init__(post_data, prefix=prefix)
+        add_select(self, 'sync_method', CACHE.SYNC_METHOD)
+        add_select(self, 'persistent_storage', CACHE.PERSISTENT_STORAGE)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

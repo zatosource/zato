@@ -740,7 +740,8 @@ class Create(ZatoCommand):
         item.extend_expiry_on_get = True
         item.extend_expiry_on_set = True
         item.cache_type = CACHE.TYPE.BUILTIN
-        item.sync_method = CACHE.SYNC_METHOD.ASYNC.id
+        item.sync_method = CACHE.SYNC_METHOD.IN_BACKGROUND.id
+        item.persistent_storage = CACHE.PERSISTENT_STORAGE.SQL.id
         session.add(item)
 
     def add_pubsub_rest_handler(self, session, cluster, service):

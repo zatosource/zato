@@ -855,6 +855,7 @@ class CacheBuiltin(Cache):
     extend_expiry_on_get = Column(Boolean(), nullable=False)
     extend_expiry_on_set = Column(Boolean(), nullable=False)
     sync_method = Column(String(20), nullable=False)
+    persistent_storage = Column(String(40), nullable=False)
 
 # ################################################################################################################################
 
