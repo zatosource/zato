@@ -201,6 +201,22 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
+    cpdef list clear(self):
+        """ Clears the cache - removes all entries and associated metadata.
+        """
+        # The attributes cleared below must be kept in sync with the ones from __cinit__.
+        with self._lock:
+            self._data.clear()
+            self._index[:] = []
+            self.hits_per_position.clear()
+            self._expired_on_op[:] = []
+            self.hits = 0
+            self.misses = 0
+            self.set_ops = 0
+            self.get_ops = 0
+
+# ################################################################################################################################
+
     cdef _delete(self, str key):
         # Will raise KeyError on invalid key so the next line is safe
         del self._data[key]
@@ -267,7 +283,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cdef _set(self, object key, value, expiry, _getsizeof=getsizeof, _key_types=key_types, _len_values=len_values):
+    cdef _set(self, object key, value, expiry, dict meta_ref, _getsizeof=getsizeof, _key_types=key_types, _len_values=len_values):
 
         cdef Entry entry
         cdef double _now = self._get_timestamp()
@@ -296,6 +312,7 @@ cdef class Cache(object):
             # If we have a key that previously was not using expiry, we must set it now.
             if not entry.expires_at:
                 if expiry:
+                    entry.expiry = expiry
                     entry.expires_at = _now + expiry
             else:
                 # If we find an expired entry (meaning that entry.expires_at must have been set already),
@@ -335,15 +352,19 @@ cdef class Cache(object):
             PyDict_SetItem(self._data, key, entry)
             PyList_Insert(self._index, 0, key)
 
+        # If any output dict for metadata was passed in by reference, set its requires items.
+        if meta_ref is not None:
+            meta_ref['expires_at'] = entry.expires_at
+
 # ################################################################################################################################
 
-    cpdef set(self, str key, value, double expiry=0.0):
+    cpdef set(self, str key, value, double expiry, dict meta_ref):
         with self._lock:
-            self._set(key, value, expiry)
+            self._set(key, value, expiry, meta_ref)
 
 # ################################################################################################################################
 
-    cpdef object get(self, str key, bint details=False):
+    cdef object _get(self, str key, bint details):
         """ Returns data for key in cache if present. Otherwise returns None. If 'details' is True,
         returns a dictionary with value and metadata instead of value alone.
         """
@@ -354,61 +375,71 @@ cdef class Cache(object):
         cdef object index_key
         cdef double _now = self._get_timestamp()
 
-        with self._lock:
+        try:
+            entry = <Entry>self._data[key]
+        except KeyError:
+            # Add information that there was a cache miss
+            self.misses += 1
+            raise
+        else:
 
-            try:
-                entry = <Entry>self._data[key]
-            except KeyError:
-                # Add information that there was a cache miss
-                self.misses += 1
-                raise
+            # We have the key but we must first ensure that it's not expired already
+            if entry.expires_at and _now >= entry.expires_at:
+                self._delete(key)
+                self._expired_on_op.append(key)
+                raise KeyExpiredError(key)
+
+            # Update total # of .get operations
+            self.get_ops += 1
+
+            # Update total hits counter
+            self.hits += 1
+
+            # Current position of that key in index
+            index_idx = self._get_index(key)
+
+            # We have the key's position so we can now update per-position counter
+            # to be able to offer statistics on how often a key is found at a given position.
+            hits_per_position = PyInt_AS_LONG(<object>PyDict_GetItem(self.hits_per_position, index_idx))
+            hits_per_position += 1
+            PyDict_SetItem(self.hits_per_position, index_idx, PyInt_FromLong(hits_per_position))
+
+            # Remove key from index
+            index_key = self._remove_from_index_by_idx(index_idx)
+
+            # Now insert the key back at the head position.
+            PyList_Insert(self._index, 0, index_key)
+
+            # Update last/prev access information + hits
+            entry.prev_read = entry.last_read
+            entry.last_read = _now
+            entry.hits += 1
+
+            # The entry exists and has not expired so now, if we are configured to, prolong its expiration time
+            if self.extend_expiry_on_get and entry.expiry:
+                entry.expires_at = _now + entry.expiry
+
+            # If details are requested, add current position of key to data returned
+            if details:
+                entry.key = key
+                entry.position = index_idx
+                return entry
+
+            # Without details, simply return value stored for key
             else:
+                return entry.value
 
-                # We have the key but we must first ensure that it's not expired already
-                if entry.expires_at and _now >= entry.expires_at:
-                    self._delete(key)
-                    self._expired_on_op.append(key)
-                    raise KeyExpiredError(key)
+# ################################################################################################################################
 
-                # Update total # of .get operations
-                self.get_ops += 1
+    cpdef get(self, str key, bint details=False):
+        with self._lock:
+            return self._get(key, details)
 
-                # Update total hits counter
-                self.hits += 1
+# ################################################################################################################################
 
-                # Current position of that key in index
-                index_idx = self._get_index(key)
-
-                # We have the key's position so we can now update per-position counter
-                # to be able to offer statistics on how often a key is found at a given position.
-                hits_per_position = PyInt_AS_LONG(<object>PyDict_GetItem(self.hits_per_position, index_idx))
-                hits_per_position += 1
-                PyDict_SetItem(self.hits_per_position, index_idx, PyInt_FromLong(hits_per_position))
-
-                # Remove key from index
-                index_key = self._remove_from_index_by_idx(index_idx)
-
-                # Now insert the key back at the head position.
-                PyList_Insert(self._index, 0, index_key)
-
-                # Update last/prev access information + hits
-                entry.prev_read = entry.last_read
-                entry.last_read = _now
-                entry.hits += 1
-
-                # The entry exists and has not expired so now, if we are configured to, prolong its expiration time
-                if self.extend_expiry_on_get and entry.expiry:
-                    entry.expires_at = _now + entry.expiry
-
-                # If details are requested, add current position of key to data returned
-                if details:
-                    entry.key = key
-                    entry.position = index_idx
-                    return entry
-
-                # Without details, simply return value stored for key
-                else:
-                    return entry.value
+    cpdef expire(self, str key, expiry, dict meta_ref):
+        with self._lock:
+            self._set(key, self._get(key, False), expiry, meta_ref)
 
 # ################################################################################################################################
 

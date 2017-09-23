@@ -18,6 +18,7 @@ from gevent.lock import RLock
 
 # Zato
 from zato.cache import Cache as _CyCache
+from zato.common import CACHE
 
 # ################################################################################################################################
 
@@ -31,6 +32,7 @@ class Cache(object):
     """
     def __init__(self, config):
         self.config = config
+        self.needs_sync = self.config.sync_method != CACHE.SYNC_METHOD.NO_SYNC.id
         self.impl = _CyCache(self.config.max_size, self.config.max_item_size, self.config.extend_expiry_on_get,
             self.config.extend_expiry_on_set)
         spawn(self._delete_expired)
@@ -41,23 +43,21 @@ class Cache(object):
     def __setitem__(self, key, value):
         self.set(key, value)
 
-    def __getattr__(self, key):
-        return self.get(key)
-
-    def __setattr__(self, key, value):
-        self.set(key, value)
+    def __delitem__(self, key):
+        del self.impl[key]
 
     def __contains__(self, key):
         return key in self.impl
 
-    def __len__(self, key):
+    def __len__(self):
         return len(self.impl)
 
     def set(self, key, value, expiry=0.0):
         """ Sets key to a given value. Key must be string/unicode. Value must be an integer or string/unicode.
         Expiry is in seconds (or a fraction of).
         """
-        self.impl.set(key, value, expiry)
+        meta_ref = {} if self.needs_sync else None
+        self.impl.set(key, value, expiry, meta_ref)
 
     def get(self, key, details=False):
         """ Returns a value stored under a given key. If details is True, return metadata about the key as well.
@@ -68,6 +68,12 @@ class Cache(object):
         """ Deletes a cache entry by its key.
         """
         self.impl.delete(key)
+
+    def expire(self, key, expiry=0.0):
+        """ Sets expiry in seconds (or a fraction of) for a given key.
+        """
+        meta_ref = {} if self.needs_sync else None
+        self.impl.expire(key, expiry, meta_ref)
 
     def keys(self):
         """ Returns all keys in the cache - like dict.keys().
@@ -84,19 +90,32 @@ class Cache(object):
         """
         return self.impl.items()
 
+    def clear(self):
+        """ Clears the cache - removes all entries.
+        """
+        self.impl.clear()
+
     def _delete_expired(self, interval=5, _sleep=sleep):
         """ Invokes in its own greenlet in background to delete expired cache entries.
         """
-        while True:
-            try:
-                _sleep(interval)
-                deleted = self.impl.delete_expired()
-            except Exception, e:
-                logger.warn(format_exc(e))
-                _sleep(2)
-            else:
-                if deleted:
-                    logger.info('Deleted keys expired in the last %ss - %s', interval, deleted)
+        try:
+            while True:
+                try:
+                    _sleep(interval)
+                    deleted = self.impl.delete_expired()
+                except Exception, e:
+                    logger.warn('Exception while deleting expired keys %s', format_exc(e))
+                    _sleep(2)
+                else:
+                    if deleted:
+                        logger.info('Cache `%s` deleted keys expired in the last %ss - %s', self.config.name, interval, deleted)
+        except Exception, e:
+            logger.warn('Exception in _delete_expired loop %s', format_exc(e))
+
+    def sync_entry(self, key, value, expiry):
+        """ Invoked by other servers/processes to set this cache's key to value along with expiry,
+        synchronizing this cache's entry with the one the calling cache has.
+        """
 
 # ################################################################################################################################
 
@@ -114,16 +133,10 @@ class CacheAPI(object):
         self.lock = RLock()
         self.default = _NotConfiguredAPI()
         self.caches = {}
-        self._set_api_calls()
 
     def _maybe_set_default(self, config, cache):
         if config.is_default:
             self.default = cache
-            self._set_api_calls()
-
-    def _set_api_calls(self):
-        self.set = self.default.set
-        self.get = self.default.get
 
 # ################################################################################################################################
 
