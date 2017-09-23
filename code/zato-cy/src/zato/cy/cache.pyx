@@ -83,6 +83,20 @@ cdef class Entry:
         # This entry's position in index
         public long position
 
+    cpdef dict to_dict(self):
+        return {
+            'key': self.key,
+            'value': self.value,
+            'last_read': self.last_read,
+            'prev_read': self.prev_read,
+            'last_write': self.last_write,
+            'prev_write': self.prev_write,
+            'expiry': self.expiry,
+            'expires_at': self.expires_at,
+            'hits': self.hits,
+            'position': self.position,
+        }
+
 # ################################################################################################################################
 
 cdef class Cache(object):
@@ -218,7 +232,7 @@ cdef class Cache(object):
 # ################################################################################################################################
 
     cpdef object index(self, str key):
-        """ Returns position key given on input currently holds or None if key is not found.
+        """ Returns position the key given on input currently holds or None if key is not found.
         """
         with self._lock:
             if PyDict_Contains(self._data, key):
@@ -279,15 +293,20 @@ cdef class Cache(object):
         if PyDict_Contains(self._data, key):
             entry = <Entry>PyDict_GetItem(self._data, key)
 
-            # If we find an expired entry, we can either extend its lifetime or delete it,
-            # depending on what self.extend_expiry_on_set dictates.
-            if entry.expires_at and _now >= entry.expires_at:
-                if self.extend_expiry_on_set:
-                    entry.expires_at = _now + entry.expiry
-                else:
-                    self._delete(key)
-                    self._expired_on_op.append(key)
-                    raise KeyExpiredError(key)
+            # If we have a key that previously was not using expiry, we must set it now.
+            if not entry.expires_at:
+                if expiry:
+                    entry.expires_at = _now + expiry
+            else:
+                # If we find an expired entry (meaning that entry.expires_at must have been set already),
+                # we can either extend its lifetime or delete it, depending on what self.extend_expiry_on_set dictates.
+                if entry.expires_at and _now >= entry.expires_at:
+                    if self.extend_expiry_on_set:
+                        entry.expires_at = _now + entry.expiry
+                    else:
+                        self._delete(key)
+                        self._expired_on_op.append(key)
+                        raise KeyExpiredError(key)
 
             # Update access information for that entry, if we get to this point, the entry is not expired,
             # or at least its expiry time has been extended.
