@@ -42,7 +42,7 @@ def instance_hook(self, input, instance, attrs):
 def response_hook(self, input, _ignored, attrs, service_type):
     if service_type == 'get_list':
         for item in self.response.payload:
-            item.current_size = self.cache.get_size(item.name)
+            item.current_size = self.cache.get_size(_COMMON_CACHE.TYPE.BUILTIN, item.name)
 
 # ################################################################################################################################
 
