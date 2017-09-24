@@ -409,6 +409,7 @@ class CACHE:
 
     class TYPE:
         BUILTIN = 'builtin'
+        MEMCACHED = 'memcached'
 
     class STATE_CHANGED:
         SET = 'SET'
