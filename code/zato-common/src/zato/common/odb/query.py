@@ -20,10 +20,10 @@ from sqlalchemy.sql.expression import case
 # Zato
 from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
      URL_PARAMS_PRIORITY
-from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CassandraConn, CassandraQuery, \
-     ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
-     DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, \
-     IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
+from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
+     CassandraQuery, ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
+     CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, \
+     HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
      OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, \
      RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, TechnicalAccount, \
@@ -1379,7 +1379,7 @@ def _cache_builtin(session, cluster_id):
         order_by(CacheBuiltin.name)
 
 def cache_builtin(session, cluster_id, id):
-    """ An individual cache definition.
+    """ An individual built-in cache definition.
     """
     return _cache_builtin(session, cluster_id).\
         filter(CacheBuiltin.id==id).\
@@ -1387,9 +1387,34 @@ def cache_builtin(session, cluster_id, id):
 
 @query_wrapper
 def cache_builtin_list(session, cluster_id, needs_columns=False):
-    """ A list of cache definitions.
+    """ A list of built-in cache definitions.
     """
     return _cache_builtin(session, cluster_id)
+
+# ################################################################################################################################
+
+def _cache_memcached(session, cluster_id):
+    return session.query(
+        CacheMemcached.id, CacheMemcached.name, CacheMemcached.is_active,
+        CacheMemcached.is_default, CacheMemcached.cache_type,
+        CacheMemcached.servers, CacheMemcached.extra).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==CacheMemcached.cluster_id).\
+        filter(Cache.id==CacheMemcached.id).\
+        order_by(CacheMemcached.name)
+
+def cache_memcached(session, cluster_id, id):
+    """ An individual Memcached cache definition.
+    """
+    return _cache_builtin(session, cluster_id).\
+        filter(CacheMemcached.id==id).\
+        one()
+
+@query_wrapper
+def cache_memcached_list(session, cluster_id, needs_columns=False):
+    """ A list of Memcached cache definitions.
+    """
+    return _cache_memcached(session, cluster_id)
 
 # ################################################################################################################################
 

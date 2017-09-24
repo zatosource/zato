@@ -11,19 +11,18 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Zato
 from zato.common import CACHE as _COMMON_CACHE
 from zato.common.broker_message import CACHE
-from zato.common.odb.model import Cache, CacheBuiltin
-from zato.common.odb.query import cache_builtin_list
+from zato.common.odb.model import Cache, CacheMemcached
+from zato.common.odb.query import cache_memcached_list
 from zato.server.service.internal import AdminService
 from zato.server.service.internal.cache import common_instance_hook
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 elem = 'cache_builtin'
-model = CacheBuiltin
-label = 'a built-in cache definition'
+model = CacheMemcached
+label = 'a Memcached cache definition'
 broker_message = CACHE
-broker_message_prefix = 'BUILTIN_'
-list_func = cache_builtin_list
-output_optional_extra = ['current_size']
+broker_message_prefix = 'MEMCACHED_'
+list_func = cache_memcached_list
 
 # ################################################################################################################################
 
@@ -31,15 +30,8 @@ instance_hook = common_instance_hook
 
 # ################################################################################################################################
 
-def response_hook(self, input, _ignored, attrs, service_type):
-    if service_type == 'get_list':
-        for item in self.response.payload:
-            item.current_size = self.cache.get_size(_COMMON_CACHE.TYPE.BUILTIN, item.name)
-
-# ################################################################################################################################
-
 class GetList(AdminService):
-    _filter_by = CacheBuiltin.name,
+    _filter_by = CacheMemcached.name,
     __metaclass__ = GetListMeta
 
 # ################################################################################################################################

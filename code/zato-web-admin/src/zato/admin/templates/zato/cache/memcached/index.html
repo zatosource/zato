@@ -13,7 +13,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/cache/builtin/index.js"></script>
+    <script type="text/javascript" src="/static/js/cache/memcached/index.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -44,7 +44,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Cache definitions - built-in</h2>
+<h2 class="zato">Cache definitions - Memcached</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -58,7 +58,7 @@
     {% if cluster_id %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.cache.builtin.create()">Create a new definition</a>
+            <a href="javascript:$.fn.zato.cache.memcached.create()">Create a new definition</a>
         </div>
 
         <div id="markup">
@@ -102,8 +102,8 @@
                         <td>{{ item.extend_expiry_on_set|yesno:'Yes,No'  }}</td>
                         <td>{{ item.sync_method }}</td>
                         <td>{{ item.persistent_storage }}</td>
-                        <td><a href="javascript:$.fn.zato.cache.builtin.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.cache.builtin.delete_('{{ item.id }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.cache.memcached.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="javascript:$.fn.zato.cache.memcached.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_default }}</td>
@@ -125,7 +125,7 @@
 
         <div id="create-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "cache-builtin-create" %}" method="post" id="create-form">
+                <form action="{% url "cache-memcached-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
                             <td style="vertical-align:middle; width:30%">Name</td>
@@ -187,7 +187,7 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" name="cache_type" value="builtin" />
+                    <input type="hidden" name="cache_type" value="memcached" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                 </form>
             </div>
@@ -195,7 +195,7 @@
 
         <div id="edit-div" class='data-popup ignore'>
             <div class="bd">
-                <form action="{% url "cache-builtin-edit" %}" method="post" id="edit-form">
+                <form action="{% url "cache-memcached-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
                         <tr>
@@ -258,7 +258,7 @@
                             </td>
                         </tr>
                     </table>
-                    <input type="hidden" id="id_edit-cache_type" name="edit-cache_type" value="builtin" />
+                    <input type="hidden" id="id_edit-cache_type" name="edit-cache_type" value="memcached" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
                 </form>

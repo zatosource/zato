@@ -905,18 +905,25 @@ urlpatterns += [
 
     url(r'^zato/cache/builtin/$',
         login_required(cache_builtin.Index()), name=cache_builtin.Index.url_name),
-
     url(r'^zato/cache/builtin/create/$',
         login_required(cache_builtin.Create()), name=cache_builtin.Create.url_name),
-
     url(r'^zato/cache/builtin/edit/$',
         login_required(cache_builtin.Edit()), name=cache_builtin.Edit.url_name),
-
     url(r'^zato/cache/builtin/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cache_builtin.Delete()), name=cache_builtin.Delete.url_name),
-
     url(r'^zato/cache/builtin/details/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cache_builtin.DetailsIndex()), name=cache_builtin.DetailsIndex.url_name),
+
+    url(r'^zato/cache/memcached/$',
+        login_required(cache_memcached.Index()), name=cache_memcached.Index.url_name),
+    url(r'^zato/cache/memcached/create/$',
+        login_required(cache_memcached.Create()), name=cache_memcached.Create.url_name),
+    url(r'^zato/cache/memcached/edit/$',
+        login_required(cache_memcached.Edit()), name=cache_memcached.Edit.url_name),
+    url(r'^zato/cache/memcached/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cache_memcached.Delete()), name=cache_memcached.Delete.url_name),
+    url(r'^zato/cache/memcached/details/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cache_memcached.DetailsIndex()), name=cache_memcached.DetailsIndex.url_name),
 
     ]
 
