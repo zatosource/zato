@@ -19,6 +19,14 @@ from gevent.lock import RLock
 # Zato
 from zato.cache import Cache as _CyCache
 from zato.common import CACHE
+from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
+
+builtin_op_to_broker_msg = {
+    CACHE.STATE_CHANGED.GET: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_GET.value,
+    CACHE.STATE_CHANGED.SET: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_SET.value,
+    CACHE.STATE_CHANGED.DELETE: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_DELETE.value,
+    CACHE.STATE_CHANGED.EXPIRE: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_EXPIRE.value,
+}
 
 # ################################################################################################################################
 
@@ -32,68 +40,117 @@ class Cache(object):
     """
     def __init__(self, config):
         self.config = config
+        self.after_state_changed_callback = self.config.after_state_changed_callback
         self.needs_sync = self.config.sync_method != CACHE.SYNC_METHOD.NO_SYNC.id
         self.impl = _CyCache(self.config.max_size, self.config.max_item_size, self.config.extend_expiry_on_get,
             self.config.extend_expiry_on_set)
         spawn(self._delete_expired)
 
+# ################################################################################################################################
+
     def __getitem__(self, key):
         return self.get(key)
+
+# ################################################################################################################################
 
     def __setitem__(self, key, value):
         self.set(key, value)
 
+# ################################################################################################################################
+
     def __delitem__(self, key):
         del self.impl[key]
+
+# ################################################################################################################################
 
     def __contains__(self, key):
         return key in self.impl
 
+# ################################################################################################################################
+
     def __len__(self):
         return len(self.impl)
 
-    def set(self, key, value, expiry=0.0):
+# ################################################################################################################################
+
+    def get(self, key, details=False, _GET=CACHE.STATE_CHANGED.GET):
+        """ Returns a value stored under a given key. If details is True, return metadata about the key as well.
+        """
+        needs_sync = self.needs_sync and self.config.extend_expiry_on_get
+        meta_ref = {'key':key} if needs_sync else None
+
+        if needs_sync:
+            spawn(self.after_state_changed_callback, _GET, self.config.name, meta_ref)
+
+        return self.impl.get(key, details, meta_ref)
+
+# ################################################################################################################################
+
+    def set(self, key, value, expiry=0.0, _SET=CACHE.STATE_CHANGED.SET):
         """ Sets key to a given value. Key must be string/unicode. Value must be an integer or string/unicode.
         Expiry is in seconds (or a fraction of).
         """
-        meta_ref = {} if self.needs_sync else None
+        meta_ref = {'key':key, 'value':value, 'expiry':expiry} if self.needs_sync else None
         self.impl.set(key, value, expiry, meta_ref)
 
-    def get(self, key, details=False):
-        """ Returns a value stored under a given key. If details is True, return metadata about the key as well.
-        """
-        return self.impl.get(key, details)
+        if self.needs_sync:
+            spawn(self.after_state_changed_callback, _SET, self.config.name, meta_ref)
 
-    def delete(self, key):
+# ################################################################################################################################
+
+    def delete(self, key, _DELETE=CACHE.STATE_CHANGED.DELETE):
         """ Deletes a cache entry by its key.
         """
         self.impl.delete(key)
 
-    def expire(self, key, expiry=0.0):
+        if self.needs_sync:
+            spawn(self.after_state_changed_callback, _DELETE, self.config.name, {'key':key})
+
+# ################################################################################################################################
+
+    def expire(self, key, expiry=0.0, _EXPIRE=CACHE.STATE_CHANGED.EXPIRE):
         """ Sets expiry in seconds (or a fraction of) for a given key.
         """
-        meta_ref = {} if self.needs_sync else None
+        meta_ref = {'key':key, 'expiry':expiry} if self.needs_sync else None
         self.impl.expire(key, expiry, meta_ref)
+
+        if self.needs_sync:
+            spawn(self.after_state_changed_callback, _EXPIRE, self.config.name, meta_ref)
+
+# ################################################################################################################################
 
     def keys(self):
         """ Returns all keys in the cache - like dict.keys().
         """
         return self.impl.keys()
 
+# ################################################################################################################################
+
     def values(self):
         """ Returns all values in the cache - like dict.values().
         """
         return self.impl.values()
+
+# ################################################################################################################################
 
     def items(self):
         """ Returns all items in the cache - like dict.items().
         """
         return self.impl.items()
 
+# ################################################################################################################################
+
     def clear(self):
         """ Clears the cache - removes all entries.
         """
         self.impl.clear()
+
+# ################################################################################################################################
+
+    def update_config(self, config):
+        self.impl.update_config(config)
+
+# ################################################################################################################################
 
     def _delete_expired(self, interval=5, _sleep=sleep):
         """ Invokes in its own greenlet in background to delete expired cache entries.
@@ -112,10 +169,33 @@ class Cache(object):
         except Exception, e:
             logger.warn('Exception in _delete_expired loop %s', format_exc(e))
 
-    def sync_entry(self, key, value, expiry):
-        """ Invoked by other servers/processes to set this cache's key to value along with expiry,
-        synchronizing this cache's entry with the one the calling cache has.
+# ################################################################################################################################
+
+    def sync_after_get(self, data):
+        """ Invoked by Cache API to synchronizes this worker's caches after a .get operation in another worker process.
         """
+        self.impl.set_expiration_data(data.key, data.expiry, data.expires_at)
+
+# ################################################################################################################################
+
+    def sync_after_set(self, data):
+        """ Invoked by Cache API to synchronizes this worker's caches after a .set operation in another worker process.
+        """
+        self.impl.set(data.key, data.value, data.expiry, None)
+
+# ################################################################################################################################
+
+    def sync_after_delete(self, data):
+        """ Invoked by Cache API to synchronizes this worker's caches after a .delete operation in another worker process.
+        """
+        self.impl.delete(data.key)
+
+# ################################################################################################################################
+
+    def sync_after_expire(self, data):
+        """ Invoked by Cache API to synchronizes this worker's caches after an .expire operation in another worker process.
+        """
+        self.impl.set_expiration_data(data.key, data.expiry, data.expires_at)
 
 # ################################################################################################################################
 
@@ -129,10 +209,11 @@ class _NotConfiguredAPI(object):
 class CacheAPI(object):
     """ Base class for all cache objects.
     """
-    def __init__(self):
+    def __init__(self, server):
+        self.server = server
         self.lock = RLock()
         self.default = _NotConfiguredAPI()
-        self.caches = {}
+        self.caches = {CACHE.TYPE.BUILTIN:{}}
 
     def _maybe_set_default(self, config, cache):
         if config.is_default:
@@ -140,59 +221,127 @@ class CacheAPI(object):
 
 # ################################################################################################################################
 
+    def after_state_changed(self, op, cache_name, data, _broker_msg=builtin_op_to_broker_msg):
+        """ Callback method invoked by each cache if it requires synchronization with other worker processes.
+        """
+        try:
+            data['action'] = _broker_msg[op]
+            data['cache_name'] = cache_name
+            data['source_worker_id'] = self.server.worker_id
+            self.server.broker_client.publish(data)
+        except Exception, e:
+            logger.warn('Could not run `%s` after_state_changed in cache `%s`, data:`%s`, e:`%s`',
+                op, cache_name, data, format_exc(e))
+
+# ################################################################################################################################
+
     def _create_builtin(self, config):
+        """ A low-level method building a Cache object for built-in caches. Must be called with self.lock held.
+        """
+        config.after_state_changed_callback = self.after_state_changed
         return Cache(config)
 
 # ################################################################################################################################
 
     def _create(self, config):
-        func = getattr(self, '_create_{}'.format(config.cache_type))
-        cache = func(config)
-        self.caches[config.name] = cache
+        """ A low-level method building caches. Must be called with self.lock held.
+        """
+        # Create a cache object out of configuration
+        cache = getattr(self, '_create_{}'.format(config.cache_type))(config)
+
+        # Add it to caches
+        self.caches[config.cache_type][config.name] = cache
+
+        # If told to be configuration, make this cache the default one
         self._maybe_set_default(config, cache)
 
 # ################################################################################################################################
 
     def create(self, config):
+        """ Public method for building caches out of configuration.
+        """
         with self.lock:
             self._create(config)
 
 # ################################################################################################################################
 
     def _edit(self, config):
-        self.caches[config.name].update_config(config)
+        """ A low-level method for updating configuration of a given cache. Must be called with self.lock held.
+        """
+        self.caches[config.cache_type][config.name].update_config(config)
 
 # ################################################################################################################################
 
     def edit(self, config):
+        """ Public method for updating configuration of a given cache.
+        """
         with self.lock:
             self._edit(config)
 
 # ################################################################################################################################
 
-    def _delete(self, name):
-        del self.caches[name]
+    def _delete(self, cache_type, name):
+        """ A low-level method for deleting a given cache. Must be called with self.lock held.
+        """
+        self._clear(cache_type, name)
+        del self.caches[cache_type][name]
 
 # ################################################################################################################################
 
     def delete(self, config):
+        """ Public method for updating configuration of a given cache.
+        """
         with self.lock:
             self._delete(config.name)
 
 # ################################################################################################################################
 
-    def _clear(self, name):
-        self.caches[name].clear()
+    def _clear(self, cache_type, name):
+        """ A low-level method for clearing out contents of a given cache. Must be called with self.lock held.
+        """
+        self.caches[cache_type][name].clear()
 
 # ################################################################################################################################
 
-    def clear(self, name):
+    def clear(self, cache_type, name):
+        """ Public method for clearing out a given cache.
+        """
         with self.lock:
-            self._clear(name)
+            self._clear(cache_type, name)
 
 # ################################################################################################################################
 
-    def get_size(self, name):
-        return len(self.caches[name])
+    def get_size(self, cache_type, name):
+        """ Returns current size, the number of entries, in a given cache.
+        """
+        return len(self.caches[cache_type][name])
+
+# ################################################################################################################################
+
+    def sync_after_get(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .get operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_get(data)
+
+# ################################################################################################################################
+
+    def sync_after_set(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .set operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_set(data)
+
+# ################################################################################################################################
+
+    def sync_after_delete(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .delete operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_delete(data)
+
+# ################################################################################################################################
+
+    def sync_after_expire(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after an .expire operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_expire(data)
 
 # ################################################################################################################################

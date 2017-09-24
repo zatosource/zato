@@ -364,7 +364,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cdef object _get(self, str key, bint details):
+    cdef object _get(self, str key, bint details, dict meta_ref):
         """ Returns data for key in cache if present. Otherwise returns None. If 'details' is True,
         returns a dictionary with value and metadata instead of value alone.
         """
@@ -419,6 +419,11 @@ cdef class Cache(object):
             if self.extend_expiry_on_get and entry.expiry:
                 entry.expires_at = _now + entry.expiry
 
+            # If any output dict for metadata was passed in by reference, set its requires items.
+            if meta_ref is not None:
+                meta_ref['expires_at'] = entry.expires_at
+                meta_ref['expiry'] = entry.expiry
+
             # If details are requested, add current position of key to data returned
             if details:
                 entry.key = key
@@ -431,15 +436,43 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef get(self, str key, bint details=False):
+    cpdef get(self, str key, bint details, dict meta_ref):
         with self._lock:
-            return self._get(key, details)
+            return self._get(key, details, meta_ref)
 
 # ################################################################################################################################
 
-    cpdef expire(self, str key, expiry, dict meta_ref):
+    cpdef expire(self, str key, double expiry, dict meta_ref):
+        """ Makes a given cache entry expire after 'expiry' seconds.
+        """
         with self._lock:
-            self._set(key, self._get(key, False), expiry, meta_ref)
+            self._set(key, self._get(key, False, None), expiry, meta_ref)
+
+# ################################################################################################################################
+
+    cpdef set_expiration_data(self, str key, double expiry, double expires_at):
+        """ Sets expiry and expires_at attributes of a cache entry. Unlike self.expire,
+        this method is not exposed to user API and is instead used in cache synchronization,
+        i.e. current worker's Cache API calls this method after another worker issued a call that changes
+        a given entry's expiry/expires_at attributes.
+        """
+        cdef Entry entry
+
+        with self._lock:
+            try:
+                entry = <Entry>self._data[key]
+            except KeyError:
+                # We wouldn't have been called if that key hadn't existed in another worker's cache.
+                # But since it doesn't in ours, it means that it must have been already deleted,
+                # in which case report an error and quit.
+                raise KeyError('Key `%s` not found by set_expiration_data' % key)
+            else:
+                # Process this request only if its expiration data is farther in the future than what we have in cache,
+                # i.e. it's possible that our current worker already updated expiration metadata before this request was received
+                # and without this condition, we would set expiration data back in the past.
+                if expires_at > entry.expires_at:
+                    entry.expiry = expiry
+                    entry.expires_at = expires_at
 
 # ################################################################################################################################
 

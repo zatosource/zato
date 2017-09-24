@@ -410,6 +410,12 @@ class CACHE:
     class TYPE:
         BUILTIN = 'builtin'
 
+    class STATE_CHANGED:
+        SET = 'SET'
+        GET = 'GET'
+        DELETE = 'DELETE'
+        EXPIRE = 'EXPIRE'
+
     class DEFAULT:
         MAX_SIZE = 10000
         MAX_ITEM_SIZE = 1000 # In characters for string/unicode, bytes otherwise
