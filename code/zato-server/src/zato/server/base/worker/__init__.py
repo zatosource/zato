@@ -193,7 +193,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.vault_conn_api = VaultConnAPI()
 
         # Caches
-        self.cache_api = CacheAPI()
+        self.cache_api = CacheAPI(self.server)
 
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.

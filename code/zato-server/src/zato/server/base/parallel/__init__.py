@@ -41,7 +41,7 @@ from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
 from zato.common.time_util import TimeUtil
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
-     invoke_startup_services as _invoke_startup_services, spawn_greenlet, StaticConfig, register_diag_handlers
+     invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, register_diag_handlers
 from zato.distlock import LockManager
 from zato.server.base.worker import WorkerStore
 from zato.server.config import ConfigStore
@@ -91,6 +91,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.connector_server_grace_time = None
         self.id = None
         self.name = None
+        self.worker_id = None
+        self.worker_pid = None
         self.cluster = None
         self.cluster_id = None
         self.kvdb = None
@@ -356,6 +358,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.name = server.name
         self.cluster_id = server.cluster_id
         self.cluster = self.odb.cluster
+        self.worker_id = '{}.{}.{}.{}'.format(self.cluster_id, self.id, self.worker_pid, new_cid())
 
         # Looked up upfront here and assigned to services in their store
         self.enforce_service_invokes = asbool(self.fs_server_config.misc.enforce_service_invokes)
@@ -535,6 +538,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def post_fork(arbiter, worker):
         """ A Gunicorn hook which initializes the worker.
         """
+        worker.app.zato_wsgi_app.worker_pid = worker.pid
         ParallelServer.start_server(worker.app.zato_wsgi_app, arbiter.zato_deployment_key)
 
 # ################################################################################################################################

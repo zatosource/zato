@@ -422,6 +422,11 @@ class CACHE(Constants):
     BUILTIN_EDIT = ValueConstant('')
     BUILTIN_DELETE = ValueConstant('')
 
+    BUILTIN_STATE_CHANGED_GET = ValueConstant('')
+    BUILTIN_STATE_CHANGED_SET = ValueConstant('')
+    BUILTIN_STATE_CHANGED_DELETE = ValueConstant('')
+    BUILTIN_STATE_CHANGED_EXPIRE = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'
