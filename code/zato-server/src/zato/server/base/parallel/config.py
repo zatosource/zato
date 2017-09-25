@@ -145,6 +145,9 @@ class ConfigLoader(object):
         query = self.odb.get_cache_builtin_list(server.cluster.id, True)
         self.config.cache_builtin = ConfigDict.from_query('cache_builtin', query)
 
+        query = self.odb.get_cache_memcached_list(server.cluster.id, True)
+        self.config.cache_memcached = ConfigDict.from_query('cache_memcached', query)
+
         # FTP
         query = self.odb.get_out_ftp_list(server.cluster.id, True)
         self.config.out_ftp = ConfigDict.from_query('out_ftp', query)

@@ -725,8 +725,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def init_caches(self):
-        for value in self.worker_config.cache_builtin.values():
-            self.cache_api.create(bunchify(value['config']))
+
+        for name in 'builtin', 'memcached':
+            cache = getattr(self.worker_config, 'cache_{}'.format(name))
+            for value in cache.values():
+                self.cache_api.create(bunchify(value['config']))
 
 # ################################################################################################################################
 
@@ -2046,17 +2049,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def on_broker_msg_CHANNEL_STOMP_CHANGE_PASSWORD(self, msg):
         dispatcher.notify(broker_message.CHANNEL.STOMP_CHANGE_PASSWORD.value, msg)
         self.stomp_channel_api.change_password_def(msg)
-
-# ################################################################################################################################
-
-    def on_broker_msg_CACHE_BUILTIN_CREATE(self, msg):
-        self.cache_api.create(msg)
-
-    def on_broker_msg_CACHE_BUILTIN_EDIT(self, msg):
-        self.cache_api.edit(msg)
-
-    def on_broker_msg_CACHE_BUILTIN_DELETE(self, msg):
-        self.cache_api.delete(msg)
 
 # ################################################################################################################################
 
