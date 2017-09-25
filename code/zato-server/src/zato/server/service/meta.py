@@ -136,6 +136,7 @@ def update_attrs(cls, name, attrs):
 
     attrs.is_edit = False
     attrs.is_create_edit = False
+    attrs.is_delete = False
 
     if name == 'GetList':
         # get_sio sorts out what is required and what is optional.
@@ -147,10 +148,14 @@ def update_attrs(cls, name, attrs):
         attrs.broker_message_prefix = getattr(mod, 'broker_message_prefix')
 
         if name in('Create', 'Edit'):
+
             attrs.input_required = attrs.model
             attrs.input_optional = attrs.model
             attrs.is_edit = name == 'Edit'
             attrs.is_create_edit = True
+
+        elif name == 'Delete':
+            attrs.is_delete = True
 
     return attrs
 
@@ -338,11 +343,12 @@ class DeleteMeta(AdminServiceMeta):
     @staticmethod
     def handle(attrs):
         def handle_impl(self):
+            input = self.request.input
             with closing(self.odb.session()) as session:
                 attrs._meta_session = session
                 try:
                     instance = session.query(attrs.model).\
-                        filter(attrs.model.id==self.request.input.id).\
+                        filter(attrs.model.id==input.id).\
                         one()
 
                     if attrs.instance_hook:
@@ -357,16 +363,16 @@ class DeleteMeta(AdminServiceMeta):
 
                     raise
                 else:
-                    self.request.input.action = getattr(attrs.broker_message, attrs.broker_message_prefix + 'DELETE').value
-                    self.request.input.name = getattr(instance, 'name', ZATO_NOT_GIVEN)
+                    input.action = getattr(attrs.broker_message, attrs.broker_message_prefix + 'DELETE').value
+                    input.name = getattr(instance, 'name', ZATO_NOT_GIVEN)
 
                     for name in attrs.extra_delete_attrs:
-                        self.request.input[name] = getattr(instance, name)
+                        input[name] = getattr(instance, name)
 
                     if attrs.broker_message_hook:
-                        attrs.broker_message_hook(self, self.request.input, instance, attrs, 'delete')
+                        attrs.broker_message_hook(self, input, instance, attrs, 'delete')
 
-                    self.broker_client.publish(self.request.input)
+                    self.broker_client.publish(input)
 
                     if attrs.delete_hook:
                         attrs.delete_hook(self, input, instance, attrs)

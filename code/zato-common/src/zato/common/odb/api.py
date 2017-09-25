@@ -1105,6 +1105,20 @@ class ODBManager(SessionWrapper):
 
 # ################################################################################################################################
 
+    def get_cache_memcached(self, cluster_id, id):
+        """ Returns a Memcached-based definition's details.
+        """
+        with closing(self.session()) as session:
+            return query.cache_memcached(session, cluster_id, id)
+
+    def get_cache_memcached_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of Memcached-based cache definitions.
+        """
+        with closing(self.session()) as session:
+            return query.cache_memcached_list(session, cluster_id, needs_columns)
+
+# ################################################################################################################################
+
     def get_namespace_list(self, cluster_id, needs_columns=False):
         """ Returns a list of XML namespaces.
         """

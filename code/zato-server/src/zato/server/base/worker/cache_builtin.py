@@ -8,23 +8,30 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from logging import getLogger
-from traceback import format_exc
-
 # Zato
 from zato.common import CACHE
 from zato.server.base.worker.common import WorkerImpl
 
 # ################################################################################################################################
 
-logger = getLogger(__name__)
+class CacheBuiltin(WorkerImpl):
+    """ Handles asynchronous updates to built-in caches.
+    """
 
 # ################################################################################################################################
 
-class SMSTwilio(WorkerImpl):
-    """ Handles asynchronous updates to built-in caches.
-    """
+    def on_broker_msg_CACHE_BUILTIN_CREATE(self, msg):
+        self.cache_api.create(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_CACHE_BUILTIN_EDIT(self, msg):
+        self.cache_api.edit(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_CACHE_BUILTIN_DELETE(self, msg):
+        self.cache_api.delete(msg)
 
 # ################################################################################################################################
 

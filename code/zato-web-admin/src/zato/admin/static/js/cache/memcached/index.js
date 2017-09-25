@@ -40,15 +40,22 @@ $.fn.zato.cache.memcached.data_table.new_row = function(item, data, include_tr) 
     var is_default = item.is_default == true
     var is_debug = item.is_debug == true
 
+    if(is_default) {
+        var delete_link = String.format("<span class='form_hint'>(Delete)</span>");
+    }
+    else {
+        var delete_link = String.format("<a href='javascript:$.fn.zato.cache.builtin.delete_({0});'>Delete</a>", item.id);
+    }
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? "Yes":"No");
     row += String.format('<td>{0}</td>', is_default ? "Yes":"No");
     row += String.format('<td>{0}</td>', item.servers);
-    row += String.format('<td>{0}</td>', is_debug);
+    row += String.format('<td>{0}</td>', is_debug ? "Yes":"No");
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cache.memcached.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.cache.memcached.delete_({0});'>Delete</a>", item.id));
+    row += String.format('<td>{0}</td>', delete_link);
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
     row += String.format("<td class='ignore'>{0}</td>", is_default);

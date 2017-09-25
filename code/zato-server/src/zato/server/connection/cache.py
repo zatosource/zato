@@ -16,10 +16,17 @@ from traceback import format_exc
 from gevent import sleep, spawn
 from gevent.lock import RLock
 
+# python-memcached
+from memcache import Client as _MemcachedClient
+
+# Paste
+from paste.util.converters import asbool
+
 # Zato
 from zato.cache import Cache as _CyCache
 from zato.common import CACHE
 from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
+from zato.common.util import parse_extra_into_dict
 
 builtin_op_to_broker_msg = {
     CACHE.STATE_CHANGED.GET: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_GET.value,
@@ -214,7 +221,13 @@ class CacheAPI(object):
         self.server = server
         self.lock = RLock()
         self.default = _NotConfiguredAPI()
-        self.caches = {CACHE.TYPE.BUILTIN:{}}
+        self.caches = {
+            CACHE.TYPE.BUILTIN:{},
+            CACHE.TYPE.MEMCACHED:{},
+        }
+
+        self.builtin = self.caches[CACHE.TYPE.BUILTIN]
+        self.memcached = self.caches[CACHE.TYPE.MEMCACHED]
 
     def _maybe_set_default(self, config, cache):
         if config.is_default:
@@ -237,10 +250,35 @@ class CacheAPI(object):
 # ################################################################################################################################
 
     def _create_builtin(self, config):
-        """ A low-level method building a Cache object for built-in caches. Must be called with self.lock held.
+        """ A low-level method building a bCache object for built-in caches. Must be called with self.lock held.
         """
         config.after_state_changed_callback = self.after_state_changed
         return Cache(config)
+
+# ################################################################################################################################
+
+    def _create_memcached(self, config):
+        """ A low-level method building a Memcached-based cache connections.
+        """
+        def impl():
+            try:
+                servers = [elem.strip() for elem in config.servers.splitlines()]
+                cache = _MemcachedClient(servers, asbool(config.is_debug), **parse_extra_into_dict(config.extra))
+                self._add_cache(config, cache)
+            except Exception, e:
+                logger.warn(format_exc(e))
+
+        spawn(impl)
+
+# ################################################################################################################################
+
+    def _add_cache(self, config, cache):
+
+        # Add it to caches
+        self.caches[config.cache_type][config.name] = cache
+
+        # If told to be configuration, make this cache the default one
+        self._maybe_set_default(config, cache)
 
 # ################################################################################################################################
 
@@ -250,11 +288,10 @@ class CacheAPI(object):
         # Create a cache object out of configuration
         cache = getattr(self, '_create_{}'.format(config.cache_type))(config)
 
-        # Add it to caches
-        self.caches[config.cache_type][config.name] = cache
-
-        # If told to be configuration, make this cache the default one
-        self._maybe_set_default(config, cache)
+        # Only built-in caches can be added directly because they do not establish
+        # any external connections, any other cache will be built in a background greenlet
+        if config.cache_type == CACHE.TYPE.BUILTIN:
+            self._add_cache(config, cache)
 
 # ################################################################################################################################
 
@@ -269,7 +306,14 @@ class CacheAPI(object):
     def _edit(self, config):
         """ A low-level method for updating configuration of a given cache. Must be called with self.lock held.
         """
-        self.caches[config.cache_type][config.name].update_config(config)
+        cache = self.caches[config.cache_type][config.old_name]
+
+        if config.cache_type == CACHE.TYPE.BUILTIN:
+            cache.update_config(config)
+        else:
+            cache.disconnect_all()
+            self._delete(config.cache_type, config.old_name)
+            self._create_memcached(config)
 
 # ################################################################################################################################
 
@@ -284,7 +328,13 @@ class CacheAPI(object):
     def _delete(self, cache_type, name):
         """ A low-level method for deleting a given cache. Must be called with self.lock held.
         """
-        self._clear(cache_type, name)
+        cache = self.caches[cache_type][name]
+
+        if cache_type == CACHE.TYPE.BUILTIN:
+            self._clear(cache_type, name)
+        else:
+            cache.disconnect_all()
+
         del self.caches[cache_type][name]
 
 # ################################################################################################################################
@@ -293,7 +343,7 @@ class CacheAPI(object):
         """ Public method for updating configuration of a given cache.
         """
         with self.lock:
-            self._delete(config.name)
+            self._delete(config.cache_type, config.name)
 
 # ################################################################################################################################
 
