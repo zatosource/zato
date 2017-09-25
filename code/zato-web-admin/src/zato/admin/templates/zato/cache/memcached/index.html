@@ -23,20 +23,15 @@
             'name',
             '_is_active',
             '_is_default',
-            'cur_size',
-            'max_size',
-            'max_item_size',
-            '_extend_expiry_on_get',
-            '_extend_expiry_on_set',
-            'sync_method',
-            'persistent_storage',
+            'servers',
+            '_is_debug',
             '_edit',
             '_delete',
             'id',
             'is_active',
             'is_default',
-            'extend_expiry_on_get',
-            'extend_expiry_on_set',
+            'is_debug',
+            'extra',
         ]
     }
     </script>
@@ -70,13 +65,8 @@
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Default</a></th>
-                        <th><a href="#">Current size</a></th>
-                        <th><a href="#">Max size</a></th>
-                        <th><a href="#">Max item size</a></th>
-                        <th><a href="#">Extend exp. on get</a></th>
-                        <th><a href="#">Extend exp. on set</a></th>
-                        <th><a href="#">Sync. method</a></th>
-                        <th><a href="#">Persistent storage</a></th>
+                        <th><a href="#">Servers</a></th>
+                        <th><a href="#">Debug mode</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -95,25 +85,20 @@
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.is_default|yesno:'Yes,No' }}</td>
-                        <td>{{ item.current_size }}</td>
-                        <td>{{ item.max_size }}</td>
-                        <td>{{ item.max_item_size }}</td>
-                        <td>{{ item.extend_expiry_on_get|yesno:'Yes,No' }}</td>
-                        <td>{{ item.extend_expiry_on_set|yesno:'Yes,No'  }}</td>
-                        <td>{{ item.sync_method }}</td>
-                        <td>{{ item.persistent_storage }}</td>
+                        <td>{{ item.servers }}</td>
+                        <td>{{ item.is_debug|yesno:'Yes,No' }}</td>
                         <td><a href="javascript:$.fn.zato.cache.memcached.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.cache.memcached.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_default }}</td>
-                        <td class='ignore'>{{ item.extend_expiry_on_get }}</td>
-                        <td class='ignore'>{{ item.extend_expiry_on_set }}</td>
+                        <td class='ignore'>{{ item.is_debug }}</td>
+                        <td class='ignore'>{{ item.extra }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='15'>No results</td>
+                        <td colspan='14'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -128,7 +113,7 @@
                 <form action="{% url "cache-memcached-create" %}" method="post" id="create-form">
                     <table class="form-data">
                         <tr>
-                            <td style="vertical-align:middle; width:30%">Name</td>
+                            <td style="vertical-align:middle; width:20%">Name</td>
                             <td>{{ create_form.name }}</td>
                         </tr>
                         <tr>
@@ -140,45 +125,16 @@
                             <td>{{ create_form.is_default }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Max size
-                            <br/>
-                            <span class="form_hint">0=No limits</span>
-                            <br/>
-                            <span class="form_hint">Default: {{ default_max_size }}</span>
-                            </td>
-                            <td>{{ create_form.max_size }} </td>
+                            <td style="vertical-align:middle">Debug mode</td>
+                            <td>{{ create_form.is_debug }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Max item size
-                            <br/>
-                            <span class="form_hint">0=No limits</span>
-                            <br/>
-                            <span class="form_hint">Default: {{ default_max_item_size }}
-                            <br/>
-                            (characters or bytes)
-                            </span>
-                            </td>
-                            <td>{{ create_form.max_item_size }} </td>
+                            <td style="vertical-align:middle">Servers</td>
+                            <td>{{ create_form.servers }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Extend expiration on get
-                            </td>
-                            <td>{{ create_form.extend_expiry_on_get }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Extend expiration on set
-                            </td>
-                            <td>{{ create_form.extend_expiry_on_set }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Synchronization method
-                            </td>
-                            <td>{{ create_form.sync_method }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Persistent storage
-                            </td>
-                            <td>{{ create_form.persistent_storage }} </td>
+                            <td style="vertical-align:middle">Extra</td>
+                            <td>{{ create_form.extra }} </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
@@ -198,8 +154,7 @@
                 <form action="{% url "cache-memcached-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
                         <tr>
-                        <tr>
-                            <td style="vertical-align:middle; width:30%">Name</td>
+                            <td style="vertical-align:middle; width:20%">Name</td>
                             <td>{{ edit_form.name }}</td>
                         </tr>
                         <tr>
@@ -211,45 +166,16 @@
                             <td>{{ edit_form.is_default }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Max size
-                            <br/>
-                            <span class="form_hint">0=No limits</span>
-                            <br/>
-                            <span class="form_hint">Default: {{ default_max_size }}</span>
-                            </td>
-                            <td>{{ edit_form.max_size }} </td>
+                            <td style="vertical-align:middle">Debug mode</td>
+                            <td>{{ edit_form.is_debug }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Max item size
-                            <br/>
-                            <span class="form_hint">0=No limits</span>
-                            <br/>
-                            <span class="form_hint">Default: {{ default_max_item_size }}
-                            <br/>
-                            (characters or bytes)
-                            </span>
-                            </td>
-                            <td>{{ edit_form.max_item_size }} </td>
+                            <td style="vertical-align:middle">Servers</td>
+                            <td>{{ edit_form.servers }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Extend expiration on get
-                            </td>
-                            <td>{{ edit_form.extend_expiry_on_get }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Extend expiration on set
-                            </td>
-                            <td>{{ edit_form.extend_expiry_on_set }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Synchronization method
-                            </td>
-                            <td>{{ edit_form.sync_method }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Persistent storage
-                            </td>
-                            <td>{{ edit_form.persistent_storage }} </td>
+                            <td style="vertical-align:middle">Extra</td>
+                            <td>{{ edit_form.extra }} </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">
