@@ -1396,8 +1396,9 @@ def cache_builtin_list(session, cluster_id, needs_columns=False):
 def _cache_memcached(session, cluster_id):
     return session.query(
         CacheMemcached.id, CacheMemcached.name, CacheMemcached.is_active,
-        CacheMemcached.is_default, CacheMemcached.cache_type,
-        CacheMemcached.servers, CacheMemcached.extra).\
+        CacheMemcached.is_default, CacheMemcached.is_debug,
+        CacheMemcached.servers, CacheMemcached.extra,
+        CacheMemcached.cache_type).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==CacheMemcached.cluster_id).\
         filter(Cache.id==CacheMemcached.id).\

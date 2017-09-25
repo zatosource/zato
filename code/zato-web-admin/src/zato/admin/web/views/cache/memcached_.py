@@ -29,8 +29,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
-            'extend_expiry_on_set', 'sync_method', 'persistent_storage', 'cache_type', 'current_size')
+        output_required = ('id', 'name', 'is_active', 'is_default', 'is_debug', 'servers', 'extra', 'cache_type')
         output_repeated = True
 
     def handle(self):
@@ -45,8 +44,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
-            'extend_expiry_on_set', 'sync_method', 'persistent_storage', 'cache_type', 'current_size')
+        input_required = ('name', 'is_active', 'is_default', 'is_debug', 'servers', 'extra', 'cache_type')
         output_required = ('id', 'name')
 
     def success_message(self, item):
