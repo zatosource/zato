@@ -94,16 +94,27 @@ def _get_edit_create_message(params, prefix=''):
         'cache_expiry': params.get(prefix + 'cache_expiry'),
     }
 
-def _edit_create_response(id, verb, transport, connection, name):
+def _edit_create_response(req, id, verb, transport, connection, name):
 
-    return_data = {'id': id,
-                   'transport': transport,
-                   'message': 'Successfully {0} the {1} {2} [{3}], check server logs for details'.format(
-                       verb,
-                       TRANSPORT[transport],
-                       CONNECTION[connection],
-                       name),
-                }
+    return_data = {
+        'id': id,
+        'transport': transport,
+        'message': 'Successfully {} the {} {} `{}`, check server logs for details'.format(
+            verb, TRANSPORT[transport], CONNECTION[connection], name),
+    }
+
+    # If current item has a cache assigned, provide its human-friendly name to the caller
+    response = req.zato.client.invoke('zato.http-soap.get', {
+        'cluster_id': req.zato.cluster_id,
+        'id': id,
+    })
+
+    if response.data.cache_id:
+        cache_name = '{}/{}'.format(CACHE_TYPE[response.data.cache_type], response.data.cache_name)
+    else:
+        cache_name = None
+
+    return_data['cache_name'] = cache_name
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
 
@@ -228,7 +239,7 @@ def create(req):
     try:
         response = req.zato.client.invoke('zato.http-soap.create', _get_edit_create_message(req.POST))
         if response.has_data:
-            return _edit_create_response(response.data.id, 'created',
+            return _edit_create_response(req, response.data.id, 'created',
                 req.POST['transport'], req.POST['connection'], req.POST['name'])
         else:
             raise ZatoException(msg=response.details)
@@ -242,7 +253,7 @@ def edit(req):
     try:
         response = req.zato.client.invoke('zato.http-soap.edit', _get_edit_create_message(req.POST, 'edit-'))
         if response.has_data:
-            return _edit_create_response(response.data.id, 'updated',
+            return _edit_create_response(req, response.data.id, 'updated',
                 req.POST['transport'], req.POST['connection'], req.POST['edit-name'])
         else:
             raise ZatoException(msg=response.details)

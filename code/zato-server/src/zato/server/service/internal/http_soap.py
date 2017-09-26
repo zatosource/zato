@@ -29,9 +29,11 @@ from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_P
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, JSONPointer, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsJSONPointer, \
      HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, TLSCACert, to_json, XPath
-from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap_list
+from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap, http_soap_list
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+
+# ################################################################################################################################
 
 class _HTTPSOAPService(object):
     """ A common class for various HTTP/SOAP-related services.
@@ -78,20 +80,43 @@ class _HTTPSOAPService(object):
 
         return info
 
-class GetList(AdminService):
-    """ Returns a list of HTTP/SOAP connections.
-    """
-    _filter_by = HTTPSOAP.name,
+# ################################################################################################################################
 
-    class SimpleIO(GetListAdminSIO):
-        request_elem = 'zato_http_soap_get_list_request'
-        response_elem = 'zato_http_soap_get_list_response'
-        input_required = ('cluster_id', 'connection', 'transport')
+class _BaseGet(AdminService):
+    """ Base class for services returning information about HTTP/SOAP objects.
+    """
+    class SimpleIO:
         output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
             'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type')
+
+# ################################################################################################################################
+
+class Get(_BaseGet):
+    """ Returns information about an individual HTTP/SOAP object by its ID.
+    """
+    class SimpleIO(_BaseGet.SimpleIO):
+        request_elem = 'zato_http_soap_get_request'
+        response_elem = 'zato_http_soap_get_response'
+        input_required = ('cluster_id', 'id')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload = http_soap(session, self.request.input.cluster_id, self.request.input.id)
+
+# ################################################################################################################################
+
+class GetList(_BaseGet):
+    """ Returns a list of HTTP/SOAP connections.
+    """
+    _filter_by = HTTPSOAP.name,
+
+    class SimpleIO(GetListAdminSIO, _BaseGet.SimpleIO):
+        request_elem = 'zato_http_soap_get_list_request'
+        response_elem = 'zato_http_soap_get_list_response'
+        input_required = ('cluster_id', 'connection', 'transport')
         output_repeated = True
 
     def get_data(self, session):
@@ -103,12 +128,16 @@ class GetList(AdminService):
         with closing(self.odb.session()) as session:
             self.response.payload[:] = self.get_data(session)
 
+# ################################################################################################################################
+
 class _CreateEdit(AdminService, _HTTPSOAPService):
     def add_tls_ca_cert(self, input, sec_tls_ca_cert_id):
         with closing(self.odb.session()) as session:
             input.sec_tls_ca_cert_name = session.query(TLSCACert.name).\
                 filter(TLSCACert.id==sec_tls_ca_cert_id).\
                 one()[0]
+
+# ################################################################################################################################
 
 class Create(_CreateEdit):
     """ Creates a new HTTP/SOAP connection.
@@ -223,6 +252,8 @@ class Create(_CreateEdit):
                 session.rollback()
 
                 raise
+
+# ################################################################################################################################
 
 class Edit(_CreateEdit):
     """ Updates an HTTP/SOAP connection.
@@ -352,6 +383,8 @@ class Edit(_CreateEdit):
 
                 raise
 
+# ################################################################################################################################
+
 class Delete(AdminService, _HTTPSOAPService):
     """ Deletes an HTTP/SOAP connection.
     """
@@ -390,6 +423,8 @@ class Delete(AdminService, _HTTPSOAPService):
 
                 raise
 
+# ################################################################################################################################
+
 class Ping(AdminService):
     """ Pings an HTTP/SOAP connection.
     """
@@ -404,6 +439,8 @@ class Ping(AdminService):
             item = session.query(HTTPSOAP).filter_by(id=self.request.input.id).one()
             config_dict = getattr(self.outgoing, item.transport)
             self.response.payload.info = config_dict.get(item.name).ping(self.cid)
+
+# ################################################################################################################################
 
 class ReloadWSDL(AdminService, _HTTPSOAPService):
     """ Reloads WSDL by recreating the whole underlying queue of SOAP clients.
@@ -424,6 +461,8 @@ class ReloadWSDL(AdminService, _HTTPSOAPService):
 
         action = OUTGOING.HTTP_SOAP_CREATE_EDIT.value
         self.notify_worker_threads(fields, action)
+
+# ################################################################################################################################
 
 class GetURLSecurity(AdminService):
     """ Returns a JSON document describing the security configuration of all
@@ -459,6 +498,8 @@ class GetAuditConfig(AdminService):
             self.response.payload.audit_back_log = item.audit_back_log
             self.response.payload.audit_max_payload = item.audit_max_payload
             self.response.payload.audit_repl_patt_type = item.audit_repl_patt_type
+
+# ################################################################################################################################
 
 class SetAuditConfig(AdminService):
     """ Sets audit configuration for a given HTTP/SOAP connection. Everything except for replace patterns.
@@ -503,6 +544,8 @@ class GetAuditReplacePatterns(AdminService):
 
             self.response.payload.patterns_json_pointer = [elem.pattern.name for elem in item.replace_patterns_json_pointer]
             self.response.payload.patterns_xpath = [elem.pattern.name for elem in item.replace_patterns_xpath]
+
+# ################################################################################################################################
 
 class SetAuditReplacePatterns(AdminService):
     """ Set audit replace patterns for a given HTTP/SOAP connection.
@@ -629,6 +672,8 @@ class _BaseAuditService(AdminService):
 
         return Page(q, page=current_batch, items_per_page=batch_size)
 
+# ################################################################################################################################
+
 class GetAuditItemList(_BaseAuditService):
     """ Returns a list of audit items for a particular HTTP/SOAP object.
     """
@@ -648,6 +693,8 @@ class GetAuditItemList(_BaseAuditService):
             item.req_time_utc = item.req_time_utc.isoformat()
             if item.resp_time_utc:
                 item.resp_time_utc = item.resp_time_utc.isoformat()
+
+# ################################################################################################################################
 
 class GetAuditBatchInfo(_BaseAuditService):
     """ Returns pagination information for audit log for a specified object and from/to dates.
@@ -670,6 +717,8 @@ class GetAuditBatchInfo(_BaseAuditService):
                 'next_batch_number': page.next_page,
                 'previous_batch_number': page.previous_page,
             }
+
+# ################################################################################################################################
 
 class GetAuditItem(_BaseAuditService):
     """ Returns a particular audit item by its ID.

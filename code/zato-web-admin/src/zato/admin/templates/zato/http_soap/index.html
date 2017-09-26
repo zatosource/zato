@@ -65,8 +65,11 @@
             'id',
             'is_active',
             'security',
+
             'cache_id',
+            'cache_type',
             'cache_expiry',
+
             'has_rbac',
             'data_format',
 
@@ -121,8 +124,8 @@
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        <th>&nbsp;</th> {% comment %} _numbering {% endcomment %}
+                        <th>&nbsp;</th> {% comment %} _selection {% endcomment %}
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Active</a></th>
                         {% ifequal connection 'outgoing' %}
@@ -140,39 +143,44 @@
                         {% endifequal %}
                         {% ifequal connection 'channel' %}
                             <th><a href="#">Method</a></th>
-                            <th class='ignore'>&nbsp;</th>
+                            <th class='ignore'>&nbsp;</th> {% comment %} service {% endcomment %}
                         {% endifequal %}
 
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th> {% comment %} id {% endcomment %}
+                        <th class='ignore'>&nbsp;</th> {% comment %} is_active {% endcomment %}
+                        <th class='ignore'>&nbsp;</th> {% comment %} security {% endcomment %}
 
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th> {% comment %} cache_id {% endcomment %}
+                        <th class='ignore'>&nbsp;</th> {% comment %} cache_type {% endcomment %}
+                        <th class='ignore'>&nbsp;</th> {% comment %} cache_expiry {% endcomment %}
+
+                        <th class='ignore'>&nbsp;</th> {% comment %} has_rbac {% endcomment %}
+                        <th class='ignore'>&nbsp;</th> {% comment %} data_format {% endcomment %}
+
+                        <th class='ignore'>&nbsp;</th> {% comment %} timeout {% endcomment %}
+                        <th class='ignore'>&nbsp;</th> {% comment %} sec_tls_ca_cert_id {% endcomment %}
 
                         {% ifequal connection 'outgoing' %}
-                            <th class='ignore'>&nbsp;</th>
-                            <th class='ignore'>&nbsp;</th>
-                            <th class='ignore'>&nbsp;</th>
-                            <th class='ignore'>&nbsp;</th>
+                            <th class='ignore'>&nbsp;</th> {% comment %} ping_method {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} pool_size {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} serialization_type {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} content_type {% endcomment %}
                         {% endifequal %}
 
                         {% ifequal connection 'channel' %}
-                            <th class='ignore'>&nbsp;</th>
-                            <th class='ignore'>&nbsp;</th>
-                            <th class='ignore'>&nbsp;</th>
+                            <th class='ignore'>&nbsp;</th> {% comment %} merge_url_params_req {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} url_params_pri {% endcomment %}
+                            <th class='ignore'>&nbsp;</th> {% comment %} params_pri {% endcomment %}
                         {% endifequal %}
 
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        <th>&nbsp;</th> {% comment %} _edit {% endcomment %}
+                        <th>&nbsp;</th> {% comment %} _delete {% endcomment %}
                         {% ifequal connection 'outgoing' %}
-                            <th>&nbsp;</th>
+                            <th>&nbsp;</th> {% comment %} _ping {% endcomment %}
                         {% endifequal %}
 
                         {% ifequal connection 'outgoing' %}
-                            <th>&nbsp;</th>
+                            <th>&nbsp;</th> {% comment %} _reload_wsdl {% endcomment %}
                         {% endifequal %}
                 </thead>
 
@@ -205,7 +213,7 @@
                             {% if item.cache_id %}
                                 <a href="/zato/cache/{{ item.cache_type }}/?cluster={{ cluster_id }}&amp;highlight={{ item.cache_id }}">{{ item.cache_name }}</a>
                             {% else %}
-                                {{ item.cache_name|default:"<span class='form_hint'>---</span<"|safe }}
+                                <span class="form_hint">---</span>
                             {% endif %}
                             </td>
                         {% endifequal %}
@@ -224,9 +232,12 @@
                         <td class='ignore'>{{ item.security_id }}</td>
 
                         <td class='ignore'>{{ item.cache_id }}</td>
+                        <td class='ignore'>{{ item.cache_type }}</td>
                         <td class='ignore'>{{ item.cache_expiry }}</td>
+
                         <td class='ignore'>{{ item.has_rbac }}</td>
                         <td class='ignore'>{{ item.data_format }}</td>
+
                         <td class='ignore'>{{ item.timeout }}</td>
                         <td class='ignore'>{{ item.sec_tls_ca_cert_id }}</td>
 
@@ -420,6 +431,7 @@
                         </tr>
                     </table>
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_cache_type" name="cache_type" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
                 </form>
@@ -578,6 +590,7 @@
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
+                    <input type="hidden" id="id_edit-cache_type" name="edit-cache_type" />
                     <input type="hidden" name="connection" value="{{ connection }}" />
                     <input type="hidden" name="transport" value="{{ transport }}" />
                 </form>
