@@ -258,25 +258,25 @@ def edit(req):
         else:
             raise ZatoException(msg=response.details)
     except Exception, e:
-        msg = 'Could not perform the update, e:[{e}]'.format(e=format_exc(e))
+        msg = 'Could not perform the update, e:`{}`'.format(format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
 
 @method_allowed('POST')
 def delete(req, id, cluster_id):
-    id_only_service(req, 'zato.http-soap.delete', id, 'Could not delete the object, e:[{e}]')
+    id_only_service(req, 'zato.http-soap.delete', id, 'Could not delete the object, e:`{e}`')
     return HttpResponse()
 
 @method_allowed('POST')
 def ping(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:[{e}]')
+    ret = id_only_service(req, 'zato.http-soap.ping', id, 'Could not ping the connection, e:`{e}`')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse(ret.data.info)
 
 @method_allowed('POST')
 def reload_wsdl(req, id, cluster_id):
-    ret = id_only_service(req, 'zato.http-soap.reload-wsdl', id, 'Could not reload the WSDL, e:[{e}]')
+    ret = id_only_service(req, 'zato.http-soap.reload-wsdl', id, 'Could not reload the WSDL, e:`{e}`')
     if isinstance(ret, HttpResponseServerError):
         return ret
     return HttpResponse('WSDL reloaded, check server logs for details')
@@ -373,8 +373,6 @@ def audit_log(req, **kwargs):
             item.req_time = from_utc_to_user(item.req_time_utc+'+00:00', req.zato.user_profile)
             item.resp_time = from_utc_to_user(item.resp_time_utc+'+00:00', req.zato.user_profile) if item.resp_time_utc else '(None)'
             out['items'].append(item)
-
-    #out.update(**req.zato.client.invoke('zato.http-soap.get-audit-batch-info', request).data)
 
     return TemplateResponse(req, 'zato/http_soap/audit/log.html', out)
 
