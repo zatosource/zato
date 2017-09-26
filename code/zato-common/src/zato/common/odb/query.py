@@ -643,6 +643,7 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.sec_use_rbac,
         HTTPSOAP.cache_id,
         HTTPSOAP.cache_expiry,
+        Cache.name.label('cache_name'),
         Cache.cache_type,
         TLSCACert.name.label('sec_tls_ca_cert_name'),
         SecurityBase.sec_type,

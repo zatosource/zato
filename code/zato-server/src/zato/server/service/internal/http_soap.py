@@ -91,7 +91,7 @@ class GetList(AdminService):
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
             'method', 'soap_action', 'soap_version', 'data_format', 'host', 'ping_method', 'pool_size', 'merge_url_params_req',
             'url_params_pri', 'params_pri', 'serialization_type', 'timeout', 'sec_tls_ca_cert_id', Boolean('has_rbac'),
-            'content_type', Boolean('sec_use_rbac'), 'cache_id', Integer('cache_expiry'), 'cache_type')
+            'content_type', Boolean('sec_use_rbac'), 'cache_id', 'cache_name', Integer('cache_expiry'), 'cache_type')
         output_repeated = True
 
     def get_data(self, session):
