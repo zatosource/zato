@@ -91,6 +91,7 @@ def _get_edit_create_message(params, prefix=''):
         'has_rbac': bool(params.get(prefix + 'has_rbac')),
         'content_type': params.get(prefix + 'content_type'),
         'cache_id': params.get(prefix + 'cache_id'),
+        'cache_expiry': params.get(prefix + 'cache_expiry'),
     }
 
 def _edit_create_response(id, verb, transport, connection, name):
@@ -174,7 +175,7 @@ def index(req):
                 if item.sec_use_rbac:
                     security_name = DELEGATED_TO_RBAC
                 else:
-                    security_name = 'No security definition'
+                    security_name = '<span class="form_hint">---</span>'
 
             _security_id = item.security_id
             if _security_id:
@@ -185,6 +186,11 @@ def index(req):
                 else:
                     security_id = ZATO_NONE
 
+            if item.cache_id:
+                cache_name = '{}/{}'.format(CACHE_TYPE[item.cache_type], item.cache_name)
+            else:
+                cache_name = None
+
             item = HTTPSOAP(item.id, item.name, item.is_active, item.is_internal, connection,
                     transport, item.host, item.url_path, item.method, item.soap_action,
                     item.soap_version, item.data_format, item.ping_method,
@@ -192,7 +198,7 @@ def index(req):
                     item.serialization_type, item.timeout, item.sec_tls_ca_cert_id, service_id=item.service_id,
                     service_name=item.service_name, security_id=security_id, has_rbac=item.has_rbac,
                     security_name=security_name, content_type=item.content_type,
-                    cache_id=item.cache_id, cache_expiry=item.cache_expiry)
+                    cache_id=item.cache_id, cache_name=cache_name, cache_type=item.cache_type, cache_expiry=item.cache_expiry)
             items.append(item)
 
     return_data = {'zato_clusters':req.zato.clusters,

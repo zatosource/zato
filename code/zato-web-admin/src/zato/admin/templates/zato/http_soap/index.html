@@ -47,6 +47,7 @@
 
             {% ifequal connection 'channel' %}
                 '_service',
+                '_cache',
             {% endifequal %}
 
             '_security',
@@ -130,6 +131,7 @@
                         <th><a href="#">URL path</a></th>
                         {% ifequal connection 'channel' %}
                             <th><a href="#">Service</a></th>
+                            <th><a href="#">Cache</a></th>
                         {% endifequal %}
                         <th><a href="#">Security</a></th>
                         {% ifequal transport 'soap' %}
@@ -199,6 +201,13 @@
                         <td>{{ item.url_path }}</td>
                         {% ifequal connection 'channel' %}
                             <td><a href="{% url "service-overview" item.service_name %}?cluster={{ cluster_id }}">{{ item.service_name }}</a></td>
+                            <td>
+                            {% if item.cache_id %}
+                                <a href="/zato/cache/{{ item.cache_type }}/?cluster={{ cluster_id }}&amp;highlight={{ item.cache_id }}">{{ item.cache_name }}</a>
+                            {% else %}
+                                {{ item.cache_name|default:"<span class='form_hint'>---</span<"|safe }}
+                            {% endif %}
+                            </td>
                         {% endifequal %}
                         <td>{{ item.security_name|safe }}</td>
                         {% ifequal transport 'soap' %}
