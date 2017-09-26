@@ -591,7 +591,6 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     var id = '';
     var tag_name = '';
     var html_elem;
-    var _columns = $.fn.zato.data_table.get_columns();
 
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');
