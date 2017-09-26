@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 from cStringIO import StringIO
+from operator import itemgetter
 from pprint import pprint
 from traceback import format_exc
 
@@ -32,7 +33,7 @@ from zato.admin.web.views import get_js_dt_format, get_security_id_from_select, 
 from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, DELEGATED_TO_RBAC, \
      HTTP_SOAP_SERIALIZATION_TYPE, MSG_PATTERN_TYPE, PARAMS_PRIORITY, SEC_DEF_TYPE_NAME, SOAP_CHANNEL_VERSIONS, SOAP_VERSIONS, \
      URL_PARAMS_PRIORITY, URL_TYPE, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
-from zato.common import MISC, SEC_DEF_TYPE
+from zato.common import CACHE, MISC, SEC_DEF_TYPE
 from zato.common.odb.model import HTTPSOAP
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,11 @@ TRANSPORT = {
     'plain_http': 'Plain HTTP',
     'soap': 'SOAP',
     }
+
+CACHE_TYPE = {
+    CACHE.TYPE.BUILTIN: 'Built-in',
+    CACHE.TYPE.MEMCACHED: 'Memcached',
+}
 
 def _get_edit_create_message(params, prefix=''):
     """ A bunch of attributes that can be used by both 'edit' and 'create' actions
@@ -84,6 +90,7 @@ def _get_edit_create_message(params, prefix=''):
         'security_id': security_id,
         'has_rbac': bool(params.get(prefix + 'has_rbac')),
         'content_type': params.get(prefix + 'content_type'),
+        'cache_id': params.get(prefix + 'cache_id'),
     }
 
 def _edit_create_response(id, verb, transport, connection, name):
@@ -134,9 +141,19 @@ def index(req):
 
         _soap_versions = SOAP_CHANNEL_VERSIONS if connection == 'channel' else SOAP_VERSIONS
 
-        create_form = CreateForm(_security, get_tls_ca_cert_list(req.zato.client, req.zato.cluster), _soap_versions, req=req)
-        edit_form = EditForm(
-            _security, get_tls_ca_cert_list(req.zato.client, req.zato.cluster), _soap_versions, prefix='edit', req=req)
+        tls_ca_cert_list = get_tls_ca_cert_list(req.zato.client, req.zato.cluster)
+
+        cache_list = []
+
+        for cache_type in (CACHE.TYPE.BUILTIN, CACHE.TYPE.MEMCACHED):
+            service_name = 'zato.cache.{}.get-list'.format(cache_type)
+            response = req.zato.client.invoke(service_name, {'cluster_id': req.zato.cluster.id})
+
+            for item in sorted(response, key=itemgetter('name')):
+                cache_list.append({'id':item.id, 'name':'{}/{}'.format(CACHE_TYPE[cache_type], item.name)})
+
+        create_form = CreateForm(_security, tls_ca_cert_list, cache_list, _soap_versions, req=req)
+        edit_form = EditForm(_security, tls_ca_cert_list, cache_list, _soap_versions, prefix='edit', req=req)
 
         input_dict = {
             'cluster_id': req.zato.cluster_id,
@@ -174,7 +191,8 @@ def index(req):
                     item.pool_size, item.merge_url_params_req, item.url_params_pri, item.params_pri,
                     item.serialization_type, item.timeout, item.sec_tls_ca_cert_id, service_id=item.service_id,
                     service_name=item.service_name, security_id=security_id, has_rbac=item.has_rbac,
-                    security_name=security_name, content_type=item.content_type)
+                    security_name=security_name, content_type=item.content_type,
+                    cache_id=item.cache_id, cache_expiry=item.cache_expiry)
             items.append(item)
 
     return_data = {'zato_clusters':req.zato.clusters,

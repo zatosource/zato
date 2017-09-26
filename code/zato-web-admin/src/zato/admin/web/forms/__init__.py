@@ -29,7 +29,9 @@ def add_select(form, field_name, elems):
     add_initial_select(form, field_name)
 
     for elem in elems:
-        form.fields[field_name].choices.append([elem.id, elem.name])
+        id = getattr(elem, 'id', None) or elem['id']
+        name = getattr(elem, 'name', None) or elem['name']
+        form.fields[field_name].choices.append([id, name])
 
 # ################################################################################################################################
 
