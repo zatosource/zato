@@ -110,10 +110,13 @@ def _edit_create_response(req, id, verb, transport, connection, name):
     })
 
     if response.data.cache_id:
-        cache_name = '{}/{}'.format(CACHE_TYPE[response.data.cache_type], response.data.cache_name)
+        cache_type = response.data.cache_type
+        cache_name = '{}/{}'.format(CACHE_TYPE[cache_type], response.data.cache_name)
     else:
+        cache_type = None
         cache_name = None
 
+    return_data['cache_type'] = cache_type
     return_data['cache_name'] = cache_name
 
     return HttpResponse(dumps(return_data), content_type='application/javascript')
