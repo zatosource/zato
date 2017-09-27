@@ -134,7 +134,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
         if(item.cache_id) {
             row += String.format('<td><a href="/zato/cache/{0}/?cluster={1}&amp;highlight={2}">{3}</a></td>',
-                    item.cache_type, cluster_id, item.cache_id, data.cache_name);
+                    data.cache_type, cluster_id, item.cache_id, data.cache_name);
         }
         else {
             row += '<td><span class="form_hint">---</span></td>';
