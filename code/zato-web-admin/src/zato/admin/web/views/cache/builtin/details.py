@@ -38,12 +38,13 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'id')
-        output_required = ('key', 'value', 'last_read', 'prev_read', 'prev_write', 'expiry',
-            'expires_at', 'hits', 'position')
+        output_required = ('key', 'value', 'position', 'hits', 'expiry', 'expires_at', 'last_read', 'prev_read', 'prev_write')
         output_repeated = True
 
     def handle(self):
-        pass
+        return {
+            'show_search_form': True
+        }
 
 '''
 # -*- coding: utf-8 -*-
@@ -65,8 +66,7 @@ class Details(AdminService):
 
     class SimpleIO:
         input_required = (AsIs('id'),)
-        output_required = ('key', 'value', 'last_read', 'prev_read', 'prev_write', 'expiry',
-            'expires_at', 'hits', 'position')
+        output_required = ('key', 'value', 'position', 'hits', 'expiry', 'expires_at', 'last_read', 'prev_read', 'prev_write')
         output_repeated = True
 
     def _get_data(self, _ignored_session, _ignored_cluster_id, *args, **kwargs):
@@ -74,5 +74,5 @@ class Details(AdminService):
         return []
 
     def handle(self):
-        self.response.payload = self._search(self._get_data)
+        self.response.payload[:] = self._search(self._get_data)
 '''
