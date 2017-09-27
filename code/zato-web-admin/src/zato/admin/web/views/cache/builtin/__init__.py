@@ -65,7 +65,3 @@ class Delete(_Delete):
     url_name = 'cache-builtin-delete'
     error_message = 'Cache could not be deleted'
     service_name = 'zato.cache.builtin.delete'
-
-class DetailsIndex(_Index):
-    method_allowed = 'GET'
-    url_name = 'cache-builtin-details'

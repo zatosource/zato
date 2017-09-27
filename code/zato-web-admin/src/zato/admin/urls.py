@@ -18,6 +18,7 @@ from django.views.static import serve as django_static_serve
 from zato.admin import settings
 from zato.admin.web.views import account, cluster, docs, http_soap, kvdb, load_balancer, main, scheduler, service, stats
 from zato.admin.web.views.cache import builtin as cache_builtin
+from zato.admin.web.views.cache.builtin import details as cache_builtin_details
 from zato.admin.web.views.cache import memcached_ as cache_memcached
 from zato.admin.web.views.cache import redis_ as cache_redis
 from zato.admin.web.views.channel import amqp_ as channel_amqp
@@ -911,8 +912,11 @@ urlpatterns += [
         login_required(cache_builtin.Edit()), name=cache_builtin.Edit.url_name),
     url(r'^zato/cache/builtin/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cache_builtin.Delete()), name=cache_builtin.Delete.url_name),
+
     url(r'^zato/cache/builtin/details/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
-        login_required(cache_builtin.DetailsIndex()), name=cache_builtin.DetailsIndex.url_name),
+        login_required(cache_builtin_details.Index()), name=cache_builtin_details.Index.url_name),
+
+    # .. Memcached
 
     url(r'^zato/cache/memcached/$',
         login_required(cache_memcached.Index()), name=cache_memcached.Index.url_name),
