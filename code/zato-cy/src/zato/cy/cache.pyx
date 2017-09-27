@@ -165,7 +165,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    def __contains__(self, str key):
+    def __contains__(self, object key):
         with self._lock:
             return PyDict_Contains(self._data, key)
 
@@ -217,14 +217,14 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cdef _delete(self, str key):
+    cdef _delete(self, object key):
         # Will raise KeyError on invalid key so the next line is safe
         del self._data[key]
         self._remove_from_index_by_idx(self._get_index(key))
 
 # ################################################################################################################################
 
-    cpdef delete(self, str key):
+    cpdef delete(self, object key):
         with self._lock:
             self._delete(key)
 
@@ -232,7 +232,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cdef inline long _get_index(self, str key):
+    cdef inline long _get_index(self, object key):
         """ C-only version of self.get_position that will always return a long - must be called only
         if key is known to be in self._index or self._data and only with self.lock held.
         """
@@ -247,7 +247,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef object index(self, str key):
+    cpdef object index(self, object key):
         """ Returns position the key given on input currently holds or None if key is not found.
         """
         with self._lock:
@@ -358,13 +358,13 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef set(self, str key, value, double expiry, dict meta_ref):
+    cpdef set(self, object key, value, double expiry, dict meta_ref):
         with self._lock:
             self._set(key, value, expiry, meta_ref)
 
 # ################################################################################################################################
 
-    cdef object _get(self, str key, bint details, dict meta_ref):
+    cdef object _get(self, object key, bint details, dict meta_ref):
         """ Returns data for key in cache if present. Otherwise returns None. If 'details' is True,
         returns a dictionary with value and metadata instead of value alone.
         """
@@ -436,13 +436,13 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef get(self, str key, bint details, dict meta_ref):
+    cpdef get(self, object key, bint details, dict meta_ref):
         with self._lock:
             return self._get(key, details, meta_ref)
 
 # ################################################################################################################################
 
-    cpdef expire(self, str key, double expiry, dict meta_ref):
+    cpdef expire(self, object key, double expiry, dict meta_ref):
         """ Makes a given cache entry expire after 'expiry' seconds.
         """
         with self._lock:
@@ -450,7 +450,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef set_expiration_data(self, str key, double expiry, double expires_at):
+    cpdef set_expiration_data(self, object key, double expiry, double expires_at):
         """ Sets expiry and expires_at attributes of a cache entry. Unlike self.expire,
         this method is not exposed to user API and is instead used in cache synchronization,
         i.e. current worker's Cache API calls this method after another worker issued a call that changes
