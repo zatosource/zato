@@ -92,7 +92,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>{{ item.name }}</td>
+                        <td><a href="{% url "cache-builtin-details" item.id cluster_id %}">{{ item.name }}</a></td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.is_default|yesno:'Yes,No' }}</td>
                         <td>{{ item.current_size }}</td>
@@ -103,7 +103,7 @@
                         <td>{{ item.sync_method }}</td>
                         <td>{{ item.persistent_storage }}</td>
                         <td><a href="javascript:$.fn.zato.cache.builtin.edit('{{ item.id }}')">Edit</a></td>
-                        <td>{% if item.is_default %}<span class="form_hint">(Delete)</span>{% else %}<a href="javascript:$.fn.zato.cache.builtin.delete_('{{ item.id }}')">Delete</a>{% endif %}</td>
+                        <td>{% if item.is_default %}<span class="form_hint">Delete</span>{% else %}<a href="javascript:$.fn.zato.cache.builtin.delete_('{{ item.id }}')">Delete</a>{% endif %}</td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_default }}</td>
