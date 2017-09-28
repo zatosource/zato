@@ -29,6 +29,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, Cac
      RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, TechnicalAccount, \
      TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, \
      XPath, XPathSecurity
+from zato.common.search_util import SearchResults as _SearchResults
 
 # ################################################################################################################################
 
@@ -39,27 +40,6 @@ logger = logging.getLogger(__name__)
 _no_page_limit = 2 ** 24 # ~16.7 million results, tops
 
 # ################################################################################################################################
-
-class _SearchResult(object):
-    def __init__(self, q, result, columns, total):
-        self.q = q
-        self.result = result
-        self.total = total
-        self.columns = columns
-        self.num_pages = 0
-        self.cur_page = 0
-        self.prev_page = 0
-        self.next_page = 0
-        self.has_prev_page = False
-        self.has_next_page = False
-
-    def __iter__(self):
-        return iter(self.result)
-
-    def __repr__(self):
-        # To avoice circular imports - this is OK because we very rarely repr(self) anyway
-        from zato.common.util import make_repr
-        return make_repr(self)
 
 class _SearchWrapper(object):
     """ Wraps results in pagination and/or filters out objects by their name or other attributes.
@@ -99,7 +79,7 @@ def query_wrapper(func):
         needs_columns = args[-1]
 
         tool = _SearchWrapper(func(*args), **kwargs)
-        result = _SearchResult(tool.q, tool.q.all(), tool.q.statement.columns, tool.total)
+        result = _SearchResults(tool.q, tool.q.all(), tool.q.statement.columns, tool.total)
 
         if needs_columns:
             return result, result.columns

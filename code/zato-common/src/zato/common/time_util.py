@@ -88,7 +88,7 @@ class TimeUtil(object):
 
 # ################################################################################################################################
 
-    def iso_now(self, tz='UTC', needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
+    def iso_now(self, tz=local_tz.zone, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
         return self.now(_format, tz, needs_format)
 
 # ################################################################################################################################
