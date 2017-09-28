@@ -466,26 +466,36 @@ class CreateEdit(_BaseView):
 
 # ################################################################################################################################
 
-class Delete(_BaseView):
-    """ Our subclasses will delete objects such as connections and others.
-    """
+class BaseCallView(_BaseView):
+
     method_allowed = 'POST'
     error_message = 'error_message-must-be-defined-in-a-subclass'
 
+    def get_input_dict(self):
+        raise NotImplementedError('Must be defined in subclasses')
+
     def __call__(self, req, initial_input_dict={}, *args, **kwargs):
         try:
-            super(Delete, self).__call__(req, *args, **kwargs)
-            input_dict = {
-                'id': self.req.zato.id,
-                'cluster_id': self.cluster_id
-            }
+            super(BaseCallView, self).__call__(req, *args, **kwargs)
+            input_dict = self.get_input_dict()
             input_dict.update(initial_input_dict)
             req.zato.client.invoke(self.service_name, input_dict)
             return HttpResponse()
         except Exception, e:
-            msg = '{}, e:[{}]'.format(self.error_message, format_exc(e))
+            msg = '{}, e:`{}`'.format(self.error_message, format_exc(e))
             logger.error(msg)
             return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+
+class Delete(BaseCallView):
+    """ Our subclasses will delete objects such as connections and others.
+    """
+    def get_input_dict(self):
+        return {
+            'id': self.req.zato.id,
+            'cluster_id': self.cluster_id
+        }
 
 # ################################################################################################################################
 

@@ -1,0 +1,105 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Cache details {{ cache_name }}{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            'key',
+            'value',
+            'position',
+            'hits',
+            'expiry',
+            'expires_at',
+            'last_read',
+            'prev_read',
+            'prev_write',
+            'chars_omitted',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Cache details - CACHE_NAME: {{ cache_name }}</h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+    <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+{% include "zato/search-form.html" with page_prompt="Show entries"%}
+
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Key</a></th>
+                        <th><a href="#">Value</a></th>
+                        <th><a href="#">Position</a></th>
+                        <th><a href="#">Hits</a></th>
+                        <th><a href="#">Expiry</a></th>
+                        <th><a href="#">Expires at</a></th>
+                        <th><a href="#">Last read</a></th>
+                        <th><a href="#">Prev. read</a></th>
+                        <th><a href="#">Prev. write</a></th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.key }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td><a href="{% url "cache-builtin-get-item" cluster_id %}?cache_id={{ item.cache_id_escaped }}&amp;key={{ item.key_escaped }}">{{ item.key }}</a></td>
+                        <td>{{ item.value }}</td>
+                        <td>{{ item.position }}</td>
+                        <td>{{ item.hits }}</td>
+                        <td>{{ item.expiry }}</td>
+                        <td>{{ item.expires_at }}</td>
+                        <td>{{ item.last_read }}</td>
+                        <td>{{ item.prev_read  }}</td>
+                        <td>{{ item.prev_write }}</td>
+                        <td class='ignore item_id_{{ item.key_escaped }}'>{{ item.key_escaped }}</td>
+                        <td class='ignore'>{{ item.chars_omitted }}</td>
+                    </tr>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='13'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}
