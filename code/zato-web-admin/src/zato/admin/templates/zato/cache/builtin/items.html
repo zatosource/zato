@@ -73,15 +73,15 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.key }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td><a href="{% url "cache-builtin-get-item" cluster_id %}?cache_id={{ item.cache_id_escaped }}&amp;key={{ item.key_escaped }}">{{ item.key }}</a></td>
-                        <td>{{ item.value }}</td>
+                        <td style="vertical-align:middle"><a href="{% url "cache-builtin-get-item" cluster_id %}?cache_id={{ item.cache_id_escaped }}&amp;key={{ item.key_escaped }}">{{ item.key }}</a></td>
+                        <td>{{ item.value }}{% if item.chars_omitted %}<span class="form_hint"><br/>({{ item.chars_omitted }} more omitted)</span>{% endif %}</td>
                         <td>{{ item.position }}</td>
                         <td>{{ item.hits }}</td>
-                        <td>{{ item.expiry }}</td>
-                        <td>{{ item.expires_at }}</td>
-                        <td>{{ item.last_read }}</td>
-                        <td>{{ item.prev_read  }}</td>
-                        <td>{{ item.prev_write }}</td>
+                        <td>{{ item.expiry|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.expires_at|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.last_read|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.prev_read|default:'<span class="form_hint">---</span>'  }}</td>
+                        <td>{{ item.prev_write|default:'<span class="form_hint">---</span>' }}</td>
                         <td class='ignore item_id_{{ item.key_escaped }}'>{{ item.key_escaped }}</td>
                         <td class='ignore'>{{ item.chars_omitted }}</td>
                     </tr>

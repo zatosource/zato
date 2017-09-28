@@ -201,6 +201,22 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
+    cpdef list iteritems(self):
+        with self._lock:
+            return iter(PyDict_Items(self._data))
+
+# ################################################################################################################################
+
+    def get_slice(self, start, stop, step):
+        with self._lock:
+            for key in self._index[start:stop:step]:
+                entry = self._data[key]
+                as_dict = entry.to_dict()
+                as_dict['position'] = self._get_index(key)
+                yield as_dict
+
+# ################################################################################################################################
+
     cpdef list clear(self):
         """ Clears the cache - removes all entries and associated metadata.
         """
@@ -340,6 +356,7 @@ cdef class Cache(object):
 
             # Actually insert entry
             entry = Entry()
+            entry.key = key
             entry.value = value
             entry.last_read = 0.0
             entry.prev_read = 0.0

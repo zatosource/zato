@@ -86,10 +86,16 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# Bunch
+from bunch import bunchify
+
 # Zato
+from zato.common import CACHE
 from zato.common.search_util import SearchResults
-from zato.server.service import AsIs
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, GetListAdminSIO
+
+null_out = ('expiry', 'expires_at', 'last_read', 'prev_read', 'prev_write')
 
 class GetItems(AdminService):
     name = 'cache3.get-items'
@@ -97,25 +103,59 @@ class GetItems(AdminService):
 
     class SimpleIO(GetListAdminSIO):
         input_required = (AsIs('id'),)
+        input_optional = GetListAdminSIO.input_optional + (Int('max_chars'),)
         output_required = (AsIs('cache_id'), 'key', 'value', 'position', 'hits', 'expiry', 'expires_at', 'last_read',
-            'prev_read', 'prev_write')
+            'prev_read', 'prev_write', 'chars_omitted')
         output_repeated = True
 
-    def _get_data(self, _ignored_session, _ignored_cluster_id, *args, **kwargs):
-        data = [{
-            'cache_id':'GEZ · ARX ',
-            'key': 'GEZ · ARX ',
-            'value': 'zzz',
-            'position': 'zzz',
-            'hits': 'zzz',
-            'expiry': 'zzz',
-            'expires_at': 'zzz',
-            'last_read': 'zzz',
-            'prev_read': 'zzz',
-            'prev_write': 'zzz'
-        }]
-        return SearchResults(None, data, None, 123)
+    def _get_data(self, _ignored_session, _ignored_cluster_id, _null_out=null_out, *args, **kwargs):
+
+        # Get the cache object first
+        odb_cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.id)
+        cache = self.cache.get_cache(CACHE.TYPE.BUILTIN, odb_cache.name)
+
+        query_ctx = bunchify(kwargs)
+        query = query_ctx.get('query', None)
+
+        max_chars = self.request.input.get('max_chars') or 50
+        out = []
+
+        # Without any query, simply return a slice of the underlying list from the cache object
+        if not query:
+            start = query_ctx.cur_page * query_ctx.page_size
+            stop = start + query_ctx.page_size
+
+            for idx, item in enumerate(cache[start:stop]):
+
+                for name in _null_out:
+                    _value = item[name]
+                    _value = _value or None
+                    item[name] = _value
+
+                del _value
+
+                value = item['value']
+
+                if isinstance(value, basestring):
+                    len_value = len(value)
+                    chars_omitted = len_value - max_chars
+                    chars_omitted = chars_omitted if chars_omitted > 0 else 0
+
+                    if chars_omitted:
+                        value = value[:max_chars]
+
+                    item['value'] = value
+                    item['chars_omitted'] = chars_omitted
+
+
+                item['cache_id'] = self.request.input.id
+                out.append(item)
+
+            return SearchResults(None, out, None, len(cache))
+
+        else:
+            return SearchResults(None, [], None, 0)
 
     def handle(self):
         self.response.payload[:] = self._search(self._get_data)
-        '''
+'''
