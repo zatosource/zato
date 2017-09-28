@@ -101,15 +101,8 @@ class AdminService(Service):
         is_basestring = isinstance(payload, basestring)
         needs_meta = self.request.input.get('needs_meta', True)
 
-        print()
-        print(333, self)
-        print(333, needs_meta)
-        print(333, hasattr(self, '_search_tool'))
-        print(333, is_basestring)
-
         if needs_meta and hasattr(self, '_search_tool') and not is_basestring:
             payload.zato_meta = self._search_tool.output_meta
-            print(333, payload.zato_meta)
 
         logger.info(
             'cid:`%s`, name:`%s`, response:`%s`', self.cid, self.name, replace_private_key(get_response_value(self.response)))
@@ -158,8 +151,6 @@ class AdminService(Service):
                 kwargs['query'] = query
 
         result = search_func(session, cluster_id, *args, **kwargs)
-
-        print(999, result)
 
         num_pages, rest = divmod(result.total, page_size)
 

@@ -56,7 +56,10 @@ class Cache(object):
 # ################################################################################################################################
 
     def __getitem__(self, key):
-        return self.get(key)
+        if isinstance(key, slice):
+            return self.impl.get_slice(key.start, key.stop, key.step)
+        else:
+            return self.get(key)
 
 # ################################################################################################################################
 
@@ -142,6 +145,11 @@ class Cache(object):
 
     def items(self):
         """ Returns all items in the cache - like dict.items().
+        """
+        return self.impl.items()
+
+    def iteritems(self):
+        """ Returns an iterator over all items in the cache - like dict.iteritems().
         """
         return self.impl.items()
 
@@ -359,6 +367,14 @@ class CacheAPI(object):
         """
         with self.lock:
             self._clear(cache_type, name)
+
+# ################################################################################################################################
+
+    def get_cache(self, cache_type, name):
+        """ Returns the lower-level cache implementation object by its type and name.
+        """
+        with self.lock:
+            return self.caches[cache_type][name]
 
 # ################################################################################################################################
 
