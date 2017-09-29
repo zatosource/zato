@@ -22,7 +22,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.parse();
 })
 
-$.fn.zato.cache.builtin.items.delete_ = function(id) {
+$.fn.zato.cache.builtin.entries.delete_ = function(id) {
 
     var post_data = {};
     post_data['cluster_id'] = $('#cluster_id').val();

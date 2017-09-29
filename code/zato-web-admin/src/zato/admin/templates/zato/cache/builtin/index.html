@@ -37,6 +37,7 @@
             'is_default',
             'extend_expiry_on_get',
             'extend_expiry_on_set',
+            'cache_id',
         ]
     }
     </script>
@@ -89,10 +90,10 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.cache_id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td><a href="{% url "cache-builtin-get-items" item.id %}?cluster=1">{{ item.name }}</a></td>
+                        <td><a href="{% url "cache-builtin-get-entries" item.cache_id %}?cluster=1">{{ item.name }}</a></td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.is_default|yesno:'Yes,No' }}</td>
                         <td>{{ item.current_size }}</td>
@@ -102,13 +103,14 @@
                         <td>{{ item.extend_expiry_on_set|yesno:'Yes,No'  }}</td>
                         <td>{{ item.sync_method }}</td>
                         <td>{{ item.persistent_storage }}</td>
-                        <td><a href="javascript:$.fn.zato.cache.builtin.edit('{{ item.id }}')">Edit</a></td>
-                        <td>{% if item.is_default %}<span class="form_hint">Delete</span>{% else %}<a href="javascript:$.fn.zato.cache.builtin.delete_('{{ item.id }}')">Delete</a>{% endif %}</td>
-                        <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td><a href="javascript:$.fn.zato.cache.builtin.edit('{{ item.cache_id }}')">Edit</a></td>
+                        <td>{% if item.is_default %}<span class="form_hint">Delete</span>{% else %}<a href="javascript:$.fn.zato.cache.builtin.delete_('{{ item.cache_id }}')">Delete</a>{% endif %}</td>
+                        <td class='ignore item_id_{{ item.cache_id }}'>{{ item.cache_id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.is_default }}</td>
                         <td class='ignore'>{{ item.extend_expiry_on_get }}</td>
                         <td class='ignore'>{{ item.extend_expiry_on_set }}</td>
+                        <td class='ignore'>{{ item.cache_id }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -189,6 +191,7 @@
                     </table>
                     <input type="hidden" name="cache_type" value="builtin" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    {{ create_form.cache_id }}
                 </form>
             </div>
         </div>
@@ -261,6 +264,7 @@
                     <input type="hidden" id="id_edit-cache_type" name="edit-cache_type" value="builtin" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
+                    {{ edit_form.cache_id }}
                 </form>
             </div>
         </div>

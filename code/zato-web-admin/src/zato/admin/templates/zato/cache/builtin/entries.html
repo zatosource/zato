@@ -13,7 +13,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/javascript" src="/static/js/cache/builtin/items.js"></script>
+    <script type="text/javascript" src="/static/js/cache/builtin/entries.js"></script>
 
     <script>
     $.fn.zato.data_table.get_columns = function() {
@@ -39,7 +39,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Cache - {{ cache_name }}</h2>
+<h2 class="zato">Built-in cache - <a href="{% url "cache-builtin" %}?cluster={{ cluster_id }}&amp;highlight={{ cache_id }}">{{ cache_name }}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -78,7 +78,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.key }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td style="vertical-align:middle"><a href="{% url "cache-builtin-get-item" cluster_id %}?cache_id={{ item.cache_id }}&amp;key={{ item.key_escaped }}">{{ item.key }}</a></td>
+                        <td style="vertical-align:middle"><a href="{% url "cache-builtin-get-entry" cluster_id %}?cache_id={{ item.cache_id }}&amp;key={{ item.key_escaped }}">{{ item.key }}</a></td>
                         <td>{{ item.value }}{% if item.chars_omitted %}<span class="form_hint"><br/>({{ item.chars_omitted }} more omitted)</span>{% endif %}</td>
                         <td>{{ item.position }}</td>
                         <td>{{ item.hits }}</td>
@@ -87,7 +87,7 @@
                         <td>{{ item.last_read|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.prev_read|default:'<span class="form_hint">---</span>'  }}</td>
                         <td>{{ item.prev_write|default:'<span class="form_hint">---</span>' }}</td>
-                        <td><a href="javascript:$.fn.zato.cache.builtin.items.delete_('{{ item.key_escaped }}')">Delete</a></td>
+                        <td><a href="javascript:$.fn.zato.cache.builtin.entries.delete_('{{ item.key_escaped }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.key_escaped }}'>{{ item.key_escaped }}</td>
                         <td class='ignore'>{{ item.chars_omitted }}</td>
                     </tr>

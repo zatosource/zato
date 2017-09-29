@@ -40,9 +40,9 @@ class CacheEntry(object):
 
 class Index(_Index):
     method_allowed = 'GET'
-    url_name = 'cache-builtin-get-items'
-    template = 'zato/cache/builtin/items.html'
-    service_name = 'cache3.get-items' #'zato.cache.builtin.details.get-list'
+    url_name = 'cache-builtin-get-entries'
+    template = 'zato/cache/builtin/entries.html'
+    service_name = 'cache3.get-entries' #'zato.cache.builtin.details.get-list'
     output_class = CacheEntry
     paginate = True
 
@@ -75,20 +75,20 @@ class Index(_Index):
 
 # ################################################################################################################################
 
-class GetItem(BaseCallView):
+class GetEntry(BaseCallView):
     method_allowed = 'GET'
-    url_name = 'cache-builtin-get-item'
-    template = 'zato/cache/builtin/item.html'
-    service_name = 'cache3.get-item' #'zato.cache.builtin.details.get-entry'
+    url_name = 'cache-builtin-get-entry'
+    template = 'zato/cache/builtin/entry.html'
+    service_name = 'cache3.get-entry' #'zato.cache.builtin.details.get-entry'
 
     class SimpleIO(BaseCallView.SimpleIO):
         input_required = ('cluster_id', 'id', 'key')
         output_required = ('value',)
 
 class Delete(_Delete):
-    url_name = 'cache-builtin-delete-item'
+    url_name = 'cache-builtin-delete-entry'
     error_message = 'Could not delete key'
-    service_name = 'cache3.delete-item'
+    service_name = 'cache3.delete-entry'
 
     def get_input_dict(self, *args, **kwargs):
         return {
@@ -129,7 +129,7 @@ time_keys = ('expires_at', 'last_read', 'prev_read', 'prev_write')
 # ################################################################################################################################
 
 class GetItems(AdminService):
-    name = 'cache3.get-items'
+    name = 'cache3.get-entries'
     _filter_by = ('name',)
 
 # ################################################################################################################################
@@ -217,7 +217,7 @@ class GetItems(AdminService):
 # ################################################################################################################################
 
 class Delete(AdminService):
-    name = 'cache3.delete-item'
+    name = 'cache3.delete-entry'
 
 # ################################################################################################################################
 
@@ -238,4 +238,5 @@ class Delete(AdminService):
             key_found = True
 
         self.response.payload.key_found = key_found
+
 '''
