@@ -23,12 +23,13 @@
             'value',
             'position',
             'hits',
-            'expiry',
+            'expiry_op',
             'expires_at',
             'last_read',
             'prev_read',
             'prev_write',
             'chars_omitted',
+            '_delete',
         ]
     }
     </script>
@@ -57,13 +58,15 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Key</a></th>
                         <th><a href="#">Value</a></th>
-                        <th><a href="#">Position</a></th>
+                        <th><a href="#">Idx</a></th>
                         <th><a href="#">Hits</a></th>
-                        <th><a href="#">Expiry</a></th>
+                        <th><a href="#">Expiry (s)</a></th>
                         <th><a href="#">Expires at</a></th>
                         <th><a href="#">Last read</a></th>
                         <th><a href="#">Prev. read</a></th>
                         <th><a href="#">Prev. write</a></th>
+                        <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -77,18 +80,19 @@
                         <td>{{ item.value }}{% if item.chars_omitted %}<span class="form_hint"><br/>({{ item.chars_omitted }} more omitted)</span>{% endif %}</td>
                         <td>{{ item.position }}</td>
                         <td>{{ item.hits }}</td>
-                        <td>{{ item.expiry|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.expiry_op|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.expires_at|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.last_read|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.prev_read|default:'<span class="form_hint">---</span>'  }}</td>
                         <td>{{ item.prev_write|default:'<span class="form_hint">---</span>' }}</td>
+                        <td><a href="javascript:$.fn.zato.cache.builtin.items.delete_('{{ item.key_escaped }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.key_escaped }}'>{{ item.key_escaped }}</td>
                         <td class='ignore'>{{ item.chars_omitted }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='13'>No results</td>
+                        <td colspan='14'>No results</td>
                     </tr>
                 {% endif %}
 
