@@ -39,7 +39,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Built-in cache - <a href="{% url "cache-builtin" %}?cluster={{ cluster_id }}&amp;highlight={{ cache_id }}">{{ cache_name }}</a></h2>
+<h2 class="zato">Cache definitions : built-in : <a href="{% url "cache-builtin" %}?cluster={{ cluster_id }}&amp;highlight={{ cache_id }}">{{ cache_name }}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -49,8 +49,11 @@
 
 {% include "zato/search-form.html" with page_prompt="Show entries"%}
 
-
     {% if cluster_id %}
+
+<div class='page_prompt' style="clear:left">
+    <a href="{% url "cache-builtin-create-entry" cache_id cluster_id %}">Add a new entry</a>
+</div>
 
         <div id="markup">
             <table id="data-table">
@@ -78,7 +81,7 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.key }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td style="vertical-align:middle"><a href="{% url "cache-builtin-get-entry" cluster_id %}?cache_id={{ item.cache_id }}&amp;key={{ item.key_escaped }}">{{ item.key }}</a></td>
+                        <td style="vertical-align:middle"><a href="{% url "cache-builtin-edit-entry" item.cache_id cluster_id %}?key={{ item.key_escaped }}">{{ item.key }}</a></td>
                         <td>{{ item.value }}{% if item.chars_omitted %}<span class="form_hint"><br/>({{ item.chars_omitted }} more omitted)</span>{% endif %}</td>
                         <td>{{ item.position }}</td>
                         <td>{{ item.hits }}</td>

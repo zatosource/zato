@@ -411,6 +411,14 @@ class CACHE:
         BUILTIN = 'builtin'
         MEMCACHED = 'memcached'
 
+    class BUILTIN_KV_DATA_TYPE:
+        STR = NameId('String/unicode', 'str')
+        INT = NameId('Integer', 'int')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.STR, self.INT))
+
     class STATE_CHANGED:
         SET = 'SET'
         GET = 'GET'

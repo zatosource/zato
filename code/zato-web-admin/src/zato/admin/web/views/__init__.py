@@ -104,7 +104,7 @@ def get_lb_client(cluster):
 
 # ################################################################################################################################
 
-def method_allowed(*meths):
+def method_allowed(*methods_allowed):
     """ Accepts a list (possibly one-element long) of HTTP methods allowed
     for a given view. An exception will be raised if a request has been made
     with a method outside of those allowed, otherwise the view executes
@@ -116,8 +116,8 @@ def method_allowed(*meths):
         def inner_view(*args, **kwargs):
             req = args[1] if len(args) > 1 else args[0]
             if req.method not in meths:
-                msg = 'Method [{method}] is not allowed here [{view}], methods allowed:[{meths}]'
-                msg = msg.format(method=req.method, view=view.func_name, meths=meths)
+                msg = 'Method `{}` is not allowed here `{}`, methods allowed:`{}`'.format(
+                    req.method, view.func_name, methods_allowed)
                 logger.error(msg)
                 raise Exception(msg)
             return view(*args, **kwargs)
@@ -527,6 +527,20 @@ class SecurityList(object):
 def id_only_service(req, service, id, error_template):
     try:
         result = req.zato.client.invoke(service, {'id': id})
+        if not result.ok:
+            raise Exception(result.details)
+        else:
+            return result
+    except Exception, e:
+        msg = error_template.format(e=format_exc(e))
+        logger.error(msg)
+        return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+
+def invoke_service_with_json_response(req, service, input_dict, error_template):
+    try:
+        result = req.zato.client.invoke(service, input_dict)
         if not result.ok:
             raise Exception(result.details)
         else:
