@@ -69,7 +69,7 @@ class Cache(object):
 # ################################################################################################################################
 
     def __delitem__(self, key):
-        del self.impl[key]
+        self.delete(key)
 
 # ################################################################################################################################
 
@@ -108,13 +108,17 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def delete(self, key, _DELETE=CACHE.STATE_CHANGED.DELETE):
+    def delete(self, key, raise_key_error=True, _DELETE=CACHE.STATE_CHANGED.DELETE):
         """ Deletes a cache entry by its key.
         """
-        self.impl.delete(key)
-
-        if self.needs_sync:
-            spawn(self.after_state_changed_callback, _DELETE, self.config.name, {'key':key})
+        try:
+            self.impl.delete(key)
+        except KeyError:
+            if raise_key_error:
+                raise
+        else:
+            if self.needs_sync:
+                spawn(self.after_state_changed_callback, _DELETE, self.config.name, {'key':key})
 
 # ################################################################################################################################
 

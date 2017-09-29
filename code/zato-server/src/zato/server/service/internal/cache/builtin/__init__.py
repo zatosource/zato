@@ -52,10 +52,8 @@ class Get(AdminService):
 
     def handle(self):
         response = asdict(self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.id))
-
-        print(response, type(response))
-
         response['current_size'] = self.cache.get_size(_COMMON_CACHE.TYPE.BUILTIN, response['name'])
+
         self.response.payload = response
 
 # ################################################################################################################################
