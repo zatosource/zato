@@ -14,7 +14,7 @@ from urllib import quote_plus as urllib_quote
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.admin.web.views import BaseCallView, Index as _Index
+from zato.admin.web.views import BaseCallView, Delete as _Delete, Index as _Index
 
 # ################################################################################################################################
 
@@ -54,6 +54,8 @@ class Index(_Index):
 
     def handle(self):
         return {
+            'cluster_id': self.cluster_id,
+            'cache_id': self.input.id,
             'show_search_form': True,
             'cache_name': self.req.zato.client.invoke('zato.cache.builtin.get', {
                 'cluster_id': self.cluster_id,
@@ -84,6 +86,18 @@ class GetItem(BaseCallView):
         input_required = ('cluster_id', 'id', 'key')
         output_required = ('value',)
 
+class Delete(_Delete):
+    url_name = 'cache-builtin-delete-item'
+    error_message = 'Could not delete key'
+    service_name = 'cache3.delete-item'
+
+    def get_input_dict(self, *args, **kwargs):
+        return {
+            'cache_id': self.req.POST['cache_id'],
+            'key': self.req.POST['key'],
+            'cluster_id': self.cluster_id
+        }
+
 # ################################################################################################################################
 
 '''
@@ -106,14 +120,20 @@ from bunch import bunchify
 # Zato
 from zato.common import CACHE
 from zato.common.search_util import SearchResults
-from zato.server.service import AsIs, Int
+from zato.server.service import AsIs, Bool, Int
 from zato.server.service.internal import AdminService, GetListAdminSIO
 
+# ################################################################################################################################
+
 time_keys = ('expires_at', 'last_read', 'prev_read', 'prev_write')
+
+# ################################################################################################################################
 
 class GetItems(AdminService):
     name = 'cache3.get-items'
     _filter_by = ('name',)
+
+# ################################################################################################################################
 
     class SimpleIO(GetListAdminSIO):
         input_required = (AsIs('id'),)
@@ -121,6 +141,8 @@ class GetItems(AdminService):
         output_required = (AsIs('cache_id'), 'key', 'value', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
             'last_read', 'prev_read', 'prev_write', 'chars_omitted')
         output_repeated = True
+
+# ################################################################################################################################
 
     def _get_data(self, _ignored_session, _ignored_cluster_id, _time_keys=time_keys, *args, **kwargs):
 
@@ -188,6 +210,34 @@ class GetItems(AdminService):
         else:
             return SearchResults(None, [], None, 0)
 
+# ################################################################################################################################
+
     def handle(self):
         self.response.payload[:] = self._search(self._get_data)
+
+# ################################################################################################################################
+
+class Delete(AdminService):
+    name = 'cache3.delete-item'
+
+# ################################################################################################################################
+
+    class SimpleIO(GetListAdminSIO):
+        input_required = ('cluster_id', 'cache_id', 'key')
+        output_required = (Bool('key_found'),)
+
+    def handle(self):
+        # Get the cache object first
+        odb_cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.cache_id)
+        cache = self.cache.get_cache(CACHE.TYPE.BUILTIN, odb_cache.name)
+
+        try:
+            cache.delete(self.request.input.key+'a')
+        except KeyError:
+            key_found = False
+        else:
+            key_found = True
+
+        self.response.payload.key_found = key_found
+
 '''

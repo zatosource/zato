@@ -51,6 +51,7 @@ $.namespace('zato.account');
 $.namespace('zato.account.basic_settings');
 $.namespace('zato.cache');
 $.namespace('zato.cache.builtin');
+$.namespace('zato.cache.builtin.items');
 $.namespace('zato.cache.memcached');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
@@ -327,7 +328,7 @@ $.fn.zato.data_table.parse = function() {
         var instance = new $.fn.zato.data_table.class_()
         var tds = $(row).find('td');
 
-        console.log('columns = ' + columns);
+        console.info('columns = ' + columns);
 
         $.each(tds, function(td_idx, td) {
 
@@ -343,6 +344,7 @@ $.fn.zato.data_table.parse = function() {
         });
         console.log('Found instance in data_table ' + instance);
         $.fn.zato.data_table.data[instance.id] = instance;
+
     });
 
     if(_.size($.fn.zato.data_table.data) < 1) {
