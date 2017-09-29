@@ -64,8 +64,7 @@ class Index(_Index):
         }
 
     def on_before_append_item(self, item, _to_user_dt=('expires_at', 'last_read', 'prev_read', 'prev_write')):
-        item.cache_id_escaped = urllib_quote(item.cache_id.encode('utf-8'))
-        item.key_escaped = urllib_quote(item.key.encode('utf-8'))
+        item.key_escaped = item.key.encode('utf8').encode('hex') if isinstance(item.key, basestring) else item.key
 
         for name in _to_user_dt:
             value = getattr(item, name)
@@ -94,7 +93,7 @@ class Delete(_Delete):
     def get_input_dict(self, *args, **kwargs):
         return {
             'cache_id': self.req.POST['cache_id'],
-            'key': self.req.POST['key'],
+            'key': self.req.POST['key'].decode('hex'),
             'cluster_id': self.cluster_id
         }
 
@@ -121,7 +120,7 @@ from bunch import bunchify
 from zato.common import CACHE
 from zato.common.search_util import SearchResults
 from zato.server.service import AsIs, Bool, Int
-from zato.server.service.internal import AdminService, GetListAdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
@@ -222,7 +221,7 @@ class Delete(AdminService):
 
 # ################################################################################################################################
 
-    class SimpleIO(GetListAdminSIO):
+    class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'cache_id', 'key')
         output_required = (Bool('key_found'),)
 
@@ -232,12 +231,11 @@ class Delete(AdminService):
         cache = self.cache.get_cache(CACHE.TYPE.BUILTIN, odb_cache.name)
 
         try:
-            cache.delete(self.request.input.key+'a')
+            cache.delete(self.request.input.key)
         except KeyError:
             key_found = False
         else:
             key_found = True
 
         self.response.payload.key_found = key_found
-
 '''
