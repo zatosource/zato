@@ -29,7 +29,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
+        output_required = ('cache_id', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
             'extend_expiry_on_set', 'sync_method', 'persistent_storage', 'cache_type', 'current_size')
         output_repeated = True
 
@@ -45,9 +45,9 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
+        input_required = ('cache_id', 'name', 'is_active', 'is_default', 'max_size', 'max_item_size', 'extend_expiry_on_get',
             'extend_expiry_on_set', 'sync_method', 'persistent_storage', 'cache_type', 'current_size')
-        output_required = ('id', 'name')
+        output_required = ('cache_id', 'name')
 
     def success_message(self, item):
         return 'Successfully {} cache `{}`'.format(self.verb, item.name)
