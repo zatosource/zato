@@ -54,7 +54,11 @@ class Index(_Index):
 
     def handle(self):
         return {
-            'show_search_form': True
+            'show_search_form': True,
+            'cache_name': self.req.zato.client.invoke('zato.cache.builtin.get', {
+                'cluster_id': self.cluster_id,
+                'id': self.input.id
+            }).data.response.name
         }
 
     def on_before_append_item(self, item, _to_user_dt=('expires_at', 'last_read', 'prev_read', 'prev_write')):

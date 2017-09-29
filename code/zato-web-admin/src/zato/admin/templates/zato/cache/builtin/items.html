@@ -37,7 +37,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Cache details - CACHE_NAME: {{ cache_name }}</h2>
+<h2 class="zato">Cache - {{ cache_name }}</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
