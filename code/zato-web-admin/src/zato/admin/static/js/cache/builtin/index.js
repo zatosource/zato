@@ -58,8 +58,6 @@ $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.max_item_size);
     row += String.format('<td>{0}</td>', extend_expiry_on_get ? "Yes":"No");
     row += String.format('<td>{0}</td>', extend_expiry_on_set ? "Yes":"No");
-    row += String.format('<td>{0}</td>', item.sync_method);
-    row += String.format('<td>{0}</td>', item.persistent_storage);
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cache.builtin.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', delete_link);
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);

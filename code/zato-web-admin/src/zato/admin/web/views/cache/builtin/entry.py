@@ -9,93 +9,51 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging
-from urllib import quote_plus as urllib_quote
+
+# Django
+from django.http.response import HttpResponse
+from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web import from_utc_to_user
-from zato.admin.web.views import BaseCallView, Delete as _Delete, Index as _Index
+from zato.admin.web.views import invoke_service_with_json_response, method_allowed
+from zato.admin.web.forms.cache.builtin.entry import CreateForm, EditForm
 
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
+@method_allowed('GET')
+def create(req, cache_id, cluster_id):
+
+    out = {
+        'zato_clusters': req.zato.clusters,
+        'cluster_id': req.zato.cluster_id,
+        'form': CreateForm(''),
+        'action': 'create',
+        'cache_id': cache_id,
+        'cache': req.zato.client.invoke('zato.cache.builtin.get', {
+                'cluster_id': req.zato.cluster_id,
+                'id': cache_id,
+            }).data.response
+    }
+    return TemplateResponse(req, 'zato/cache/builtin/entry.html', out)
 
 # ################################################################################################################################
 
-class CacheEntry(object):
-    def __init__(self, cache_id=None, key=None, value=None, last_read=None, prev_read=None, prev_write=None, expiry_op=None,
-            expires_at=None, hits=None, position=None):
-        self.cache_id = cache_id
-        self.key = key
-        self.value = value
-        self.last_read = last_read
-        self.prev_read = prev_read
-        self.prev_write = prev_write
-        self.expiry_op = expiry_op
-        self.expires_at = expires_at
-        self.hits = hits
-        self.position = position
+@method_allowed('POST')
+def create_action(req, cache_id, cluster_id):
+    #return invoke_service_with_json_response(req, '
+    pass
 
 # ################################################################################################################################
 
-class Index(_Index):
-    method_allowed = 'GET'
-    url_name = 'cache-builtin-get-entries'
-    template = 'zato/cache/builtin/entries.html'
-    service_name = 'cache3.get-entries' #'zato.cache.builtin.details.get-list'
-    output_class = CacheEntry
-    paginate = True
-
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'id')
-        output_required = ('cache_id', 'key', 'value', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
-            'last_read', 'prev_read', 'prev_write', 'chars_omitted')
-        output_repeated = True
-
-    def handle(self):
-        return {
-            'cluster_id': self.cluster_id,
-            'cache_id': self.input.id,
-            'show_search_form': True,
-            'cache_name': self.req.zato.client.invoke('zato.cache.builtin.get', {
-                'cluster_id': self.cluster_id,
-                'id': self.input.id
-            }).data.response.name
-        }
-
-    def on_before_append_item(self, item, _to_user_dt=('expires_at', 'last_read', 'prev_read', 'prev_write')):
-        item.key_escaped = item.key.encode('utf8').encode('hex') if isinstance(item.key, basestring) else item.key
-
-        for name in _to_user_dt:
-            value = getattr(item, name)
-            if value:
-                setattr(item, name, from_utc_to_user(value, self.req.zato.user_profile))
-
-        return item
+@method_allowed('GET')
+def edit(req, cache_id, cluster_id):
+    zzz
 
 # ################################################################################################################################
 
-class GetEntry(BaseCallView):
-    method_allowed = 'GET'
-    url_name = 'cache-builtin-get-entry'
-    template = 'zato/cache/builtin/entry.html'
-    service_name = 'cache3.get-entry' #'zato.cache.builtin.details.get-entry'
-
-    class SimpleIO(BaseCallView.SimpleIO):
-        input_required = ('cluster_id', 'id', 'key')
-        output_required = ('value',)
-
-class Delete(_Delete):
-    url_name = 'cache-builtin-delete-entry'
-    error_message = 'Could not delete key'
-    service_name = 'cache3.delete-entry'
-
-    def get_input_dict(self, *args, **kwargs):
-        return {
-            'cache_id': self.req.POST['cache_id'],
-            'key': self.req.POST['key'].decode('hex'),
-            'cluster_id': self.cluster_id
-        }
+@method_allowed('POST')
+def edit_action(req, cache_id, cluster_id):
+    eee
 
 # ################################################################################################################################
 
@@ -118,6 +76,7 @@ from bunch import bunchify
 
 # Zato
 from zato.common import CACHE
+from zato.common.exception import BadRequest
 from zato.common.search_util import SearchResults
 from zato.server.service import AsIs, Bool, Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -131,8 +90,6 @@ time_keys = ('expires_at', 'last_read', 'prev_read', 'prev_write')
 class GetItems(AdminService):
     name = 'cache3.get-entries'
     _filter_by = ('name',)
-
-# ################################################################################################################################
 
     class SimpleIO(GetListAdminSIO):
         input_required = (AsIs('id'),)
@@ -216,27 +173,65 @@ class GetItems(AdminService):
 
 # ################################################################################################################################
 
-class Delete(AdminService):
-    name = 'cache3.delete-entry'
+class _CacheModifyingService(AdminService):
+    """ Base class for services that modify the contents of a given cache.
+    """
+    def _get_cache_by_input(self):
+        odb_cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.cache_id)
+        return self.cache.get_cache(CACHE.TYPE.BUILTIN, odb_cache.name)
 
 # ################################################################################################################################
+
+class Create(_CacheModifyingService):
+    name = 'cache3.create-entry'
+
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'cache_id', 'key', 'value', Bool('ignore_existing'))
+        input_optional = ('key_data_type', 'value_data_type', 'expiry')
+
+    def handle(self):
+
+        key = self.request.input.key
+        value = self.request.input.value
+
+        key = int(key) if self.request.input.get('key_data_type') == CACHE.BUILTIN_KV_DATA_TYPE.INT.id else key
+        value = int(value) if self.request.input.get('value_data_type') == CACHE.BUILTIN_KV_DATA_TYPE.INT.id else value
+
+        expiry = self.request.input.get('expiry', None) or 0
+
+        # Double check expiry is actually an integer
+        try:
+            int(expiry)
+        except ValueError:
+            raise BadRequest(self.cid, 'Expiry {} must be an integer instead of {}'.format(repr(expiry)), type(expiry))
+
+        # Note that the check operation below is not atomic
+        cache = self._get_cache_by_input()
+
+        existing = cache.get(key)
+        if existing and (not self.request.input.ignore_existing):
+            raise BadRequest('Key `{}` already exists with value of `{}`'.format(key, existing))
+
+# ################################################################################################################################
+
+class Delete(AdminService):
+    name = 'cache3.delete-entry'
 
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'cache_id', 'key')
         output_required = (Bool('key_found'),)
 
     def handle(self):
-        # Get the cache object first
-        odb_cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.cache_id)
-        cache = self.cache.get_cache(CACHE.TYPE.BUILTIN, odb_cache.name)
 
         try:
-            cache.delete(self.request.input.key)
+            self._get_cache_by_input().delete(self.request.input.key)
         except KeyError:
             key_found = False
         else:
             key_found = True
 
         self.response.payload.key_found = key_found
+
+# ################################################################################################################################
 
 '''

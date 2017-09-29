@@ -18,7 +18,8 @@ from django.views.static import serve as django_static_serve
 from zato.admin import settings
 from zato.admin.web.views import account, cluster, docs, http_soap, kvdb, load_balancer, main, scheduler, service, stats
 from zato.admin.web.views.cache import builtin as cache_builtin
-from zato.admin.web.views.cache.builtin import details as cache_builtin_details
+from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
+from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
 from zato.admin.web.views.cache import memcached_ as cache_memcached
 from zato.admin.web.views.cache import redis_ as cache_redis
 from zato.admin.web.views.channel import amqp_ as channel_amqp
@@ -914,11 +915,25 @@ urlpatterns += [
         login_required(cache_builtin.Delete()), name=cache_builtin.Delete.url_name),
 
     url(r'^zato/cache/builtin/entries/(?P<id>.*)/delete/$',
-        login_required(cache_builtin_details.Delete()), name=cache_builtin_details.Delete.url_name),
+        login_required(cache_builtin_entries.Delete()), name=cache_builtin_entries.Delete.url_name),
+
+    url(r'^zato/cache/builtin/details/entries/cluster/(?P<cluster_id>.*)/$',
+        login_required(cache_builtin_entries.GetEntries()), name=cache_builtin_entries.GetEntries.url_name),
+
     url(r'^zato/cache/builtin/entries/(?P<id>.*)/$',
-        login_required(cache_builtin_details.Index()), name=cache_builtin_details.Index.url_name),
-    url(r'^zato/cache/builtin/details/entry/cluster/(?P<cluster_id>.*)/$',
-        login_required(cache_builtin_details.GetEntry()), name=cache_builtin_details.GetEntry.url_name),
+        login_required(cache_builtin_entries.Index()), name=cache_builtin_entries.Index.url_name),
+
+    url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/action/$',
+        login_required(cache_builtin_entry.create_action), name='cache-builtin-create-entry-action'),
+
+    url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cache_builtin_entry.create), name='cache-builtin-create-entry'),
+
+    url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/action/$',
+        login_required(cache_builtin_entry.edit_action), name='cache-builtin-edit-entry-action'),
+
+    url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cache_builtin_entry.edit), name='cache-builtin-edit-entry'),
 
     # .. Memcached
 
