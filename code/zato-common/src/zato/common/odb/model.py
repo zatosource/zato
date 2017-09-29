@@ -860,7 +860,7 @@ class CacheBuiltin(Cache):
     __tablename__ = 'cache_builtin'
     __mapper_args__ = {'polymorphic_identity':'builtin'}
 
-    id = Column(Integer, ForeignKey('cache.id'), primary_key=True)
+    cache_id = Column(Integer, ForeignKey('cache.id'), primary_key=True)
     max_size = Column(Integer(), nullable=False)
     max_item_size = Column(Integer(), nullable=False)
     extend_expiry_on_get = Column(Boolean(), nullable=False)
@@ -876,7 +876,7 @@ class CacheMemcached(Cache):
     __tablename__ = 'cache_memcached'
     __mapper_args__ = {'polymorphic_identity':'memcached'}
 
-    id = Column(Integer, ForeignKey('cache.id'), primary_key=True)
+    cache_id = Column(Integer, ForeignKey('cache.id'), primary_key=True)
     servers = Column(Text, nullable=False)
     is_debug = Column(Boolean(), nullable=False)
     extra = Column(LargeBinary(20000), nullable=True)

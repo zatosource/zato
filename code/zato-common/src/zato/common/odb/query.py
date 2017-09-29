@@ -18,7 +18,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import case
 
 # Zato
-from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
+from zato.common import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
      URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
      CassandraQuery, ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
@@ -1353,14 +1353,11 @@ def rbac_role_permission_list(session, cluster_id, needs_columns=False):
 # ################################################################################################################################
 
 def _cache_builtin(session, cluster_id):
-    return session.query(
-        CacheBuiltin.id, CacheBuiltin.name, CacheBuiltin.is_active,
-        CacheBuiltin.is_default, CacheBuiltin.cache_type, CacheBuiltin.max_size,
-        CacheBuiltin.max_item_size, CacheBuiltin.extend_expiry_on_get, CacheBuiltin.extend_expiry_on_set,
-        CacheBuiltin.sync_method, CacheBuiltin.persistent_storage).\
+    return session.query(CacheBuiltin).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==CacheBuiltin.cluster_id).\
-        filter(Cache.id==CacheBuiltin.id).\
+        filter(Cache.id==CacheBuiltin.cache_id).\
+        filter(Cache.cache_type==CACHE.TYPE.BUILTIN).\
         order_by(CacheBuiltin.name)
 
 def cache_builtin(session, cluster_id, id):
@@ -1380,13 +1377,14 @@ def cache_builtin_list(session, cluster_id, needs_columns=False):
 
 def _cache_memcached(session, cluster_id):
     return session.query(
-        CacheMemcached.id, CacheMemcached.name, CacheMemcached.is_active,
+        CacheMemcached.cache_id, CacheMemcached.name, CacheMemcached.is_active,
         CacheMemcached.is_default, CacheMemcached.is_debug,
         CacheMemcached.servers, CacheMemcached.extra,
         CacheMemcached.cache_type).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==CacheMemcached.cluster_id).\
-        filter(Cache.id==CacheMemcached.id).\
+        filter(Cache.id==CacheMemcached.cache_id).\
+        filter(Cache.cache_type==CACHE.TYPE.MEMCACHED).\
         order_by(CacheMemcached.name)
 
 def cache_memcached(session, cluster_id, id):
