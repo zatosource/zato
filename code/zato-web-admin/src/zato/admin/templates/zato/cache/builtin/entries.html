@@ -23,9 +23,10 @@
             'key',
             'value',
             'position',
-            'hits',
             '_expiry_op',
             '_expires_at',
+            '_server',
+            'hits',
             '_last_read',
             '_prev_read',
             '_last_write',
@@ -65,9 +66,10 @@
                         <th><a href="#">Key</a></th>
                         <th><a href="#">Value</a></th>
                         <th><a href="#">Idx</a></th>
-                        <th><a href="#">Hits</a></th>
                         <th><a href="#">Expiry (s)</a></th>
                         <th><a href="#">Expires at</a></th>
+                        <th><a href="#">Srv</a></th>
+                        <th><a href="#">Hits</a></th>
                         <th><a href="#">Last read</a></th>
                         <th><a href="#">Prev. read</a></th>
                         <th><a href="#">Last write</a></th>
@@ -86,9 +88,10 @@
                         <td style="vertical-align:middle"><a href="{% url "cache-builtin-edit-entry" item.cache_id cluster_id %}?key={{ item.key_escaped }}">{{ item.key }}</a></td>
                         <td>{{ item.value|default:'<span class="form_hint">---</span>' }}{% if item.chars_omitted %}<span class="form_hint"><br/>({{ item.chars_omitted }} more omitted)</span>{% endif %}</td>
                         <td>{{ item.position }}</td>
-                        <td>{{ item.hits }}</td>
                         <td>{{ item.expiry_op|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.expires_at|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.server }}</td>
+                        <td>{{ item.hits }}</td>
                         <td>{{ item.last_read|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.prev_read|default:'<span class="form_hint">---</span>'  }}</td>
                         <td>{{ item.last_write|default:'<span class="form_hint">---</span>' }}</td>
