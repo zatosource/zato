@@ -33,6 +33,7 @@ builtin_op_to_broker_msg = {
     CACHE.STATE_CHANGED.SET: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_SET.value,
     CACHE.STATE_CHANGED.DELETE: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_DELETE.value,
     CACHE.STATE_CHANGED.EXPIRE: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_EXPIRE.value,
+    CACHE.STATE_CHANGED.CLEAR: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_CLEAR.value,
 }
 
 # ################################################################################################################################
@@ -159,10 +160,13 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def clear(self):
+    def clear(self, _CLEAR=CACHE.STATE_CHANGED.CLEAR):
         """ Clears the cache - removes all entries.
         """
         self.impl.clear()
+
+        if self.needs_sync:
+            spawn(self.after_state_changed_callback, _CLEAR, self.config.name, {})
 
 # ################################################################################################################################
 
@@ -192,30 +196,37 @@ class Cache(object):
 # ################################################################################################################################
 
     def sync_after_get(self, data):
-        """ Invoked by Cache API to synchronizes this worker's caches after a .get operation in another worker process.
+        """ Invoked by Cache API to synchronizes this worker's cache after a .get operation in another worker process.
         """
         self.impl.set_expiration_data(data.key, data.expiry, data.expires_at)
 
 # ################################################################################################################################
 
     def sync_after_set(self, data):
-        """ Invoked by Cache API to synchronizes this worker's caches after a .set operation in another worker process.
+        """ Invoked by Cache API to synchronizes this worker's cache after a .set operation in another worker process.
         """
         self.impl.set(data.key, data.value, data.expiry, None)
 
 # ################################################################################################################################
 
     def sync_after_delete(self, data):
-        """ Invoked by Cache API to synchronizes this worker's caches after a .delete operation in another worker process.
+        """ Invoked by Cache API to synchronizes this worker's cache after a .delete operation in another worker process.
         """
         self.impl.delete(data.key)
 
 # ################################################################################################################################
 
     def sync_after_expire(self, data):
-        """ Invoked by Cache API to synchronizes this worker's caches after an .expire operation in another worker process.
+        """ Invoked by Cache API to synchronizes this worker's cache after an .expire operation in another worker process.
         """
         self.impl.set_expiration_data(data.key, data.expiry, data.expires_at)
+
+# ################################################################################################################################
+
+    def sync_after_clear(self):
+        """ Invoked by Cache API to synchronizes this worker's cache after a .clear operation in another worker process.
+        """
+        self.impl.clear()
 
 # ################################################################################################################################
 
@@ -386,7 +397,6 @@ class CacheAPI(object):
     def get_size(self, cache_type, name):
         """ Returns current size, the number of entries, in a given cache.
         """
-        print(self.caches[cache_type])
         return len(self.caches[cache_type][name])
 
 # ################################################################################################################################
@@ -416,5 +426,12 @@ class CacheAPI(object):
         """ Synchronizes the state of this worker's cache after an .expire operation in another worker process.
         """
         self.caches[cache_type][data.cache_name].sync_after_expire(data)
+
+# ################################################################################################################################
+
+    def sync_after_clear(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .clear operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_clear()
 
 # ################################################################################################################################

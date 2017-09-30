@@ -30,7 +30,7 @@ $.fn.zato.cache.builtin.entries.delete_ = function(id) {
     post_data['key'] = id;
 
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Key `{0}` deleted',
+        'Key {0} deleted',
         'Are you sure you want to delete key <b>{0}</b>?',
         false, false, './delete/', post_data);
 }

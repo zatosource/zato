@@ -424,6 +424,7 @@ class CACHE:
         GET = 'GET'
         DELETE = 'DELETE'
         EXPIRE = 'EXPIRE'
+        CLEAR = 'CLEAR'
 
     class DEFAULT:
         MAX_SIZE = 10000

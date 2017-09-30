@@ -289,7 +289,6 @@ class Create(_CreateEdit):
     name = 'cache3.create-entry'
     old_key_elem = 'key'
 
-
 # ################################################################################################################################
 
 class Update(_CreateEdit):
@@ -356,6 +355,17 @@ class Delete(_Base):
             key_found = True
 
         self.response.payload.key_found = key_found
+
+# ################################################################################################################################
+
+class ClearCache(_Base):
+    name = 'cache3.clear-cache'
+
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'cache_id')
+
+    def handle(self):
+        self._get_cache_by_input().clear()
 
 # ################################################################################################################################
 '''
