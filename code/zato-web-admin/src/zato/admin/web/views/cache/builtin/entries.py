@@ -53,7 +53,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'id')
         output_required = ('cache_id', 'key', 'value', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
-            'last_read', 'prev_read', 'prev_write', 'chars_omitted')
+            'last_read', 'prev_read', 'last_write', 'prev_write', 'chars_omitted')
         output_repeated = True
 
     def handle(self):
@@ -67,7 +67,7 @@ class Index(_Index):
             }).data.response.name
         }
 
-    def on_before_append_item(self, item, _to_user_dt=('expires_at', 'last_read', 'prev_read', 'prev_write')):
+    def on_before_append_item(self, item, _to_user_dt=('expires_at', 'last_read', 'prev_read', 'last_write', 'prev_write')):
         item.key_escaped = item.key.encode('utf8').encode('hex') if isinstance(item.key, basestring) else item.key
 
         for name in _to_user_dt:

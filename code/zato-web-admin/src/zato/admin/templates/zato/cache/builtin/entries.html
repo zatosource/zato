@@ -28,6 +28,7 @@
             '_expires_at',
             '_last_read',
             '_prev_read',
+            '_last_write',
             '_prev_write',
             '_delete',
             'id',
@@ -69,6 +70,7 @@
                         <th><a href="#">Expires at</a></th>
                         <th><a href="#">Last read</a></th>
                         <th><a href="#">Prev. read</a></th>
+                        <th><a href="#">Last write</a></th>
                         <th><a href="#">Prev. write</a></th>
                         <th>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -82,13 +84,14 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td style="vertical-align:middle"><a href="{% url "cache-builtin-edit-entry" item.cache_id cluster_id %}?key={{ item.key_escaped }}">{{ item.key }}</a></td>
-                        <td>{{ item.value }}{% if item.chars_omitted %}<span class="form_hint"><br/>({{ item.chars_omitted }} more omitted)</span>{% endif %}</td>
+                        <td>{{ item.value|default:'<span class="form_hint">---</span>' }}{% if item.chars_omitted %}<span class="form_hint"><br/>({{ item.chars_omitted }} more omitted)</span>{% endif %}</td>
                         <td>{{ item.position }}</td>
                         <td>{{ item.hits }}</td>
                         <td>{{ item.expiry_op|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.expires_at|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.last_read|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.prev_read|default:'<span class="form_hint">---</span>'  }}</td>
+                        <td>{{ item.last_write|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.prev_write|default:'<span class="form_hint">---</span>' }}</td>
                         <td><a href="javascript:$.fn.zato.cache.builtin.entries.delete_('{{ item.key_escaped }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.key_escaped }}'>{{ item.key_escaped }}</td>
@@ -97,7 +100,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='14'>No results</td>
+                        <td colspan='15'>No results</td>
                     </tr>
                 {% endif %}
 
