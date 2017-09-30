@@ -115,7 +115,7 @@ def method_allowed(*methods_allowed):
     def inner_method_allowed(view):
         def inner_view(*args, **kwargs):
             req = args[1] if len(args) > 1 else args[0]
-            if req.method not in meths:
+            if req.method not in methods_allowed:
                 msg = 'Method `{}` is not allowed here `{}`, methods allowed:`{}`'.format(
                     req.method, view.func_name, methods_allowed)
                 logger.error(msg)
@@ -538,17 +538,13 @@ def id_only_service(req, service, id, error_template):
 
 # ################################################################################################################################
 
-def invoke_service_with_json_response(req, service, input_dict, error_template):
+def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_template, content_type='application/javascript'):
     try:
         result = req.zato.client.invoke(service, input_dict)
-        if not result.ok:
-            raise Exception(result.details)
-        else:
-            return result
     except Exception, e:
-        msg = error_template.format(e=format_exc(e))
-        logger.error(msg)
-        return HttpResponseServerError(msg)
+        return HttpResponseServerError(e.message, content_type=content_type)
+    else:
+        return HttpResponse(dumps({'msg': ok_msg}), content_type=content_type)
 
 # ################################################################################################################################
 

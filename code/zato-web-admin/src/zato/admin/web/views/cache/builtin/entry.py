@@ -9,9 +9,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from json import dumps
 
 # Django
-from django.http.response import HttpResponse
+from django.http.response import HttpResponseBadRequest, HttpResponse
 from django.template.response import TemplateResponse
 
 # Zato
@@ -38,10 +39,30 @@ def create(req, cache_id, cluster_id):
 
 # ################################################################################################################################
 
+def _create_edit_action_message(action, post, cache_id, cluster_id):
+    message = {
+        'cache_id': cache_id,
+        'cluster_id': cluster_id,
+    }
+
+    # Common request elements
+    for name in ('key', 'value', 'replace_existing', 'key_data_type', 'value_data_type', 'expiry'):
+        message[name] = post.get(name)
+
+    # Edit will possibly rename the key
+    if action == 'edit':
+        message['old_key'] = post['old_key']
+
+    return message
+
+# ################################################################################################################################
+
 @method_allowed('POST')
 def create_action(req, cache_id, cluster_id):
-    #return invoke_service_with_json_response(req, '
-    pass
+
+    return invoke_service_with_json_response(
+        req, 'cache3.create-entry', _create_edit_action_message('create', req.POST, cache_id, cluster_id),
+        'OK, entry created successfully.', 'Entry could not be created, e:{e}')
 
 # ################################################################################################################################
 
@@ -78,12 +99,12 @@ from bunch import bunchify
 from zato.common import CACHE
 from zato.common.exception import BadRequest
 from zato.common.search_util import SearchResults
-from zato.server.service import AsIs, Bool, Int
+from zato.server.service import AsIs, Bool, Float, Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
-time_keys = ('expires_at', 'last_read', 'prev_read', 'prev_write')
+time_keys = ('expires_at', 'last_read', 'prev_read', 'last_write', 'prev_write')
 
 # ################################################################################################################################
 
@@ -94,8 +115,9 @@ class GetItems(AdminService):
     class SimpleIO(GetListAdminSIO):
         input_required = (AsIs('id'),)
         input_optional = GetListAdminSIO.input_optional + (Int('max_chars'),)
-        output_required = (AsIs('cache_id'), 'key', 'value', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
-            'last_read', 'prev_read', 'prev_write', 'chars_omitted')
+        output_required = (AsIs('cache_id'), 'key', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
+            'last_read', 'prev_read', 'last_write', 'prev_write', 'chars_omitted')
+        output_optional = ('value',)
         output_repeated = True
 
 # ################################################################################################################################
@@ -186,13 +208,13 @@ class Create(_CacheModifyingService):
     name = 'cache3.create-entry'
 
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'cache_id', 'key', 'value', Bool('ignore_existing'))
-        input_optional = ('key_data_type', 'value_data_type', 'expiry')
+        input_required = ('cluster_id', 'cache_id', 'key', 'value', Bool('replace_existing'))
+        input_optional = ('key_data_type', 'value_data_type', Float('expiry'))
 
     def handle(self):
 
         key = self.request.input.key
-        value = self.request.input.value
+        value = self.request.input.value or ''
 
         key = int(key) if self.request.input.get('key_data_type') == CACHE.BUILTIN_KV_DATA_TYPE.INT.id else key
         value = int(value) if self.request.input.get('value_data_type') == CACHE.BUILTIN_KV_DATA_TYPE.INT.id else value
@@ -205,16 +227,24 @@ class Create(_CacheModifyingService):
         except ValueError:
             raise BadRequest(self.cid, 'Expiry {} must be an integer instead of {}'.format(repr(expiry)), type(expiry))
 
-        # Note that the check operation below is not atomic
         cache = self._get_cache_by_input()
 
-        existing = cache.get(key)
-        if existing and (not self.request.input.ignore_existing):
-            raise BadRequest('Key `{}` already exists with value of `{}`'.format(key, existing))
+        # Note that the try/except/else/set operation below is not atomic
+
+        try:
+            existing_value = cache.get(key)
+        except KeyError:
+            pass # It's OK if the key doesn't exist yet
+        else:
+            if not self.request.input.get('replace_existing'):
+                raise BadRequest(self.cid, 'Key `{}` already exists with a value of `{}`'.format(key, existing_value))
+
+        # If we get here it means the key doesn't exist or it's fine to overwrite it.
+        cache.set(key, value, expiry)
 
 # ################################################################################################################################
 
-class Delete(AdminService):
+class Delete(_CacheModifyingService):
     name = 'cache3.delete-entry'
 
     class SimpleIO(AdminSIO):
@@ -233,5 +263,4 @@ class Delete(AdminService):
         self.response.payload.key_found = key_found
 
 # ################################################################################################################################
-
 '''

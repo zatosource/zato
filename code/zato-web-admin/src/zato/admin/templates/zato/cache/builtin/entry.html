@@ -9,6 +9,7 @@
 {% block "extra_js" %}
 
     <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
@@ -29,7 +30,7 @@
         </tr>
         <tr>
             <td>
-                <form id="cache_entry_form" action="./action/" method="post">
+                <form id="cache_entry_form" action="{% url "cache-builtin-create-entry-action" cache_id cluster_id %}" method="post">
                 {% csrf_token %}
                     Key
                     <br/>
@@ -51,8 +52,17 @@
                             <td>{{ form.value_data_type }}</td>
                         </tr>
                         <tr>
-                            <td>Expiry</td>
+                            <td>Expiry
+                            <br/>
+                            <span class="form_hint">
+                            (0=unlimited)
+                            </span>
+                            </td>
                             <td>{{ form.expiry }}</td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Replace existing</td>
+                            <td>{{ form.replace_existing }}</td>
                         </tr>
                     </table>
 
