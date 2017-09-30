@@ -90,10 +90,12 @@ class Cache(object):
         needs_sync = self.needs_sync and self.config.extend_expiry_on_get
         meta_ref = {'key':key} if needs_sync else None
 
+        out = self.impl.get(key, details, meta_ref)
+
         if needs_sync:
             spawn(self.after_state_changed_callback, _GET, self.config.name, meta_ref)
 
-        return self.impl.get(key, details, meta_ref)
+        return out
 
 # ################################################################################################################################
 
