@@ -13,11 +13,12 @@ import logging
 
 # Zato
 from zato.admin.web.forms.cache.builtin import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, invoke_service_with_json_response, \
+     method_allowed
 from zato.common import CACHE
 from zato.common.odb.model import CacheBuiltin
 
-logger = logging.getLogger(__name__)
+# ################################################################################################################################
 
 class Index(_Index):
     method_allowed = 'GET'
@@ -41,6 +42,8 @@ class Index(_Index):
             'default_max_item_size': CACHE.DEFAULT.MAX_ITEM_SIZE,
         }
 
+# ################################################################################################################################
+
 class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
@@ -52,16 +55,32 @@ class _CreateEdit(CreateEdit):
     def success_message(self, item):
         return 'Successfully {} cache `{}`'.format(self.verb, item.name)
 
+# ################################################################################################################################
+
 class Create(_CreateEdit):
     url_name = 'cache-builtin-create'
     service_name = 'zato.cache.builtin.create'
+
+# ################################################################################################################################
 
 class Edit(_CreateEdit):
     url_name = 'cache-builtin-edit'
     form_prefix = 'edit-'
     service_name = 'zato.cache.builtin.edit'
 
+# ################################################################################################################################
+
 class Delete(_Delete):
     url_name = 'cache-builtin-delete'
     error_message = 'Cache could not be deleted'
     service_name = 'zato.cache.builtin.delete'
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def clear(req):
+    return invoke_service_with_json_response(
+        req, 'cache3.clear-cache', {'cluster_id':req.POST['cluster_id'], 'cache_id':req.POST['cache_id']},
+        'OK, cache cleared.', 'Cache could not be cleared, e:{e}')
+
+# ################################################################################################################################

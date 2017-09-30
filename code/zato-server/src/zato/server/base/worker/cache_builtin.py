@@ -58,3 +58,9 @@ class CacheBuiltin(WorkerImpl):
             self.cache_api.sync_after_expire(_BUILTIN, msg)
 
 # ################################################################################################################################
+
+    def on_broker_msg_CACHE_BUILTIN_STATE_CHANGED_CLEAR(self, msg, _BUILTIN=CACHE.TYPE.BUILTIN):
+        if msg.source_worker_id != self.server.worker_id:
+            self.cache_api.sync_after_clear(_BUILTIN, msg)
+
+# ################################################################################################################################

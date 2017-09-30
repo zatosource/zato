@@ -426,6 +426,7 @@ class CACHE(Constants):
     BUILTIN_STATE_CHANGED_SET = ValueConstant('')
     BUILTIN_STATE_CHANGED_DELETE = ValueConstant('')
     BUILTIN_STATE_CHANGED_EXPIRE = ValueConstant('')
+    BUILTIN_STATE_CHANGED_CLEAR = ValueConstant('')
 
     MEMCACHED_CREATE = ValueConstant('')
     MEMCACHED_EDIT = ValueConstant('')

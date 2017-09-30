@@ -59,6 +59,7 @@ $.fn.zato.cache.builtin.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', extend_expiry_on_get ? "Yes":"No");
     row += String.format('<td>{0}</td>', extend_expiry_on_set ? "Yes":"No");
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cache.builtin.edit('{0}')\">Edit</a>", item.id));
+    row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.cache.builtin.clear('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', delete_link);
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
@@ -78,4 +79,20 @@ $.fn.zato.cache.builtin.delete_ = function(id) {
         'Cache definition `{0}` deleted',
         'Are you sure you want to delete the cache definition `{0}`?',
         true);
+}
+
+$.fn.zato.cache.builtin.clear = function(id) {
+
+    var post_data = {};
+    post_data['cluster_id'] = $('#cluster_id').val();
+    post_data['cache_id'] = id;
+
+    var _callback = function() {
+        $('#cache_current_size_' + id).html('0');
+    }
+
+    $.fn.zato.data_table.delete_(id, 'td.item_id_',
+        'Cache `{0}` cleared',
+        'Are you sure you want to remove all entries from cache <b>{0}</b>?',
+        false, false, './clear/', post_data, false, _callback);
 }
