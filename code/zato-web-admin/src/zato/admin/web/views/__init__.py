@@ -538,13 +538,17 @@ def id_only_service(req, service, id, error_template):
 
 # ################################################################################################################################
 
-def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_template, content_type='application/javascript'):
+def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_template, content_type='application/javascript',
+        extra=None):
     try:
         result = req.zato.client.invoke(service, input_dict)
     except Exception, e:
         return HttpResponseServerError(e.message, content_type=content_type)
     else:
-        return HttpResponse(dumps({'msg': ok_msg}), content_type=content_type)
+        response = {'msg': ok_msg}
+        response.update(extra or {})
+        response = dumps(response)
+        return HttpResponse(response, content_type=content_type)
 
 # ################################################################################################################################
 

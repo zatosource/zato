@@ -45,13 +45,13 @@ def response_hook(self, input, _ignored, attrs, service_type):
 class Get(AdminService):
 
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'id')
+        input_required = ('cluster_id', 'cache_id')
         output_required = ('name', 'is_active', 'is_default', 'cache_type', Int('max_size'), Int('max_item_size'),
             Bool('extend_expiry_on_get'), Bool('extend_expiry_on_set'), 'sync_method', 'persistent_storage',
             Int('current_size'))
 
     def handle(self):
-        response = asdict(self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.id))
+        response = asdict(self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.cache_id))
         response['current_size'] = self.cache.get_size(_COMMON_CACHE.TYPE.BUILTIN, response['name'])
 
         self.response.payload = response
