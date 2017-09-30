@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 class CacheEntry(object):
     def __init__(self, cache_id=None, key=None, value=None, last_read=None, prev_read=None, prev_write=None, expiry_op=None,
-            expires_at=None, hits=None, position=None):
+            expires_at=None, hits=None, position=None, server=None):
         self.cache_id = cache_id
         self.key = key
         self.value = value
@@ -39,6 +39,7 @@ class CacheEntry(object):
         self.expires_at = expires_at
         self.hits = hits
         self.position = position
+        self.server = server
 
 # ################################################################################################################################
 
@@ -53,7 +54,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'cache_id')
         output_required = ('cache_id', 'key', 'value', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
-            'last_read', 'prev_read', 'last_write', 'prev_write', 'chars_omitted')
+            'last_read', 'prev_read', 'last_write', 'prev_write', 'chars_omitted', 'server')
         output_repeated = True
 
     def handle(self):
@@ -69,6 +70,7 @@ class Index(_Index):
 
     def on_before_append_item(self, item, _to_user_dt=('expires_at', 'last_read', 'prev_read', 'last_write', 'prev_write')):
         item.key_escaped = item.key.encode('utf8').encode('hex') if isinstance(item.key, basestring) else item.key
+        print(item)
 
         for name in _to_user_dt:
             value = getattr(item, name)
