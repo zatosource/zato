@@ -318,10 +318,11 @@ class CacheAPI(object):
     def _edit(self, config):
         """ A low-level method for updating configuration of a given cache. Must be called with self.lock held.
         """
-        cache = self.caches[config.cache_type][config.old_name]
+        cache = self.caches[config.cache_type].pop(config.old_name)
 
         if config.cache_type == CACHE.TYPE.BUILTIN:
             cache.update_config(config)
+            self._add_cache(config, cache)
         else:
             cache.disconnect_all()
             self._delete(config.cache_type, config.old_name)
@@ -385,6 +386,7 @@ class CacheAPI(object):
     def get_size(self, cache_type, name):
         """ Returns current size, the number of entries, in a given cache.
         """
+        print(self.caches[cache_type])
         return len(self.caches[cache_type][name])
 
 # ################################################################################################################################
