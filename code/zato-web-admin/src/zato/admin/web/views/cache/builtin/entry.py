@@ -129,6 +129,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# stdlib
+from operator import and_, or_
+
 # Arrow
 from arrow import get as arrow_get
 
@@ -151,9 +154,13 @@ time_keys = ('expires_at', 'last_read', 'prev_read', 'last_write', 'prev_write')
 class _Base(AdminService):
     """ Base class for services that access the contents of a given cache.
     """
-    def _get_cache_by_input(self):
+    def _get_cache_by_input(self, needs_odb=False):
         odb_cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.cache_id)
-        return self.cache.get_cache(CACHE.TYPE.BUILTIN, odb_cache.name)
+
+        if needs_odb:
+            return odb_cache
+        else:
+            return self.cache.get_cache(CACHE.TYPE.BUILTIN, odb_cache.name)
 
 # ################################################################################################################################
 
@@ -165,13 +172,112 @@ class GetItems(_Base):
         input_required = (AsIs('cache_id'),)
         input_optional = GetListAdminSIO.input_optional + (Int('max_chars'),)
         output_required = (AsIs('cache_id'), 'key', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
-            'last_read', 'prev_read', 'last_write', 'prev_write', 'chars_omitted')
+            'last_read', 'prev_read', 'last_write', 'prev_write', 'chars_omitted', 'server')
         output_optional = ('value',)
         output_repeated = True
 
 # ################################################################################################################################
 
-    def _get_data(self, _ignored_session, _ignored_cluster_id, _time_keys=time_keys, *args, **kwargs):
+    def _get_data_from_sliceable(self, sliceable, query_ctx, _time_keys=time_keys):
+
+        max_chars = self.request.input.get('max_chars') or 60
+        out = []
+
+        now = self.time.utc_now(needs_format=False)
+
+        start = query_ctx.cur_page * query_ctx.page_size
+        stop = start + query_ctx.page_size
+
+        for idx, item in enumerate(sliceable[start:stop]):
+
+            # Internally, time is kept as doubles so we need to convert it to a datetime object or null it out.
+            for name in _time_keys:
+                _value = item[name]
+                if _value:
+                    item[name] = arrow_get(_value)
+                else:
+                    item[name] = None
+
+            del _value
+
+            # Compute expiry since the last operation + the time left to expiry
+            expiry = item.pop('expiry')
+            if expiry:
+                item['expiry_op'] = int(expiry)
+                item['expiry_left'] = int((item['expires_at'] - now).total_seconds())
+            else:
+                item['expiry_op'] = None
+                item['expiry_left'] = None
+
+            # Now that we have worked with all the time keys needed, we can serialize them to the ISO-8601 format.
+            for name in _time_keys:
+                if item[name]:
+                    item[name] = item[name].isoformat()
+
+            # Shorten the value if it's possible, if it's not something else than a string/unicode
+            value = item['value']
+            if isinstance(value, basestring):
+                len_value = len(value)
+                chars_omitted = len_value - max_chars
+                chars_omitted = chars_omitted if chars_omitted > 0 else 0
+
+                if chars_omitted:
+                    value = value[:max_chars]
+
+                item['value'] = value
+                item['chars_omitted'] = chars_omitted
+
+            item['cache_id'] = self.request.input.cache_id
+            item['server'] = '{} ({})'.format(self.server.name, self.server.pid)
+            out.append(item)
+
+        return SearchResults(None, out, None, len(sliceable))
+
+# ################################################################################################################################
+
+    def _filter_cache(self, query, cache):
+
+        out = []
+        key_criteria = []
+        value_criteria = []
+
+        for item in query:
+
+            if item.startswith('k:'):
+                criterion = item.split('k:', 1)[1]
+                key_criteria.append(criterion)
+
+            elif item.startswith('v:'):
+                criterion = item.split('v:', 1)[1]
+                value_criteria.append(criterion)
+
+            else:
+                key_criteria.append(item)
+
+        has_empty_key_criteria = len(key_criteria) == 0
+        has_empty_value_criteria = len(value_criteria) == 0
+
+        for key, entry in cache.iteritems():
+
+            include_by_key = False
+            include_by_value = False
+
+            if key_criteria:
+                if all(item in key for item in key_criteria):
+                    include_by_key = True
+
+            if value_criteria:
+                if all(item in entry.value for item in value_criteria):
+                    include_by_value = True
+
+            if (include_by_key or has_empty_key_criteria) and (include_by_value or has_empty_value_criteria):
+                out.append(entry.to_dict())
+
+        return out
+
+# ################################################################################################################################
+
+    def _get_data(self, _ignored_session, _ignored_cluster_id, *args, **kwargs):
 
         # Get the cache object first
         cache = self._get_cache_by_input()
@@ -179,62 +285,13 @@ class GetItems(_Base):
         query_ctx = bunchify(kwargs)
         query = query_ctx.get('query', None)
 
-        max_chars = self.request.input.get('max_chars') or 30
-        out = []
-
-        now = self.time.utc_now(needs_format=False)
-
         # Without any query, simply return a slice of the underlying list from the cache object
         if not query:
-            start = query_ctx.cur_page * query_ctx.page_size
-            stop = start + query_ctx.page_size
-
-            for idx, item in enumerate(cache[start:stop]):
-
-                # Internally, time is kept as doubles so we need to convert it to a datetime object or null it out.
-                for name in _time_keys:
-                    _value = item[name]
-                    if _value:
-                        item[name] = arrow_get(_value)
-                    else:
-                        item[name] = None
-
-                del _value
-
-                # Compute expiry since the last operation + the time left to expiry
-                expiry = item.pop('expiry')
-                if expiry:
-                    item['expiry_op'] = int(expiry)
-                    item['expiry_left'] = int((item['expires_at'] - now).total_seconds())
-                else:
-                    item['expiry_op'] = None
-                    item['expiry_left'] = None
-
-                # Now that we have worked with all the time keys needed, we can serialize them to the ISO-8601 format.
-                for name in _time_keys:
-                    if item[name]:
-                        item[name] = item[name].isoformat()
-
-                # Shorten the value if it's possible, if it's not something else than a string/unicode
-                value = item['value']
-                if isinstance(value, basestring):
-                    len_value = len(value)
-                    chars_omitted = len_value - max_chars
-                    chars_omitted = chars_omitted if chars_omitted > 0 else 0
-
-                    if chars_omitted:
-                        value = value[:max_chars]
-
-                    item['value'] = value
-                    item['chars_omitted'] = chars_omitted
-
-                item['cache_id'] = self.request.input.cache_id
-                out.append(item)
-
-            return SearchResults(None, out, None, len(cache))
-
+            sliceable = cache
         else:
-            return SearchResults(None, [], None, 0)
+            sliceable = self._filter_cache(query, cache)
+
+        return self._get_data_from_sliceable(sliceable, query_ctx)
 
 # ################################################################################################################################
 
@@ -303,8 +360,6 @@ class Update(_CreateEdit):
         # Invoke common logic
         super(Update, self).handle()
 
-        print(333, self.request.input)
-
         # Now, if new key and old key are different, we must delete the old one because it was a rename.
         if self.request.input.old_key != self.request.input.key:
             self._get_cache_by_input().delete(self.request.input.old_key)
@@ -365,7 +420,7 @@ class ClearCache(_Base):
         input_required = ('cluster_id', 'cache_id')
 
     def handle(self):
-        self._get_cache_by_input().clear()
+        self.cache.clear(CACHE.TYPE.BUILTIN, self._get_cache_by_input(True).name)
 
 # ################################################################################################################################
 '''
