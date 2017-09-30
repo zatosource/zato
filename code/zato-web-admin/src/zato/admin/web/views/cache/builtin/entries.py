@@ -51,7 +51,7 @@ class Index(_Index):
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'id')
+        input_required = ('cluster_id', 'cache_id')
         output_required = ('cache_id', 'key', 'value', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
             'last_read', 'prev_read', 'last_write', 'prev_write', 'chars_omitted')
         output_repeated = True
@@ -59,11 +59,11 @@ class Index(_Index):
     def handle(self):
         return {
             'cluster_id': self.cluster_id,
-            'cache_id': self.input.id,
+            'cache_id': self.input.cache_id,
             'show_search_form': True,
             'cache_name': self.req.zato.client.invoke('zato.cache.builtin.get', {
                 'cluster_id': self.cluster_id,
-                'id': self.input.id
+                'cache_id': self.input.cache_id
             }).data.response.name
         }
 
@@ -76,18 +76,6 @@ class Index(_Index):
                 setattr(item, name, from_utc_to_user(value, self.req.zato.user_profile))
 
         return item
-
-# ################################################################################################################################
-
-class GetEntries(BaseCallView):
-    method_allowed = 'GET'
-    url_name = 'cache-builtin-get-entries'
-    template = 'zato/cache/builtin/entries.html'
-    service_name = 'cache3.get-entries' #'zato.cache.builtin.details.get-entries'
-
-    class SimpleIO(BaseCallView.SimpleIO):
-        input_required = ('cluster_id', 'id', 'key')
-        output_required = ('value',)
 
 # ################################################################################################################################
 

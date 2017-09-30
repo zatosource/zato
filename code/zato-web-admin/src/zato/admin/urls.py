@@ -914,13 +914,10 @@ urlpatterns += [
     url(r'^zato/cache/builtin/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(cache_builtin.Delete()), name=cache_builtin.Delete.url_name),
 
-    url(r'^zato/cache/builtin/entries/(?P<id>.*)/delete/$',
+    url(r'^zato/cache/builtin/entries/(?P<cache_id>.*)/delete/$',
         login_required(cache_builtin_entries.Delete()), name=cache_builtin_entries.Delete.url_name),
 
-    url(r'^zato/cache/builtin/details/entries/cluster/(?P<cluster_id>.*)/$',
-        login_required(cache_builtin_entries.GetEntries()), name=cache_builtin_entries.GetEntries.url_name),
-
-    url(r'^zato/cache/builtin/entries/(?P<id>.*)/$',
+    url(r'^zato/cache/builtin/entries/(?P<cache_id>.*)/$',
         login_required(cache_builtin_entries.Index()), name=cache_builtin_entries.Index.url_name),
 
     url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/action/$',

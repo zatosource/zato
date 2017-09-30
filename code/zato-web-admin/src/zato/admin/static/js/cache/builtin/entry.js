@@ -10,6 +10,15 @@ $(document).ready(function() {
         var success = status == 'success';
         var msg = success ? data.msg : data.responseText;
         $.fn.zato.user_message(success, msg);
+
+        var action = $('#action').val();
+        var key_value = $('#id_key').val();
+        var old_key = $('#id_old_key');
+
+        if(success) {
+            old_key.val(key_value);
+            window.history.pushState({} , '', data.new_path);
+        }
     }
 
     var options = {

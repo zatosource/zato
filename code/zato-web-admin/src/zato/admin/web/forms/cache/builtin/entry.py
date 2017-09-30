@@ -27,14 +27,15 @@ class CreateForm(forms.Form):
     replace_existing = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     cache_id = forms.CharField(widget=forms.HiddenInput())
 
-    def __init__(self, prefix=None, post_data=None, req=None):
-        super(CreateForm, self).__init__(post_data, prefix=prefix)
+    def __init__(self, post_data=None, req=None):
+        super(CreateForm, self).__init__(post_data)
         add_select(self, 'key_data_type', CACHE.BUILTIN_KV_DATA_TYPE)
         add_select(self, 'value_data_type', CACHE.BUILTIN_KV_DATA_TYPE)
 
 # ################################################################################################################################
 
 class EditForm(CreateForm):
+    replace_existing = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     old_key = forms.CharField(widget=forms.Textarea(attrs={'class':'required', 'style':'display:none'}))
 
 # ################################################################################################################################

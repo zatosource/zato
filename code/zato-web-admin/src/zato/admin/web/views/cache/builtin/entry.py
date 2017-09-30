@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from json import dumps
 
+# Bunch
+from bunch import bunchify
+
 # Django
 from django.http.response import HttpResponseBadRequest, HttpResponse
 from django.template.response import TemplateResponse
@@ -18,24 +21,59 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.views import invoke_service_with_json_response, method_allowed
 from zato.admin.web.forms.cache.builtin.entry import CreateForm, EditForm
+from zato.common import CACHE
+
+# ################################################################################################################################
+
+def _create_edit(req, action, cache_id, cluster_id, _KV_DATATYPE=CACHE.BUILTIN_KV_DATA_TYPE):
+
+    out = {}
+
+    if action == 'create':
+        form = CreateForm()
+    else:
+        key = req.GET['key'].decode('hex')
+        entry = bunchify(req.zato.client.invoke('cache3.get-entry', {
+                'cluster_id': req.zato.cluster_id,
+                'cache_id': cache_id,
+                'key': key
+            }).data.response)
+
+        form = EditForm({
+            'key': key,
+            'old_key': key,
+            'value': entry.value,
+            'key_data_type': _KV_DATATYPE.INT.id if entry.is_key_integer else _KV_DATATYPE.STR.id,
+            'value_data_type': _KV_DATATYPE.INT.id if entry.is_value_integer else _KV_DATATYPE.STR.id,
+            'expiry': entry.expiry if entry.expiry else 0,
+        })
+
+    out.update({
+        'zato_clusters': req.zato.clusters,
+        'cluster_id': req.zato.cluster_id,
+        'form': form,
+        'form_action': 'cache-builtin-{}-entry-action'.format(action),
+        'action': action,
+        'cache_id': cache_id,
+        'cache': req.zato.client.invoke('zato.cache.builtin.get', {
+                'cluster_id': req.zato.cluster_id,
+                'cache_id': cache_id,
+            }).data.response
+    })
+
+    return TemplateResponse(req, 'zato/cache/builtin/entry.html', out)
 
 # ################################################################################################################################
 
 @method_allowed('GET')
 def create(req, cache_id, cluster_id):
+    return _create_edit(req, 'create', cache_id, cluster_id)
 
-    out = {
-        'zato_clusters': req.zato.clusters,
-        'cluster_id': req.zato.cluster_id,
-        'form': CreateForm(''),
-        'action': 'create',
-        'cache_id': cache_id,
-        'cache': req.zato.client.invoke('zato.cache.builtin.get', {
-                'cluster_id': req.zato.cluster_id,
-                'id': cache_id,
-            }).data.response
-    }
-    return TemplateResponse(req, 'zato/cache/builtin/entry.html', out)
+# ################################################################################################################################
+
+@method_allowed('GET')
+def edit(req, cache_id, cluster_id):
+    return _create_edit(req, 'edit', cache_id, cluster_id)
 
 # ################################################################################################################################
 
@@ -66,15 +104,17 @@ def create_action(req, cache_id, cluster_id):
 
 # ################################################################################################################################
 
-@method_allowed('GET')
-def edit(req, cache_id, cluster_id):
-    zzz
-
-# ################################################################################################################################
-
 @method_allowed('POST')
 def edit_action(req, cache_id, cluster_id):
-    eee
+
+    key_encoded = req.POST['key'].encode('hex')
+    new_path = '{}?key={}'.format(req.path.replace('action/', ''), key_encoded)
+
+    extra = {'new_path': new_path}
+
+    return invoke_service_with_json_response(
+        req, 'cache3.update-entry', _create_edit_action_message('edit', req.POST, cache_id, cluster_id),
+        'OK, entry updated successfully.', 'Entry could not be updated, e:{e}', extra=extra)
 
 # ################################################################################################################################
 
@@ -108,12 +148,21 @@ time_keys = ('expires_at', 'last_read', 'prev_read', 'last_write', 'prev_write')
 
 # ################################################################################################################################
 
-class GetItems(AdminService):
+class _Base(AdminService):
+    """ Base class for services that access the contents of a given cache.
+    """
+    def _get_cache_by_input(self):
+        odb_cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.cache_id)
+        return self.cache.get_cache(CACHE.TYPE.BUILTIN, odb_cache.name)
+
+# ################################################################################################################################
+
+class GetItems(_Base):
     name = 'cache3.get-entries'
     _filter_by = ('name',)
 
     class SimpleIO(GetListAdminSIO):
-        input_required = (AsIs('id'),)
+        input_required = (AsIs('cache_id'),)
         input_optional = GetListAdminSIO.input_optional + (Int('max_chars'),)
         output_required = (AsIs('cache_id'), 'key', 'position', 'hits', 'expiry_op', 'expiry_left', 'expires_at',
             'last_read', 'prev_read', 'last_write', 'prev_write', 'chars_omitted')
@@ -125,8 +174,7 @@ class GetItems(AdminService):
     def _get_data(self, _ignored_session, _ignored_cluster_id, _time_keys=time_keys, *args, **kwargs):
 
         # Get the cache object first
-        odb_cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.id)
-        cache = self.cache.get_cache(CACHE.TYPE.BUILTIN, odb_cache.name)
+        cache = self._get_cache_by_input()
 
         query_ctx = bunchify(kwargs)
         query = query_ctx.get('query', None)
@@ -180,7 +228,7 @@ class GetItems(AdminService):
                     item['value'] = value
                     item['chars_omitted'] = chars_omitted
 
-                item['cache_id'] = self.request.input.id
+                item['cache_id'] = self.request.input.cache_id
                 out.append(item)
 
             return SearchResults(None, out, None, len(cache))
@@ -195,17 +243,10 @@ class GetItems(AdminService):
 
 # ################################################################################################################################
 
-class _CacheModifyingService(AdminService):
-    """ Base class for services that modify the contents of a given cache.
-    """
-    def _get_cache_by_input(self):
-        odb_cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.cache_id)
-        return self.cache.get_cache(CACHE.TYPE.BUILTIN, odb_cache.name)
+class _CreateEdit(_Base):
 
-# ################################################################################################################################
-
-class Create(_CacheModifyingService):
-    name = 'cache3.create-entry'
+    old_key_elem = '<invalid>'
+    new_key_elem = 'key'
 
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'cache_id', 'key', 'value', Bool('replace_existing'))
@@ -213,7 +254,7 @@ class Create(_CacheModifyingService):
 
     def handle(self):
 
-        key = self.request.input.key
+        key = self.request.input[self.new_key_elem]
         value = self.request.input.value or ''
 
         key = int(key) if self.request.input.get('key_data_type') == CACHE.BUILTIN_KV_DATA_TYPE.INT.id else key
@@ -244,7 +285,61 @@ class Create(_CacheModifyingService):
 
 # ################################################################################################################################
 
-class Delete(_CacheModifyingService):
+class Create(_CreateEdit):
+    name = 'cache3.create-entry'
+    old_key_elem = 'key'
+
+
+# ################################################################################################################################
+
+class Update(_CreateEdit):
+    name = 'cache3.update-entry'
+    old_key_elem = 'old_key'
+
+    class SimpleIO(_CreateEdit.SimpleIO):
+        input_optional = _CreateEdit.SimpleIO.input_optional + ('old_key',)
+
+    def handle(self):
+
+        # Invoke common logic
+        super(Update, self).handle()
+
+        print(333, self.request.input)
+
+        # Now, if new key and old key are different, we must delete the old one because it was a rename.
+        if self.request.input.old_key != self.request.input.key:
+            self._get_cache_by_input().delete(self.request.input.old_key)
+
+# ################################################################################################################################
+
+class GetEntry(_Base):
+    name = 'cache3.get-entry'
+
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'cache_id', 'key')
+        output_required = (Bool('key_found'),)
+        output_optional = ('key', 'value', 'is_key_integer', 'is_value_integer', Float('expiry'))
+
+    def handle(self):
+
+        key = self.request.input.key
+        cache = self._get_cache_by_input()
+
+        try:
+            entry = cache.get(key, True)
+        except KeyError:
+            self.response.payload.key_found = False
+        else:
+            self.response.payload.key_found = True
+            self.response.payload.key = key
+            self.response.payload.is_key_integer = isinstance(key, (int, long))
+            self.response.payload.value = entry.value
+            self.response.payload.is_value_integer = isinstance(entry.value, (int, long))
+            self.response.payload.expiry = entry.expiry
+
+# ################################################################################################################################
+
+class Delete(_Base):
     name = 'cache3.delete-entry'
 
     class SimpleIO(AdminSIO):
