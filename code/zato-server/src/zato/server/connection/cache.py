@@ -29,7 +29,6 @@ from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
 from zato.common.util import parse_extra_into_dict
 
 builtin_op_to_broker_msg = {
-    CACHE.STATE_CHANGED.GET: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_GET.value,
     CACHE.STATE_CHANGED.SET: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_SET.value,
     CACHE.STATE_CHANGED.DELETE: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_DELETE.value,
     CACHE.STATE_CHANGED.EXPIRE: CACHE_BROKER_MSG.BUILTIN_STATE_CHANGED_EXPIRE.value,
@@ -84,18 +83,10 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def get(self, key, details=False, _GET=CACHE.STATE_CHANGED.GET):
+    def get(self, key, details=False):
         """ Returns a value stored under a given key. If details is True, return metadata about the key as well.
         """
-        needs_sync = self.needs_sync and self.config.extend_expiry_on_get
-        meta_ref = {'key':key} if needs_sync else None
-
-        out = self.impl.get(key, details, meta_ref)
-
-        if needs_sync:
-            spawn(self.after_state_changed_callback, _GET, self.config.name, meta_ref)
-
-        return out
+        return self.impl.get(key, details)
 
 # ################################################################################################################################
 
@@ -194,13 +185,6 @@ class Cache(object):
                         logger.info('Cache `%s` deleted keys expired in the last %ss - %s', self.config.name, interval, deleted)
         except Exception, e:
             logger.warn('Exception in _delete_expired loop %s', format_exc(e))
-
-# ################################################################################################################################
-
-    def sync_after_get(self, data):
-        """ Invoked by Cache API to synchronizes this worker's cache after a .get operation in another worker process.
-        """
-        self.impl.set_expiration_data(data.key, data.expiry, data.expires_at)
 
 # ################################################################################################################################
 
