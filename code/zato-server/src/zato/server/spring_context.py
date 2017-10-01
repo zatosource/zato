@@ -50,6 +50,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.apispec.pub',
             'zato.server.service.internal.checks.sio',
             'zato.server.service.internal.cache.builtin',
+            'zato.server.service.internal.cache.builtin.entry',
             'zato.server.service.internal.cache.memcached',
             'zato.server.service.internal.channel.amqp_',
             'zato.server.service.internal.channel.jms_wmq',
