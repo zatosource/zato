@@ -47,7 +47,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'cache-builtin-get-entries'
     template = 'zato/cache/builtin/entries.html'
-    service_name = 'cache3.get-entries' #'zato.cache.builtin.details.get-list'
+    service_name = 'zato.cache.builtin.entry.get-list'
     output_class = CacheEntry
     paginate = True
 
@@ -83,7 +83,7 @@ class Index(_Index):
 class Delete(_Delete):
     url_name = 'cache-builtin-delete-entry'
     error_message = 'Could not delete key'
-    service_name = 'cache3.delete-entry'
+    service_name = 'zato.cache.builtin.entry.delete'
 
     def get_input_dict(self, *args, **kwargs):
         return {

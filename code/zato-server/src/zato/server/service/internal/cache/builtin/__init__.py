@@ -78,3 +78,14 @@ class Delete(AdminService):
     __metaclass__ = DeleteMeta
 
 # ################################################################################################################################
+
+class Clear(AdminService):
+
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'cache_id')
+
+    def handle(self):
+        cache = self.server.odb.get_cache_builtin(self.server.cluster_id, self.request.input.cache_id)
+        self.cache.clear(_COMMON_CACHE.TYPE.BUILTIN, cache.name)
+
+# ################################################################################################################################

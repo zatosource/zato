@@ -80,7 +80,7 @@ class Delete(_Delete):
 @method_allowed('POST')
 def clear(req):
     return invoke_service_with_json_response(
-        req, 'cache3.clear-cache', {'cluster_id':req.POST['cluster_id'], 'cache_id':req.POST['cache_id']},
+        req, 'zato.cache.builtin.clear', {'cluster_id':req.POST['cluster_id'], 'cache_id':req.POST['cache_id']},
         'OK, cache cleared.', 'Cache could not be cleared, e:{e}')
 
 # ################################################################################################################################
