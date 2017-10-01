@@ -70,7 +70,6 @@ class Index(_Index):
 
     def on_before_append_item(self, item, _to_user_dt=('expires_at', 'last_read', 'prev_read', 'last_write', 'prev_write')):
         item.key_escaped = item.key.encode('utf8').encode('hex') if isinstance(item.key, basestring) else item.key
-        print(item)
 
         for name in _to_user_dt:
             value = getattr(item, name)
