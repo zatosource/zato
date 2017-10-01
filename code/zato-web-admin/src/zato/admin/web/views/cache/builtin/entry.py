@@ -107,7 +107,7 @@ def create_action(req, cache_id, cluster_id):
 @method_allowed('POST')
 def edit_action(req, cache_id, cluster_id):
 
-    key_encoded = req.POST['key'].encode('hex')
+    key_encoded = req.POST['key'].encode('utf8').encode('hex')
     new_path = '{}?key={}'.format(req.path.replace('action/', ''), key_encoded)
 
     extra = {'new_path': new_path}
