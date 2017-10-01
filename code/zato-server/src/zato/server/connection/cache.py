@@ -387,13 +387,6 @@ class CacheAPI(object):
 
 # ################################################################################################################################
 
-    def sync_after_get(self, cache_type, data):
-        """ Synchronizes the state of this worker's cache after a .get operation in another worker process.
-        """
-        self.caches[cache_type][data.cache_name].sync_after_get(data)
-
-# ################################################################################################################################
-
     def sync_after_set(self, cache_type, data):
         """ Synchronizes the state of this worker's cache after a .set operation in another worker process.
         """
