@@ -381,7 +381,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cdef object _get(self, object key, bint details, dict meta_ref):
+    cdef object _get(self, object key, bint details):
         """ Returns data for key in cache if present. Otherwise returns None. If 'details' is True,
         returns a dictionary with value and metadata instead of value alone.
         """
@@ -436,11 +436,6 @@ cdef class Cache(object):
             if self.extend_expiry_on_get and entry.expiry:
                 entry.expires_at = _now + entry.expiry
 
-            # If any output dict for metadata was passed in by reference, set its requires items.
-            if meta_ref is not None:
-                meta_ref['expires_at'] = entry.expires_at
-                meta_ref['expiry'] = entry.expiry
-
             # If details are requested, add current position of key to data returned
             if details:
                 entry.key = key
@@ -453,9 +448,9 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef get(self, object key, bint details, dict meta_ref):
+    cpdef get(self, object key, bint details):
         with self._lock:
-            return self._get(key, details, meta_ref)
+            return self._get(key, details)
 
 # ################################################################################################################################
 
@@ -463,7 +458,7 @@ cdef class Cache(object):
         """ Makes a given cache entry expire after 'expiry' seconds.
         """
         with self._lock:
-            self._set(key, self._get(key, False, None), expiry, meta_ref)
+            self._set(key, self._get(key, False), expiry, meta_ref)
 
 # ################################################################################################################################
 
