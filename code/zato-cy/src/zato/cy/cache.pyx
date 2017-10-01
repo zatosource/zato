@@ -331,15 +331,15 @@ cdef class Cache(object):
                     entry.expiry = expiry
                     entry.expires_at = _now + expiry
             else:
-                # If we find an expired entry (meaning that entry.expires_at must have been set already),
-                # we can either extend its lifetime or delete it, depending on what self.extend_expiry_on_set dictates.
-                if entry.expires_at and _now >= entry.expires_at:
-                    if self.extend_expiry_on_set:
+                # Mark as deleted an entry that has already expired
+                if _now >= entry.expires_at:
+                    self._delete(key)
+                    self._expired_on_op.append(key)
+                    raise KeyExpiredError(key)
+                else:
+                    # The entry exists and has not expired so now, if we are configured to, prolong its expiration time
+                    if self.extend_expiry_on_set and entry.expiry:
                         entry.expires_at = _now + entry.expiry
-                    else:
-                        self._delete(key)
-                        self._expired_on_op.append(key)
-                        raise KeyExpiredError(key)
 
             # Update access information for that entry, if we get to this point, the entry is not expired,
             # or at least its expiry time has been extended.
