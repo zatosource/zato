@@ -32,10 +32,7 @@ class CreateForm(forms.Form):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
         self.fields['engine'].choices = []
 
-        # Sort engines by their friendly name.
-        engines = sorted(engine_friendly_name.iteritems(), key=itemgetter(1))
-
-        for engine, friendly_name in engines:
+        for engine, friendly_name in engine_friendly_name.iteritems():
             self.fields['engine'].choices.append([engine, friendly_name])
 
 class EditForm(CreateForm):

@@ -1,0 +1,11 @@
+--- sqlalchemy/dialects/mssql/__init__.py.orig	2017-10-05 11:24:25.000000000 +0300
++++ sqlalchemy/dialects/mssql/__init__.py	      2017-10-05 11:25:01.000000000 +0300
+@@ -8,7 +8,7 @@
+ from sqlalchemy.dialects.mssql import base, pyodbc, adodbapi, \
+     pymssql, zxjdbc, mxodbc
+ 
+-base.dialect = pyodbc.dialect
++base.dialect = pymssql.dialect
+ 
+ from sqlalchemy.dialects.mssql.base import \
+     INTEGER, BIGINT, SMALLINT, TINYINT, VARCHAR, NVARCHAR, CHAR, \
