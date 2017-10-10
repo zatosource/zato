@@ -33,7 +33,7 @@ class GetList(DataDictService):
         self.response.payload[:] = self.get_data()
 
 class _CreateEdit(DataDictService):
-    NAME_PATTERN = '\w+'
+    NAME_PATTERN = '[\w\-\.]+'
     NAME_RE = re.compile(NAME_PATTERN)
 
     class SimpleIO(AdminSIO):
@@ -48,7 +48,7 @@ class _CreateEdit(DataDictService):
             if match and match.group() == name:
                 continue
             else:
-                msg = "System and key may contain only letters, digits and an underscore, failed to validate [{}] against the regular expression {}".format(
+                msg = "System and key may contain only letters, dots, digits, dashes and underscores, failed to validate [{}] against the regular expression {}".format(
                     name, self.NAME_PATTERN)
                 raise ZatoException(self.cid, msg)
 
