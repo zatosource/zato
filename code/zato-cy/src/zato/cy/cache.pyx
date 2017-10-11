@@ -118,6 +118,7 @@ cdef class Cache(object):
         public dict hits_per_position # How many times a given position in cache was used
         public list _expired_on_op    # Keys that were found to have expired during a .get or .set operation
         public object _lock
+        public object default_get # A singleton indicating that no default value was given for self.get
 
     def __cinit__(self):
         self._data = {}
@@ -131,6 +132,7 @@ cdef class Cache(object):
 
     def __init__(self, max_size=None, max_item_size=None, extend_expiry_on_get=True, extend_expiry_on_set=True, lock=None):
         self._lock = lock or RLock()
+        self.default_get = object()
         with self._lock:
             self._update_config(max_size, max_item_size, extend_expiry_on_get, extend_expiry_on_set)
 
@@ -381,7 +383,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cdef object _get(self, object key, bint details):
+    cdef object _get(self, object key, object default, bint details):
         """ Returns data for key in cache if present. Otherwise returns None. If 'details' is True,
         returns a dictionary with value and metadata instead of value alone.
         """
@@ -397,7 +399,12 @@ cdef class Cache(object):
         except KeyError:
             # Add information that there was a cache miss
             self.misses += 1
-            raise
+
+            # Return the default value, if any was given, or re-raise the exception.
+            if default is self.default_get:
+                return None
+            else:
+                return default
         else:
 
             # We have the key but we must first ensure that it's not expired already
@@ -448,9 +455,9 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef get(self, object key, bint details):
+    cpdef get(self, object key, object default, bint details):
         with self._lock:
-            return self._get(key, details)
+            return self._get(key, default, details)
 
 # ################################################################################################################################
 
@@ -458,7 +465,7 @@ cdef class Cache(object):
         """ Makes a given cache entry expire after 'expiry' seconds.
         """
         with self._lock:
-            self._set(key, self._get(key, False), expiry, meta_ref)
+            self._set(key, self._get(key, self.default_get, False), expiry, meta_ref)
 
 # ################################################################################################################################
 

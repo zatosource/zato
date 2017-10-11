@@ -207,11 +207,8 @@ class _CreateEdit(_Base):
 
         # Note that the try/except/else/set operation below is not atomic
 
-        try:
-            existing_value = cache.get(key)
-        except KeyError:
-            pass # It's OK if the key doesn't exist yet
-        else:
+        existing_value = cache.get(key)
+        if existing_value:
             if not self.request.input.get('replace_existing'):
                 raise BadRequest(self.cid, 'Key `{}` already exists with a value of `{}`'.format(key, existing_value))
 
@@ -254,17 +251,17 @@ class Get(_Base):
         key = self.request.input.key
         cache = self._get_cache_by_input()
 
-        try:
-            entry = cache.get(key, True)
-        except KeyError:
-            self.response.payload.key_found = False
-        else:
+        entry = cache.get(key, details=True)
+
+        if entry:
             self.response.payload.key_found = True
             self.response.payload.key = key
             self.response.payload.is_key_integer = isinstance(key, (int, long))
             self.response.payload.value = entry.value
             self.response.payload.is_value_integer = isinstance(entry.value, (int, long))
             self.response.payload.expiry = entry.expiry
+        else:
+            self.response.payload.key_found = False
 
 # ################################################################################################################################
 
