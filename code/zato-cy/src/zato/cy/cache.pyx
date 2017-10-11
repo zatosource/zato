@@ -203,12 +203,6 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef list iteritems(self):
-        with self._lock:
-            return iter(PyDict_Items(self._data))
-
-# ################################################################################################################################
-
     def get_slice(self, start, stop, step):
         with self._lock:
             for key in self._index[start:stop:step]:
@@ -458,6 +452,12 @@ cdef class Cache(object):
     cpdef get(self, object key, object default, bint details):
         with self._lock:
             return self._get(key, default, details)
+
+# ################################################################################################################################
+
+    cpdef get_by_prefix(self, object prefix, object default, bint details):
+        with self._lock:
+            return self._get(key, prefix, details)
 
 # ################################################################################################################################
 
