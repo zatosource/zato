@@ -948,6 +948,12 @@ class ZatoException(Exception):
         self.cid = cid
         self.msg = msg
 
+    def __repr__(self):
+        return '<{} at {} cid:`{}`, msg:`{}`>'.format(
+            self.__class__.__name__, hex(id(self)), self.cid, self.msg)
+
+    __str__ = __repr__
+
 class ClientSecurityException(ZatoException):
     """ An exception for signalling errors stemming from security problems
     on the client side, such as invalid username or password.

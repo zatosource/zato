@@ -41,6 +41,10 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
+default_get = object() # A singleton to indicate that no default for Cache.get was given on input
+
+# ################################################################################################################################
+
 class Cache(object):
     """ The cache API through which services access the built-in self.cache objects.
     Attribute self.impl is the actual Cython-based cache implementation.
@@ -83,10 +87,10 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def get(self, key, details=False):
+    def get(self, key, default=default_get, details=False):
         """ Returns a value stored under a given key. If details is True, return metadata about the key as well.
         """
-        return self.impl.get(key, details)
+        return self.impl.get(key, default if default is not default_get else self.impl.default_get, details)
 
 # ################################################################################################################################
 
