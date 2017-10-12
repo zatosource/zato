@@ -457,7 +457,7 @@ cdef class Cache(object):
 
     cpdef get_by_prefix(self, object prefix, object default, bint details):
         with self._lock:
-            return self._get(key, prefix, details)
+            return self._get(prefix, default, details)
 
 # ################################################################################################################################
 
