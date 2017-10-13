@@ -94,18 +94,52 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def get_by_prefix(self, prefix, default=default_get, details=False):
-        """ Returns a dictionary of key:value items with keys matching the prefix given on input.
+    def get_by_prefix(self, data, details=False):
+        """ Returns a dictionary of key:value items for keys matching the prefix given on input.
         """
-        return self.impl.get_by_prefix(prefix, default if default is not default_get else self.impl.default_get, details)
+        return self.impl.get_by_prefix(data, details)
 
 # ################################################################################################################################
 
-#    def get_by_suffix
+    def get_by_suffix(self, data, details=False):
+        """ Returns a dictionary of key:value items for keys matching the suffix given on input.
+        """
+        return self.impl.get_by_suffix(data, details)
 
 # ################################################################################################################################
 
-#    def get_by_pattern
+    def get_by_regex(self, data, details=False):
+        """ Returns a dictionary of key:value items for keys matching the regular expression given on input.
+        """
+        return self.impl.get_by_regex(data, details)
+
+# ################################################################################################################################
+
+    def get_contains(self, data, details=False):
+        """ Returns a dictionary of key:value items for keys containing the string given on input.
+        """
+        return self.impl.get_contains(data, details)
+
+# ################################################################################################################################
+
+    def get_not_contains(self, data, details=False):
+        """ Returns a dictionary of key:value items for keys that don't contain the string given on input.
+        """
+        return self.impl.get_not_contains(data, details)
+
+# ################################################################################################################################
+
+    def get_contains_all(self, data, details=False):
+        """ Returns a dictionary of key:value items for keys that contain all of elements in the input list of strings.
+        """
+        return self.impl.get_contains_all(data, details)
+
+# ################################################################################################################################
+
+    def get_contains_any(self, data, details=False):
+        """ Returns a dictionary of key:value items for keys that contain at least one of elements in the input list of strings.
+        """
+        return self.impl.get_contains_any(data, details)
 
 # ################################################################################################################################
 
@@ -131,7 +165,23 @@ class Cache(object):
 
 # ################################################################################################################################
 
-#    def set_by_pattern
+#    def set_by_regex
+
+# ################################################################################################################################
+
+#    def set_contains
+
+# ################################################################################################################################
+
+#    def set_not_contains
+
+# ################################################################################################################################
+
+#    def set_contains_all
+
+# ################################################################################################################################
+
+#    def set_contains_any
 
 # ################################################################################################################################
 
@@ -159,7 +209,23 @@ class Cache(object):
 
 # ################################################################################################################################
 
-#    def delete_by_pattern
+#    def delete_by_regex
+
+# ################################################################################################################################
+
+#    def delete_contains
+
+# ################################################################################################################################
+
+#    def delete_not_contains
+
+# ################################################################################################################################
+
+#    def delete_contains_all
+
+# ################################################################################################################################
+
+#    def delete_contains_any
 
 # ################################################################################################################################
 
@@ -182,7 +248,23 @@ class Cache(object):
 
 # ################################################################################################################################
 
-#    def expire_by_pattern
+#    def expire_by_regex
+
+# ################################################################################################################################
+
+#    def expire_contains
+
+# ################################################################################################################################
+
+#    def expire_not_contains
+
+# ################################################################################################################################
+
+#    def expire_contains_all
+
+# ################################################################################################################################
+
+#    def expire_contains_any
 
 # ################################################################################################################################
 
