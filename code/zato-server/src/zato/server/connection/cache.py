@@ -68,12 +68,12 @@ class Cache(object):
 # ################################################################################################################################
 
     def __setitem__(self, key, value):
-        self.set(key, value)
+        return self.set(key, value)
 
 # ################################################################################################################################
 
     def __delitem__(self, key):
-        self.delete(key)
+        return self.delete(key)
 
 # ################################################################################################################################
 
@@ -114,10 +114,12 @@ class Cache(object):
         Expiry is in seconds (or a fraction of).
         """
         meta_ref = {'key':key, 'value':value, 'expiry':expiry} if self.needs_sync else None
-        self.impl.set(key, value, expiry, meta_ref)
+        value = self.impl.set(key, value, expiry, meta_ref)
 
         if self.needs_sync:
             spawn(self.after_state_changed_callback, _SET, self.config.name, meta_ref)
+
+        return value
 
 # ################################################################################################################################
 
@@ -137,13 +139,15 @@ class Cache(object):
         """ Deletes a cache entry by its key.
         """
         try:
-            self.impl.delete(key)
+            value = self.impl.delete(key)
         except KeyError:
             if raise_key_error:
                 raise
         else:
             if self.needs_sync:
                 spawn(self.after_state_changed_callback, _DELETE, self.config.name, {'key':key})
+
+            return value
 
 # ################################################################################################################################
 
