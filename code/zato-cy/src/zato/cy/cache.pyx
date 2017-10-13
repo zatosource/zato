@@ -409,13 +409,13 @@ cdef class Cache(object):
                 if not isinstance(key, str_types):
                     continue
 
-                add_key = True
+                use_key = True
                 for elem in patterns:
                     if elem not in key:
-                        add_key = False
+                        use_key = False
                         break
 
-                if add_key:
+                if use_key:
                     if return_found:
                         out[key] = <Entry>self._data[key].value
                     to_delete.append(key)
@@ -439,20 +439,20 @@ cdef class Cache(object):
         cdef dict out = {}
         cdef object value = None
         cdef list to_delete = []
-        cdef bint add_key
+        cdef bint use_key
 
         with self._lock:
             for key in self._data.iterkeys():
                 if not isinstance(key, str_types):
                     continue
 
-                add_key = False
+                use_key = False
                 for elem in patterns:
                     if elem in key:
-                        add_key = True
+                        use_key = True
                         break
 
-                if add_key:
+                if use_key:
                     if return_found:
                         out[key] = <Entry>self._data[key].value
                     to_delete.append(key)
@@ -732,20 +732,20 @@ cdef class Cache(object):
         """
         cdef dict out = {}
         cdef Entry entry
-        cdef bint add_key
+        cdef bint use_key
 
         with self._lock:
             for key in self._data.iterkeys():
                 if not isinstance(key, str_types):
                     continue
 
-                add_key = True
+                use_key = True
                 for elem in patterns:
                     if elem not in key:
-                        add_key = False
+                        use_key = False
                         break
 
-                if add_key:
+                if use_key:
                     # Set it before the update which would overwrite it, this is why we can return
                     # value alone, without any metadata.
                     if return_found:
@@ -764,20 +764,20 @@ cdef class Cache(object):
         """
         cdef dict out = {}
         cdef Entry entry
-        cdef bint add_key
+        cdef bint use_key
 
         with self._lock:
             for key in self._data.iterkeys():
                 if not isinstance(key, str_types):
                     continue
 
-                add_key = False
+                use_key = False
                 for elem in patterns:
                     if elem in key:
-                        add_key = True
+                        use_key = True
                         break
 
-                if add_key:
+                if use_key:
                     # Set it before the update which would overwrite it, this is why we can return
                     # value alone, without any metadata.
                     if return_found:
@@ -869,7 +869,7 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef object get_by_prefix(self, object prefix, object default, bint details):
+    cpdef object get_by_prefix(self, object pattern, object default, bint details):
         """ Returns all key:value mappings for keys matching a given prefix, or an empty dictionary
         if none of key matches. Non-string-like keys are ignored. Similarly to other self.get/set/expire/delete methods,
         it's a separate one to reduce code branching/CPU mispredictions.
@@ -880,7 +880,7 @@ cdef class Cache(object):
             for key in self._data.iterkeys():
                 if not isinstance(key, str_types):
                     continue
-                if key.startswith(prefix):
+                if key.startswith(pattern):
                     out[key] = self._get(key, default, details)
 
         return out
@@ -967,20 +967,20 @@ cdef class Cache(object):
         it's a separate one to reduce code branching/CPU mispredictions.
         """
         cdef dict out = {}
-        cdef bint add_key
+        cdef bint use_key
 
         with self._lock:
             for key in self._data.iterkeys():
                 if not isinstance(key, str_types):
                     continue
 
-                add_key = True
+                use_key = True
                 for elem in patterns:
                     if elem not in key:
-                        add_key = False
+                        use_key = False
                         break
 
-                if add_key:
+                if use_key:
                     out[key] = self._get(key, default, details)
 
         return out
@@ -993,23 +993,30 @@ cdef class Cache(object):
         it's a separate one to reduce code branching/CPU mispredictions.
         """
         cdef dict out = {}
-        cdef bint add_key
+        cdef bint use_key
 
         with self._lock:
             for key in self._data.iterkeys():
                 if not isinstance(key, str_types):
                     continue
 
-                add_key = False
+                use_key = False
                 for elem in patterns:
                     if elem in key:
-                        add_key = True
+                        use_key = True
                         break
 
-                if add_key:
+                if use_key:
                     out[key] = self._get(key, default, details)
 
         return out
+
+# ################################################################################################################################
+
+    cdef inline _expire(self, object key, double expiry, dict meta_ref):
+        """ A low-level method to expire a key after 'expiry' seconds. Must be called with self._lock held.
+        """
+        self._set(key, self._get(key, self.default_get, False), expiry, meta_ref)
 
 # ################################################################################################################################
 
@@ -1017,15 +1024,118 @@ cdef class Cache(object):
         """ Makes a given cache entry expire after 'expiry' seconds.
         """
         with self._lock:
-            self._set(key, self._get(key, self.default_get, False), expiry, meta_ref)
+            self._expire(key, expiry, meta_ref)
 
-    # expire_by_prefix
-    # expire_by_suffix
-    # expire_by_regex
-    # expire_contains
-    # expire_not_contains
-    # expire_contains_all
-    # expire_contains_any
+# ################################################################################################################################
+
+    cpdef expire_by_prefix(self, object pattern, double expiry):
+        """ Sets expiration for all keys matching a given prefix. Non-string-like keys are ignored.
+        Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
+        """
+        with self._lock:
+            for key in self._data.iterkeys():
+                if not isinstance(key, str_types):
+                    continue
+                if key.startswith(pattern):
+                    self._expire(key, expiry, None)
+
+# ################################################################################################################################
+
+    cpdef expire_by_suffix(self, object pattern, double expiry):
+        """ Sets expiration for all keys matching a given suffix. Non-string-like keys are ignored.
+        Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
+        """
+        with self._lock:
+            for key in self._data.iterkeys():
+                if not isinstance(key, str_types):
+                    continue
+                if key.endswith(pattern):
+                    self._expire(key, expiry, None)
+
+# ################################################################################################################################
+
+    cpdef expire_by_regex(self, object pattern, double expiry):
+        """ Sets expiration for all keys matching a given regex pattern. Non-string-like keys are ignored.
+        Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
+        """
+        cdef object regex = self._regex_cache.setdefault(pattern, re_compile(pattern))
+
+        with self._lock:
+            for key in self._data.iterkeys():
+                if not isinstance(key, str_types):
+                    continue
+                if regex.match(key):
+                    self._expire(key, expiry, None)
+
+# ################################################################################################################################
+
+    cpdef expire_contains(self, object pattern, double expiry):
+        """ Sets expiration for all keys containing a given pattern. Non-string-like keys are ignored.
+        Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
+        """
+        with self._lock:
+            for key in self._data.iterkeys():
+                if not isinstance(key, str_types):
+                    continue
+                if pattern in key:
+                    self._expire(key, expiry, None)
+
+# ################################################################################################################################
+
+    cpdef expire_not_contains(self, object pattern, double expiry):
+        """ Sets expiration for all keys containing a given pattern. Non-string-like keys are ignored.
+        Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
+        """
+        with self._lock:
+            for key in self._data.iterkeys():
+                if not isinstance(key, str_types):
+                    continue
+                if pattern not in key:
+                    self._expire(key, expiry, None)
+
+# ################################################################################################################################
+
+    cpdef expire_contains_all(self, object patterns, double expiry):
+        """ Sets expiration for keys containing all of input elements. Non-string-like keys are ignored.
+        Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
+        """
+        cdef bint use_key
+
+        with self._lock:
+            for key in self._data.iterkeys():
+                if not isinstance(key, str_types):
+                    continue
+
+                use_key = True
+                for elem in patterns:
+                    if elem not in key:
+                        use_key = False
+                        break
+
+                if use_key:
+                    self._expire(key, expiry, None)
+
+# ################################################################################################################################
+
+    cpdef expire_contains_any(self, object patterns, double expiry):
+        """ Sets expiration for keys containing at least one of input elements. Non-string-like keys are ignored.
+        Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
+        """
+        cdef bint use_key
+
+        with self._lock:
+            for key in self._data.iterkeys():
+                if not isinstance(key, str_types):
+                    continue
+
+                use_key = False
+                for elem in patterns:
+                    if elem in key:
+                        use_key = True
+                        break
+
+                if use_key:
+                    self._expire(key, expiry, None)
 
 # ################################################################################################################################
 
