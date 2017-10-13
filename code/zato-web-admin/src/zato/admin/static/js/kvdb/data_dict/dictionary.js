@@ -26,7 +26,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.DictEntry;
     $.fn.zato.data_table.new_row_func = $.fn.zato.kvdb.data_dict.dictionary.data_table.new_row;
     $.fn.zato.data_table.parse();
-    $.fn.zato.data_table.setup_forms(['system', 'key', 'value']);
+    $.fn.zato.data_table.setup_forms(['system', 'key']);
 })
 
 $.fn.zato.kvdb.data_dict.dictionary.create = function() {
