@@ -1023,41 +1023,58 @@ cdef class Cache(object):
     cpdef expire(self, object key, double expiry, dict meta_ref):
         """ Makes a given cache entry expire after 'expiry' seconds.
         """
+        cpdef bint found_any = False
+
         with self._lock:
-            self._expire(key, expiry, meta_ref)
+            if key in self._data:
+                self._expire(key, expiry, meta_ref)
+                found_key = True
+
+        return found_key
 
 # ################################################################################################################################
 
-    cpdef expire_by_prefix(self, object data, double expiry):
+    cpdef bint expire_by_prefix(self, object data, double expiry):
         """ Sets expiration for all keys matching a given prefix. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
+        cpdef bint found_any = False
+
         with self._lock:
             for key in self._data.iterkeys():
                 if not isinstance(key, str_types):
                     continue
                 if key.startswith(data):
                     self._expire(key, expiry, None)
+                    found_any = True
+
+        return found_any
 
 # ################################################################################################################################
 
-    cpdef expire_by_suffix(self, object data, double expiry):
+    cpdef bint expire_by_suffix(self, object data, double expiry):
         """ Sets expiration for all keys matching a given suffix. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
+        cpdef bint found_any = False
+
         with self._lock:
             for key in self._data.iterkeys():
                 if not isinstance(key, str_types):
                     continue
                 if key.endswith(data):
                     self._expire(key, expiry, None)
+                    found_any = True
+
+        return found_any
 
 # ################################################################################################################################
 
-    cpdef expire_by_regex(self, object data, double expiry):
+    cpdef bint expire_by_regex(self, object data, double expiry):
         """ Sets expiration for all keys matching a given regex pattern. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
+        cpdef bint found_any = False
         cdef object regex = self._regex_cache.setdefault(data, re_compile(data))
 
         with self._lock:
@@ -1066,39 +1083,53 @@ cdef class Cache(object):
                     continue
                 if regex.match(key):
                     self._expire(key, expiry, None)
+                    found_any = True
+
+        return found_any
 
 # ################################################################################################################################
 
-    cpdef expire_contains(self, object data, double expiry):
+    cpdef bint expire_contains(self, object data, double expiry):
         """ Sets expiration for all keys containing a given pattern. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
+        cpdef bint found_any = False
+
         with self._lock:
             for key in self._data.iterkeys():
                 if not isinstance(key, str_types):
                     continue
                 if data in key:
                     self._expire(key, expiry, None)
+                    found_any = True
+
+        return found_any
 
 # ################################################################################################################################
 
-    cpdef expire_not_contains(self, object data, double expiry):
+    cpdef bint expire_not_contains(self, object data, double expiry):
         """ Sets expiration for all keys containing a given pattern. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
+        cpdef bint found_any = False
+
         with self._lock:
             for key in self._data.iterkeys():
                 if not isinstance(key, str_types):
                     continue
                 if data not in key:
                     self._expire(key, expiry, None)
+                    found_any = True
+
+        return found_any
 
 # ################################################################################################################################
 
-    cpdef expire_contains_all(self, object data, double expiry):
+    cpdef bint expire_contains_all(self, object data, double expiry):
         """ Sets expiration for keys containing all of input elements. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
+        cpdef bint found_any = False
         cdef bint use_key
 
         with self._lock:
@@ -1114,13 +1145,17 @@ cdef class Cache(object):
 
                 if use_key:
                     self._expire(key, expiry, None)
+                    found_any = True
+
+        return found_any
 
 # ################################################################################################################################
 
-    cpdef expire_contains_any(self, object data, double expiry):
+    cpdef bint expire_contains_any(self, object data, double expiry):
         """ Sets expiration for keys containing at least one of input elements. Non-string-like keys are ignored.
         Similarly to other self.get/set/expire/delete methods, it's a separate one to reduce code branching/CPU mispredictions.
         """
+        cpdef bint found_any = False
         cdef bint use_key
 
         with self._lock:
@@ -1136,6 +1171,9 @@ cdef class Cache(object):
 
                 if use_key:
                     self._expire(key, expiry, None)
+                    found_any = True
+
+        return found_any
 
 # ################################################################################################################################
 

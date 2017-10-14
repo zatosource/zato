@@ -169,7 +169,6 @@ class Cache(object):
         """
         meta_ref = {'key':key, 'value':value, 'expiry':expiry} if self.needs_sync else None
         value = self.impl.set(key, value, expiry, meta_ref)
-
         if self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, meta_ref)
 
@@ -183,7 +182,6 @@ class Cache(object):
         returns all matched keys and their previous values.
         """
         out = self.impl.set_by_prefix(data, value, expiry, return_found)
-
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data, 'value':value, 'expiry':expiry})
 
@@ -269,7 +267,7 @@ class Cache(object):
 
 # ################################################################################################################################
 
-    def delete(self, key, raise_key_error=True, _DELETE=CACHE.STATE_CHANGED.DELETE):
+    def delete(self, key, raise_key_error=True, _OP=CACHE.STATE_CHANGED.DELETE):
         """ Deletes a cache entry by its key.
         """
         try:
@@ -279,76 +277,181 @@ class Cache(object):
                 raise
         else:
             if self.needs_sync:
-                spawn(self.after_state_changed_callback, _DELETE, self.config.name, {'key':key})
+                spawn(self.after_state_changed_callback, _OP, self.config.name, {'key':key})
 
             return value
 
 # ################################################################################################################################
 
-#    def delete_by_prefix
+    def delete_by_prefix(self, data, return_found=False, _OP=CACHE.STATE_CHANGED.DELETE_BY_PREFIX):
+        """ Deletes cache entries by their key prefixes - non-string-like keys are ignored.
+        Optionally, returns all matched keys and their previous values.
+        """
+        out = self.impl.delete_by_prefix(data)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
+
+        return out
 
 # ################################################################################################################################
 
-#    def delete_by_suffix
+    def delete_by_suffix(self, data, return_found=False, _OP=CACHE.STATE_CHANGED.DELETE_BY_SUFFIX):
+        """ Deletes cache entries by their key suffixes - non-string-like keys are ignored.
+        Optionally, returns all matched keys and their previous values.
+        """
+        out = self.impl.delete_by_suffix(data)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
+
+        return out
 
 # ################################################################################################################################
 
-#    def delete_by_regex
+    def delete_by_regex(self, data, return_found=False, _OP=CACHE.STATE_CHANGED.DELETE_BY_REGEX):
+        """ Deletes cache entries with keys matching the input regular expression - non-string-like keys are ignored.
+        Optionally, returns all matched keys and their previous values.
+        """
+        out = self.impl.delete_by_regex(data)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
+
+        return out
 
 # ################################################################################################################################
 
-#    def delete_contains
+    def delete_contains(self, data, return_found=False, _OP=CACHE.STATE_CHANGED.DELETE_CONTAINS):
+        """ Deletes cache entries with keys containing the input string - non-string-like keys are ignored.
+        Optionally, returns all matched keys and their previous values.
+        """
+        out = self.impl.delete_contains(data)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
+
+        return out
 
 # ################################################################################################################################
 
-#    def delete_not_contains
+    def delete_not_contains(self, data, return_found=False, _OP=CACHE.STATE_CHANGED.DELETE_NOT_CONTAINS):
+        """ Deletes cache entries with keys that don't contain the input string - non-string-like keys are ignored.
+        Optionally, returns all matched keys and their previous values.
+        """
+        out = self.impl.delete_not_contains(data)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
+
+        return out
 
 # ################################################################################################################################
 
-#    def delete_contains_all
+    def delete_contains_all(self, data, return_found=False, _OP=CACHE.STATE_CHANGED.DELETE_CONTAINS_ALL):
+        """ Deletes cache entries with keys containing all of elements in the input string - non-string-like keys are ignored.
+        Optionally, returns all matched keys and their previous values.
+        """
+        out = self.impl.delete_contains_all(data)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
+
+        return out
 
 # ################################################################################################################################
 
-#    def delete_contains_any
+    def delete_contains_any(self, data, return_found=False, _OP=CACHE.STATE_CHANGED.DELETE_CONTAINS_ANY):
+        """ Deletes cache entries with keys containing at least one of elements in the input string -
+        non-string-like keys are ignored. Optionally, returns all matched keys and their previous values.
+        """
+        out = self.impl.delete_contains_any(data)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
+
+        return out
 
 # ################################################################################################################################
 
-    def expire(self, key, expiry=0.0, _EXPIRE=CACHE.STATE_CHANGED.EXPIRE):
+    def expire(self, key, expiry=0.0, _OP=CACHE.STATE_CHANGED.EXPIRE):
         """ Sets expiry in seconds (or a fraction of) for a given key.
         """
         meta_ref = {'key':key, 'expiry':expiry} if self.needs_sync else None
         self.impl.expire(key, expiry, meta_ref)
 
         if self.needs_sync:
-            spawn(self.after_state_changed_callback, _EXPIRE, self.config.name, meta_ref)
+            spawn(self.after_state_changed_callback, _OP, self.config.name, meta_ref)
 
 # ################################################################################################################################
 
-#    def expire_by_prefix
+    def expire_by_prefix(self, data, expiry=0.0, _OP=CACHE.STATE_CHANGED.EXPIRE_BY_PREFIX):
+        """ Sets expiry in seconds (or a fraction of) for all keys matching the input prefix.
+        """
+        out = self.impl.expire_by_prefix(data, expiry)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data, 'expiry':expiry})
+
+        return out
 
 # ################################################################################################################################
 
-#    def expire_by_suffix
+    def expire_by_suffix(self, data, expiry=0.0, _OP=CACHE.STATE_CHANGED.EXPIRE_BY_SUFFIX):
+        """ Sets expiry in seconds (or a fraction of) for all keys matching the input suffix.
+        """
+        out = self.impl.expire_by_suffix(data, expiry)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data, 'expiry':expiry})
+
+        return out
 
 # ################################################################################################################################
 
-#    def expire_by_regex
+    def expire_by_regex(self, data, expiry=0.0, _OP=CACHE.STATE_CHANGED.EXPIRE_BY_REGEX):
+        """ Sets expiry in seconds (or a fraction of) for all keys matching the input regular expression.
+        """
+        out = self.impl.expire_by_regex(data, expiry)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data, 'expiry':expiry})
+
+        return out
 
 # ################################################################################################################################
 
-#    def expire_contains
+    def expire_contains(self, data, expiry=0.0, _OP=CACHE.STATE_CHANGED.EXPIRE_CONTAINS):
+        """ Sets expiry in seconds (or a fraction of) for all keys containing the input string.
+        """
+        out = self.impl.expire_contains(data, expiry)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data, 'expiry':expiry})
+
+        return out
 
 # ################################################################################################################################
 
-#    def expire_not_contains
+    def expire_not_contains(self, data, expiry=0.0, _OP=CACHE.STATE_CHANGED.EXPIRE_NOT_CONTAINS):
+        """ Sets expiry in seconds (or a fraction of) for all keys that don't contain the input string.
+        """
+        out = self.impl.expire_not_contains(data, expiry)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data, 'expiry':expiry})
+
+        return out
 
 # ################################################################################################################################
 
-#    def expire_contains_all
+    def expire_contains_all(self, data, expiry=0.0, _OP=CACHE.STATE_CHANGED.EXPIRE_CONTAINS_ALL):
+        """ Sets expiry in seconds (or a fraction of) for keys that contain all of input elements.
+        """
+        out = self.impl.expire_contains_all(data, expiry)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data, 'expiry':expiry})
+
+        return out
 
 # ################################################################################################################################
 
-#    def expire_contains_any
+    def expire_contains_any(self, data, expiry=0.0, _OP=CACHE.STATE_CHANGED.EXPIRE_CONTAINS_ALL):
+        """ Sets expiry in seconds (or a fraction of) for keys that contain at least one of input elements.
+        """
+        out = self.impl.expire_contains_any(data, expiry)
+        if out and self.needs_sync:
+            spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data, 'expiry':expiry})
+
+        return out
 
 # ################################################################################################################################
 
@@ -462,43 +565,43 @@ class Cache(object):
         """ Invoked by Cache API to synchronizes this worker's cache after a .delete_by_prefix operation
         in another worker process.
         """
-        self.impl.delete_by_prefix(data.data, data.value, data.expiry, None)
+        self.impl.delete_by_prefix(data.data, False)
 
     def sync_after_delete_by_suffix(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .delete_by_suffix operation
         in another worker process.
         """
-        self.impl.delete_by_suffix(data.data, data.value, data.expiry, None)
+        self.impl.delete_by_suffix(data.data, False)
 
     def sync_after_delete_by_regex(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .delete_by_regex operation
         in another worker process.
         """
-        self.impl.delete_by_regex(data.data, data.value, data.expiry, None)
+        self.impl.delete_by_regex(data.data, False)
 
     def sync_after_delete_contains(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .delete_contains operation
         in another worker process.
         """
-        self.impl.delete_contains(data.data, data.value, data.expiry, None)
+        self.impl.delete_contains(data.data, False)
 
     def sync_after_delete_not_contains(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .delete_not_contains operation
         in another worker process.
         """
-        self.impl.delete_not_contains(data.data, data.value, data.expiry, None)
+        self.impl.delete_not_contains(data.data, False)
 
     def sync_after_delete_contains_all(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .delete_contains_all operation
         in another worker process.
         """
-        self.impl.delete_contains_all(data.data, data.value, data.expiry, None)
+        self.impl.delete_contains_all(data.data, False)
 
     def sync_after_delete_contains_any(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .delete_contains_any operation
         in another worker process.
         """
-        self.impl.delete_contains_any(data.data, data.value, data.expiry, None)
+        self.impl.delete_contains_any(data.data, False)
 
 # ################################################################################################################################
 
@@ -511,43 +614,43 @@ class Cache(object):
         """ Invoked by Cache API to synchronizes this worker's cache after a .expire_by_prefix operation
         in another worker process.
         """
-        self.impl.expire_by_prefix(data.data, data.value, data.expiry, None)
+        self.impl.expire_by_prefix(data.data, data.expiry)
 
     def sync_after_expire_by_suffix(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .expire_by_suffix operation
         in another worker process.
         """
-        self.impl.expire_by_suffix(data.data, data.value, data.expiry, None)
+        self.impl.expire_by_suffix(data.data, data.expiry)
 
     def sync_after_expire_by_regex(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .expire_by_regex operation
         in another worker process.
         """
-        self.impl.expire_by_regex(data.data, data.value, data.expiry, None)
+        self.impl.expire_by_regex(data.data, data.expiry)
 
     def sync_after_expire_contains(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .expire_contains operation
         in another worker process.
         """
-        self.impl.expire_contains(data.data, data.value, data.expiry, None)
+        self.impl.expire_contains(data.data, data.expiry)
 
     def sync_after_expire_not_contains(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .expire_not_contains operation
         in another worker process.
         """
-        self.impl.expire_not_contains(data.data, data.value, data.expiry, None)
+        self.impl.expire_not_contains(data.data, data.expiry)
 
     def sync_after_expire_contains_all(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .expire_contains_all operation
         in another worker process.
         """
-        self.impl.expire_contains_all(data.data, data.value, data.expiry, None)
+        self.impl.expire_contains_all(data.data, data.expiry)
 
     def sync_after_expire_contains_any(self, data):
         """ Invoked by Cache API to synchronizes this worker's cache after a .expire_contains_any operation
         in another worker process.
         """
-        self.impl.expire_contains_any(data.data, data.value, data.expiry, None)
+        self.impl.expire_contains_any(data.data, data.expiry)
 
 # ################################################################################################################################
 
@@ -776,12 +879,82 @@ class CacheAPI(object):
         """
         self.caches[cache_type][data.cache_name].sync_after_delete(data)
 
+    def sync_after_delete_by_prefix(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .delete_by_prefix operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_delete_by_prefix(data)
+
+    def sync_after_delete_by_suffix(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .delete_by_suffix operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_delete_by_suffix(data)
+
+    def sync_after_delete_by_regex(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .delete_by_regex operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_delete_by_regex(data)
+
+    def sync_after_delete_contains(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .delete_contains operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_delete_contains(data)
+
+    def sync_after_delete_not_contains(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .delete_not_contains operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_delete_not_contains(data)
+
+    def sync_after_delete_contains_all(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .delete_contains_all operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_delete_contains_all(data)
+
+    def sync_after_delete_contains_any(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .delete_contains_any operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_delete_contains_any(data)
+
 # ################################################################################################################################
 
     def sync_after_expire(self, cache_type, data):
         """ Synchronizes the state of this worker's cache after an .expire operation in another worker process.
         """
         self.caches[cache_type][data.cache_name].sync_after_expire(data)
+
+    def sync_after_expire_by_prefix(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .expire_by_prefix operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_expire_by_prefix(data)
+
+    def sync_after_expire_by_suffix(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .expire_by_suffix operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_expire_by_suffix(data)
+
+    def sync_after_expire_by_regex(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .expire_by_regex operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_expire_by_regex(data)
+
+    def sync_after_expire_contains(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .expire_contains operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_expire_contains(data)
+
+    def sync_after_expire_not_contains(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .expire_not_contains operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_expire_not_contains(data)
+
+    def sync_after_expire_contains_all(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .expire_contains_all operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_expire_contains_all(data)
+
+    def sync_after_expire_contains_any(self, cache_type, data):
+        """ Synchronizes the state of this worker's cache after a .expire_contains_any operation in another worker process.
+        """
+        self.caches[cache_type][data.cache_name].sync_after_expire_contains_any(data)
 
 # ################################################################################################################################
 
