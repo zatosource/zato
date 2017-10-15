@@ -238,10 +238,9 @@ class SimpleIOPayload(SIOConverter):
     """ Produces the actual response - XML, JSON or fixed-width - out of the user-provided SimpleIO abstract data.
     All of the attributes are prefixed with zato_ so that they don't conflict with non-Zato data..
     """
-    def __init__(self, zato_cid, logger, data_format, required_list, optional_list, simple_io_config, response_elem, namespace,
-            output_repeated):
+    def __init__(self, zato_cid, data_format, required_list, optional_list, simple_io_config, response_elem, namespace,
+            output_repeated, skip_empty, ignore_skip_empty, allow_empty_required):
         self.zato_cid = zato_cid
-        self.zato_logger = logger
         self.zato_data_format = data_format
         self.zato_is_xml = self.zato_data_format == SIMPLE_IO.FORMAT.XML
         self.zato_is_fixed_width = self.zato_data_format == SIMPLE_IO.FORMAT.FIXED_WIDTH
@@ -249,6 +248,9 @@ class SimpleIOPayload(SIOConverter):
         self.zato_required = [(True, name) for name in required_list]
         self.zato_optional = [(False, name) for name in optional_list]
         self.zato_output_repeated = output_repeated
+        self.zato_skip_empty = skip_empty
+        self.zato_ignore_skip_empty = ignore_skip_empty
+        self.zato_allow_empty_required = allow_empty_required
         self.zato_meta = {}
         self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
         self.int_parameters = simple_io_config.get('int_parameters', [])
@@ -333,14 +335,11 @@ class SimpleIOPayload(SIOConverter):
             elem_value = item.get(lookup_name, '')
 
         if isinstance(elem_value, basestring) and not elem_value:
+            if elem_value == '' and self.zato_allow_empty_required:
+                return ''
             msg = self._missing_value_log_msg(name, item, is_sa_namedtuple, is_required)
             if is_required:
-                if self.zato_logger.isEnabledFor(_DEBUG):
-                    self.zato_logger.debug(msg)
                 raise ZatoException(self.zato_cid, msg)
-            else:
-                if self.zato_logger.isEnabledFor(_TRACE1):
-                    self.zato_logger.log(_TRACE1, msg)
 
         if leave_as_is:
             return elem_value
@@ -396,6 +395,10 @@ class SimpleIOPayload(SIOConverter):
                     leave_as_is = isinstance(name, AsIs)
                     elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
 
+                    if elem_value == '':
+                        if name not in self.zato_ignore_skip_empty:
+                            continue
+
                     if isinstance(name, ForceType):
                         name = name.name
 
@@ -418,7 +421,10 @@ class SimpleIOPayload(SIOConverter):
             top = getattr(em, self.response_elem)(zato_env)
             top.append(value)
         else:
-            top = {self.response_elem: value}
+            if self.response_elem is not None:
+                top = {self.response_elem: value}
+            else:
+                top = value
             search = self.zato_meta.get('search')
             if search:
                 top['_meta'] = search
@@ -534,33 +540,21 @@ class Response(object):
                     raise Exception("Can't set payload, there's no output_required nor output_optional declared")
                 self._payload.set_payload_attrs(value)
 
-        '''
-        return
-
-        if isinstance(value, direct_payload) and not isinstance(value, KeyedTuple):
-            self._payload = value
-        else:
-            if isinstance(value, dict):
-                if not self.outgoing_declared:
-                    self._payload = value
-                else:
-                    self._payload.set_payload_attrs(value)
-            else:
-                if not self.outgoing_declared:
-                    raise Exception("Can't set payload, there's no output_required nor output_optional declared")
-                self._payload.set_payload_attrs(value)'''
-
     payload = property(_get_payload, _set_payload)
 
-    def init(self, cid, io, data_format):
+    def init(self, cid, io, data_format, _not_given=NOT_GIVEN):
         self.data_format = data_format
         required_list = getattr(io, 'output_required', [])
         optional_list = getattr(io, 'output_optional', [])
-        response_elem = getattr(io, 'response_elem', 'response')
+        response_elem = getattr(io, 'response_elem', _not_given)
+        response_elem = response_elem if response_elem != _not_given else 'response'
         namespace = getattr(io, 'namespace', '')
         output_repeated = getattr(io, 'output_repeated', False)
         self.outgoing_declared = True if required_list or optional_list else False
+        skip_empty = getattr(io, 'skip_empty', True)
+        ignore_skip_empty = getattr(io, 'ignore_skip_empty', [])
+        allow_empty_required = getattr(io, 'allow_empty_required', True)
 
         if required_list or optional_list:
-            self._payload = SimpleIOPayload(cid, self.logger, data_format, required_list, optional_list, self.simple_io_config,
-                response_elem, namespace, output_repeated)
+            self._payload = SimpleIOPayload(cid, data_format, required_list, optional_list, self.simple_io_config,
+                response_elem, namespace, output_repeated, skip_empty, ignore_skip_empty, allow_empty_required)
