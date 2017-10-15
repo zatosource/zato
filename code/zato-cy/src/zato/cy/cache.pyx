@@ -557,9 +557,14 @@ cdef class Cache(object):
                     self._expired_on_op.append(key)
                     raise KeyExpiredError(key)
                 else:
-                    # The entry exists and has not expired so now, if we are configured to, prolong its expiration time
-                    if self.extend_expiry_on_set and entry.expiry:
-                        entry.expires_at = _now + entry.expiry
+                    # If expiry == 0.0 it means that we are resetting an already existing expiry time
+                    if expiry == 0.0:
+                        entry.expires_at = 0.0
+                        entry.expiry = 0.0
+                    else:
+                        # The entry exists and has not expired so now, if we are configured to, prolong its expiration time
+                        if self.extend_expiry_on_set and entry.expiry:
+                            entry.expires_at = _now + entry.expiry
 
             # Update access information for that entry, if we get to this point, the entry is not expired,
             # or at least its expiry time has been extended.
