@@ -24,7 +24,7 @@ from paste.util.converters import asbool
 
 # Zato
 from zato.cache import Cache as _CyCache
-from zato.common import CACHE
+from zato.common import CACHE, ZATO_NOT_GIVEN
 from zato.common.broker_message import CACHE as CACHE_BROKER_MSG
 from zato.common.util import parse_extra_into_dict
 
@@ -61,7 +61,7 @@ logger = getLogger(__name__)
 
 # ################################################################################################################################
 
-default_get = object() # A singleton to indicate that no default for Cache.get was given on input
+default_get = ZATO_NOT_GIVEN # A singleton to indicate that no default for Cache.get was given on input
 
 # ################################################################################################################################
 
@@ -110,7 +110,7 @@ class Cache(object):
     def get(self, key, default=default_get, details=False):
         """ Returns a value stored under a given key. If details is True, return metadata about the key as well.
         """
-        return self.impl.get(key, default if default is not default_get else self.impl.default_get, details)
+        return self.impl.get(key, default if default != default_get else self.impl.default_get, details)
 
 # ################################################################################################################################
 

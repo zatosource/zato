@@ -248,8 +248,8 @@ class SimpleIOPayload(SIOConverter):
         self.zato_required = [(True, name) for name in required_list]
         self.zato_optional = [(False, name) for name in optional_list]
         self.zato_output_repeated = output_repeated
-        self.zato_skip_empty = skip_empty
-        self.zato_ignore_skip_empty = ignore_skip_empty
+        self.zato_skip_empty_keys = skip_empty
+        self.zato_force_empty_keys = ignore_skip_empty
         self.zato_allow_empty_required = allow_empty_required
         self.zato_meta = {}
         self.bool_parameter_prefixes = simple_io_config.get('bool_parameter_prefixes', [])
@@ -396,8 +396,9 @@ class SimpleIOPayload(SIOConverter):
                     elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
 
                     if elem_value == '':
-                        if name not in self.zato_ignore_skip_empty:
-                            continue
+                        if self.zato_skip_empty_keys:
+                            if name not in self.zato_force_empty_keys:
+                                continue
 
                     if isinstance(name, ForceType):
                         name = name.name
@@ -551,10 +552,10 @@ class Response(object):
         namespace = getattr(io, 'namespace', '')
         output_repeated = getattr(io, 'output_repeated', False)
         self.outgoing_declared = True if required_list or optional_list else False
-        skip_empty = getattr(io, 'skip_empty', True)
-        ignore_skip_empty = getattr(io, 'ignore_skip_empty', [])
-        allow_empty_required = getattr(io, 'allow_empty_required', True)
+        skip_empty_keys = getattr(io, 'skip_empty_keys', False)
+        force_empty_keys = getattr(io, 'force_empty_keys', [])
+        allow_empty_required = getattr(io, 'allow_empty_required', False)
 
         if required_list or optional_list:
             self._payload = SimpleIOPayload(cid, data_format, required_list, optional_list, self.simple_io_config,
-                response_elem, namespace, output_repeated, skip_empty, ignore_skip_empty, allow_empty_required)
+                response_elem, namespace, output_repeated, skip_empty_keys, force_empty_keys, allow_empty_required)
