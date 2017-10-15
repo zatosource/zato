@@ -470,7 +470,7 @@ class Service(object):
                 if service.after_handle:
                     _call_hook_no_service(service.after_handle)
 
-                # Call before job hooks if any are defined and we are called from the scheduler
+                # Call after job hooks if any are defined and we are called from the scheduler
                 if service._has_after_job_hooks and self.channel.type == _CHANNEL_SCHEDULER:
                     for elem in service._after_job_hooks:
                         if elem:
