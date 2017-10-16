@@ -287,7 +287,7 @@ class Cache(object):
         """ Deletes cache entries by their key prefixes - non-string-like keys are ignored.
         Optionally, returns all matched keys and their previous values.
         """
-        out = self.impl.delete_by_prefix(data)
+        out = self.impl.delete_by_prefix(data, return_found)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
 
@@ -299,7 +299,7 @@ class Cache(object):
         """ Deletes cache entries by their key suffixes - non-string-like keys are ignored.
         Optionally, returns all matched keys and their previous values.
         """
-        out = self.impl.delete_by_suffix(data)
+        out = self.impl.delete_by_suffix(data, return_found)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
 
@@ -311,7 +311,7 @@ class Cache(object):
         """ Deletes cache entries with keys matching the input regular expression - non-string-like keys are ignored.
         Optionally, returns all matched keys and their previous values.
         """
-        out = self.impl.delete_by_regex(data)
+        out = self.impl.delete_by_regex(data, return_found)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
 
@@ -323,7 +323,7 @@ class Cache(object):
         """ Deletes cache entries with keys containing the input string - non-string-like keys are ignored.
         Optionally, returns all matched keys and their previous values.
         """
-        out = self.impl.delete_contains(data)
+        out = self.impl.delete_contains(data, return_found)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
 
@@ -335,7 +335,7 @@ class Cache(object):
         """ Deletes cache entries with keys that don't contain the input string - non-string-like keys are ignored.
         Optionally, returns all matched keys and their previous values.
         """
-        out = self.impl.delete_not_contains(data)
+        out = self.impl.delete_not_contains(data, return_found)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
 
@@ -347,7 +347,7 @@ class Cache(object):
         """ Deletes cache entries with keys containing all of elements in the input string - non-string-like keys are ignored.
         Optionally, returns all matched keys and their previous values.
         """
-        out = self.impl.delete_contains_all(data)
+        out = self.impl.delete_contains_all(data, return_found)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
 
@@ -359,7 +359,7 @@ class Cache(object):
         """ Deletes cache entries with keys containing at least one of elements in the input string -
         non-string-like keys are ignored. Optionally, returns all matched keys and their previous values.
         """
-        out = self.impl.delete_contains_any(data)
+        out = self.impl.delete_contains_any(data, return_found)
         if out and self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, {'data':data})
 
@@ -371,10 +371,12 @@ class Cache(object):
         """ Sets expiry in seconds (or a fraction of) for a given key.
         """
         meta_ref = {'key':key, 'expiry':expiry} if self.needs_sync else None
-        self.impl.expire(key, expiry, meta_ref)
+        found_key = self.impl.expire(key, expiry, meta_ref)
 
         if self.needs_sync:
             spawn(self.after_state_changed_callback, _OP, self.config.name, meta_ref)
+
+        return found_key
 
 # ################################################################################################################################
 
