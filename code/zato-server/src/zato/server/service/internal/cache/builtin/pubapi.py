@@ -96,14 +96,12 @@ class SingleKeyService(_BaseService):
 
         # This is an update of value and, possibly, an entry's expiry
         if input.get('value'):
-            self.logger.warn('Set')
             prev_value = cache.set(input['key'], input.value, input.get('expiry') or 0.0)
             if input.get('return_prev'):
                 self.response.payload.prev_value = prev_value
 
         # We only update the expiry time
         else:
-            self.logger.warn('Expiry')
             if not input.get('expiry'):
                 raise BadRequest(self.cid, 'At least one of `value` or `expiry` is needed on input')
             else:
