@@ -236,7 +236,7 @@ cdef class Cache(object):
 # ################################################################################################################################
 
     cdef object _delete(self, object key):
-        cdef out = self._data[key].value # Will KeyError on invalid key so _remove_from_index_by_idx is safe to call
+        cdef object out = self._data[key].value # raise Will KeyError on invalid key so _remove_from_index_by_idx is safe to call
         del self._data[key]
         self._remove_from_index_by_idx(self._get_index(key))
 
@@ -244,9 +244,9 @@ cdef class Cache(object):
 
 # ################################################################################################################################
 
-    cpdef Entry delete(self, object key):
+    cpdef object delete(self, object key):
         with self._lock:
-            self._delete(key)
+            return self._delete(key)
 
     __del__ = delete
 
@@ -1028,7 +1028,7 @@ cdef class Cache(object):
     cpdef expire(self, object key, double expiry, dict meta_ref):
         """ Makes a given cache entry expire after 'expiry' seconds.
         """
-        cpdef bint found_any = False
+        cpdef bint found_key = False
 
         with self._lock:
             if key in self._data:
