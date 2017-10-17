@@ -31,8 +31,8 @@ class _BaseService(Service):
         response_elem = None
         input_required = ('key',)
         input_optional = (Bool('return_prev'),)
+        output_optional = optional_keys
         skip_empty_keys = True
-        force_empty_keys = ('value',)
         allow_empty_required = True
 
     def _get_cache(self, input):
@@ -64,7 +64,7 @@ class SingleKeyService(_BaseService):
     """
     class SimpleIO(_BaseService.SimpleIO):
         input_optional = _BaseService.SimpleIO.input_optional + ('cache', 'value', 'details', Float('expiry'))
-        output_optional = ('prev_value',)
+        output_optional = _BaseService.SimpleIO.output_optional + ('prev_value',)
 
 # ################################################################################################################################
 
