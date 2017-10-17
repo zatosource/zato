@@ -220,6 +220,8 @@ class Create(_CreateEdit):
                 item.cache_id = input.cache_id
                 item.cache_expiry = input.cache_expiry
 
+                #if item.cache_id
+
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
 
