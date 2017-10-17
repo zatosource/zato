@@ -543,6 +543,7 @@ class Create(ZatoCommand):
         self.add_default_rbac_permissions(session, cluster)
         self.add_default_rbac_roles(session, cluster)
         self.add_default_cache(session, cluster)
+        self.add_cache_endpoints(session, cluster)
 
         try:
             session.commit()
@@ -788,3 +789,86 @@ class Create(ZatoCommand):
             channel = HTTPSOAP(None, name, True, True, 'channel', 'plain_http', None, url_path, None, '', None, data_format,
                 merge_url_params_req=True, service=service, cluster=cluster, security=pubapi_sec)
             session.add(channel)
+
+    def add_cache_endpoints(self, session, cluster):
+
+        service_to_endpoint = {
+
+            # For single keys
+            'zato.cache.builtin.pubapi.single-key-service':  '/zato/cache/{key}',
+
+            # Multi-key delete
+            'zato.cache.builtin.pubapi.delete-by-prefix':    '/zato/cache/delete/by-prefix/{key}',
+            'zato.cache.builtin.pubapi.delete-by-regex':     '/zato/cache/delete/by-regex/{key}',
+            'zato.cache.builtin.pubapi.delete-by-suffix':    '/zato/cache/delete/by-suffix/{key}',
+            'zato.cache.builtin.pubapi.delete-contains':     '/zato/cache/delete/contains/{key}',
+            'zato.cache.builtin.pubapi.delete-not-contains': '/zato/cache/delete/not-contains/{key}',
+            'zato.cache.builtin.pubapi.delete-contains-all': '/zato/cache/delete/contains-all',
+            'zato.cache.builtin.pubapi.delete-contains-any': '/zato/cache/delete/contains-any',
+
+            # Multi-key expire
+            'zato.cache.builtin.pubapi.expire-by-prefix':    '/zato/cache/expire/by-prefix/{key}',
+            'zato.cache.builtin.pubapi.expire-by-regex':     '/zato/cache/expire/by-prefix/{key}',
+            'zato.cache.builtin.pubapi.expire-by-suffix':    '/zato/cache/expire/by-suffix/{key}',
+            'zato.cache.builtin.pubapi.expire-contains':     '/zato/cache/expire/contains/{key}',
+            'zato.cache.builtin.pubapi.expire-not-contains': '/zato/cache/expire/not-contains/{key}',
+            'zato.cache.builtin.pubapi.expire-contains-all': '/zato/cache/expire/contains-all',
+            'zato.cache.builtin.pubapi.expire-contains-any': '/zato/cache/expire/contains-any',
+
+            # Multi-key set
+            'zato.cache.builtin.pubapi.set-by-prefix':       '/zato/cache/set/by-prefix/{key}',
+            'zato.cache.builtin.pubapi.set-by-regex':        '/zato/cache/set/by-regex/{key}',
+            'zato.cache.builtin.pubapi.set-by-suffix':       '/zato/cache/set/by-suffix/{key}',
+            'zato.cache.builtin.pubapi.set-contains':        '/zato/cache/set/contains/{key}',
+            'zato.cache.builtin.pubapi.set-not-contains':    '/zato/cache/set/not-contains/{key}',
+            'zato.cache.builtin.pubapi.set-contains-all':    '/zato/cache/set/contains-all',
+            'zato.cache.builtin.pubapi.set-contains-any':    '/zato/cache/set/contains-any',
+        }
+
+        service_to_impl = {
+
+            # For single keys
+            'zato.cache.builtin.pubapi.single-key-service':  'zato.server.service.internal.cache.builtin.pubapi.SingleKeyService',
+
+            # Multi-key delete
+            'zato.cache.builtin.pubapi.delete-by-prefix':    'zato.server.service.internal.cache.builtin.pubapi.DeleteByPrefix',
+            'zato.cache.builtin.pubapi.delete-by-regex':     'zato.server.service.internal.cache.builtin.pubapi.DeleteByRegex',
+            'zato.cache.builtin.pubapi.delete-by-suffix':    'zato.server.service.internal.cache.builtin.pubapi.DeleteBySuffix',
+            'zato.cache.builtin.pubapi.delete-contains':     'zato.server.service.internal.cache.builtin.pubapi.DeleteContains',
+            'zato.cache.builtin.pubapi.delete-not-contains': 'zato.server.service.internal.cache.builtin.pubapi.DeleteNotContains',
+            'zato.cache.builtin.pubapi.delete-contains-all': 'zato.server.service.internal.cache.builtin.pubapi.DeleteContainsAll',
+            'zato.cache.builtin.pubapi.delete-contains-any': 'zato.server.service.internal.cache.builtin.pubapi.DeleteContainsAny',
+
+            # Multi-key expire
+            'zato.cache.builtin.pubapi.expire-by-prefix':    'zato.server.service.internal.cache.builtin.pubapi.ExpireByPrefix',
+            'zato.cache.builtin.pubapi.expire-by-regex':     'zato.server.service.internal.cache.builtin.pubapi.ExpireByRegex',
+            'zato.cache.builtin.pubapi.expire-by-suffix':    'zato.server.service.internal.cache.builtin.pubapi.ExpireBySuffix',
+            'zato.cache.builtin.pubapi.expire-contains':     'zato.server.service.internal.cache.builtin.pubapi.ExpireContains',
+            'zato.cache.builtin.pubapi.expire-not-contains': 'zato.server.service.internal.cache.builtin.pubapi.ExpireNotContains',
+            'zato.cache.builtin.pubapi.expire-contains-all': 'zato.server.service.internal.cache.builtin.pubapi.ExpireContainsAll',
+            'zato.cache.builtin.pubapi.expire-contains-any': 'zato.server.service.internal.cache.builtin.pubapi.ExpireContainsAny',
+
+            # Multi-key set
+            'zato.cache.builtin.pubapi.set-by-prefix':       'zato.server.service.internal.cache.builtin.pubapi.SetByPrefix',
+            'zato.cache.builtin.pubapi.set-by-regex':        'zato.server.service.internal.cache.builtin.pubapi.SetByRegex',
+            'zato.cache.builtin.pubapi.set-by-suffix':       'zato.server.service.internal.cache.builtin.pubapi.SetBySuffix',
+            'zato.cache.builtin.pubapi.set-contains':        'zato.server.service.internal.cache.builtin.pubapi.SetContains',
+            'zato.cache.builtin.pubapi.set-not-contains':    'zato.server.service.internal.cache.builtin.pubapi.SetNotContains',
+            'zato.cache.builtin.pubapi.set-contains-all':    'zato.server.service.internal.cache.builtin.pubapi.SetContainsAll',
+            'zato.cache.builtin.pubapi.set-contains-any':    'zato.server.service.internal.cache.builtin.pubapi.SetContainsAny',
+        }
+
+        sec = HTTPBasicAuth(None, 'zato.default.cache.client', True, 'zato.cache', 'Zato cache', uuid4().hex, cluster)
+        session.add(sec)
+
+        for name, impl_name in service_to_impl.iteritems():
+
+            service = Service(None, name, True, impl_name, True, cluster)
+            session.add(service)
+
+            url_path = service_to_endpoint[name]
+
+            http_soap = HTTPSOAP(None, name, True, True, 'channel', 'plain_http', None, url_path, None, '',
+                None, DATA_FORMAT.JSON, security=None, service=service, cluster=cluster)
+
+            session.add(http_soap)

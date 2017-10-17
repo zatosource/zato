@@ -228,7 +228,7 @@ class URLData(CyURLData, OAuthDataStore):
 
         if not result:
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`, sec-wall code:`{}`, description:`{}`\n'.format(
                     path_info, cid, result.code, result.description)
                 logger.error(msg)
                 raise Unauthorized(cid, msg, 'Basic realm="{}"'.format(sec_def.realm))
@@ -303,7 +303,7 @@ class URLData(CyURLData, OAuthDataStore):
 
         if not result:
             if enforce_auth:
-                msg = 'UNAUTHORIZED path_info:[{}], cid:[{}], sec-wall code:[{}], description:[{}]\n'.format(
+                msg = 'UNAUTHORIZED path_info:`{}`, cid:`{}`, sec-wall code:`{}`, description:`{}`\n'.format(
                     path_info, cid, result.code, result.description)
                 logger.error(msg)
                 raise Unauthorized(cid, msg, 'zato-wss')
