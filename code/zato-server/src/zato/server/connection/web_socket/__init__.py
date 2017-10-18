@@ -347,9 +347,6 @@ class WebSocket(_WebSocket):
             'data_format': _data_format,
             'service': service_name,
             'payload': data,
-<<<<<<< HEAD
-            'environ': {'pub_client_id': self.pub_client_id, 'client_name':self.ext_client_name, 'client_id':self.ext_client_id},
-=======
             'environ': {
                 'ws_channel_config': self.config,
                 'ws_token': self.token,
@@ -367,7 +364,6 @@ class WebSocket(_WebSocket):
                 'forwarded_for_fqdn': self.forwarded_for_fqdn,
                 'initial_http_wsgi_environ': self.initial_http_wsgi_environ,
             },
->>>>>>> main
         }, CHANNEL.WEB_SOCKET, None, needs_response=needs_response, serialize=False)
 
 # ################################################################################################################################
