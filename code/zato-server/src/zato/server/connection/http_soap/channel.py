@@ -149,8 +149,6 @@ class RequestDispatcher(object):
         # Credentials are checked in a call to self.url_data.check_security
         url_match, channel_item = self.url_data.match(path_info, soap_action, bool(soap_action))
 
-        logger.warn('333 %s', channel_item)
-
         if _has_debug and channel_item:
             logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))
 
