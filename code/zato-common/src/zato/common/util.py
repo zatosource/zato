@@ -981,7 +981,7 @@ def parse_extra_into_dict(lines, convert_bool=True):
             if line:
                 line = line.split('=')
                 if not len(line) == 2:
-                    raise ValueError('Each line must be a single key=value entry, not [{}]'.format(original_line))
+                    raise ValueError('Each line must be a single key=value entry, not `{}`'.format(original_line))
 
                 key, value = line
                 value = value.strip()

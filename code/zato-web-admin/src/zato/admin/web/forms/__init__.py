@@ -25,6 +25,16 @@ def add_initial_select(form, field_name):
 
 # ################################################################################################################################
 
+def add_select(form, field_name, elems):
+    add_initial_select(form, field_name)
+
+    for elem in elems:
+        id = getattr(elem, 'id', None) or elem['id']
+        name = getattr(elem, 'name', None) or elem['name']
+        form.fields[field_name].choices.append([id, name])
+
+# ################################################################################################################################
+
 def add_security_select(form, security_list, needs_no_security=True, field_name='security', needs_rbac=True):
     form.fields[field_name].choices = []
     form.fields[field_name].choices.append(INITIAL_CHOICES)

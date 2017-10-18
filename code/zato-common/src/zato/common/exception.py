@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from httplib import BAD_REQUEST, CONFLICT, FORBIDDEN, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
+from httplib import BAD_REQUEST, CONFLICT, FORBIDDEN, INTERNAL_SERVER_ERROR, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
 
 # Zato
 from zato.common import TOO_MANY_REQUESTS, HTTPException
@@ -49,3 +49,7 @@ class Unauthorized(Reportable):
 class TooManyRequests(Reportable):
     def __init__(self, cid, msg):
         super(TooManyRequests, self).__init__(cid, msg, TOO_MANY_REQUESTS)
+
+class InternalServerError(Reportable):
+    def __init__(self, cid, msg):
+        super(InternalServerError, self).__init__(cid, msg, INTERNAL_SERVER_ERROR)

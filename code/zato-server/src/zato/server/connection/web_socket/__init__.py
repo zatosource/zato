@@ -11,7 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from copy import deepcopy
 from datetime import datetime, timedelta
-from httplib import INTERNAL_SERVER_ERROR, NOT_FOUND, responses
+from httplib import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import getLogger
 from traceback import format_exc
 from urlparse import urlparse
@@ -32,7 +32,7 @@ from ws4py.server.geventserver import WSGIServer
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, SEC_DEF_TYPE, WEB_SOCKET
+from zato.common import CHANNEL, DATA_FORMAT, ParsingException, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.exception import Reportable
 from zato.common.util import new_cid
 from zato.server.connection.connector import Connector
@@ -382,9 +382,17 @@ class WebSocket(_WebSocket):
             logger.warn('Service `%s` could not be invoked, id:`%s` cid:`%s`, e:`%s`',
                 self.config.service_name, msg.id, cid, format_exc(e))
 
+            # Errors known to map to HTTP ones
             if isinstance(e, Reportable):
                 status = e.status
                 error_message = e.msg
+
+            # Catch SimpleIO-related errors, i.e. missing input parameters
+            elif isinstance(e, ParsingException):
+                status = BAD_REQUEST
+                error_message = 'I/O processing error'
+
+            # Anything else
             else:
                 status = INTERNAL_SERVER_ERROR
                 error_message = 'Could not invoke service `{}`, id:`{}`, cid:`{}`'.format(self.config.service_name, msg.id, cid)

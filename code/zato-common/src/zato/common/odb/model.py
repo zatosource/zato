@@ -16,8 +16,8 @@ from json import dumps
 from dictalchemy import make_class_dictable
 
 # SQLAlchemy
-from sqlalchemy import Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, LargeBinary, Sequence, SmallInteger, String, \
-     Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, LargeBinary, Sequence, SmallInteger, \
+     String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relation, relationship
 
@@ -536,10 +536,19 @@ class HTTPSOAP(Base):
     audit_max_payload = Column(Integer, nullable=False, default=MISC.DEFAULT_AUDIT_MAX_PAYLOAD)
     audit_repl_patt_type = Column(String(200), nullable=False, default=MSG_PATTERN_TYPE.JSON_POINTER.id)
 
-    sec_tls_ca_cert_id = Column(Integer, ForeignKey('sec_tls_ca_cert.id', ondelete='CASCADE'), nullable=True)
-    sec_tls_ca_cert = relationship('TLSCACert', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
     has_rbac = Column(Boolean, nullable=False, default=False)
     sec_use_rbac = Column(Boolean(), nullable=False, default=False)
+
+    cache_expiry = Column(Integer, nullable=True, default=0)
+
+    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
+    security = relationship(SecurityBase, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+    sec_tls_ca_cert_id = Column(Integer, ForeignKey('sec_tls_ca_cert.id', ondelete='CASCADE'), nullable=True)
+    sec_tls_ca_cert = relationship('TLSCACert', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
+
+    cache_id = Column(Integer, ForeignKey('cache.id', ondelete='CASCADE'), nullable=True)
+    cache = relationship('Cache', backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
 
     service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
     service = relationship('Service', backref=backref('http_soap', order_by=name, cascade='all, delete, delete-orphan'))
@@ -547,14 +556,12 @@ class HTTPSOAP(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
 
-    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
-    security = relationship(SecurityBase, backref=backref('http_soap_list', order_by=name, cascade='all, delete, delete-orphan'))
-
     def __init__(self, id=None, name=None, is_active=None, is_internal=None, connection=None, transport=None, host=None,
                  url_path=None, method=None, soap_action=None, soap_version=None, data_format=None, ping_method=None,
                  pool_size=None, merge_url_params_req=None, url_params_pri=None, params_pri=None, serialization_type=None,
                  timeout=None, sec_tls_ca_cert_id=None, service_id=None, service=None, security=None, cluster_id=None,
-                 cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None, content_type=None):
+                 cluster=None, service_name=None, security_id=None, has_rbac=None, security_name=None, content_type=None,
+                 cache_id=None, cache_type=None, cache_expiry=None, cache_name=None):
         self.id = id
         self.name = name
         self.is_active = is_active
@@ -585,6 +592,10 @@ class HTTPSOAP(Base):
         self.has_rbac = has_rbac
         self.security_name = security_name
         self.content_type = content_type
+        self.cache_id = cache_id
+        self.cache_type = cache_type
+        self.cache_expiry = cache_expiry
+        self.cache_name = cache_name # Not used by the DB
 
 # ################################################################################################################################
 
@@ -820,6 +831,56 @@ class CronStyleJob(Base):
         self.id = id
         self.job = job
         self.cron_definition = cron_definition
+
+# ################################################################################################################################
+
+class Cache(Base):
+    """ Base class for all cache definitions.
+    """
+    __tablename__ = 'cache'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+    __mapper_args__ = {'polymorphic_on': 'cache_type'}
+
+    id = Column(Integer, Sequence('cache_builtin_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    is_default = Column(Boolean(), nullable=False)
+    cache_type = Column(String(45), nullable=False)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('cache_list', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self):
+        self.current_size = 0 # Not used by the DB
+
+# ################################################################################################################################
+
+class CacheBuiltin(Cache):
+    """ Cache definitions using mechanisms built into Zato.
+    """
+    __tablename__ = 'cache_builtin'
+    __mapper_args__ = {'polymorphic_identity':'builtin'}
+
+    cache_id = Column(Integer, ForeignKey('cache.id'), primary_key=True)
+    max_size = Column(Integer(), nullable=False)
+    max_item_size = Column(Integer(), nullable=False)
+    extend_expiry_on_get = Column(Boolean(), nullable=False)
+    extend_expiry_on_set = Column(Boolean(), nullable=False)
+    sync_method = Column(String(20), nullable=False)
+    persistent_storage = Column(String(40), nullable=False)
+
+# ################################################################################################################################
+
+class CacheMemcached(Cache):
+    """ Cache definitions using Memcached.
+    """
+    __tablename__ = 'cache_memcached'
+    __mapper_args__ = {'polymorphic_identity':'memcached'}
+
+    cache_id = Column(Integer, ForeignKey('cache.id'), primary_key=True)
+    servers = Column(Text, nullable=False)
+    is_debug = Column(Boolean(), nullable=False)
+    extra = Column(LargeBinary(20000), nullable=True)
 
 # ################################################################################################################################
 

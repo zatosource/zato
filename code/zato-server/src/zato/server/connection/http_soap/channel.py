@@ -149,6 +149,8 @@ class RequestDispatcher(object):
         # Credentials are checked in a call to self.url_data.check_security
         url_match, channel_item = self.url_data.match(path_info, soap_action, bool(soap_action))
 
+        logger.warn('333 %s', channel_item)
+
         if _has_debug and channel_item:
             logger.debug('url_match:`%r`, channel_item:`%r`', url_match, sorted(channel_item.items()))
 
@@ -343,8 +345,6 @@ class RequestHandler(object):
         wsgi_environ['zato.http.POST'] = post
 
         return channel_params
-
-
 
     def handle(self, cid, url_match, channel_item, wsgi_environ, raw_request, worker_store, simple_io_config, post_data,
             path_info, soap_action, channel_type=CHANNEL.HTTP_SOAP, _response_404=response_404):

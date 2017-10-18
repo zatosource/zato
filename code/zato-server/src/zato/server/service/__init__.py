@@ -240,6 +240,7 @@ class Service(object):
         self.listnav = _ListNav
         self.has_validate_input = False
         self.has_validate_output = False
+        self.cache = None
 
         self.out = self.outgoing = _Outgoing(
             self.amqp,
@@ -343,6 +344,9 @@ class Service(object):
         if self.has_sio:
             self.request.init(True, self.cid, self.SimpleIO, self.data_format, self.transport, self.wsgi_environ)
             self.response.init(self.cid, self.SimpleIO, self.data_format)
+
+        # Cache is always enabled
+        self.cache = self._worker_store.cache_api
 
     def set_response_data(self, service, _raw_types=(basestring, dict, list, tuple, EtreeElement, ObjectifiedElement), **kwargs):
         response = service.response.payload
@@ -470,7 +474,7 @@ class Service(object):
                 if service.after_handle:
                     _call_hook_no_service(service.after_handle)
 
-                # Call before job hooks if any are defined and we are called from the scheduler
+                # Call after job hooks if any are defined and we are called from the scheduler
                 if service._has_after_job_hooks and self.channel.type == _CHANNEL_SCHEDULER:
                     for elem in service._after_job_hooks:
                         if elem:
