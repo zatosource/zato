@@ -172,7 +172,7 @@ HTTP_RESPONSES[TOO_MANY_REQUESTS] = 'Too Many Requests'
 TRUE_FALSE = 'true_false'
 FALSE_TRUE = 'false_true'
 
-# If self.response.payload 
+# If self.response.payload
 simple_types = (basestring, dict, list, tuple, bool, Number)
 
 # Queries to use in pinging the databases.
@@ -856,9 +856,9 @@ class WEB_SOCKET:
         MSG_BROWSER = MSG_BROWSER_PREFIX + '{}'
 
     class ACTION:
-        AUTHENTICATE = 'authenticate'
-        INVOKE_SERVICE = 'invoke-service'
         CLIENT_RESPONSE = 'client-response'
+        CREATE_SESSION = 'create-session'
+        INVOKE_SERVICE = 'invoke-service'
 
 class APISPEC:
     OPEN_API_V2 = 'openapi-v2'
@@ -875,11 +875,11 @@ class AMQP:
 
     class ACK_MODE:
         ACK = NameId('Ack', 'ack')
-        NO_ACK = NameId('No ack', 'no-ack')
+        REJECT = NameId('Reject', 'reject')
 
         class __metaclass__(type):
             def __iter__(self):
-                return iter((self.ACK, self.NO_ACK))
+                return iter((self.ACK, self.REJECT))
 
 # Need to use such a constant because we can sometimes be interested in setting
 # default values which evaluate to boolean False.

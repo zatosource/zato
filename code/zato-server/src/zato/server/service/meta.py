@@ -197,7 +197,7 @@ class AdminServiceMeta(type):
         SimpleIO.input_required = tuple(sorted(SimpleIO.input_required))
         SimpleIO.input_optional = tuple(sorted(SimpleIO.input_optional))
         SimpleIO.output_required = tuple(sorted(SimpleIO.output_required))
-        SimpleIO.output_optional = tuple(sorted(SimpleIO.input_required))
+        SimpleIO.output_optional = tuple(sorted(SimpleIO.output_optional))
 
         return SimpleIO
 

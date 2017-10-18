@@ -63,13 +63,25 @@ class HTTPRequestData(object):
 
 # ################################################################################################################################
 
+class AMQPRequestData(object):
+    """ Data regarding an AMQP request.
+    """
+    __slots__ = ('msg', 'ack', 'reject')
+
+    def __init__(self, msg):
+        self.msg = msg
+        self.ack = msg.ack
+        self.reject = msg.reject
+
+# ################################################################################################################################
+
 class Request(SIOConverter):
     """ Wraps a service request and adds some useful meta-data.
     """
     __slots__ = ('logger', 'payload', 'raw_request', 'input', 'cid', 'has_simple_io_config',
                  'simple_io_config', 'bool_parameter_prefixes', 'int_parameters',
                  'int_parameter_suffixes', 'is_xml', 'data_format', 'transport',
-                 '_wsgi_environ', 'channel_params', 'merge_channel_params')
+                 '_wsgi_environ', 'channel_params', 'merge_channel_params', 'http', 'amqp')
 
     def __init__(self, logger, simple_io_config={}, data_format=None, transport=None,
             _dt_fixed_width=SIMPLE_IO.FORMAT.FIXED_WIDTH):
@@ -91,6 +103,7 @@ class Request(SIOConverter):
         self.channel_params = {}
         self.merge_channel_params = True
         self.params_priority = PARAMS_PRIORITY.DEFAULT
+        self.amqp = None
 
 # ################################################################################################################################
 
@@ -424,10 +437,11 @@ class Outgoing(object):
     """ A container for various outgoing connections a service can access. This
     in fact is a thin wrapper around data fetched from the service's self.worker_store.
     """
-    __slots__ = ('amqp', 'ftp', 'jms_wmq', 'odoo', 'plain_http', 'soap', 'sql', 'stomp', 'zmq', 'websockets')
+    __slots__ = ('amqp', 'ftp', 'jms_wmq', 'odoo', 'plain_http', 'soap', 'sql', 'stomp', 'zmq', 'websockets', 'vault',
+        'sms')
 
     def __init__(self, amqp=None, ftp=None, jms_wmq=None, odoo=None, plain_http=None, soap=None, sql=None, stomp=None, zmq=None,
-            websockets=None):
+            websockets=None, vault=None, sms=None):
         self.amqp = amqp
         self.ftp = ftp
         self.jms_wmq = jms_wmq
@@ -438,6 +452,8 @@ class Outgoing(object):
         self.stomp = stomp
         self.zmq = zmq
         self.websockets = websockets
+        self.vault = vault
+        self.sms = sms
 
 class AWS(object):
     def __init__(self, s3=None):

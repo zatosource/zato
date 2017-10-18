@@ -162,7 +162,7 @@ class AuditTestCase(TestCase):
                         'wsgi.url_scheme': expected_url_scheme,
                         'gunicorn.socket': FakeGunicornSocket(None, None),
                         'zato.http.response.status': expected_status_code,
-                        'zato.http.channel_item': channel_item,
+                        'zato.channel_item': channel_item,
                         'PATH_INFO': rand_string(),
                         'wsgi.input': StringIO(expected_request),
                         'REQUEST_METHOD': rand_string(),
@@ -262,7 +262,7 @@ class AuditTestCase(TestCase):
                         self.assertEquals(req_headers['wsgi.url_scheme'], repr(expected_url_scheme))
                         self.assertEquals(req_headers['gunicorn.socket'], repr(FakeGunicornSocket(None, None)))
 
-                        channel_item = literal_eval(req_headers['zato.http.channel_item'])
+                        channel_item = literal_eval(req_headers['zato.channel_item'])
 
                         self.assertEquals(channel_item['audit_max_payload'], expected_audit_max_payload)
                         self.assertEquals(channel_item['name'], expected_name)
@@ -305,7 +305,7 @@ class AuditTestCase(TestCase):
                                 httplib.responses[expected_status_code],
                             ))
 
-                        channel_item = literal_eval(wsgi_environ['zato.http.channel_item'])
+                        channel_item = literal_eval(wsgi_environ['zato.channel_item'])
 
                         self.assertEquals(channel_item[expected_channel_item_key1], expected_channel_item_value1)
                         self.assertEquals(channel_item['audit_enabled'], expected_audit_enabled)
@@ -368,7 +368,7 @@ class HTTPAccessLogTestCase(TestCase):
             'wsgi.input': StringIO(response),
 
             'zato.http.response.status': httplib.OK,
-            'zato.http.channel_item': channel_item,
+            'zato.channel_item': channel_item,
             'zato.request_timestamp_utc': req_timestamp_utc,
 
             'HTTP_X_FORWARDED_FOR': remote_ip,

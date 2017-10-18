@@ -32,18 +32,20 @@ from gevent import Timeout, spawn
 from zato.bunch import Bunch
 from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, ZatoException
 from zato.common.broker_message import SERVICE
+from zato.common.exception import Reportable
 from zato.common.nav import DictNav, ListNav
 from zato.common.util import get_response_value, make_repr, new_cid, payload_from_request, service_name_from_impl, uncamelify
 from zato.server.connection import slow_response
 from zato.server.connection.email import EMailAPI
 from zato.server.connection.jms_wmq.outgoing import WMQFacade
 from zato.server.connection.search import SearchAPI
+from zato.server.connection.sms import SMSAPI
 from zato.server.connection.zmq_.outgoing import ZMQFacade
 from zato.server.message import MessageFacade
 from zato.server.pattern.fanout import FanOut
 from zato.server.pattern.invoke_retry import InvokeRetry
 from zato.server.pattern.parallel import ParallelExec
-from zato.server.service.reqresp import Cloud, Outgoing, Request, Response
+from zato.server.service.reqresp import AMQPRequestData, Cloud, Outgoing, Request, Response
 
 # Not used here in this module but it's convenient for callers to be able to import everything from a single namespace
 from zato.server.service.reqresp.sio import AsIs, CSV, Boolean, Dict, Float, ForceType, Integer, List, ListOfDicts, Nested, \
@@ -118,8 +120,8 @@ class ChannelInfo(object):
         self.data_format = data_format
         self.is_internal = is_internal
         self.match_target = match_target
-        self.security = self.sec = security
         self.impl = impl
+        self.security = self.sec = security
 
     def __repr__(self):
         return make_repr(self)
@@ -250,6 +252,8 @@ class Service(object):
             self._worker_store.stomp_outconn_api,
             ZMQFacade(self.server) if self.component_enabled_zeromq else None,
             self._worker_store.outgoing_web_sockets,
+            self._worker_store.vault_conn_api,
+            SMSAPI(self._worker_store.sms_twilio_api) if self.component_enabled_sms else None,
         )
 
     @staticmethod
@@ -325,7 +329,6 @@ class Service(object):
         if self.component_enabled_search:
             if not Service.search:
                 Service.search = SearchAPI(self._worker_store.search_es_api, self._worker_store.search_solr_api)
-
         if self.component_enabled_msg_path:
             self.msg = MessageFacade(
                 self._json_pointer_store, self._xpath_store, self._msg_ns_store, self.request.payload, self.time)
@@ -500,7 +503,10 @@ class Service(object):
                     logger.warn('Exception in service `%s`, e:`%s`', service.name, format_exc(resp_e))
 
                     if e:
-                        raise Exception(exc_formatted)
+                        if isinstance(e, Reportable):
+                            raise e
+                        else:
+                            raise Exception(exc_formatted)
                     raise resp_e
 
                 else:
@@ -731,7 +737,7 @@ class Service(object):
         ttl - defaults to 20 seconds and is the max time the lock will be held
         block - how long (in seconds) we will wait to acquire the lock before giving up
         """
-        return self.server.zato_lock_manager(name, ttl=ttl, block=block)
+        return self.server.zato_lock_manager(name or self.name, ttl=ttl, block=block)
 
 # ################################################################################################################################
 
@@ -858,7 +864,7 @@ class Service(object):
                raw_request, transport=None, simple_io_config=None, data_format=None,
                wsgi_environ={}, job_type=None, channel_params=None,
                merge_channel_params=True, params_priority=None, in_reply_to=None, environ=None, init=True,
-               http_soap=CHANNEL.HTTP_SOAP):
+               http_soap=CHANNEL.HTTP_SOAP, _CHANNEL_AMQP=CHANNEL.AMQP):
         """ Takes a service instance and updates it with the current request's
         context data.
         """
@@ -886,8 +892,11 @@ class Service(object):
         service.in_reply_to = in_reply_to
         service.environ = environ or {}
 
-        channel_item = wsgi_environ.get('zato.http.channel_item', {})
+        channel_item = wsgi_environ.get('zato.channel_item', {})
         sec_def_info = wsgi_environ.get('zato.sec_def', {})
+
+        if channel_type == _CHANNEL_AMQP:
+            service.request.amqp = AMQPRequestData(channel_item['amqp_msg'])
 
         service.channel = service.chan = ChannelInfo(
             channel_item.get('id'), channel_item.get('name'), channel_type,

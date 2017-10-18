@@ -29,7 +29,7 @@ from zato.common import APISPEC, DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY,
 
 logger = logging.getLogger(__name__)
 
-NOT_GIVEN = 'ZATO_NOT_GIVEN'
+NOT_GIVEN = b'ZATO_NOT_GIVEN'
 
 # ################################################################################################################################
 
@@ -463,7 +463,10 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
 
     else:
         if value is not None and not isinstance(param, COMPLEX_VALUE):
-            value = unicode(value)
+            if isinstance(value, str):
+                value = value.decode('utf-8')
+            else:
+                value = unicode(value)
 
         if not isinstance(param, AsIs):
             return param_name, convert_sio(param, param_name, value, has_simple_io_config, data_format==DATA_FORMAT.XML,

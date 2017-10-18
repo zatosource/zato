@@ -27,7 +27,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraC
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
      OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubEndpoint, PubSubEndpointAttr, PubSubEndpointOwner, \
      PubSubEndpointRole, PubSubOwner, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, \
-     SecurityBase, Server, Service, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, \
+     SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, \
      TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, XPath, XPathSecurity
 
 # ################################################################################################################################
@@ -1618,5 +1618,26 @@ def pubsub_endpoint_attr_list(session, cluster_id, endpoint_id):
     """ A list of ID context items.
     """
     return _pubsub_endpoint_attr(session, cluster_id, endpoint_id)
+
+def _sms_twilio(session, cluster_id):
+    """ SMS Twilio connections.
+    """
+    return session.query(SMSTwilio).\
+        filter(Cluster.id==SMSTwilio.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(SMSTwilio.name)
+
+def sms_twilio(session, cluster_id, id):
+    """ An individual SMS Twilio connection.
+    """
+    return _sms_twilio(session, cluster_id).\
+        filter(SMSTwilio.id==id).\
+        one()
+
+@query_wrapper
+def sms_twilio_list(session, cluster_id, needs_columns=False):
+    """ All the SMS Twilio connections.
+    """
+    return _sms_twilio(session, cluster_id)
 
 # ################################################################################################################################

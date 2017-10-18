@@ -14,7 +14,7 @@ from contextlib import closing
 # Zato
 from zato.common.broker_message import CHANNEL
 from zato.common.odb.model import ChannelWebSocket, Service as ServiceModel
-from zato.common.odb.query import channel_web_socket_list, channel_web_socket
+from zato.common.odb.query import channel_web_socket_list, channel_web_socket, service
 from zato.common.util import is_port_taken
 from zato.server.service import Int, Service
 from zato.server.service.internal import AdminService
@@ -57,6 +57,14 @@ def instance_hook(self, input, instance, attrs):
             filter(ServiceModel.name==input.service_name).\
             filter(ServiceModel.cluster_id==input.cluster_id).\
             one().id
+
+# ################################################################################################################################
+
+def response_hook(self, input, _ignored_instance, attrs, service_type):
+    if service_type == 'get_list' and self.name == 'zato.channel.web-socket.get-list':
+        with closing(self.odb.session()) as session:
+            for item in self.response.payload:
+                item.service_name = service(session, self.server.cluster_id, item.service_id).name
 
 # ################################################################################################################################
 

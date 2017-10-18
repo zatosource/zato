@@ -16,6 +16,11 @@ from logging.config import dictConfig
 import cloghandler
 cloghandler = cloghandler # For pyflakes
 
+# Update logging.Logger._log to make it a bit faster
+from zato.common.microopt import logging_Logger_log
+from logging import Logger
+Logger._log = logging_Logger_log
+
 # gunicorn
 import gunicorn
 from gunicorn.app.base import Application

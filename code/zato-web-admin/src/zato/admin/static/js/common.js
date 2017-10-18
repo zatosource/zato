@@ -134,6 +134,8 @@ $.namespace('zato.search');
 $.namespace('zato.search.es');
 $.namespace('zato.search.solr');
 $.namespace('zato.service');
+$.namespace('zato.sms');
+$.namespace('zato.sms.twilio');
 $.namespace('zato.stats');
 $.namespace('zato.stats.top_n');
 

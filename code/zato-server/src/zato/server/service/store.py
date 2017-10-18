@@ -107,6 +107,7 @@ def set_up_class_attributes(class_, service_store=None, name=None):
         class_.component_enabled_patterns = service_store.server.fs_server_config.component_enabled.patterns
         class_.component_enabled_target_matcher = service_store.server.fs_server_config.component_enabled.target_matcher
         class_.component_enabled_invoke_matcher = service_store.server.fs_server_config.component_enabled.invoke_matcher
+        class_.component_enabled_sms = service_store.server.fs_server_config.component_enabled.sms
 
     # Replace hook methods with None if they have not been overridden by users.
     # Each method's .im_func.func_defaults attribute will be a one-element tuple in the form such as ('_zato_no_op_marker',)

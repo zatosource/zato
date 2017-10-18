@@ -35,13 +35,13 @@ class TimeUtil(object):
         key = 'kvdb:date-format:{}'.format(format[5:])
         format = self.kvdb.conn.get(key)
         if not format:
-            msg = 'Key [{}] does not exist'.format(key)
+            msg = 'Key `{}` does not exist'.format(key)
             logger.error(msg)
             raise ValueError(msg)
 
         return format
 
-    def utcnow(self, format='YYYY-MM-DDTHH:mm:ss.SSSSSS', needs_format=True):
+    def utc_now(self, format='YYYY-MM-DD HH:mm:ss', needs_format=True):
         """ Returns now in UTC formatted as given in 'format'.
         """
         return self.now(format, 'UTC', needs_format)
@@ -53,6 +53,12 @@ class TimeUtil(object):
         if needs_format:
             return now.format(format)
         return now
+
+    def iso_now(self, tz='UTC', needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
+        return self.now(_format, tz, needs_format)
+
+    def iso_utc_now(self, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
+        return self.utc_now(_format, needs_format)
 
     def today(self, format='YYYY-MM-DD', tz='UTC', needs_format=True):
         """ Returns current day in a given timezone.

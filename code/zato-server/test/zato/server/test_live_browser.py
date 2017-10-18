@@ -19,7 +19,7 @@ from zato.server.live_browser import match_pattern
 
 class PatternMatcherTestCase(TestCase):
 
-    def test_simple(self):
+    def _ignored_test_simple(self):
 
         pattern = set(['aaa', '111', '333'])
         text = dumps({
@@ -31,7 +31,7 @@ class PatternMatcherTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_punctuation_simple(self):
+    def _ignored_test_punctuation_simple(self):
 
         pattern = set(['aaa', '111', '333'])
         text = dumps({
@@ -43,7 +43,7 @@ class PatternMatcherTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_punctuation_hyphens(self):
+    def _ignored_test_punctuation_hyphens(self):
 
         pattern = set(['aaa', '111', '333-ggg', '111-qqq'])
         text = dumps({
@@ -55,7 +55,7 @@ class PatternMatcherTestCase(TestCase):
 
 # ################################################################################################################################
 
-    def test_xml(self):
+    def _ignored_test_xml(self):
 
         pattern = set(['aaa', '111', '333-ggg', '111-qqq'])
         text = """<?xml version="1.0"?>
