@@ -49,6 +49,10 @@ if ({}.__proto__){
 $.namespace('zato');
 $.namespace('zato.account');
 $.namespace('zato.account.basic_settings');
+$.namespace('zato.cache');
+$.namespace('zato.cache.builtin');
+$.namespace('zato.cache.builtin.entries');
+$.namespace('zato.cache.memcached');
 $.namespace('zato.channel');
 $.namespace('zato.channel.amqp');
 $.namespace('zato.channel.jms_wmq');
@@ -324,7 +328,7 @@ $.fn.zato.data_table.parse = function() {
         var instance = new $.fn.zato.data_table.class_()
         var tds = $(row).find('td');
 
-        console.log('columns = ' + columns);
+        console.info('columns = ' + columns);
 
         $.each(tds, function(td_idx, td) {
 
@@ -340,6 +344,7 @@ $.fn.zato.data_table.parse = function() {
         });
         console.log('Found instance in data_table ' + instance);
         $.fn.zato.data_table.data[instance.id] = instance;
+
     });
 
     if(_.size($.fn.zato.data_table.data) < 1) {
@@ -421,7 +426,11 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
 }
 
 $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_pattern,
-                        append_cluster, confirm_challenge, url_pattern, post_data) {
+    append_cluster, confirm_challenge, url_pattern, post_data, remove_tr,
+    on_success_callback) {
+
+    // 99% of callers will not provide remove_tr in which case we default to True
+    var _remove_tr = remove_tr == null ? true : remove_tr;
 
     var instance = $.fn.zato.data_table.data[id];
     var name = '';
@@ -436,16 +445,23 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 
     var _callback = function(data, status) {
         var success = status == 'success';
+
         if(success) {
+            if(_remove_tr) {
+                $(td_prefix + instance.id).parent().remove();
+                $.fn.zato.data_table.data[instance.id] = null;
 
-            $(td_prefix + instance.id).parent().remove();
-            $.fn.zato.data_table.data[instance.id] = null;
-
-            if($('#data-table tr').length == 1) {
-                var row = '<tr><td>No results</td></tr>';
-                $('#data-table > tbody:last').prepend(row);
-                $('#data-table').data('is_empty', true);
+                if($('#data-table tr').length == 1) {
+                    var row = '<tr><td>No results</td></tr>';
+                    $('#data-table > tbody:last').prepend(row);
+                    $('#data-table').data('is_empty', true);
+                }
             }
+
+            if(on_success_callback) {
+                on_success_callback();
+            }
+
             msg = String.format(success_pattern, name);
         }
         else {
@@ -588,7 +604,6 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
     var id = '';
     var tag_name = '';
     var html_elem;
-    var _columns = $.fn.zato.data_table.get_columns();
 
     $.each(form.serializeArray(), function(idx, elem) {
         name = elem.name.replace(prefix, '');

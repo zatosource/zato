@@ -50,6 +50,7 @@ from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_pa
      store_tls, update_apikey_username, update_bind_port, visit_py_source
 from zato.server.base.worker.common import WorkerImpl
 from zato.server.connection.amqp_ import ConnectorAMQP
+from zato.server.connection.cache import CacheAPI
 from zato.server.connection.cassandra import CassandraAPI, CassandraConnStore
 from zato.server.connection.connector import ConnectorStore, connector_type
 from zato.server.connection.cloud.aws.s3 import S3Wrapper
@@ -191,6 +192,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Vault connections
         self.vault_conn_api = VaultConnAPI()
 
+        # Caches
+        self.cache_api = CacheAPI(self.server)
+
         # Message-related config - init_msg_ns_store must come before init_xpath_store
         # so the latter has access to the former's namespace map.
 
@@ -232,6 +236,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Vault connections
         self.init_vault_conn()
+
+        # Caches
+        self.init_caches()
 
         # API keys
         self.update_apikeys()
@@ -714,6 +721,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def init_vault_conn(self):
         for value in self.worker_config.vault_conn_sec.values():
             self.vault_conn_api.create(bunchify(value['config']))
+
+# ################################################################################################################################
+
+    def init_caches(self):
+
+        for name in 'builtin', 'memcached':
+            cache = getattr(self.worker_config, 'cache_{}'.format(name))
+            for value in cache.values():
+                self.cache_api.create(bunchify(value['config']))
 
 # ################################################################################################################################
 

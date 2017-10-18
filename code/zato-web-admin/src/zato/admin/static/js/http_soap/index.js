@@ -88,6 +88,8 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
     var params_pri_tr = '';
     var serialization_type = item.serialization_type ? item.serialization_type : 'string';
 
+    var security_name = item.security_id ? item.security_select : '<span class="form_hint">---</span>';
+
     if(is_soap) {
         soap_action_tr += String.format('<td>{0}</td>', item.soap_action);
         soap_version_tr += String.format('<td>{0}</td>', item.soap_version);
@@ -112,7 +114,7 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     if(is_channel) {
         row += String.format('<td>{0}</td>',
-            String.format("<a href='/zato/http-soap/details/{3}/{4}/{1}/{0}/{2}/'>{0}</a>", 
+            String.format("<a href='/zato/http-soap/details/{3}/{4}/{1}/{0}/{2}/'>{0}</a>",
             item.name, item.id, cluster_id, connection, data.transport));
     }
     else {
@@ -129,9 +131,18 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     if(is_channel) {
         row += service_tr;
+
+        if(item.cache_id) {
+            row += String.format('<td><a href="/zato/cache/{0}/?cluster={1}&amp;highlight={2}">{3}</a></td>',
+                    data.cache_type, cluster_id, item.cache_id, data.cache_name);
+        }
+        else {
+            row += '<td><span class="form_hint">---</span></td>';
+        }
+
     }
 
-    row += String.format('<td>{0}</td>', item.security_select);
+    row += String.format('<td>{0}</td>', security_name);
 
     if(is_soap) {
         row += soap_action_tr;
@@ -140,19 +151,26 @@ $.fn.zato.http_soap.data_table.new_row = function(item, data, include_tr) {
 
     if(is_channel) {
         row += method_tr;
-        row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.service);
+        row += String.format("<td class='ignore'>{0}</td>", item.service);
     }
 
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
     row += String.format("<td class='ignore'>{0}</td>", is_active);
-    row += String.format("<td class='ignore'>{0}</td>", '');
-    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.data_format);
-    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", 333);
+    row += String.format("<td class='ignore'>{0}</td>", ''); // item.security
+
+    row += String.format("<td class='ignore'>{0}</td>", item.cache_id);
+    row += String.format("<td class='ignore'>{0}</td>", item.cache_type);
+    row += String.format("<td class='ignore'>{0}</td>", item.cache_expiry);
+    row += String.format("<td class='ignore'>{0}</td>", item.has_rbac);
+
+    row += String.format("<td class='ignore'>{0}</td>", item.data_format);
+    row += String.format("<td class='ignore'>{0}</td>", item.timeout);
 
     if(is_outgoing) {
-        row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.ping_method);
-        row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.pool_size);
-        row += String.format("<td class='ignore item_id_{0}'>{0}</td>", serialization_type);
+        row += String.format("<td class='ignore'>{0}</td>", item.ping_method);
+        row += String.format("<td class='ignore'>{0}</td>", item.pool_size);
+        row += String.format("<td class='ignore'>{0}</td>", serialization_type);
+        row += String.format("<td class='ignore'>{0}</td>", item.content_type);
     }
 
     if(is_channel) {

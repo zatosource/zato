@@ -114,7 +114,7 @@ class AdminService(Service):
 
 # ################################################################################################################################
 
-    def _search(self, search_func, session, cluster_id, *args, **kwargs):
+    def _search(self, search_func, session=None, cluster_id=None, *args, **kwargs):
         """ Adds search criteria to an SQLAlchemy query based on the service's (self) search configuration.
         """
         _input = self.request.input

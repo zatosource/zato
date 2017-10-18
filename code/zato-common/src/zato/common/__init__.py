@@ -407,6 +407,74 @@ class SERVER_UP_STATUS(Attrs):
     RUNNING = 'running'
     CLEAN_DOWN = 'clean-down'
 
+class CACHE:
+
+    class TYPE:
+        BUILTIN = 'builtin'
+        MEMCACHED = 'memcached'
+
+    class BUILTIN_KV_DATA_TYPE:
+        STR = NameId('String/unicode', 'str')
+        INT = NameId('Integer', 'int')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.STR, self.INT))
+
+    class STATE_CHANGED:
+
+        CLEAR = 'CLEAR'
+
+        DELETE = 'DELETE'
+        DELETE_BY_PREFIX = 'DELETE_BY_PREFIX'
+        DELETE_BY_SUFFIX= 'DELETE_BY_SUFFIX'
+        DELETE_BY_REGEX = 'DELETE_BY_REGEX'
+        DELETE_CONTAINS = 'DELETE_CONTAINS'
+        DELETE_NOT_CONTAINS = 'DELETE_NOT_CONTAINS'
+        DELETE_CONTAINS_ALL = 'DELETE_CONTAINS_ALL'
+        DELETE_CONTAINS_ANY = 'DELETE_CONTAINS_ANY'
+
+        EXPIRE = 'EXPIRE'
+        EXPIRE_BY_PREFIX = 'EXPIRE_BY_PREFIX'
+        EXPIRE_BY_SUFFIX = 'EXPIRE_BY_SUFFIX'
+        EXPIRE_BY_REGEX = 'EXPIRE_BY_REGEX'
+        EXPIRE_CONTAINS = 'EXPIRE_CONTAINS'
+        EXPIRE_NOT_CONTAINS = 'EXPIRE_NOT_CONTAINS'
+        EXPIRE_CONTAINS_ALL = 'EXPIRE_CONTAINS_ALL'
+        EXPIRE_CONTAINS_ANY = 'EXPIRE_CONTAINS_ANY'
+
+        GET = 'GET'
+
+        SET = 'SET'
+        SET_BY_PREFIX = 'SET_BY_PREFIX'
+        SET_BY_SUFFIX = 'SET_BY_SUFFIX'
+        SET_BY_REGEX = 'SET_BY_REGEX'
+        SET_CONTAINS = 'SET_CONTAINS'
+        SET_NOT_CONTAINS = 'SET_NOT_CONTAINS'
+        SET_CONTAINS_ALL = 'SET_CONTAINS_ALL'
+        SET_CONTAINS_ANY = 'SET_CONTAINS_ANY'
+
+
+    class DEFAULT:
+        MAX_SIZE = 10000
+        MAX_ITEM_SIZE = 1000 # In characters for string/unicode, bytes otherwise
+
+    class PERSISTENT_STORAGE:
+        NO_PERSISTENT_STORAGE = NameId('No persistent storage', 'no-persistent-storage')
+        SQL = NameId('SQL', 'sql')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.NO_PERSISTENT_STORAGE, self.SQL))
+
+    class SYNC_METHOD:
+        NO_SYNC = NameId('No synchronization', 'no-sync')
+        IN_BACKGROUND = NameId('In background', 'in-background')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.NO_SYNC, self.IN_BACKGROUND))
+
 class KVDB(Attrs):
     SEPARATOR = ':::'
 
@@ -927,6 +995,12 @@ class ZatoException(Exception):
         super(ZatoException, self).__init__(msg)
         self.cid = cid
         self.msg = msg
+
+    def __repr__(self):
+        return '<{} at {} cid:`{}`, msg:`{}`>'.format(
+            self.__class__.__name__, hex(id(self)), self.cid, self.msg)
+
+    __str__ = __repr__
 
 class ClientSecurityException(ZatoException):
     """ An exception for signalling errors stemming from security problems

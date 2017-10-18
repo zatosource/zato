@@ -21,7 +21,7 @@ sudo apt-get install -y git bzr gfortran haproxy \
     libatlas-dev libatlas3-base libblas3 \
     libbz2-dev libev4 libev-dev \
     libevent-dev libgfortran3 liblapack-dev liblapack3 libldap2-dev \
-    libpq-dev libsasl2-dev libyaml-dev libxml2-dev libxslt1-dev \
+    libmemcached-dev libpq-dev libsasl2-dev libyaml-dev libxml2-dev libxslt1-dev \
     libumfpack* openssl python2.7-dev python-numpy python-pip \
     python-scipy python-zdaemon swig uuid-dev uuid-runtime libffi-dev libssl-dev
 

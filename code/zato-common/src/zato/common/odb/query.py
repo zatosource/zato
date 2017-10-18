@@ -18,12 +18,12 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.sql.expression import case
 
 # Zato
-from zato.common import DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
+from zato.common import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE, HTTP_SOAP_SERIALIZATION_TYPE, PARAMS_PRIORITY, \
      URL_PARAMS_PRIORITY
-from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, CassandraConn, CassandraQuery, ChannelAMQP, \
-     ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, CronStyleJob, \
-     DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, \
-     IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
+from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
+     CassandraQuery, ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
+     CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, \
+     HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
      OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubEndpoint, PubSubEndpointAttr, PubSubEndpointOwner, \
      PubSubEndpointRole, PubSubOwner, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, \
@@ -39,27 +39,6 @@ logger = logging.getLogger(__name__)
 _no_page_limit = 2 ** 24 # ~16.7 million results, tops
 
 # ################################################################################################################################
-
-class _SearchResult(object):
-    def __init__(self, q, result, columns, total):
-        self.q = q
-        self.result = result
-        self.total = total
-        self.columns = columns
-        self.num_pages = 0
-        self.cur_page = 0
-        self.prev_page = 0
-        self.next_page = 0
-        self.has_prev_page = False
-        self.has_next_page = False
-
-    def __iter__(self):
-        return iter(self.result)
-
-    def __repr__(self):
-        # To avoice circular imports - this is OK because we very rarely repr(self) anyway
-        from zato.common.util import make_repr
-        return make_repr(self)
 
 class _SearchWrapper(object):
     """ Wraps results in pagination and/or filters out objects by their name or other attributes.
@@ -99,7 +78,7 @@ def query_wrapper(func):
         needs_columns = args[-1]
 
         tool = _SearchWrapper(func(*args), **kwargs)
-        result = _SearchResult(tool.q, tool.q.all(), tool.q.statement.columns, tool.total)
+        result = _SearchResults(tool.q, tool.q.all(), tool.q.statement.columns, tool.total)
 
         if needs_columns:
             return result, result.columns
@@ -644,6 +623,10 @@ def _http_soap(session, cluster_id):
         HTTPSOAP.timeout,
         HTTPSOAP.sec_tls_ca_cert_id,
         HTTPSOAP.sec_use_rbac,
+        HTTPSOAP.cache_id,
+        HTTPSOAP.cache_expiry,
+        Cache.name.label('cache_name'),
+        Cache.cache_type,
         TLSCACert.name.label('sec_tls_ca_cert_name'),
         SecurityBase.sec_type,
         Service.name.label('service_name'),
@@ -654,6 +637,7 @@ def _http_soap(session, cluster_id):
         SecurityBase.password.label('password'),
         SecurityBase.password_type.label('password_type'),).\
         outerjoin(Service, Service.id==HTTPSOAP.service_id).\
+        outerjoin(Cache, Cache.id==HTTPSOAP.cache_id).\
         outerjoin(TLSCACert, TLSCACert.id==HTTPSOAP.sec_tls_ca_cert_id).\
         outerjoin(SecurityBase, HTTPSOAP.security_id==SecurityBase.id).\
         filter(Cluster.id==HTTPSOAP.cluster_id).\
@@ -1367,6 +1351,56 @@ def rbac_role_permission_list(session, cluster_id, needs_columns=False):
     """ A list of permissions for roles against services.
     """
     return _rbac_role_permission(session, cluster_id)
+
+# ################################################################################################################################
+
+def _cache_builtin(session, cluster_id):
+    return session.query(CacheBuiltin).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==CacheBuiltin.cluster_id).\
+        filter(Cache.id==CacheBuiltin.cache_id).\
+        filter(Cache.cache_type==CACHE.TYPE.BUILTIN).\
+        order_by(CacheBuiltin.name)
+
+def cache_builtin(session, cluster_id, id):
+    """ An individual built-in cache definition.
+    """
+    return _cache_builtin(session, cluster_id).\
+        filter(CacheBuiltin.id==id).\
+        one()
+
+@query_wrapper
+def cache_builtin_list(session, cluster_id, needs_columns=False):
+    """ A list of built-in cache definitions.
+    """
+    return _cache_builtin(session, cluster_id)
+
+# ################################################################################################################################
+
+def _cache_memcached(session, cluster_id):
+    return session.query(
+        CacheMemcached.cache_id, CacheMemcached.name, CacheMemcached.is_active,
+        CacheMemcached.is_default, CacheMemcached.is_debug,
+        CacheMemcached.servers, CacheMemcached.extra,
+        CacheMemcached.cache_type).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==CacheMemcached.cluster_id).\
+        filter(Cache.id==CacheMemcached.cache_id).\
+        filter(Cache.cache_type==CACHE.TYPE.MEMCACHED).\
+        order_by(CacheMemcached.name)
+
+def cache_memcached(session, cluster_id, id):
+    """ An individual Memcached cache definition.
+    """
+    return _cache_builtin(session, cluster_id).\
+        filter(CacheMemcached.id==id).\
+        one()
+
+@query_wrapper
+def cache_memcached_list(session, cluster_id, needs_columns=False):
+    """ A list of Memcached cache definitions.
+    """
+    return _cache_memcached(session, cluster_id)
 
 # ################################################################################################################################
 

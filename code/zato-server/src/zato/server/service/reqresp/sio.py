@@ -26,6 +26,7 @@ from paste.util.converters import asbool
 # Zato
 from zato.common import APISPEC, DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, path, ZatoException, \
      ZATO_NONE, ZATO_SEC_USE_RBAC
+from zato.common.exception import BadRequest, Reportable
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +180,10 @@ class Float(ForceType):
     """ Gets transformed into a float object.
     """
     def from_json(self, value, *ignored):
-        return float(value)
+        try:
+            return float(value)
+        except ValueError:
+            raise BadRequest(None, 'Cannot convert `{}` to float'.format(value))
 
     from_xml = to_json = to_xml = from_json
 
@@ -330,7 +334,7 @@ def is_int(param_name, int_params, int_param_suffixes):
 
 # ################################################################################################################################
 
-def convert_sio(param, param_name, value, has_simple_io_config, is_xml, bool_parameter_prefixes, int_parameters,
+def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, bool_parameter_prefixes, int_parameters,
     int_parameter_suffixes, date_time_format=None, data_format=ZATO_NONE, from_sio_to_external=False,
     special_values=(ZATO_NONE, ZATO_SEC_USE_RBAC), _is_bool=is_bool, _is_int=is_int):
     try:
@@ -348,11 +352,15 @@ def convert_sio(param, param_name, value, has_simple_io_config, is_xml, bool_par
         return value
 
     except Exception, e:
-        msg = 'Conversion error, param:`{}`, param_name:`{}`, repr:`{}`, type:`{}`, e:`{}`'.format(
-            param, param_name, repr(value), type(value), format_exc(e))
-        logger.error(msg)
+        if isinstance(e, Reportable):
+            e.cid = cid
+            raise
+        else:
+            msg = 'Conversion error, param:`{}`, param_name:`{}`, repr:`{}`, type:`{}`, e:`{}`'.format(
+                param, param_name, repr(value), type(value), format_exc(e))
+            logger.error(msg)
 
-        raise ZatoException(msg=msg)
+            raise ZatoException(msg=msg)
 
 # ################################################################################################################################
 
@@ -428,7 +436,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
 
     # Convert it to a native Python data type
     if channel_value != ZATO_NONE:
-        channel_value = convert_sio(param, param_name, channel_value, has_simple_io_config, False, bool_parameter_prefixes,
+        channel_value = convert_sio(cid, param, param_name, channel_value, has_simple_io_config, False, bool_parameter_prefixes,
                     int_parameters, int_parameter_suffixes, None, data_format, False)
 
     # Return the value immediately if we already know channel_params are of higer priority
@@ -469,7 +477,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
                 value = unicode(value)
 
         if not isinstance(param, AsIs):
-            return param_name, convert_sio(param, param_name, value, has_simple_io_config, data_format==DATA_FORMAT.XML,
+            return param_name, convert_sio(cid, param, param_name, value, has_simple_io_config, data_format==DATA_FORMAT.XML,
                 bool_parameter_prefixes, int_parameters, int_parameter_suffixes, None, data_format, False)
 
     return param_name, value

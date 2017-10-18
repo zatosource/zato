@@ -17,6 +17,11 @@ from django.views.static import serve as django_static_serve
 # Zato
 from zato.admin import settings
 from zato.admin.web.views import account, cluster, docs, http_soap, kvdb, load_balancer, main, scheduler, service, stats
+from zato.admin.web.views.cache import builtin as cache_builtin
+from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
+from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
+from zato.admin.web.views.cache import memcached_ as cache_memcached
+from zato.admin.web.views.cache import redis_ as cache_redis
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import stomp as channel_stomp
@@ -888,6 +893,60 @@ urlpatterns += [
         login_required(channel_zmq.Edit()), name=channel_zmq.Edit.url_name),
     url(r'^zato/channel/zmq/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(channel_zmq.Delete()), name=channel_zmq.Delete.url_name),
+    ]
+
+# ################################################################################################################################
+
+#   Cache
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # .. Built-in
+
+    url(r'^zato/cache/builtin/$',
+        login_required(cache_builtin.Index()), name=cache_builtin.Index.url_name),
+    url(r'^zato/cache/builtin/create/$',
+        login_required(cache_builtin.Create()), name=cache_builtin.Create.url_name),
+    url(r'^zato/cache/builtin/edit/$',
+        login_required(cache_builtin.Edit()), name=cache_builtin.Edit.url_name),
+    url(r'^zato/cache/builtin/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cache_builtin.Delete()), name=cache_builtin.Delete.url_name),
+    url(r'^zato/cache/builtin/clear/$',
+        login_required(cache_builtin.clear), name='cache-builtin-clear'),
+
+    url(r'^zato/cache/builtin/entries/(?P<cache_id>.*)/delete/$',
+        login_required(cache_builtin_entries.Delete()), name=cache_builtin_entries.Delete.url_name),
+
+    url(r'^zato/cache/builtin/entries/(?P<cache_id>.*)/$',
+        login_required(cache_builtin_entries.Index()), name=cache_builtin_entries.Index.url_name),
+
+    url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/action/$',
+        login_required(cache_builtin_entry.create_action), name='cache-builtin-create-entry-action'),
+
+    url(r'^zato/cache/builtin/details/entry/create/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cache_builtin_entry.create), name='cache-builtin-create-entry'),
+
+    url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/action/$',
+        login_required(cache_builtin_entry.edit_action), name='cache-builtin-edit-entry-action'),
+
+    url(r'^zato/cache/builtin/details/entry/edit/cache-id/(?P<cache_id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cache_builtin_entry.edit), name='cache-builtin-edit-entry'),
+
+    # .. Memcached
+
+    url(r'^zato/cache/memcached/$',
+        login_required(cache_memcached.Index()), name=cache_memcached.Index.url_name),
+    url(r'^zato/cache/memcached/create/$',
+        login_required(cache_memcached.Create()), name=cache_memcached.Create.url_name),
+    url(r'^zato/cache/memcached/edit/$',
+        login_required(cache_memcached.Edit()), name=cache_memcached.Edit.url_name),
+    url(r'^zato/cache/memcached/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cache_memcached.Delete()), name=cache_memcached.Delete.url_name),
+    url(r'^zato/cache/memcached/details/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(cache_memcached.DetailsIndex()), name=cache_memcached.DetailsIndex.url_name),
+
     ]
 
 # ################################################################################################################################

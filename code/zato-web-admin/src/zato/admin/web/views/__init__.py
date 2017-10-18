@@ -104,7 +104,7 @@ def get_lb_client(cluster):
 
 # ################################################################################################################################
 
-def method_allowed(*meths):
+def method_allowed(*methods_allowed):
     """ Accepts a list (possibly one-element long) of HTTP methods allowed
     for a given view. An exception will be raised if a request has been made
     with a method outside of those allowed, otherwise the view executes
@@ -115,9 +115,9 @@ def method_allowed(*meths):
     def inner_method_allowed(view):
         def inner_view(*args, **kwargs):
             req = args[1] if len(args) > 1 else args[0]
-            if req.method not in meths:
-                msg = 'Method [{method}] is not allowed here [{view}], methods allowed:[{meths}]'
-                msg = msg.format(method=req.method, view=view.func_name, meths=meths)
+            if req.method not in methods_allowed:
+                msg = 'Method `{}` is not allowed here `{}`, methods allowed:`{}`'.format(
+                    req.method, view.func_name, methods_allowed)
                 logger.error(msg)
                 raise Exception(msg)
             return view(*args, **kwargs)
@@ -466,26 +466,36 @@ class CreateEdit(_BaseView):
 
 # ################################################################################################################################
 
-class Delete(_BaseView):
-    """ Our subclasses will delete objects such as connections and others.
-    """
+class BaseCallView(_BaseView):
+
     method_allowed = 'POST'
     error_message = 'error_message-must-be-defined-in-a-subclass'
 
+    def get_input_dict(self):
+        raise NotImplementedError('Must be defined in subclasses')
+
     def __call__(self, req, initial_input_dict={}, *args, **kwargs):
         try:
-            super(Delete, self).__call__(req, *args, **kwargs)
-            input_dict = {
-                'id': self.req.zato.id,
-                'cluster_id': self.cluster_id
-            }
+            super(BaseCallView, self).__call__(req, *args, **kwargs)
+            input_dict = self.get_input_dict()
             input_dict.update(initial_input_dict)
             req.zato.client.invoke(self.service_name, input_dict)
             return HttpResponse()
         except Exception, e:
-            msg = '{}, e:[{}]'.format(self.error_message, format_exc(e))
+            msg = '{}, e:`{}`'.format(self.error_message, format_exc(e))
             logger.error(msg)
             return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+
+class Delete(BaseCallView):
+    """ Our subclasses will delete objects such as connections and others.
+    """
+    def get_input_dict(self):
+        return {
+            'id': self.req.zato.id,
+            'cluster_id': self.cluster_id
+        }
 
 # ################################################################################################################################
 
@@ -525,6 +535,20 @@ def id_only_service(req, service, id, error_template):
         msg = error_template.format(e=format_exc(e))
         logger.error(msg)
         return HttpResponseServerError(msg)
+
+# ################################################################################################################################
+
+def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_template, content_type='application/javascript',
+        extra=None):
+    try:
+        result = req.zato.client.invoke(service, input_dict)
+    except Exception, e:
+        return HttpResponseServerError(e.message, content_type=content_type)
+    else:
+        response = {'msg': ok_msg}
+        response.update(extra or {})
+        response = dumps(response)
+        return HttpResponse(response, content_type=content_type)
 
 # ################################################################################################################################
 
