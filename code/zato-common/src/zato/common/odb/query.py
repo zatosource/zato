@@ -29,6 +29,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, Cac
      PubSubEndpointRole, PubSubOwner, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, \
      SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, \
      TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, XPath, XPathSecurity
+from zato.common.search_util import SearchResults as _SearchResults
 
 # ################################################################################################################################
 
