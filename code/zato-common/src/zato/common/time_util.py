@@ -62,7 +62,7 @@ class TimeUtil(object):
 
 # ################################################################################################################################
 
-    def utc_now(self, format='YYYY-MM-DD HH:mm:ss', needs_format=True):
+    def utcnow(self, format='YYYY-MM-DD HH:mm:ss', needs_format=True):
         """ Returns now in UTC formatted as given in 'format'.
         """
         return self.now(format, 'UTC', needs_format)
@@ -88,12 +88,12 @@ class TimeUtil(object):
 
 # ################################################################################################################################
 
-    def iso_now(self, tz=local_tz.zone, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
+    def isonow(self, tz=local_tz.zone, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
         return self.now(_format, tz, needs_format)
 
 # ################################################################################################################################
 
-    def iso_utc_now(self, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
+    def isoutcnow(self, needs_format=True, _format='YYYY-MM-DDTHH:mm:ss.SSSSSS'):
         return self.utc_now(_format, needs_format)
 
 # ################################################################################################################################
