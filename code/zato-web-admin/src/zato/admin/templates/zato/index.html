@@ -208,6 +208,12 @@
                                 <li class='wide'><a href="{% url "email-smtp" %}?cluster={{ cluster_id|default:'' }}">SMTP</a></li>
                             </ul>
                         </li>
+                        <li>
+                            <span class="like-a">SMS &rarr;</span>
+                            <ul>
+                                <li class='wide'><a href="{% url "sms-twilio" %}?cluster={{ cluster_id|default:'' }}">Twilio</a></li>
+                            </ul>
+                        </li>
                     </ul>
                 </li>
 

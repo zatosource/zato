@@ -62,6 +62,7 @@ from zato.server.connection.http_soap.url_data import URLData
 from zato.server.connection.odoo import OdooWrapper
 from zato.server.connection.search.es import ElasticSearchAPI, ElasticSearchConnStore
 from zato.server.connection.search.solr import SolrAPI, SolrConnStore
+from zato.server.connection.sms.twilio import TwilioAPI, TwilioConnStore
 from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channel_main_loop as stomp_channel_main_loop, \
      OutconnSTOMPConnStore
 from zato.server.connection.web_socket import ChannelWebSocket
@@ -167,6 +168,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.search_es_api = ElasticSearchAPI(ElasticSearchConnStore())
         self.search_solr_api = SolrAPI(SolrConnStore())
 
+        # SMS
+        self.sms_twilio_api = TwilioAPI(TwilioConnStore())
+
         # E-mail
         self.email_smtp_api = SMTPAPI(SMTPConnStore())
         self.email_imap_api = IMAPAPI(IMAPConnStore())
@@ -182,7 +186,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # AMQP
         self.amqp_api = ConnectorStore(connector_type.duplex.amqp, ConnectorAMQP)
-        self.amqp_out_name_to_def = {} # Maps outgoing connection names to definition names, i.e. to connector names        
+        self.amqp_out_name_to_def = {} # Maps outgoing connection names to definition names, i.e. to connector names
 
         # Vault connections
         self.vault_conn_api = VaultConnAPI()
@@ -206,6 +210,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Search
         self.init_search_es()
         self.init_search_solr()
+
+        # SMS
+        self.init_sms_twilio()
 
         # E-mail
         self.init_email_smtp()
@@ -538,6 +545,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def init_sms_twilio(self):
+        self.init_simple(self.worker_config.sms_twilio, self.sms_twilio_api, 'a Twilio')
+
+# ################################################################################################################################
+
     def init_search_es(self):
         self.init_simple(self.worker_config.search_es, self.search_es_api, 'an ElasticSearch')
 
@@ -659,7 +671,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
             # AMQP definitions as such are always active. It's channels or outconns that can be inactive.
             data.config.is_active = True
-            self.amqp_api.create(def_name, bunchify(data.config), self.on_message_invoke_service,
+            self.amqp_api.create(def_name, bunchify(data.config), self.invoke,
                 channels=self._config_to_dict(channels), outconns=self._config_to_dict(outconns))
 
         self.amqp_api.start()
@@ -1230,22 +1242,25 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def invoke(self, service, payload, **kwargs):
         """ Invokes a service by its name with request on input.
         """
+        channel = kwargs.get('channel', CHANNEL.WORKER)
+
         return self.on_message_invoke_service({
-            'channel': kwargs.get('channel', CHANNEL.WORKER),
+            'channel': channel,
             'payload': payload,
             'data_format': kwargs.get('data_format'),
             'service': service,
             'cid': new_cid(),
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
-        }, CHANNEL.WORKER, None, needs_response=True, serialize=kwargs.get('serialize', True))
+            'zato_ctx': kwargs.get('zato_ctx'),
+        }, channel, None, needs_response=True, serialize=kwargs.get('serialize', True))
 
 # ################################################################################################################################
 
     def on_message_invoke_service(self, msg, channel, action, args=None, **kwargs):
         """ Triggered by external events, such as messages sent through connectots. Creates a new service instance and invokes it.
         """
-        zato_ctx = msg.get('zato_ctx', {})
+        zato_ctx = msg.get('zato_ctx') or {}
         target = zato_ctx.get('zato.request_ctx.target', '')
         cid = msg['cid']
 
@@ -1287,6 +1302,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'zato.request_ctx.fanout_cid':zato_ctx.get('fanout_cid'),
             'zato.request_ctx.parallel_exec_cid':zato_ctx.get('parallel_exec_cid'),
         }
+
+        if zato_ctx:
+            wsgi_environ['zato.channel_item'] = zato_ctx.get('zato.channel_item')
 
         data_format = msg.get('data_format')
         transport = msg.get('transport')

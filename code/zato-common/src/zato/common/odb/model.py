@@ -2002,7 +2002,7 @@ class ChannelWebSocket(Base):
     __table_args__ = (UniqueConstraint('name', 'cluster_id'),
                       UniqueConstraint('address', 'cluster_id'), {})
 
-    id = Column(Integer, Sequence('web_socket_seq'), primary_key=True)
+    id = Column(Integer, Sequence('web_socket_chan_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False)
@@ -2038,6 +2038,8 @@ class ChannelWebSocket(Base):
         self.cluster = cluster
         self.security_id = security_id
         self.security = security
+        self.service_name = None # Not used by DB
+        self.sec_type = None # Not used by DB
 
 # ################################################################################################################################
 
@@ -2095,7 +2097,7 @@ class WebSocketSubscription(Base):
         Index('wssub_patt_is_idx', 'pattern', 'is_internal', 'is_by_ext_id', 'is_by_channel', unique=False),
     {})
 
-    id = Column(Integer, Sequence('web_socket_seq'), primary_key=True)
+    id = Column(Integer, Sequence('web_socket_sub_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False)
     pattern = Column(String(400), nullable=False)
 
@@ -2245,7 +2247,7 @@ class PubSubSubscription(Base):
 
     creation_time = Column(DateTime(), nullable=False)
     sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
-    
+
     is_internal = Column(Boolean(), nullable=False)
     protocol = Column(String(200), nullable=False) # HTTP/SOAP, AMQP etc.
     data_format = Column(String(20), nullable=False) # JSON, XML, SOAP etc.
@@ -2284,7 +2286,7 @@ class PubSubSubscription(Base):
 # ################################################################################################################################
 
 class PubSubSubscriptionItem(Base):
-    """ Each PubSubSubscription has 1:n key/value pairs it subsribes to, kept in this table.
+    """ Each PubSubSubscription has 1:n key/value pairs it subscribes to, kept in this table.
     """
     __tablename__ = 'pubsub_item'
 
@@ -2315,5 +2317,28 @@ class PubSubSubscriptionItem(Base):
 
 #class PubSubLocation(Base):
 #    pass
+
+class SMSTwilio(Base):
+    """ Outgoing SMS connections with Twilio.
+    """
+    __tablename__ = 'sms_twilio'
+    __table_args__ = (
+        UniqueConstraint('name', 'cluster_id'),
+    {})
+
+    id = Column(Integer, Sequence('sms_twilio_id_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False, default=False)
+
+    account_sid = Column(String(200), nullable=False)
+    auth_token = Column(String(200), nullable=False)
+
+    default_from = Column(String(200), nullable=True)
+    default_to = Column(String(200), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('sms_twilio_list', order_by=name, cascade='all, delete, delete-orphan'))
+
 
 # ################################################################################################################################

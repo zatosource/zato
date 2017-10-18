@@ -197,7 +197,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
                 self.service_modules + self.service_sources, self.base_dir))
 
             # Migrations
-            self.odb.add_channels_2_0()
+            #self.odb.add_channels_2_0()
 
             return set(locally_deployed)
 
