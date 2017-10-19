@@ -142,19 +142,11 @@ log_connection_info_sleep_time=5 # In seconds
 [startup_services_first_worker]
 zato.helpers.input-logger=Sample payload for a startup service (first worker)
 zato.notif.init-notifiers=
-zato.pubsub.move-to-target-queues=
-zato.pubsub.delete-expired=
-zato.pubsub.invoke-callbacks=
 zato.kvdb.log-connection-info=
 zato.updates.check-updates=
 
 [startup_services_any_worker]
 zato.helpers.input-logger=Sample payload for a startup service (any worker)
-
-[pubsub]
-move_to_target_queues_interval=3 # In seconds
-delete_expired_interval=180 # In seconds
-invoke_callbacks_interval=2 # In seconds
 
 [profiler]
 enabled=False

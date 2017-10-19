@@ -17,7 +17,6 @@ from paste.util.converters import asbool
 # Zato
 from zato.bunch import Bunch
 from zato.common import MISC
-from zato.common.pubsub import PubSubAPI, SQLPubSub
 from zato.server.config import ConfigDict
 from zato.server.message import JSONPointerStore, NamespaceStore, XPathStore
 from zato.url_dispatcher import Matcher
@@ -42,7 +41,7 @@ class ConfigLoader(object):
         self.live_msg_browser.include_internal = asbool(self.live_msg_browser.include_internal)
 
         # Pub/sub
-        self.pubsub = PubSubAPI(SQLPubSub(self.odb, self.invoke_outconn_http))
+        self.pubsub = None
 
         #
         # Cassandra - start
@@ -332,23 +331,6 @@ class ConfigLoader(object):
 
         # Pub/sub config
         self.config.pubsub = Bunch()
-        self.config.pubsub.default_consumer = Bunch()
-        self.config.pubsub.default_producer = Bunch()
-
-        query = self.odb.get_pubsub_topic_list(server.cluster.id, True)
-        self.config.pubsub.topics = ConfigDict.from_query('pubsub_topics', query)
-
-        id, name = self.odb.get_pubsub_default_client(server.cluster.id, 'zato.pubsub.default-consumer')
-        self.config.pubsub.default_consumer.id, self.config.pubsub.default_consumer.name = id, name
-
-        id, name = self.odb.get_pubsub_default_client(server.cluster.id, 'zato.pubsub.default-producer')
-        self.config.pubsub.default_producer.id, self.config.pubsub.default_producer.name = id, name
-
-        query = self.odb.get_pubsub_producer_list(server.cluster.id, True)
-        self.config.pubsub.producers = ConfigDict.from_query('pubsub_producers', query, list_config=True)
-
-        query = self.odb.get_pubsub_consumer_list(server.cluster.id, True)
-        self.config.pubsub.consumers = ConfigDict.from_query('pubsub_consumers', query, list_config=True)
 
         # E-mail - SMTP
         query = self.odb.get_email_smtp_list(server.cluster.id, True)
