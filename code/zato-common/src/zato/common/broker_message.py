@@ -408,12 +408,8 @@ class VAULT(Constants):
     POLICY_EDIT = ValueConstant('')
     POLICY_DELETE = ValueConstant('')
 
-class PUB_SUB(Constants):
+class PUBSUB(Constants):
     code_start = 105600
-
-    OWNER_CREATE = ValueConstant('')
-    OWNER_EDIT = ValueConstant('')
-    OWNER_DELETE = ValueConstant('')
 
     ENDPOINT_CREATE = ValueConstant('')
     ENDPOINT_EDIT = ValueConstant('')
@@ -423,13 +419,10 @@ class PUB_SUB(Constants):
     ENDPOINT_ATTR_EDIT = ValueConstant('')
     ENDPOINT_ATTR_DELETE = ValueConstant('')
 
-    ENDPOINT_OWNER_CREATE = ValueConstant('')
-    ENDPOINT_OWNER_EDIT = ValueConstant('')
-    ENDPOINT_OWNER_DELETE = ValueConstant('')
+    SUBSCRIPTION_CREATE = ValueConstant('')
+    SUBSCRIPTION_EDIT = ValueConstant('')
+    SUBSCRIPTION_DELETE = ValueConstant('')
 
-    ENDPOINT_ROLE_CREATE = ValueConstant('')
-    ENDPOINT_ROLE_EDIT = ValueConstant('')
-    ENDPOINT_ROLE_DELETE = ValueConstant('')
 
 class SMS(Constants):
     code_start = 106000

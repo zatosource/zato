@@ -2120,7 +2120,11 @@ class PubSubEndpoint(Base):
     id = Column(Integer, Sequence('pubsub_owner_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False)
 
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
+    # Identifies the endpoint through its security definition, e.g. a username/password combination.
+    security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
+    security = relationship(SecurityBase, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################

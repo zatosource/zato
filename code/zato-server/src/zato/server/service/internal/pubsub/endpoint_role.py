@@ -13,7 +13,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.common.broker_message import PUB_SUB
+from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import PubSubEndpointRole
 from zato.common.odb.query import pubsub_endpoint_role_list
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -68,7 +68,7 @@ class Create(AdminService):
                 session.add(item)
                 session.commit()
 
-                input.action = PUB_SUB.ENDPOINT_ROLE_CREATE.value
+                input.action = PUBSUB.ENDPOINT_ROLE_CREATE.value
                 input.id = item.id
                 self.broker_client.publish(input)
 
@@ -107,7 +107,7 @@ class Edit(AdminService):
                 session.add(item)
                 session.commit()
 
-                input.action = PUB_SUB.ENDPOINT_ROLE_EDIT.value
+                input.action = PUBSUB.ENDPOINT_ROLE_EDIT.value
                 input.id = item.id
                 self.broker_client.publish(input)
 
@@ -144,7 +144,7 @@ class Delete(AdminService):
                 session.commit()
 
                 self.broker_client.publish({
-                    'action': PUB_SUB.ENDPOINT_ROLE_DELETE.value,
+                    'action': PUBSUB.ENDPOINT_ROLE_DELETE.value,
                     'id':item_id,
                 })
 
