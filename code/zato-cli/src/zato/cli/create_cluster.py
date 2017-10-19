@@ -21,8 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
 from zato.common import CACHE, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, PUB_SUB, SIMPLE_IO, URL_TYPE, WEB_SOCKET
 from zato.common.odb.model import CacheBuiltin, ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, \
-     PubSubEndpointAttr, PubSubEndpointOwner, PubSubEndpointRole, PubSubOwner, RBACPermission, RBACRole, Service, \
-     WSSDefinition
+     PubSubEndpointAttr, PubSubEndpointRole, RBACPermission, RBACRole, Service, WSSDefinition
 from zato.common.util import get_http_json_channel, get_http_soap_channel
 
 msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
@@ -271,86 +270,11 @@ zato_services = {
     'zato.cache.builtin.delete': 'zato.server.service.internal.cache.builtin.Delete',
     'zato.cache.builtin.get-list': 'zato.server.service.internal.cache.builtin.GetList',
 
-    # Publish/subscribe - init
-    'zato.pubsub.delete-expired':'zato.server.service.internal.pubsub.DeleteExpired',
-    'zato.pubsub.invoke-callbacks':'zato.server.service.internal.pubsub.InvokeCallbacks',
-    'zato.pubsub.move-to-target-queues':'zato.server.service.internal.pubsub.MoveToTargetQueues',
-    'zato.pubsub.rest-handler':'zato.server.service.internal.pubsub.RESTHandler',
-
-    # Publish/subscribe - consumer
-    'zato.pubsub.consumers.create':'zato.server.service.internal.pubsub.consumers.Create',
-    'zato.pubsub.consumers.delete':'zato.server.service.internal.pubsub.consumers.Delete',
-    'zato.pubsub.consumers.edit':'zato.server.service.internal.pubsub.consumers.Edit',
-    'zato.pubsub.consumers.get-info':'zato.server.service.internal.pubsub.consumers.GetInfo',
-    'zato.pubsub.consumers.get-list':'zato.server.service.internal.pubsub.consumers.GetList',
-
-    # Publish/subscribe - endpoints
-    'zato.pubsub.endpoint.create':'zato.server.service.internal.pubsub.endpoint.Create',
-    'zato.pubsub.endpoint.delete':'zato.server.service.internal.pubsub.endpoint.Delete',
-    'zato.pubsub.endpoint.edit':'zato.server.service.internal.pubsub.endpoint.Edit',
-    'zato.pubsub.endpoint.get':'zato.server.service.internal.pubsub.endpoint.Get',
-    'zato.pubsub.endpoint.get-list':'zato.server.service.internal.pubsub.endpoint.GetList',
-
-    # Publish/subscribe - endpoint attributes
-    'zato.pubsub.endpoint-attr.create':'zato.server.service.internal.pubsub.endpoint-attr.Create',
-    'zato.pubsub.endpoint-attr.delete':'zato.server.service.internal.pubsub.endpoint-attr.Delete',
-    'zato.pubsub.endpoint-attr.edit':'zato.server.service.internal.pubsub.endpoint-attr.Edit',
-    'zato.pubsub.endpoint-attr.get':'zato.server.service.internal.pubsub.endpoint-attr.Get',
-    'zato.pubsub.endpoint-attr.get-list':'zato.server.service.internal.pubsub.endpoint-attr.GetList',
-
-    # Publish/subscribe - endpoint owners
-    'zato.pubsub.endpoint-owner.create':'zato.server.service.internal.pubsub.endpoint-owner.Create',
-    'zato.pubsub.endpoint-owner.delete':'zato.server.service.internal.pubsub.endpoint-owner.Delete',
-    'zato.pubsub.endpoint-owner.edit':'zato.server.service.internal.pubsub.endpoint-owner.Edit',
-    'zato.pubsub.endpoint-owner.get':'zato.server.service.internal.pubsub.endpoint-owner.Get',
-    'zato.pubsub.endpoint-owner.get-list':'zato.server.service.internal.pubsub.endpoint-owner.GetList',
-
-    # Publish/subscribe - endpoint roles
-    'zato.pubsub.endpoint-role.create':'zato.server.service.internal.pubsub.endpoint-role.Create',
-    'zato.pubsub.endpoint-role.delete':'zato.server.service.internal.pubsub.endpoint-role.Delete',
-    'zato.pubsub.endpoint-role.edit':'zato.server.service.internal.pubsub.endpoint-role.Edit',
-    'zato.pubsub.endpoint-role.get':'zato.server.service.internal.pubsub.endpoint-role.Get',
-    'zato.pubsub.endpoint-role.get-list':'zato.server.service.internal.pubsub.endpoint-role.GetList',
-
-    # Publish/subscribe - messages
-    'zato.pubsub.message.delete':'zato.server.service.internal.pubsub.message.Delete',
-    'zato.pubsub.message.get':'zato.server.service.internal.pubsub.message.Get',
-    'zato.pubsub.message.get-list':'zato.server.service.internal.pubsub.message.GetList',
-
-    # Publish/subscribe - owners
-    'zato.pubsub.owner.create':'zato.server.service.internal.pubsub.owner.Create',
-    'zato.pubsub.owner.delete':'zato.server.service.internal.pubsub.owner.Delete',
-    'zato.pubsub.owner.edit':'zato.server.service.internal.pubsub.owner.Edit',
-    'zato.pubsub.owner.get':'zato.server.service.internal.pubsub.owner.Get',
-    'zato.pubsub.owner.get-list':'zato.server.service.internal.pubsub.owner.GetList',
-
-    # Publish/subscribe - producers
-    'zato.pubsub.producers.create':'zato.server.service.internal.pubsub.producers.Create',
-    'zato.pubsub.producers.delete':'zato.server.service.internal.pubsub.producers.Delete',
-    'zato.pubsub.producers.edit':'zato.server.service.internal.pubsub.producers.Edit',
-    'zato.pubsub.producers.get-info':'zato.server.service.internal.pubsub.producers.GetInfo',
-    'zato.pubsub.producers.get-list':'zato.server.service.internal.pubsub.producers.GetList',
-
-    # Publish/subscribe - subscribers
-    'zato.pubsub.subscriber.external-subscribe':'zato.server.service.internal.pubsub.subscriber.ExternalSubscribe',
-    'zato.pubsub.subscriber.json-external-subscribe':'zato.server.service.internal.pubsub.subscriber.JSONExternalSubscribe',
-    'zato.pubsub.subscriber.soap-external-subscribe':'zato.server.service.internal.pubsub.subscriber.SOAPExternalSubscribe',
-    'zato.pubsub.subscriber.subscribe':'zato.server.service.internal.pubsub.subscriber.Subscribe',
-    'zato.pubsub.subscriber.xml-external-subscribe':'zato.server.service.internal.pubsub.subscriber.XMLExternalSubscribe',
-
     # Query - Cassandra
     'zato.query.cassandra.create':'zato.server.service.internal.query.cassandra.Create',
     'zato.query.cassandra.delete':'zato.server.service.internal.query.cassandra.Delete',
     'zato.query.cassandra.edit':'zato.server.service.internal.query.cassandra.Edit',
     'zato.query.cassandra.get-list':'zato.server.service.internal.query.cassandra.GetList',
-
-    # Publish/subscribe - topics
-    'zato.pubsub.topics.create':'zato.server.service.internal.pubsub.topics.Create',
-    'zato.pubsub.topics.delete':'zato.server.service.internal.pubsub.topics.Delete',
-    'zato.pubsub.topics.edit':'zato.server.service.internal.pubsub.topics.Edit',
-    'zato.pubsub.topics.get-info':'zato.server.service.internal.pubsub.topics.GetInfo',
-    'zato.pubsub.topics.get-list':'zato.server.service.internal.pubsub.topics.GetList',
-    'zato.pubsub.topics.publish':'zato.server.service.internal.pubsub.topics.Publish',
 
     # Search - ElasticSearch
     'zato.search.es.create':'zato.server.service.internal.search.es.Create',
@@ -580,19 +504,13 @@ class Create(ZatoCommand):
             uuid4().hex, msg_browser_defaults.TOKEN_TTL, cluster)
         session.add(live_browser_sec)
 
-        # Services used to handle pub/sub subscriptions.
-        pubsub_services = []
-
         self.add_internal_services(
-            session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec, pubsub_services)
+            session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec)
         self.add_ping_services(session, cluster)
         self.add_default_rbac_permissions(session, cluster)
         self.add_default_rbac_roles(session, cluster)
         self.add_default_cache(session, cluster)
         self.add_cache_endpoints(session, cluster)
-
-        self.add_default_pubsub_accounts(session, cluster)
-        self.add_default_pubsub_config(session, cluster, pubsub_services)
 
         try:
             session.commit()
@@ -613,8 +531,7 @@ class Create(ZatoCommand):
             else:
                 self.logger.info('OK')
 
-    def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec,
-        pubsub_services):
+    def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec):
         """ Adds these Zato internal services that can be accessed through SOAP requests.
         """
 
@@ -638,9 +555,6 @@ class Create(ZatoCommand):
                 self.add_admin_invoke(session, cluster, service, admin_invoke_sec)
                 self.add_internal_invoke(session, cluster, service, internal_invoke_sec)
 
-            elif name == 'zato.pubsub.rest-handler':
-                self.add_pubsub_rest_handler(session, cluster, service)
-
             elif name == 'zato.security.jwt.log-in':
                 self.add_jwt_log_in(session, cluster, service)
 
@@ -655,11 +569,6 @@ class Create(ZatoCommand):
 
             elif 'check' in name:
                 self.add_check(session, cluster, service, pubapi_sec)
-
-            elif 'subscribe' in name:
-                for item in ('json', 'xml', 'soap'):
-                    if item in name:
-                        pubsub_services.append(service)
 
             session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))
             session.add(get_http_json_channel(name, service, cluster, pubapi_sec))
@@ -757,14 +666,6 @@ class Create(ZatoCommand):
             security=internal_invoke_sec)
         session.add(channel)
 
-    def add_default_pubsub_accounts(self, session, cluster):
-        """ Adds default accounts used by pub/sub internally.
-        """
-        for suffix in('consumer', 'producer'):
-            name = 'zato.pubsub.default-{}'.format(suffix)
-            item = HTTPBasicAuth(None, name, True, name, 'Zato pub/sub', uuid4().hex, cluster)
-            session.add(item)
-
     def add_default_rbac_permissions(self, session, cluster):
         """ Adds default CRUD permissions used by RBAC.
         """
@@ -799,11 +700,6 @@ class Create(ZatoCommand):
         item.sync_method = CACHE.SYNC_METHOD.IN_BACKGROUND.id
         item.persistent_storage = CACHE.PERSISTENT_STORAGE.SQL.id
         session.add(item)
-
-    def add_pubsub_rest_handler(self, session, cluster, service):
-        channel = HTTPSOAP(None, 'zato.pubsub.rest', True, True, 'channel', 'plain_http',
-            None, '/zato/pubsub/{item_type}/{item}/', None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster)
-        session.add(channel)
 
     def add_jwt_log_in(self, session, cluster, service):
         channel = HTTPSOAP(None, 'zato.security.jwt.log-in', True, True, 'channel', 'plain_http',
@@ -844,79 +740,6 @@ class Create(ZatoCommand):
             channel = HTTPSOAP(None, name, True, True, 'channel', 'plain_http', None, url_path, None, '', None, data_format,
                 merge_url_params_req=True, service=service, cluster=cluster, security=pubapi_sec)
             session.add(channel)
-
-    def add_default_pubsub_config(self, session, cluster, pubsub_services):
-        """ Adds default configuration for pub/sub endpoints and owners.
-        """
-        zato_root = PubSubOwner()
-        zato_root.name = 'zato.root'
-        zato_root.is_internal = True
-        zato_root.cluster = cluster
-
-        user_root = PubSubOwner()
-        user_root.name = 'user.root'
-        user_root.is_internal = False
-        user_root.cluster = cluster
-
-        owner = PubSubOwner()
-        owner.name = 'zato.service'
-        owner.is_internal = True
-        owner.parent = zato_root
-        owner.cluster = cluster
-
-        endpoint = PubSubEndpoint()
-        endpoint.is_internal = True
-
-        endpoint_owner = PubSubEndpointOwner()
-        endpoint_owner.role = PUB_SUB.OWNER_ROLE.OWNER
-        endpoint_owner.endpoint = endpoint
-        endpoint_owner.owner = owner
-        endpoint_owner.cluster = cluster
-
-        endpoint_role = PubSubEndpointRole()
-        endpoint_role.role = PUB_SUB.ENDPOINT_ROLE.PUBLISHER
-        endpoint_role.endpoint = endpoint
-        endpoint_role.cluster = cluster
-
-        id_attr = PubSubEndpointAttr()
-        id_attr.key = 'id'
-        id_attr.value = PUB_SUB.ENDPOINT_ATTR.DEFAULT_VALUE_FUNC('service')
-        id_attr.endpoint = endpoint
-        id_attr.cluster = cluster
-
-        channel_names = {
-            'zato.pubsub.subscriber.json-external-subscribe': '/pubsub/subscribe',
-            'zato.pubsub.subscriber.xml-external-subscribe': '/pubsub/subscribe/xml',
-            'zato.pubsub.subscriber.soap-external-subscribe': '/pubsub/subscribe/soap',
-        }
-
-        transports = {
-            DATA_FORMAT.JSON: URL_TYPE.PLAIN_HTTP,
-            DATA_FORMAT.XML: URL_TYPE.PLAIN_HTTP,
-            DATA_FORMAT.SOAP: URL_TYPE.SOAP,
-        }
-
-        for service in pubsub_services:
-
-            channel_name = channel_names[service.name]
-            data_format = service.name.replace('zato.pubsub.subscriber.', '').replace('-external-subscribe', '')
-
-            sec_name = sec_username = 'pubsub.subscribe.{}'.format(data_format)
-            sec = HTTPBasicAuth(None, sec_name, True, sec_username, 'Zato pub/sub', uuid4().hex, cluster)
-
-            channel = HTTPSOAP(None, channel_name, True, True, CONNECTION.CHANNEL, transports[data_format],
-                None, channel_name, None, '', None, None, merge_url_params_req=True, service=service, cluster=cluster,
-                security=sec, serialization_type=HTTP_SOAP_SERIALIZATION_TYPE.STRING_VALUE.id)
-
-            session.add(sec)
-            session.add(channel)
-
-        session.add(zato_root)
-        session.add(user_root)
-        session.add(service)
-        session.add(endpoint)
-        session.add(endpoint_owner)
-        session.add(id_attr)
 
     def add_cache_endpoints(self, session, cluster):
 

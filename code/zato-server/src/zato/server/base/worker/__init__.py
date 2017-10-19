@@ -44,7 +44,6 @@ from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
 from zato.common.odb.api import PoolStore, SessionWrapper
-from zato.common.pubsub import Client, Consumer, Topic
 from zato.common.util import get_tls_ca_cert_full_path, get_tls_key_cert_full_path, get_tls_from_payload, \
      import_module_from_path, new_cid, pairwise, parse_extra_into_dict, parse_tls_channel_security_definition, start_connectors, \
      store_tls, update_apikey_username, update_bind_port, visit_py_source
@@ -266,7 +265,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.init_http_soap()
 
         self.init_cloud()
-        self.init_pubsub()
         self.init_notifiers()
 
         # WebSocket
@@ -730,39 +728,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             cache = getattr(self.worker_config, 'cache_{}'.format(name))
             for value in cache.values():
                 self.cache_api.create(bunchify(value['config']))
-
-# ################################################################################################################################
-
-    def _topic_from_topic_data(self, data):
-        return Topic(data.name, data.is_active, True, data.max_depth)
-
-    def _add_pubsub_topic(self, data):
-        self.pubsub.add_topic(self._topic_from_topic_data(data))
-
-    def init_pubsub(self):
-        """ Initializes publish/subscribe mechanisms.
-        """
-        self.pubsub.set_default_consumer(self.worker_config.pubsub.default_consumer)
-        self.pubsub.set_default_producer(self.worker_config.pubsub.default_producer)
-
-        for topic_name, topic_data in self.worker_config.pubsub.topics.items():
-            self._add_pubsub_topic(topic_data.config)
-
-        for list_value in self.worker_config.pubsub.producers.values():
-            for config in list_value:
-                self.pubsub.add_producer(Client(config.client_id, config.name, config.is_active), Topic(config.topic_name))
-
-        for list_value in self.worker_config.pubsub.consumers.values():
-            for config in list_value:
-
-                callback_type = PUB_SUB.CALLBACK_TYPE.OUTCONN_SOAP if bool(config.soap_version) else \
-                    PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTTP
-
-                self.pubsub.add_consumer(
-                    Consumer(
-                        config.client_id, config.name, config.is_active, config.sub_key, config.max_depth,
-                        config.delivery_mode, config.callback_id, config.callback_name, callback_type),
-                    Topic(config.topic_name))
 
 # ################################################################################################################################
 
@@ -1742,47 +1707,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """ Closes and deletes an Odoo connection.
         """
         self._delete_config_close_wrapper(msg['name'], self.worker_config.out_odoo, 'Odoo', logger.debug)
-
-# ################################################################################################################################
-
-    def on_broker_msg_PUB_SUB_TOPIC_CREATE(self, msg):
-        self._add_pubsub_topic(msg)
-
-    def on_broker_msg_PUB_SUB_TOPIC_EDIT(self, msg):
-        self.pubsub.update_topic(Topic(msg.name, msg.is_active, True, msg.max_depth))
-
-    def on_broker_msg_PUB_SUB_TOPIC_DELETE(self, msg):
-        self.pubsub.delete_topic(Topic(msg.name))
-
-# ################################################################################################################################
-
-    def _on_broker_msg_pub_sub_consumer_create_edit(self, msg):
-        self.pubsub.add_consumer(
-            Consumer(
-                msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_depth,
-                msg.delivery_mode, msg.callback_id, msg.callback_name, msg.callback_type),
-            Topic(msg.topic_name))
-
-    def on_broker_msg_PUB_SUB_CONSUMER_CREATE(self, msg):
-        self._on_broker_msg_pub_sub_consumer_create_edit(msg)
-
-    def on_broker_msg_PUB_SUB_CONSUMER_EDIT(self, msg):
-        self._on_broker_msg_pub_sub_consumer_create_edit(msg)
-
-    def on_broker_msg_PUB_SUB_CONSUMER_DELETE(self, msg):
-        self.pubsub.delete_consumer(
-            Consumer(msg.client_id, msg.client_name, msg.is_active, msg.sub_key, msg.max_depth), Topic(msg.topic_name))
-
-# ################################################################################################################################
-
-    def on_broker_msg_PUB_SUB_PRODUCER_CREATE(self, msg):
-        self.pubsub.add_producer(Client(msg.client_id, msg.name, msg.is_active), Topic(msg.topic_name))
-
-    def on_broker_msg_PUB_SUB_PRODUCER_EDIT(self, msg):
-        self.pubsub.update_producer(Client(msg.client_id, msg.client_name, msg.is_active), Topic(msg.topic_name))
-
-    def on_broker_msg_PUB_SUB_PRODUCER_DELETE(self, msg):
-        self.pubsub.delete_producer(Client(msg.client_id, msg.client_name), Topic(msg.topic_name))
 
 # ################################################################################################################################
 

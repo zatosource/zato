@@ -1624,77 +1624,6 @@ class PubSubTopic(Base):
 
 # ################################################################################################################################
 
-class PubSubConsumer(Base):
-    """ All consumers of a given topic, including ones that are not currently connected.
-    """
-    __tablename__ = 'pub_sub_consumer'
-    __table_args__ = (UniqueConstraint('sec_def_id', 'topic_id', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('pub_sub_cons_seq'), primary_key=True)
-    is_active = Column(Boolean(), nullable=False)
-    sub_key = Column(String(200), nullable=False)
-    max_depth = Column(Integer, nullable=False)
-    delivery_mode = Column(String(200), nullable=False)
-
-    # Our only callback type right now is an HTTP outconn but more will come with time.
-    callback_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)
-    callback_type = Column(String(20), nullable=True, default=PUB_SUB.CALLBACK_TYPE.OUTCONN_PLAIN_HTTP)
-
-    topic_id = Column(Integer, ForeignKey('pub_sub_topic.id', ondelete='CASCADE'), nullable=False)
-    topic = relationship(PubSubTopic, backref=backref('consumers', order_by=max_depth, cascade='all, delete, delete-orphan'))
-
-    sec_def_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
-    sec_def = relationship(SecurityBase, backref=backref('pub_sub_consumers', order_by=max_depth, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('pub_sub_consumers', order_by=max_depth, cascade='all, delete, delete-orphan'))
-
-    http_soap = relationship(SecurityBase, backref=backref('pubsub_consumers', order_by=max_depth, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, is_active=None, sub_key=None, max_depth=None, delivery_mode=None, callback_id=None,
-                callback_type=None, topic_id=None, sec_def_id=None, cluster_id=None):
-        self.id = id
-        self.is_active = is_active
-        self.sub_key = sub_key
-        self.max_depth = max_depth
-        self.delivery_mode = delivery_mode
-        self.callback_id = callback_id
-        self.callback_type = callback_type
-        self.topic_id = topic_id
-        self.sec_def_id = sec_def_id
-        self.cluster_id = cluster_id
-        self.last_seen = None # Not used by the DB
-
-# ################################################################################################################################
-
-class PubSubProducer(Base):
-    """ All producers allowed to publish to a given topic.
-    """
-    __tablename__ = 'pub_sub_producer'
-    __table_args__ = (UniqueConstraint('sec_def_id', 'topic_id', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('pub_sub_cons_seq'), primary_key=True)
-    is_active = Column(Boolean(), nullable=False)
-
-    topic_id = Column(Integer, ForeignKey('pub_sub_topic.id', ondelete='CASCADE'), nullable=False)
-    topic = relationship(PubSubTopic, backref=backref('producers', order_by=is_active, cascade='all, delete, delete-orphan'))
-
-    sec_def_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=False)
-    sec_def = relationship(SecurityBase, backref=backref('pub_sub_producers', order_by=is_active, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('pub_sub_producers', order_by=is_active, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, is_active=None, topic_id=None, sec_def_id=None, cluster_id=None):
-        self.id = id
-        self.is_active = is_active
-        self.topic_id = topic_id
-        self.sec_def_id = sec_def_id
-        self.cluster_id = cluster_id
-        self.last_seen = None # Not used by the DB
-
-# ################################################################################################################################
-
 class OpenStackSwift(Base):
     """ A connection to OpenStack's Swift.
     """
@@ -2182,29 +2111,6 @@ class WebSocketSubscription(Base):
 
 # ################################################################################################################################
 
-class PubSubOwner(Base):
-    """ Owners to whom endpoints will be assigned. An owner can be an arbitrary entity, a customer, an application
-    or perhaps Zato components.
-    """
-    __tablename__ = 'pubsub_owner'
-    __table_args__ = (
-        Index('pubs_owner_nm_parent_clust', 'name', 'parent_id', 'cluster_id', unique=True),
-        Index('pubs_owner_parent_id', 'parent_id', unique=False),
-        Index('pubs_owner_cluster_id', 'cluster_id', unique=False),
-    {})
-
-    id = Column(Integer, Sequence('pubsub_owner_seq'), primary_key=True)
-    is_internal = Column(Boolean(), nullable=False)
-    name = Column(String(200), nullable=False)
-
-    parent_id = Column(Integer, ForeignKey('pubsub_owner.id', ondelete='CASCADE'), nullable=True)
-    parent = relation('PubSubOwner', remote_side=[id])
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
-    cluster = relationship(Cluster, backref=backref('pubsub_owners', order_by=name, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
 class PubSubEndpoint(Base):
     """ An individual endpoint participating in publish/subscribe scenarios.
     """
@@ -2216,33 +2122,6 @@ class PubSubEndpoint(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
     cluster = relationship(Cluster, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class PubSubEndpointOwner(Base):
-    """ Relations between owners and endpoints, i.e. who owns what and under what role.
-    """
-    __tablename__ = 'pubsub_endpoint_owner'
-    __table_args__ = (
-        Index('pubs_endp_end_owner_idx', 'endpoint_id', 'owner_id', 'role', unique=True),
-        Index('pubs_endp_end_owner_role_idx', 'role', unique=False),
-    {})
-
-    id = Column(Integer, Sequence('pubsub_endpoint_owner_seq'), primary_key=True)
-
-    # Under what role this owner owns the endpoint, i.e. some owners will be the primary ones, some may be temporary
-    role = Column(String(200), nullable=False)
-
-    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
-    endpoint = relationship(
-        PubSubEndpoint, backref=backref('pusub_endpoint_owner_endpoints', order_by=role, cascade='all, delete, delete-orphan'))
-
-    owner_id = Column(Integer, ForeignKey('pubsub_owner.id', ondelete='CASCADE'), nullable=False)
-    owner = relationship(
-        PubSubOwner, backref=backref('pusub_endpoint_owner_owners', order_by=role, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
-    cluster = relationship(Cluster, backref=backref('pubsub_endpoint_owners', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 

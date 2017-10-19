@@ -25,10 +25,10 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, Cac
      CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, \
      HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
-     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubConsumer, PubSubEndpoint, PubSubEndpointAttr, PubSubEndpointOwner, \
-     PubSubEndpointRole, PubSubOwner, PubSubProducer, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, \
-     SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, \
-     TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, XPath, XPathSecurity
+     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, PubSubEndpointAttr, PubSubEndpointRole,  PubSubTopic, \
+     RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, \
+     SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, \
+     WebSocketSubscription, WSSDefinition, VaultConnection, XPath, XPathSecurity
 from zato.common.search_util import SearchResults as _SearchResults
 
 # ################################################################################################################################
@@ -999,73 +999,6 @@ def pubsub_topic_list(session, cluster_id, needs_columns=False):
     """
     return _pubsub_topic(session, cluster_id)
 
-def pubsub_default_client(session, cluster_id, name):
-    """ Returns a client ID of a given name used internally for pub/sub.
-    """
-    return session.query(HTTPBasicAuth.id, HTTPBasicAuth.name).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==HTTPBasicAuth.cluster_id).\
-        filter(HTTPBasicAuth.name==name).\
-        first()
-
-# ################################################################################################################################
-
-def _pubsub_producer(session, cluster_id, needs_columns=False):
-    return session.query(
-        PubSubProducer.id,
-        PubSubProducer.is_active,
-        SecurityBase.id.label('client_id'),
-        SecurityBase.name,
-        SecurityBase.sec_type,
-        PubSubTopic.name.label('topic_name')).\
-        filter(Cluster.id==cluster_id).\
-        filter(PubSubProducer.topic_id==PubSubTopic.id).\
-        filter(PubSubProducer.cluster_id==Cluster.id).\
-        filter(PubSubProducer.sec_def_id==SecurityBase.id).\
-        order_by(SecurityBase.sec_type, SecurityBase.name)
-
-@query_wrapper
-def pubsub_producer_list(session, cluster_id, topic_name, needs_columns=False):
-    """ All pub/sub producers.
-    """
-    response = _pubsub_producer(session, cluster_id, query_wrapper)
-    if topic_name:
-        response = response.filter(PubSubTopic.name==topic_name)
-    return response
-
-# ################################################################################################################################
-
-def _pubsub_consumer(session, cluster_id, needs_columns=False):
-    return session.query(
-        PubSubConsumer.id,
-        PubSubConsumer.is_active,
-        PubSubConsumer.max_depth,
-        PubSubConsumer.sub_key,
-        PubSubConsumer.delivery_mode,
-        PubSubConsumer.callback_id,
-        PubSubConsumer.callback_type,
-        HTTPSOAP.name.label('callback_name'),
-        HTTPSOAP.soap_version,
-        SecurityBase.id.label('client_id'),
-        SecurityBase.name,
-        SecurityBase.sec_type,
-        PubSubTopic.name.label('topic_name')).\
-        outerjoin(HTTPSOAP, HTTPSOAP.id==PubSubConsumer.callback_id).\
-        filter(Cluster.id==cluster_id).\
-        filter(PubSubConsumer.topic_id==PubSubTopic.id).\
-        filter(PubSubConsumer.cluster_id==Cluster.id).\
-        filter(PubSubConsumer.sec_def_id==SecurityBase.id).\
-        order_by(SecurityBase.sec_type, SecurityBase.name)
-
-@query_wrapper
-def pubsub_consumer_list(session, cluster_id, topic_name, needs_columns=False):
-    """ All pub/sub consumers.
-    """
-    response = _pubsub_consumer(session, cluster_id, query_wrapper)
-    if topic_name:
-        response = response.filter(PubSubTopic.name==topic_name)
-    return response
-
 # ################################################################################################################################
 
 def _notif_cloud_openstack_swift(session, cluster_id, needs_password):
@@ -1536,28 +1469,6 @@ def vault_connection_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def _pubsub_owner(session, cluster_id):
-    return session.query(PubSubOwner.id, PubSubOwner.is_internal, PubSubOwner.name,
-            PubSubOwner.parent_id).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==PubSubOwner.cluster_id).\
-        order_by(PubSubOwner.name)
-
-def pubsub_owner(session, cluster_id, id):
-    """ An individual pub/sub owner.
-    """
-    return _pubsub_owner(session, cluster_id).\
-        filter(PubSubOwner.id==id).\
-        one()
-
-@query_wrapper
-def pubsub_owner_list(session, cluster_id, needs_columns=False):
-    """ A list of pub/sub owners.
-    """
-    return _pubsub_owner(session, cluster_id)
-
-# ################################################################################################################################
-
 def _pubsub_endpoint(session, cluster_id):
     return session.query(PubSubEndpoint.id, PubSubEndpoint.is_internal).\
         filter(Cluster.id==cluster_id).\
@@ -1576,34 +1487,6 @@ def pubsub_endpoint_list(session, cluster_id, needs_columns=False):
     """ A list of pub/sub endpoints.
     """
     return _pubsub_endpoint(session, cluster_id)
-
-# ################################################################################################################################
-
-def _pubsub_endpoint_owner(session, cluster_id, endpoint_id, owner_id):
-    q = session.query(PubSubEndpointOwner.id, PubSubEndpointOwner.role, PubSubEndpointOwner.endpoint_id,
-        PubSubEndpointOwner.owner_id).\
-        filter(Cluster.id==cluster_id)
-
-    if endpoint_id:
-        q = q.filter(PubSubEndpointOwner.endpoint_id==endpoint_id)
-
-    if owner_id:
-        q = q.filter(PubSubEndpointOwner.owner_id==owner_id)
-
-    q = q.order_by(PubSubEndpointOwner.id)
-
-def pubsub_endpoint_owner(session, cluster_id, endpoint_id, owner_id):
-    """ An individual association of a pub/sub endpoint and owner.
-    """
-    return _pubsub_endpoint_owner(session, cluster_id, endpoint_id, owner_id).\
-        filter(PubSubEndpointOwner.id==id).\
-        one()
-
-@query_wrapper
-def pubsub_endpoint_owner_list(session, cluster_id, endpoint_id, owner_id):
-    """ A list of pub/sub endpoints and owners associations.
-    """
-    return _pubsub_endpoint_owner(session, cluster_id, endpoint_id, owner_id)
 
 # ################################################################################################################################
 

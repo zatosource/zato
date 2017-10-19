@@ -163,7 +163,7 @@ class ConfigStore(object):
     def __init__(self, out_ftp=ZATO_NONE, out_odoo=ZATO_NONE, out_plain_http=ZATO_NONE, out_soap=ZATO_NONE, out_sql=ZATO_NONE,
             out_stomp=ZATO_NONE, repo_location=ZATO_NONE, basic_auth=ZATO_NONE, wss=ZATO_NONE, tech_acc=ZATO_NONE,
             url_sec=ZATO_NONE, http_soap=ZATO_NONE, broker_config=ZATO_NONE, odb_data=ZATO_NONE, simple_io=ZATO_NONE,
-            msg_ns=ZATO_NONE, json_pointer=ZATO_NONE, xpath=ZATO_NONE, pubsub_topics=ZATO_NONE):
+            msg_ns=ZATO_NONE, json_pointer=ZATO_NONE, xpath=ZATO_NONE):
 
         # Outgoing connections
         self.out_ftp = out_ftp
@@ -204,9 +204,6 @@ class ConfigStore(object):
 
         # XPath
         self.xpath = xpath
-
-        # Pub/sub
-        self.pubsub_topics = pubsub_topics
 
     def outgoing_connections(self):
         """ Returns all the outgoing connections.
