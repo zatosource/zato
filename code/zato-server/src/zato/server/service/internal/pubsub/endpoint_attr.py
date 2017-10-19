@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common.broker_message import PUB_SUB
+from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import PubSubEndpointAttr
 from zato.common.odb.query import pubsub_endpoint_attr_list
 from zato.server.service.internal import AdminService
@@ -20,7 +20,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'pubsub_endpoint_attr'
 model = PubSubEndpointAttr
 label = 'a publish/subscribe endpoint attribute'
-broker_message = PUB_SUB
+broker_message = PUBSUB
 broker_message_prefix = 'ENDPOINT_ATTR_'
 list_func = pubsub_endpoint_attr_list
 
