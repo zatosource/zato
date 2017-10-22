@@ -415,10 +415,6 @@ class PUBSUB(Constants):
     ENDPOINT_EDIT = ValueConstant('')
     ENDPOINT_DELETE = ValueConstant('')
 
-    ENDPOINT_ATTR_CREATE = ValueConstant('')
-    ENDPOINT_ATTR_EDIT = ValueConstant('')
-    ENDPOINT_ATTR_DELETE = ValueConstant('')
-
     SUBSCRIPTION_CREATE = ValueConstant('')
     SUBSCRIPTION_EDIT = ValueConstant('')
     SUBSCRIPTION_DELETE = ValueConstant('')

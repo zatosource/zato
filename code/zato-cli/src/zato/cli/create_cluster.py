@@ -19,9 +19,9 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import CACHE, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, PUB_SUB, SIMPLE_IO, URL_TYPE, WEB_SOCKET
+from zato.common import CACHE, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, SIMPLE_IO, URL_TYPE, WEB_SOCKET
 from zato.common.odb.model import CacheBuiltin, ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, \
-     PubSubEndpointAttr, PubSubEndpointRole, RBACPermission, RBACRole, Service, WSSDefinition
+     RBACPermission, RBACRole, Service, WSSDefinition
 from zato.common.util import get_http_json_channel, get_http_soap_channel
 
 msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER

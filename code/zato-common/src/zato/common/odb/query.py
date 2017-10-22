@@ -25,10 +25,10 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, Cac
      CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, \
      HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
-     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, PubSubEndpointAttr, PubSubEndpointRole,  PubSubTopic, \
-     RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, \
-     SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, \
-     WebSocketSubscription, WSSDefinition, VaultConnection, XPath, XPathSecurity
+     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, PubSubTopic, RBACClientRole, RBACPermission, \
+     RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, TechnicalAccount, \
+     TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, \
+     XPath, XPathSecurity
 from zato.common.search_util import SearchResults as _SearchResults
 
 # ################################################################################################################################
@@ -1470,7 +1470,7 @@ def vault_connection_list(session, cluster_id, needs_columns=False):
 # ################################################################################################################################
 
 def _pubsub_endpoint(session, cluster_id):
-    return session.query(PubSubEndpoint.id, PubSubEndpoint.is_internal).\
+    return session.query(PubSubEndpoint).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==PubSubEndpoint.cluster_id).\
         order_by(PubSubEndpoint.id)
@@ -1489,53 +1489,6 @@ def pubsub_endpoint_list(session, cluster_id, needs_columns=False):
     return _pubsub_endpoint(session, cluster_id)
 
 # ################################################################################################################################
-
-def _pubsub_endpoint_role(session, cluster_id, endpoint_id):
-    q = session.query(PubSubEndpointRole.id, PubSubEndpointRole.role, PubSubEndpointRole.endpoint_id).\
-        filter(Cluster.id==cluster_id)
-
-    if endpoint_id:
-        q = q.filter(PubSubEndpointRole.endpoint_id==endpoint_id)
-
-    q = q.order_by(PubSubEndpointRole.id)
-
-def pubsub_endpoint_role(session, cluster_id, endpoint_id):
-    """ An individual association of a pub/sub endpoint and role.
-    """
-    return _pubsub_endpoint_role(session, cluster_id, endpoint_id).\
-        filter(PubSubEndpointRole.id==id).\
-        one()
-
-@query_wrapper
-def pubsub_endpoint_role_list(session, cluster_id, endpoint_id):
-    """ A list of pub/sub endpoints and roles associations.
-    """
-    return _pubsub_endpoint_role(session, cluster_id, endpoint_id)
-
-# ################################################################################################################################
-
-def _pubsub_endpoint_attr(session, cluster_id, endpoint_id):
-    q = session.query(PubSubEndpointAttr.id, PubSubEndpointAttr.key, PubSubEndpointAttr.value,
-        PubSubEndpointAttr.endpoint_id).\
-        filter(Cluster.id==cluster_id)
-
-    if endpoint_id:
-        q = q.filter(PubSubEndpointAttr.endpoint_id==endpoint_id)
-
-    q = q.order_by(PubSubEndpointAttr.id)
-
-def pubsub_endpoint_attr(session, cluster_id, endpoint_id):
-    """ An individual ID context item.
-    """
-    return _pubsub_endpoint_attr(session, cluster_id, endpoint_id).\
-        filter(PubSubEndpointAttr.id==id).\
-        one()
-
-@query_wrapper
-def pubsub_endpoint_attr_list(session, cluster_id, endpoint_id):
-    """ A list of ID context items.
-    """
-    return _pubsub_endpoint_attr(session, cluster_id, endpoint_id)
 
 def _sms_twilio(session, cluster_id):
     """ SMS Twilio connections.
