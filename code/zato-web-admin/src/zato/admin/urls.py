@@ -45,6 +45,7 @@ from zato.admin.web.views.outgoing import odoo as out_odoo
 from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import stomp as out_stomp
 from zato.admin.web.views.outgoing import zmq as out_zmq
+from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
@@ -1169,6 +1170,22 @@ urlpatterns += [
         login_required(translation.get_value_list), name='kvdb-data-dict-translation-get-value-list'),
     url(r'^zato/kvdb/data-dict/translation/translate/$',
         login_required(translation.translate), name='kvdb-data-dict-translation-translate'),
+    ]
+
+# ################################################################################################################################
+
+urlpatterns += [
+
+    # Pub/sub - endpoints
+
+    url(r'^zato/pubsub/endpoint/$',
+        login_required(pubsub_endpoint.Index()), name=pubsub_endpoint.Index.url_name),
+    url(r'^zato/pubsub/endpoint/create/$',
+        login_required(pubsub_endpoint.Create()), name=pubsub_endpoint.Create.url_name),
+    url(r'^zato/pubsub/endpoint/edit/$',
+        login_required(pubsub_endpoint.Edit()), name=pubsub_endpoint.Edit.url_name),
+    url(r'^zato/pubsub/endpoint/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(pubsub_endpoint.Delete()), name=pubsub_endpoint.Delete.url_name),
     ]
 
 # ################################################################################################################################

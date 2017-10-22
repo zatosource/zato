@@ -39,7 +39,7 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
 from zato.common import broker_message, CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, \
-     PUB_SUB, SEC_DEF_TYPE, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     SEC_DEF_TYPE, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher

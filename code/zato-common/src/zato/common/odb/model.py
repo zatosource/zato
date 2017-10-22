@@ -23,7 +23,7 @@ from sqlalchemy.orm import backref, relation, relationship
 
 # Zato
 from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, \
-     MSG_PATTERN_TYPE, ODOO, PUB_SUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
+     MSG_PATTERN_TYPE, ODOO, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -2116,64 +2116,45 @@ class PubSubEndpoint(Base):
     """
     __tablename__ = 'pubsub_endpoint'
 
-    # This ID is used for SQL joins only, actual business IDs are in PubSubEndpointAttr
     id = Column(Integer, Sequence('pubsub_owner_seq'), primary_key=True)
-    is_internal = Column(Boolean(), nullable=False)
+    name = Column(String(200), nullable=False)
+    is_internal = Column(Boolean(), nullable=False, default=False)
+    is_active = Column(Boolean(), nullable=False, default=True) # Unusued for now
+
+    # Endpoint's role, e.g. publisher, subscriber or both
+    role = Column(String(40), nullable=False)
+
+    # Tags describing this endpoint
+    tags = Column(Text, nullable=True) # Unusued for now
+
+    # Patterns for topics that this endpoint may subscribe to
+    topic_patterns = Column(Text, nullable=True)
+
+    # Patterns for topics that this endpoint may subscribe to
+    queue_patterns = Column(Text, nullable=True)
+
+    # Patterns for tags of publishers
+    pub_tag_patterns = Column(Text, nullable=True) # Unused for now
+
+    # Patterns for tags of messages
+    message_tag_patterns = Column(Text, nullable=True) # Unused for now
 
     # Identifies the endpoint through its security definition, e.g. a username/password combination.
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
     security = relationship(SecurityBase, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
+    # Identifies the endpoint through a long-running WebSockets channel
+    ws_channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
+    ws_channel = relationship(
+        ChannelWebSocket, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
+
+    # A hook service invoked during publications and subscriptions
+    hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+    hook_service = relationship(
+        'Service', backref=backref('pubsub_endpoints', order_by=name, cascade='all, delete, delete-orphan'))
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class PubSubEndpointRole(Base):
-    """ A given endpoint's role in pub/sub, e.g. publisher or subscriber (but is not fixed to these two alone).
-    """
-    __tablename__ = 'pubsub_endpoint_role'
-    __table_args__ = (
-        Index('pubsub_endpoint_role_endp_idx', 'endpoint_id', 'role', unique=True),
-    {})
-
-    id = Column(Integer, Sequence('pubsub_endpoint_role_seq'), primary_key=True)
-    role = Column(String(200), nullable=False)
-
-    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
-    endpoint = relationship(
-        PubSubEndpoint, backref=backref('pusub_endpoint_roles', order_by=role, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
-    cluster = relationship(
-        Cluster, backref=backref('pubsub_endpoint_roles', order_by=id, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class PubSubEndpointAttr(Base):
-    """ A set of key/value attributes assigned to a pub/sub endpoint.
-    """
-    __tablename__ = 'pubsub_endpoint_attr'
-    __table_args__ = (
-        Index('pubsub_id_ctx_name_value', 'key', 'value', unique=False),
-        UniqueConstraint('key', 'value', 'endpoint_id'),
-    {})
-
-    id = Column(Integer, Sequence('pubsub_id_ctx_seq'), primary_key=True)
-
-    # An arbitrary label assigned to this identifier
-    key = Column(String(200), nullable=False)
-
-    # One of IDs of this endpoint assigned by its owner
-    value = Column(String(200), nullable=False)
-
-    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
-    endpoint = relationship(
-        PubSubEndpoint, backref=backref('pubsub_id_ctx_list', order_by=key, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
-    cluster = relationship(
-        Cluster, backref=backref('pubsub_endpoint_context_list', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
