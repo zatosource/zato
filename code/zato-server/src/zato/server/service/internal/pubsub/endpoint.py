@@ -27,6 +27,7 @@ broker_message = PUBSUB
 broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
 skip_input_params = ['is_internal']
+output_optional_extra = ['hook_service_name', 'sec_id', 'sec_type', 'sec_name']
 
 # ################################################################################################################################
 

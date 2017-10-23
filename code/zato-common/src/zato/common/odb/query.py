@@ -1470,7 +1470,22 @@ def vault_connection_list(session, cluster_id, needs_columns=False):
 # ################################################################################################################################
 
 def _pubsub_endpoint(session, cluster_id):
-    return session.query(PubSubEndpoint).\
+    return session.query(
+        PubSubEndpoint.id, PubSubEndpoint.name,
+        PubSubEndpoint.is_internal, PubSubEndpoint.is_active,
+        PubSubEndpoint.role, PubSubEndpoint.tags,
+        PubSubEndpoint.topic_patterns, PubSubEndpoint.queue_patterns,
+        PubSubEndpoint.pub_tag_patterns, PubSubEndpoint.message_tag_patterns,
+        PubSubEndpoint.security_id, PubSubEndpoint.ws_channel_id,
+        PubSubEndpoint.hook_service_id,
+        SecurityBase.sec_type,
+        SecurityBase.name.label('sec_name'),
+        Service.name.label('hook_service_name'),
+        ChannelWebSocket.name.label('ws_channel_name'),
+        ).\
+        outerjoin(Service, Service.id==PubSubEndpoint.hook_service_id).\
+        outerjoin(SecurityBase, SecurityBase.id==PubSubEndpoint.security_id).\
+        outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==PubSubEndpoint.cluster_id).\
         order_by(PubSubEndpoint.id)

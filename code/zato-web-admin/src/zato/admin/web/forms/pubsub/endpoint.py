@@ -38,7 +38,7 @@ class CreateForm(forms.Form):
         add_security_select(self, security_list, field_name='security_id', needs_no_security=False, needs_rbac=False)
         add_select(self, 'ws_channel_id', ws_channel_list)
         add_select(self, 'role', PUBSUB.ROLE)
-        add_services(self, req)
+        add_services(self, req, by_id=True)
 
 class EditForm(CreateForm):
     is_internal = forms.BooleanField(required=False, widget=forms.CheckboxInput())

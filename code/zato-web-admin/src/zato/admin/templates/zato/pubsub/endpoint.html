@@ -21,11 +21,9 @@
             '_numbering',
             '_selection',
             'name',
-            'is_internal',
             'role',
             '_topic_patterns',
             '_queue_patterns',
-            '_attrs',
             '_client',
             '_edit',
             '_delete',
@@ -36,6 +34,7 @@
             'attrs',
             'security_id',
             'ws_channel_id',
+            'hook_service_id',
         ]
     }
     </script>
@@ -67,13 +66,13 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
-                        <th><a href="#">Internal</a></th>
                         <th><a href="#">Role</a></th>
                         <th><a href="#">Topics</a></th>
                         <th><a href="#">Queues</a></th>
                         <th><a href="#">Client</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -89,14 +88,18 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
-                        <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
                         <td>{{ item.role }}</td>
                         <td>{{ item.topic_patterns|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.queue_patterns|default:'<span class="form_hint">---</span>' }}</td>
-                        <td>{{ item.attrs|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.client|default:'<span class="form_hint">---</span>' }}</td>
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint.edit('{{ item.id }}')">Edit</a></td>
-                        <td><a href="javascript:$.fn.zato.pubsub.endpoint.delete_('{{ item.id }}')">Delete</a></td>
+                        <td>
+                            {% if item.is_internal %}
+                                <span class="form_hint">Delete</span>
+                            {% else %}
+                                <a href="javascript:$.fn.zato.pubsub.endpoint.delete_('{{ item.id }}')">Delete</a>
+                            {% endif %}
+                        </td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_internal }}</td>
                         <td class='ignore'>{{ item.topic_patterns|default:'' }}</td>
@@ -104,11 +107,12 @@
                         <td class='ignore'>{{ item.attrs|default:'' }}</td>
                         <td class='ignore'>{{ item.security_id|default:'' }}</td>
                         <td class='ignore'>{{ item.ws_channel_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.hook_service_id|default:'' }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='18'>No results</td>
+                        <td colspan='16'>No results</td>
                     </tr>
                 {% endif %}
 

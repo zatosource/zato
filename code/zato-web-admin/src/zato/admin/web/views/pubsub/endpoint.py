@@ -20,6 +20,7 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.common import ZATO_NONE
 from zato.common.odb.model import PubSubEndpoint
 
 # ################################################################################################################################
@@ -39,15 +40,23 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_internal', 'role', 'is_active')
-        output_optional = ('topic_patterns', 'queue_patterns', 'security_id', 'ws_channel_id', 'hook_service_id')
+        output_optional = ('topic_patterns', 'queue_patterns', 'security_id', 'ws_channel_id', 'ws_channel_name',
+            'hook_service_id', 'hook_service_name', 'sec_id', 'sec_type', 'sec_name')
         output_repeated = True
+
+    def on_before_append_item(self, item):
+        if item.security_id:
+            item.security_id = '{}/{}'.format(item.sec_type, item.security_id)
+
+        # Client is a string representation of a WebSockets channel or HTTP credentials
+        client = ''
+
+        return item
 
     def handle(self):
 
         if self.req.zato.cluster_id:
             sec_list = self.get_sec_def_list('basic_auth').def_items
-            sec_list.extend(self.get_sec_def_list('jwt'))
-            sec_list.extend(self.get_sec_def_list('vault_conn_sec'))
             ws_channel_list = result = self.req.zato.client.invoke(
                 'zato.channel.web-socket.get-list', {'cluster_id': self.req.zato.cluster_id})
         else:
@@ -68,6 +77,12 @@ class _CreateEdit(CreateEdit):
         input_required = ('name', 'is_internal', 'role', 'is_active')
         input_optional = ('topic_patterns', 'queue_patterns', 'security_id', 'ws_channel_id', 'hook_service_id')
         output_required = ('id', 'name')
+
+    def on_after_set_input(self):
+        if self.input.security_id and self.input.security_id != ZATO_NONE:
+            self.input.security_id = int(self.input.security_id.split('/')[1])
+        else:
+            self.input.security_id = None
 
     def success_message(self, item):
         return 'Successfully {} the pub/sub endpoint `{}`'.format(self.verb, item.name)
