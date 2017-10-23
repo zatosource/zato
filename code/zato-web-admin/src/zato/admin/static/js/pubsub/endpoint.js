@@ -17,9 +17,24 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubEndpoint;
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.endpoint.data_table.new_row;
     $.fn.zato.data_table.parse();
+    $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.endpoint.before_submit_hook;
     $.fn.zato.data_table.setup_forms(['name', 'role']);
 })
 
+$.fn.zato.pubsub.endpoint.before_submit_hook = function(form) {
+    var form = $(form);
+    var is_edit = form.attr('id').includes('edit');
+    var prefix = is_edit ? 'edit-' : '';
+    var security_id = $('#id_' + prefix + 'security_id');
+    var ws_channel_id = $('#id_' + prefix + 'ws_channel_id');
+
+    if(security_id.val() && ws_channel_id.val()) {
+        form.data('bValidator').showMsg(ws_channel_id, 'Cannot provide both client credentials and WebSockets channel');
+    }
+    else {
+        return true;
+    }
+}
 
 $.fn.zato.pubsub.endpoint.create = function() {
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub endpoint', null);
