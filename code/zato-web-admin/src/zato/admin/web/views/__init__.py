@@ -344,7 +344,6 @@ class Index(_BaseView):
                 response = self.invoke_admin_service()
                 if response.ok:
                     return_data['response_inner'] = response.inner_service_response
-                    print(response.data)
                     if output_repeated:
                         if isinstance(response.data, dict):
                             response.data.pop('_meta', None)
