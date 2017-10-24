@@ -51,25 +51,29 @@ $.fn.zato.pubsub.endpoint.data_table.new_row = function(item, data, include_tr) 
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
-    var is_active = item.is_active == true
-
-    var default_from = item.default_from ? item.default_from : '<span class="form_hint">(None)</span>';
-    var default_to = item.default_to ? item.default_to : '<span class="form_hint">(None)</span>';
+    var empty = '<span class="form_hint">---</span>';
+    var topic_patterns_html = data.topic_patterns_html ? data.topic_patterns_html : empty;
+    var queue_patterns_html = data.queue_patterns_html ? data.queue_patterns_html : empty;
+    var client_html = data.client_html ? data.client_html : empty;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', item.name);
-    row += String.format('<td>{0}</td>', is_active ? "Yes":"No");
-    row += String.format('<td>{0}</td>', default_from);
-    row += String.format('<td>{0}</td>', default_to);
+    row += String.format('<td>{0}</td>', data.endpoint_details_html);
+    row += String.format('<td>{0}</td>', data.role);
+    row += String.format('<td>{0}</td>', topic_patterns_html);
+    row += String.format('<td>{0}</td>', queue_patterns_html);
+    row += String.format('<td>{0}</td>', client_html);
     row += String.format('<td>{0}</td>',
-        String.format("<a href=\"/zato/sms/twilio/send/cluster/{0}/conn/{1}\">Send a message</a>", item.cluster_id, item.id));
-    row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint.edit('{0}')\">Edit</a>", item.id));
-    row += String.format('<td>{0}</td>',
-        String.format("<a href='javascript:$.fn.zato.pubsub.endpoint.delete_({0});'>Delete</a>", item.id));
-    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", item.id);
-    row += String.format("<td class='ignore'>{0}</td>", is_active);
+        String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint.edit('{0}')\">Edit</a>", data.id));
+    row += String.format('<td>{0}</td>', data.delete_html);
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
+    row += String.format("<td class='ignore'>{0}</td>", data.is_internal);
+    row += String.format("<td class='ignore'>{0}</td>", data.is_active);
+    row += String.format("<td class='ignore'>{0}</td>", data.topic_patterns);
+    row += String.format("<td class='ignore'>{0}</td>", data.queue_patterns);
+    row += String.format("<td class='ignore'>{0}</td>", data.security_id);
+    row += String.format("<td class='ignore'>{0}</td>", data.ws_channel_id);
+    row += String.format("<td class='ignore'>{0}</td>", data.hook_service_id);
 
     if(include_tr) {
         row += '</tr>';

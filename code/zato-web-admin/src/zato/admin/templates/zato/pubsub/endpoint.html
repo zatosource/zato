@@ -29,6 +29,7 @@
             '_delete',
             'id',
             'is_internal',
+            'is_active',
             'topic_patterns',
             'queue_patterns',
             'security_id',
@@ -62,15 +63,16 @@
             <table id="data-table">
                 <thead>
                     <tr class='ignore'>
-                        <th>&nbsp;</th>
+                        <th style="width:5%">&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Role</a></th>
-                        <th><a href="#">Topics</a></th>
-                        <th><a href="#">Queues</a></th>
-                        <th><a href="#">Client</a></th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        <th style="width:25%"><a href="#">Topics</a></th>
+                        <th style="width:25%"><a href="#">Queues</a></th>
+                        <th style="width:20%"><a href="#">Client</a></th>
+                        <th style="width:5%">&nbsp;</th>
+                        <th style="width:5%">&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -84,15 +86,15 @@
                 {% if items %}
                 {% for item in items %}
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
-                        <td class='numbering' style="width:5%">&nbsp;</td>
+                        <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td><a href="{% url "pubsub-endpoint-details" cluster_id item.id item.name|slugify %}">{{ item.name }}</a></td>
                         <td>{{ item.role }}</td>
-                        <td style="width:25%">{{ item.topic_patterns_html|safe|default:'<span class="form_hint">---</span>' }}</td>
-                        <td style="width:25%">{{ item.queue_patterns_html|safe|default:'<span class="form_hint">---</span>' }}</td>
-                        <td style="width:20%">{{ item.client_html|safe|default:'<span class="form_hint">---</span>' }}</td>
-                        <td style="width:5%"><a href="javascript:$.fn.zato.pubsub.endpoint.edit('{{ item.id }}')">Edit</a></td>
-                        <td style="width:5%">
+                        <td>{{ item.topic_patterns_html|safe|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.queue_patterns_html|safe|default:'<span class="form_hint">---</span>' }}</td>
+                        <td>{{ item.client_html|safe|default:'<span class="form_hint">---</span>' }}</td>
+                        <td><a href="javascript:$.fn.zato.pubsub.endpoint.edit('{{ item.id }}')">Edit</a></td>
+                        <td>
                             {% if item.is_internal %}
                                 <span class="form_hint">Delete</span>
                             {% else %}
@@ -101,6 +103,7 @@
                         </td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_internal }}</td>
+                        <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.topic_patterns|default:'' }}</td>
                         <td class='ignore'>{{ item.queue_patterns|default:'' }}</td>
                         <td class='ignore'>{{ item.security_id|default:'' }}</td>
