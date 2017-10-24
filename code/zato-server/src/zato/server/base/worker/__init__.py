@@ -68,6 +68,7 @@ from zato.server.connection.stomp import ChannelSTOMPConnStore, STOMPAPI, channe
 from zato.server.connection.web_socket import ChannelWebSocket
 from zato.server.connection.web_socket.outgoing import OutgoingWebSocket
 from zato.server.connection.vault import VaultConnAPI
+from zato.server.pubsub import PubSub
 from zato.server.query import CassandraQueryAPI, CassandraQueryStore
 from zato.server.rbac_ import RBAC
 from zato.server.stats import MaintenanceTool
@@ -131,7 +132,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.update_lock = RLock()
         self.kvdb = server.kvdb
         self.broker_client = None
-        self.pubsub = None
+        self.pubsub = PubSub()
         self.rbac = RBAC()
         self.worker_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
 
@@ -238,6 +239,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # Caches
         self.init_caches()
+
+        # Pub/sub
+        self.init_pubsub()
 
         # API keys
         self.update_apikeys()
@@ -728,6 +732,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             cache = getattr(self.worker_config, 'cache_{}'.format(name))
             for value in cache.values():
                 self.cache_api.create(bunchify(value['config']))
+
+# ################################################################################################################################
+
+    def init_pubsub(self):
+        for value in self.worker_config.pubsub_endpoint.values():
+            self.pubsub.add_endpoint(bunchify(value['config']))
 
 # ################################################################################################################################
 

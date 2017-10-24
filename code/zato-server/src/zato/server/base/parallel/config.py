@@ -40,9 +40,6 @@ class ConfigLoader(object):
         self.live_msg_browser = self.fs_server_config.live_msg_browser
         self.live_msg_browser.include_internal = asbool(self.live_msg_browser.include_internal)
 
-        # Pub/sub
-        self.pubsub = None
-
         #
         # Cassandra - start
         #
@@ -329,8 +326,12 @@ class ConfigLoader(object):
         self.config.simple_io['int_parameter_suffixes'] = self.int_parameter_suffixes
         self.config.simple_io['bool_parameter_prefixes'] = self.bool_parameter_prefixes
 
-        # Pub/sub config
+        # Pub/sub
         self.config.pubsub = Bunch()
+
+        # Pub/sub - endpoints
+        query = self.odb.get_pubsub_endpoint_list(server.cluster.id, True)
+        self.config.pubsub_endpoint = ConfigDict.from_query('pubsub_endpoint', query)
 
         # E-mail - SMTP
         query = self.odb.get_email_smtp_list(server.cluster.id, True)
@@ -347,7 +348,6 @@ class ConfigLoader(object):
 
         # Assign config to worker
         self.worker_store.worker_config = self.config
-        self.worker_store.pubsub = self.pubsub
 
 # ################################################################################################################################
 

@@ -1293,3 +1293,10 @@ class ODBManager(SessionWrapper):
         return query.rbac_role_permission_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
+
+    def get_pubsub_endpoint_list(self, cluster_id, needs_columns=False):
+        """ Returns a list of pub/sub endpoints.
+        """
+        return query.pubsub_endpoint_list(self._session, cluster_id, needs_columns)
+
+# ################################################################################################################################
