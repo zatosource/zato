@@ -737,7 +737,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def init_pubsub(self):
         for value in self.worker_config.pubsub_endpoint.values():
-            self.pubsub.add_endpoint(bunchify(value['config']))
+            self.pubsub.set_endpoint(bunchify(value['config']))
 
 # ################################################################################################################################
 
