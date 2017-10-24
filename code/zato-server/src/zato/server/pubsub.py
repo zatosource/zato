@@ -47,7 +47,6 @@ class Endpoint(object):
         self.sub_topics = {}
         self.sub_queues = {}
 
-        self._lock = RLock()
         self.set_up_patterns()
 
 # ################################################################################################################################
@@ -89,8 +88,41 @@ class Endpoint(object):
 class PubSub(object):
     def __init__(self):
         self.endpoints = {}
+        self._lock = RLock()
 
-    def add_endpoint(self, config):
-        self.endpoints[config.id] = Endpoint(config)
+# ################################################################################################################################
+
+    def set_endpoint(self, config):
+        with self._lock:
+            self.endpoints[config.id] = Endpoint(config)
+
+# ################################################################################################################################
+
+    def _is_allowed(self, endpoint_id, target, name):
+        endpoint = self.endpoints[endpoint_id]
+
+        for elem in getattr(endpoint, target):
+            if elem.match(name):
+                return True
+
+# ################################################################################################################################
+
+    def is_allowed_pub_topic(self, endpoint_id, name):
+        return self._is_allowed(endpoint_id, 'pub_topic_patterns', name)
+
+# ################################################################################################################################
+
+    def is_allowed_pub_queue(self, endpoint_id, name):
+        return self._is_allowed(endpoint_id, 'pub_queue_patterns', name)
+
+# ################################################################################################################################
+
+    def is_allowed_sub_queue(self, endpoint_id, name):
+        return self._is_allowed(endpoint_id, 'sub_queue_patterns', name)
+
+# ################################################################################################################################
+
+    def is_allowed_sub_topic(self, endpoint_id, name):
+        return self._is_allowed(endpoint_id, 'sub_topic_patterns', name)
 
 # ################################################################################################################################
