@@ -17,6 +17,11 @@ from traceback import format_exc
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
+try:
+    from django.core.urlresolvers import reverse as django_url_reverse # Django < 1.10
+except ImportError:
+    from django.urls import reverse as django_url_reverse              # Django >= 1.10
+
 # Zato
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
@@ -41,15 +46,45 @@ class Index(_Index):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_internal', 'role', 'is_active')
         output_optional = ('topic_patterns', 'queue_patterns', 'security_id', 'ws_channel_id', 'ws_channel_name',
-            'hook_service_id', 'hook_service_name', 'sec_id', 'sec_type', 'sec_name')
+            'hook_service_id', 'hook_service_name', 'sec_type', 'sec_name')
         output_repeated = True
 
     def on_before_append_item(self, item):
+
+        item.topic_patterns = item.topic_patterns or ''
+        item.queue_patterns = item.queue_patterns or ''
+
+        item.topic_patterns_html = item.topic_patterns.replace('\n', '<br/>')
+        item.queue_patterns_html = item.queue_patterns.replace('\n', '<br/>')
+
+        # Making a copy because it will be replaced with a concatenation of sec_type and security_id,
+        # yet we still need it for the client string.
+        security_id = item.security_id
+
         if item.security_id:
             item.security_id = '{}/{}'.format(item.sec_type, item.security_id)
 
         # Client is a string representation of a WebSockets channel or HTTP credentials
         client = ''
+
+        if security_id or item.ws_channel_id:
+            if security_id:
+                path_name = 'security-basic-auth'
+                id_value = security_id
+                name = item.sec_name
+                protocol = 'HTTP'
+
+            elif item.ws_channel_id:
+                path_name = 'channel-web-socket'
+                id_value = item.ws_channel_id
+                name = item.ws_channel_name
+                protocol = 'WebSockets'
+
+            path = django_url_reverse(path_name)
+            client = '<span style="font-size:smaller">{}</span><br/><a href="{}?cluster={}&amp;highlight={}">{}</a>'.format(
+                protocol, path, self.req.zato.cluster_id, id_value, name)
+
+        item.client_html = client
 
         return item
 
@@ -106,5 +141,10 @@ class Delete(_Delete):
     url_name = 'pubsub-endpoint-delete'
     error_message = 'Could not delete the pub/sub endpoint'
     service_name = 'endpoint1.delete'
+
+# ################################################################################################################################
+
+def endpoint_details(req, cluster_id, endpoint_id, name_slug):
+    pass
 
 # ################################################################################################################################
