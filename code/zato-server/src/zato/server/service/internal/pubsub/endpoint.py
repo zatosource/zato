@@ -15,6 +15,7 @@ from contextlib import closing
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import PubSubEndpoint
 from zato.common.odb.query import pubsub_endpoint, pubsub_endpoint_list
+from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -27,7 +28,7 @@ broker_message = PUBSUB
 broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
 skip_input_params = ['is_internal']
-output_optional_extra = ['hook_service_name', 'sec_id', 'sec_type', 'sec_name']
+output_optional_extra = ['ws_channel_name', 'hook_service_name', 'sec_id', 'sec_type', 'sec_name']
 
 # ################################################################################################################################
 
@@ -49,5 +50,18 @@ class Edit(AdminService):
 
 class Delete(AdminService):
     __metaclass__ = DeleteMeta
+
+# ################################################################################################################################
+
+class Get(AdminService):
+    class SimpleIO:
+        input_required = ('cluster_id', AsIs('id'))
+        output_required = ('id', 'name', 'is_internal', 'is_active', 'role')
+        output_optional = ('tags', 'topic_patterns', 'queue_patterns', 'pub_tag_patterns', 'message_tag_patterns',
+            'security_id', 'ws_channel_id', 'hook_service_id', 'sec_type', 'sec_name', 'ws_channel_name', 'hook_service_name')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload = pubsub_endpoint(session, self.request.input.cluster_id, self.request.input.id)
 
 # ################################################################################################################################
