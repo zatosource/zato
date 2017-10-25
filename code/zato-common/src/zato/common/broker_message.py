@@ -419,6 +419,9 @@ class PUBSUB(Constants):
     SUBSCRIPTION_EDIT = ValueConstant('')
     SUBSCRIPTION_DELETE = ValueConstant('')
 
+    TOPIC_CREATE = ValueConstant('')
+    TOPIC_EDIT = ValueConstant('')
+    TOPIC_DELETE = ValueConstant('')
 
 class SMS(Constants):
     code_start = 106000

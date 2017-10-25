@@ -92,7 +92,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-endpoint'
     template = 'zato/pubsub/endpoint.html'
-    service_name = 'endpoint1.get-list'
+    service_name = 'zato.pubsub.endpoint.get-list'
     output_class = PubSubEndpoint
     paginate = True
 
@@ -139,7 +139,7 @@ class _CreateEdit(CreateEdit):
 
     def post_process_return_data(self, return_data):
 
-        response = self.req.zato.client.invoke('endpoint1.get', {
+        response = self.req.zato.client.invoke('zato.pubsub.endpoint.get', {
             'cluster_id': self.req.zato.cluster_id,
             'id': return_data['id'],
         }).data['response']
@@ -153,21 +153,21 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'pubsub-endpoint-create'
-    service_name = 'endpoint1.create'
+    service_name = 'zato.pubsub.endpoint.create'
 
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
     url_name = 'pubsub-endpoint-edit'
     form_prefix = 'edit-'
-    service_name = 'endpoint1.edit'
+    service_name = 'zato.pubsub.endpoint.edit'
 
 # ################################################################################################################################
 
 class Delete(_Delete):
     url_name = 'pubsub-endpoint-delete'
     error_message = 'Could not delete the pub/sub endpoint'
-    service_name = 'endpoint1.delete'
+    service_name = 'zato.pubsub.endpoint.delete'
 
 # ################################################################################################################################
 

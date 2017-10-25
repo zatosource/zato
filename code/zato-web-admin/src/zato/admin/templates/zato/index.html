@@ -251,7 +251,7 @@
                 <li><span class="like-a">Pub/sub &darr;</span>
                     <ul>
                         <li><a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id|default:'' }}">Endpoints</a></li>
-                        <li><a href="?cluster={{ cluster_id|default:'' }}">Topics</a></li>
+                        <li><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id|default:'' }}">Topics</a></li>
                         <li><a href="?cluster={{ cluster_id|default:'' }}">Queues</a></li>
                     </ul>
                 </li>

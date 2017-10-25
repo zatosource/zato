@@ -23,7 +23,7 @@ from sqlalchemy.orm import backref, relation, relationship
 
 # Zato
 from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, \
-     MSG_PATTERN_TYPE, ODOO, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
+     MSG_PATTERN_TYPE, ODOO, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -1597,33 +1597,6 @@ class HTTSOAPAuditReplacePatternsXPath(Base):
 
 # ################################################################################################################################
 
-class PubSubTopic(Base):
-    """ A definition of a topic in pub/sub.
-    """
-    __tablename__ = 'pub_sub_topic'
-    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
-
-    id = Column(Integer, Sequence('pub_sub_topic_seq'), primary_key=True)
-    name = Column(String(200), nullable=False)
-    is_active = Column(Boolean(), nullable=False)
-    max_depth = Column(Integer, nullable=False)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('pub_sub_topics', order_by=name, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, name=None, is_active=None, max_depth=None, cluster_id=None):
-        self.id = id
-        self.name = name
-        self.is_active = is_active
-        self.max_depth = max_depth
-        self.cluster_id = cluster_id
-        self.last_pub_time = None # Not used by the database
-        self.cur_depth = None # Not used by the database
-        self.cur_consumers = None # Not used by the database
-        self.cur_producers = None # Not used by the database
-
-# ################################################################################################################################
-
 class OpenStackSwift(Base):
     """ A connection to OpenStack's Swift.
     """
@@ -2116,7 +2089,7 @@ class PubSubEndpoint(Base):
     """
     __tablename__ = 'pubsub_endpoint'
 
-    id = Column(Integer, Sequence('pubsub_owner_seq'), primary_key=True)
+    id = Column(Integer, Sequence('pubsub_endp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     is_internal = Column(Boolean(), nullable=False, default=False)
     is_active = Column(Boolean(), nullable=False, default=True) # Unusued for now
@@ -2163,13 +2136,35 @@ class PubSubEndpoint(Base):
 
 # ################################################################################################################################
 
+class PubSubTopic(Base):
+    """ A topic in pub/sub.
+    """
+    __tablename__ = 'pubsub_topic'
+    __table_args__ = (
+        Index('pubsb_tp_clust_idx', 'cluster_id', unique=False),
+        Index('pubsb_tp_name_idx', 'cluster_id', 'name', unique=True),
+    {})
+
+    id = Column(Integer, Sequence('pubsub_topic_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+    is_internal = Column(Boolean(), nullable=False, default=False)
+    last_pub_time = Column(DateTime(), nullable=True)
+    max_depth = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH)
+    current_depth = Column(Integer(), nullable=False, default=0)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pubsub_containers', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
 class PubSubSubscription(Base):
-    """ Stores high-level information about what an endpoint subscribes to.
+    """ Stores high-level information about topics an endpoint subscribes to.
     """
     __tablename__ = 'pubsub_sub'
     __table_args__ = (
-        Index('pubsb_sub_patt_clust_idx', 'cluster_id', unique=False),
-        Index('pubsb_sub_patt_clust_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
+        Index('pubsb_sub_clust_idx', 'cluster_id', unique=False),
+        Index('pubsb_sub_clust_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
     {})
 
     id = Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True)
@@ -2185,13 +2180,13 @@ class PubSubSubscription(Base):
     is_durable = Column(Boolean(), nullable=False) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
 
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
+    topic = relationship(
+        PubSubTopic, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
+
     endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
     endpoint = relationship(
         PubSubEndpoint, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
-    cluster = relationship(
-        Cluster, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
     out_http_soap_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)
     out_http_soap = relationship(
@@ -2213,40 +2208,62 @@ class PubSubSubscription(Base):
     ws_server = relationship(
         Server, backref=backref('pubsub_ws_clients', order_by=id, cascade='all, delete, delete-orphan'))
 
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
+    cluster = relationship(
+        Cluster, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
+
 # ################################################################################################################################
 
-class PubSubSubscriptionItem(Base):
-    """ Each PubSubSubscription has 1:n key/value pairs it subscribes to, kept in this table.
+class PubSubMessage(Base):
+    """ An individual message published to a topic.
     """
-    __tablename__ = 'pubsub_item'
-
+    __tablename__ = 'pubsub_message'
     __table_args__ = (
-        Index('pubsb_item_key_idx', 'key', unique=False),
-        Index('pubsb_item_kv_idx', 'key', 'value', unique=False),
-        Index('pubsb_item_kv_sub_idx', 'key', 'value', 'subscription_id', unique=True),
+        Index('pubsb_msg_id_idx', 'cluster_id', 'id', unique=True),
     {})
 
-    id = Column(Integer, Sequence('pubsub_item_seq'), primary_key=True)
-    is_active = Column(Boolean(), nullable=False)
-    # TODO: by_publisher_attr = Column(Boolean(), nullable=False)
-    by_pub_attr = Column(Boolean(), nullable=False)
-    by_msg_attr = Column(Boolean(), nullable=False)
-    has_glob = Column(Boolean(), nullable=False)
+    id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
 
-    # Key to subscribe by
-    key = Column(String(200), nullable=False)
+    creation_time = Column(DateTime(), nullable=False)
+    data = Column(LargeBinary(), nullable=False)
+    data_format = Column(String(200), nullable=False)
+    mime_type = Column(String(200), nullable=False)
+    size = Column(Integer, nullable=False)
+    priority = Column(Integer, nullable=False)
+    expiration = Column(Integer, nullable=False, default=0)
+    expiration_time = Column(DateTime(), nullable=True)
 
-    # Value to match the key with
-    value = Column(String(200), nullable=False)
+    published_by_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
+    published_by = relationship(
+        PubSubEndpoint, backref=backref('pubsub_msg_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    subscription_id = Column(Integer, ForeignKey('pubsub_sub.id', ondelete='CASCADE'), nullable=False)
-    subscription = relationship(
-        PubSubSubscription, backref=backref('items', order_by=key, cascade='all, delete, delete-orphan'))
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pubsub_messages', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
-#class PubSubLocation(Base):
-#    pass
+class PubSubEndpointQueue(Base):
+    """ A queue of messages for an individual endpoint.
+    """
+    __tablename__ = 'pubsub_message_queue'
+    __table_args__ = (
+        Index('pubsb_msg_q_id_idx', 'cluster_id', 'id', unique=True),
+        Index('pubsb_msg_q_endp_id_idx', 'cluster_id', 'endpoint_id', unique=True),
+    {})
+
+    id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
+
+    msg_id = Column(Integer, ForeignKey('pubsub_message.id', ondelete='CASCADE'), nullable=False)
+    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
+
+    delivery_count = Column(Integer, nullable=False)
+    delivery_details = Column(LargeBinary(), nullable=True)
+    last_delivery_time = Column(DateTime(), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pubsub_endpoint_queues', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
 
 class SMSTwilio(Base):
     """ Outgoing SMS connections with Twilio.
@@ -2269,6 +2286,5 @@ class SMSTwilio(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('sms_twilio_list', order_by=name, cascade='all, delete, delete-orphan'))
-
 
 # ################################################################################################################################
