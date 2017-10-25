@@ -20,15 +20,19 @@
         return [
             '_numbering',
             '_selection',
+
             'name',
             'max_depth',
             '_current_depth',
             '_last_pub_time',
+
             '_publishers',
             '_subscribers',
+
             '_edit',
             '_clear',
             '_delete',
+
             'id',
             'is_internal',
             'is_active',
@@ -91,8 +95,8 @@
                         <td>{{ item.current_depth }}</td>
                         <td>{{ item.last_pub_time|default:"<span class='form_hint'>---</span>" }}</td>
 
-                        <td><a href="{% url "pubsub-topic-subscribers" cluster_id item.id item.name|slugify %}">Publishers</a></td>
-                        <td><a href="{% url "pubsub-topic-publishers" cluster_id item.id item.name|slugify %}">Subscribers</a></td>
+                        <td><a href="{% url "pubsub-topic-publishers" cluster_id item.id item.name|slugify %}">Publishers</a></td>
+                        <td><a href="{% url "pubsub-topic-subscribers" cluster_id item.id item.name|slugify %}">Subscribers</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.clear('{{ item.id }}')">Clear</a></td>
                         <td>

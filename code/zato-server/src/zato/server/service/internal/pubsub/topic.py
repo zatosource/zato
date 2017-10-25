@@ -28,7 +28,7 @@ broker_message = PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
 skip_input_params = ['is_internal', 'last_pub_time', 'current_depth']
-output_required_extra = ['current_depth']
+output_optional_extra = ['current_depth']
 
 # ################################################################################################################################
 
