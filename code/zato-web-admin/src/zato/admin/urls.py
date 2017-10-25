@@ -46,6 +46,7 @@ from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import stomp as out_stomp
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
+from zato.admin.web.views.pubsub import topic as pubsub_topic
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
 from zato.admin.web.views.search import solr
@@ -1188,6 +1189,23 @@ urlpatterns += [
         login_required(pubsub_endpoint.Delete()), name=pubsub_endpoint.Delete.url_name),
     url(r'^zato/pubsub/endpoint/details/(?P<cluster_id>.*)/item/(?P<endpoint_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_endpoint.endpoint_details), name='pubsub-endpoint-details'),
+
+    # Pub/sub - topics
+
+    url(r'^zato/pubsub/topic/$',
+        login_required(pubsub_topic.Index()), name=pubsub_topic.Index.url_name),
+    url(r'^zato/pubsub/topic/create/$',
+        login_required(pubsub_topic.Create()), name=pubsub_topic.Create.url_name),
+    url(r'^zato/pubsub/topic/edit/$',
+        login_required(pubsub_topic.Edit()), name=pubsub_topic.Edit.url_name),
+    url(r'^zato/pubsub/topic/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(pubsub_topic.Delete()), name=pubsub_topic.Delete.url_name),
+    url(r'^zato/pubsub/topic/details/(?P<cluster_id>.*)/item/(?P<topic_id>.*)/(?P<name_slug>.*)$',
+        login_required(pubsub_topic.topic_details), name='pubsub-topic-details'),
+    url(r'^zato/pubsub/topic/subscribers/(?P<cluster_id>.*)/item/(?P<topic_id>.*)/(?P<name_slug>.*)$',
+        login_required(pubsub_topic.topic_subscribers), name='pubsub-topic-subscribers'),
+    url(r'^zato/pubsub/topic/publishers/(?P<cluster_id>.*)/item/(?P<topic_id>.*)/(?P<name_slug>.*)$',
+        login_required(pubsub_topic.topic_publishers), name='pubsub-topic-publishers'),
     ]
 
 # ################################################################################################################################

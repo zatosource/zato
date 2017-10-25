@@ -106,6 +106,7 @@ $.namespace('zato.outgoing.zmq');
 $.namespace('zato.pattern.delivery');
 $.namespace('zato.pattern.delivery.in_doubt');
 $.namespace('zato.pubsub.endpoint');
+$.namespace('zato.pubsub.topic');
 $.namespace('zato.query');
 $.namespace('zato.query.cassandra');
 $.namespace('zato.scheduler');

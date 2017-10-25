@@ -981,7 +981,10 @@ def cloud_aws_s3_list(session, cluster_id, needs_columns=False):
 # ################################################################################################################################
 
 def _pubsub_topic(session, cluster_id):
-    return session.query(PubSubTopic.id, PubSubTopic.name, PubSubTopic.is_active, PubSubTopic.max_depth).\
+    return session.query(
+        PubSubTopic.id, PubSubTopic.name, PubSubTopic.is_active,
+        PubSubTopic.is_internal, PubSubTopic.last_pub_time, PubSubTopic.max_depth,
+        PubSubTopic.current_depth).\
         filter(Cluster.id==PubSubTopic.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(PubSubTopic.name)

@@ -730,6 +730,9 @@ class HTTP_SOAP_SERIALIZATION_TYPE:
 
 class PUBSUB:
 
+    class DEFAULT:
+        TOPIC_MAX_DEPTH = 10000
+
     class ROLE:
         PUBLISHER = NameId('Publisher', 'pub')
         SUBSCRIBER = NameId('Subscriber', 'sub')
