@@ -17,16 +17,9 @@ from traceback import format_exc
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
-try:
-    from django.core.urlresolvers import reverse as django_url_reverse # Django < 1.10
-    from django.utils.text import slugify
-except ImportError:
-    from django.urls import reverse as django_url_reverse              # Django >= 1.10
-    from django.utils import slugify
-
 # Zato
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
 from zato.common import ZATO_NONE
 from zato.common.odb.model import PubSubEndpoint
 

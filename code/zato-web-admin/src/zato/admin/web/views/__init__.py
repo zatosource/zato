@@ -42,6 +42,15 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
+try:
+    from django.core.urlresolvers import reverse as django_url_reverse # Django < 1.10
+    from django.utils.text import slugify
+except ImportError:
+    from django.urls import reverse as django_url_reverse              # Django >= 1.10
+    from django.utils import slugify
+
+# ################################################################################################################################
+
 def parse_response_data(response):
     """ Parses out data and metadata out an internal API call response.
     """

@@ -19,7 +19,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index, method_allowed
+from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
 from zato.common.odb.model import PubSubTopic
 
 # ################################################################################################################################
@@ -56,6 +56,20 @@ class _CreateEdit(CreateEdit):
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'max_depth')
         output_required = ('id', 'name')
+
+    def post_process_return_data(self, return_data):
+
+        return_data['publishers_link'] = '<a href="{}">{}</a>'.format(
+            django_url_reverse('pubsub-topic-publishers',
+                kwargs={'cluster_id':self.req.zato.cluster_id,
+                        'topic_id':return_data['id'], 'name_slug':slugify(return_data['name'])}),
+            'Publishers')
+
+        return_data['subscribers_link'] = '<a href="{}">{}</a>'.format(
+            django_url_reverse('pubsub-topic-subscribers',
+                kwargs={'cluster_id':self.req.zato.cluster_id,
+                        'topic_id':return_data['id'], 'name_slug':slugify(return_data['name'])}),
+            'Subscribers')
 
     def success_message(self, item):
         return 'Successfully {} the pub/sub topic `{}`'.format(self.verb, item.name)
