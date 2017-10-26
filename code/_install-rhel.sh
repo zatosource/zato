@@ -35,8 +35,7 @@ sudo pip install zato-apitest
 virtualenv $CURDIR
 $CURDIR/bin/pip install --upgrade pip
 
-$CURDIR/bin/python bootstrap.py -v 1.7.0
-$CURDIR/bin/pip install setuptools==31.0.1
+$CURDIR/bin/python bootstrap.py
 $CURDIR/bin/pip install cython==0.22
 $CURDIR/bin/buildout
 
