@@ -35,17 +35,12 @@ class Endpoint(object):
         self.hook_service_id = config.hook_service_id
 
         self.topic_patterns = config.topic_patterns or ''
-        self.queue_patterns = config.queue_patterns or ''
 
         self.pub_topic_patterns = []
-        self.pub_queue_patterns = []
         self.sub_topic_patterns = []
-        self.sub_queue_patterns = []
 
         self.pub_topics = {}
-        self.pub_queues = {}
         self.sub_topics = {}
-        self.sub_queues = {}
 
         self.set_up_patterns()
 
@@ -54,15 +49,12 @@ class Endpoint(object):
     def set_up_patterns(self):
         data = {
             'topic': self.topic_patterns,
-            'queue': self.queue_patterns,
         }
 
         # is_pub, is_topic -> target set
         targets = {
             (True, True): self.pub_topic_patterns,
-            (True, False): self.pub_queue_patterns,
             (False, True): self.sub_topic_patterns,
-            (False, False): self.sub_queue_patterns,
         }
 
         for key, config in data.iteritems():
@@ -81,7 +73,8 @@ class Endpoint(object):
                     target.append(pattern)
 
                 else:
-                    logger.warn('Ignoring invalid {} pattern `{}` for `{}` ({})'.format(key, line, self.name, self.role))
+                    logger.warn('Ignoring invalid {} pattern `{}` for `{}` (role:{}) (reason: no pub=/sub= prefix found)'.format(
+                        key, line, self.name, self.role))
 
 # ################################################################################################################################
 

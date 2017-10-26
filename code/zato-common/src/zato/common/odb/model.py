@@ -2103,9 +2103,6 @@ class PubSubEndpoint(Base):
     # Patterns for topics that this endpoint may subscribe to
     topic_patterns = Column(Text, nullable=True)
 
-    # Patterns for topics that this endpoint may subscribe to
-    queue_patterns = Column(Text, nullable=True)
-
     # Patterns for tags of publishers
     pub_tag_patterns = Column(Text, nullable=True) # Unused for now
 

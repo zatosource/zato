@@ -31,10 +31,7 @@ logger = logging.getLogger(__name__)
 
 def enrich_item(cluster_id, item):
     item.topic_patterns = item.topic_patterns or ''
-    item.queue_patterns = item.queue_patterns or ''
-
     item.topic_patterns_html = '<br/>'.join(item.topic_patterns.splitlines())
-    item.queue_patterns_html = '<br/>'.join(item.queue_patterns.splitlines())
 
     # Making a copy because it will be replaced with a concatenation of sec_type and security_id,
     # yet we still need it for the client string.
@@ -92,7 +89,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_internal', 'role', 'is_active')
-        output_optional = ('topic_patterns', 'queue_patterns', 'security_id', 'ws_channel_id', 'ws_channel_name',
+        output_optional = ('topic_patterns', 'security_id', 'ws_channel_id', 'ws_channel_name',
             'hook_service_id', 'hook_service_name', 'sec_type', 'sec_name')
         output_repeated = True
 
@@ -121,7 +118,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_internal', 'role', 'is_active')
-        input_optional = ('topic_patterns', 'queue_patterns', 'security_id', 'ws_channel_id', 'hook_service_id')
+        input_optional = ('topic_patterns', 'security_id', 'ws_channel_id', 'hook_service_id')
         output_required = ('id', 'name')
 
     def on_after_set_input(self):

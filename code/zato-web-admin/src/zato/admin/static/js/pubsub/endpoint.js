@@ -53,7 +53,6 @@ $.fn.zato.pubsub.endpoint.data_table.new_row = function(item, data, include_tr) 
 
     var empty = '<span class="form_hint">---</span>';
     var topic_patterns_html = data.topic_patterns_html ? data.topic_patterns_html : empty;
-    var queue_patterns_html = data.queue_patterns_html ? data.queue_patterns_html : empty;
     var client_html = data.client_html ? data.client_html : empty;
 
     row += "<td class='numbering'>&nbsp;</td>";
@@ -61,7 +60,6 @@ $.fn.zato.pubsub.endpoint.data_table.new_row = function(item, data, include_tr) 
     row += String.format('<td>{0}</td>', data.endpoint_details_html);
     row += String.format('<td>{0}</td>', data.role);
     row += String.format('<td>{0}</td>', topic_patterns_html);
-    row += String.format('<td>{0}</td>', queue_patterns_html);
     row += String.format('<td>{0}</td>', client_html);
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint.edit('{0}')\">Edit</a>", data.id));
@@ -70,7 +68,6 @@ $.fn.zato.pubsub.endpoint.data_table.new_row = function(item, data, include_tr) 
     row += String.format("<td class='ignore'>{0}</td>", data.is_internal);
     row += String.format("<td class='ignore'>{0}</td>", data.is_active);
     row += String.format("<td class='ignore'>{0}</td>", data.topic_patterns);
-    row += String.format("<td class='ignore'>{0}</td>", data.queue_patterns);
     row += String.format("<td class='ignore'>{0}</td>", data.security_id);
     row += String.format("<td class='ignore'>{0}</td>", data.ws_channel_id);
     row += String.format("<td class='ignore'>{0}</td>", data.hook_service_id);
