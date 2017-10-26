@@ -19,10 +19,10 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import CACHE, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, SIMPLE_IO, URL_TYPE, WEB_SOCKET
+from zato.common import CACHE, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, SIMPLE_IO, URL_TYPE, WEB_SOCKET
 from zato.common.odb.model import CacheBuiltin, ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, \
-     RBACPermission, RBACRole, Service, WSSDefinition
-from zato.common.util import get_http_json_channel, get_http_soap_channel
+     PubSubTopic, PubSubSubscription, RBACPermission, RBACRole, Service, WSSDefinition
+from zato.common.util import get_http_json_channel, get_http_soap_channel, new_cid
 
 msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
 
@@ -456,6 +456,8 @@ zato_services = {
     'zato.stats.trends.get-trends':'zato.server.service.internal.stats.trends.GetTrends',
 }
 
+# ################################################################################################################################
+
 class Create(ZatoCommand):
     """ Creates a new Zato cluster in the ODB
     """
@@ -511,6 +513,7 @@ class Create(ZatoCommand):
         self.add_default_rbac_roles(session, cluster)
         self.add_default_cache(session, cluster)
         self.add_cache_endpoints(session, cluster)
+        self.add_pubsub_sec_endpoints(session, cluster)
 
         try:
             session.commit()
@@ -530,6 +533,8 @@ class Create(ZatoCommand):
                 self.logger.debug(msg)
             else:
                 self.logger.info('OK')
+
+# ################################################################################################################################
 
     def add_internal_services(self, session, cluster, admin_invoke_sec, pubapi_sec, internal_invoke_sec, live_browser_sec):
         """ Adds these Zato internal services that can be accessed through SOAP requests.
@@ -572,6 +577,8 @@ class Create(ZatoCommand):
 
             session.add(get_http_soap_channel(name, service, cluster, pubapi_sec))
             session.add(get_http_json_channel(name, service, cluster, pubapi_sec))
+
+# ################################################################################################################################
 
     def add_ping_services(self, session, cluster):
         """ Adds a ping service and channels, with and without security checks.
@@ -648,6 +655,8 @@ class Create(ZatoCommand):
                         soap_version, data_format, service=ping_service, security=sec, cluster=cluster)
                     session.add(channel)
 
+# ################################################################################################################################
+
     def add_admin_invoke(self, session, cluster, service, admin_invoke_sec):
         """ Adds an admin channel for invoking services from web admin and CLI.
         """
@@ -656,6 +665,8 @@ class Create(ZatoCommand):
             None, '/zato/admin/invoke', None, '', None, SIMPLE_IO.FORMAT.JSON, service=service, cluster=cluster,
             security=admin_invoke_sec)
         session.add(channel)
+
+# ################################################################################################################################
 
     def add_internal_invoke(self, session, cluster, service, internal_invoke_sec):
         """ Adds an internal channel for invoking services from other servers.
@@ -666,6 +677,8 @@ class Create(ZatoCommand):
             security=internal_invoke_sec)
         session.add(channel)
 
+# ################################################################################################################################
+
     def add_default_rbac_permissions(self, session, cluster):
         """ Adds default CRUD permissions used by RBAC.
         """
@@ -675,6 +688,8 @@ class Create(ZatoCommand):
             item.cluster = cluster
             session.add(item)
 
+# ################################################################################################################################
+
     def add_default_rbac_roles(self, session, cluster):
         """ Adds default roles used by RBAC.
         """
@@ -683,6 +698,8 @@ class Create(ZatoCommand):
         item.parent_id = None
         item.cluster = cluster
         session.add(item)
+
+# ################################################################################################################################
 
     def add_default_cache(self, session, cluster):
         """ Adds default cache to cluster.
@@ -701,11 +718,15 @@ class Create(ZatoCommand):
         item.persistent_storage = CACHE.PERSISTENT_STORAGE.SQL.id
         session.add(item)
 
+# ################################################################################################################################
+
     def add_jwt_log_in(self, session, cluster, service):
         channel = HTTPSOAP(None, 'zato.security.jwt.log-in', True, True, 'channel', 'plain_http',
             None, '/zato/jwt/log-in', None, '', None, DATA_FORMAT.JSON, merge_url_params_req=True, service=service,
             cluster=cluster)
         session.add(channel)
+
+# ################################################################################################################################
 
     def add_jwt_log_out(self, session, cluster, service):
         channel = HTTPSOAP(None, 'zato.security.jwt.log-out', True, True, 'channel', 'plain_http',
@@ -713,17 +734,23 @@ class Create(ZatoCommand):
             cluster=cluster)
         session.add(channel)
 
+# ################################################################################################################################
+
     def add_live_browser(self, session, cluster, service, live_browser_sec):
         channel = ChannelWebSocket(None, msg_browser_defaults.CHANNEL, True, True,
             'ws://0.0.0.0:{}/{}'.format(msg_browser_defaults.PORT, msg_browser_defaults.CHANNEL), DATA_FORMAT.JSON, 5,
             msg_browser_defaults.TOKEN_TTL, service=service, cluster=cluster, security=live_browser_sec)
         session.add(channel)
 
+# ################################################################################################################################
+
     def add_apispec_pub(self, session, cluster, service, _name_path=apispec_name_path):
         url_path = _name_path[service.name]
         channel = HTTPSOAP(None, url_path, True, True, 'channel', 'plain_http', None, url_path, None, '', None, None,
             merge_url_params_req=True, service=service, cluster=cluster)
         session.add(channel)
+
+# ################################################################################################################################
 
     def add_check(self, session, cluster, service, pubapi_sec):
 
@@ -740,6 +767,8 @@ class Create(ZatoCommand):
             channel = HTTPSOAP(None, name, True, True, 'channel', 'plain_http', None, url_path, None, '', None, data_format,
                 merge_url_params_req=True, service=service, cluster=cluster, security=pubapi_sec)
             session.add(channel)
+
+# ################################################################################################################################
 
     def add_cache_endpoints(self, session, cluster):
 
@@ -823,3 +852,59 @@ class Create(ZatoCommand):
                 None, DATA_FORMAT.JSON, security=None, service=service, cluster=cluster)
 
             session.add(http_soap)
+
+# ################################################################################################################################
+
+    def add_pubsub_sec_endpoints(self, session, cluster):
+
+        sec = HTTPBasicAuth(None, 'zato.pubsub', True, 'zato.pubsub', 'Zato pub/sub', uuid4().hex, cluster)
+        session.add(sec)
+
+        endpoint = PubSubEndpoint()
+        endpoint.name = 'zato.pubsub'
+        endpoint.is_internal = True
+        endpoint.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
+        endpoint.topic_patterns = 'pub=zato.demo.{suffix}\nsub=zato.demo.{suffix}'
+        endpoint.security = sec
+        endpoint.cluster = cluster
+
+        topic = PubSubTopic()
+        topic.name = 'zato.demo'
+        topic.is_active = True
+        topic.is_internal = True
+        topic.max_depth = 100
+        topic.cluster = cluster
+
+        sub = PubSubSubscription()
+        sub.topic = topic
+        sub.endpoint = endpoint
+        sub.sub_key = new_cid()
+        sub.has_gd = False
+        sub.cluster = cluster
+
+        impl_name1 = 'pubapi1.TopicService' #'zato.server.service.internal.pubsub.pubapi.TopicService'
+        impl_name2 = 'pubapi1.MsgService' #'zato.server.service.internal.pubsub.pubapi.MsgService'
+
+        service_topic = Service(None, 'zato.pubsub.pubapi.topic-service', True,
+            impl_name1,
+            True, cluster)
+
+        service_msg = Service(None, 'zato.pubsub.pubapi.msg-service', True,
+            impl_name2,
+            True, cluster)
+
+        chan_topic = HTTPSOAP(None, 'zato.pubsub.topic.topic_name', True, True, 'channel', 'plain_http', None,
+            '/zato/pubsub/topic/{topic_name}',
+            None, '', None, DATA_FORMAT.JSON, security=None, service=service_topic, cluster=cluster)
+
+        chan_msg = HTTPSOAP(None, 'zato.pubsub.msg.msg_id', True, True, 'channel', 'plain_http', None,
+            '/zato/pubsub/msg/{msg_id}',
+            None, '', None, DATA_FORMAT.JSON, security=None, service=service_msg, cluster=cluster)
+
+        session.add(endpoint)
+        session.add(topic)
+        session.add(sub)
+        session.add(service_topic)
+        session.add(service_msg)
+
+# ################################################################################################################################

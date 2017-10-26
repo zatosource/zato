@@ -51,12 +51,12 @@ def broker_message_hook(self, input, instance, attrs, service_type):
 
 def instance_hook(self, input, instance, attrs):
 
-    with closing(self.odb.session()) as session:
-
-        instance.service_id = session.query(ServiceModel).\
-            filter(ServiceModel.name==input.service_name).\
-            filter(ServiceModel.cluster_id==input.cluster_id).\
-            one().id
+    if attrs.is_create_edit:
+        with closing(self.odb.session()) as session:
+            instance.service_id = session.query(ServiceModel).\
+                filter(ServiceModel.name==input.service_name).\
+                filter(ServiceModel.cluster_id==input.cluster_id).\
+                one().id
 
 # ################################################################################################################################
 

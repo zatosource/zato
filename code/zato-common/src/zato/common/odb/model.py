@@ -16,8 +16,8 @@ from json import dumps
 from dictalchemy import make_class_dictable
 
 # SQLAlchemy
-from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, LargeBinary, Sequence, SmallInteger, \
-     String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, func, Index, Integer, LargeBinary, Sequence, \
+     SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relation, relationship
 
@@ -2165,23 +2165,20 @@ class PubSubSubscription(Base):
     {})
 
     id = Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True)
-    is_active = Column(Boolean(), nullable=False)
+    is_active = Column(Boolean(), nullable=False, default=True)
+    is_internal = Column(Boolean(), nullable=False, default=False)
 
-    creation_time = Column(DateTime(), nullable=False)
+    creation_time = Column(DateTime(), nullable=False, default=func.current_timestamp())
     sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
 
-    is_internal = Column(Boolean(), nullable=False)
-    protocol = Column(String(200), nullable=False) # HTTP/SOAP, AMQP etc.
-    data_format = Column(String(20), nullable=False) # JSON, XML, SOAP etc.
-
-    is_durable = Column(Boolean(), nullable=False) # For now always True = survives cluster restarts
+    is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
 
     topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
     topic = relationship(
         PubSubTopic, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
+    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True)
     endpoint = relationship(
         PubSubEndpoint, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
@@ -2221,7 +2218,8 @@ class PubSubMessage(Base):
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
 
-    creation_time = Column(DateTime(), nullable=False)
+    creation_time = Column(DateTime(), nullable=False, default=func.current_timestamp()) # When the row was created
+    ext_creation_time = Column(DateTime(), nullable=True) # When the message was created by publisher
     data = Column(LargeBinary(), nullable=False)
     data_format = Column(String(200), nullable=False)
     mime_type = Column(String(200), nullable=False)
@@ -2233,6 +2231,10 @@ class PubSubMessage(Base):
     published_by_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
     published_by = relationship(
         PubSubEndpoint, backref=backref('pubsub_msg_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
+    topic = relationship(
+        PubSubTopic, backref=backref('pubsub_msg_list', order_by=id, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_messages', order_by=id, cascade='all, delete, delete-orphan'))
@@ -2246,16 +2248,18 @@ class PubSubEndpointQueue(Base):
     __table_args__ = (
         Index('pubsb_msg_q_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_msg_q_endp_id_idx', 'cluster_id', 'endpoint_id', unique=True),
+        Index('pubsb_msg_q_endp_tp_id_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=True),
     {})
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
 
-    msg_id = Column(Integer, ForeignKey('pubsub_message.id', ondelete='CASCADE'), nullable=False)
-    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
-
     delivery_count = Column(Integer, nullable=False)
     delivery_details = Column(LargeBinary(), nullable=True)
     last_delivery_time = Column(DateTime(), nullable=True)
+
+    msg_id = Column(Integer, ForeignKey('pubsub_message.id', ondelete='CASCADE'), nullable=True)
+    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True)
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_endpoint_queues', order_by=id, cascade='all, delete, delete-orphan'))
