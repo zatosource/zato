@@ -57,7 +57,7 @@ class Get(AdminService):
     class SimpleIO:
         input_required = ('cluster_id', AsIs('id'))
         output_required = ('id', 'name', 'is_internal', 'is_active', 'role')
-        output_optional = ('tags', 'topic_patterns', 'queue_patterns', 'pub_tag_patterns', 'message_tag_patterns',
+        output_optional = ('tags', 'topic_patterns', 'pub_tag_patterns', 'message_tag_patterns',
             'security_id', 'ws_channel_id', 'hook_service_id', 'sec_type', 'sec_name', 'ws_channel_name', 'hook_service_name')
 
     def handle(self):
