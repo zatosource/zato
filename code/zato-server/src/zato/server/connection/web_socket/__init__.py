@@ -76,6 +76,7 @@ class WebSocket(_WebSocket):
     """
     def __init__(self, container, config, _unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs):
         super(WebSocket, self).__init__(_unusued_sock, _unusued_protocols, _unusued_extensions, wsgi_environ, **kwargs)
+        logger.warn('111 %s', config)
         self.container = container
         self.config = config
         self.initial_http_wsgi_environ = wsgi_environ
