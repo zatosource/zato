@@ -65,7 +65,7 @@ class Endpoint(object):
                 if line.startswith('pub=') or line.startswith('sub='):
                     is_pub = line.startswith('pub=')
 
-                    pattern = line[line.find('='):]
+                    pattern = line[line.find('=')+1:]
                     pattern = globre_compile(pattern)
 
                     source = (is_pub, is_topic)
@@ -81,17 +81,31 @@ class Endpoint(object):
 class PubSub(object):
     def __init__(self):
         self.endpoints = {}
+        self._security_id_to_endpoint_id = {}
+        self._ws_channel_id_to_endpoint_id = {}
         self._lock = RLock()
 
 # ################################################################################################################################
 
     def set_endpoint(self, config):
-        with self._lock:
-            self.endpoints[config.id] = Endpoint(config)
+        self.endpoints[config.id] = Endpoint(config)
+
+        if config['security_id']:
+            self._security_id_to_endpoint_id[config['security_id']] = config.id
+
+        if config['ws_channel_id']:
+            self._ws_channel_id_to_endpoint_id[config['ws_channel_id']] = config.id
 
 # ################################################################################################################################
 
-    def _is_allowed(self, endpoint_id, target, name):
+    def _is_allowed(self, target, name, security_id, ws_channel_id):
+
+        if security_id:
+            source, id = self._security_id_to_endpoint_id, security_id
+        else:
+            source, id = self._ws_channel_id_to_endpoint_id, ws_channel_id
+
+        endpoint_id = source[id]
         endpoint = self.endpoints[endpoint_id]
 
         for elem in getattr(endpoint, target):
@@ -100,22 +114,12 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def is_allowed_pub_topic(self, endpoint_id, name):
-        return self._is_allowed(endpoint_id, 'pub_topic_patterns', name)
+    def is_allowed_pub_topic(self, name, security_id=None, ws_channel_id=None):
+        return self._is_allowed('pub_topic_patterns', name, security_id, ws_channel_id)
 
 # ################################################################################################################################
 
-    def is_allowed_pub_queue(self, endpoint_id, name):
-        return self._is_allowed(endpoint_id, 'pub_queue_patterns', name)
-
-# ################################################################################################################################
-
-    def is_allowed_sub_queue(self, endpoint_id, name):
-        return self._is_allowed(endpoint_id, 'sub_queue_patterns', name)
-
-# ################################################################################################################################
-
-    def is_allowed_sub_topic(self, endpoint_id, name):
-        return self._is_allowed(endpoint_id, 'sub_topic_patterns', name)
+    def is_allowed_sub_topic(self, endpoint_id, name, security_id=None, ws_channel_id=None):
+        return self._is_allowed('sub_topic_patterns', name, security_id, ws_channel_id)
 
 # ################################################################################################################################

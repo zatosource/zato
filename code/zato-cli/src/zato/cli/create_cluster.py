@@ -864,7 +864,7 @@ class Create(ZatoCommand):
         endpoint.name = 'zato.pubsub'
         endpoint.is_internal = True
         endpoint.role = PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id
-        endpoint.topic_patterns = 'pub=zato.demo.{suffix}\nsub=zato.demo.{suffix}'
+        endpoint.topic_patterns = 'pub=zato.demo.*\nsub=zato.demo.*'
         endpoint.security = sec
         endpoint.cluster = cluster
 
@@ -882,10 +882,15 @@ class Create(ZatoCommand):
         sub.has_gd = False
         sub.cluster = cluster
 
-        impl_name1 = 'pubapi1.TopicService' #'zato.server.service.internal.pubsub.pubapi.TopicService'
-        impl_name2 = 'pubapi1.MsgService' #'zato.server.service.internal.pubsub.pubapi.MsgService'
+        impl_name1 = 'pubapi1.TopicService'     #'zato.server.service.internal.pubsub.pubapi.TopicService'
+        impl_name2 = 'pubapi1.SubscribeService' #'zato.server.service.internal.pubsub.pubapi.SubscribeService'
+        impl_name3 = 'pubapi1.MsgService'       #'zato.server.service.internal.pubsub.pubapi.MsgService'
 
         service_topic = Service(None, 'zato.pubsub.pubapi.topic-service', True,
+            impl_name1,
+            True, cluster)
+
+        service_sub = Service(None, 'zato.pubsub.pubapi.subscribe-service', True,
             impl_name1,
             True, cluster)
 
@@ -897,6 +902,10 @@ class Create(ZatoCommand):
             '/zato/pubsub/topic/{topic_name}',
             None, '', None, DATA_FORMAT.JSON, security=None, service=service_topic, cluster=cluster)
 
+        chan_sub = HTTPSOAP(None, 'zato.pubsub.subscribe.topic.topic_name', True, True, 'channel', 'plain_http', None,
+            '/zato/pubsub/subscribe/topic/{topic_name}',
+            None, '', None, DATA_FORMAT.JSON, security=None, service=service_sub, cluster=cluster)
+
         chan_msg = HTTPSOAP(None, 'zato.pubsub.msg.msg_id', True, True, 'channel', 'plain_http', None,
             '/zato/pubsub/msg/{msg_id}',
             None, '', None, DATA_FORMAT.JSON, security=None, service=service_msg, cluster=cluster)
@@ -904,7 +913,13 @@ class Create(ZatoCommand):
         session.add(endpoint)
         session.add(topic)
         session.add(sub)
+
         session.add(service_topic)
+        session.add(service_sub)
         session.add(service_msg)
+
+        session.add(chan_topic)
+        session.add(chan_sub)
+        session.add(chan_msg)
 
 # ################################################################################################################################
