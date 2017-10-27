@@ -30,7 +30,7 @@ class Conflict(Reportable):
         super(Conflict, self).__init__(cid, msg, CONFLICT)
 
 class Forbidden(Reportable):
-    def __init__(self, cid, msg, *ignored_args, **ignored_kwargs):
+    def __init__(self, cid, msg='You are not allowed to access this resource', *ignored_args, **ignored_kwargs):
         super(Forbidden, self).__init__(cid, msg, FORBIDDEN)
 
 class MethodNotAllowed(Reportable):

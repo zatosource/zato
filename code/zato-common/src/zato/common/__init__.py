@@ -733,6 +733,11 @@ class PUBSUB:
     class DEFAULT:
         TOPIC_MAX_DEPTH = 10000
 
+    class PRIORITY:
+        DEFAULT = 5
+        MIN = 1
+        MAX = 9
+
     class ROLE:
         PUBLISHER = NameId('Publisher', 'pub')
         SUBSCRIBER = NameId('Subscriber', 'sub')
