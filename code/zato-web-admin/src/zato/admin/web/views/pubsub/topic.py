@@ -102,8 +102,23 @@ class Delete(_Delete):
 
 # ################################################################################################################################
 
-def topic_details(req, cluster_id, topic_id, name_slug):
-    pass
+def topic_clear(req, cluster_id, topic_id):
+
+    try:
+        req.zato.client.invoke('zato.pubsub.topic.clear', {
+            'cluster_id': cluster_id,
+            'id': topic_id,
+        })
+    except Exception, e:
+        return HttpResponseServerError(format_exc(e))
+    else:
+        msg = 'Cleared topic `{}`'.format(
+            req.zato.client.invoke('zato.pubsub.topic.get', {
+                'cluster_id': cluster_id,
+                'id': topic_id,
+            }).data.response.name)
+
+    return HttpResponse(msg)
 
 # ################################################################################################################################
 

@@ -92,7 +92,7 @@
 
                         <td>{{ item.name }}</td>
                         <td>{{ item.max_depth }}</td>
-                        <td>{{ item.current_depth }}</td>
+                        <td id="current_depth_{{ item.id }}">{{ item.current_depth }}</td>
                         <td>{{ item.last_pub_time|default:"<span class='form_hint'>---</span>" }}</td>
 
                         <td><a href="{% url "pubsub-topic-publishers" cluster_id item.id item.name|slugify %}">Publishers</a></td>

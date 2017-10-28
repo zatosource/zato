@@ -145,6 +145,11 @@ class TopicService(Service):
         data_msg.priority = priority
         '''
 
+        try:
+            topic = pubsub.get_topic_by_name(topic_name)
+        except KeyError:
+            raise NotFound(self.cid, 'No such topic `{}`'.format(topic_name))
+
         # Get all subscribers for that topic from local worker store
         subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic_name)
 
@@ -158,8 +163,6 @@ class TopicService(Service):
         in_reply_to = input.get('in_reply_to')
 
         endpoint_id = pubsub.get_endpoint_id_by_sec_id(security_id)
-
-        topic = pubsub.get_topic_by_name(topic_name)
 
         ps_msg = PubSubMessage()
         ps_msg.pub_msg_id = pub_msg_id
@@ -243,6 +246,8 @@ class TopicService(Service):
 class GetEndpointTopicList(Service):
     """ Returns all topics to which a given endpoint published at least once.
     """
+    name = 'pubapi1.get-endpoint-topic-list'
+
     class SimpleIO:
         input_required = ('cluster_id', 'endpoint_id')
         output_required = ('topic_id', 'name', 'is_active', 'is_internal', 'max_depth')
@@ -283,4 +288,3 @@ class GetEndpointTopicList(Service):
         self.response.payload[:] = response
 
 # ################################################################################################################################
-
