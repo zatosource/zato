@@ -57,10 +57,12 @@ $.fn.zato.pubsub.endpoint.data_table.new_row = function(item, data, include_tr) 
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', data.endpoint_details_html);
+    row += String.format('<td>{0}</td>', data.name);
     row += String.format('<td>{0}</td>', data.role);
     row += String.format('<td>{0}</td>', topic_patterns_html);
     row += String.format('<td>{0}</td>', client_html);
+    row += String.format('<td>{0}</td>', data.endpoint_topics_html);
+    row += String.format('<td>{0}</td>', data.endpoint_queues_html);
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint.edit('{0}')\">Edit</a>", data.id));
     row += String.format('<td>{0}</td>', data.delete_html);

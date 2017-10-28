@@ -32,6 +32,13 @@ output_optional_extra = ['current_depth']
 
 # ################################################################################################################################
 
+def broker_message_hook(self, input, instance, attrs, service_type):
+    if service_type == 'create_edit':
+        with closing(self.odb.session()) as session:
+            input.is_internal = pubsub_topic(session, input.cluster_id, instance.id).is_internal
+
+# ################################################################################################################################
+
 class GetList(AdminService):
     _filter_by = PubSubTopic.name,
     __metaclass__ = GetListMeta
