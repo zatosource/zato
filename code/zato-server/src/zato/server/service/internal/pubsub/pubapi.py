@@ -15,11 +15,15 @@ from datetime import datetime, timedelta
 # rapidjson
 from rapidjson import dumps, loads
 
+# SQLAlchemy
+from sqlalchemy import and_, exists
+
 # Zato
 from zato.common import CONTENT_TYPE, DATA_FORMAT, PUBSUB
-from zato.common.exception import BadRequest, NotFound, Forbidden
-from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointQueue, PubSubMessage
-from zato.server.service import Int, Service
+from zato.common.exception import BadRequest, NotFound, Forbidden, TooManyRequests, ServiceUnavailable
+from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointQueue, PubSubEndpointTopic, PubSubMessage
+from zato.common.util import new_cid
+from zato.server.service import AsIs, Int, Service
 
 # ################################################################################################################################
 
@@ -58,11 +62,14 @@ class TopicService(Service):
     """
     class SimpleIO:
         input_required = ('topic_name',)
-        input_optional = (Int('priority'), Int('expiration'), 'mime_type')
+        input_optional = (Int('priority'), Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to')
+        output_optional = (AsIs('msg_id'),)
+        response_elem = None
 
 # ################################################################################################################################
 
-    def handle_POST(self, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pri_def=_PRIORITY.DEFAULT, _JSON=_JSON):
+    def handle_POST(self, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pri_def=_PRIORITY.DEFAULT, _JSON=_JSON,
+        _new_cid=new_cid):
 
         # Check credentials first
         auth = self.wsgi_environ.get('HTTP_AUTHORIZATION')
@@ -142,10 +149,18 @@ class TopicService(Service):
         now = datetime.utcnow()
         expiration_time = now + timedelta(seconds=expiration) if expiration else None
 
+        cluster_id = self.server.cluster_id
+
+        pub_msg_id = 'zpsm.%s' % _new_cid()
+        pub_correl_id = input.get('correl_id')
+        in_reply_to = input.get('in_reply_to')
+
         endpoint_id = pubsub.get_endpoint_id_by_sec_id(security_id)
-        topic_id = pubsub.get_topic_id_by_name(topic_name)
+
+        topic = pubsub.get_topic_by_name(topic_name)
 
         ps_msg = PubSubMessage()
+        ps_msg.pub_msg_id = pub_msg_id
         ps_msg.creation_time = now
         ps_msg.data = data
         ps_msg.data_format = _JSON
@@ -155,13 +170,54 @@ class TopicService(Service):
         ps_msg.expiration = expiration
         ps_msg.expiration_time = expiration_time
         ps_msg.published_by_id = endpoint_id
-        ps_msg.topic_id = topic_id
-        ps_msg.cluster_id = self.server.cluster_id
+        ps_msg.topic_id = topic.id
+        ps_msg.cluster_id = cluster_id
 
         # Operate under a global lock for that topic to rule out any interference
-        with self.lock('zato.pubsub.publish.{}'.format(topic_name)):
+        with self.lock('zato.pubsub.publish.%s' % topic_name):
 
             with closing(self.odb.session()) as session:
+
+                # Get the topic object which must exist, hence .one() is used.
+                ps_topic = session.query(PubSubTopic).\
+                    filter(PubSubTopic.id==topic.id).\
+                    filter(PubSubTopic.cluster_id==cluster_id).\
+                    one()
+
+                # Abort if max_depth is already reached
+                if ps_topic.current_depth >= topic.max_depth:
+                    raise ServiceUnavailable(self.cid, 'Max depth already reached for `{}`'.format(topic.name))
+
+                # Update metadata if max_depth is not reached yet
+                else:
+                    ps_topic.current_depth = ps_topic.current_depth + 1
+                    ps_topic.last_pub_time = now
+                    session.add(ps_topic)
+
+                # Update information when this endpoint last published to the topic
+                ps_endpoint_topic = session.query(PubSubEndpointTopic).\
+                    filter(PubSubEndpointTopic.endpoint_id==endpoint_id).\
+                    filter(PubSubEndpointTopic.id==topic.id).\
+                    filter(PubSubEndpointTopic.cluster_id==cluster_id).\
+                    first()
+
+                # Never published before - add a new row then
+                if not ps_endpoint_topic:
+                    ps_endpoint_topic = PubSubEndpointTopic()
+                    ps_endpoint_topic.endpoint_id = endpoint_id
+                    ps_endpoint_topic.topic_id = topic.id
+                    ps_endpoint_topic.cluster_id = cluster_id
+
+                # New row or not, we have an object to
+                ps_endpoint_topic.last_pub_time = now
+                ps_endpoint_topic.pub_msg_id = pub_msg_id
+                ps_endpoint_topic.pub_correl_id = pub_correl_id
+                ps_endpoint_topic.in_reply_to = in_reply_to
+
+                session.add(ps_endpoint_topic)
+
+                # Add the parent message with actual data
+                session.add(ps_msg)
 
                 # Enqueue a new message for all subscribers already known at the publication time
                 for sub in subscriptions_by_topic:
@@ -170,12 +226,60 @@ class TopicService(Service):
                     queue_msg.delivery_count = 0
                     queue_msg.msg = ps_msg
                     queue_msg.endpoint_id = endpoint_id
-                    queue_msg.topic_id = topic_id
+                    queue_msg.topic_id = topic.id
                     queue_msg.subscription_id = sub.id
-                    queue_msg.cluster_id = self.server.cluster_id
+                    queue_msg.cluster_id = cluster_id
 
                     session.add(queue_msg)
 
                 session.commit()
+
+        self.response.payload.msg_id = pub_msg_id
+
+# ################################################################################################################################
+
+class GetTopicList(Service):
+    """ Returns all topics to which a given endpoint published at least once.
+    """
+    name = 'pubapi1.get-topic-list'
+
+    class SimpleIO:
+        input_required = ('cluster_id', 'endpoint_id')
+        output_required = ('topic_id', 'name', 'is_active', 'is_internal', 'max_depth')
+        output_optional = ('last_pub_time', AsIs('last_msg_id'), AsIs('last_correl_id'), 'last_in_reply_to')
+        output_repeated = True
+
+    def handle(self):
+        input = self.request.input
+        pubsub = self.server.worker_store.pubsub
+
+        if input.cluster_id != self.server.cluster_id:
+            raise BadRequest(self.cid, 'Invalid cluster_id value')
+
+        response = []
+
+        with closing(self.odb.session()) as session:
+
+            # Get last pub time for that specific endpoint to this very topic
+            last_data = session.query(
+                PubSubTopic.id.label('topic_id'),
+                PubSubTopic.name, PubSubTopic.is_active,
+                PubSubTopic.is_internal, PubSubTopic.name,
+                PubSubTopic.max_depth,
+                PubSubEndpointTopic.last_pub_time,
+                PubSubEndpointTopic.pub_msg_id.label('last_msg_id'),
+                PubSubEndpointTopic.pub_correl_id.label('last_correl_id'),
+                PubSubEndpointTopic.in_reply_to.label('last_in_reply_to'),
+                ).\
+                filter(PubSubEndpointTopic.topic_id==PubSubTopic.id).\
+                filter(PubSubEndpointTopic.endpoint_id==input.endpoint_id).\
+                filter(PubSubEndpointTopic.cluster_id==self.server.cluster_id).\
+                all()
+
+            for item in last_data:
+                item.last_pub_time = item.last_pub_time.isoformat()
+                response.append(item)
+
+        self.response.payload[:] = response
 
 # ################################################################################################################################

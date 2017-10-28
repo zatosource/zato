@@ -1187,8 +1187,10 @@ urlpatterns += [
         login_required(pubsub_endpoint.Edit()), name=pubsub_endpoint.Edit.url_name),
     url(r'^zato/pubsub/endpoint/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(pubsub_endpoint.Delete()), name=pubsub_endpoint.Delete.url_name),
-    url(r'^zato/pubsub/endpoint/details/(?P<cluster_id>.*)/item/(?P<endpoint_id>.*)/(?P<name_slug>.*)$',
-        login_required(pubsub_endpoint.endpoint_details), name='pubsub-endpoint-details'),
+    url(r'^zato/pubsub/endpoint/topics/(?P<cluster_id>.*)/item/(?P<endpoint_id>.*)/(?P<name_slug>.*)$',
+        login_required(pubsub_endpoint.EndpointTopics()), name=pubsub_endpoint.EndpointTopics.url_name),
+    url(r'^zato/pubsub/endpoint/queues/(?P<cluster_id>.*)/item/(?P<endpoint_id>.*)/(?P<name_slug>.*)$',
+        login_required(pubsub_endpoint.EndpointQueues()), name=pubsub_endpoint.EndpointQueues.url_name),
 
     # Pub/sub - topics
 

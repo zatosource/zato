@@ -86,6 +86,9 @@ class Topic(object):
         self.config = config
         self.id = config.id
         self.name = config.name
+        self.is_active = config.is_active
+        self.is_internal = config.is_internal
+        self.max_depth = config.max_depth
 
 # ################################################################################################################################
 
@@ -143,13 +146,24 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_topic_id_by_name(self, topic_name):
-        with self.lock:
-            return self.topic_name_to_id[topic_name]
+    def _get_topic_id_by_name(self, topic_name):
+        return self.topic_name_to_id[topic_name]
 
 # ################################################################################################################################
 
-    def set_endpoint(self, config):
+    def get_topic_id_by_name(self, topic_name):
+        with self.lock:
+            return self._get_topic_id_by_name(topic_name)
+
+# ################################################################################################################################
+
+    def get_topic_by_name(self, topic_name):
+        with self.lock:
+            return self.topics[self._get_topic_id_by_name(topic_name)]
+
+# ################################################################################################################################
+
+    def create_endpoint(self, config):
         with self.lock:
             self.endpoints[config.id] = Endpoint(config)
 
@@ -161,7 +175,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def set_subscription(self, config):
+    def create_subscription(self, config):
         with self.lock:
             sub = Subscription(config)
 
@@ -173,10 +187,38 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def set_topic(self, config):
+    def _create_topic(self, config):
+        self.topics[config.id] = Topic(config)
+        self.topic_name_to_id[config.name] = config.id
+
+# ################################################################################################################################
+
+    def create_topic(self, config):
         with self.lock:
-            self.topics[config.id] = Topic(config)
-            self.topic_name_to_id[config.name] = config.id
+            self._create_topic(config)
+
+# ################################################################################################################################
+
+    def _delete_topic(self, topic_id, topic_name):
+        del self.topic_name_to_id[topic_name]
+        self.subscriptions_by_topic.pop(topic_name, None) # May have no subscriptions hence .pop instead of del
+        del self.topics[topic_id]
+
+# ################################################################################################################################
+
+    def delete_topic(self, topic_id):
+        with self.lock:
+            topic_name = self.topics[topic_id].name
+            self._delete_topic(topic_id, topic_name)
+
+# ################################################################################################################################
+
+    def edit_topic(self, del_name, config):
+        with self.lock:
+            subscriptions_by_topic = self.subscriptions_by_topic.pop(del_name, [])
+            self._delete_topic(config.id, del_name)
+            self._create_topic(config)
+            self.subscriptions_by_topic[config.name] = subscriptions_by_topic
 
 # ################################################################################################################################
 

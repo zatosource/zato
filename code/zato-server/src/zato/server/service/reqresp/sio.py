@@ -77,16 +77,16 @@ class ForceType(object):
     def __repr__(self):
         return '<{} at {} name:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.name)
 
-    def from_json(self, value):
+    def from_json(self, value, *ignored):
         raise NotImplementedError('Subclasses should override it')
 
-    def to_json(self, value):
+    def to_json(self, value, *ignored):
         raise NotImplementedError('Subclasses should override it')
 
-    def from_xml(self, value):
+    def from_xml(self, value, *ignored):
         raise NotImplementedError('Subclasses should override it')
 
-    def to_xml(self, value):
+    def to_xml(self, value, *ignored):
         raise NotImplementedError('Subclasses should override it')
 
     def convert(self, value, param_name, data_type, from_sio_to_external):
@@ -118,6 +118,10 @@ class AsIs(ForceType):
     it would've been, for instance, because its name is 'user_id' and should've
     been converted over to an int.
     """
+    def from_json(self, value, *ignored):
+        return value
+
+    to_json = from_json
 
 # ################################################################################################################################
 

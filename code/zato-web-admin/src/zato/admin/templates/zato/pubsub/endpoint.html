@@ -24,6 +24,8 @@
             'role',
             '_topic_patterns_html',
             '_client_html',
+            '_topics',
+            '_queues',
             '_edit',
             '_delete',
             'id',
@@ -65,8 +67,10 @@
                         <th>&nbsp;</th>
                         <th><a href="#">Name</a></th>
                         <th><a href="#">Role</a></th>
-                        <th style="width:25%"><a href="#">Topics</a></th>
+                        <th style="width:25%"><a href="#">Topics allowed</a></th>
                         <th style="width:20%"><a href="#">Client</a></th>
+                        <th>&nbsp;</th>
+                        <th>&nbsp;</th>
                         <th style="width:5%">&nbsp;</th>
                         <th style="width:5%">&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -85,10 +89,14 @@
                     <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td><a href="{% url "pubsub-endpoint-details" cluster_id item.id item.name|slugify %}">{{ item.name }}</a></td>
+                        <td>{{ item.name }}</td>
                         <td>{{ item.role }}</td>
                         <td>{{ item.topic_patterns_html|safe|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.client_html|safe|default:'<span class="form_hint">---</span>' }}</td>
+
+                        <td><a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}">Topics</a></td>
+                        <td><a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.name|slugify %}">Queues</a></td>
+
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint.edit('{{ item.id }}')">Edit</a></td>
                         <td>
                             {% if item.is_internal %}
@@ -143,7 +151,7 @@
                             <td>{{ create_form.hook_service_id }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Topics</td>
+                            <td style="vertical-align:middle">Topics allowed</td>
                             <td>{{ create_form.topic_patterns }} </td>
                         </tr>
                         <tr>
@@ -184,7 +192,7 @@
                             <td>{{ edit_form.hook_service_id }} </td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle">Topics</td>
+                            <td style="vertical-align:middle">Topics allowed</td>
                             <td>{{ edit_form.topic_patterns }} </td>
                         </tr>
                         <tr>

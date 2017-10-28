@@ -2109,6 +2109,9 @@ class PubSubEndpoint(Base):
     # Patterns for tags of messages
     message_tag_patterns = Column(Text, nullable=True) # Unused for now
 
+    # Endpoint is a service
+    service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+
     # Identifies the endpoint through its security definition, e.g. a username/password combination.
     security_id = Column(Integer, ForeignKey('sec_base.id', ondelete='CASCADE'), nullable=True)
     security = relationship(SecurityBase, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
@@ -2120,8 +2123,6 @@ class PubSubEndpoint(Base):
 
     # A hook service invoked during publications and subscriptions
     hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
-    hook_service = relationship(
-        'Service', backref=backref('pubsub_endpoints', order_by=name, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
@@ -2152,6 +2153,36 @@ class PubSubTopic(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=name, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class PubSubEndpointTopic(Base):
+    """ A list of topics to which a given endpoint has ever published along with metadata about the latest publication.
+    """
+    __tablename__ = 'pubsub_endp_topic'
+    __table_args__ = (
+        Index('pubsb_endpt_clust_idx', 'cluster_id', unique=False),
+        Index('pubsb_endpt_msgid_idx', 'cluster_id', 'pub_msg_id', unique=True),
+        Index('pubsb_endpt_clsendtp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=True),
+    {})
+
+    id = Column(Integer, Sequence('pubsub_endpt_seq'), primary_key=True)
+
+    last_pub_time = Column(DateTime(), nullable=False)
+    pub_msg_id = Column(String(200), nullable=False)
+    pub_correl_id = Column(String(200), nullable=True)
+    in_reply_to = Column(String(200), nullable=True)
+
+    endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True)
+    endpoint = relationship(
+        PubSubEndpoint, backref=backref('pubsub_endpoint_topics', order_by=endpoint_id, cascade='all, delete, delete-orphan'))
+
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
+    topic = relationship(
+        PubSubTopic, backref=backref('pubsub_endpoint_topics', order_by=topic_id, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pubsub_endpoint_topics', order_by=cluster_id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -2214,9 +2245,21 @@ class PubSubMessage(Base):
     __tablename__ = 'pubsub_message'
     __table_args__ = (
         Index('pubsb_msg_id_idx', 'cluster_id', 'id', unique=True),
+        Index('pubsb_msg_pubmsg_id_idx', 'cluster_id', 'pub_msg_id', unique=True),
+        Index('pubsb_msg_inreplyto_id_idx', 'cluster_id', 'in_reply_to', unique=False),
     {})
 
+    # For SQL joins
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
+
+    # Publicly visible message identifier
+    pub_msg_id = Column(String(200), nullable=False)
+
+    # Publicly visible correlation ID
+    pub_correl_id = Column(String(200), nullable=True)
+
+    # Publicly visible ID of the message current message is a response to
+    in_reply_to = Column(String(200), nullable=True)
 
     creation_time = Column(DateTime(), nullable=False, default=func.current_timestamp()) # When the row was created
     ext_creation_time = Column(DateTime(), nullable=True) # When the message was created by publisher

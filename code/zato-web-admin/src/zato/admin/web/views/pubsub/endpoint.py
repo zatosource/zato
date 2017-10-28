@@ -13,15 +13,19 @@ import logging
 from json import dumps
 from traceback import format_exc
 
+# Arrow
+from arrow import get as arrow_get
+
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
 from zato.common import ZATO_NONE
-from zato.common.odb.model import PubSubEndpoint
+from zato.common.odb.model import PubSubEndpoint, PubSubTopic
 
 # ################################################################################################################################
 
@@ -62,11 +66,13 @@ def enrich_item(cluster_id, item):
 
     item.client_html = client
 
-    # This is needed by the edit action to link to an endpoint's details
-    item.endpoint_details_html = '<a href="{}">{}</a>'.format(
-        django_url_reverse('pubsub-endpoint-details',
-            kwargs={'cluster_id':cluster_id, 'endpoint_id':item.id, 'name_slug':slugify(item.name)}),
-        item.name)
+    html_kwargs={'cluster_id':cluster_id, 'endpoint_id':item.id, 'name_slug':slugify(item.name)}
+
+    endpoint_topics_path = django_url_reverse('pubsub-endpoint-topics', kwargs=html_kwargs)
+    item.endpoint_topics_html = '<a href="{}">Topics</a>'.format(endpoint_topics_path)
+
+    endpoint_queues_path = django_url_reverse('pubsub-endpoint-queues', kwargs=html_kwargs)
+    item.endpoint_queues_html = '<a href="{}">Queues</a>'.format(endpoint_queues_path)
 
     # This is also needed by the edit action so as not to construct it in JavaScript
     if item.is_internal:
@@ -88,7 +94,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_internal', 'role', 'is_active')
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'role')
         output_optional = ('topic_patterns', 'security_id', 'ws_channel_id', 'ws_channel_name',
             'hook_service_id', 'hook_service_name', 'sec_type', 'sec_name')
         output_repeated = True
@@ -161,7 +167,48 @@ class Delete(_Delete):
 
 # ################################################################################################################################
 
-def endpoint_details(req, cluster_id, endpoint_id, name_slug):
-    pass
+class EndpointTopics(_Index):
+    method_allowed = 'GET'
+    url_name = 'pubsub-endpoint-topics'
+    template = 'zato/pubsub/endpoint-topics.html'
+    service_name = 'pubapi1.get-topic-list' #'zato.pubsub.endpoint.get-topic-list'
+    output_class = PubSubTopic
+    paginate = True
+
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id', 'endpoint_id')
+        output_required = ('topic_id', 'name', 'is_active', 'is_internal', 'max_depth')
+        output_optional = ('last_pub_time', 'last_msg_id', 'last_correl_id', 'last_in_reply_to')
+        output_repeated = True
+
+    def on_before_append_item(self, item):
+        item.last_pub_time = from_utc_to_user(item.last_pub_time+'+00:00', self.req.zato.user_profile)
+        return item
+
+    def handle(self):
+
+        from_utc_to_user
+        return {
+            'endpoint_id': self.input.endpoint_id,
+            'endpoint_name': '333'
+        }
+
+# ################################################################################################################################
+
+class EndpointQueues(_Index):
+    method_allowed = 'GET'
+    url_name = 'pubsub-endpoint-queues'
+    template = 'zato/pubsub/endpoint-queues.html'
+    service_name = 'pubapi1.get-queue-list' #'zato.pubsub.endpoint.get-queue-list'
+    output_class = PubSubTopic
+    paginate = True
+
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id', 'endpoint_id')
+        output_required = ('msg_id', 'delivery_count', 'last_delivery_time', 'endpoint_id', 'topic_id', 'subscription_id')
+        output_repeated = True
+
+    def handle(self):
+        pass
 
 # ################################################################################################################################
