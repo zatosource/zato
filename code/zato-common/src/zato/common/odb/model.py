@@ -2151,7 +2151,7 @@ class PubSubTopic(Base):
     current_depth = Column(Integer(), nullable=False, default=0)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('pubsub_containers', order_by=name, cascade='all, delete, delete-orphan'))
+    cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=name, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -2174,7 +2174,7 @@ class PubSubSubscription(Base):
     is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
 
-    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(
         PubSubTopic, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
@@ -2242,13 +2242,14 @@ class PubSubMessage(Base):
 # ################################################################################################################################
 
 class PubSubEndpointQueue(Base):
-    """ A queue of messages for an individual endpoint.
+    """ A queue of messages for an individual endpoint subscribed to a topic.
     """
-    __tablename__ = 'pubsub_message_queue'
+    __tablename__ = 'pubsub_endp_message_queue'
     __table_args__ = (
         Index('pubsb_msg_q_id_idx', 'cluster_id', 'id', unique=True),
-        Index('pubsb_msg_q_endp_id_idx', 'cluster_id', 'endpoint_id', unique=True),
-        Index('pubsb_msg_q_endp_tp_id_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=True),
+        Index('pubsb_msg_q_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
+        Index('pubsb_msg_q_endptp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
+        Index('pubsb_msg_q_endptpm_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
     {})
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
@@ -2258,8 +2259,18 @@ class PubSubEndpointQueue(Base):
     last_delivery_time = Column(DateTime(), nullable=True)
 
     msg_id = Column(Integer, ForeignKey('pubsub_message.id', ondelete='CASCADE'), nullable=True)
+    msg = relationship(PubSubMessage, backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
+
     endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True)
+    endpoint = relationship(PubSubEndpoint,
+        backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
+
     topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
+    topic = relationship(PubSubTopic, backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+    subscription_id = Column(Integer, ForeignKey('pubsub_sub.id', ondelete='CASCADE'), nullable=True)
+    subscription = relationship(PubSubSubscription,
+        backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_endpoint_queues', order_by=id, cascade='all, delete, delete-orphan'))

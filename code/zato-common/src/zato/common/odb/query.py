@@ -25,7 +25,7 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, Cac
      CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, \
      HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
-     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, PubSubTopic, RBACClientRole, RBACPermission, \
+     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, \
      RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, TechnicalAccount, \
      TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, \
      XPath, XPathSecurity
@@ -980,6 +980,42 @@ def cloud_aws_s3_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
+def _pubsub_endpoint(session, cluster_id):
+    return session.query(
+        PubSubEndpoint.id, PubSubEndpoint.name,
+        PubSubEndpoint.is_internal, PubSubEndpoint.is_active,
+        PubSubEndpoint.role, PubSubEndpoint.tags,
+        PubSubEndpoint.topic_patterns,
+        PubSubEndpoint.pub_tag_patterns, PubSubEndpoint.message_tag_patterns,
+        PubSubEndpoint.security_id, PubSubEndpoint.ws_channel_id,
+        PubSubEndpoint.hook_service_id,
+        SecurityBase.sec_type,
+        SecurityBase.name.label('sec_name'),
+        Service.name.label('hook_service_name'),
+        ChannelWebSocket.name.label('ws_channel_name'),
+        ).\
+        outerjoin(Service, Service.id==PubSubEndpoint.hook_service_id).\
+        outerjoin(SecurityBase, SecurityBase.id==PubSubEndpoint.security_id).\
+        outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
+        filter(Cluster.id==cluster_id).\
+        filter(Cluster.id==PubSubEndpoint.cluster_id).\
+        order_by(PubSubEndpoint.id)
+
+def pubsub_endpoint(session, cluster_id, id):
+    """ An individual pub/sub endpoint.
+    """
+    return _pubsub_endpoint(session, cluster_id).\
+        filter(PubSubEndpoint.id==id).\
+        one()
+
+@query_wrapper
+def pubsub_endpoint_list(session, cluster_id, needs_columns=False):
+    """ A list of pub/sub endpoints.
+    """
+    return _pubsub_endpoint(session, cluster_id)
+
+# ################################################################################################################################
+
 def _pubsub_topic(session, cluster_id):
     return session.query(
         PubSubTopic.id, PubSubTopic.name, PubSubTopic.is_active,
@@ -1001,6 +1037,39 @@ def pubsub_topic_list(session, cluster_id, needs_columns=False):
     """ All pub/sub topics.
     """
     return _pubsub_topic(session, cluster_id)
+
+# ################################################################################################################################
+
+def _pubsub_subscription(session, cluster_id):
+    return session.query(
+        PubSubSubscription.id, PubSubSubscription.is_active,
+        PubSubSubscription.is_internal, PubSubSubscription.creation_time,
+        PubSubSubscription.sub_key, PubSubSubscription.is_durable,
+        PubSubSubscription.has_gd, PubSubSubscription.topic_id,
+        PubSubSubscription.endpoint_id, PubSubSubscription.out_http_soap_id,
+        PubSubSubscription.out_amqp_id, PubSubSubscription.ws_client_id,
+        PubSubSubscription.ws_channel_id, PubSubSubscription.ws_server_id,
+        PubSubSubscription.cluster_id,
+        PubSubSubscription.id.label('name'), # A 'name' attribute is needed by ConfigDict
+        PubSubTopic.name.label('topic_name'),
+        ).\
+        outerjoin(PubSubTopic, PubSubTopic.id==PubSubSubscription.topic_id).\
+        filter(Cluster.id==PubSubSubscription.cluster_id).\
+        filter(Cluster.id==cluster_id).\
+        order_by(PubSubSubscription.id)
+
+def pubsub_subscription(session, cluster_id, id):
+    """ A pub/sub subscription.
+    """
+    return _pubsub_subscription(session, cluster_id).\
+        filter(PubSubSubscription.id==id).\
+        one()
+
+@query_wrapper
+def pubsub_subscription_list(session, cluster_id, needs_columns=False):
+    """ All pub/sub subscriptions.
+    """
+    return _pubsub_subscription(session, cluster_id)
 
 # ################################################################################################################################
 
@@ -1469,42 +1538,6 @@ def vault_connection_list(session, cluster_id, needs_columns=False):
     """ A list of Vault connections.
     """
     return _vault_connection(session, cluster_id)
-
-# ################################################################################################################################
-
-def _pubsub_endpoint(session, cluster_id):
-    return session.query(
-        PubSubEndpoint.id, PubSubEndpoint.name,
-        PubSubEndpoint.is_internal, PubSubEndpoint.is_active,
-        PubSubEndpoint.role, PubSubEndpoint.tags,
-        PubSubEndpoint.topic_patterns,
-        PubSubEndpoint.pub_tag_patterns, PubSubEndpoint.message_tag_patterns,
-        PubSubEndpoint.security_id, PubSubEndpoint.ws_channel_id,
-        PubSubEndpoint.hook_service_id,
-        SecurityBase.sec_type,
-        SecurityBase.name.label('sec_name'),
-        Service.name.label('hook_service_name'),
-        ChannelWebSocket.name.label('ws_channel_name'),
-        ).\
-        outerjoin(Service, Service.id==PubSubEndpoint.hook_service_id).\
-        outerjoin(SecurityBase, SecurityBase.id==PubSubEndpoint.security_id).\
-        outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
-        filter(Cluster.id==cluster_id).\
-        filter(Cluster.id==PubSubEndpoint.cluster_id).\
-        order_by(PubSubEndpoint.id)
-
-def pubsub_endpoint(session, cluster_id, id):
-    """ An individual pub/sub endpoint.
-    """
-    return _pubsub_endpoint(session, cluster_id).\
-        filter(PubSubEndpoint.id==id).\
-        one()
-
-@query_wrapper
-def pubsub_endpoint_list(session, cluster_id, needs_columns=False):
-    """ A list of pub/sub endpoints.
-    """
-    return _pubsub_endpoint(session, cluster_id)
 
 # ################################################################################################################################
 
