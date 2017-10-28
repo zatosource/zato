@@ -13,7 +13,7 @@ from contextlib import closing
 
 # Zato
 from zato.common.broker_message import PUBSUB
-from zato.common.odb.model import PubSubTopic
+from zato.common.odb.model import PubSubEndpointQueue, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_topic, pubsub_topic_list
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
@@ -65,5 +65,53 @@ class Edit(AdminService):
 
 class Delete(AdminService):
     __metaclass__ = DeleteMeta
+
+# ################################################################################################################################
+
+class Get(AdminService):
+    class SimpleIO:
+        input_required = ('cluster_id', AsIs('id'))
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'max_depth', 'current_depth')
+        output_optional = ('last_pub_time',)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            topic = pubsub_topic(session, self.request.input.cluster_id, self.request.input.id)
+
+        topic.last_pub_time = topic.last_pub_time.isoformat()
+        self.response.payload = topic
+
+# ################################################################################################################################
+
+class Clear(AdminService):
+    class SimpleIO:
+        input_required = ('cluster_id', AsIs('id'))
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+
+            topic = session.query(PubSubTopic).\
+                filter(PubSubTopic.cluster_id==self.request.input.cluster_id).\
+                filter(PubSubTopic.id==self.request.input.id).\
+                one()
+
+            with self.lock('zato.pubsub.publish.%s' % topic.name):
+
+                # Set metadata for topic
+                topic.current_depth = 0
+
+                # Remove all messages
+                session.query(PubSubMessage).\
+                    filter(PubSubMessage.cluster_id==self.request.input.cluster_id).\
+                    filter(PubSubMessage.topic_id==self.request.input.id).\
+                    delete()
+
+                # Remove all references to topic messages from target queues
+                session.query(PubSubEndpointQueue).\
+                    filter(PubSubEndpointQueue.cluster_id==self.request.input.cluster_id).\
+                    filter(PubSubEndpointQueue.topic_id==self.request.input.id).\
+                    delete()
+
+                session.commit()
 
 # ################################################################################################################################

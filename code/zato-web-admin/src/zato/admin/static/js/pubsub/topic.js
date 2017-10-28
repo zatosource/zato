@@ -76,3 +76,25 @@ $.fn.zato.pubsub.topic.delete_ = function(id) {
         'Are you sure you want to delete the pub/sub topic `{0}`?',
         true);
 }
+
+$.fn.zato.pubsub.topic.clear = function(id) {
+
+    var instance = $.fn.zato.data_table.data[id];
+
+    var http_callback = function(data, status) {
+        var success = status == 'success';
+        $('#current_depth_' + instance.id).html('0');
+        $.fn.zato.user_message(success, data.responseText);
+    }
+
+    var jq_callback = function(ok) {
+        if(ok) {
+            var url = String.format('./clear/cluster/{0}/item/{1}/', $(document).getUrlParam('cluster'), instance.id);
+            $.fn.zato.post(url, http_callback, '', 'text');
+        }
+    }
+
+    var q = String.format('Are you sure you want to clear topic `{0}`?', instance.name);
+    jConfirm(q, 'Please confirm', jq_callback);
+
+}
