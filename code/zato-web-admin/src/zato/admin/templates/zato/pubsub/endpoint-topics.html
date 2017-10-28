@@ -62,10 +62,10 @@
                 <tbody>
                 {% if items %}
                 {% for item in items %}
-                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.id }}'>
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.topic_id }}'>
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
-                        <td>{{ item.name }}</td>
+                        <td><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.name }}</a></td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
                         <td>{{ item.max_depth }}</td>

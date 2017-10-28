@@ -37,6 +37,9 @@ def enrich_item(cluster_id, item):
     item.topic_patterns = item.topic_patterns or ''
     item.topic_patterns_html = '<br/>'.join(item.topic_patterns.splitlines())
 
+    is_pub = 'pub' in item.role
+    is_sub = 'sub' in item.role
+
     # Making a copy because it will be replaced with a concatenation of sec_type and security_id,
     # yet we still need it for the client string.
     security_id = item.security_id
@@ -68,11 +71,17 @@ def enrich_item(cluster_id, item):
 
     html_kwargs={'cluster_id':cluster_id, 'endpoint_id':item.id, 'name_slug':slugify(item.name)}
 
-    endpoint_topics_path = django_url_reverse('pubsub-endpoint-topics', kwargs=html_kwargs)
-    item.endpoint_topics_html = '<a href="{}">Topics</a>'.format(endpoint_topics_path)
+    if is_pub:
+        endpoint_topics_path = django_url_reverse('pubsub-endpoint-topics', kwargs=html_kwargs)
+        item.endpoint_topics_html = '<a href="{}">Topics</a>'.format(endpoint_topics_path)
+    else:
+        item.endpoint_topics_html = '<span class="form_hint">Topics</span>'
 
-    endpoint_queues_path = django_url_reverse('pubsub-endpoint-queues', kwargs=html_kwargs)
-    item.endpoint_queues_html = '<a href="{}">Queues</a>'.format(endpoint_queues_path)
+    if is_sub:
+        endpoint_queues_path = django_url_reverse('pubsub-endpoint-queues', kwargs=html_kwargs)
+        item.endpoint_queues_html = '<a href="{}">Queues</a>'.format(endpoint_queues_path)
+    else:
+        item.endpoint_queues_html = '<span class="form_hint">Queues</span>'
 
     # This is also needed by the edit action so as not to construct it in JavaScript
     if item.is_internal:
@@ -171,7 +180,7 @@ class EndpointTopics(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-endpoint-topics'
     template = 'zato/pubsub/endpoint-topics.html'
-    service_name = 'pubapi1.get-topic-list' #'zato.pubsub.endpoint.get-topic-list'
+    service_name = 'pubapi1.get-endpoint-topic-list' #'zato.pubsub.endpoint.get-topic-list'
     output_class = PubSubTopic
     paginate = True
 
@@ -187,10 +196,13 @@ class EndpointTopics(_Index):
 
     def handle(self):
 
-        from_utc_to_user
         return {
             'endpoint_id': self.input.endpoint_id,
-            'endpoint_name': '333'
+            'endpoint_name': self.req.zato.client.invoke(
+                'zato.pubsub.endpoint.get', {
+                    'cluster_id':self.req.zato.cluster_id,
+                    'id':self.input.endpoint_id,
+                }).data.response.name
         }
 
 # ################################################################################################################################

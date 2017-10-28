@@ -33,7 +33,6 @@ class PubSub(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_TOPIC_EDIT(self, msg):
-        # It might be a rename
         old_name = msg.get('old_name')
         del_name = old_name if old_name else msg['name']
         self.pubsub.edit_topic(del_name, msg)
@@ -42,5 +41,20 @@ class PubSub(WorkerImpl):
 
     def on_broker_msg_PUBSUB_TOPIC_DELETE(self, msg):
         self.pubsub.delete_topic(msg.id)
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_ENDPOINT_CREATE(self, msg):
+        self.pubsub.create_endpoint(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_ENDPOINT_EDIT(self, msg):
+        self.pubsub.edit_endpoint(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_ENDPOINT_DELETE(self, msg):
+        self.pubsub.delete_endpoint(msg.id)
 
 # ################################################################################################################################

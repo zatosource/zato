@@ -69,8 +69,8 @@
                         <th><a href="#">Role</a></th>
                         <th style="width:25%"><a href="#">Topics allowed</a></th>
                         <th style="width:20%"><a href="#">Client</a></th>
-                        <th>&nbsp;</th>
-                        <th>&nbsp;</th>
+                        <th>Publication</th>
+                        <th>Subscription</th>
                         <th style="width:5%">&nbsp;</th>
                         <th style="width:5%">&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -94,8 +94,20 @@
                         <td>{{ item.topic_patterns_html|safe|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.client_html|safe|default:'<span class="form_hint">---</span>' }}</td>
 
-                        <td><a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}">Topics</a></td>
-                        <td><a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.name|slugify %}">Queues</a></td>
+                        <td>
+                            {% if 'pub' in item.role %}
+                                <a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}">Topics</a>
+                            {% else %}
+                                <span class="form_hint">Topics</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if 'sub' in item.role %}
+                                <a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.name|slugify %}">Queues</a>
+                            {% else %}
+                                <span class="form_hint">Queues</span>
+                            {% endif %}
+                        </td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint.edit('{{ item.id }}')">Edit</a></td>
                         <td>

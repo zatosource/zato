@@ -18,6 +18,7 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
 from zato.common.odb.model import PubSubTopic
@@ -41,6 +42,11 @@ class Index(_Index):
         output_required = ('id', 'name', 'is_active', 'max_depth', 'current_depth')
         output_optional = ('last_pub_time',)
         output_repeated = True
+
+    def on_before_append_item(self, item):
+        if item.last_pub_time:
+            item.last_pub_time = from_utc_to_user(item.last_pub_time+'+00:00', self.req.zato.user_profile)
+        return item
 
     def handle(self):
         return {

@@ -163,15 +163,58 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def _create_endpoint(self, config):
+        self.endpoints[config.id] = Endpoint(config)
+
+        if config['security_id']:
+            self.sec_id_to_endpoint_id[config['security_id']] = config.id
+
+        if config['ws_channel_id']:
+            self.ws_chan_id_to_endpoint_id[config['ws_channel_id']] = config.id
+
+# ################################################################################################################################
+
     def create_endpoint(self, config):
         with self.lock:
-            self.endpoints[config.id] = Endpoint(config)
+            self._create_endpoint(config)
 
-            if config['security_id']:
-                self.sec_id_to_endpoint_id[config['security_id']] = config.id
+# ################################################################################################################################
 
-            if config['ws_channel_id']:
-                self.ws_chan_id_to_endpoint_id[config['ws_channel_id']] = config.id
+    def _delete_endpoint(self, endpoint_id):
+        del self.endpoints[endpoint_id]
+
+        sec_id = None
+        ws_chan_id = None
+
+        for key, value in self.sec_id_to_endpoint_id.iteritems():
+            if value == endpoint_id:
+                sec_id = key
+                break
+
+        for key, value in self.ws_chan_id_to_endpoint_id.iteritems():
+            if value == endpoint_id:
+                ws_chan_id = key
+                break
+
+        if sec_id:
+            del self.sec_id_to_endpoint_id[sec_id]
+
+        if ws_chan_id:
+            del self.ws_chan_id_to_endpoint_id[ws_chan_id]
+
+# ################################################################################################################################
+
+    def delete_endpoint(self, endpoint_id):
+        with self.lock:
+            self._delete_endpoint(endpoint_id)
+
+# ################################################################################################################################
+
+    def edit_endpoint(self, config):
+        print(config)
+        with self.lock:
+            self._delete_endpoint(config.id)
+            self._create_endpoint(config)
 
 # ################################################################################################################################
 

@@ -22,8 +22,10 @@ from sqlalchemy import and_, exists
 from zato.common import CONTENT_TYPE, DATA_FORMAT, PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, TooManyRequests, ServiceUnavailable
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointQueue, PubSubEndpointTopic, PubSubMessage
+from zato.common.odb.query import query_wrapper
 from zato.common.util import new_cid
 from zato.server.service import AsIs, Int, Service
+from zato.server.service.internal import AdminService, GetListAdminSIO
 
 # ################################################################################################################################
 
@@ -238,11 +240,9 @@ class TopicService(Service):
 
 # ################################################################################################################################
 
-class GetTopicList(Service):
+class GetEndpointTopicList(Service):
     """ Returns all topics to which a given endpoint published at least once.
     """
-    name = 'pubapi1.get-topic-list'
-
     class SimpleIO:
         input_required = ('cluster_id', 'endpoint_id')
         output_required = ('topic_id', 'name', 'is_active', 'is_internal', 'max_depth')
@@ -283,3 +283,4 @@ class GetTopicList(Service):
         self.response.payload[:] = response
 
 # ################################################################################################################################
+

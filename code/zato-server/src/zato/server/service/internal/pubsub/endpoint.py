@@ -32,6 +32,13 @@ output_optional_extra = ['ws_channel_name', 'hook_service_name', 'sec_id', 'sec_
 
 # ################################################################################################################################
 
+def broker_message_hook(self, input, instance, attrs, service_type):
+    if service_type == 'create_edit':
+        with closing(self.odb.session()) as session:
+            input.is_internal = pubsub_endpoint(session, input.cluster_id, instance.id).is_internal
+
+# ################################################################################################################################
+
 class GetList(AdminService):
     _filter_by = PubSubEndpoint.name,
     __metaclass__ = GetListMeta
