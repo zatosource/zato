@@ -28,7 +28,7 @@ broker_message = PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
 skip_input_params = ['is_internal', 'last_pub_time', 'current_depth']
-output_optional_extra = ['current_depth']
+output_optional_extra = ['current_depth', 'last_pub_time']
 
 # ################################################################################################################################
 
@@ -36,6 +36,14 @@ def broker_message_hook(self, input, instance, attrs, service_type):
     if service_type == 'create_edit':
         with closing(self.odb.session()) as session:
             input.is_internal = pubsub_topic(session, input.cluster_id, instance.id).is_internal
+
+# ################################################################################################################################
+
+def response_hook(service, input, instance, attrs, service_type):
+    if service_type == 'get_list':
+        for item in service.response.payload:
+            if item.last_pub_time:
+                item.last_pub_time = item.last_pub_time.isoformat()
 
 # ################################################################################################################################
 
