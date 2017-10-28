@@ -333,6 +333,14 @@ class ConfigLoader(object):
         query = self.odb.get_pubsub_endpoint_list(server.cluster.id, True)
         self.config.pubsub_endpoint = ConfigDict.from_query('pubsub_endpoint', query)
 
+        # Pub/sub - topics
+        query = self.odb.get_pubsub_topic_list(server.cluster.id, True)
+        self.config.pubsub_topic = ConfigDict.from_query('pubsub_topic', query)
+
+        # Pub/sub - subscriptions
+        query = self.odb.get_pubsub_subscription_list(server.cluster.id, True)
+        self.config.pubsub_subscription = ConfigDict.from_query('pubsub_subscription', query)
+
         # E-mail - SMTP
         query = self.odb.get_email_smtp_list(server.cluster.id, True)
         self.config.email_smtp = ConfigDict.from_query('email_smtp', query)

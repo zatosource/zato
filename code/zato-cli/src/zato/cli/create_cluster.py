@@ -869,7 +869,7 @@ class Create(ZatoCommand):
         endpoint.cluster = cluster
 
         topic = PubSubTopic()
-        topic.name = 'zato.demo'
+        topic.name = 'zato.demo.sample'
         topic.is_active = True
         topic.is_internal = True
         topic.max_depth = 100

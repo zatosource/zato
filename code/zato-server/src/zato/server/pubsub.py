@@ -27,6 +27,7 @@ class Endpoint(object):
     """ A publisher/subscriber in pub/sub workflows.
     """
     def __init__(self, config):
+        self.config = config
         self.id = config.id
         self.name = config.name
         self.role = config.role
@@ -78,32 +79,113 @@ class Endpoint(object):
 
 # ################################################################################################################################
 
+class Topic(object):
+    """ An individiual topic ib in pub/sub workflows.
+    """
+    def __init__(self, config):
+        self.config = config
+        self.id = config.id
+        self.name = config.name
+
+# ################################################################################################################################
+
+class Subscription(object):
+    def __init__(self, config):
+        self.config = config
+        self.id = config.id
+        self.topic_name = config.topic_name
+
+# ################################################################################################################################
+
 class PubSub(object):
     def __init__(self):
-        self.endpoints = {}
-        self._security_id_to_endpoint_id = {}
-        self._ws_channel_id_to_endpoint_id = {}
-        self._lock = RLock()
+        self.subscriptions_by_topic = {}    # Topic name     -> Subscription object
+        self.subscriptions_by_sub_key = {}  # Sub key        -> Subscription object
+
+        self.endpoints = {}                 # Endpoint ID    -> Endpoint object
+        self.topics = {}                    # Topic ID       -> Topic object
+
+        self.sec_id_to_endpoint_id = {}     # Sec def ID     -> Endpoint ID
+        self.ws_chan_id_to_endpoint_id = {} # WS chan def ID -> Endpoint ID
+        self.topic_name_to_id = {}          # Topic name     -> Topic ID
+
+        self.lock = RLock()
+
+# ################################################################################################################################
+
+    def get_subscriptions_by_topic(self, topic_name):
+        with self.lock:
+            return self.subscriptions_by_topic.get(topic_name, [])
+
+# ################################################################################################################################
+
+    def get_subscriptions_by_sub_key(self, sub_key):
+        with self.lock:
+            return self.subscriptions_by_sub_key.get(sub_key, [])
+
+# ################################################################################################################################
+
+    def has_sub_key(self, sub_key):
+        with self.lock:
+            return sub_key in self.subscriptions_by_sub_key
+
+# ################################################################################################################################
+
+    def get_endpoint_id_by_sec_id(self, sec_id):
+        with self.lock:
+            return self.sec_id_to_endpoint_id[sec_id]
+
+# ################################################################################################################################
+
+    def get_endpoint_id_by_chan_id(self, chan_id):
+        with self.lock:
+            return self.ws_chan_id_to_endpoint_id[chan_id]
+
+# ################################################################################################################################
+
+    def get_topic_id_by_name(self, topic_name):
+        with self.lock:
+            return self.topic_name_to_id[topic_name]
 
 # ################################################################################################################################
 
     def set_endpoint(self, config):
-        self.endpoints[config.id] = Endpoint(config)
+        with self.lock:
+            self.endpoints[config.id] = Endpoint(config)
 
-        if config['security_id']:
-            self._security_id_to_endpoint_id[config['security_id']] = config.id
+            if config['security_id']:
+                self.sec_id_to_endpoint_id[config['security_id']] = config.id
 
-        if config['ws_channel_id']:
-            self._ws_channel_id_to_endpoint_id[config['ws_channel_id']] = config.id
+            if config['ws_channel_id']:
+                self.ws_chan_id_to_endpoint_id[config['ws_channel_id']] = config.id
+
+# ################################################################################################################################
+
+    def set_subscription(self, config):
+        with self.lock:
+            sub = Subscription(config)
+
+            existing_by_topic = self.subscriptions_by_topic.setdefault(config.topic_name, [])
+            existing_by_topic.append(sub)
+
+            existing_by_sub_key = self.subscriptions_by_sub_key.setdefault(config.sub_key, [])
+            existing_by_sub_key.append(sub)
+
+# ################################################################################################################################
+
+    def set_topic(self, config):
+        with self.lock:
+            self.topics[config.id] = Topic(config)
+            self.topic_name_to_id[config.name] = config.id
 
 # ################################################################################################################################
 
     def _is_allowed(self, target, name, security_id, ws_channel_id):
 
         if security_id:
-            source, id = self._security_id_to_endpoint_id, security_id
+            source, id = self.sec_id_to_endpoint_id, security_id
         else:
-            source, id = self._ws_channel_id_to_endpoint_id, ws_channel_id
+            source, id = self.ws_chan_id_to_endpoint_id, ws_channel_id
 
         endpoint_id = source[id]
         endpoint = self.endpoints[endpoint_id]

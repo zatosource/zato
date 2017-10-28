@@ -739,6 +739,12 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for value in self.worker_config.pubsub_endpoint.values():
             self.pubsub.set_endpoint(bunchify(value['config']))
 
+        for value in self.worker_config.pubsub_subscription.values():
+            self.pubsub.set_subscription(bunchify(value['config']))
+
+        for value in self.worker_config.pubsub_topic.values():
+            self.pubsub.set_topic(bunchify(value['config']))
+
 # ################################################################################################################################
 
     def update_apikeys(self):
