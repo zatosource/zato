@@ -152,6 +152,9 @@ class AdminService(Service):
 
         result = search_func(session, cluster_id, *args, **kwargs)
 
+        print(3333, result)
+        print()
+
         num_pages, rest = divmod(result.total, page_size)
 
         # Apparently there are some results in rest that did not fit a full page

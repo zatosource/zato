@@ -21,8 +21,8 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
-from zato.admin.web.views.pubsub import get_client_html
-from zato.common.odb.model import PubSubEndpoint, PubSubTopic
+from zato.admin.web.views.pubsub import get_client_html, get_endpoint_html
+from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubTopic
 
 # ################################################################################################################################
 
@@ -164,5 +164,39 @@ class TopicSubscribers(_Index):
     service_name = 'pubapi1.get-topic-subscriber-list' #'zato.pubsub.topic.get-subscriber-list'
     output_class = PubSubEndpoint
     paginate = True
+
+# ################################################################################################################################
+
+class TopicMessages(_Index):
+    method_allowed = 'GET'
+    url_name = 'pubsub-topic-messages'
+    template = 'zato/pubsub/topic-messages.html'
+    service_name = 'zato.pubsub.topic.get-message-list'
+    output_class = PubSubMessage
+    paginate = True
+
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id', 'topic_id')
+        output_required = ('msg_id', 'pub_time', 'data_prefix_short', 'pattern_matched')
+        output_optional = ('correl_id', 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id',
+            'service_name', 'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name')
+        output_repeated = True
+
+    def on_before_append_item(self, item):
+        item.pub_time = from_utc_to_user(item.pub_time+'+00:00', self.req.zato.user_profile)
+        item.client_html = get_client_html(item, item.security_id, self.req.zato.cluster_id)
+        item.endpoint_html = get_endpoint_html(item, self.req.zato.cluster_id)
+        return item
+
+    def handle(self):
+
+        return {
+            'topic_id': self.input.topic_id,
+            'topic_name': self.req.zato.client.invoke(
+                'zato.pubsub.topic.get', {
+                    'cluster_id':self.req.zato.cluster_id,
+                    'id':self.input.topic_id,
+                }).data.response.name
+        }
 
 # ################################################################################################################################

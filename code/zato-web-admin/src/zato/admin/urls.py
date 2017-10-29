@@ -1206,8 +1206,10 @@ urlpatterns += [
         login_required(pubsub_topic.topic_clear), name='pubsub-topic-clear'),
     url(r'^zato/pubsub/topic/publishers/(?P<cluster_id>.*)/item/(?P<topic_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_topic.TopicPublishers()), name=pubsub_topic.TopicPublishers.url_name),
-    url(r'^zato/pubsub/topic/publishers/(?P<cluster_id>.*)/item/(?P<topic_id>.*)/(?P<name_slug>.*)$',
+    url(r'^zato/pubsub/topic/subscribers/(?P<cluster_id>.*)/item/(?P<topic_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_topic.TopicSubscribers()), name=pubsub_topic.TopicSubscribers.url_name),
+    url(r'^zato/pubsub/topic/messages/(?P<topic_id>.*)/(?P<name_slug>.*)$',
+        login_required(pubsub_topic.TopicMessages()), name=pubsub_topic.TopicMessages.url_name),
     ]
 
 # ################################################################################################################################
