@@ -70,9 +70,7 @@ def get_endpoint_html(item, cluster_id):
 @method_allowed('GET')
 def message(req, cluster_id, object_type, object_id, msg_id):
 
-    service_name = 'pubapi1.get-message' # 'zato.pubsub.{}.get'.format(object_type)
-
-    return_data = req.zato.client.invoke(service_name, {
+    return_data = req.zato.client.invoke('zato.pubsub.message.get', {
         'cluster_id': cluster_id,
         'msg_id': msg_id,
     }).data.response
@@ -110,7 +108,7 @@ def update_message(req, cluster_id, msg_id):
         expiration_time = None
         size = None
 
-        response = req.zato.client.invoke('pubapi1.update-message', {
+        response = req.zato.client.invoke('zato.pubsub.message.update', {
             'cluster_id': cluster_id,
             'msg_id': msg_id,
             'data': data,

@@ -96,6 +96,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.pattern.invoke_retry',
             'zato.server.service.internal.pubsub',
             'zato.server.service.internal.pubsub.endpoint',
+            'zato.server.service.internal.pubsub.message',
             'zato.server.service.internal.pubsub.topic',
             'zato.server.service.internal.query.cassandra',
             'zato.server.service.internal.scheduler',
