@@ -29,8 +29,9 @@
             '_publishers',
             '_subscribers',
 
-            '_edit',
+            '_publish',
             '_clear',
+            '_edit',
             '_delete',
 
             'id',
@@ -77,6 +78,7 @@
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
+                        <th>&nbsp;</th>
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -98,8 +100,9 @@
                         <td>{{ item.last_pub_time|default:"<span class='form_hint'>---</span>" }}</td>
                         <td><a href="{% url "pubsub-topic-publishers" cluster_id item.id item.name|slugify %}">Publishers</a></td>
                         <td><a href="{% url "pubsub-topic-subscribers" cluster_id item.id item.name|slugify %}">Subscribers</a></td>
-                        <td><a href="javascript:$.fn.zato.pubsub.topic.edit('{{ item.id }}')">Edit</a></td>
+                        <td><a href="{% url "pubsub-message-publish" cluster_id item.id %}">Publish</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.topic.clear('{{ item.id }}')">Clear</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.topic.edit('{{ item.id }}')">Edit</a></td>
                         <td>
                             {% if item.is_internal %}
                                 <span class="form_hint">Delete</span>

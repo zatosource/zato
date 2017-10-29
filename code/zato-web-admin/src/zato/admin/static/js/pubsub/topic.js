@@ -89,7 +89,7 @@ $.fn.zato.pubsub.topic.clear = function(id) {
 
     var jq_callback = function(ok) {
         if(ok) {
-            var url = String.format('./clear/cluster/{0}/item/{1}/', $(document).getUrlParam('cluster'), instance.id);
+            var url = String.format('./clear/cluster/{0}/topic/{1}/', $(document).getUrlParam('cluster'), instance.id);
             $.fn.zato.post(url, http_callback, '', 'text');
         }
     }

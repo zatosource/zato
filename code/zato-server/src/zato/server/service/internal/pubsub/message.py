@@ -76,11 +76,26 @@ class Delete(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            session.query(PubSubMessage).\
+            ps_msg = session.query(PubSubMessage).\
                 filter(PubSubMessage.cluster_id==self.request.input.cluster_id).\
                 filter(PubSubMessage.pub_msg_id==self.request.input.msg_id).\
-                delete()
-            session.commit()
+                first()
+
+            if not ps_msg:
+                raise NotFound(self.cid, 'Message not found `{}`'.format(self.request.input.msg_id))
+
+            ps_topic = session.query(PubSubTopic).\
+                filter(PubSubTopic.cluster_id==self.request.input.cluster_id).\
+                filter(PubSubTopic.id==ps_msg.topic_id).\
+                one()
+
+            # Delete the message and decrement its topic's current depth ..
+            session.delete(ps_msg)
+            ps_topic.current_depth = ps_topic.current_depth - 1
+
+            # .. but do it under a global lock because other transactions may want to update the topic in parallel.
+            with self.lock('zato.pubsub.publish.%s' % ps_topic.name):
+                session.commit()
 
 # ################################################################################################################################
 
