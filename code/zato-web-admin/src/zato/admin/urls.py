@@ -46,8 +46,7 @@ from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import stomp as out_stomp
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
-from zato.admin.web.views.pubsub import delete_message as pubsub_delete_message, message as pubsub_message, \
-     update_message as pubsub_update_message
+from zato.admin.web.views.pubsub import message as pubsub_message
 from zato.admin.web.views.pubsub import topic as pubsub_topic
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
@@ -1189,9 +1188,9 @@ urlpatterns += [
         login_required(pubsub_endpoint.Edit()), name=pubsub_endpoint.Edit.url_name),
     url(r'^zato/pubsub/endpoint/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(pubsub_endpoint.Delete()), name=pubsub_endpoint.Delete.url_name),
-    url(r'^zato/pubsub/endpoint/topics/(?P<cluster_id>.*)/item/(?P<endpoint_id>.*)/(?P<name_slug>.*)$',
+    url(r'^zato/pubsub/endpoint/topics/(?P<cluster_id>.*)/endpoint/(?P<endpoint_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_endpoint.EndpointTopics()), name=pubsub_endpoint.EndpointTopics.url_name),
-    url(r'^zato/pubsub/endpoint/queues/(?P<cluster_id>.*)/item/(?P<endpoint_id>.*)/(?P<name_slug>.*)$',
+    url(r'^zato/pubsub/endpoint/queues/(?P<cluster_id>.*)/endpoint/(?P<endpoint_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_endpoint.EndpointQueues()), name=pubsub_endpoint.EndpointQueues.url_name),
 
     # Pub/sub - topics
@@ -1204,26 +1203,34 @@ urlpatterns += [
         login_required(pubsub_topic.Edit()), name=pubsub_topic.Edit.url_name),
     url(r'^zato/pubsub/topic/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
         login_required(pubsub_topic.Delete()), name=pubsub_topic.Delete.url_name),
-    url(r'^zato/pubsub/topic/clear/cluster/(?P<cluster_id>.*)/item/(?P<topic_id>.*)/$',
+    url(r'^zato/pubsub/topic/clear/cluster/(?P<cluster_id>.*)/topic/(?P<topic_id>.*)/$',
         login_required(pubsub_topic.topic_clear), name='pubsub-topic-clear'),
-    url(r'^zato/pubsub/topic/publishers/(?P<cluster_id>.*)/item/(?P<topic_id>.*)/(?P<name_slug>.*)$',
+    url(r'^zato/pubsub/topic/publishers/(?P<cluster_id>.*)/topic/(?P<topic_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_topic.TopicPublishers()), name=pubsub_topic.TopicPublishers.url_name),
-    url(r'^zato/pubsub/topic/subscribers/(?P<cluster_id>.*)/item/(?P<topic_id>.*)/(?P<name_slug>.*)$',
+    url(r'^zato/pubsub/topic/subscribers/(?P<cluster_id>.*)/topic/(?P<topic_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_topic.TopicSubscribers()), name=pubsub_topic.TopicSubscribers.url_name),
     url(r'^zato/pubsub/topic/messages/(?P<topic_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_topic.TopicMessages()), name=pubsub_topic.TopicMessages.url_name),
 
     # Details of an individual message
     url(r'^zato/pubsub/message/details/cluster/(?P<cluster_id>.*)/(?P<object_type>.*)/(?P<object_id>.*)/msg/(?P<msg_id>.*)$',
-        login_required(pubsub_message), name='pubsub-message'),
+        login_required(pubsub_message.get), name='pubsub-message'),
 
     # Updates an individual message
     url(r'^zato/pubsub/message/update/cluster/(?P<cluster_id>.*)/msg/(?P<msg_id>.*)$',
-        login_required(pubsub_update_message), name='pubsub-message-update'),
+        login_required(pubsub_message.update), name='pubsub-message-update'),
 
     # Deletes an individual message
     url(r'^zato/pubsub/message/delete/cluster/(?P<cluster_id>.*)/msg/(?P<msg_id>.*)$',
-        login_required(pubsub_delete_message), name='pubsub-message-delete'),
+        login_required(pubsub_message.delete), name='pubsub-message-delete'),
+
+    # Publishes a message to a topic (GET form)
+    url(r'^zato/pubsub/message/publish/cluster/(?P<cluster_id>.*)/topic/(?P<topic_id>.*)$',
+        login_required(pubsub_message.publish), name='pubsub-message-publish'),
+
+    # Publishes a message to a topic (POST action)
+    url(r'^zato/pubsub/message/publish-action/cluster/(?P<cluster_id>.*)/topic/(?P<topic_id>.*)$',
+        login_required(pubsub_message.publish_action), name='pubsub-message-publish-action'),
 
     ]
 
