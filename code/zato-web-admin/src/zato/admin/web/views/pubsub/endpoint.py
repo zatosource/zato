@@ -24,6 +24,7 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
+from zato.admin.web.views.pubsub import get_client_html
 from zato.common import ZATO_NONE
 from zato.common.odb.model import PubSubEndpoint, PubSubTopic
 
@@ -47,27 +48,7 @@ def enrich_item(cluster_id, item):
     if item.security_id:
         item.security_id = '{}/{}'.format(item.sec_type, item.security_id)
 
-    # Client is a string representation of a WebSockets channel or HTTP credentials
-    client = ''
-
-    if security_id or item.ws_channel_id:
-        if security_id:
-            path_name = 'security-basic-auth'
-            id_value = security_id
-            name = item.sec_name
-            protocol = 'HTTP'
-
-        elif item.ws_channel_id:
-            path_name = 'channel-web-socket'
-            id_value = item.ws_channel_id
-            name = item.ws_channel_name
-            protocol = 'WebSockets'
-
-        path = django_url_reverse(path_name)
-        client = '<span style="font-size:smaller">{}</span><br/><a href="{}?cluster={}&amp;highlight={}">{}</a>'.format(
-            protocol, path, cluster_id, id_value, name)
-
-    item.client_html = client
+    item.client_html = get_client_html(item, security_id, cluster_id)
 
     html_kwargs={'cluster_id':cluster_id, 'endpoint_id':item.id, 'name_slug':slugify(item.name)}
 
@@ -180,7 +161,7 @@ class EndpointTopics(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-endpoint-topics'
     template = 'zato/pubsub/endpoint-topics.html'
-    service_name = 'pubapi1.get-endpoint-topic-list' #'zato.pubsub.endpoint.get-topic-list'
+    service_name = 'zato.pubsub.endpoint.get-topic-list'
     output_class = PubSubTopic
     paginate = True
 
