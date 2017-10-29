@@ -22,7 +22,8 @@
             '_active',
             '_is_active',
             '_is_internal',
-            'max_depth',
+            'pattern_matched',
+            'last_seen',
             'last_pub_time',
             'last_msg_id',
             'last_correl_id',
@@ -54,6 +55,7 @@
                         <th><a href="#">Client</a></th>
                         <th><a href="#">Active</a></th>
                         <th><a href="#">Internal</a></th>
+                        <th><a href="#">Pattern</a></th>
                         <th><a href="#">Last seen</a></th>
                         <th><a href="#">Last pub time</a></th>
                         <th><a href="#">Last Msg ID</a></th>
@@ -74,6 +76,7 @@
                         </td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
+                        <td>{{ item.pattern_matched }}</td>
                         <td>{{ item.last_seen }}</td>
                         <td>{{ item.last_pub_time }}</td>
                         <td>{{ item.last_msg_id|default:'<span class="form_hint">---</span>' }}</td>

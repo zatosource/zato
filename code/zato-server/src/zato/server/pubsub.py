@@ -66,12 +66,12 @@ class Endpoint(object):
                 if line.startswith('pub=') or line.startswith('sub='):
                     is_pub = line.startswith('pub=')
 
-                    pattern = line[line.find('=')+1:]
-                    pattern = globre_compile(pattern)
+                    matcher = line[line.find('=')+1:]
+                    matcher = globre_compile(matcher)
 
                     source = (is_pub, is_topic)
                     target = targets[source]
-                    target.append(pattern)
+                    target.append([line, matcher])
 
                 else:
                     logger.warn('Ignoring invalid {} pattern `{}` for `{}` (role:{}) (reason: no pub=/sub= prefix found)'.format(
@@ -275,9 +275,9 @@ class PubSub(object):
         endpoint_id = source[id]
         endpoint = self.endpoints[endpoint_id]
 
-        for elem in getattr(endpoint, target):
-            if elem.match(name):
-                return True
+        for orig, matcher in getattr(endpoint, target):
+            if matcher.match(name):
+                return orig
 
 # ################################################################################################################################
 
