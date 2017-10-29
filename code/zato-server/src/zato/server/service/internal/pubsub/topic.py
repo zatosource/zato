@@ -151,8 +151,8 @@ class GetMessageList(AdminService):
 
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'topic_id')
-        output_required = (AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'pub_time', 'data_prefix_short', 'pattern_matched')
-        output_optional = ('size', 'service_id', 'security_id', 'ws_channel_id', 'service_name',
+        output_required = (AsIs('msg_id'), 'pub_time', 'data_prefix_short', 'pattern_matched')
+        output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id', 'service_name',
             'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name')
         output_repeated = True
 

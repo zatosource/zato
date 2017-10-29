@@ -46,6 +46,7 @@ from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import stomp as out_stomp
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
+from zato.admin.web.views.pubsub import message as pubsub_message, update_message as pubsub_update_message
 from zato.admin.web.views.pubsub import topic as pubsub_topic
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
@@ -1210,6 +1211,15 @@ urlpatterns += [
         login_required(pubsub_topic.TopicSubscribers()), name=pubsub_topic.TopicSubscribers.url_name),
     url(r'^zato/pubsub/topic/messages/(?P<topic_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_topic.TopicMessages()), name=pubsub_topic.TopicMessages.url_name),
+
+    # Details of an individual message
+    url(r'^zato/pubsub/message/details/cluster/(?P<cluster_id>.*)/(?P<object_type>.*)/(?P<object_id>.*)/msg/(?P<msg_id>.*)$',
+        login_required(pubsub_message), name='pubsub-message'),
+
+    # Updates an individual message
+    url(r'^zato/pubsub/message/update/cluster/(?P<cluster_id>.*)/msg/(?P<msg_id>.*)$',
+        login_required(pubsub_update_message), name='pubsub-message-update'),
+
     ]
 
 # ################################################################################################################################
