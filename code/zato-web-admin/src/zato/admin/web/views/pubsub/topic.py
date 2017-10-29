@@ -21,7 +21,8 @@ from django.template.response import TemplateResponse
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
-from zato.common.odb.model import PubSubTopic
+from zato.admin.web.views.pubsub import get_client_html
+from zato.common.odb.model import PubSubEndpoint, PubSubTopic
 
 # ################################################################################################################################
 
@@ -122,12 +123,47 @@ def topic_clear(req, cluster_id, topic_id):
 
 # ################################################################################################################################
 
-def topic_subscribers(req, cluster_id, topic_id, name_slug):
-    pass
+class TopicPublishers(_Index):
+    method_allowed = 'GET'
+    url_name = 'pubsub-topic-publishers'
+    template = 'zato/pubsub/topic-publishers.html'
+    service_name = 'zato.pubsub.topic.get-publisher-list'
+    output_class = PubSubEndpoint
+    paginate = True
+
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id', 'topic_id')
+        output_required = ('endpoint_id', 'name', 'is_active', 'is_internal')
+        output_optional = ('service_id', 'security_id', 'ws_channel_id', 'last_seen', 'last_pub_time', 'last_msg_id',
+            'last_correl_id', 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name')
+        output_repeated = True
+
+    def on_before_append_item(self, item):
+        item.last_seen = from_utc_to_user(item.last_seen+'+00:00', self.req.zato.user_profile)
+        item.last_pub_time = from_utc_to_user(item.last_pub_time+'+00:00', self.req.zato.user_profile)
+        item.client_html = get_client_html(item, item.security_id, self.req.zato.cluster_id)
+        print(item, item.sec_name)
+        return item
+
+    def handle(self):
+
+        return {
+            'topic_id': self.input.topic_id,
+            'topic_name': self.req.zato.client.invoke(
+                'zato.pubsub.topic.get', {
+                    'cluster_id':self.req.zato.cluster_id,
+                    'id':self.input.topic_id,
+                }).data.response.name
+        }
 
 # ################################################################################################################################
 
-def topic_publishers(req, cluster_id, topic_id, name_slug):
-    pass
+class TopicSubscribers(_Index):
+    method_allowed = 'GET'
+    url_name = 'pubsub-topic-subscribers'
+    template = 'zato/pubsub/topic-subscribers.html'
+    service_name = 'pubapi1.get-topic-subscriber-list' #'zato.pubsub.topic.get-subscriber-list'
+    output_class = PubSubEndpoint
+    paginate = True
 
 # ################################################################################################################################

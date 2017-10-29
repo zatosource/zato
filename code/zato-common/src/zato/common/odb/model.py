@@ -2094,6 +2094,11 @@ class PubSubEndpoint(Base):
     is_internal = Column(Boolean(), nullable=False, default=False)
     is_active = Column(Boolean(), nullable=False, default=True) # Unusued for now
 
+    last_seen = Column(DateTime(), nullable=True)
+    last_pub_time = Column(DateTime(), nullable=True)
+    last_sub_time = Column(DateTime(), nullable=True)
+    last_deliv_time = Column(DateTime(), nullable=True)
+
     # Endpoint's role, e.g. publisher, subscriber or both
     role = Column(String(40), nullable=False)
 
@@ -2130,6 +2135,7 @@ class PubSubEndpoint(Base):
     sec_type = None          # Not used by DB
     sec_name = None          # Not used by DB
     ws_channel_name = None   # Not used by DB
+    service_name = None      # Not used by DB
     hook_service_name = None # Not used by DB
 
 # ################################################################################################################################
@@ -2158,6 +2164,7 @@ class PubSubTopic(Base):
 
 class PubSubEndpointTopic(Base):
     """ A list of topics to which a given endpoint has ever published along with metadata about the latest publication.
+    There is one row for each existing publisher and topic ever in use.
     """
     __tablename__ = 'pubsub_endp_topic'
     __table_args__ = (

@@ -13,7 +13,8 @@ from contextlib import closing
 
 # Zato
 from zato.common.broker_message import PUBSUB
-from zato.common.odb.model import PubSubEndpointQueue, PubSubMessage, PubSubTopic
+from zato.common.odb.model import ChannelWebSocket, PubSubEndpoint, PubSubEndpointTopic, PubSubEndpointQueue, PubSubMessage, \
+     PubSubTopic, SecurityBase, Service
 from zato.common.odb.query import pubsub_topic, pubsub_topic_list
 from zato.server.service import AsIs
 from zato.server.service.internal import AdminService, AdminSIO
@@ -113,5 +114,54 @@ class Clear(AdminService):
                     delete()
 
                 session.commit()
+
+# ################################################################################################################################
+
+class GetPublisherList(AdminService):
+    """ Returns all publishers that sent at least one message to a given topic.
+    """
+    class SimpleIO:
+        input_required = ('cluster_id', 'topic_id')
+        output_required = ('name', 'is_active', 'is_internal')
+        output_optional = ('service_id', 'security_id', 'ws_channel_id', 'last_seen', 'last_pub_time', AsIs('last_msg_id'),
+            AsIs('last_correl_id'), 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name')
+        output_repeated = True
+
+    def handle(self):
+        input = self.request.input
+        pubsub = self.server.worker_store.pubsub
+        response = []
+
+        with closing(self.odb.session()) as session:
+
+            # Get last pub time for that specific endpoint to this very topic
+            last_data = session.query(
+                PubSubEndpoint.service_id, PubSubEndpoint.security_id,
+                PubSubEndpoint.ws_channel_id, PubSubEndpoint.name,
+                PubSubEndpoint.is_active, PubSubEndpoint.is_internal,
+                PubSubEndpoint.last_seen, PubSubEndpoint.last_pub_time,
+                PubSubEndpointTopic.last_pub_time,
+                PubSubEndpointTopic.pub_msg_id.label('last_msg_id'),
+                PubSubEndpointTopic.pub_correl_id.label('last_correl_id'),
+                PubSubEndpointTopic.in_reply_to.label('last_in_reply_to'),
+                Service.name.label('service_name'),
+                SecurityBase.name.label('sec_name'),
+                ChannelWebSocket.name.label('ws_channel_name'),
+                ).\
+                outerjoin(Service, Service.id==PubSubEndpoint.service_id).\
+                outerjoin(SecurityBase, SecurityBase.id==PubSubEndpoint.security_id).\
+                outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
+                filter(PubSubEndpointTopic.topic_id==PubSubTopic.id).\
+                filter(PubSubEndpointTopic.topic_id==input.topic_id).\
+                filter(PubSubEndpointTopic.endpoint_id==PubSubEndpoint.id).\
+                filter(PubSubEndpointTopic.cluster_id==self.server.cluster_id).\
+                all()
+
+            for item in last_data:
+                item.last_seen = item.last_pub_time.isoformat()
+                item.last_pub_time = item.last_pub_time.isoformat()
+                response.append(item)
+
+        self.response.payload[:] = response
 
 # ################################################################################################################################
