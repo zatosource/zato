@@ -8,6 +8,7 @@ $.fn.zato.pubsub.message.details.on_validate_save = function(e) {
     };
 
     $('#expiration_time').html(expiration_time);
+    $('#size').html(response.size);
     $.fn.zato.user_message(response.is_ok, response.message);
 }
 
@@ -31,6 +32,9 @@ $(document).ready(function() {
 
     $('#id_mime_type').attr('data-bvalidator', 'required');
     $('#id_mime_type').attr('data-bvalidator-msg', 'This is a required field');
+
+    $('#data-textarea').attr('data-bvalidator', 'required');
+    $('#data-textarea').attr('data-bvalidator-msg', 'This is a required field');
 
     var form = $('#message-details-form');
 

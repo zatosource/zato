@@ -1020,7 +1020,7 @@ def _pubsub_topic(session, cluster_id):
     return session.query(
         PubSubTopic.id, PubSubTopic.name, PubSubTopic.is_active,
         PubSubTopic.is_internal, PubSubTopic.last_pub_time, PubSubTopic.max_depth,
-        PubSubTopic.current_depth).\
+        PubSubTopic.current_depth, PubSubTopic.has_gd).\
         filter(Cluster.id==PubSubTopic.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(PubSubTopic.name)
@@ -1108,7 +1108,7 @@ def _pubsub_message(session, cluster_id):
         PubSubMessage.ext_pub_time, PubSubMessage.size,
         PubSubMessage.data_format, PubSubMessage.mime_type,
         PubSubMessage.data, PubSubMessage.expiration,
-        PubSubMessage.expiration_time,
+        PubSubMessage.expiration_time, PubSubMessage.has_gd,
         PubSubEndpoint.id.label('endpoint_id'),
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubEndpoint.service_id,
@@ -1132,7 +1132,8 @@ def pubsub_message(session, cluster_id, pub_msg_id):
 @query_wrapper
 def pubsub_messages_for_topic(session, cluster_id, topic_id, needs_columns=False):
     return _pubsub_message(session, cluster_id).\
-        filter(PubSubMessage.topic_id==topic_id)
+        filter(PubSubMessage.topic_id==topic_id).\
+        order_by(PubSubMessage.pub_time.desc())
 
 # ################################################################################################################################
 

@@ -89,6 +89,7 @@ def message(req, cluster_id, object_type, object_id, msg_id):
     return_data.object_type = object_type
     return_data['{}_id'.format(object_type)] = object_id
     return_data.form = MsgForm(return_data)
+    return_data.endpoint_html = get_endpoint_html(return_data, cluster_id)
 
     return TemplateResponse(req, 'zato/pubsub/message-details.html', return_data)
 
@@ -103,24 +104,31 @@ def update_message(req, cluster_id, msg_id):
 
     priority = req.POST['priority']
     mime_type = req.POST['mime_type']
+    data = req.POST['data']
 
     try:
         expiration_time = None
+        size = None
+
         response = req.zato.client.invoke('pubapi1.update-message', {
             'cluster_id': cluster_id,
             'msg_id': msg_id,
+            'data': data,
             'expiration': expiration,
             'correl_id': correl_id,
             'in_reply_to': in_reply_to,
             'priority': priority,
             'mime_type': mime_type,
         }).data.response
+
     except Exception, e:
         is_ok = False
         message = format_exc(e)
+
     else:
         is_ok = True
         message = 'Message updated'
+        size = response.size
         if response.expiration_time:
             expiration_time = from_utc_to_user(response.expiration_time+'+00:00', req.zato.user_profile)
 
@@ -128,6 +136,7 @@ def update_message(req, cluster_id, msg_id):
         'is_ok': is_ok,
         'message': message,
         'expiration_time': expiration_time,
+        'size': size
     }))
 
 # ################################################################################################################################
