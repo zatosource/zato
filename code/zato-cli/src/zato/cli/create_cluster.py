@@ -873,6 +873,7 @@ class Create(ZatoCommand):
         topic.is_active = True
         topic.is_internal = True
         topic.max_depth = 100
+        topic.has_gd = False
         topic.cluster = cluster
 
         sub = PubSubSubscription()

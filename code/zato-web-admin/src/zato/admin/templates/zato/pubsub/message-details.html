@@ -64,19 +64,24 @@
                 <td style="width:140px" id="expiration_time">{{ expiration_time|default:"<span class='form_hint'>---</span>" }}</td>
 
                 <td class='inline_header' style="width:90px">Pub endpoint</td>
-                <td style="width:140px">{{ endpoint_html }}</td>
+                <td style="width:140px">{{ endpoint_html|safe }}</td>
             </tr>
             <tr>
                 <td class='inline_header' style="width:90px">In reply to</td>
                 <td style="width:140px">{{ form.in_reply_to }}</td>
 
                 <td class='inline_header' style="width:90px">Size <span class='form_hint'>(in bytes)</span></td>
-                <td style="width:140px">{{ size }}</td>
+                <td style="width:140px" id="size">{{ size }}</td>
 
                 <td class='inline_header' style="width:90px">Guaranteed delivery</td>
+
                 <td style="width:140px">
                     {% if has_gd %}
-                        <a href="#">Show details</a>
+                        {% ifequal object_type "queue" %}
+                            <a href="#">Show details</a>
+                        {% else %}
+                            Enabled
+                        {% endifequal %}
                     {% else %}
                         <span class='form_hint'>---</span>
                     {% endif %}
@@ -87,7 +92,7 @@
                 <td class='inline_header' colspan="6">Payload</td>
             </tr>
             <tr>
-                <td colspan="6"><textarea style="height:300px">{{ data }}</textarea></td>
+                <td colspan="6"><textarea style="height:300px" id="data-textarea" name="data">{{ data }}</textarea></td>
             </tr>
             <tr>
                 <td colspan="6" style="text-align:right"><input type="submit" name="update-message-button" value="Update message" /></td>

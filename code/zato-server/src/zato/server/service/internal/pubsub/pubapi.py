@@ -92,7 +92,7 @@ class TopicService(Service):
     """
     class SimpleIO:
         input_required = ('topic_name',)
-        input_optional = (Int('priority'), Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to')
+        input_optional = (Int('priority'), Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to', Bool('gd'))
         output_optional = (AsIs('msg_id'),)
         response_elem = None
 
@@ -180,6 +180,7 @@ class TopicService(Service):
         pub_msg_id = 'zpsm%s' % _new_cid()
         pub_correl_id = input.get('correl_id')
         in_reply_to = input.get('in_reply_to')
+        has_gd = input.gd if isinstance(input.gd, bool) else topic.has_gd
 
         endpoint_id = pubsub.get_endpoint_id_by_sec_id(security_id)
 
@@ -201,6 +202,7 @@ class TopicService(Service):
         ps_msg.published_by_id = endpoint_id
         ps_msg.topic_id = topic.id
         ps_msg.cluster_id = cluster_id
+        ps_msg.has_gd = has_gd
 
         # Operate under a global lock for that topic to rule out any interference
         with self.lock('zato.pubsub.publish.%s' % topic_name):
@@ -308,7 +310,7 @@ class GetMessage(AdminService):
         input_required = ('cluster_id', AsIs('msg_id'))
         output_optional = ('topic_id', 'topic_name', AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'pub_time', \
             'ext_pub_time', 'pattern_matched', 'priority', 'data_format', 'mime_type', 'size', 'data',
-            'expiration', 'expiration_time')
+            'expiration', 'expiration_time', 'endpoint_id', 'endpoint_name', Bool('has_gd'))
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -332,9 +334,9 @@ class UpdateMessage(AdminService):
 
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'), 'mime_type')
-        input_optional = (Int('expiration'), AsIs('correl_id'), AsIs('in_reply_to'), Int('priority'))
+        input_optional = ('data', Int('expiration'), AsIs('correl_id'), AsIs('in_reply_to'), Int('priority'))
         output_required = (Bool('found'),)
-        output_optional = ('expiration_time',)
+        output_optional = ('expiration_time', Int('size'))
 
     def handle(self, _utcnow=datetime.utcnow):
         input = self.request.input
@@ -349,6 +351,10 @@ class UpdateMessage(AdminService):
                 self.response.payload.found = False
                 return
 
+            item.data = input.data
+            item.data_prefix = input.data[:2048]
+            item.data_prefix_short = input.data[:64]
+            item.size = len(input.data)
             item.expiration = get_expiration(self.cid, input)
             item.priority = get_priority(self.cid, input)
 
@@ -365,6 +371,7 @@ class UpdateMessage(AdminService):
             session.commit()
 
             self.response.payload.found = True
+            self.response.payload.size = item.size
             self.response.payload.expiration_time = item.expiration_time.isoformat() if item.expiration_time else None
 
 # ################################################################################################################################

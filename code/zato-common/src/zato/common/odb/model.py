@@ -2156,6 +2156,7 @@ class PubSubTopic(Base):
     last_pub_time = Column(DateTime(), nullable=True)
     max_depth = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH)
     current_depth = Column(Integer(), nullable=False, default=0)
+    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=name, cascade='all, delete, delete-orphan'))
@@ -2282,6 +2283,7 @@ class PubSubMessage(Base):
     priority = Column(Integer, nullable=False)
     expiration = Column(Integer, nullable=False, default=0)
     expiration_time = Column(DateTime(), nullable=True)
+    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
 
     published_by_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
     published_by = relationship(
