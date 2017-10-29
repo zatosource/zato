@@ -20,26 +20,9 @@ from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointQue
      SecurityBase, Service as ODBService, ChannelWebSocket
 from zato.common.odb.query import pubsub_message, query_wrapper
 from zato.common.util import new_cid
+from zato.server.pubsub import get_expiration, get_priority
 from zato.server.service import AsIs, Bool, Int, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
-
-# ################################################################################################################################
-
-class Has(AdminService):
-    """ Returns a boolean flag to indicate whether a given message by ID exists in pub/sub.
-    """
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', AsIs('msg_id'))
-        output_required = (Bool('found'),)
-
-    def handle(self):
-        with closing(self.odb.session()) as session:
-            self.response.payload.found = session.query(
-                exists().where(and_(
-                    PubSubMessage.pub_msg_id==self.request.input.msg_id,
-                    PubSubMessage.cluster_id==self.server.cluster_id,
-                    ))).\
-                scalar()
 
 # ################################################################################################################################
 
@@ -64,6 +47,40 @@ class Get(AdminService):
                 item.expiration_time = item.expiration_time.isoformat() if item.expiration_time else ''
 
             self.response.payload = item
+
+# ################################################################################################################################
+
+class Has(AdminService):
+    """ Returns a boolean flag to indicate whether a given message by ID exists in pub/sub.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', AsIs('msg_id'))
+        output_required = (Bool('found'),)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload.found = session.query(
+                exists().where(and_(
+                    PubSubMessage.pub_msg_id==self.request.input.msg_id,
+                    PubSubMessage.cluster_id==self.server.cluster_id,
+                    ))).\
+                scalar()
+
+# ################################################################################################################################
+
+class Delete(AdminService):
+    """ Deletes a message by its ID. Cascades to all related SQL objects, e.g. subscriber queues.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', AsIs('msg_id'))
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            session.query(PubSubMessage).\
+                filter(PubSubMessage.cluster_id==self.request.input.cluster_id).\
+                filter(PubSubMessage.pub_msg_id==self.request.input.msg_id).\
+                delete()
+            session.commit()
 
 # ################################################################################################################################
 

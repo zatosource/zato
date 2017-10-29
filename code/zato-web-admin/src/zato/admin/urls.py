@@ -46,7 +46,8 @@ from zato.admin.web.views.outgoing import sql as out_sql
 from zato.admin.web.views.outgoing import stomp as out_stomp
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
-from zato.admin.web.views.pubsub import message as pubsub_message, update_message as pubsub_update_message
+from zato.admin.web.views.pubsub import delete_message as pubsub_delete_message, message as pubsub_message, \
+     update_message as pubsub_update_message
 from zato.admin.web.views.pubsub import topic as pubsub_topic
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
@@ -1219,6 +1220,10 @@ urlpatterns += [
     # Updates an individual message
     url(r'^zato/pubsub/message/update/cluster/(?P<cluster_id>.*)/msg/(?P<msg_id>.*)$',
         login_required(pubsub_update_message), name='pubsub-message-update'),
+
+    # Deletes an individual message
+    url(r'^zato/pubsub/message/delete/cluster/(?P<cluster_id>.*)/msg/(?P<msg_id>.*)$',
+        login_required(pubsub_delete_message), name='pubsub-message-delete'),
 
     ]
 

@@ -425,6 +425,17 @@ $.fn.zato.data_table._on_submit = function(form, callback) {
     $.fn.zato.post(form.attr('action'), callback, form.serialize());
 }
 
+$.fn.zato.data_table.remove_row = function(td_prefix, instance_id) {
+    $(td_prefix + instance_id).parent().remove();
+    $.fn.zato.data_table.data[instance_id] = null;
+
+    if($('#data-table tr').length == 1) {
+        var row = '<tr><td colspan="100">No results</td></tr>';
+        $('#data-table > tbody:last').prepend(row);
+        $('#data-table').data('is_empty', true);
+    }
+}
+
 $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_pattern,
     append_cluster, confirm_challenge, url_pattern, post_data, remove_tr,
     on_success_callback) {
@@ -448,14 +459,7 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
 
         if(success) {
             if(_remove_tr) {
-                $(td_prefix + instance.id).parent().remove();
-                $.fn.zato.data_table.data[instance.id] = null;
-
-                if($('#data-table tr').length == 1) {
-                    var row = '<tr><td>No results</td></tr>';
-                    $('#data-table > tbody:last').prepend(row);
-                    $('#data-table').data('is_empty', true);
-                }
+                $.fn.zato.data_table.remove_row(td_prefix, instance.id);
             }
 
             if(on_success_callback) {

@@ -56,13 +56,13 @@ def enrich_item(cluster_id, item):
         endpoint_topics_path = django_url_reverse('pubsub-endpoint-topics', kwargs=html_kwargs)
         item.endpoint_topics_html = '<a href="{}">Topics</a>'.format(endpoint_topics_path)
     else:
-        item.endpoint_topics_html = '<span class="form_hint">Topics</span>'
+        item.endpoint_topics_html = '<span class="form_hint">---</span>'
 
     if is_sub:
         endpoint_queues_path = django_url_reverse('pubsub-endpoint-queues', kwargs=html_kwargs)
         item.endpoint_queues_html = '<a href="{}">Queues</a>'.format(endpoint_queues_path)
     else:
-        item.endpoint_queues_html = '<span class="form_hint">Queues</span>'
+        item.endpoint_queues_html = '<span class="form_hint">---</span>'
 
     # This is also needed by the edit action so as not to construct it in JavaScript
     if item.is_internal:
