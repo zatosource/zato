@@ -1,11 +1,11 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.data_table.PubSubEndpoint = new Class({
+$.fn.zato.data_table.PubSubMessage = new Class({
     toString: function() {
-        var s = '<PubSubTopic id:{0} name:{1}>';
+        var s = '<PubSubMessage id:{0} msg_prefix:{1}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                this.name ? this.name : '(none)');
+                                this.msg_prefix ? this.msg_prefix : '(none)');
     }
 });
 
@@ -14,7 +14,7 @@ $.fn.zato.data_table.PubSubEndpoint = new Class({
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
-    $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubEndpoint;
+    $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubMessage;
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.topic.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.topic.before_submit_hook;
@@ -96,5 +96,29 @@ $.fn.zato.pubsub.topic.clear = function(id) {
 
     var q = String.format('Are you sure you want to clear topic `{0}`?', instance.name);
     jConfirm(q, 'Please confirm', jq_callback);
+}
 
+$.fn.zato.pubsub.topic.delete_message = function(topic_id, msg_id) {
+
+    var instance = $.fn.zato.data_table.data[msg_id];
+
+    var http_callback = function(data, status) {
+        var success = status == 'success';
+        if(success) {
+            $.fn.zato.data_table.remove_row('td.item_id_', msg_id);
+        }
+        $.fn.zato.user_message(success, data.responseText);
+    }
+
+    var jq_callback = function(ok) {
+        if(ok) {
+            var url = String.format('/zato/pubsub/message/delete/cluster/{0}/msg/{1}',
+                $(document).getUrlParam('cluster'), instance.id);
+            $.fn.zato.post(url, http_callback, '', 'text');
+        }
+    }
+
+    var q = String.format(
+        'Are you sure you want to delete message `{0}`?<br/><center>Msg prefix {1}</center>', instance.id, instance.msg_prefix);
+    jConfirm(q, 'Please confirm', jq_callback);
 }

@@ -17,9 +17,43 @@ from gevent.lock import RLock
 # globre
 from globre import compile as globre_compile
 
+# Zato
+from zato.common import DATA_FORMAT, PUBSUB
+from zato.common.exception import BadRequest
+
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+_PRIORITY=PUBSUB.PRIORITY
+_JSON=DATA_FORMAT.JSON
+
+# ################################################################################################################################
+
+def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pri_def=_PRIORITY.DEFAULT):
+    """ Get and validate message priority.
+    """
+    priority = input.get('priority')
+    if priority:
+        if priority < _pri_min or priority > _pri_max:
+            raise BadRequest(cid, 'Priority `{}` outside of allowed range {}-{}'.format(priority, _pri_min, _pri_max))
+    else:
+        priority = _pri_def
+
+    return priority
+
+# ################################################################################################################################
+
+def get_expiration(cid, input):
+    """ Get and validate message expiration.
+    """
+    expiration = input.get('expiration')
+    if expiration is not None and expiration < 0:
+        raise BadRequest(self.cid, 'Expiration `{}` must not be negative'.format(expiration))
+
+    return expiration
 
 # ################################################################################################################################
 

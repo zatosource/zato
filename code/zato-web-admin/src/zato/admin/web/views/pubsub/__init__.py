@@ -27,6 +27,7 @@ def get_client_html(item, security_id, cluster_id):
     """ Client is a string representation of a WebSockets channel, HTTP credentials or a service.
     """
     client = ''
+    path_name = ''
 
     if security_id:
         path_name = 'security-basic-auth'
@@ -40,15 +41,16 @@ def get_client_html(item, security_id, cluster_id):
         name = item.ws_channel_name
         protocol = 'WebSockets'
 
-    elif item.service_id:
+    elif getattr(item, 'service_id', None):
         path_name = 'service'
         id_value = item.service_id
         name = item.service_name
         protocol = 'Service'
 
-    path = django_url_reverse(path_name)
-    client = '<span style="font-size:smaller">{}</span><br/><a href="{}?cluster={}&amp;highlight={}">{}</a>'.format(
-        protocol, path, cluster_id, id_value, name)
+    if path_name:
+        path = django_url_reverse(path_name)
+        client = '<span style="font-size:smaller">{}</span><br/><a href="{}?cluster={}&amp;highlight={}">{}</a>'.format(
+            protocol, path, cluster_id, id_value, name)
 
     return client
 
@@ -138,3 +140,19 @@ def update_message(req, cluster_id, msg_id):
     }))
 
 # ################################################################################################################################
+
+@method_allowed('POST')
+def delete_message(req, cluster_id, msg_id):
+
+    try:
+        req.zato.client.invoke('zato.pubsub.message.delete', {
+            'cluster_id': cluster_id,
+            'msg_id': msg_id,
+        })
+    except Exception, e:
+        return HttpResponseServerError(format_exc(e))
+    else:
+        return HttpResponse('Deleted message `{}`'.format(msg_id))
+
+# ################################################################################################################################
+
