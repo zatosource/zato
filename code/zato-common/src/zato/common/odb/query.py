@@ -25,10 +25,10 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, Cac
      CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, \
      HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
-     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, \
-     RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, TechnicalAccount, \
-     TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, \
-     XPath, XPathSecurity
+     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, PubSubEndpointTopic, PubSubMessage, PubSubSubscription, \
+     PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, \
+     Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, \
+     WebSocketSubscription, WSSDefinition, VaultConnection, XPath, XPathSecurity
 from zato.common.search_util import SearchResults as _SearchResults
 
 # ################################################################################################################################
@@ -1070,6 +1070,58 @@ def pubsub_subscription_list(session, cluster_id, needs_columns=False):
     """ All pub/sub subscriptions.
     """
     return _pubsub_subscription(session, cluster_id)
+
+# ################################################################################################################################
+
+def pubsub_publishers_for_topic(session, cluster_id, topic_id):
+    return session.query(
+        PubSubEndpoint.service_id, PubSubEndpoint.security_id,
+        PubSubEndpoint.ws_channel_id, PubSubEndpoint.name,
+        PubSubEndpoint.is_active, PubSubEndpoint.is_internal,
+        PubSubEndpoint.last_seen, PubSubEndpoint.last_pub_time,
+        PubSubEndpointTopic.pattern_matched,
+        PubSubEndpointTopic.last_pub_time,
+        PubSubEndpointTopic.pub_msg_id.label('last_msg_id'),
+        PubSubEndpointTopic.pub_correl_id.label('last_correl_id'),
+        PubSubEndpointTopic.in_reply_to.label('last_in_reply_to'),
+        Service.name.label('service_name'),
+        SecurityBase.name.label('sec_name'),
+        ChannelWebSocket.name.label('ws_channel_name'),
+        ).\
+        outerjoin(Service, Service.id==PubSubEndpoint.service_id).\
+        outerjoin(SecurityBase, SecurityBase.id==PubSubEndpoint.security_id).\
+        outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
+        filter(PubSubEndpointTopic.topic_id==PubSubTopic.id).\
+        filter(PubSubEndpointTopic.topic_id==topic_id).\
+        filter(PubSubEndpointTopic.endpoint_id==PubSubEndpoint.id).\
+        filter(PubSubEndpointTopic.cluster_id==cluster_id)
+
+# ################################################################################################################################
+
+@query_wrapper
+def pubsub_messages_for_topic(session, cluster_id, topic_id, needs_columns=False):
+    return session.query(
+        PubSubMessage.pub_msg_id.label('msg_id'),
+        PubSubMessage.pub_correl_id.label('correl_id'),
+        PubSubMessage.in_reply_to.label('in_reply_to'),
+        PubSubMessage.pub_time, PubSubMessage.data_prefix_short,
+        PubSubMessage.pattern_matched,
+        PubSubMessage.ext_pub_time, PubSubMessage.size,
+        PubSubEndpoint.id.label('endpoint_id'),
+        PubSubEndpoint.name.label('endpoint_name'),
+        PubSubEndpoint.service_id,
+        PubSubEndpoint.security_id,
+        PubSubEndpoint.ws_channel_id,
+        Service.name.label('service_name'),
+        SecurityBase.name.label('sec_name'),
+        ChannelWebSocket.name.label('ws_channel_name'),
+        ).\
+        outerjoin(PubSubEndpoint, PubSubMessage.published_by_id==PubSubEndpoint.id).\
+        outerjoin(Service, Service.id==PubSubEndpoint.service_id).\
+        outerjoin(SecurityBase, SecurityBase.id==PubSubEndpoint.security_id).\
+        outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
+        filter(PubSubMessage.topic_id==topic_id).\
+        filter(PubSubMessage.cluster_id==cluster_id)
 
 # ################################################################################################################################
 

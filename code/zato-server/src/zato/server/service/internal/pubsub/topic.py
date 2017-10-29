@@ -14,10 +14,10 @@ from contextlib import closing
 # Zato
 from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import ChannelWebSocket, PubSubEndpoint, PubSubEndpointTopic, PubSubEndpointQueue, PubSubMessage, \
-     PubSubTopic, SecurityBase, Service
-from zato.common.odb.query import pubsub_topic, pubsub_topic_list
+     PubSubTopic, SecurityBase, Service as ODBService
+from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
 from zato.server.service import AsIs
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
@@ -128,35 +128,12 @@ class GetPublisherList(AdminService):
         output_repeated = True
 
     def handle(self):
-        input = self.request.input
-        pubsub = self.server.worker_store.pubsub
         response = []
 
         with closing(self.odb.session()) as session:
 
             # Get last pub time for that specific endpoint to this very topic
-            last_data = session.query(
-                PubSubEndpoint.service_id, PubSubEndpoint.security_id,
-                PubSubEndpoint.ws_channel_id, PubSubEndpoint.name,
-                PubSubEndpoint.is_active, PubSubEndpoint.is_internal,
-                PubSubEndpoint.last_seen, PubSubEndpoint.last_pub_time,
-                PubSubEndpointTopic.pattern_matched,
-                PubSubEndpointTopic.last_pub_time,
-                PubSubEndpointTopic.pub_msg_id.label('last_msg_id'),
-                PubSubEndpointTopic.pub_correl_id.label('last_correl_id'),
-                PubSubEndpointTopic.in_reply_to.label('last_in_reply_to'),
-                Service.name.label('service_name'),
-                SecurityBase.name.label('sec_name'),
-                ChannelWebSocket.name.label('ws_channel_name'),
-                ).\
-                outerjoin(Service, Service.id==PubSubEndpoint.service_id).\
-                outerjoin(SecurityBase, SecurityBase.id==PubSubEndpoint.security_id).\
-                outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
-                filter(PubSubEndpointTopic.topic_id==PubSubTopic.id).\
-                filter(PubSubEndpointTopic.topic_id==input.topic_id).\
-                filter(PubSubEndpointTopic.endpoint_id==PubSubEndpoint.id).\
-                filter(PubSubEndpointTopic.cluster_id==self.server.cluster_id).\
-                all()
+            last_data = pubsub_publishers_for_topic(session, self.server.cluster_id, self.request.input.topic_id).all()
 
             for item in last_data:
                 item.last_seen = item.last_pub_time.isoformat()
@@ -164,5 +141,30 @@ class GetPublisherList(AdminService):
                 response.append(item)
 
         self.response.payload[:] = response
+
+# ################################################################################################################################
+
+class GetMessageList(AdminService):
+    """ Returns all messages currently in a topic that have not been moved to subscriber queues yet.
+    """
+    _filter_by = PubSubMessage.data_prefix,
+
+    class SimpleIO(GetListAdminSIO):
+        input_required = ('cluster_id', 'topic_id')
+        output_required = (AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'pub_time', 'data_prefix_short', 'pattern_matched')
+        output_optional = ('size', 'service_id', 'security_id', 'ws_channel_id', 'service_name',
+            'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name')
+        output_repeated = True
+
+    def get_data(self, session):
+        return self._search(pubsub_messages_for_topic, session, self.server.cluster_id, self.request.input.topic_id, False)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload[:] = self.get_data(session)
+
+        for item in self.response.payload.zato_output:
+            item.pub_time = item.pub_time.isoformat()
+            item.ext_pub_time = item.ext_pub_time.isoformat() if item.ext_pub_time else ''
 
 # ################################################################################################################################

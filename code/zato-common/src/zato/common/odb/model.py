@@ -2269,9 +2269,12 @@ class PubSubMessage(Base):
     # Publicly visible ID of the message current message is a response to
     in_reply_to = Column(String(200), nullable=True)
 
-    creation_time = Column(DateTime(), nullable=False, default=func.current_timestamp()) # When the row was created
-    ext_creation_time = Column(DateTime(), nullable=True) # When the message was created by publisher
+    pattern_matched = Column(Text, nullable=False)
+    pub_time = Column(DateTime(), nullable=False, default=func.current_timestamp()) # When the row was created
+    ext_pub_time = Column(DateTime(), nullable=True) # When the message was created by publisher
     data = Column(LargeBinary(), nullable=False)
+    data_prefix = Column(Text(), nullable=False)
+    data_prefix_short = Column(String(200), nullable=False)
     data_format = Column(String(200), nullable=False)
     mime_type = Column(String(200), nullable=False)
     size = Column(Integer, nullable=False)
