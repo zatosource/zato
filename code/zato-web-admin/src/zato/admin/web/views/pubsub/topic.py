@@ -135,14 +135,13 @@ class TopicPublishers(_Index):
         input_required = ('cluster_id', 'topic_id')
         output_required = ('endpoint_id', 'name', 'is_active', 'is_internal')
         output_optional = ('service_id', 'security_id', 'ws_channel_id', 'last_seen', 'last_pub_time', 'last_msg_id',
-            'last_correl_id', 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name')
+            'last_correl_id', 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name', 'pattern_matched')
         output_repeated = True
 
     def on_before_append_item(self, item):
         item.last_seen = from_utc_to_user(item.last_seen+'+00:00', self.req.zato.user_profile)
         item.last_pub_time = from_utc_to_user(item.last_pub_time+'+00:00', self.req.zato.user_profile)
         item.client_html = get_client_html(item, item.security_id, self.req.zato.cluster_id)
-        print(item, item.sec_name)
         return item
 
     def handle(self):

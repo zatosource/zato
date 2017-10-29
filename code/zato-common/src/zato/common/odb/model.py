@@ -2175,6 +2175,7 @@ class PubSubEndpointTopic(Base):
 
     id = Column(Integer, Sequence('pubsub_endpt_seq'), primary_key=True)
 
+    pattern_matched = Column(Text, nullable=False)
     last_pub_time = Column(DateTime(), nullable=False)
     pub_msg_id = Column(String(200), nullable=False)
     pub_correl_id = Column(String(200), nullable=True)
