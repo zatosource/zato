@@ -23,10 +23,10 @@ from zato.common import CONTENT_TYPE, DATA_FORMAT, PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, TooManyRequests, ServiceUnavailable
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointQueue, PubSubEndpointTopic, PubSubMessage, \
      SecurityBase, Service as ODBService, ChannelWebSocket
-from zato.common.odb.query import query_wrapper
+from zato.common.odb.query import pubsub_message, query_wrapper
 from zato.common.util import new_cid
-from zato.server.service import AsIs, Int, Service
-from zato.server.service.internal import AdminService, GetListAdminSIO
+from zato.server.service import AsIs, Bool, Int, Service
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
@@ -45,6 +45,33 @@ def parse_basic_auth(auth, prefix = 'Basic '):
     return auth.split(':', 1)
 
 # ################################################################################################################################
+
+def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pri_def=_PRIORITY.DEFAULT):
+    """ Get and validate message priority.
+    """
+    priority = input.get('priority')
+    if priority:
+        if priority < _pri_min or priority > _pri_max:
+            raise BadRequest(cid, 'Priority `{}` outside of allowed range {}-{}'.format(priority, _pri_min, _pri_max))
+    else:
+        priority = _pri_def
+
+    return priority
+
+# ################################################################################################################################
+
+def get_expiration(cid, input):
+    """ Get and validate message expiration.
+    """
+    expiration = input.get('expiration')
+    if expiration is not None and expiration < 0:
+        raise BadRequest(self.cid, 'Expiration `{}` must not be negative'.format(expiration))
+
+    return expiration
+
+# ################################################################################################################################
+
+
 '''
 class DataMessage(object):
     __slots__ = ('data', 'topic_name', 'expiration', 'mime_type', 'priority')
@@ -72,7 +99,7 @@ class TopicService(Service):
 # ################################################################################################################################
 
     def handle_POST(self, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pri_def=_PRIORITY.DEFAULT, _JSON=_JSON,
-                    _new_cid=new_cid):
+                    _new_cid=new_cid, _utcnow=datetime.utcnow):
 
         # Check credentials first
         auth = self.wsgi_environ.get('HTTP_AUTHORIZATION')
@@ -124,18 +151,8 @@ class TopicService(Service):
         mime_type = self.wsgi_environ.get('CONTENT_TYPE')
         mime_type = mime_type if mime_type != 'application/x-www-form-urlencoded' else CONTENT_TYPE.JSON
 
-        # Get and validate priority
-        priority = input.get('priority')
-        if priority:
-            if priority < _pri_min or priority > _pri_max:
-                raise BadRequest(self.cid, 'Priority `{}` outside of allowed range {}-{}'.format(priority, _pri_min, _pri_max))
-        else:
-            priority = _pri_def
-
-        # Get and validate expiration
-        expiration = input.get('expiration')
-        if expiration is not None and expiration < 0:
-            raise BadRequest(self.cid, 'Expiration `{}` must not be negative'.format(expiration))
+        priority = get_priority(self.cid, input)
+        expiration = get_expiration(self.cid, input)
 
         # Construct the message object now that we have everything validated
         '''
@@ -155,12 +172,12 @@ class TopicService(Service):
         # Get all subscribers for that topic from local worker store
         subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic_name)
 
-        now = datetime.utcnow()
+        now = _utcnow()
         expiration_time = now + timedelta(seconds=expiration) if expiration else None
 
         cluster_id = self.server.cluster_id
 
-        pub_msg_id = 'zpsm.%s' % _new_cid()
+        pub_msg_id = 'zpsm%s' % _new_cid()
         pub_correl_id = input.get('correl_id')
         in_reply_to = input.get('in_reply_to')
 
@@ -168,8 +185,13 @@ class TopicService(Service):
 
         ps_msg = PubSubMessage()
         ps_msg.pub_msg_id = pub_msg_id
+        ps_msg.pub_correl_id = pub_correl_id
+        ps_msg.in_reply_to = in_reply_to
         ps_msg.creation_time = now
+        ps_msg.pattern_matched = pattern_matched
         ps_msg.data = data
+        ps_msg.data_prefix = data[:2048]
+        ps_msg.data_prefix_short = data[:64]
         ps_msg.data_format = _JSON
         ps_msg.mime_type = mime_type
         ps_msg.size = len(data)
@@ -254,5 +276,95 @@ class TopicService(Service):
                 session.commit()
 
         self.response.payload.msg_id = pub_msg_id
+
+# ################################################################################################################################
+
+class HasMessage(AdminService):
+    """ Returns a boolean flag to indicate whether a given message by ID exists in pub/sub.
+    """
+    name = 'pubapi1.has-message'
+
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', AsIs('msg_id'))
+        output_required = (Bool('found'),)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload.found = session.query(
+                exists().where(and_(
+                    PubSubMessage.pub_msg_id==self.request.input.msg_id,
+                    PubSubMessage.cluster_id==self.server.cluster_id,
+                    ))).\
+                scalar()
+
+# ################################################################################################################################
+
+class GetMessage(AdminService):
+    """ Returns a pub/sub message by its ID.
+    """
+    name = 'pubapi1.get-message'
+
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', AsIs('msg_id'))
+        output_optional = ('topic_id', 'topic_name', AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'pub_time', \
+            'ext_pub_time', 'pattern_matched', 'priority', 'data_format', 'mime_type', 'size', 'data',
+            'expiration', 'expiration_time')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+
+            item = pubsub_message(session, self.server.cluster_id, self.request.input.msg_id).\
+                first()
+
+            if item:
+                item.pub_time = item.pub_time.isoformat()
+                item.ext_pub_time = item.ext_pub_time.isoformat() if item.ext_pub_time else ''
+                item.expiration_time = item.expiration_time.isoformat() if item.expiration_time else ''
+
+            self.response.payload = item
+
+# ################################################################################################################################
+
+class UpdateMessage(AdminService):
+    """ Updates details of an individual message.
+    """
+    name = 'pubapi1.update-message'
+
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', AsIs('msg_id'), 'mime_type')
+        input_optional = (Int('expiration'), AsIs('correl_id'), AsIs('in_reply_to'), Int('priority'))
+        output_required = (Bool('found'),)
+        output_optional = ('expiration_time',)
+
+    def handle(self, _utcnow=datetime.utcnow):
+        input = self.request.input
+
+        with closing(self.odb.session()) as session:
+            item = session.query(PubSubMessage).\
+                filter(PubSubMessage.cluster_id==input.cluster_id).\
+                filter(PubSubMessage.pub_msg_id==input.msg_id).\
+                first()
+
+            if not item:
+                self.response.payload.found = False
+                return
+
+            item.expiration = get_expiration(self.cid, input)
+            item.priority = get_priority(self.cid, input)
+
+            item.correl_id = input.correl_id
+            item.in_reply_to = input.in_reply_to
+            item.mime_type = input.mime_type
+
+            if item.expiration:
+                item.expiration_time = item.pub_time + timedelta(seconds=item.expiration)
+            else:
+                item.expiration_time = None
+
+            session.add(item)
+            session.commit()
+
+            self.response.payload.found = True
+            self.response.payload.expiration_time = item.expiration_time.isoformat() if item.expiration_time else None
 
 # ################################################################################################################################

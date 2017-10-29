@@ -36,7 +36,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Publishers for topic :: <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}</a></h2>
+<h2 class="zato">Publishers for topic : <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}

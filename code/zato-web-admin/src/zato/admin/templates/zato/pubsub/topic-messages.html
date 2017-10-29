@@ -26,7 +26,6 @@
             '_pattern',
             '_msg_prefix',
             '_endpoint',
-            '_client',
 
             '_delete',
             'id',
@@ -37,7 +36,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Messages for topic :: <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}</a></h2>
+<h2 class="zato">Messages for topic : <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -62,7 +61,6 @@
                         <th><a href="#">Pattern</a></th>
                         <th><a href="#">Msg prefix</a></th>
                         <th><a href="#">Endpoint</a></th>
-                        <th><a href="#">Client</a></th>
 
                         <th style="width:5%">&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -76,11 +74,10 @@
                         <td class="impexp"><input type="checkbox" /></td>
 
                         <td>{{ item.pub_time }}</td>
-                        <td><a href="#">{{ item.msg_id }}</a></td>
+                        <td><a href="{% url "pubsub-message" cluster_id "topic" topic_id item.msg_id %}">{{ item.msg_id }}</a></td>
                         <td>{{ item.pattern_matched }}</td>
                         <td>{{ item.data_prefix_short }}</td>
                         <td>{{ item.endpoint_html|safe }}</td>
-                        <td>{{ item.client_html|safe }}</td>
 
                         <td><a href="javascript:$.fn.zato.pubsub.topic_message.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
@@ -88,7 +85,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='12'>No results</td>
+                        <td colspan='9'>No results</td>
                     </tr>
                 {% endif %}
 

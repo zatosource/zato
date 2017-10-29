@@ -184,7 +184,6 @@ class TopicMessages(_Index):
 
     def on_before_append_item(self, item):
         item.pub_time = from_utc_to_user(item.pub_time+'+00:00', self.req.zato.user_profile)
-        item.client_html = get_client_html(item, item.security_id, self.req.zato.cluster_id)
         item.endpoint_html = get_endpoint_html(item, self.req.zato.cluster_id)
         return item
 
