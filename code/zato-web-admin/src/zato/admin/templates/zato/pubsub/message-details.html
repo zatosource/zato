@@ -31,14 +31,14 @@
                 <td style="width:140px"><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}</a></td>
 
                 <td class='inline_header' style="width:90px">Pub time</td>
-                <td>{{ pub_time }}</td>
+                <td>{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ pub_time }}{% endifequal %}</td>
 
                 <td class='inline_header' style="width:90px">Priority <span class="form_hint">(1-9, 1=min)</span></td>
                 <td>{{ form.priority }}</td>
             </tr>
             <tr>
                 <td class='inline_header' style="width:90px">Pub pattern</td>
-                <td style="width:140px">{{ pattern_matched }}</td>
+                <td style="width:140px">{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ pattern_matched }}{% endifequal %}</td>
 
                 <td class='inline_header' style="width:90px">Ext. pub time</td>
                 <td style="width:140px">{{ ext_pub_time|default:"<span class='form_hint'>---</span>" }}</td>
@@ -48,7 +48,7 @@
             </tr>
             <tr>
                 <td class='inline_header' style="width:90px">Msg ID</td>
-                <td style="width:140px">{{ msg_id }}</td>
+                <td style="width:140px">{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ msg_id }}{% endifequal %}</td>
 
                 <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in s)</span></td>
                 <td style="width:140px">{{ form.expiration }}</td>
@@ -71,7 +71,7 @@
                 <td style="width:140px">{{ form.in_reply_to }}</td>
 
                 <td class='inline_header' style="width:90px">Size <span class='form_hint'>(in bytes)</span></td>
-                <td style="width:140px" id="size">{{ size }}</td>
+                <td style="width:140px" id="size">{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ size }}{% endifequal %}</td>
 
                 <td class='inline_header' style="width:90px">Guaranteed delivery</td>
 
