@@ -48,8 +48,8 @@ def get_client_html(item, security_id, cluster_id):
 
 def get_endpoint_html(item, cluster_id):
     path_name = 'endpoint'
-    id_value = item.endpoint_id
-    name = item.endpoint_name
+    id_value = item['endpoint_id']
+    name = item['endpoint_name']
 
     path = django_url_reverse('pubsub-endpoint')
     endpoint = '<span style="font-size:smaller"><a href="{}?cluster={}&amp;highlight={}">{}</a>'.format(

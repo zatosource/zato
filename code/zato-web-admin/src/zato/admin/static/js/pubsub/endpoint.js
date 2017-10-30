@@ -3,9 +3,11 @@
 
 $.fn.zato.data_table.PubSubEndpoint = new Class({
     toString: function() {
-        var s = '<PubSubEndpoint id:{0} name:{1}>';
+        var s = '<PubSubEndpoint id:{0} name:{1} sub_key:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                this.name ? this.name : '(none)');
+                                this.name ? this.name : '(none)',
+                                this.sub_key ? this.sub_key : '(none)'
+                                );
     }
 });
 
@@ -55,12 +57,25 @@ $.fn.zato.pubsub.endpoint.data_table.new_row = function(item, data, include_tr) 
     var topic_patterns_html = data.topic_patterns_html ? data.topic_patterns_html : empty;
     var client_html = data.client_html ? data.client_html : empty;
 
+    var has_sub_key = data.role.contains('sub');
+    var sub_key_html;
+
+    if(has_sub_key) {
+        sub_key_html = String.format(
+            '<a id="sub_key_{0}" href="javascript:$.fn.zato.pubsub.endpoint.toggle_sub_key(\'{0}\')">Show</a>',
+            data.id);
+    }
+    else {
+        sub_key_html = '<span class="form_hint">---</span>';
+    }
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', data.name);
     row += String.format('<td>{0}</td>', data.role);
     row += String.format('<td>{0}</td>', topic_patterns_html);
     row += String.format('<td>{0}</td>', client_html);
+    row += String.format('<td>{0}</td>', sub_key_html);
     row += String.format('<td>{0}</td>', data.endpoint_topics_html);
     row += String.format('<td>{0}</td>', data.endpoint_queues_html);
     row += String.format('<td>{0}</td>',
@@ -73,6 +88,7 @@ $.fn.zato.pubsub.endpoint.data_table.new_row = function(item, data, include_tr) 
     row += String.format("<td class='ignore'>{0}</td>", data.security_id);
     row += String.format("<td class='ignore'>{0}</td>", data.ws_channel_id);
     row += String.format("<td class='ignore'>{0}</td>", data.hook_service_id);
+    row += String.format("<td class='ignore'>{0}</td>", data.sub_key);
 
     if(include_tr) {
         row += '</tr>';

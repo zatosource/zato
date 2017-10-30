@@ -139,7 +139,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='17'>No results</td>
+                        <td colspan='19'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -186,6 +186,7 @@
                     </table>
                     <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    {{ create_form.sub_key }}
                 </form>
             </div>
         </div>
@@ -228,6 +229,7 @@
                     <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
+                    {{ edit_form.sub_key }}
                 </form>
             </div>
         </div>
