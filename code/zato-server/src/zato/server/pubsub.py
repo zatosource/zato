@@ -246,7 +246,6 @@ class PubSub(object):
 # ################################################################################################################################
 
     def edit_endpoint(self, config):
-        print(config)
         with self.lock:
             self._delete_endpoint(config.id)
             self._create_endpoint(config)
