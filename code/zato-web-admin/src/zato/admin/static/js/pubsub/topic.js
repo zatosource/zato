@@ -1,11 +1,11 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 
-$.fn.zato.data_table.PubSubMessage = new Class({
+$.fn.zato.data_table.PubSubTopic = new Class({
     toString: function() {
-        var s = '<PubSubMessage id:{0} msg_prefix:{1}>';
+        var s = '<PubSubTopic id:{0} name:{1}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                this.msg_prefix ? this.msg_prefix : '(none)');
+                                this.name ? this.name : '(none)');
     }
 });
 
@@ -14,7 +14,7 @@ $.fn.zato.data_table.PubSubMessage = new Class({
 $(document).ready(function() {
     $('#data-table').tablesorter();
     $.fn.zato.data_table.password_required = false;
-    $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubMessage;
+    $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubTopic;
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.topic.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.topic.before_submit_hook;
@@ -42,9 +42,14 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
+    var has_gd = data.has_gd ? "Yes" : "No";
+
     row += String.format('<td>{0}</td>', item.name);
+    row += String.format('<td>{0}</td>', has_gd);
     row += String.format('<td>{0}</td>', item.max_depth);
-    row += String.format('<td>{0}</td>', empty);
+
+    row += String.format('<td>{0}</td>', data.current_depth_link);
+
     row += String.format('<td>{0}</td>', empty);
 
     row += String.format('<td>{0}</td>', data.publishers_link);
@@ -62,6 +67,7 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
     row += String.format("<td class='ignore'>{0}</td>", data.is_internal);
     row += String.format("<td class='ignore'>{0}</td>", data.is_active);
+    row += String.format("<td class='ignore'>{0}</td>", data.has_gd);
 
     if(include_tr) {
         row += '</tr>';

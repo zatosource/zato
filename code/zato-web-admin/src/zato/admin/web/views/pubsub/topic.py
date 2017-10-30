@@ -62,7 +62,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'is_internal', 'has_gd', 'max_depth', )
-        output_required = ('id', 'name')
+        output_required = ('id', 'name', 'has_gd')
 
     def post_process_return_data(self, return_data):
 
@@ -77,6 +77,19 @@ class _CreateEdit(CreateEdit):
                 kwargs={'cluster_id':self.req.zato.cluster_id,
                         'topic_id':return_data['id'], 'name_slug':slugify(return_data['name'])}),
             'Subscribers')
+
+        item = self.req.zato.client.invoke('zato.pubsub.topic.get', {
+            'cluster_id': self.req.zato.cluster_id,
+            'id': return_data['id'],
+        }).data.response
+
+        return_data['has_gd'] = item.has_gd
+
+        return_data['current_depth_link'] = '<a href="{}?cluster={}">{}</a>'.format(
+            django_url_reverse('pubsub-topic-messages',
+                kwargs={'topic_id':return_data['id'], 'name_slug':slugify(return_data['name'])}),
+            self.req.zato.cluster_id,
+            item.current_depth)
 
     def success_message(self, item):
         return 'Successfully {} the pub/sub topic `{}`'.format(self.verb, item.name)

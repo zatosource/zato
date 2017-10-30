@@ -22,6 +22,7 @@
             '_selection',
 
             'name',
+            '_has_gd',
             'max_depth',
             '_current_depth',
             '_last_pub_time',
@@ -70,6 +71,7 @@
                         <th>&nbsp;</th>
 
                         <th><a href="#">Name</a></th>
+                        <th><a href="#">GD</a></th>
                         <th><a href="#">Max depth</a></th>
                         <th><a href="#">Current depth</a></th>
                         <th><a href="#">Last pub. time</a></th>
@@ -94,6 +96,7 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
+                        <td>{{ item.has_gd|yesno:"Yes,No" }}</td>
                         <td>{{ item.max_depth }}</td>
                         <td id="current_depth_{{ item.id }}">
                             <a href="{% url "pubsub-topic-messages" item.id item.name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth }}</a>
@@ -121,7 +124,7 @@
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='15'>No results</td>
+                        <td colspan='16'>No results</td>
                     </tr>
                 {% endif %}
 
