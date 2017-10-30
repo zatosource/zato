@@ -79,7 +79,9 @@ class Get(AdminService):
         with closing(self.odb.session()) as session:
             topic = pubsub_topic(session, self.request.input.cluster_id, self.request.input.id)
 
-        topic.last_pub_time = topic.last_pub_time.isoformat()
+        if topic.last_pub_time:
+            topic.last_pub_time = topic.last_pub_time.isoformat()
+
         self.response.payload = topic
 
 # ################################################################################################################################

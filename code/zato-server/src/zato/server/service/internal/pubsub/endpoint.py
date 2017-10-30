@@ -34,6 +34,10 @@ output_optional_extra = ['ws_channel_name', 'hook_service_name', 'sec_id', 'sec_
 # ################################################################################################################################
 
 def instance_hook(self, input, instance, attrs):
+
+    if attrs.is_delete:
+        return
+
     # SQLite will not accept empty strings, must be None
     instance.last_seen = instance.last_seen or None
     instance.last_pub_time = instance.last_pub_time or None
