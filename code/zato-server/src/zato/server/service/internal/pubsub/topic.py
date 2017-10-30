@@ -72,7 +72,7 @@ class Delete(AdminService):
 class Get(AdminService):
     class SimpleIO:
         input_required = ('cluster_id', AsIs('id'))
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'max_depth', 'current_depth')
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth', 'current_depth')
         output_optional = ('last_pub_time',)
 
     def handle(self):
