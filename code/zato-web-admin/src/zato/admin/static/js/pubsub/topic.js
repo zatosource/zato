@@ -51,10 +51,10 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', data.subscribers_link);
 
     row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.pubsub.topic.edit('{0}')\">Edit</a>", data.id));
+        String.format("<a href=\"javascript:$.fn.zato.pubsub.topic.clear('{0}')\">Clear</a>", data.id));
 
     row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.pubsub.topic.clear('{0}')\">Clear</a>", data.id));
+        String.format("<a href=\"javascript:$.fn.zato.pubsub.topic.edit('{0}')\">Edit</a>", data.id));
 
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"javascript:$.fn.zato.pubsub.topic.delete_('{0}')\">Delete</a>", data.id));

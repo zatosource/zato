@@ -18,6 +18,7 @@ class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    has_gd = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     max_depth = forms.CharField(widget=forms.TextInput(
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH)
 
