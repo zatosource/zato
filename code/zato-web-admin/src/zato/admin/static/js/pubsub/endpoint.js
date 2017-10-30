@@ -87,3 +87,16 @@ $.fn.zato.pubsub.endpoint.delete_ = function(id) {
         'Are you sure you want to delete the pub/sub endpoint `{0}`?',
         true);
 }
+
+$.fn.zato.pubsub.endpoint.toggle_sub_key = function(id) {
+    var hidden = 'Show';
+    var instance = $.fn.zato.data_table.data[id];
+    var span = $('#sub_key_' + id);
+
+    if(span.html().startsWith(hidden)) {
+        span.html(instance.sub_key);
+    }
+    else {
+        span.html(hidden);
+    }
+}

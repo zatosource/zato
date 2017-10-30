@@ -2102,6 +2102,9 @@ class PubSubEndpoint(Base):
     # Endpoint's role, e.g. publisher, subscriber or both
     role = Column(String(40), nullable=False)
 
+    # Subscription key, empty if endpoint's role is publisher only
+    sub_key = Column(Text, nullable=True)
+
     # Tags describing this endpoint
     tags = Column(Text, nullable=True) # Unusued for now
 
