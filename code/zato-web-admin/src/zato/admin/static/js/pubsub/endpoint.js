@@ -69,6 +69,9 @@ $.fn.zato.pubsub.endpoint.data_table.new_row = function(item, data, include_tr) 
         sub_key_html = '<span class="form_hint">---</span>';
     }
 
+    // Update it with latest content dynamically obtained from the call to backend
+    item.sub_key = data.sub_key;
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', data.name);
