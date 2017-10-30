@@ -43,14 +43,13 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += "<td class='impexp'><input type='checkbox' /></td>";
 
     var has_gd = data.has_gd ? "Yes" : "No";
+    var last_pub_time = data.last_pub_time ? data.last_pub_time : empty;
 
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', has_gd);
     row += String.format('<td>{0}</td>', item.max_depth);
-
     row += String.format('<td>{0}</td>', data.current_depth_link);
-
-    row += String.format('<td>{0}</td>', empty);
+    row += String.format('<td>{0}</td>', last_pub_time);
 
     row += String.format('<td>{0}</td>', data.publishers_link);
     row += String.format('<td>{0}</td>', data.subscribers_link);

@@ -84,6 +84,10 @@ class _CreateEdit(CreateEdit):
         }).data.response
 
         return_data['has_gd'] = item.has_gd
+        if item.get('last_pub_time'):
+            return_data['last_pub_time'] = from_utc_to_user(item.last_pub_time+'+00:00', self.req.zato.user_profile)
+        else:
+            return_data['last_pub_time'] = None
 
         return_data['current_depth_link'] = '<a href="{}?cluster={}">{}</a>'.format(
             django_url_reverse('pubsub-topic-messages',
