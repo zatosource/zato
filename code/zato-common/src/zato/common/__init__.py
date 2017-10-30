@@ -384,7 +384,7 @@ class SIMPLE_IO:
         SUFFIXES = ['_id', '_count', '_size', '_timeout']
 
     class BOOL_PARAMETERS:
-        PREFIXES = ['is_', 'needs_', 'should_', 'by_']
+        PREFIXES = ['is_', 'needs_', 'should_', 'by_', 'has_']
 
     COMMON_FORMAT = OrderedDict()
     COMMON_FORMAT[DATA_FORMAT.JSON] = 'JSON'

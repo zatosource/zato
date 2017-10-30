@@ -16,7 +16,7 @@ from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import ChannelWebSocket, PubSubEndpoint, PubSubEndpointTopic, PubSubEndpointQueue, PubSubMessage, \
      PubSubTopic, SecurityBase, Service as ODBService
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
-from zato.server.service import AsIs
+from zato.server.service import AsIs, Bool
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -29,7 +29,7 @@ broker_message = PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
 skip_input_params = ['is_internal', 'last_pub_time', 'current_depth']
-output_optional_extra = ['current_depth', 'last_pub_time']
+output_optional_extra = ['current_depth', 'last_pub_time', 'is_internal']
 
 # ################################################################################################################################
 

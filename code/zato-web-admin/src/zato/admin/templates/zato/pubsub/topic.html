@@ -37,6 +37,7 @@
             'id',
             'is_internal',
             'is_active',
+            'has_gd',
         ]
     }
     </script>
@@ -83,6 +84,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -114,11 +116,12 @@
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_internal }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
+                        <td class='ignore'>{{ item.has_gd }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='12'>No results</td>
+                        <td colspan='15'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -139,6 +142,10 @@
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ create_form.is_active }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Guaranteed delivery</td>
+                            <td>{{ create_form.has_gd }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Max depth</td>
@@ -167,6 +174,10 @@
                         <tr>
                             <td style="vertical-align:middle">Active</td>
                             <td>{{ edit_form.is_active }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Guaranteed delivery</td>
+                            <td>{{ edit_form.has_gd }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Max depth</td>
