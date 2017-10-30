@@ -1218,7 +1218,7 @@ urlpatterns += [
 
     # Updates an individual message
     url(r'^zato/pubsub/message/update/cluster/(?P<cluster_id>.*)/msg/(?P<msg_id>.*)$',
-        login_required(pubsub_message.update), name='pubsub-message-update'),
+        login_required(pubsub_message.update_action), name='pubsub-message-update'),
 
     # Deletes an individual message
     url(r'^zato/pubsub/message/delete/cluster/(?P<cluster_id>.*)/msg/(?P<msg_id>.*)$',
