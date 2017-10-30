@@ -2089,9 +2089,9 @@ class PubSubEndpoint(Base):
     """
     __tablename__ = 'pubsub_endpoint'
     __table_args__ = (
-        Index('pubsb_endpt_clust_idx', 'cluster_id', unique=False),
-        Index('pubsb_endpt_id_idx', 'cluster_id', 'id', unique=True),
-        Index('pubsb_endpt_name_idx', 'cluster_id', 'name', unique=True),
+        Index('pubsb_endp_clust_idx', 'cluster_id', unique=False),
+        Index('pubsb_endp_id_idx', 'cluster_id', 'id', unique=True),
+        Index('pubsb_endp_name_idx', 'cluster_id', 'name', unique=True),
         UniqueConstraint('cluster_id', 'name'),
         UniqueConstraint('cluster_id', 'security_id'),
         UniqueConstraint('cluster_id', 'service_id'),
