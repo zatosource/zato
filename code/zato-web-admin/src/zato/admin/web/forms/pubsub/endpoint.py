@@ -24,6 +24,7 @@ class CreateForm(forms.Form):
     security_id = forms.ChoiceField(widget=forms.Select())
     hook_service_id = forms.ChoiceField(widget=forms.Select())
     ws_channel_id = forms.ChoiceField(widget=forms.Select())
+    sub_key = forms.CharField(widget=forms.HiddenInput())
 
     def __init__(self, security_list=None, ws_channel_list=None, prefix=None, post_data=None, req=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)

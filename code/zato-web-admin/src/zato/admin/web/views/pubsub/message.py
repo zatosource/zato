@@ -34,21 +34,21 @@ def get(req, cluster_id, object_type, object_id, msg_id):
     return_data['cluster_id'] = cluster_id
     return_data['object_type'] = object_type
     return_data['{}_id'.format(object_type)] = object_id
-    return_data['endpoint_html'] = get_endpoint_html(return_data, cluster_id)
 
     return_data.update(req.zato.client.invoke('zato.pubsub.message.get', {
         'cluster_id': cluster_id,
         'msg_id': msg_id,
     }).data.response)
 
+    return_data['endpoint_html'] = get_endpoint_html(return_data, cluster_id)
     return_data['form'] = MsgForm(return_data)
-    return_data.pub_time = from_utc_to_user(return_data.pub_time+'+00:00', req.zato.user_profile)
+    return_data['pub_time'] = from_utc_to_user(return_data['pub_time']+'+00:00', req.zato.user_profile)
 
-    if return_data.ext_pub_time:
-        return_data.ext_pub_time = from_utc_to_user(return_data.ext_pub_time+'+00:00', req.zato.user_profile)
+    if return_data['ext_pub_time']:
+        return_data['ext_pub_time'] = from_utc_to_user(return_data['ext_pub_time']+'+00:00', req.zato.user_profile)
 
-    if return_data.expiration_time:
-        return_data.expiration_time = from_utc_to_user(return_data.expiration_time+'+00:00', req.zato.user_profile)
+    if return_data['expiration_time']:
+        return_data['expiration_time'] = from_utc_to_user(return_data['expiration_time']+'+00:00', req.zato.user_profile)
 
     return TemplateResponse(req, 'zato/pubsub/message-details.html', return_data)
 

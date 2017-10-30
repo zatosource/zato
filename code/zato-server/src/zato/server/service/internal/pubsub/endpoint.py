@@ -102,7 +102,8 @@ class Get(AdminService):
         input_required = ('cluster_id', AsIs('id'))
         output_required = ('id', 'name', 'is_active', 'is_internal', 'role')
         output_optional = ('tags', 'topic_patterns', 'pub_tag_patterns', 'message_tag_patterns',
-            'security_id', 'ws_channel_id', 'hook_service_id', 'sec_type', 'sec_name', 'ws_channel_name', 'hook_service_name')
+            'security_id', 'ws_channel_id', 'hook_service_id', 'sec_type', 'sec_name', 'ws_channel_name', 'hook_service_name',
+            'sub_key')
 
     def handle(self):
         with closing(self.odb.session()) as session:
