@@ -2088,6 +2088,15 @@ class PubSubEndpoint(Base):
     """ An individual endpoint participating in publish/subscribe scenarios.
     """
     __tablename__ = 'pubsub_endpoint'
+    __table_args__ = (
+        Index('pubsb_endpt_clust_idx', 'cluster_id', unique=False),
+        Index('pubsb_endpt_id_idx', 'cluster_id', 'id', unique=True),
+        Index('pubsb_endpt_name_idx', 'cluster_id', 'name', unique=True),
+        UniqueConstraint('cluster_id', 'name'),
+        UniqueConstraint('cluster_id', 'security_id'),
+        UniqueConstraint('cluster_id', 'service_id'),
+        UniqueConstraint('cluster_id', 'ws_channel_id'),
+    {})
 
     id = Column(Integer, Sequence('pubsub_endp_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
@@ -2149,6 +2158,7 @@ class PubSubTopic(Base):
     __tablename__ = 'pubsub_topic'
     __table_args__ = (
         Index('pubsb_tp_clust_idx', 'cluster_id', unique=False),
+        Index('pubsb_tp_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_tp_name_idx', 'cluster_id', 'name', unique=True),
     {})
 
@@ -2173,6 +2183,7 @@ class PubSubEndpointTopic(Base):
     __tablename__ = 'pubsub_endp_topic'
     __table_args__ = (
         Index('pubsb_endpt_clust_idx', 'cluster_id', unique=False),
+        Index('pubsb_endpt_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_endpt_msgid_idx', 'cluster_id', 'pub_msg_id', unique=True),
         Index('pubsb_endpt_clsendtp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=True),
     {})
@@ -2204,6 +2215,7 @@ class PubSubSubscription(Base):
     __tablename__ = 'pubsub_sub'
     __table_args__ = (
         Index('pubsb_sub_clust_idx', 'cluster_id', unique=False),
+        Index('pubsb_sub_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_sub_clust_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
     {})
 
@@ -2306,10 +2318,10 @@ class PubSubEndpointQueue(Base):
     """
     __tablename__ = 'pubsub_endp_message_queue'
     __table_args__ = (
-        Index('pubsb_msg_q_id_idx', 'cluster_id', 'id', unique=True),
-        Index('pubsb_msg_q_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
-        Index('pubsb_msg_q_endptp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
-        Index('pubsb_msg_q_endptpm_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
+        Index('pubsb_enms_q_id_idx', 'cluster_id', 'id', unique=True),
+        Index('pubsb_enms_q_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
+        Index('pubsb_enms_q_endptp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
+        Index('pubsb_enms_q_endptpm_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
     {})
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
