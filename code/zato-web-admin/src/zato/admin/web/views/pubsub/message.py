@@ -89,7 +89,7 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
 
     else:
         is_ok = True
-        message = 'Message {}'.format
+        message = 'Message {}'.format('updated' if action=='update' else 'created')
         size = response.size
         if response.expiration_time:
             expiration_time = from_utc_to_user(response.expiration_time+'+00:00', req.zato.user_profile)
@@ -105,7 +105,7 @@ def _publish_update_action(req, cluster_id, action, msg_id=None, topic_id=None):
 
 @method_allowed('POST')
 def update_action(req, cluster_id, msg_id):
-    _publish_update_action(req, cluster_id, 'update', msg_id)
+    return _publish_update_action(req, cluster_id, 'update', msg_id)
 
 # ################################################################################################################################
 
@@ -121,7 +121,7 @@ def publish(req, cluster_id, topic_id):
 
 @method_allowed('POST')
 def publish_action(req, cluster_id, topic_id):
-    _publish_update_action(req, cluster_id, 'publish', topic_id=topic_id)
+    return _publish_update_action(req, cluster_id, 'publish', topic_id=topic_id)
 
 # ################################################################################################################################
 
