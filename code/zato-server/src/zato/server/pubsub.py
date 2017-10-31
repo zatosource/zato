@@ -320,7 +320,7 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def is_allowed_sub_topic(self, endpoint_id, name, security_id=None, ws_channel_id=None):
+    def is_allowed_sub_topic(self, name, security_id=None, ws_channel_id=None):
         return self._is_allowed('sub_topic_patterns', name, security_id, ws_channel_id)
 
 # ################################################################################################################################
