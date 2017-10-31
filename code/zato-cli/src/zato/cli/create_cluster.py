@@ -879,7 +879,7 @@ class Create(ZatoCommand):
         sub = PubSubSubscription()
         sub.topic = topic
         sub.endpoint = endpoint
-        sub.sub_key = new_cid()
+        sub.sub_key = 'zpsk{}'.format(new_cid())
         sub.has_gd = False
         sub.cluster = cluster
 

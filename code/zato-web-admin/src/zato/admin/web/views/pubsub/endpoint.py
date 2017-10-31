@@ -26,7 +26,7 @@ from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
 from zato.admin.web.views.pubsub import get_client_html
 from zato.common import ZATO_NONE
-from zato.common.odb.model import PubSubEndpoint, PubSubTopic
+from zato.common.odb.model import PubSubEndpoint, PubSubSubscription, PubSubTopic
 
 # ################################################################################################################################
 
@@ -192,14 +192,22 @@ class EndpointQueues(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-endpoint-queues'
     template = 'zato/pubsub/endpoint-queues.html'
-    service_name = 'pubapi1.get-queue-list' #'zato.pubsub.endpoint.get-queue-list'
-    output_class = PubSubTopic
+    service_name = 'pubapi1.get-endpoint-queue-list' #'zato.pubsub.endpoint.get-queue-list'
+    output_class = PubSubSubscription
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'endpoint_id')
-        output_required = ('msg_id', 'delivery_count', 'last_delivery_time', 'endpoint_id', 'topic_id', 'subscription_id')
+        output_required = ('sub_id', 'topic_id', 'topic_name', 'queue_name', 'is_active', 'is_internal', 'current_depth')
+        output_optional = ('creation_time', 'sub_key', 'has_gd', 'delivery_method', 'delivery_data_format', 'delivery_endpoint',
+            'last_interaction_time', 'last_interaction_type', 'last_interaction_details')
         output_repeated = True
+
+    def on_before_append_item(self, item):
+        item.creation_time = from_utc_to_user(item.creation_time+'+00:00', self.req.zato.user_profile)
+        if item.last_interaction_time:
+            item.last_interaction_time = from_utc_to_user(item.last_interaction_time+'+00:00', self.req.zato.user_profile)
+        return item
 
     def handle(self):
         pass

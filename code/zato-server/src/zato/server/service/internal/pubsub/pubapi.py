@@ -271,7 +271,7 @@ class SubscribeService(PubSubService):
     """
     class SimpleIO(PubSubService.SimpleIO):
         input_optional = PubSubService.SimpleIO.input_optional + ('sub_key', 'deliver_to', 'delivery_format')
-        output_optional = ('sub_key', Int('msg_count'))
+        output_optional = ('sub_key', Int('queue_depth'))
 
     def handle_POST(self, _new_cid=new_cid, _utcnow=datetime.utcnow):
 
@@ -354,6 +354,7 @@ class SubscribeService(PubSubService):
                     # that haven't expired yet.
                     select_messages = session.query(
                         PubSubMessage.id, PubSubMessage.topic_id,
+                        expr.bindparam('creation_time', now),
                         expr.bindparam('delivery_count', 0),
                         expr.bindparam('endpoint_id', endpoint_id),
                         expr.bindparam('subscription_id', ps_sub.id),
@@ -368,6 +369,7 @@ class SubscribeService(PubSubService):
                         from_select((
                             PubSubEndpointQueue.msg_id,
                             PubSubEndpointQueue.topic_id,
+                            expr.column('creation_time'),
                             expr.column('delivery_count'),
                             expr.column('endpoint_id'),
                             expr.column('subscription_id'),
@@ -376,7 +378,6 @@ class SubscribeService(PubSubService):
 
                     # Commit changes to subscriber's queue
                     session.execute(insert_messages)
-                    session.commit()
 
                     # Get the number of messages moved to let the subscriber know
                     # how many there are available initially.
@@ -387,7 +388,18 @@ class SubscribeService(PubSubService):
                     total_moved_q = moved_q.statement.with_only_columns([func.count()]).order_by(None)
                     total_moved = moved_q.session.execute(total_moved_q).scalar()
 
+                    # Update the subscriber queue's current depth with the number of messages moved,
+                    # because it's a computed value.
+                    ps_sub.current_depth = total_moved
+                    session.commit()
+
+                    # Produce response
                     self.response.payload.sub_key = sub_key
-                    self.response.payload.msg_count = total_moved
+                    self.response.payload.queue_depth = total_moved
+
+# ################################################################################################################################
+
+    def handle_GET(self):
+        pass
 
 # ################################################################################################################################
