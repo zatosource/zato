@@ -22,8 +22,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relation, relationship
 
 # Zato
-from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, \
-     MSG_PATTERN_TYPE, ODOO, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
+from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, \
+     MISC, NOTIF, MSG_PATTERN_TYPE, ODOO, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -2092,6 +2092,9 @@ class PubSubEndpoint(Base):
         Index('pubsb_endp_clust_idx', 'cluster_id', unique=False),
         Index('pubsb_endp_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_endp_name_idx', 'cluster_id', 'name', unique=True),
+        Index('pubsb_endp_sub_idx', 'cluster_id', 'sub_key', unique=True),
+        Index('pubsb_endp_secsub_idx', 'cluster_id', 'security_id', 'sub_key', unique=True),
+        Index('pubsb_endp_wscsub_idx', 'cluster_id', 'ws_channel_id', 'sub_key', unique=True),
         UniqueConstraint('cluster_id', 'name'),
         UniqueConstraint('cluster_id', 'security_id'),
         UniqueConstraint('cluster_id', 'service_id'),
@@ -2216,7 +2219,7 @@ class PubSubSubscription(Base):
     __table_args__ = (
         Index('pubsb_sub_clust_idx', 'cluster_id', unique=False),
         Index('pubsb_sub_id_idx', 'cluster_id', 'id', unique=True),
-        Index('pubsb_sub_clust_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
+        Index('pubsb_sub_clust_endpt_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
     {})
 
     id = Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True)
@@ -2228,6 +2231,9 @@ class PubSubSubscription(Base):
 
     is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
+    delivery_method = Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY)
+    delivery_data_format = Column(String(200), nullable=False, default=DATA_FORMAT.JSON)
+    delivery_endpoint = Column(Text, nullable=True)
 
     topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(
@@ -2320,8 +2326,8 @@ class PubSubEndpointQueue(Base):
     __table_args__ = (
         Index('pubsb_enms_q_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_enms_q_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
+        Index('pubsb_enms_q_subs_idx', 'cluster_id', 'subscription_id', unique=False),
         Index('pubsb_enms_q_endptp_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
-        Index('pubsb_enms_q_endptpm_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
     {})
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
@@ -2330,14 +2336,14 @@ class PubSubEndpointQueue(Base):
     delivery_details = Column(LargeBinary(), nullable=True)
     last_delivery_time = Column(DateTime(), nullable=True)
 
-    msg_id = Column(Integer, ForeignKey('pubsub_message.id', ondelete='CASCADE'), nullable=True)
+    msg_id = Column(Integer, ForeignKey('pubsub_message.id', ondelete='CASCADE'), nullable=False)
     msg = relationship(PubSubMessage, backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
     endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True)
     endpoint = relationship(PubSubEndpoint,
         backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(PubSubTopic, backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
 
     subscription_id = Column(Integer, ForeignKey('pubsub_sub.id', ondelete='CASCADE'), nullable=True)

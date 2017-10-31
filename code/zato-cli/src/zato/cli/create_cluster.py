@@ -892,11 +892,11 @@ class Create(ZatoCommand):
             True, cluster)
 
         service_sub = Service(None, 'zato.pubsub.pubapi.subscribe-service', True,
-            impl_name1,
+            impl_name2,
             True, cluster)
 
         service_msg = Service(None, 'zato.pubsub.pubapi.msg-service', True,
-            impl_name2,
+            impl_name3,
             True, cluster)
 
         chan_topic = HTTPSOAP(None, 'zato.pubsub.topic.topic_name', True, True, 'channel', 'plain_http', None,

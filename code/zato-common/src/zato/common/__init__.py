@@ -733,6 +733,10 @@ class PUBSUB:
     class DEFAULT:
         TOPIC_MAX_DEPTH = 10000
 
+    class DELIVERY_METHOD:
+        NOTIFY = 'notify'
+        PULL = 'pull'
+
     class PRIORITY:
         DEFAULT = 5
         MIN = 1
