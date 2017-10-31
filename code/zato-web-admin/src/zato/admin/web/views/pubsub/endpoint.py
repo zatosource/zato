@@ -22,7 +22,7 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
+from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm, EndpointQueueEditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
 from zato.admin.web.views.pubsub import get_client_html
 from zato.common import ZATO_NONE
@@ -157,23 +157,13 @@ class Delete(_Delete):
 
 # ################################################################################################################################
 
-class EndpointTopics(_Index):
+class _EndpointObjects(_Index):
     method_allowed = 'GET'
-    url_name = 'pubsub-endpoint-topics'
-    template = 'zato/pubsub/endpoint-topics.html'
-    service_name = 'zato.pubsub.endpoint.get-topic-list'
-    output_class = PubSubTopic
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'endpoint_id')
-        output_required = ('topic_id', 'name', 'is_active', 'is_internal', 'max_depth')
-        output_optional = ('last_pub_time', 'last_msg_id', 'last_correl_id', 'last_in_reply_to')
         output_repeated = True
-
-    def on_before_append_item(self, item):
-        item.last_pub_time = from_utc_to_user(item.last_pub_time+'+00:00', self.req.zato.user_profile)
-        return item
 
     def handle(self):
 
@@ -183,25 +173,39 @@ class EndpointTopics(_Index):
                 'zato.pubsub.endpoint.get', {
                     'cluster_id':self.req.zato.cluster_id,
                     'id':self.input.endpoint_id,
-                }).data.response.name
+                }).data.response.name,
+            'edit_form': EndpointQueueEditForm(),
         }
 
 # ################################################################################################################################
 
-class EndpointQueues(_Index):
-    method_allowed = 'GET'
+class EndpointTopics(_EndpointObjects):
+    url_name = 'pubsub-endpoint-topics'
+    template = 'zato/pubsub/endpoint-topics.html'
+    service_name = 'zato.pubsub.endpoint.get-topic-list'
+    output_class = PubSubTopic
+
+    class SimpleIO(_EndpointObjects.SimpleIO):
+        output_required = ('topic_id', 'name', 'is_active', 'is_internal', 'max_depth')
+        output_optional = ('last_pub_time', 'last_msg_id', 'last_correl_id', 'last_in_reply_to')
+
+    def on_before_append_item(self, item):
+        item.last_pub_time = from_utc_to_user(item.last_pub_time+'+00:00', self.req.zato.user_profile)
+        return item
+
+# ################################################################################################################################
+
+class EndpointQueues(_EndpointObjects):
     url_name = 'pubsub-endpoint-queues'
     template = 'zato/pubsub/endpoint-queues.html'
     service_name = 'pubapi1.get-endpoint-queue-list' #'zato.pubsub.endpoint.get-queue-list'
     output_class = PubSubSubscription
-    paginate = True
 
-    class SimpleIO(_Index.SimpleIO):
-        input_required = ('cluster_id', 'endpoint_id')
-        output_required = ('sub_id', 'topic_id', 'topic_name', 'queue_name', 'is_active', 'is_internal', 'current_depth')
+    class SimpleIO(_EndpointObjects.SimpleIO):
+        output_required = ('sub_id', 'topic_id', 'topic_name', 'queue_name', 'active_status', 'is_internal',
+            'total_depth', 'current_depth', 'staging_depth')
         output_optional = ('creation_time', 'sub_key', 'has_gd', 'delivery_method', 'delivery_data_format', 'delivery_endpoint',
-            'last_interaction_time', 'last_interaction_type', 'last_interaction_details')
-        output_repeated = True
+            'last_interaction_time', 'last_interaction_type', 'last_interaction_details', 'endpoint_name')
 
     def on_before_append_item(self, item):
         item.creation_time = from_utc_to_user(item.creation_time+'+00:00', self.req.zato.user_profile)
@@ -209,7 +213,20 @@ class EndpointQueues(_Index):
             item.last_interaction_time = from_utc_to_user(item.last_interaction_time+'+00:00', self.req.zato.user_profile)
         return item
 
-    def handle(self):
-        pass
+# ################################################################################################################################
+
+class EndpointQueuesEdit(CreateEdit):
+    method_allowed = 'POST'
+    url_name = 'pubsub-endpoint-queue-edit'
+    service_name = 'pubapi1.update-endpoint-queue'
+
+    class SimpleIO(CreateEdit.SimpleIO):
+        input_required = ('cluster_id', 'id', 'sub_key', 'active_status')
+        input_optional = ('is_staging_enabled', 'has_gd')
+        output_required = ('id', 'name')
+
+    def success_message(self, item):
+        print(333, item)
+        return 'Successfully updated pub/sub endpoint queue`{}`'.format(item.name)
 
 # ################################################################################################################################

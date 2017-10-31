@@ -106,6 +106,7 @@ $.namespace('zato.outgoing.zmq');
 $.namespace('zato.pattern.delivery');
 $.namespace('zato.pattern.delivery.in_doubt');
 $.namespace('zato.pubsub.endpoint');
+$.namespace('zato.pubsub.endpoint_queue');
 $.namespace('zato.pubsub.topic');
 $.namespace('zato.pubsub.message');
 $.namespace('zato.pubsub.message.details');
@@ -266,11 +267,14 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
     var skip_boolean = ['in_lb']; // A list of boolean fields that should be treated as though they were regular text
 
     for(field_name in fields) {
+        console.log('Field -> `'+ field_name +'`');
         if(field_name.indexOf(name_prefix) === 0 || field_name == 'id') {
             field_name = field_name.replace(name_prefix, '');
             for(item_attr in instance) {
+                console.log('Item attr -> `'+ item_attr +'`');
                 if(item_attr == field_name) {
                     value = instance[item_attr];
+                    console.log('Value -> `'+ value +'`');
                     form_elem_name = id_prefix + field_name;
                     form_elem = $(form_elem_name);
                     if($.fn.zato.like_bool(value)) {
@@ -335,7 +339,7 @@ $.fn.zato.data_table.parse = function() {
             var attr_name = columns[td_idx];
             var attr_value = $(td).text().trim();
 
-            console.log('td_idx, attr_name = ' + td_idx + ' ' + attr_name);
+            console.log('td_idx:`'+ td_idx +'`, attr_name:`'+ attr_name +'`, attr_value:`'+ attr_value + '`');
 
             // Don't bother with ignored attributes.
             if(attr_name[0] != '_') {
@@ -866,3 +870,7 @@ $.fn.zato.get_url_param = function(name, url) {
     };
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
+
+//function $.fn.zato.decimal_to_hex(dec) {
+//  return ('0' + dec.toString(16)).substr(-2);
+//}

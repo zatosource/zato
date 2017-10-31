@@ -335,7 +335,7 @@ class SubscribeService(PubSubService):
 
                     # Create a new subscription object
                     ps_sub = PubSubSubscription()
-                    ps_sub.is_active = True
+                    ps_sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
                     ps_sub.is_internal = False
                     ps_sub.creation_time = now
                     ps_sub.sub_key = sub_key
@@ -390,7 +390,10 @@ class SubscribeService(PubSubService):
 
                     # Update the subscriber queue's current depth with the number of messages moved,
                     # because it's a computed value.
+                    ps_sub.total_depth = total_moved
                     ps_sub.current_depth = total_moved
+                    ps_sub.staging_depth = 0
+
                     session.commit()
 
                     # Produce response
@@ -403,3 +406,62 @@ class SubscribeService(PubSubService):
         pass
 
 # ################################################################################################################################
+
+class GetEndpointQueueList(AdminService):
+    """ Returns all queues to which a given endpoint is subscribed.
+    """
+    class SimpleIO:
+        input_required = ('cluster_id', 'endpoint_id')
+        output_required = ('sub_id', 'topic_id', 'topic_name', 'queue_name', 'active_status', 'is_internal',
+            'is_staging_enabled', 'creation_time', 'sub_key', 'has_gd', 'delivery_method',
+            'delivery_data_format', 'endpoint_name', Int('total_depth'), Int('current_depth'), Int('staging_depth'))
+        output_optional = ('delivery_endpoint', 'last_interaction_time', 'last_interaction_type', 'last_interaction_details', )
+        output_repeated = True
+
+    def handle(self):
+        input = self.request.input
+        pubsub = self.server.worker_store.pubsub
+        response = []
+
+        with closing(self.odb.session()) as session:
+
+            queue_list = session.query(
+                PubSubSubscription.id.label('sub_id'),
+                PubSubSubscription.active_status, PubSubSubscription.is_internal,
+                PubSubSubscription.current_depth, PubSubSubscription.creation_time,
+                PubSubSubscription.sub_key, PubSubSubscription.has_gd,
+                PubSubSubscription.delivery_method, PubSubSubscription.delivery_data_format,
+                PubSubSubscription.delivery_endpoint, PubSubSubscription.last_interaction_time,
+                PubSubSubscription.last_interaction_type, PubSubSubscription.last_interaction_details,
+                PubSubSubscription.is_staging_enabled,
+                PubSubSubscription.total_depth, PubSubSubscription.current_depth, PubSubSubscription.staging_depth,
+                PubSubTopic.id.label('topic_id'),
+                PubSubTopic.name.label('topic_name'),
+                PubSubTopic.name.label('queue_name'), # Queue names are the same as their originating topics
+                PubSubEndpoint.name.label('endpoint_name'),
+                ).\
+                filter(PubSubSubscription.endpoint_id==input.endpoint_id).\
+                filter(PubSubSubscription.topic_id==PubSubTopic.id).\
+                filter(PubSubSubscription.cluster_id==self.server.cluster_id).\
+                filter(PubSubSubscription.endpoint_id==PubSubEndpoint.id).\
+                all()
+
+            for item in queue_list:
+                item.creation_time = item.creation_time.isoformat()
+                if item.last_interaction_time:
+                    item.last_interaction_time = item.last_interaction_time.isoformat()
+                response.append(item)
+
+        self.response.payload[:] = response
+
+# ################################################################################################################################
+
+class UpdateEndpointQueue(AdminService):
+    """ Returns all queues to which a given endpoint is subscribed.
+    """
+    class SimpleIO:
+        input_required = ('cluster_id', 'id', 'sub_key', 'active_status')
+        input_optional = ('is_staging_enabled', 'has_gd')
+
+    def handle(self):
+        self.logger.warn(self.request.input)

@@ -25,8 +25,11 @@ def add_initial_select(form, field_name):
 
 # ################################################################################################################################
 
-def add_select(form, field_name, elems):
-    add_initial_select(form, field_name)
+def add_select(form, field_name, elems, needs_initial_select=True):
+    if needs_initial_select:
+        add_initial_select(form, field_name)
+    else:
+        form.fields[field_name].choices = []
 
     for elem in elems:
         id = getattr(elem, 'id', None) or elem['id']

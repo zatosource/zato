@@ -1042,7 +1042,7 @@ def pubsub_topic_list(session, cluster_id, needs_columns=False):
 
 def _pubsub_subscription(session, cluster_id):
     return session.query(
-        PubSubSubscription.id, PubSubSubscription.is_active,
+        PubSubSubscription.id, PubSubSubscription.active_status,
         PubSubSubscription.is_internal, PubSubSubscription.creation_time,
         PubSubSubscription.sub_key, PubSubSubscription.is_durable,
         PubSubSubscription.has_gd, PubSubSubscription.topic_id,
@@ -1126,6 +1126,33 @@ def _pubsub_message(session, cluster_id):
 def pubsub_message(session, cluster_id, pub_msg_id):
     return _pubsub_message(session, cluster_id).\
         filter(PubSubMessage.pub_msg_id==pub_msg_id)
+
+# ################################################################################################################################
+
+def _pubsub_endpoint_queue(session, cluster_id, endpoint_id):
+    session.query(
+        PubSubSubscription.id.label('sub_id'),
+        PubSubSubscription.active_status, PubSubSubscription.is_internal,
+        PubSubSubscription.current_depth, PubSubSubscription.creation_time,
+        PubSubSubscription.sub_key, PubSubSubscription.has_gd,
+        PubSubSubscription.delivery_method, PubSubSubscription.delivery_data_format,
+        PubSubSubscription.delivery_endpoint, PubSubSubscription.last_interaction_time,
+        PubSubSubscription.last_interaction_type, PubSubSubscription.last_interaction_details,
+        PubSubSubscription.is_staging_enabled,
+        PubSubSubscription.total_depth, PubSubSubscription.current_depth, PubSubSubscription.staging_depth,
+        PubSubTopic.id.label('topic_id'),
+        PubSubTopic.name.label('topic_name'),
+        PubSubTopic.name.label('queue_name'), # Queue names are the same as their originating topics
+        PubSubEndpoint.name.label('endpoint_name'),
+        ).\
+        filter(PubSubSubscription.endpoint_id==input.endpoint_id).\
+        filter(PubSubSubscription.topic_id==PubSubTopic.id).\
+        filter(PubSubSubscription.cluster_id==self.server.cluster_id).\
+        filter(PubSubSubscription.endpoint_id==PubSubEndpoint.id)
+
+zz
+
+zxc
 
 # ################################################################################################################################
 
