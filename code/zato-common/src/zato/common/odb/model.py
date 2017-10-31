@@ -2231,9 +2231,16 @@ class PubSubSubscription(Base):
 
     is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
+
     delivery_method = Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY)
     delivery_data_format = Column(String(200), nullable=False, default=DATA_FORMAT.JSON)
     delivery_endpoint = Column(Text, nullable=True)
+
+    last_interaction_time = Column(DateTime(), nullable=True)
+    last_interaction_type = Column(String(200), nullable=True)
+    last_interaction_details = Column(Text, nullable=True)
+
+    current_depth = Column(Integer(), nullable=False, default=0)
 
     topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(
@@ -2331,6 +2338,7 @@ class PubSubEndpointQueue(Base):
     {})
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
+    creation_time = Column(DateTime(), nullable=False)
 
     delivery_count = Column(Integer, nullable=False)
     delivery_details = Column(LargeBinary(), nullable=True)
