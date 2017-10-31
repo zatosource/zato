@@ -15,6 +15,8 @@ from django import forms
 from zato.admin.web.forms import add_select, add_security_select, add_services
 from zato.common import PUBSUB
 
+# ################################################################################################################################
+
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
@@ -40,5 +42,22 @@ class CreateForm(forms.Form):
         add_select(self, 'role', PUBSUB.ROLE)
         add_services(self, req, by_id=True)
 
+# ################################################################################################################################
+
 class EditForm(CreateForm):
     is_internal = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+
+# ################################################################################################################################
+
+class EndpointQueueEditForm(forms.Form):
+    id = forms.CharField(widget=forms.HiddenInput())
+    active_status = forms.ChoiceField(widget=forms.Select())
+    is_staging_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    has_gd = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    sub_key = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:70%'}))
+
+    def __init__(self, *args, **kwargs):
+        super(EndpointQueueEditForm, self).__init__(prefix='edit', *args, **kwargs)
+        add_select(self, 'active_status', PUBSUB.QUEUE_ACTIVE_STATUS, False)
+
+# ################################################################################################################################

@@ -733,6 +733,16 @@ class PUBSUB:
     class DEFAULT:
         TOPIC_MAX_DEPTH = 10000
 
+    class QUEUE_ACTIVE_STATUS:
+        FULLY_ENABLED = NameId('Fully enabled', 'pub-sub')
+        PUB_ONLY = NameId('Pub only', 'pub-only')
+        SUB_ONLY = NameId('Sub only', 'sub-only')
+        DISABLED = NameId('Disabled', 'disabled')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.FULLY_ENABLED, self.PUB_ONLY, self.SUB_ONLY, self.DISABLED))
+
     class DELIVERY_METHOD:
         NOTIFY = 'notify'
         PULL = 'pull'
@@ -743,8 +753,8 @@ class PUBSUB:
         MAX = 9
 
     class ROLE:
-        PUBLISHER = NameId('Publisher', 'pub')
-        SUBSCRIBER = NameId('Subscriber', 'sub')
+        PUBLISHER = NameId('Publisher', 'pub-only')
+        SUBSCRIBER = NameId('Subscriber', 'sub-only')
         PUBLISHER_SUBSCRIBER = NameId('Publisher/subscriber', 'pub-sub')
 
         class __metaclass__(type):

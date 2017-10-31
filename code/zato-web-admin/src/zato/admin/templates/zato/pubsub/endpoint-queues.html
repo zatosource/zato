@@ -1,0 +1,159 @@
+{% extends "zato/index.html" %}
+
+{% block html_title %}Endpoint queues{% endblock %}
+
+{% block "extra_css" %}
+    <link rel="stylesheet" type="text/css" href="/static/css/jquery.alerts.css">
+{% endblock %}
+
+{% block "extra_js" %}
+
+    <script type="text/javascript" src="/static/jquery/jquery.tablesorter.min.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.cookie.js"></script>
+    <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
+
+    <script type="text/javascript" src="/static/js/common.js"></script>
+    <script type="text/javascript" src="/static/js/pubsub/endpoint-queues.js"></script>
+
+    <script>
+    $.fn.zato.data_table.get_columns = function() {
+        return [
+            '_numbering',
+            '_selection',
+            '_queue_name',
+            '_active_status',
+            '_has_gd',
+            '_is_staging_enabled',
+            '_total_depth',
+            '_current_depth',
+            '_staging_depth',
+            '_creation_time',
+            '_sub_key',
+            '_last_interaction_time',
+            '_clear',
+            '_edit',
+            '_delete',
+            'id',
+            'sub_key',
+            'active_status',
+        ]
+    }
+    </script>
+
+{% endblock %}
+
+{% block "content" %}
+<h2 class="zato">Queues for endpoint : <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint_id }}">{{ endpoint_name }}</a></h2>
+
+{% if not zato_clusters %}
+    {% include "zato/no-clusters.html" %}
+{% else %}
+
+<div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
+
+    {% if cluster_id %}
+
+        <div id="markup">
+            <table id="data-table">
+                <thead>
+                    <tr class='ignore'>
+                        <th style="width:2%">&nbsp;</th>
+                        <th>&nbsp;</th>
+                        <th><a href="#">Queue for topic</a></th>
+                        <th><a href="#">Active status</a></th>
+                        <th><a href="#">GD</a></th>
+                        <th><a href="#">STG</a></th>
+                        <th><a href="#">Total</a></th>
+                        <th><a href="#">Current</a></th>
+                        <th><a href="#">Staging</a></th>
+                        <th><a href="#">Creation time</a></th>
+                        <th><a href="#">Sub key</a></th>
+                        <th><a href="#">Last interaction</a></th>
+                        <th style="width:5%">&nbsp;</th>
+                        <th style="width:5%">&nbsp;</th>
+                        <th style="width:5%">&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                </thead>
+
+                <tbody>
+                {% if items %}
+                {% for item in items %}
+                    <tr class="{% cycle 'odd' 'even' %}" id='tr_{{ item.topic_id }}'>
+                        <td class='numbering'>&nbsp;</td>
+                        <td class="impexp"><input type="checkbox" /></td>
+                        <td><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.sub_id }}">{{ item.queue_name }}</a></td>
+                        <td>{{ item.active_status }}</td>
+                        <td>{{ item.has_gd|yesno:'Yes,No' }}</td>
+                        <td>{{ item.is_staging_enabled|yesno:'Yes,No' }}</td>
+                        <td><a href="#">{{ item.total_depth }}</a></td>
+                        <td><a href="#">{{ item.current_depth }}</a></td>
+                        <td><a href="#">{{ item.staging_depth }}</a></td>
+                        <td>{{ item.creation_time }}</td>
+                        <td style="min-width:200px">
+                            <a id="sub_key_{{ item.sub_id }}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key('{{ item.sub_id }}')">Show</a>
+                        </td>
+                        <td>
+                            {% if item.last_interaction_time %}
+                                <a href="#">{{ item.last_interaction_time }}</a>
+                            {% else %}
+                                <span class="form_hint">---</span>
+                            {% endif %}
+                        </td>
+                        <td><a href="#">Clear</a></td>
+                        <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.edit('{{ item.sub_id }}')">Edit</a></td>
+                        <td><a href="#">Delete</a></td>
+                        <td class='ignore item_id_{{ item.sub_id }}'>{{ item.sub_id }}</td>
+                        <td class='ignore'>{{ item.sub_key }}</td>
+                        <td class='ignore'>{{ item.active_status }}</td>
+                {% endfor %}
+                {% else %}
+                    <tr class='ignore'>
+                        <td colspan='13'>No results</td>
+                    </tr>
+                {% endif %}
+
+                </tbody>
+            </table>
+        </div>
+
+        <div id="edit-div" class='data-popup ignore'>
+            <div class="bd">
+                <form action="{% url "pubsub-endpoint-queue-edit" %}" method="post" id="edit-form">
+                    <table class="form-data">
+                        <tr>
+                            <td>Sub key</td>
+                            <td>{{ edit_form.sub_key }} <a href="javascript:$.fn.zato.pubsub.endpoint_queue.get_new_sub_key()">Get new</a></td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle; width:25%">Active status</td>
+                            <td>{{ edit_form.active_status }}</td>
+                        </tr>
+                        <tr>
+                            <td>Guaranteed delivery<br/><span class="form_hint">(GD)</span></td>
+                            <td>{{ edit_form.has_gd }}</td>
+                        </tr>
+                        <tr>
+                            <td>Staging enabled<br/><span class="form_hint">(STG)</span></td>
+                            <td>{{ edit_form.is_staging_enabled }}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
+                    </table>
+                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
+                    <input type="hidden" id="id_edit-id" name="id" />
+                </form>
+            </div>
+        </div>
+
+{% include "zato/paginate/action-panel.html" %}
+
+    {% endif %} {% comment %}cluster_id{% endcomment %}
+
+{% endif %}{% comment %}not zato_clusters{% endcomment %}
+
+{% endblock %}

@@ -24,7 +24,6 @@
             'role',
             '_topic_patterns_html',
             '_client_html',
-            '_sub_key',
             '_topics',
             '_queues',
             '_edit',
@@ -36,7 +35,6 @@
             'security_id',
             'ws_channel_id',
             'hook_service_id',
-            'sub_key'
         ]
     }
     </script>
@@ -71,7 +69,6 @@
                         <th><a href="#">Role</a></th>
                         <th style="width:25%"><a href="#">Topics allowed</a></th>
                         <th style="width:10%"><a href="#">Client</a></th>
-                        <th><a href="#">Sub key</a></th>
                         <th>Pub</th>
                         <th>Sub</th>
                         <th style="width:5%">&nbsp;</th>
@@ -96,14 +93,6 @@
                         <td>{{ item.role }}</td>
                         <td>{{ item.topic_patterns_html|safe|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.client_html|safe|default:'<span class="form_hint">---</span>' }}</td>
-                        <td style="min-width:200px">
-                            {% if 'sub' in item.role %}
-                                <a id="sub_key_{{ item.id }}" href="javascript:$.fn.zato.pubsub.endpoint.toggle_sub_key('{{ item.id }}')">Show</a>
-                            {% else %}
-                                <span class="form_hint">---</span>
-                            {% endif %}
-                        </td>
-
                         <td>
                             {% if 'pub' in item.role %}
                                 <a href="{% url "pubsub-endpoint-topics" cluster_id item.id item.name|slugify %}">Topics</a>
@@ -134,12 +123,11 @@
                         <td class='ignore'>{{ item.security_id|default:'' }}</td>
                         <td class='ignore'>{{ item.ws_channel_id|default:'' }}</td>
                         <td class='ignore'>{{ item.hook_service_id|default:'' }}</td>
-                        <td class='ignore'>{{ item.sub_key }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='19'>No results</td>
+                        <td colspan='18'>No results</td>
                     </tr>
                 {% endif %}
 
@@ -186,7 +174,6 @@
                     </table>
                     <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                    {{ create_form.sub_key }}
                 </form>
             </div>
         </div>
@@ -229,7 +216,6 @@
                     <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="id_edit-id" name="id" />
-                    {{ edit_form.sub_key }}
                 </form>
             </div>
         </div>

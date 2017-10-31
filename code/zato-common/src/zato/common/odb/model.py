@@ -2223,7 +2223,6 @@ class PubSubSubscription(Base):
     {})
 
     id = Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True)
-    is_active = Column(Boolean(), nullable=False, default=True)
     is_internal = Column(Boolean(), nullable=False, default=False)
 
     creation_time = Column(DateTime(), nullable=False, default=func.current_timestamp())
@@ -2231,6 +2230,9 @@ class PubSubSubscription(Base):
 
     is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
+
+    active_status = Column(String(200), nullable=False)
+    is_staging_enabled = Column(Boolean(), nullable=False, default=False)
 
     delivery_method = Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY)
     delivery_data_format = Column(String(200), nullable=False, default=DATA_FORMAT.JSON)
@@ -2240,7 +2242,9 @@ class PubSubSubscription(Base):
     last_interaction_type = Column(String(200), nullable=True)
     last_interaction_details = Column(Text, nullable=True)
 
+    total_depth = Column(Integer(), nullable=False, default=0)
     current_depth = Column(Integer(), nullable=False, default=0)
+    staging_depth = Column(Integer(), nullable=False, default=0)
 
     topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(
@@ -2312,6 +2316,7 @@ class PubSubMessage(Base):
     expiration = Column(Integer, nullable=False, default=0)
     expiration_time = Column(DateTime(), nullable=True)
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
+    is_in_staging = Column(Boolean(), nullable=False, default=False)
 
     published_by_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
     published_by = relationship(
