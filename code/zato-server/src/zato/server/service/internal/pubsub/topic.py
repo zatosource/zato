@@ -13,7 +13,7 @@ from contextlib import closing
 
 # Zato
 from zato.common.broker_message import PUBSUB
-from zato.common.odb.model import ChannelWebSocket, PubSubEndpoint, PubSubEndpointTopic, PubSubEndpointQueue, PubSubMessage, \
+from zato.common.odb.model import ChannelWebSocket, PubSubEndpoint, PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, \
      PubSubTopic, SecurityBase, Service as ODBService
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
 from zato.server.service import AsIs, Bool
@@ -110,9 +110,9 @@ class Clear(AdminService):
                     delete()
 
                 # Remove all references to topic messages from target queues
-                session.query(PubSubEndpointQueue).\
-                    filter(PubSubEndpointQueue.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubEndpointQueue.topic_id==self.request.input.id).\
+                session.query(PubSubEndpointEnqueuedMessage).\
+                    filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
+                    filter(PubSubEndpointEnqueuedMessage.topic_id==self.request.input.id).\
                     delete()
 
                 session.commit()

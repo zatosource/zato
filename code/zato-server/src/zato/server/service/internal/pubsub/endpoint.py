@@ -17,8 +17,8 @@ from contextlib import closing
 from zato.common import PUBSUB as COMMON_PUBSUB
 from zato.common.broker_message import PUBSUB
 from zato.common.exception import BadRequest
-from zato.common.odb.model import PubSubEndpoint, PubSubEndpointQueue, PubSubEndpointTopic, PubSubSubscription, PubSubTopic
-from zato.common.odb.query import pubsub_endpoint, pubsub_endpoint_queue, pubsub_endpoint_queue_list, pubsub_endpoint_list
+from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubSubscription, PubSubTopic
+from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_queue, pubsub_endpoint_queue_list, pubsub_endpoint_list
 from zato.common.util import new_cid
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, AdminSIO
@@ -174,10 +174,36 @@ class GetEndpointQueueList(AdminService):
         response = []
 
         with closing(self.odb.session()) as session:
+
             queue_list = pubsub_endpoint_queue_list(session, self.request.input.cluster_id, self.request.input.endpoint_id).\
                 all()
+
             for item in queue_list:
+
+                total_q = session.query(PubSubEndpointEnqueuedMessage.id).\
+                    filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
+                    filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id)
+
+                current_q = session.query(PubSubEndpointEnqueuedMessage.id).\
+                    filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
+                    filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id).\
+                    filter(PubSubEndpointEnqueuedMessage.is_in_staging.isnot(True))
+
+                staging_q = session.query(PubSubEndpointEnqueuedMessage.id).\
+                    filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
+                    filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id).\
+                    filter(PubSubEndpointEnqueuedMessage.is_in_staging.is_(True))
+
+                total_depth = count(session, total_q)
+                current_depth = count(session, current_q)
+                staging_depth = count(session, staging_q)
+
+                item.total_depth = total_depth
+                item.current_depth = current_depth
+                item.staging_depth = staging_depth
+
                 item.creation_time = item.creation_time.isoformat()
+
                 if item.last_interaction_time:
                     item.last_interaction_time = item.last_interaction_time.isoformat()
                 response.append(item)
@@ -261,14 +287,14 @@ class ClearEndpointQueue(AdminService):
 
         # Remove all references to the queue given on input
         with closing(self.odb.session()) as session:
-            q = session.query(PubSubEndpointQueue).\
-                filter(PubSubEndpointQueue.cluster_id==self.request.input.cluster_id).\
-                filter(PubSubEndpointQueue.subscription_id==self.request.input.id)
+            q = session.query(PubSubEndpointEnqueuedMessage).\
+                filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
+                filter(PubSubEndpointEnqueuedMessage.subscription_id==self.request.input.id)
 
             if is_in_staging is not None:
-                q = q.filter(PubSubEndpointQueue.is_in_staging.is_(is_in_staging))
-
+                q = q.filter(PubSubEndpointEnqueuedMessage.is_in_staging.is_(is_in_staging))
             q.delete()
+
             session.commit()
 
 # ################################################################################################################################
@@ -288,6 +314,6 @@ class DeleteEndpointQueue(AdminService):
                 filter(PubSubSubscription.id==self.request.input.id).\
                 delete()
 
-            #session.commit()
+            session.commit()
 
 # ################################################################################################################################

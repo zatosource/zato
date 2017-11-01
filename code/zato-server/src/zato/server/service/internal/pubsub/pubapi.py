@@ -22,7 +22,7 @@ from sqlalchemy.sql import expression as expr, func
 # Zato
 from zato.common import CONTENT_TYPE, DATA_FORMAT, PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, TooManyRequests, ServiceUnavailable
-from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointQueue, PubSubEndpointTopic, PubSubMessage, \
+from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
      PubSubSubscription, SecurityBase, Service as ODBService, ChannelWebSocket
 from zato.common.odb.query import pubsub_message, query_wrapper
 from zato.common.util import new_cid
@@ -250,7 +250,7 @@ class TopicService(PubSubService):
                 # Enqueue a new message for all subscribers already known at the publication time
                 for sub in subscriptions_by_topic:
 
-                    queue_msg = PubSubEndpointQueue()
+                    queue_msg = PubSubEndpointEnqueuedMessage()
                     queue_msg.delivery_count = 0
                     queue_msg.msg = ps_msg
                     queue_msg.endpoint_id = endpoint_id
@@ -365,10 +365,10 @@ class SubscribeService(PubSubService):
                         filter(PubSubMessage.expiration_time > now)
 
                     # INSERT references to topic's messages in the subscriber's queue.
-                    insert_messages = insert(PubSubEndpointQueue).\
+                    insert_messages = insert(PubSubEndpointEnqueuedMessage).\
                         from_select((
-                            PubSubEndpointQueue.msg_id,
-                            PubSubEndpointQueue.topic_id,
+                            PubSubEndpointEnqueuedMessage.msg_id,
+                            PubSubEndpointEnqueuedMessage.topic_id,
                             expr.column('creation_time'),
                             expr.column('delivery_count'),
                             expr.column('endpoint_id'),
@@ -381,9 +381,9 @@ class SubscribeService(PubSubService):
 
                     # Get the number of messages moved to let the subscriber know
                     # how many there are available initially.
-                    moved_q = session.query(PubSubEndpointQueue.id).\
-                        filter(PubSubEndpointQueue.subscription_id==ps_sub.id).\
-                        filter(PubSubEndpointQueue.cluster_id==self.server.cluster_id)
+                    moved_q = session.query(PubSubEndpointEnqueuedMessage.id).\
+                        filter(PubSubEndpointEnqueuedMessage.subscription_id==ps_sub.id).\
+                        filter(PubSubEndpointEnqueuedMessage.cluster_id==self.server.cluster_id)
 
                     total_moved_q = moved_q.statement.with_only_columns([func.count()]).order_by(None)
                     total_moved = moved_q.session.execute(total_moved_q).scalar()
