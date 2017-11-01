@@ -269,10 +269,27 @@ def endpoint_queue_clear(req, cluster_id, sub_id):
         req.zato.client.invoke('zato.pubsub.endpoint.clear-endpoint-queue', {
             'id': sub_id,
             'cluster_id': cluster_id,
-            'queue_type': 'staging'
         })
     except Exception, e:
         return HttpResponseServerError(format_exc(e))
     else:
         queue_name = req.POST['queue_name']
         return HttpResponse('Cleared sub queue `{}`'.format(queue_name))
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def endpoint_queue_delete(req, sub_id, cluster_id):
+
+    try:
+        req.zato.client.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
+            'id': sub_id,
+            'cluster_id': cluster_id,
+        })
+    except Exception, e:
+        return HttpResponseServerError(format_exc(e))
+    else:
+        queue_name = req.POST['queue_name']
+        return HttpResponse() # 200 OK
+
+# ################################################################################################################################
