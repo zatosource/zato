@@ -41,6 +41,12 @@ _no_page_limit = 2 ** 24 # ~16.7 million results, tops
 
 # ################################################################################################################################
 
+def count(session, q):
+    _q = q.statement.with_only_columns([func.count()]).order_by(None)
+    return session.execute(_q).scalar()
+
+# ################################################################################################################################
+
 class _SearchWrapper(object):
     """ Wraps results in pagination and/or filters out objects by their name or other attributes.
     """
@@ -1133,13 +1139,12 @@ def _pubsub_endpoint_queue(session, cluster_id):
     return session.query(
         PubSubSubscription.id.label('sub_id'),
         PubSubSubscription.active_status, PubSubSubscription.is_internal,
-        PubSubSubscription.current_depth, PubSubSubscription.creation_time,
+        PubSubSubscription.creation_time,
         PubSubSubscription.sub_key, PubSubSubscription.has_gd,
         PubSubSubscription.delivery_method, PubSubSubscription.delivery_data_format,
         PubSubSubscription.delivery_endpoint, PubSubSubscription.last_interaction_time,
         PubSubSubscription.last_interaction_type, PubSubSubscription.last_interaction_details,
         PubSubSubscription.is_staging_enabled,
-        PubSubSubscription.total_depth, PubSubSubscription.current_depth, PubSubSubscription.staging_depth,
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
         PubSubTopic.name.label('queue_name'), # Queue names are the same as their originating topics

@@ -2275,7 +2275,7 @@ class PubSubSubscription(Base):
     id = Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False, default=False)
 
-    creation_time = Column(DateTime(), nullable=False, default=func.current_timestamp())
+    creation_time = Column(DateTime(), nullable=False)
     sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
 
     is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
@@ -2291,10 +2291,6 @@ class PubSubSubscription(Base):
     last_interaction_time = Column(DateTime(), nullable=True)
     last_interaction_type = Column(String(200), nullable=True)
     last_interaction_details = Column(Text, nullable=True)
-
-    total_depth = Column(Integer(), nullable=False, default=0)
-    current_depth = Column(Integer(), nullable=False, default=0)
-    staging_depth = Column(Integer(), nullable=False, default=0)
 
     topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(
@@ -2330,10 +2326,10 @@ class PubSubSubscription(Base):
 
 # ################################################################################################################################
 
-class PubSubEndpointQueue(Base):
+class PubSubEndpointEnqueuedMessage(Base):
     """ A queue of messages for an individual endpoint subscribed to a topic.
     """
-    __tablename__ = 'pubsub_endp_message_queue'
+    __tablename__ = 'pubsub_endp_msg_queue'
     __table_args__ = (
         Index('pubsb_enms_q_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_enms_q_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
@@ -2367,6 +2363,32 @@ class PubSubEndpointQueue(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_endpoint_queues', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class PubSubEndpointQueueInteraction(Base):
+    """ A series of interactions with a message queue's endpoint.
+    """
+    __tablename__ = 'pubsub_endp_msg_q_inter'
+    __table_args__ = (
+        Index('pubsb_enms_qi_id_idx', 'cluster_id', 'id', unique=True),
+        Index('pubsb_enms_qi_endptp_idx', 'cluster_id', 'queue_id', unique=False),
+    {})
+
+    id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
+    entry_timestamp = Column(DateTime(), nullable=False) # When the row was created
+
+    inter_type = Column(String(200), nullable=False)
+    inter_details = Column(Text, nullable=True)
+
+    queue_id = Column(Integer, ForeignKey('pubsub_endp_msg_queue.id', ondelete='CASCADE'), nullable=False)
+    queue = relationship(
+        PubSubEndpointEnqueuedMessage, backref=backref(
+            'pubsub_endpoint_queue_interactions', order_by=id, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(
+        Cluster, backref=backref('pubsub_endpoint_queue_interactions', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 

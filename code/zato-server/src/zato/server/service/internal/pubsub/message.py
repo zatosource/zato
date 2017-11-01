@@ -16,7 +16,7 @@ from sqlalchemy import and_, exists
 # Zato
 from zato.common import CONTENT_TYPE, DATA_FORMAT, PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, TooManyRequests, ServiceUnavailable
-from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointQueue, PubSubEndpointTopic, PubSubMessage, \
+from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
      SecurityBase, Service as ODBService, ChannelWebSocket
 from zato.common.odb.query import pubsub_message, query_wrapper
 from zato.common.util import new_cid

@@ -877,10 +877,12 @@ class Create(ZatoCommand):
         topic.cluster = cluster
 
         sub = PubSubSubscription()
+        sub.creation_time = datetime.utcnow()
         sub.topic = topic
         sub.endpoint = endpoint
         sub.sub_key = 'zpsk{}'.format(new_cid())
         sub.has_gd = False
+        sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
         sub.cluster = cluster
 
         impl_name1 = 'pubapi1.TopicService'     #'zato.server.service.internal.pubsub.pubapi.TopicService'
