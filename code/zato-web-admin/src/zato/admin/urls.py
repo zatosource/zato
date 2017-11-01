@@ -1194,6 +1194,9 @@ urlpatterns += [
     url(r'^zato/pubsub/endpoint/queues/(?P<cluster_id>.*)/endpoint/(?P<endpoint_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_endpoint.EndpointQueues()), name=pubsub_endpoint.EndpointQueues.url_name),
 
+    url(r'^zato/pubsub/endpoint/queue/clear/cluster/(?P<cluster_id>.*)/queue/(?P<sub_id>.*)/$',
+        login_required(pubsub_endpoint.endpoint_queue_clear), name='pubsub-endpoint-queue-clear'),
+
     url(r'^zato/pubsub/endpoint/queue/edit/$',
         login_required(pubsub_endpoint.endpoint_queue_edit), name='pubsub-endpoint-queue-edit'),
 

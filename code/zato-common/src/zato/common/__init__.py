@@ -733,6 +733,14 @@ class PUBSUB:
     class DEFAULT:
         TOPIC_MAX_DEPTH = 10000
 
+    class QUEUE_TYPE:
+        STAGING = 'staging'
+        CURRENT = 'current'
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.STAGING, self.CURRENT))
+
     class QUEUE_ACTIVE_STATUS:
         FULLY_ENABLED = NameId('Fully enabled', 'pub-sub')
         PUB_ONLY = NameId('Pub only', 'pub-only')

@@ -2212,6 +2212,56 @@ class PubSubEndpointTopic(Base):
 
 # ################################################################################################################################
 
+class PubSubMessage(Base):
+    """ An individual message published to a topic.
+    """
+    __tablename__ = 'pubsub_message'
+    __table_args__ = (
+        Index('pubsb_msg_id_idx', 'cluster_id', 'id', unique=True),
+        Index('pubsb_msg_pubmsg_id_idx', 'cluster_id', 'pub_msg_id', unique=True),
+        Index('pubsb_msg_inreplyto_id_idx', 'cluster_id', 'in_reply_to', unique=False),
+    {})
+
+    # For SQL joins
+    id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
+
+    # Publicly visible message identifier
+    pub_msg_id = Column(String(200), nullable=False)
+
+    # Publicly visible correlation ID
+    pub_correl_id = Column(String(200), nullable=True)
+
+    # Publicly visible ID of the message current message is a response to
+    in_reply_to = Column(String(200), nullable=True)
+
+    pattern_matched = Column(Text, nullable=False)
+    pub_time = Column(DateTime(), nullable=False, default=func.current_timestamp()) # When the row was created
+    last_updated = Column(DateTime(), nullable=True)
+    ext_pub_time = Column(DateTime(), nullable=True) # When the message was created by publisher
+    data = Column(LargeBinary(), nullable=False)
+    data_prefix = Column(Text(), nullable=False)
+    data_prefix_short = Column(String(200), nullable=False)
+    data_format = Column(String(200), nullable=False)
+    mime_type = Column(String(200), nullable=False)
+    size = Column(Integer, nullable=False)
+    priority = Column(Integer, nullable=False)
+    expiration = Column(Integer, nullable=False, default=0)
+    expiration_time = Column(DateTime(), nullable=True)
+    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
+
+    published_by_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
+    published_by = relationship(
+        PubSubEndpoint, backref=backref('pubsub_msg_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
+    topic = relationship(
+        PubSubTopic, backref=backref('pubsub_msg_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('pubsub_messages', order_by=id, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
 class PubSubSubscription(Base):
     """ Stores high-level information about topics an endpoint subscribes to.
     """
@@ -2280,57 +2330,6 @@ class PubSubSubscription(Base):
 
 # ################################################################################################################################
 
-class PubSubMessage(Base):
-    """ An individual message published to a topic.
-    """
-    __tablename__ = 'pubsub_message'
-    __table_args__ = (
-        Index('pubsb_msg_id_idx', 'cluster_id', 'id', unique=True),
-        Index('pubsb_msg_pubmsg_id_idx', 'cluster_id', 'pub_msg_id', unique=True),
-        Index('pubsb_msg_inreplyto_id_idx', 'cluster_id', 'in_reply_to', unique=False),
-    {})
-
-    # For SQL joins
-    id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
-
-    # Publicly visible message identifier
-    pub_msg_id = Column(String(200), nullable=False)
-
-    # Publicly visible correlation ID
-    pub_correl_id = Column(String(200), nullable=True)
-
-    # Publicly visible ID of the message current message is a response to
-    in_reply_to = Column(String(200), nullable=True)
-
-    pattern_matched = Column(Text, nullable=False)
-    pub_time = Column(DateTime(), nullable=False, default=func.current_timestamp()) # When the row was created
-    last_updated = Column(DateTime(), nullable=True)
-    ext_pub_time = Column(DateTime(), nullable=True) # When the message was created by publisher
-    data = Column(LargeBinary(), nullable=False)
-    data_prefix = Column(Text(), nullable=False)
-    data_prefix_short = Column(String(200), nullable=False)
-    data_format = Column(String(200), nullable=False)
-    mime_type = Column(String(200), nullable=False)
-    size = Column(Integer, nullable=False)
-    priority = Column(Integer, nullable=False)
-    expiration = Column(Integer, nullable=False, default=0)
-    expiration_time = Column(DateTime(), nullable=True)
-    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
-    is_in_staging = Column(Boolean(), nullable=False, default=False)
-
-    published_by_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
-    published_by = relationship(
-        PubSubEndpoint, backref=backref('pubsub_msg_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=True)
-    topic = relationship(
-        PubSubTopic, backref=backref('pubsub_msg_list', order_by=id, cascade='all, delete, delete-orphan'))
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('pubsub_messages', order_by=id, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
 class PubSubEndpointQueue(Base):
     """ A queue of messages for an individual endpoint subscribed to a topic.
     """
@@ -2348,6 +2347,9 @@ class PubSubEndpointQueue(Base):
     delivery_count = Column(Integer, nullable=False)
     delivery_details = Column(LargeBinary(), nullable=True)
     last_delivery_time = Column(DateTime(), nullable=True)
+
+    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
+    is_in_staging = Column(Boolean(), nullable=False, default=False)
 
     msg_id = Column(Integer, ForeignKey('pubsub_message.id', ondelete='CASCADE'), nullable=False)
     msg = relationship(PubSubMessage, backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))

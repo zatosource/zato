@@ -214,6 +214,7 @@ class EndpointQueues(_EndpointObjects):
 
     def on_before_append_item(self, item):
         item.creation_time = from_utc_to_user(item.creation_time+'+00:00', self.req.zato.user_profile)
+        item.queue_name_slug = slugify(item.queue_name)
         if item.last_interaction_time:
             item.last_interaction_time = from_utc_to_user(item.last_interaction_time+'+00:00', self.req.zato.user_profile)
         return item
@@ -258,3 +259,20 @@ def endpoint_queue_edit(req):
                 response.last_interaction_time+'+00:00', req.zato.user_profile)
 
         return HttpResponse(dumps(response), content_type='application/javascript')
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def endpoint_queue_clear(req, cluster_id, sub_id):
+
+    try:
+        req.zato.client.invoke('zato.pubsub.endpoint.clear-endpoint-queue', {
+            'id': sub_id,
+            'cluster_id': cluster_id,
+            'queue_type': 'staging'
+        })
+    except Exception, e:
+        return HttpResponseServerError(format_exc(e))
+    else:
+        queue_name = req.POST['queue_name']
+        return HttpResponse('Cleared sub queue `{}`'.format(queue_name))

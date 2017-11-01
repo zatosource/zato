@@ -11,9 +11,13 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 
+# SQLAlchemy
+
 # Zato
+from zato.common import PUBSUB as COMMON_PUBSUB
 from zato.common.broker_message import PUBSUB
-from zato.common.odb.model import PubSubEndpoint, PubSubEndpointTopic, PubSubSubscription, PubSubTopic
+from zato.common.exception import BadRequest
+from zato.common.odb.model import PubSubEndpoint, PubSubEndpointQueue, PubSubEndpointTopic, PubSubSubscription, PubSubTopic
 from zato.common.odb.query import pubsub_endpoint, pubsub_endpoint_queue, pubsub_endpoint_queue_list, pubsub_endpoint_list
 from zato.common.util import new_cid
 from zato.server.service import AsIs, Int
@@ -229,5 +233,42 @@ class GetEndpointQueue(AdminService):
                 item.last_interaction_time = item.last_interaction_time.isoformat()
 
             self.response.payload = item
+
+# ################################################################################################################################
+
+class ClearEndpointQueue(AdminService):
+    """ Returns all queues to which a given endpoint is subscribed.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'id')
+        input_optional = ('queue_type',)
+
+    def handle(self, _queue_type=COMMON_PUBSUB.QUEUE_TYPE):
+
+        # Make sure the (optional) queue type is one of allowed values
+        queue_type = self.request.input.queue_type
+
+        if queue_type:
+            if queue_type not in _queue_type:
+                raise BadRequest(self.cid, 'Invalid queue_type:`{}`'.format(queue_type))
+            else:
+                if queue_type == _queue_type.CURRENT:
+                    is_in_staging = False
+                elif queue_type == _queue_type.STAGING:
+                    is_in_staging = True
+        else:
+            is_in_staging = None
+
+        # Remove all references to the queue given on input
+        with closing(self.odb.session()) as session:
+            q = session.query(PubSubEndpointQueue).\
+                filter(PubSubEndpointQueue.cluster_id==self.request.input.cluster_id).\
+                filter(PubSubEndpointQueue.subscription_id==self.request.input.id)
+
+            if is_in_staging is not None:
+                q = q.filter(PubSubEndpointQueue.is_in_staging.is_(is_in_staging))
+
+            q.delete()
+            session.commit()
 
 # ################################################################################################################################
