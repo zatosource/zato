@@ -1194,8 +1194,20 @@ urlpatterns += [
     url(r'^zato/pubsub/endpoint/queues/(?P<cluster_id>.*)/endpoint/(?P<endpoint_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_endpoint.EndpointQueues()), name=pubsub_endpoint.EndpointQueues.url_name),
 
-    url(r'^zato/pubsub/endpoint/queues/edit/$',
-        login_required(pubsub_endpoint.EndpointQueuesEdit()), name=pubsub_endpoint.EndpointQueuesEdit.url_name),
+    url(r'^zato/pubsub/endpoint/queue/edit/$',
+        login_required(pubsub_endpoint.endpoint_queue_edit), name='pubsub-endpoint-queue-edit'),
+
+    url(r'^zato/pubsub/endpoint/queue/total/cluster/(?P<cluster_id>.*)/queue/(?P<sub_id>.*)/(?P<name_slug>.*)$',
+        login_required(pubsub_endpoint.endpoint_queue_edit), name='pubsub-endpoint-queue-total'),
+
+    url(r'^zato/pubsub/endpoint/queue/current/cluster/(?P<cluster_id>.*)/queue/(?P<sub_id>.*)/(?P<name_slug>.*)$',
+        login_required(pubsub_endpoint.endpoint_queue_edit), name='pubsub-endpoint-queue-current'),
+
+    url(r'^zato/pubsub/endpoint/queue/staging/cluster/(?P<cluster_id>.*)/queue/(?P<sub_id>.*)/(?P<name_slug>.*)$',
+        login_required(pubsub_endpoint.endpoint_queue_edit), name='pubsub-endpoint-queue-staging'),
+
+    url(r'^zato/pubsub/endpoint/queue/last-interaction/cluster/(?P<cluster_id>.*)/queue/(?P<sub_id>.*)/(?P<name_slug>.*)$',
+        login_required(pubsub_endpoint.endpoint_queue_edit), name='pubsub-endpoint-queue-last-interaction'),
 
     # Pub/sub - topics
 

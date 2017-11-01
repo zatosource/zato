@@ -1129,8 +1129,8 @@ def pubsub_message(session, cluster_id, pub_msg_id):
 
 # ################################################################################################################################
 
-def _pubsub_endpoint_queue(session, cluster_id, endpoint_id):
-    session.query(
+def _pubsub_endpoint_queue(session, cluster_id):
+    return session.query(
         PubSubSubscription.id.label('sub_id'),
         PubSubSubscription.active_status, PubSubSubscription.is_internal,
         PubSubSubscription.current_depth, PubSubSubscription.creation_time,
@@ -1145,14 +1145,22 @@ def _pubsub_endpoint_queue(session, cluster_id, endpoint_id):
         PubSubTopic.name.label('queue_name'), # Queue names are the same as their originating topics
         PubSubEndpoint.name.label('endpoint_name'),
         ).\
-        filter(PubSubSubscription.endpoint_id==input.endpoint_id).\
         filter(PubSubSubscription.topic_id==PubSubTopic.id).\
-        filter(PubSubSubscription.cluster_id==self.server.cluster_id).\
+        filter(PubSubSubscription.cluster_id==cluster_id).\
         filter(PubSubSubscription.endpoint_id==PubSubEndpoint.id)
 
-zz
+# ################################################################################################################################
 
-zxc
+def pubsub_endpoint_queue_list(session, cluster_id, endpoint_id):
+    return _pubsub_endpoint_queue(session, cluster_id).\
+        filter(PubSubSubscription.endpoint_id==endpoint_id)
+
+# ################################################################################################################################
+
+def pubsub_endpoint_queue(session, cluster_id, sub_id):
+    return _pubsub_endpoint_queue(session, cluster_id).\
+        filter(PubSubSubscription.id==sub_id).\
+        one()
 
 # ################################################################################################################################
 

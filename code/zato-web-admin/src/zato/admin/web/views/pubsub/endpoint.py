@@ -10,11 +10,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
+from copy import deepcopy
 from json import dumps
 from traceback import format_exc
 
 # Arrow
 from arrow import get as arrow_get
+
+# Bunch
+from bunch import bunchify
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -23,7 +27,8 @@ from django.template.response import TemplateResponse
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm, EndpointQueueEditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
+from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, \
+     invoke_service_with_json_response, method_allowed, slugify
 from zato.admin.web.views.pubsub import get_client_html
 from zato.common import ZATO_NONE
 from zato.common.odb.model import PubSubEndpoint, PubSubSubscription, PubSubTopic
@@ -198,14 +203,14 @@ class EndpointTopics(_EndpointObjects):
 class EndpointQueues(_EndpointObjects):
     url_name = 'pubsub-endpoint-queues'
     template = 'zato/pubsub/endpoint-queues.html'
-    service_name = 'pubapi1.get-endpoint-queue-list' #'zato.pubsub.endpoint.get-queue-list'
+    service_name = 'zato.pubsub.endpoint.get-endpoint-queue-list'
     output_class = PubSubSubscription
 
     class SimpleIO(_EndpointObjects.SimpleIO):
         output_required = ('sub_id', 'topic_id', 'topic_name', 'queue_name', 'active_status', 'is_internal',
             'total_depth', 'current_depth', 'staging_depth')
         output_optional = ('creation_time', 'sub_key', 'has_gd', 'delivery_method', 'delivery_data_format', 'delivery_endpoint',
-            'last_interaction_time', 'last_interaction_type', 'last_interaction_details', 'endpoint_name')
+            'last_interaction_time', 'last_interaction_type', 'last_interaction_details', 'endpoint_name', 'is_staging_enabled')
 
     def on_before_append_item(self, item):
         item.creation_time = from_utc_to_user(item.creation_time+'+00:00', self.req.zato.user_profile)
@@ -215,18 +220,41 @@ class EndpointQueues(_EndpointObjects):
 
 # ################################################################################################################################
 
-class EndpointQueuesEdit(CreateEdit):
-    method_allowed = 'POST'
-    url_name = 'pubsub-endpoint-queue-edit'
-    service_name = 'pubapi1.update-endpoint-queue'
+@method_allowed('POST')
+def endpoint_queue_edit(req):
 
-    class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('cluster_id', 'id', 'sub_key', 'active_status')
-        input_optional = ('is_staging_enabled', 'has_gd')
-        output_required = ('id', 'name')
+    try:
+        sub_id = req.POST['id']
+        cluster_id = req.POST['cluster_id']
 
-    def success_message(self, item):
-        print(333, item)
-        return 'Successfully updated pub/sub endpoint queue`{}`'.format(item.name)
+        request = {
+            'id': sub_id,
+            'cluster_id': cluster_id,
+            'sub_key': req.POST['edit-sub_key'],
+            'active_status': req.POST['edit-active_status'],
+            'has_gd': req.POST.get('edit-has_gd'),
+            'is_staging_enabled': req.POST.get('edit-is_staging_enabled'),
+        }
 
-# ################################################################################################################################
+        queue_name = req.zato.client.invoke('zato.pubsub.endpoint.update-endpoint-queue', request).data.name
+
+    except Exception, e:
+        return HttpResponseServerError(format_exc(e))
+    else:
+        service = 'zato.pubsub.endpoint.get-endpoint-queue'
+        request = bunchify({
+            'id': sub_id,
+            'cluster_id': cluster_id,
+        })
+        response = deepcopy(request)
+        response.message = 'Successfully updated sub queue for topic `{}`'.format(queue_name)
+        response.queue_name_slug = slugify(queue_name)
+        response.update(req.zato.client.invoke(service, request).data.response)
+
+        response.creation_time = from_utc_to_user(response.creation_time+'+00:00', req.zato.user_profile)
+
+        if response.last_interaction_time:
+            response.last_interaction_time = from_utc_to_user(
+                response.last_interaction_time+'+00:00', req.zato.user_profile)
+
+        return HttpResponse(dumps(response), content_type='application/javascript')

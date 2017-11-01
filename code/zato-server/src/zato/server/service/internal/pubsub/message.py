@@ -38,7 +38,7 @@ class Get(AdminService):
     def handle(self):
         with closing(self.odb.session()) as session:
 
-            item = pubsub_message(session, self.server.cluster_id, self.request.input.msg_id).\
+            item = pubsub_message(session, self.request.input.cluster_id, self.request.input.msg_id).\
                 first()
 
             if item:
