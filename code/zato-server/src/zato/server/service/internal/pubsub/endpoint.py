@@ -237,7 +237,7 @@ class GetEndpointQueue(AdminService):
 # ################################################################################################################################
 
 class ClearEndpointQueue(AdminService):
-    """ Returns all queues to which a given endpoint is subscribed.
+    """ Clears messages from the queue given on input.
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'id')
@@ -270,5 +270,24 @@ class ClearEndpointQueue(AdminService):
 
             q.delete()
             session.commit()
+
+# ################################################################################################################################
+
+class DeleteEndpointQueue(AdminService):
+    """ Deletes a given queue for messages - including all messages and their parent subscription object.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'id')
+
+    def handle(self):
+
+        # Remove the subscription object which in turn cascades and removes all dependant objects
+        with closing(self.odb.session()) as session:
+            session.query(PubSubSubscription).\
+                filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
+                filter(PubSubSubscription.id==self.request.input.id).\
+                delete()
+
+            #session.commit()
 
 # ################################################################################################################################

@@ -9,6 +9,9 @@ $.fn.zato.data_table.PubSubSubscription = new Class({
                                 this.sub_key ? this.sub_key : '(none)',
                                 this.queue_name_slug ? this.queue_name_slug : '(none)',
                                 );
+    },
+    get_name: function() {
+        return this.queue_name;
     }
 });
 
@@ -146,10 +149,13 @@ $.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id) {
 }
 
 $.fn.zato.pubsub.endpoint_queue.delete_ = function(id) {
+    var instance = $.fn.zato.data_table.data[id];
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Queue `{0}` deleted',
-        'Are you sure you want to delete queue `{0}`?',
-        true);
+        'Are you sure you want to delete sub queue `{0}`?',
+        true, false,
+        '/zato/pubsub/endpoint/queue/delete/{0}/',
+        {'queue_name': instance.queue_name});
 }
 
 $.fn.zato.pubsub.endpoint_queue.toggle_sub_key = function(id) {
