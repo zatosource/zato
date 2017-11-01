@@ -13,10 +13,10 @@ from contextlib import closing
 
 # Zato
 from zato.common.broker_message import PUBSUB
-from zato.common.odb.model import PubSubEndpoint, PubSubEndpointTopic, PubSubTopic
-from zato.common.odb.query import pubsub_endpoint, pubsub_endpoint_list
+from zato.common.odb.model import PubSubEndpoint, PubSubEndpointTopic, PubSubSubscription, PubSubTopic
+from zato.common.odb.query import pubsub_endpoint, pubsub_endpoint_queue, pubsub_endpoint_queue_list, pubsub_endpoint_list
 from zato.common.util import new_cid
-from zato.server.service import AsIs
+from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, AdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -144,7 +144,7 @@ class GetTopicList(AdminService):
                 ).\
                 filter(PubSubEndpointTopic.topic_id==PubSubTopic.id).\
                 filter(PubSubEndpointTopic.endpoint_id==input.endpoint_id).\
-                filter(PubSubEndpointTopic.cluster_id==self.server.cluster_id).\
+                filter(PubSubEndpointTopic.cluster_id==self.request.input.cluster_id).\
                 all()
 
             for item in last_data:
@@ -152,5 +152,82 @@ class GetTopicList(AdminService):
                 response.append(item)
 
         self.response.payload[:] = response
+
+# ################################################################################################################################
+
+class GetEndpointQueueList(AdminService):
+    """ Returns all queues to which a given endpoint is subscribed.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'endpoint_id')
+        output_required = ('sub_id', 'topic_id', 'topic_name', 'queue_name', 'active_status', 'is_internal',
+            'is_staging_enabled', 'creation_time', 'sub_key', 'has_gd', 'delivery_method',
+            'delivery_data_format', 'endpoint_name', Int('total_depth'), Int('current_depth'), Int('staging_depth'))
+        output_optional = ('delivery_endpoint', 'last_interaction_time', 'last_interaction_type', 'last_interaction_details', )
+        output_repeated = True
+
+    def handle(self):
+        response = []
+
+        with closing(self.odb.session()) as session:
+            queue_list = pubsub_endpoint_queue_list(session, self.request.input.cluster_id, self.request.input.endpoint_id).\
+                all()
+            for item in queue_list:
+                item.creation_time = item.creation_time.isoformat()
+                if item.last_interaction_time:
+                    item.last_interaction_time = item.last_interaction_time.isoformat()
+                response.append(item)
+
+        self.response.payload[:] = response
+
+# ################################################################################################################################
+
+class UpdateEndpointQueue(AdminService):
+    """ Returns all queues to which a given endpoint is subscribed.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'id', 'sub_key', 'active_status')
+        input_optional = ('is_staging_enabled', 'has_gd')
+        output_required = ('id', 'name')
+        response_elem = 'zato_pubsub_update_endpoint_queue_response'
+
+    def handle(self):
+
+        with closing(self.odb.session()) as session:
+            item = session.query(PubSubSubscription).\
+                filter(PubSubSubscription.id==self.request.input.id).\
+                filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
+                one()
+
+            item.sub_key = self.request.input.sub_key
+            item.active_status = self.request.input.active_status
+            item.is_staging_enabled = self.request.input.is_staging_enabled
+            item.has_gd = self.request.input.has_gd
+
+            session.add(item)
+            session.commit()
+
+            self.response.payload.id = self.request.input.id
+            self.response.payload.name = item.topic.name
+
+# ################################################################################################################################
+
+class GetEndpointQueue(AdminService):
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'id')
+        output_required = ('sub_id', 'topic_id', 'topic_name', 'queue_name', 'active_status', 'is_internal',
+            'is_staging_enabled', 'creation_time', 'sub_key', 'has_gd', 'delivery_method',
+            'delivery_data_format', 'endpoint_name', Int('total_depth'), Int('current_depth'), Int('staging_depth'))
+        output_optional = ('delivery_endpoint', 'last_interaction_time', 'last_interaction_type', 'last_interaction_details', )
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = pubsub_endpoint_queue(session, self.request.input.cluster_id, self.request.input.id)
+
+            item.creation_time = item.creation_time.isoformat()
+            if item.last_interaction_time:
+                item.last_interaction_time = item.last_interaction_time.isoformat()
+
+            self.response.payload = item
 
 # ################################################################################################################################

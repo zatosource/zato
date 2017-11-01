@@ -135,7 +135,7 @@ class GetPublisherList(AdminService):
         with closing(self.odb.session()) as session:
 
             # Get last pub time for that specific endpoint to this very topic
-            last_data = pubsub_publishers_for_topic(session, self.server.cluster_id, self.request.input.topic_id).all()
+            last_data = pubsub_publishers_for_topic(session, self.request.input.cluster_id, self.request.input.topic_id).all()
 
             for item in last_data:
                 item.last_seen = item.last_pub_time.isoformat()
@@ -159,7 +159,8 @@ class GetMessageList(AdminService):
         output_repeated = True
 
     def get_data(self, session):
-        return self._search(pubsub_messages_for_topic, session, self.server.cluster_id, self.request.input.topic_id, False)
+        return self._search(
+            pubsub_messages_for_topic, session, self.request.input.cluster_id, self.request.input.topic_id, False)
 
     def handle(self):
         with closing(self.odb.session()) as session:

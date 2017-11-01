@@ -29,45 +29,92 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
         row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
     }
 
-    var empty = '<span class="form_hint">---</span>';
-    var topic_patterns_html = data.topic_patterns_html ? data.topic_patterns_html : empty;
-    var client_html = data.client_html ? data.client_html : empty;
+    /*
+        <th style="width:2%">&nbsp;</th>
+        <th>&nbsp;</th>
 
-    var has_sub_key = data.role.contains('sub');
-    var sub_key_html;
+        <th><a href="#">Sub queue for topic</a></th>
+        <th><a href="#">Active status</a></th>
 
-    if(has_sub_key) {
-        sub_key_html = String.format(
-            '<a id="sub_key_{0}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key(\'{0}\')">Show</a>',
-            data.id);
+        <th><a href="#">GD</a></th>
+        <th><a href="#">STG</a></th>
+
+        <th><a href="#">Total</a></th>
+        <th><a href="#">Current</a></th>
+        <th><a href="#">Staging</a></th>
+
+        <th><a href="#">Creation time</a></th>
+        <th><a href="#">Sub key</a></th>
+        <th><a href="#">Last interaction</a></th>
+
+        <th style="width:5%">&nbsp;</th>
+        <th style="width:5%">&nbsp;</th>
+        <th style="width:5%">&nbsp;</th>
+
+        <th class='ignore'>&nbsp;</th>
+        <th class='ignore'>&nbsp;</th>
+    */
+
+    var topic_link = String.format(
+        '<a href="/zato/pubsub/topic/?cluster={0}&highlight={1}">{2}</a>', data.cluster_id, data.id, data.queue_name);
+
+    var has_gd = data.has_gd ? 'Yes' : 'No';
+    var is_staging_enabled = data.is_staging_enabled ? 'Yes' : 'No';
+
+    var total_link = String.format(
+        '<a href="/zato/pubsub/endpoint/queue/total/cluster/{0}/queue/{1}/{2}">{3}</a>',
+        data.cluster_id, data.id, data.queue_name_slug, data.total_depth);
+
+    var current_link = String.format(
+        '<a href="/zato/pubsub/endpoint/queue/current/cluster/{0}/queue/{1}/{2}">{3}</a>',
+        data.cluster_id, data.id, data.queue_name_slug, data.current_depth);
+
+    var staging_link = String.format(
+        '<a href="/zato/pubsub/endpoint/queue/staging/cluster/{0}/queue/{1}/{2}">{3}</a>',
+        data.cluster_id, data.id, data.queue_name_slug, data.staging_depth);
+
+    var sub_key_link = String.format(
+        '<a id="sub_key_{0}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key(\'{0}\')">Show</a>', data.id);
+
+    var last_interaction_link = '';
+
+    if(data.last_interaction) {
+        last_interaction_link = String.format(
+            '<a href="/zato/pubsub/endpoint/queue/last-interaction/cluster/{0}/queue/{1}/{2}">{3}</a>',
+            data.cluster_id, data.id, data.queue_name_slug, data.staging_depth);
     }
     else {
-        sub_key_html = '<span class="form_hint">---</span>';
+        last_interaction = $.fn.zato.empty_value;
     }
-
-    // Update it with latest content dynamically obtained from the call to backend
-    item.sub_key = data.sub_key;
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', data.name);
-    row += String.format('<td>{0}</td>', data.role);
-    row += String.format('<td>{0}</td>', topic_patterns_html);
-    row += String.format('<td>{0}</td>', client_html);
-    row += String.format('<td>{0}</td>', sub_key_html);
-    row += String.format('<td>{0}</td>', data.endpoint_topics_html);
-    row += String.format('<td>{0}</td>', data.endpoint_queues_html);
+
+    row += String.format('<td>{0}</td>', topic_link);
+    row += String.format('<td>{0}</td>', data.active_status);
+
+    row += String.format('<td>{0}</td>', has_gd);
+    row += String.format('<td>{0}</td>', is_staging_enabled);
+
+    row += String.format('<td>{0}</td>', total_link);
+    row += String.format('<td>{0}</td>', current_link);
+    row += String.format('<td>{0}</td>', staging_link);
+
+    row += String.format('<td>{0}</td>', data.creation_time);
+    row += String.format('<td>{0}</td>', sub_key_link);
+    row += String.format('<td>{0}</td>', last_interaction);
+
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.clear('{0}')\">Clear</a>", data.id));
     row += String.format('<td>{0}</td>',
         String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.edit('{0}')\">Edit</a>", data.id));
-    row += String.format('<td>{0}</td>', data.delete_html);
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.delete_('{0}')\">Delete</a>", data.id));
+
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
-    row += String.format("<td class='ignore'>{0}</td>", data.is_internal);
-    row += String.format("<td class='ignore'>{0}</td>", data.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", data.topic_patterns);
-    row += String.format("<td class='ignore'>{0}</td>", data.security_id);
-    row += String.format("<td class='ignore'>{0}</td>", data.ws_channel_id);
-    row += String.format("<td class='ignore'>{0}</td>", data.hook_service_id);
     row += String.format("<td class='ignore'>{0}</td>", data.sub_key);
+    row += String.format("<td class='ignore'>{0}</td>", data.has_gd);
+    row += String.format("<td class='ignore'>{0}</td>", data.is_staging_enabled);
 
     if(include_tr) {
         row += '</tr>';
@@ -77,26 +124,26 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
 }
 
 $.fn.zato.pubsub.endpoint_queue.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub queue', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update queue', id);
 }
 
 $.fn.zato.pubsub.endpoint_queue.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
-        'Pub/sub endpoint `{0}` deleted',
-        'Are you sure you want to delete the pub/sub queue `{0}`?',
+        'Queue `{0}` deleted',
+        'Are you sure you want to delete queue `{0}`?',
         true);
 }
 
 $.fn.zato.pubsub.endpoint_queue.toggle_sub_key = function(id) {
     var hidden = 'Show';
     var instance = $.fn.zato.data_table.data[id];
-    var span = $('#sub_key_' + id);
+    var elem = $('#sub_key_' + id);
 
-    if(span.html().startsWith(hidden)) {
-        span.html(instance.sub_key);
+    if(elem.html().startsWith(hidden)) {
+        elem.html(instance.sub_key);
     }
     else {
-        span.html(hidden);
+        elem.html(hidden);
     }
 }
 

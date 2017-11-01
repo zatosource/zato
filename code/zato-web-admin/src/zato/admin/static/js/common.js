@@ -417,7 +417,7 @@ $.fn.zato.data_table._on_submit_complete = function(data, status) {
 
     if(success) {
         var response = $.parseJSON(data.responseText);
-        msg = response.message;
+        msg = response.message || response.msg;
     }
     else {
         msg = data.responseText;
@@ -871,6 +871,4 @@ $.fn.zato.get_url_param = function(name, url) {
     return decodeURIComponent(results[2].replace(/\+/g, " "));
 }
 
-//function $.fn.zato.decimal_to_hex(dec) {
-//  return ('0' + dec.toString(16)).substr(-2);
-//}
+$.fn.zato.empty_value = '<span class="form_hint">---</span>';
