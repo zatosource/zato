@@ -96,13 +96,31 @@
             </tr>
             <tr>
             <tr>
-                <td class='inline_header' colspan="6">Payload</td>
+                <td class='inline_header' colspan="6">
+                    {% ifequal object_type "queue" %}
+                        Payload from topic
+                    {% else %}
+                        Payload in topic
+                    {% endifequal %}
+                </td>
             </tr>
             <tr>
-                <td colspan="6"><textarea style="height:300px" id="data-textarea" name="data">{{ data }}</textarea></td>
+                <td colspan="6"><textarea style="height:200px" id="data-textarea" name="data">{{ data }}</textarea></td>
+            </tr>
+            {% ifequal object_type "queue" %}
+            <tr>
+                <td class='inline_header' colspan="6">
+                    Payload in queue
+                </td>
             </tr>
             <tr>
-                <td colspan="6" style="text-align:right"><input type="submit" name="update-message-button" value="Update message" /></td>
+                <td colspan="6"><textarea style="height:200px" id="data-textarea" name="data">{{ data }}</textarea></td>
+            </tr>
+            {% endifequal %}
+            <tr>
+                <td colspan="6" style="text-align:right">
+                    <input type="submit" name="update-message-button" value="Update message in {{ object_type }}" />
+                </td>
                 <input type="hidden" name="msg_id" id="msg_id" value="{{ msg_id }}" />
                 <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
             </tr>

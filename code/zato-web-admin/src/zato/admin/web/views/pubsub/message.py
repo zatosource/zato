@@ -36,8 +36,12 @@ def get(req, cluster_id, object_type, object_id, msg_id):
     return_data['{}_id'.format(object_type)] = object_id
     return_data['msg_id'] = msg_id
 
-    return_data['object_name'] = req.zato.client.invoke(
-        'zato.pubsub.{}.get'.format(object_type), {
+    if object_type=='topic':
+        service_name = 'zato.pubsub.topic.get'
+    else:
+        service_name = 'zato.pubsub.endpoint.get-endpoint-queue'
+
+    return_data['object_name'] = req.zato.client.invoke(service_name, {
         'cluster_id':cluster_id,
         'id':object_id,
     }).data.response.name
