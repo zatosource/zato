@@ -2238,7 +2238,7 @@ class PubSubMessage(Base):
     pub_time = Column(DateTime(), nullable=False, default=func.current_timestamp()) # When the row was created
     last_updated = Column(DateTime(), nullable=True)
     ext_pub_time = Column(DateTime(), nullable=True) # When the message was created by publisher
-    data = Column(LargeBinary(), nullable=False)
+    data = Column(Text(), nullable=False)
     data_prefix = Column(Text(), nullable=False)
     data_prefix_short = Column(String(200), nullable=False)
     data_format = Column(String(200), nullable=False)
