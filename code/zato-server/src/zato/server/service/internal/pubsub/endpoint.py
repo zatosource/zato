@@ -191,12 +191,12 @@ class GetEndpointQueueList(AdminService):
                 current_q = session.query(PubSubEndpointEnqueuedMessage.id).\
                     filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
                     filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id).\
-                    filter(PubSubEndpointEnqueuedMessage.is_in_staging.isnot(True))
+                    filter(PubSubEndpointEnqueuedMessage.is_in_staging != True)
 
                 staging_q = session.query(PubSubEndpointEnqueuedMessage.id).\
                     filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
                     filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id).\
-                    filter(PubSubEndpointEnqueuedMessage.is_in_staging.is_(True))
+                    filter(PubSubEndpointEnqueuedMessage.is_in_staging == True)
 
                 total_depth = count(session, total_q)
                 current_depth = count(session, current_q)
@@ -223,7 +223,6 @@ class UpdateEndpointQueue(AdminService):
         input_required = ('cluster_id', 'id', 'sub_key', 'active_status')
         input_optional = ('is_staging_enabled', 'has_gd')
         output_required = ('id', 'name')
-        response_elem = 'zato_pubsub_update_endpoint_queue_response'
 
     def handle(self):
 

@@ -70,7 +70,7 @@
                         <td>{{ item.is_internal|yesno:'Yes,No' }}</td>
                         <td>{{ item.max_depth }}</td>
                         <td>{{ item.last_pub_time }}</td>
-                        <td>{{ item.last_msg_id }}</td>
+                        <td><a href="{% url "pubsub-message" cluster_id "topic" item.topic_id item.last_msg_id %}">{{ item.last_msg_id }}</a></td>
                         <td>{{ item.last_correl_id|default:'<span class="form_hint">---</span>' }}</td>
                         <td>{{ item.last_in_reply_to|default:'<span class="form_hint">---</span>' }}</td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
