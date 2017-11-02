@@ -108,9 +108,9 @@
                         <td>{{ item.has_gd|yesno:'Yes,No' }}</td>
                         <td>{{ item.is_staging_enabled|yesno:'Yes,No' }}</td>
 
-                        <td id="total_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-total" cluster_id item.sub_id item.queue_name|slugify %}">{{ item.total_depth }}</a></td>
-                        <td id="current_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-current" cluster_id item.sub_id item.queue_name|slugify %}">{{ item.current_depth }}</a></td>
-                        <td id="staging_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-staging" cluster_id item.sub_id item.queue_name|slugify %}">{{ item.staging_depth }}</a></td>
+                        <td id="total_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "total" cluster_id item.sub_id item.queue_name|slugify %}">{{ item.total_depth }}</a></td>
+                        <td id="current_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "current" cluster_id item.sub_id item.queue_name|slugify %}">{{ item.current_depth }}</a></td>
+                        <td id="staging_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "staging" cluster_id item.sub_id item.queue_name|slugify %}">{{ item.staging_depth }}</a></td>
 
                         <td>{{ item.creation_time }}</td>
                         <td>

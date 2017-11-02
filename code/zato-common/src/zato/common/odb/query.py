@@ -25,10 +25,10 @@ from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, Cac
      CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, \
      HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
      NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
-     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, PubSubEndpointTopic, PubSubMessage, PubSubSubscription, \
-     PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, \
-     Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, \
-     WebSocketSubscription, WSSDefinition, VaultConnection, XPath, XPathSecurity
+     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, \
+     PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, \
+     Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, \
+     WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, XPath, XPathSecurity
 from zato.common.search_util import SearchResults as _SearchResults
 
 # ################################################################################################################################
@@ -1104,7 +1104,7 @@ def pubsub_publishers_for_topic(session, cluster_id, topic_id):
 
 # ################################################################################################################################
 
-def _pubsub_message(session, cluster_id):
+def _pubsub_topic_message(session, cluster_id):
     return session.query(
         PubSubMessage.pub_msg_id.label('msg_id'),
         PubSubMessage.pub_correl_id.label('correl_id'),
@@ -1130,7 +1130,7 @@ def _pubsub_message(session, cluster_id):
 # ################################################################################################################################
 
 def pubsub_message(session, cluster_id, pub_msg_id):
-    return _pubsub_message(session, cluster_id).\
+    return _pubsub_topic_message(session, cluster_id).\
         filter(PubSubMessage.pub_msg_id==pub_msg_id)
 
 # ################################################################################################################################
@@ -1171,9 +1171,48 @@ def pubsub_endpoint_queue(session, cluster_id, sub_id):
 
 @query_wrapper
 def pubsub_messages_for_topic(session, cluster_id, topic_id, needs_columns=False):
-    return _pubsub_message(session, cluster_id).\
+    return _pubsub_topic_message(session, cluster_id).\
         filter(PubSubMessage.topic_id==topic_id).\
         order_by(PubSubMessage.pub_time.desc())
+
+# ################################################################################################################################
+
+def _pubsub_queue_message(session, cluster_id):
+    return session.query(
+        PubSubMessage.pub_msg_id.label('msg_id'),
+        PubSubMessage.pub_correl_id.label('correl_id'),
+        PubSubMessage.in_reply_to.label('in_reply_to'),
+        PubSubMessage.pub_time, PubSubMessage.data_prefix_short,
+        PubSubMessage.priority,
+        PubSubMessage.ext_pub_time, PubSubMessage.size,
+        PubSubMessage.data_format, PubSubMessage.mime_type,
+        PubSubMessage.data, PubSubMessage.expiration,
+        PubSubMessage.expiration_time,
+        PubSubEndpoint.id.label('endpoint_id'),
+        PubSubEndpoint.name.label('endpoint_name'),
+        PubSubEndpoint.service_id,
+        PubSubEndpoint.security_id,
+        PubSubEndpoint.ws_channel_id,
+        PubSubTopic.id.label('topic_id'),
+        PubSubTopic.name.label('topic_name'),
+        PubSubTopic.name.label('queue_name'), # Currently, queue name = name of its underlying topic
+        PubSubEndpointEnqueuedMessage.creation_time,
+        PubSubEndpointEnqueuedMessage.delivery_count,
+        PubSubEndpointEnqueuedMessage.last_delivery_time,
+        PubSubEndpointEnqueuedMessage.is_in_staging,
+        PubSubEndpointEnqueuedMessage.has_gd,
+        ).\
+        filter(PubSubEndpointEnqueuedMessage.msg_id==PubSubMessage.id).\
+        filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id).\
+        filter(PubSubEndpointEnqueuedMessage.topic_id==PubSubTopic.id)
+
+# ################################################################################################################################
+
+@query_wrapper
+def pubsub_messages_for_queue(session, cluster_id, sub_id, needs_columns=False):
+    return _pubsub_queue_message(session, cluster_id).\
+        filter(PubSubEndpointEnqueuedMessage.subscription_id==sub_id).\
+        order_by(PubSubEndpointEnqueuedMessage.creation_time.desc())
 
 # ################################################################################################################################
 
