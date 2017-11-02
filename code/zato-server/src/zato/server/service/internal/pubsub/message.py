@@ -45,8 +45,9 @@ class Get(AdminService):
                 item.pub_time = item.pub_time.isoformat()
                 item.ext_pub_time = item.ext_pub_time.isoformat() if item.ext_pub_time else ''
                 item.expiration_time = item.expiration_time.isoformat() if item.expiration_time else ''
-
-            self.response.payload = item
+                self.response.payload = item
+            else:
+                raise NotFound(self.cid, 'No such message `{}`'.format(self.request.input.msg_id))
 
 # ################################################################################################################################
 
