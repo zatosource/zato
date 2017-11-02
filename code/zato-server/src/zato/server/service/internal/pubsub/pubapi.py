@@ -12,11 +12,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 from datetime import datetime, timedelta
 
+# gevent
+from gevent import spawn
+
 # rapidjson
 from rapidjson import dumps, loads
 
 # SQLAlchemy
-from sqlalchemy import and_, exists, insert, select
+from sqlalchemy import and_, exists, insert, select, update
 from sqlalchemy.sql import expression as expr, func
 
 # Zato
@@ -34,6 +37,14 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 _JSON = DATA_FORMAT.JSON
 
+MsgInsert = PubSubMessage.__table__.insert
+EndpointTopicInsert = PubSubEndpointTopic.__table__.insert
+EnqueuedMsgInsert = PubSubEndpointEnqueuedMessage.__table__.insert
+
+Topic = PubSubTopic.__table__
+Endpoint = PubSubEndpoint.__table__
+EndpointTopic = PubSubEndpointTopic.__table__
+
 # ################################################################################################################################
 
 def parse_basic_auth(auth, prefix = 'Basic '):
@@ -44,20 +55,6 @@ def parse_basic_auth(auth, prefix = 'Basic '):
     auth = auth.strip().decode('base64')
 
     return auth.split(':', 1)
-
-# ################################################################################################################################
-
-'''
-class DataMessage(object):
-    __slots__ = ('data', 'topic_name', 'expiration', 'mime_type', 'priority')
-
-    def __init__(self, data=None, topic_name=None, expiration=None, mime_type=None, priority=None):
-        self.data = data
-        self.topic_name = topic_name
-        self.expiration = expiration
-        self.mime_type = mime_type
-        self.priority = priority
-'''
 
 # ################################################################################################################################
 
@@ -107,6 +104,69 @@ class TopicService(PubSubService):
 
 # ################################################################################################################################
 
+    def _update_pub_metadata(self, topic_id, endpoint_id, cluster_id, now, pub_msg_id, pub_correl_id, in_reply_to,
+        pattern_matched):
+        """ Updates in background metadata about a topic and publisher after each publication.
+        """
+
+        with closing(self.odb.session()) as session:
+
+            # Update information when this endpoint last published to the topic
+            endpoint_topic = session.execute(
+                select([EndpointTopic.c.id]).\
+                where(EndpointTopic.c.topic_id==topic_id).\
+                where(EndpointTopic.c.endpoint_id==endpoint_id).\
+                where(EndpointTopic.c.cluster_id==cluster_id)
+            ).\
+            fetchone()
+
+            # Never published before - add a new row then
+            if not endpoint_topic:
+
+                session.execute(
+                    EndpointTopicInsert(), [{
+                    'endpoint_id': endpoint_id,
+                    'topic_id': topic_id,
+                    'cluster_id': cluster_id,
+
+                    'last_pub_time': now,
+                    'pub_msg_id': pub_msg_id,
+                    'pub_correl_id': pub_correl_id,
+                    'in_reply_to': in_reply_to,
+                    'pattern_matched': pattern_matched,
+                }])
+
+            # Already published before - update its metadata in that case.
+            else:
+                session.execute(
+                    update(EndpointTopic).\
+                    values({
+                        'last_pub_time': now,
+                        'pub_msg_id': pub_msg_id,
+                        'pub_correl_id': pub_correl_id,
+                        'in_reply_to': in_reply_to,
+                        'pattern_matched': pattern_matched,
+                    }).\
+                    where(EndpointTopic.c.topic_id==topic_id).\
+                    where(EndpointTopic.c.endpoint_id==endpoint_id).\
+                    where(EndpointTopic.c.cluster_id==cluster_id)
+                )
+
+            # Update metatadata for endpoint
+            session.execute(
+                update(Endpoint).\
+                values({
+                    'last_seen': now,
+                    'last_pub_time': pub_msg_id,
+                }).\
+                where(Endpoint.c.id==endpoint_id).\
+                where(Endpoint.c.cluster_id==cluster_id)
+            )
+
+            session.commit()
+
+# ################################################################################################################################
+
     def handle_POST(self, _JSON=_JSON, _new_cid=new_cid, _utcnow=datetime.utcnow, _dt_max=datetime.max):
 
         # Check credentials first
@@ -139,16 +199,6 @@ class TopicService(PubSubService):
         priority = get_priority(self.cid, input)
         expiration = get_expiration(self.cid, input)
 
-        # Construct the message object now that we have everything validated
-        '''
-        data_msg = DataMessage()
-        data_msg.data = data
-        data_msg.topic_name = topic_name
-        data_msg.expiration = expiration
-        data_msg.mime_type = mime_type
-        data_msg.priority = priority
-        '''
-
         try:
             topic = pubsub.get_topic_by_name(topic_name)
         except KeyError:
@@ -169,98 +219,83 @@ class TopicService(PubSubService):
 
         endpoint_id = pubsub.get_endpoint_id_by_sec_id(security_id)
 
-        ps_msg = PubSubMessage()
-        ps_msg.pub_msg_id = pub_msg_id
-        ps_msg.pub_correl_id = pub_correl_id
-        ps_msg.in_reply_to = in_reply_to
-        ps_msg.creation_time = now
-        ps_msg.pattern_matched = pattern_matched
-        ps_msg.data = data
-        ps_msg.data_prefix = data[:2048]
-        ps_msg.data_prefix_short = data[:64]
-        ps_msg.data_format = _JSON
-        ps_msg.mime_type = mime_type
-        ps_msg.size = len(data)
-        ps_msg.priority = priority
-        ps_msg.expiration = expiration
-        ps_msg.expiration_time = expiration_time
-        ps_msg.published_by_id = endpoint_id
-        ps_msg.topic_id = topic.id
-        ps_msg.cluster_id = cluster_id
-        ps_msg.has_gd = has_gd
+        ps_msg = {
+            'pub_msg_id': pub_msg_id,
+            'pub_correl_id': pub_correl_id,
+            'in_reply_to': in_reply_to,
+            'creation_time': now,
+            'pattern_matched': pattern_matched,
+            'data': data,
+            'data_prefix': data[:2048],
+            'data_prefix_short': data[:64],
+            'data_format': _JSON,
+            'mime_type': mime_type,
+            'size': len(data),
+            'priority': priority,
+            'expiration': expiration,
+            'expiration_time': expiration_time,
+            'published_by_id': endpoint_id,
+            'topic_id': topic.id,
+            'cluster_id': cluster_id,
+            'has_gd': has_gd,
+        }
 
         # Operate under a global lock for that topic to rule out any interference
         with self.lock('zato.pubsub.publish.%s' % topic_name):
 
             with closing(self.odb.session()) as session:
 
-                # Get the topic object which must exist, hence .one() is used.
-                ps_topic = session.query(PubSubTopic).\
-                    filter(PubSubTopic.id==topic.id).\
-                    filter(PubSubTopic.cluster_id==cluster_id).\
-                    one()
+                # Get current depth of this topic
+                current_depth = session.execute(
+                    select([Topic.c.current_depth]).\
+                    where(Topic.c.id==topic.id).\
+                    where(Topic.c.cluster_id==cluster_id)
+                ).\
+                fetchone()[0]
 
-                # Abort if max_depth is already reached
-                if ps_topic.current_depth >= topic.max_depth:
+                # Abort if max depth is already reached ..
+                if current_depth >= topic.max_depth:
                     raise ServiceUnavailable(self.cid, 'Max depth already reached for `{}`'.format(topic.name))
 
-                # Update metadata if max_depth is not reached yet
+                # .. otherwise, update current depth and timestamp of last publication to the topic.
                 else:
-                    ps_topic.current_depth = ps_topic.current_depth + 1
-                    ps_topic.last_pub_time = now
-                    session.add(ps_topic)
+                    session.execute(
+                        update(Topic).\
+                        values({
+                            'current_depth': Topic.c.current_depth+1,
+                            'last_pub_time': now
+                        }).\
+                        where(Topic.c.id==topic.id).\
+                        where(Topic.c.cluster_id==cluster_id)
+                    )
 
-                # Update information when this endpoint last published to the topic
-                ps_endpoint_topic = session.query(PubSubEndpointTopic).\
-                    filter(PubSubEndpointTopic.endpoint_id==endpoint_id).\
-                    filter(PubSubEndpointTopic.topic_id==topic.id).\
-                    filter(PubSubEndpointTopic.cluster_id==cluster_id).\
-                    first()
+                # Insert the message and get is ID back
+                msg_insert_result = session.execute(MsgInsert(), [ps_msg])
+                msg_id = msg_insert_result.inserted_primary_key
 
-                # Never published before - add a new row then
-                if not ps_endpoint_topic:
-                    ps_endpoint_topic = PubSubEndpointTopic()
-                    ps_endpoint_topic.endpoint_id = endpoint_id
-                    ps_endpoint_topic.topic_id = topic.id
-                    ps_endpoint_topic.cluster_id = cluster_id
+                queue_msgs = []
 
-                # New row or not, we have an object to
-                ps_endpoint_topic.last_pub_time = now
-                ps_endpoint_topic.pub_msg_id = pub_msg_id
-                ps_endpoint_topic.pub_correl_id = pub_correl_id
-                ps_endpoint_topic.in_reply_to = in_reply_to
-                ps_endpoint_topic.pattern_matched = pattern_matched
-
-                session.add(ps_endpoint_topic)
-
-                # Update metatadata for endpoint
-                ps_endpoint = session.query(PubSubEndpoint).\
-                    filter(PubSubEndpoint.id==endpoint_id).\
-                    filter(PubSubEndpoint.cluster_id==cluster_id).\
-                    one()
-
-                ps_endpoint.last_seen = now
-                ps_endpoint.last_pub_time = now
-
-                session.add(ps_endpoint)
-
-                # Add the parent message with actual data
-                session.add(ps_msg)
-
-                # Enqueue a new message for all subscribers already known at the publication time
                 for sub in subscriptions_by_topic:
+                    queue_msgs.append({
+                        'creation_time': now,
+                        'delivery_count': 0,
+                        'msg_id': msg_id,
+                        'endpoint_id': endpoint_id,
+                        'topic_id': topic.id,
+                        'subscription_id': sub.id,
+                        'cluster_id': cluster_id,
+                        'has_gd': False,
+                        'is_in_staging': False,
+                    })
 
-                    queue_msg = PubSubEndpointEnqueuedMessage()
-                    queue_msg.delivery_count = 0
-                    queue_msg.msg = ps_msg
-                    queue_msg.endpoint_id = endpoint_id
-                    queue_msg.topic_id = topic.id
-                    queue_msg.subscription_id = sub.id
-                    queue_msg.cluster_id = cluster_id
-
-                    session.add(queue_msg)
+                # Move the message to endpoint queues
+                session.execute(EnqueuedMsgInsert(), queue_msgs)
 
                 session.commit()
+
+        # After metadata in background
+        spawn(self._update_pub_metadata, topic.id, endpoint_id, cluster_id, now, pub_msg_id, pub_correl_id, in_reply_to,
+              pattern_matched)
 
         self.response.payload.msg_id = pub_msg_id
 
@@ -358,6 +393,8 @@ class SubscribeService(PubSubService):
                         expr.bindparam('delivery_count', 0),
                         expr.bindparam('endpoint_id', endpoint_id),
                         expr.bindparam('subscription_id', ps_sub.id),
+                        expr.bindparam('has_gd', False),
+                        expr.bindparam('is_in_staging', False),
                         expr.bindparam('cluster_id', self.server.cluster_id),
                         ).\
                         filter(PubSubMessage.topic_id==topic.id).\
@@ -373,6 +410,8 @@ class SubscribeService(PubSubService):
                             expr.column('delivery_count'),
                             expr.column('endpoint_id'),
                             expr.column('subscription_id'),
+                            expr.column('has_gd'),
+                            expr.column('is_in_staging'),
                             expr.column('cluster_id'),
                     ), select_messages)
 
@@ -387,12 +426,6 @@ class SubscribeService(PubSubService):
 
                     total_moved_q = moved_q.statement.with_only_columns([func.count()]).order_by(None)
                     total_moved = moved_q.session.execute(total_moved_q).scalar()
-
-                    # Update the subscriber queue's current depth with the number of messages moved,
-                    # because it's a computed value.
-                    ps_sub.total_depth = total_moved
-                    ps_sub.current_depth = total_moved
-                    ps_sub.staging_depth = 0
 
                     session.commit()
 

@@ -42,6 +42,10 @@ def instance_hook(self, input, instance, attrs):
     if attrs.is_delete:
         return
 
+    # Don't use empty string with integer attributes, set them to None (NULL) instead
+    if instance.service_id == '':
+        instance.service_id = None
+
     # SQLite will not accept empty strings, must be None
     instance.last_seen = instance.last_seen or None
     instance.last_pub_time = instance.last_pub_time or None

@@ -349,6 +349,11 @@ def convert_sio(cid, param, param_name, value, has_simple_io_config, is_xml, boo
             if isinstance(param, ForceType):
                 value = param.convert(value, param_name, data_format, from_sio_to_external)
             else:
+                # Empty string sent in lieu of integers are equivalent to None,
+                # as though they were never sent - this is need for internal metaclasses
+                if value == '' and _is_int(param_name, int_parameters, int_parameter_suffixes):
+                    value = None
+
                 if value and (value not in special_values) and has_simple_io_config:
                     if _is_int(param_name, int_parameters, int_parameter_suffixes):
                         value = int(value)
