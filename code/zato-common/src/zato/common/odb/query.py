@@ -1149,6 +1149,7 @@ def _pubsub_endpoint_queue(session, cluster_id):
         PubSubTopic.name.label('topic_name'),
         PubSubTopic.name.label('queue_name'), # Queue names are the same as their originating topics
         PubSubEndpoint.name.label('endpoint_name'),
+        PubSubEndpoint.id.label('endpoint_id'),
         ).\
         filter(PubSubSubscription.topic_id==PubSubTopic.id).\
         filter(PubSubSubscription.cluster_id==cluster_id).\
@@ -1182,25 +1183,21 @@ def _pubsub_queue_message(session, cluster_id):
         PubSubMessage.pub_msg_id.label('msg_id'),
         PubSubMessage.pub_correl_id.label('correl_id'),
         PubSubMessage.in_reply_to.label('in_reply_to'),
-        PubSubMessage.pub_time, PubSubMessage.data_prefix_short,
+        PubSubMessage.data_prefix_short,
         PubSubMessage.priority,
         PubSubMessage.ext_pub_time, PubSubMessage.size,
         PubSubMessage.data_format, PubSubMessage.mime_type,
         PubSubMessage.data, PubSubMessage.expiration,
         PubSubMessage.expiration_time,
-        PubSubEndpoint.id.label('endpoint_id'),
-        PubSubEndpoint.name.label('endpoint_name'),
-        PubSubEndpoint.service_id,
-        PubSubEndpoint.security_id,
-        PubSubEndpoint.ws_channel_id,
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
         PubSubTopic.name.label('queue_name'), # Currently, queue name = name of its underlying topic
-        PubSubEndpointEnqueuedMessage.creation_time,
+        PubSubEndpointEnqueuedMessage.creation_time.label('recv_time'),
         PubSubEndpointEnqueuedMessage.delivery_count,
         PubSubEndpointEnqueuedMessage.last_delivery_time,
         PubSubEndpointEnqueuedMessage.is_in_staging,
         PubSubEndpointEnqueuedMessage.has_gd,
+        PubSubEndpointEnqueuedMessage.endpoint_id,
         ).\
         filter(PubSubEndpointEnqueuedMessage.msg_id==PubSubMessage.id).\
         filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id).\
