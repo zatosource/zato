@@ -270,7 +270,7 @@ class TopicService(PubSubService):
                     )
 
                 # Insert the message and get is ID back
-                msg_insert_result = session.execute(MsgInsert(), [ps_msg])
+                msg_insert_result = session.execute(MsgInsert().values([ps_msg]))
                 msg_id = msg_insert_result.inserted_primary_key
 
                 queue_msgs = []
@@ -289,7 +289,7 @@ class TopicService(PubSubService):
                     })
 
                 # Move the message to endpoint queues
-                session.execute(EnqueuedMsgInsert(), queue_msgs)
+                session.execute(EnqueuedMsgInsert().values(queue_msgs))
 
                 session.commit()
 
@@ -316,19 +316,6 @@ class SubscribeService(PubSubService):
         # Local aliases
         input = self.request.input
         pubsub = self.server.worker_store.pubsub
-
-        '''
-        # Confirm that input sub_key belongs to the endpoint given on input
-        with closing(self.odb.session()) as session:
-            ps_endpoint = session.query(PubSubEndpoint).\
-                filter(PubSubEndpoint.security_id==security_id).\
-                filter(PubSubEndpoint.sub_key==input.sub_key).\
-                filter(PubSubEndpoint.cluster_id==self.server.cluster_id).\
-                first()
-
-            if not ps_endpoint:
-                raise Forbidden(self.cid)
-        '''
 
         # Credentials are fine, now check whether that user has access to the topic given on input
         topic_name = input.topic_name
