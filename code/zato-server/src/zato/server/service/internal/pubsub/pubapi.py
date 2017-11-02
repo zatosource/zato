@@ -27,7 +27,7 @@ from zato.common import CONTENT_TYPE, DATA_FORMAT, PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, TooManyRequests, ServiceUnavailable
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
      PubSubSubscription, SecurityBase, Service as ODBService, ChannelWebSocket
-from zato.common.odb.query import pubsub_message, query_wrapper
+from zato.common.odb.query import pubsub_message, pubsub_messages_for_queue, query_wrapper
 from zato.common.util import new_cid
 from zato.server.pubsub import get_expiration, get_priority
 from zato.server.service import AsIs, Bool, Int, Service
@@ -426,3 +426,27 @@ class SubscribeService(PubSubService):
         pass
 
 # ################################################################################################################################
+
+class GetEndpointQueueMessages(AdminService):
+    _filter_by = PubSubMessage.data_prefix,
+
+    class SimpleIO(GetListAdminSIO):
+        input_required = ('cluster_id', 'sub_id')
+        output_required = (AsIs('msg_id'), 'pub_time', 'data_prefix_short')
+        #output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id', 'service_name',
+        #    'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name')
+        output_repeated = True
+
+    def get_data(self, session):
+        return self._search(
+            pubsub_messages_for_queue, session, self.request.input.cluster_id, self.request.input.sub_id, False)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload[:] = self.get_data(session)
+
+        for item in self.response.payload.zato_output:
+            item.pub_time = item.pub_time.isoformat()
+            item.creation_time = item.creation_time.isoformat()
+            item.last_delivery_time = item.last_delivery_time.isoformat() if item.last_delivery_time else ''
+            item.ext_pub_time = item.ext_pub_time.isoformat() if item.ext_pub_time else ''

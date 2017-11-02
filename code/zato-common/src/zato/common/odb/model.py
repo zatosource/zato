@@ -2338,7 +2338,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     {})
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
-    creation_time = Column(DateTime(), nullable=False)
+    creation_time = Column(DateTime(), nullable=False) # When was the message enqueued
 
     delivery_count = Column(Integer, nullable=False)
     delivery_details = Column(LargeBinary(), nullable=True)

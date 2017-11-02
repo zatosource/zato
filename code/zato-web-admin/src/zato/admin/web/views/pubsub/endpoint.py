@@ -31,7 +31,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_rever
      invoke_service_with_json_response, method_allowed, slugify
 from zato.admin.web.views.pubsub import get_client_html
 from zato.common import ZATO_NONE
-from zato.common.odb.model import PubSubEndpoint, PubSubSubscription, PubSubTopic
+from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubSubscription, PubSubTopic
 
 # ################################################################################################################################
 
@@ -221,6 +221,23 @@ class EndpointQueues(_EndpointObjects):
 
 # ################################################################################################################################
 
+class EndpointQueueBrowser(_Index):
+    method_allowed = 'GET'
+    url_name = 'pubsub-endpoint-queue-browser'
+    template = 'zato/pubsub/endpoint-queue-browser.html'
+    service_name = 'pubapi1.get-endpoint-queue-messages' #'zato.pubsub.endpoint.get-endpoint-queue-messages'
+    output_class = PubSubEndpointEnqueuedMessage
+    paginate = True
+
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id', 'sub_id', 'queue_type')
+        output_repeated = True
+
+    def handle(self):
+        pass
+
+# ################################################################################################################################
+
 @method_allowed('POST')
 def endpoint_queue_edit(req):
 
@@ -259,6 +276,12 @@ def endpoint_queue_edit(req):
                 response.last_interaction_time+'+00:00', req.zato.user_profile)
 
         return HttpResponse(dumps(response), content_type='application/javascript')
+
+# ################################################################################################################################
+
+@method_allowed('GET')
+def endpoint_queue_interactions(req):
+    pass
 
 # ################################################################################################################################
 
