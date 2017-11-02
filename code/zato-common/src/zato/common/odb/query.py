@@ -1108,7 +1108,7 @@ def _pubsub_topic_message(session, cluster_id):
     return session.query(
         PubSubMessage.pub_msg_id.label('msg_id'),
         PubSubMessage.pub_correl_id.label('correl_id'),
-        PubSubMessage.in_reply_to.label('in_reply_to'),
+        PubSubMessage.in_reply_to,
         PubSubMessage.pub_time, PubSubMessage.data_prefix_short,
         PubSubMessage.pattern_matched, PubSubMessage.priority,
         PubSubMessage.ext_pub_time, PubSubMessage.size,
@@ -1147,7 +1147,7 @@ def _pubsub_endpoint_queue(session, cluster_id):
         PubSubSubscription.is_staging_enabled,
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
-        PubSubTopic.name.label('queue_name'), # Queue names are the same as their originating topics
+        PubSubTopic.name.label('name'), # Currently queue names are the same as their originating topics
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubEndpoint.id.label('endpoint_id'),
         ).\
@@ -1180,15 +1180,33 @@ def pubsub_messages_for_topic(session, cluster_id, topic_id, needs_columns=False
 
 def _pubsub_queue_message(session, cluster_id):
     return session.query(
+
         PubSubMessage.pub_msg_id.label('msg_id'),
         PubSubMessage.pub_correl_id.label('correl_id'),
-        PubSubMessage.in_reply_to.label('in_reply_to'),
+        PubSubMessage.in_reply_to,
         PubSubMessage.data_prefix_short,
         PubSubMessage.priority,
-        PubSubMessage.ext_pub_time, PubSubMessage.size,
-        PubSubMessage.data_format, PubSubMessage.mime_type,
-        PubSubMessage.data, PubSubMessage.expiration,
+        PubSubMessage.ext_pub_time,
+        PubSubEndpointEnqueuedMessage.size,
+        PubSubMessage.data_format,
+        PubSubEndpointEnqueuedMessage.mime_type,
+        PubSubMessage.data,
+        PubSubEndpointEnqueuedMessage.expiration,
         PubSubMessage.expiration_time,
+
+        #PubSubEndpointEnqueuedMessage.pub_msg_id.label('queue_msg_id'),
+        #PubSubEndpointEnqueuedMessage.pub_correl_id.label('queue_correl_id'),
+        #PubSubEndpointEnqueuedMessage.in_reply_to.label('queue_'),
+        #PubSubEndpointEnqueuedMessage.data_prefix_short.label('queue_'),
+        #PubSubEndpointEnqueuedMessage.priority.label('queue_'),
+        #PubSubEndpointEnqueuedMessage.ext_pub_time.label('queue_'),
+        #PubSubEndpointEnqueuedMessage.size.label('queue_'),
+        #PubSubEndpointEnqueuedMessage.data_format.label('queue_'),
+        #PubSubEndpointEnqueuedMessage.mime_type.label('queue_'),
+        #PubSubEndpointEnqueuedMessage.data.label('queue_'),
+        #PubSubEndpointEnqueuedMessage.expiration.label('queue_'),
+        #PubSubEndpointEnqueuedMessage.expiration_time.label('queue_'),
+
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
         PubSubTopic.name.label('queue_name'), # Currently, queue name = name of its underlying topic

@@ -250,7 +250,7 @@ class UpdateEndpointQueue(AdminService):
 class GetEndpointQueue(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'id')
-        output_required = ('sub_id', 'topic_id', 'topic_name', 'queue_name', 'active_status', 'is_internal',
+        output_required = ('sub_id', 'topic_id', 'topic_name', 'name', 'active_status', 'is_internal',
             'is_staging_enabled', 'creation_time', 'sub_key', 'has_gd', 'delivery_method',
             'delivery_data_format', 'endpoint_id', 'endpoint_name')
         output_optional = ('delivery_endpoint', 'last_interaction_time', 'last_interaction_type', 'last_interaction_details',

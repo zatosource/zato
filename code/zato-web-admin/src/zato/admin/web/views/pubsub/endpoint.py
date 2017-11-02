@@ -231,7 +231,7 @@ class EndpointQueueBrowser(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'sub_id', 'queue_type')
         output_required = ('msg_id', 'recv_time', 'data_prefix_short', 'has_gd', 'is_in_staging', 'delivery_count',
-            'last_delivery_time', 'queue_name', 'endpoint_id')
+            'last_delivery_time', 'name', 'endpoint_id')
         output_repeated = True
 
     def handle(self):
@@ -244,7 +244,7 @@ class EndpointQueueBrowser(_Index):
 
         return {
             'sub_id': self.input.sub_id,
-            'queue_name': service_response.queue_name,
+            'name': service_response.name,
             'endpoint_id': service_response.endpoint_id,
         }
 

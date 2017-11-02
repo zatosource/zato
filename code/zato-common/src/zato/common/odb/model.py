@@ -2341,11 +2341,27 @@ class PubSubEndpointEnqueuedMessage(Base):
     creation_time = Column(DateTime(), nullable=False) # When was the message enqueued
 
     delivery_count = Column(Integer, nullable=False)
-    delivery_details = Column(LargeBinary(), nullable=True)
     last_delivery_time = Column(DateTime(), nullable=True)
 
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
     is_in_staging = Column(Boolean(), nullable=False, default=False)
+
+    '''
+    # Attributes from the block below are copied over from PubSubMessage
+    # but they are all nullable because they are copied-on-write which doesn't happen by default.
+    pub_correl_id = Column(String(200), nullable=True)
+    in_reply_to = Column(String(200), nullable=True)
+    data = Column(LargeBinary(), nullable=True)
+    data_prefix = Column(Text(), nullable=True)
+    data_prefix_short = Column(String(200), nullable=True)
+    data_format = Column(String(200), nullable=True)
+    mime_type = Column(String(200), nullable=True)
+    size = Column(Integer, nullable=True)
+    priority = Column(Integer, nullable=True)
+    expiration = Column(Integer, nullable=True)
+    expiration_time = Column(DateTime(), nullable=True)
+    is_cow = Column(Boolean(), nullable=False) # Was it copied-on-write?
+    '''
 
     msg_id = Column(Integer, ForeignKey('pubsub_message.id', ondelete='CASCADE'), nullable=False)
     msg = relationship(PubSubMessage, backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
