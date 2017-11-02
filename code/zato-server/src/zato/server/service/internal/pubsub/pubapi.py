@@ -433,8 +433,8 @@ class GetEndpointQueueMessages(AdminService):
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'sub_id')
         output_required = (AsIs('msg_id'), 'pub_time', 'data_prefix_short')
-        #output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id', 'service_name',
-        #    'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name')
+        output_optional = (AsIs('correl_id'), 'in_reply_to', 'size', 'service_id', 'security_id', 'ws_channel_id', 'service_name',
+            'sec_name', 'ws_channel_name', 'endpoint_id', 'endpoint_name')
         output_repeated = True
 
     def get_data(self, session):

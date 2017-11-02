@@ -17,11 +17,13 @@ from contextlib import closing
 from zato.common import PUBSUB as COMMON_PUBSUB
 from zato.common.broker_message import PUBSUB
 from zato.common.exception import BadRequest
-from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubSubscription, PubSubTopic
-from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_queue, pubsub_endpoint_queue_list, pubsub_endpoint_list
+from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
+     PubSubSubscription, PubSubTopic
+from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_queue, pubsub_endpoint_queue_list, \
+     pubsub_endpoint_list, pubsub_messages_for_queue
 from zato.common.util import new_cid
 from zato.server.service import AsIs, Int
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
@@ -250,8 +252,9 @@ class GetEndpointQueue(AdminService):
         input_required = ('cluster_id', 'id')
         output_required = ('sub_id', 'topic_id', 'topic_name', 'queue_name', 'active_status', 'is_internal',
             'is_staging_enabled', 'creation_time', 'sub_key', 'has_gd', 'delivery_method',
-            'delivery_data_format', 'endpoint_name', Int('total_depth'), Int('current_depth'), Int('staging_depth'))
-        output_optional = ('delivery_endpoint', 'last_interaction_time', 'last_interaction_type', 'last_interaction_details', )
+            'delivery_data_format', 'endpoint_id', 'endpoint_name')
+        output_optional = ('delivery_endpoint', 'last_interaction_time', 'last_interaction_type', 'last_interaction_details',
+            Int('total_depth'), Int('current_depth'), Int('staging_depth'))
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -318,5 +321,28 @@ class DeleteEndpointQueue(AdminService):
                 delete()
 
             session.commit()
+
+# ################################################################################################################################
+
+class GetEndpointQueueMessages(AdminService):
+    _filter_by = PubSubMessage.data_prefix,
+
+    class SimpleIO(GetListAdminSIO):
+        input_required = ('cluster_id', 'sub_id')
+        output_required = (AsIs('msg_id'), 'recv_time', 'data_prefix_short')
+        output_optional = (Int('delivery_count'), 'last_delivery_time', 'is_in_staging', 'has_gd', 'queue_name', 'endpoint_id')
+        output_repeated = True
+
+    def get_data(self, session):
+        return self._search(
+            pubsub_messages_for_queue, session, self.request.input.cluster_id, self.request.input.sub_id, False)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload[:] = self.get_data(session)
+
+        for item in self.response.payload.zato_output:
+            item.recv_time = item.recv_time.isoformat()
+            item.last_delivery_time = item.last_delivery_time.isoformat() if item.last_delivery_time else ''
 
 # ################################################################################################################################

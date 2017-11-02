@@ -171,7 +171,6 @@ class _EndpointObjects(_Index):
         output_repeated = True
 
     def handle(self):
-
         return {
             'endpoint_id': self.input.endpoint_id,
             'endpoint_name': self.req.zato.client.invoke(
@@ -225,16 +224,33 @@ class EndpointQueueBrowser(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-endpoint-queue-browser'
     template = 'zato/pubsub/endpoint-queue-browser.html'
-    service_name = 'pubapi1.get-endpoint-queue-messages' #'zato.pubsub.endpoint.get-endpoint-queue-messages'
+    service_name = 'zato.pubsub.endpoint.get-endpoint-queue-messages'
     output_class = PubSubEndpointEnqueuedMessage
     paginate = True
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id', 'sub_id', 'queue_type')
+        output_required = ('msg_id', 'recv_time', 'data_prefix_short', 'has_gd', 'is_in_staging', 'delivery_count',
+            'last_delivery_time', 'queue_name', 'endpoint_id')
         output_repeated = True
 
     def handle(self):
-        pass
+
+        service_response = self.req.zato.client.invoke(
+            'zato.pubsub.endpoint.get-endpoint-queue', {
+                'cluster_id':self.req.zato.cluster_id,
+                'id':self.input.sub_id,
+            }).data.response
+
+        return {
+            'sub_id': self.input.sub_id,
+            'queue_name': service_response.queue_name,
+            'endpoint_id': service_response.endpoint_id,
+        }
+
+    def on_before_append_item(self, item):
+        item.recv_time = from_utc_to_user(item.recv_time+'+00:00', self.req.zato.user_profile)
+        return item
 
 # ################################################################################################################################
 

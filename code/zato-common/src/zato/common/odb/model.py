@@ -2364,6 +2364,8 @@ class PubSubEndpointEnqueuedMessage(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_endpoint_queues', order_by=id, cascade='all, delete, delete-orphan'))
 
+    queue_name = None # Not used by DB
+
 # ################################################################################################################################
 
 class PubSubEndpointQueueInteraction(Base):

@@ -23,6 +23,12 @@
 
             '_pub_time',
             '_msg_id',
+            'prefix_short',
+
+            '_has_gd',
+            '_is_in_staging',
+            'delivery_count',
+            '_last_delivery',
 
             '_endpoint',
             '_pattern',
@@ -37,7 +43,7 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Messages for topic : <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}</a></h2>
+<h2 class="zato">Messages for queue : <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id "zzz" %}?highlight={{ sub_id }}">{{ queue_name }}</a></h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -46,7 +52,6 @@
     <div id="user-message-div" style='display:none'><pre id="user-message" class="user-message"></pre></div>
 
 {% include "zato/search-form.html" with page_prompt="Show messages"%}
-
 
     {% if cluster_id %}
 
@@ -57,12 +62,14 @@
                         <th style="width:10px">&nbsp;</th>
                         <th>&nbsp;</th>
 
-                        <th style="width:16%"><a href="#">Pub time</a></th>
+                        <th style="width:16%"><a href="#">Recv time</a></th>
                         <th style="width:22%"><a href="#">Msg ID</a></th>
+                        <th style="width:22%"><a href="#">Recv msg prefix</a></th>
 
-                        <th><a href="#">Endpoint</a></th>
-                        <th><a href="#">Pattern</a></th>
-                        <th><a href="#">Msg prefix</a></th>
+                        <th><a href="#">GD</a></th>
+                        <th><a href="#">STG</a></th>
+                        <th><a href="#">DLV</a></th>
+                        <th><a href="#">Last DLV</a></th>
 
                         <th style="width:5%">&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
@@ -75,14 +82,24 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
-                        <td>{{ item.pub_time }}</td>
-                        <td><a href="{% url "pubsub-message" cluster_id "topic" topic_id item.msg_id %}">{{ item.msg_id }}</a></td>
-
-                        <td>{{ item.endpoint_html|safe }}</td>
-                        <td>{{ item.pattern_matched }}</td>
+                        <td>{{ item.recv_time }}</td>
+                        <td><a href="{% url "pubsub-message" cluster_id "queue" sub_id item.msg_id %}">{{ item.msg_id }}</a></td>
                         <td>{{ item.data_prefix_short }}</td>
 
-                        <td><a href="javascript:$.fn.zato.pubsub.topic.delete_message('{{ topic_id }}', '{{ item.msg_id }}')">Delete</a></td>
+                        <td>
+                            {% if item.has_gd %}
+                                <a href="#">Yes</a>
+                            {% else %}
+                                No
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="javascript:$.fn.zato.pubsub.queue_message.toggle_staging('{{ sub_id }}', '{{ item.msg_id }}')">{{ item.is_in_staging|yesno:"Yes,No" }}</a>
+                        </td>
+                        <td>{{ item.delivery_count }}</td>
+                        <td>{{ item.last_delivery_time|default:'<span class="form_hint">---</span>' }}</td>
+
+                        <td><a href="javascript:$.fn.zato.pubsub.queue_message.delete_('{{ sub_id }}', '{{ item.msg_id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.msg_id }}'>{{ item.msg_id }}</td>
                     </tr>
                 {% endfor %}
