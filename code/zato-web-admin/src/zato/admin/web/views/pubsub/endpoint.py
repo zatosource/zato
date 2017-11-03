@@ -206,14 +206,14 @@ class EndpointQueues(_EndpointObjects):
     output_class = PubSubSubscription
 
     class SimpleIO(_EndpointObjects.SimpleIO):
-        output_required = ('sub_id', 'topic_id', 'topic_name', 'queue_name', 'active_status', 'is_internal',
+        output_required = ('sub_id', 'topic_id', 'topic_name', 'name', 'active_status', 'is_internal',
             'total_depth', 'current_depth', 'staging_depth')
         output_optional = ('creation_time', 'sub_key', 'has_gd', 'delivery_method', 'delivery_data_format', 'delivery_endpoint',
             'last_interaction_time', 'last_interaction_type', 'last_interaction_details', 'endpoint_name', 'is_staging_enabled')
 
     def on_before_append_item(self, item):
         item.creation_time = from_utc_to_user(item.creation_time+'+00:00', self.req.zato.user_profile)
-        item.queue_name_slug = slugify(item.queue_name)
+        item.name_slug = slugify(item.name)
         if item.last_interaction_time:
             item.last_interaction_time = from_utc_to_user(item.last_interaction_time+'+00:00', self.req.zato.user_profile)
         return item
