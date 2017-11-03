@@ -22,6 +22,22 @@ $.fn.zato.pubsub.message.details.validate_save = function(e) {
     e.preventDefault();
 }
 
+$.fn.zato.pubsub.message.details.toggle_time = function(link_name) {
+    var elem = $('#a_' + link_name);
+    var current_value = elem.text();
+
+    var callback = function(data, status) {
+        elem.html(data.responseText);
+    }
+
+    var url = String.format(
+        '/zato/pubsub/message/toggle-time/cluster/{0}/value/{1}/', $('#cluster_id').val(), current_value);
+
+    $.fn.zato.post(url, callback, '', 'text', true);
+
+}
+
+
 $(document).ready(function() {
 
     $('#id_priority').attr('data-bvalidator', 'digit,between[1:9],required');
@@ -41,4 +57,3 @@ $(document).ready(function() {
     form.bValidator()
     form.submit($.fn.zato.pubsub.message.details.validate_save);
 })
-

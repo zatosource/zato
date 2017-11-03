@@ -2277,6 +2277,7 @@ class PubSubSubscription(Base):
 
     creation_time = Column(DateTime(), nullable=False)
     sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
+    pattern_matched = Column(Text, nullable=False)
 
     is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery

@@ -22,7 +22,7 @@
 
 {% if not has_msg %}
 
-<div id="user-message-div"><pre id="user-message" class="user-message user-message-failure">No such message `{{ msg_id }}` in {{ object_type }} `{{ object_name }}`</pre></div>
+<div id="user-message-div"><pre id="user-message" class="user-message user-message-failure">Could not read message `{{ msg_id }}` from {{ object_type }} `{{ object_name }}`</pre></div>
 
 {% else %}
 <h2 class="zato">Pub/sub message : {{ msg_id }}
@@ -34,64 +34,194 @@
     <form id="message-details-form" action="<invalid>" method="post">
         <table id="data-table">
             <tr>
-                <td class='inline_header' style="width:90px">Topic</td>
-                <td style="width:140px"><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ topic_id }}">{{ topic_name }}</a></td>
+                <td class='inline_header' style="width:90px">
+                    {% ifequal object_type "topic" %}
+                        Topic
+                    {% else %}
+                        Queue for topic
+                    {% endifequal %}
+                </td>
+                <td style="width:140px">
+                    {% ifequal object_type "topic" %}
+                        <a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ object_id }}">{{ object_name }}</a>
+                    {% else %}
+                        <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id object_name_slug %}?highlight={{ object_id }}">{{ object_name }}</a>
+                    {% endifequal %}
+                </td>
 
-                <td class='inline_header' style="width:90px">Pub time</td>
-                <td>{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ pub_time }}{% endifequal %}</td>
+                <td class='inline_header' style="width:90px">
+                    {% ifequal object_type "topic" %}
+                        Publisher
+                    {% else %}
+                        Publisher
+                    {% endifequal %}
+                </td>
+                <td style="width:140px">
+                    {% ifequal object_type "topic" %}
+                        {{ pub_endpoint_html|safe }}
+                        {{ pattern_matched }}
+
+                    {% else %}
+                        {{ pub_endpoint_html|safe }}
+                        {{ pub_pattern_matched }}
+                    {% endifequal %}
+                </td>
+
+
 
                 <td class='inline_header' style="width:90px">Priority <span class="form_hint">(1-9, 1=min)</span></td>
-                <td>{{ form.priority }}</td>
+                <td>
+                    {% ifequal object_type "topic" %}
+                        {{ form.priority }}
+                    {% else %}
+                        {{ priority }}
+                    {% endifequal %}
+                </td>
             </tr>
             <tr>
-                <td class='inline_header' style="width:90px">Pub pattern</td>
-                <td style="width:140px">{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ pattern_matched }}{% endifequal %}</td>
+                <td class='inline_header' style="width:90px">
+                    {% ifequal object_type "topic" %}
+                        Pub time
+                    {% else %}
+                        Recv time
+                    {% endifequal %}
+                </td>
+                <td style="width:140px">
+                    {% ifequal action "publish" %}
+                        <span class='form_hint'>---</span>
+                    {% else %}
+                        {% ifequal object_type "topic" %}
+                            <a
+                                id="a_pub_time"
+                                href="javascript:$.fn.zato.pubsub.message.details.toggle_time('pub_time')">{{ pub_time }}
+                            </a>
+                        {% else %}
+                            <a
+                                id="a_recv_time"
+                                href="javascript:$.fn.zato.pubsub.message.details.toggle_time('recv_time')">{{ recv_time }}
+                            </a>
+                        {% endifequal %}
+                    {% endifequal %}
+                </td>
 
-                <td class='inline_header' style="width:90px">Ext. pub time</td>
-                <td style="width:140px">{{ ext_pub_time|default:"<span class='form_hint'>---</span>" }}</td>
 
-                <td class='inline_header' style="width:90px">Pub data format</td>
-                <td style="width:140px">{{ data_format }}</td>
+                <td class='inline_header' style="width:90px">
+                    {% ifequal object_type "topic" %}
+                        Ext. pub time
+                    {% else %}
+                        Subscriber
+                    {% endifequal %}
+                </td>
+                <td style="width:140px">
+                    {% ifequal object_type "topic" %}
+                        {% if ext_pub_time %}
+                        <a
+                            id="a_ext_pub_time"
+                            href="javascript:$.fn.zato.pubsub.message.details.toggle_time('ext_pub_time')">{{ ext_pub_time }}
+                        </a>
+                        {% else %}
+                            <span class='form_hint'>---</span>
+                        {% endif %}
+                    {% else %}
+                        {{ sub_endpoint_html|safe }}
+                        {{ sub_pattern_matched }}
+                    {% endifequal %}
+
+                </td>
+
+                <td class='inline_header' style="width:90px">MIME type</td>
+                <td style="width:140px">
+                    {% ifequal object_type "topic" %}
+                        {{ form.mime_type }}
+                    {% else %}
+                        {{ mime_type }}
+                    {% endifequal %}
+                </td>
             </tr>
             <tr>
                 <td class='inline_header' style="width:90px">Msg ID</td>
                 <td style="width:140px">{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ msg_id }}{% endifequal %}</td>
 
                 <td class='inline_header' style="width:90px">Expiration <span class="form_hint">(in s)</span></td>
-                <td style="width:140px">{{ form.expiration }}</td>
+                <td style="width:140px">
+                    {% ifequal object_type "topic" %}
+                        {{ form.expiration }}
+                    {% else %}
+                        {{ expiration }}
+                    {% endifequal %}
+                </td>
 
-                <td class='inline_header' style="width:90px">MIME type</td>
-                <td style="width:140px">{{ form.mime_type }}</td>
+                <td class='inline_header' style="width:90px">Pub hook service</td>
+                <td style="width:140px">
+                    {% if hook_pub_service_name %}
+                        <a href="{% url "service-overview" hook_pub_service_name %}?cluster={{ cluster_id }}">{{ hook_pub_service_name }}</a>
+                    {% else %}
+                        <span class='form_hint'>---</span>
+                    {% endif %}
+                </td>
+
             </tr>
             <tr>
                 <td class='inline_header' style="width:90px">Correl ID</td>
-                <td style="width:140px">{{ form.correl_id }}</td>
+                <td style="width:140px">
+                    {% ifequal object_type "topic" %}
+                        {{ form.correl_id }}
+                    {% else %}
+                        {{ correl_id|default:"<span class='form_hint'>---</span>" }}
+                    {% endifequal %}
+                </td>
 
                 <td class='inline_header' style="width:90px">Expiration time</td>
-                <td style="width:140px" id="expiration_time">{{ expiration_time|default:"<span class='form_hint'>---</span>" }}</td>
+                <td style="width:140px" id="expiration_time">
+                    {% if expiration_time %}
+                        <a
+                            id="a_expiration_time"
+                            href="javascript:$.fn.zato.pubsub.message.details.toggle_time('expiration_time')">{{ expiration_time }}
+                        </a>
+                    {% else %}
+                        <span class='form_hint'>---</span>
+                    {% endif %}
+                </td>
 
-                <td class='inline_header' style="width:90px">Pub endpoint</td>
-                <td style="width:140px">{{ endpoint_html|safe }}</td>
+
+                <td class='inline_header' style="width:90px">
+                    {% ifequal object_type "queue" %}
+                        Sub hook service
+                    {% endifequal %}
+                </td>
+                <td style="width:140px">
+                    {% ifequal object_type "queue" %}
+                        {% if hook_sub_service_name %}
+                            <a href="{% url "service-overview" hook_sub_service_name %}?cluster={{ cluster_id }}">{{ hook_sub_service_name }}</a>
+                        {% else %}
+                            <span class='form_hint'>---</span>
+                        {% endif %}
+                    {% endifequal %}
+                </td>
+
             </tr>
             <tr>
                 <td class='inline_header' style="width:90px">In reply to</td>
-                <td style="width:140px">{{ form.in_reply_to }}</td>
+                <td style="width:140px">
+                    {% ifequal object_type "topic" %}
+                        {{ form.in_reply_to }}
+                    {% else %}
+                        {{ in_reply_to|default:"<span class='form_hint'>---</span>" }}
+                    {% endifequal %}
+                </td>
 
                 <td class='inline_header' style="width:90px">Size <span class='form_hint'>(in bytes)</span></td>
                 <td style="width:140px" id="size">{% ifequal action "publish" %}<span class='form_hint'>---</span>{% else %}{{ size }}{% endifequal %}</td>
 
-                <td class='inline_header' style="width:90px">Guaranteed delivery</td>
-
+                <td class='inline_header' style="width:90px">
+                    {% ifequal object_type "queue" %}
+                        Delivery history
+                    {% endifequal %}
+                </td>
                 <td style="width:140px">
-                    {% if has_gd %}
-                        {% ifequal object_type "queue" %}
-                            <a href="#">Show details</a>
-                        {% else %}
-                            Enabled
-                        {% endifequal %}
-                    {% else %}
-                        <span class='form_hint'>---</span>
-                    {% endif %}
+                    {% ifequal object_type "queue" %}
+                        <a href="#">Show</a>
+                    {% endifequal %}
                 </td>
             </tr>
             <tr>
@@ -107,16 +237,7 @@
             <tr>
                 <td colspan="6"><textarea style="height:200px" id="data-textarea" name="data">{{ data }}</textarea></td>
             </tr>
-            {% ifequal object_type "queue" %}
-            <tr>
-                <td class='inline_header' colspan="6">
-                    Payload in queue
-                </td>
-            </tr>
-            <tr>
-                <td colspan="6"><textarea style="height:200px" id="data-textarea" name="data">{{ data }}</textarea></td>
-            </tr>
-            {% endifequal %}
+            {% ifequal object_type "topic" %}
             <tr>
                 <td colspan="6" style="text-align:right">
                     <input type="submit" name="update-message-button" value="Update message in {{ object_type }}" />
@@ -124,6 +245,7 @@
                 <input type="hidden" name="msg_id" id="msg_id" value="{{ msg_id }}" />
                 <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
             </tr>
+            {% endifequal %}
         </table>
     </form>
 </div>
