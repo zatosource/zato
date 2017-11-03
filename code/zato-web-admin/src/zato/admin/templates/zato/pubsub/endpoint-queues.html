@@ -21,7 +21,7 @@
             '_numbering',
             '_selection',
 
-            '_queue_name',
+            '_name',
             'active_status',
 
             '_has_gd',
@@ -43,8 +43,8 @@
             'sub_key',
             'has_gd',
             'is_staging_enabled',
-            'queue_name',
-            'queue_name_slug',
+            'name',
+            'name_slug',
         ]
     }
     </script>
@@ -102,15 +102,15 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
-                        <td><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.sub_id }}">{{ item.queue_name }}</a></td>
+                        <td><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.name }}</a></td>
                         <td>{{ item.active_status }}</td>
 
                         <td>{{ item.has_gd|yesno:'Yes,No' }}</td>
                         <td>{{ item.is_staging_enabled|yesno:'Yes,No' }}</td>
 
-                        <td id="total_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "total" item.sub_id item.queue_name|slugify %}?cluster={{ cluster_id }}">{{ item.total_depth }}</a></td>
-                        <td id="current_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "current" item.sub_id item.queue_name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth }}</a></td>
-                        <td id="staging_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "staging" item.sub_id item.queue_name|slugify %}?cluster={{ cluster_id }}">{{ item.staging_depth }}</a></td>
+                        <td id="total_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "total" item.sub_id item.name|slugify %}?cluster={{ cluster_id }}">{{ item.total_depth }}</a></td>
+                        <td id="current_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "current" item.sub_id item.name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth }}</a></td>
+                        <td id="staging_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "staging" item.sub_id item.name|slugify %}?cluster={{ cluster_id }}">{{ item.staging_depth }}</a></td>
 
                         <td>{{ item.creation_time }}</td>
                         <td>
@@ -132,8 +132,8 @@
                         <td class='ignore'>{{ item.sub_key }}</td>
                         <td class='ignore'>{{ item.has_gd }}</td>
                         <td class='ignore'>{{ item.is_staging_enabled }}</td>
-                        <td class='ignore'>{{ item.queue_name }}</td>
-                        <td class='ignore'>{{ item.queue_name_slug }}</td>
+                        <td class='ignore'>{{ item.name }}</td>
+                        <td class='ignore'>{{ item.name_slug }}</td>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
