@@ -12,14 +12,17 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from json import dumps
 from traceback import format_exc
 
+# Bunch
+from bunch import bunchify
+
 # Django
 from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web import from_utc_to_user
+from zato.admin.web import from_user_to_utc, from_utc_to_user
 from zato.admin.web.forms.pubsub import MsgForm
-from zato.admin.web.views import method_allowed
+from zato.admin.web.views import method_allowed, slugify
 from zato.admin.web.views.pubsub import get_endpoint_html
 
 # ################################################################################################################################
@@ -27,45 +30,96 @@ from zato.admin.web.views.pubsub import get_endpoint_html
 @method_allowed('GET')
 def get(req, cluster_id, object_type, object_id, msg_id):
 
-    return_data = {
+    return_data = bunchify({
         'action': 'update',
-    }
+    })
 
-    return_data['cluster_id'] = cluster_id
-    return_data['object_type'] = object_type
+    return_data.cluster_id = cluster_id
+    return_data.object_type = object_type
     return_data['{}_id'.format(object_type)] = object_id
-    return_data['msg_id'] = msg_id
+    return_data.msg_id = msg_id
 
     if object_type=='topic':
-        service_name = 'zato.pubsub.topic.get'
+        object_service_name = 'zato.pubsub.topic.get'
+        msg_service_name = 'zato.pubsub.message.get-from-topic'
     else:
-        service_name = 'zato.pubsub.endpoint.get-endpoint-queue'
+        object_service_name = 'zato.pubsub.endpoint.get-endpoint-queue'
+        msg_service_name = 'pubapi1.get-from-queue'#zato.pubsub.message.get-from-queue'
 
-    return_data['object_name'] = req.zato.client.invoke(service_name, {
+    return_data.object_name = req.zato.client.invoke(
+        object_service_name, {
         'cluster_id':cluster_id,
         'id':object_id,
     }).data.response.name
 
+    return_data.object_name_slug = slugify(return_data.object_name)
+
     try:
-        service_response = req.zato.client.invoke('zato.pubsub.message.get', {
+        msg_service_response = req.zato.client.invoke(
+            msg_service_name, {
             'cluster_id': cluster_id,
             'msg_id': msg_id,
         }).data.response
+
     except Exception, e:
-        return_data['has_msg'] = False
+        return_data.has_msg = False
+
     else:
-        return_data['has_msg'] = True
-        return_data.update(service_response)
+        return_data.has_msg = True
+        return_data.update(msg_service_response)
 
-        return_data['endpoint_html'] = get_endpoint_html(return_data, cluster_id)
-        return_data['form'] = MsgForm(return_data)
-        return_data['pub_time'] = from_utc_to_user(return_data['pub_time']+'+00:00', req.zato.user_profile)
+        if object_type=='topic':
+            hook_pub_endpoint_id = return_data.endpoint_id
+            hook_sub_endpoint_id = None
+            return_data.object_id = return_data.pop('topic_id')
+            return_data.pub_endpoint_html = get_endpoint_html(return_data, cluster_id)
+        else:
 
-        if return_data['ext_pub_time']:
-            return_data['ext_pub_time'] = from_utc_to_user(return_data['ext_pub_time']+'+00:00', req.zato.user_profile)
+            # If it's a queue, we still need to get metadata about the message's underlying publisher
+            topic_msg_service_response = req.zato.client.invoke(
+                'zato.pubsub.message.get-from-topic', {
+                'cluster_id': cluster_id,
+                'msg_id': msg_id,
+            }).data.response
 
-        if return_data['expiration_time']:
-            return_data['expiration_time'] = from_utc_to_user(return_data['expiration_time']+'+00:00', req.zato.user_profile)
+            return_data.topic_id = topic_msg_service_response.topic_id
+            return_data.topic_name = topic_msg_service_response.topic_name
+            return_data.pub_endpoint_id = topic_msg_service_response.endpoint_id
+            return_data.pub_endpoint_name = topic_msg_service_response.endpoint_name
+            return_data.pub_pattern_matched = topic_msg_service_response.pattern_matched
+            return_data.pub_endpoint_html = get_endpoint_html(return_data, cluster_id, 'pub_endpoint_id', 'pub_endpoint_name')
+            return_data.sub_endpoint_html = get_endpoint_html(return_data, cluster_id)
+            return_data.object_id = return_data.pop('queue_id')
+
+            hook_pub_endpoint_id = return_data.pub_endpoint_id
+            hook_sub_endpoint_id = return_data.endpoint_id
+
+        #for k, v in sorted(return_data.items()):
+        #    print(k, `v`)
+
+        hook_pub_service_response = req.zato.client.invoke(
+            'pubapi1.get-hook-service', {
+            'cluster_id': cluster_id,
+            'endpoint_id': hook_pub_endpoint_id,
+        }).data.response
+        return_data.hook_pub_service_id = hook_pub_service_response.service_id
+        return_data.hook_pub_service_name = hook_pub_service_response.service_name
+
+        if hook_sub_endpoint_id:
+            hook_sub_service_response = req.zato.client.invoke(
+                'pubapi1.get-hook-service', {
+                'cluster_id': cluster_id,
+                'endpoint_id': hook_sub_endpoint_id,
+            }).data.response
+            return_data.hook_sub_service_id = hook_sub_service_response.service_id
+            return_data.hook_sub_service_name = hook_sub_service_response.service_name
+
+        return_data.form = MsgForm(return_data)
+
+        for name in('pub_time', 'ext_pub_time', 'expiration_time', 'recv_time'):
+            value = return_data.get(name)
+            if value:
+                return_data[name] = from_utc_to_user(value+'+00:00', req.zato.user_profile)
 
     return TemplateResponse(req, 'zato/pubsub/message-details.html', return_data)
 
@@ -154,5 +208,16 @@ def delete(req, cluster_id, msg_id):
         return HttpResponseServerError(format_exc(e))
     else:
         return HttpResponse('Deleted message `{}`'.format(msg_id))
+
+# ################################################################################################################################
+
+@method_allowed('POST')
+def toggle_time(req, cluster_id, value):
+    if '+00:00' in value:
+        new_value = from_utc_to_user(value+'+00:00', req.zato.user_profile)
+    else:
+        new_value = from_user_to_utc(value, req.zato.user_profile)
+
+    return HttpResponse(new_value)
 
 # ################################################################################################################################

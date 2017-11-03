@@ -26,14 +26,15 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
-class Get(AdminService):
-    """ Returns a pub/sub message by its ID.
+class GetFromTopic(AdminService):
+    """ Returns a pub/sub topic message by its ID.
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', AsIs('msg_id'))
         output_optional = ('topic_id', 'topic_name', AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'pub_time', \
             'ext_pub_time', 'pattern_matched', 'priority', 'data_format', 'mime_type', 'size', 'data',
-            'expiration', 'expiration_time', 'endpoint_id', 'endpoint_name', Bool('has_gd'))
+            'expiration', 'expiration_time', 'endpoint_id', 'endpoint_name', Bool('has_gd'),
+            'pub_hook_service_id', 'pub_hook_service_name', )
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -129,7 +130,7 @@ class Update(AdminService):
             item.expiration = get_expiration(self.cid, input)
             item.priority = get_priority(self.cid, input)
 
-            item.correl_id = input.correl_id
+            item.pub_correl_id = input.correl_id
             item.in_reply_to = input.in_reply_to
             item.mime_type = input.mime_type
 

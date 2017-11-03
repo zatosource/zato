@@ -153,7 +153,7 @@ class ServiceInfo(object):
                         if isinstance(param, AsIs):
                             type_info = api_spec_info.DEFAULT
 
-                        elif is_bool(param, param_name, SIMPLE_IO.BOOL_PARAMETERS.SUFFIXES):
+                        elif is_bool(param, param_name, SIMPLE_IO.BOOL_PARAMETERS.PREFIXES):
                             type_info = api_spec_info.BOOLEAN
 
                         elif is_int(param_name, SIMPLE_IO.INT_PARAMETERS.VALUES, SIMPLE_IO.INT_PARAMETERS.SUFFIXES):
@@ -164,7 +164,7 @@ class ServiceInfo(object):
                                 type_info = api_spec_info.map[param.__class__]
                             except KeyError:
                                 type_info = api_spec_info.DEFAULT
-    
+
                         _param_info.type, _param_info.subtype = type_info
                         _param_list.append(_param_info)
 

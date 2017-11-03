@@ -1187,26 +1187,12 @@ def _pubsub_queue_message(session, cluster_id):
         PubSubMessage.data_prefix_short,
         PubSubMessage.priority,
         PubSubMessage.ext_pub_time,
-        PubSubEndpointEnqueuedMessage.size,
+        PubSubMessage.size,
         PubSubMessage.data_format,
-        PubSubEndpointEnqueuedMessage.mime_type,
+        PubSubMessage.mime_type,
         PubSubMessage.data,
-        PubSubEndpointEnqueuedMessage.expiration,
+        PubSubMessage.expiration,
         PubSubMessage.expiration_time,
-
-        #PubSubEndpointEnqueuedMessage.pub_msg_id.label('queue_msg_id'),
-        #PubSubEndpointEnqueuedMessage.pub_correl_id.label('queue_correl_id'),
-        #PubSubEndpointEnqueuedMessage.in_reply_to.label('queue_'),
-        #PubSubEndpointEnqueuedMessage.data_prefix_short.label('queue_'),
-        #PubSubEndpointEnqueuedMessage.priority.label('queue_'),
-        #PubSubEndpointEnqueuedMessage.ext_pub_time.label('queue_'),
-        #PubSubEndpointEnqueuedMessage.size.label('queue_'),
-        #PubSubEndpointEnqueuedMessage.data_format.label('queue_'),
-        #PubSubEndpointEnqueuedMessage.mime_type.label('queue_'),
-        #PubSubEndpointEnqueuedMessage.data.label('queue_'),
-        #PubSubEndpointEnqueuedMessage.expiration.label('queue_'),
-        #PubSubEndpointEnqueuedMessage.expiration_time.label('queue_'),
-
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
         PubSubTopic.name.label('queue_name'), # Currently, queue name = name of its underlying topic
@@ -1216,10 +1202,20 @@ def _pubsub_queue_message(session, cluster_id):
         PubSubEndpointEnqueuedMessage.is_in_staging,
         PubSubEndpointEnqueuedMessage.has_gd,
         PubSubEndpointEnqueuedMessage.endpoint_id,
+        PubSubEndpoint.name.label('endpoint_name'),
+        PubSubSubscription.pattern_matched.label('sub_pattern_matched'),
         ).\
         filter(PubSubEndpointEnqueuedMessage.msg_id==PubSubMessage.id).\
-        filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id).\
-        filter(PubSubEndpointEnqueuedMessage.topic_id==PubSubTopic.id)
+        filter(PubSubEndpointEnqueuedMessage.topic_id==PubSubTopic.id).\
+        filter(PubSubEndpointEnqueuedMessage.endpoint_id==PubSubEndpoint.id).\
+        filter(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
+        filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id)
+
+# ################################################################################################################################
+
+def pubsub_queue_message(session, cluster_id, msg_id):
+    return _pubsub_queue_message(session, cluster_id).\
+        filter(PubSubMessage.pub_msg_id==msg_id)
 
 # ################################################################################################################################
 

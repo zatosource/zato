@@ -46,14 +46,14 @@ def get_priority(cid, input, _pri_min=_PRIORITY.MIN, _pri_max=_PRIORITY.MAX, _pr
 
 # ################################################################################################################################
 
-def get_expiration(cid, input):
-    """ Get and validate message expiration.
+def get_expiration(cid, input, default_expiration=2147483647):
+    """ Get and validate message expiration. Returns 2 ** 31 - 1 (around 68 years) if not expiration is set explicitly.
     """
     expiration = input.get('expiration')
     if expiration is not None and expiration < 0:
         raise BadRequest(self.cid, 'Expiration `{}` must not be negative'.format(expiration))
 
-    return expiration
+    return expiration or default_expiration
 
 # ################################################################################################################################
 
@@ -131,6 +131,7 @@ class Subscription(object):
     def __init__(self, config):
         self.config = config
         self.id = config.id
+        self.endpoint_id = config.endpoint_id
         self.topic_name = config.topic_name
 
 # ################################################################################################################################
