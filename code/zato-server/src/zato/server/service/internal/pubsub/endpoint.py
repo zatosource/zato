@@ -18,7 +18,7 @@ from zato.common import PUBSUB as COMMON_PUBSUB
 from zato.common.broker_message import PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
-     PubSubSubscription, PubSubTopic
+     PubSubSubscription, PubSubTopic, Service
 from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_queue, pubsub_endpoint_queue_list, \
      pubsub_endpoint_list, pubsub_messages_for_queue
 from zato.common.time_util import datetime_from_ms
@@ -347,5 +347,25 @@ class GetEndpointQueueMessages(AdminService):
         for item in self.response.payload.zato_output:
             item.recv_time = datetime_from_ms(item.recv_time)
             item.last_delivery_time = datetime_from_ms(item.last_delivery_time) if item.last_delivery_time else ''
+
+# ################################################################################################################################
+
+class GetHookService(AdminService):
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', AsIs('endpoint_id'))
+        output_optional = ('service_id', 'service_name')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = session.query(
+                Service.id.label('service_id'),
+                Service.name.label('service_name')).\
+                filter(Service.id==PubSubEndpoint.hook_service_id).\
+                filter(PubSubEndpoint.id==self.request.input.endpoint_id).\
+                filter(Service.cluster_id==self.server.cluster_id).\
+                first()
+
+            if item:
+                self.response.payload = item
 
 # ################################################################################################################################

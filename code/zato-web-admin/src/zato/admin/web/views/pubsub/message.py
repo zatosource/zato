@@ -21,9 +21,12 @@ from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import from_user_to_utc, from_utc_to_user
-from zato.admin.web.forms.pubsub import MsgForm
+from zato.admin.web.forms.pubsub import MsgForm, MsgPublishForm
 from zato.admin.web.views import method_allowed, slugify
 from zato.admin.web.views.pubsub import get_endpoint_html
+from zato.common import PUBSUB
+from zato.common.pubsub import new_msg_id
+from zato.common.util import asbool
 
 # ################################################################################################################################
 
@@ -44,7 +47,7 @@ def get(req, cluster_id, object_type, object_id, msg_id):
         msg_service_name = 'zato.pubsub.message.get-from-topic'
     else:
         object_service_name = 'zato.pubsub.endpoint.get-endpoint-queue'
-        msg_service_name = 'pubapi1.get-from-queue'#zato.pubsub.message.get-from-queue'
+        msg_service_name = 'zato.pubsub.message.get-from-queue'
 
     return_data.object_name = req.zato.client.invoke(
         object_service_name, {
@@ -94,11 +97,8 @@ def get(req, cluster_id, object_type, object_id, msg_id):
             hook_pub_endpoint_id = return_data.pub_endpoint_id
             hook_sub_endpoint_id = return_data.endpoint_id
 
-        #for k, v in sorted(return_data.items()):
-        #    print(k, `v`)
-
         hook_pub_service_response = req.zato.client.invoke(
-            'pubapi1.get-hook-service', {
+            'zato.pubsub.endpoint.get-hook-service', {
             'cluster_id': cluster_id,
             'endpoint_id': hook_pub_endpoint_id,
         }).data.response
@@ -107,7 +107,7 @@ def get(req, cluster_id, object_type, object_id, msg_id):
 
         if hook_sub_endpoint_id:
             hook_sub_service_response = req.zato.client.invoke(
-                'pubapi1.get-hook-service', {
+                'zato.pubsub.endpoint.get-hook-service', {
                 'cluster_id': cluster_id,
                 'endpoint_id': hook_sub_endpoint_id,
             }).data.response
@@ -183,17 +183,65 @@ def update_action(req, cluster_id, msg_id):
 
 @method_allowed('GET')
 def publish(req, cluster_id, topic_id):
+
+    topic_list = []
+    publisher_list = []
+
+    topic_list_response = req.zato.client.invoke('zato.pubsub.topic.get-list', {'cluster_id':cluster_id}).data
+    for item in topic_list_response:
+        topic_list.append({'id':item.name, 'name':item.name}) # Topics are identified by their name, not ID
+
+    publisher_list_response = req.zato.client.invoke('zato.pubsub.endpoint.get-list', {'cluster_id':cluster_id}).data
+    for item in publisher_list_response:
+        for line in item.topic_patterns.splitlines():
+            if line.startswith('sub='):
+                publisher_list.append({'id':item.id, 'name':item.name})
+                break
+
     return_data = {
+        'cluster_id': cluster_id,
         'action': 'publish',
-        'form': MsgForm()
+        'form': MsgPublishForm(req, topic_list, publisher_list)
     }
-    return TemplateResponse(req, 'zato/pubsub/message-details.html', return_data)
+    return TemplateResponse(req, 'zato/pubsub/message-publish.html', return_data)
 
 # ################################################################################################################################
 
 @method_allowed('POST')
-def publish_action(req, cluster_id, topic_id):
-    return _publish_update_action(req, cluster_id, 'publish', topic_id=topic_id)
+def publish_action(req):
+
+    try:
+
+        msg_id = req.POST.get('msg_id') or new_msg_id()
+        gd = req.POST['gd']
+
+        if gd == PUBSUB.GD_CHOICE.DEFAULT_PER_TOPIC.id:
+            has_gd = None
+        else:
+            has_gd = asbool(gd)
+
+        service_input = {
+            'cluster_id': req.POST['cluster_id'],
+            'msg_id': msg_id,
+            'has_gd': has_gd,
+        }
+
+        for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group', 'pub_hook_service_id'):
+            service_input[name] = req.POST[name] or None
+
+        req.zato.client.invoke('pubapi1.publish-message', service_input)
+
+    except Exception, e:
+        message = format_exc(e)
+        is_ok = False
+    else:
+        message = 'Successfully published message `{}`'.format(msg_id)
+        is_ok = True
+
+    return HttpResponse(dumps({
+        'is_ok': is_ok,
+        'message': message,
+    }))
 
 # ################################################################################################################################
 

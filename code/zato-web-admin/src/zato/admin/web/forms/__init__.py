@@ -56,7 +56,9 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
 def add_services(form, req, by_id=False):
     if req.zato.cluster_id:
 
-        service_fields = ['service_name', 'service_id', 'service', 'hook_service_id']
+        service_fields = ['service_name', 'service_id', 'service',
+            'hook_service_id', 'pub_hook_service_id', 'sub_hook_service_id']
+
         for name in service_fields:
             field = form.fields.get(name)
             if field:

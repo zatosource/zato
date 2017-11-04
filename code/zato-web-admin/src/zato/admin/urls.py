@@ -1241,13 +1241,13 @@ urlpatterns += [
     url(r'^zato/pubsub/message/delete/cluster/(?P<cluster_id>.*)/msg/(?P<msg_id>.*)$',
         login_required(pubsub_message.delete), name='pubsub-message-delete'),
 
-    # Publishes a message to a topic (GET form)
+    # Publishes a message to topic (POST action)
+    url(r'^zato/pubsub/message/publish-action/$',
+        login_required(pubsub_message.publish_action), name='pubsub-message-publish-action'),
+
+    # Publishes a message to topic (GET form)
     url(r'^zato/pubsub/message/publish/cluster/(?P<cluster_id>.*)/topic/(?P<topic_id>.*)$',
         login_required(pubsub_message.publish), name='pubsub-message-publish'),
-
-    # Publishes a message to a topic (POST action)
-    url(r'^zato/pubsub/message/publish-action/cluster/(?P<cluster_id>.*)/topic/(?P<topic_id>.*)$',
-        login_required(pubsub_message.publish_action), name='pubsub-message-publish-action'),
 
     ]
 

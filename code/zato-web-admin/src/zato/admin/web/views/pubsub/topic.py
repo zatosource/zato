@@ -179,7 +179,7 @@ class TopicSubscribers(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-topic-subscribers'
     template = 'zato/pubsub/topic-subscribers.html'
-    service_name = 'pubapi1.get-topic-subscriber-list' #'zato.pubsub.topic.get-subscriber-list'
+    service_name = 'zato.pubsub.topic.get-subscriber-list'
     output_class = PubSubEndpoint
     paginate = True
 
