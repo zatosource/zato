@@ -120,6 +120,7 @@ def get(req, cluster_id, object_type, object_id, msg_id):
             value = return_data.get(name)
             if value:
                 return_data[name] = from_utc_to_user(value+'+00:00', req.zato.user_profile)
+                return_data[name + '_utc'] = value
 
     return TemplateResponse(req, 'zato/pubsub/message-details.html', return_data)
 
@@ -208,16 +209,5 @@ def delete(req, cluster_id, msg_id):
         return HttpResponseServerError(format_exc(e))
     else:
         return HttpResponse('Deleted message `{}`'.format(msg_id))
-
-# ################################################################################################################################
-
-@method_allowed('POST')
-def toggle_time(req, cluster_id, value):
-    if '+00:00' in value:
-        new_value = from_utc_to_user(value+'+00:00', req.zato.user_profile)
-    else:
-        new_value = from_user_to_utc(value, req.zato.user_profile)
-
-    return HttpResponse(new_value)
 
 # ################################################################################################################################
