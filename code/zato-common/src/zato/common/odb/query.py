@@ -993,6 +993,7 @@ def pubsub_publishers_for_topic(session, cluster_id, topic_id):
         PubSubEndpointTopic.pub_msg_id.label('last_msg_id'),
         PubSubEndpointTopic.pub_correl_id.label('last_correl_id'),
         PubSubEndpointTopic.in_reply_to.label('last_in_reply_to'),
+        PubSubEndpointTopic.ext_client_id,
         Service.name.label('service_name'),
         SecurityBase.name.label('sec_name'),
         ChannelWebSocket.name.label('ws_channel_name'),
@@ -1018,6 +1019,7 @@ def _pubsub_topic_message(session, cluster_id):
         PubSubMessage.data_format, PubSubMessage.mime_type,
         PubSubMessage.data, PubSubMessage.expiration,
         PubSubMessage.expiration_time, PubSubMessage.has_gd,
+        PubSubMessage.ext_client_id,
         PubSubEndpoint.id.label('endpoint_id'),
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubEndpoint.service_id,
@@ -1096,6 +1098,7 @@ def _pubsub_queue_message(session, cluster_id):
         PubSubMessage.data,
         PubSubMessage.expiration,
         PubSubMessage.expiration_time,
+        PubSubMessage.ext_client_id,
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
         PubSubTopic.name.label('queue_name'), # Currently, queue name = name of its underlying topic

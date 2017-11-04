@@ -191,7 +191,7 @@ class EndpointTopics(_EndpointObjects):
 
     class SimpleIO(_EndpointObjects.SimpleIO):
         output_required = ('topic_id', 'name', 'is_active', 'is_internal', 'max_depth')
-        output_optional = ('last_pub_time', 'last_msg_id', 'last_correl_id', 'last_in_reply_to')
+        output_optional = ('last_pub_time', 'last_msg_id', 'last_correl_id', 'last_in_reply_to', 'ext_client_id')
 
     def on_before_append_item(self, item):
         item.last_pub_time = from_utc_to_user(item.last_pub_time+'+00:00', self.req.zato.user_profile)

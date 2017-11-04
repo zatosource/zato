@@ -127,7 +127,7 @@ class GetPublisherList(AdminService):
         input_required = ('cluster_id', 'topic_id')
         output_required = ('name', 'is_active', 'is_internal', 'pattern_matched')
         output_optional = ('service_id', 'security_id', 'ws_channel_id', 'last_seen', 'last_pub_time', AsIs('last_msg_id'),
-            AsIs('last_correl_id'), 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name')
+            AsIs('last_correl_id'), 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name', AsIs('ext_client_id'))
         output_repeated = True
 
     def handle(self):
