@@ -741,6 +741,15 @@ class PUBSUB:
             def __iter__(self):
                 return iter((self.STAGING, self.CURRENT))
 
+    class GD_CHOICE:
+        DEFAULT_PER_TOPIC = NameId('Default per topic', 'default-per-topic')
+        YES = NameId('Yes', 'true')
+        NO = NameId('No', 'false')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.DEFAULT_PER_TOPIC, self.YES, self.NO))
+
     class QUEUE_ACTIVE_STATUS:
         FULLY_ENABLED = NameId('Fully enabled', 'pub-sub')
         PUB_ONLY = NameId('Pub only', 'pub-only')

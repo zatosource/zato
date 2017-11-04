@@ -22,6 +22,7 @@ from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
 from zato.common import CACHE, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, PUBSUB, SIMPLE_IO, URL_TYPE, WEB_SOCKET
 from zato.common.odb.model import CacheBuiltin, ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, PubSubEndpoint, \
      PubSubTopic, PubSubSubscription, RBACPermission, RBACRole, Service, WSSDefinition
+from zato.common.pubsub import new_sub_key
 from zato.common.util import get_http_json_channel, get_http_soap_channel, new_cid
 
 msg_browser_defaults = WEB_SOCKET.DEFAULT.LIVE_MSG_BROWSER
@@ -881,7 +882,7 @@ class Create(ZatoCommand):
         sub.creation_time = datetime.utcnow()
         sub.topic = topic
         sub.endpoint = endpoint
-        sub.sub_key = 'zpsk{}'.format(new_cid())
+        sub.sub_key = new_sub_key()
         sub.has_gd = False
         sub.pattern_matched = 'sub=zato.demo.*'
         sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id

@@ -75,9 +75,6 @@ from numpy.random import bytes as random_bytes, seed as numpy_seed
 # OpenSSL
 from OpenSSL import crypto
 
-# Paste
-from paste.util.converters import asbool
-
 # pip
 from pip.download import unpack_file_url
 
@@ -131,6 +128,8 @@ cid_symbols = '0123456789abcdefghjkmnpqrstvwxyz'
 encode_cid_symbols = {idx: elem for (idx, elem) in enumerate(cid_symbols)}
 cid_base = len(cid_symbols)
 
+# ################################################################################################################################
+
 numpy_seed()
 
 # ################################################################################################################################
@@ -139,6 +138,35 @@ TLS_KEY_TYPE = {
     crypto.TYPE_DSA: 'DSA',
     crypto.TYPE_RSA: 'RSA'
 }
+
+# ################################################################################################################################
+
+# (c) 2005 Ian Bicking and contributors; written for Paste (http://pythonpaste.org)
+# Licensed under the MIT license: http://www.opensource.org/licenses/mit-license.php
+def asbool(obj):
+    if isinstance(obj, (str, unicode)):
+        obj = obj.strip().lower()
+        if obj in ['true', 'yes', 'on', 'y', 't', '1']:
+            return True
+        elif obj in ['false', 'no', 'off', 'n', 'f', '0']:
+            return False
+        else:
+            raise ValueError(
+                "String is not true/false: %r" % obj)
+    return bool(obj)
+
+def aslist(obj, sep=None, strip=True):
+    if isinstance(obj, (str, unicode)):
+        lst = obj.split(sep)
+        if strip:
+            lst = [v.strip() for v in lst]
+        return lst
+    elif isinstance(obj, (list, tuple)):
+        return obj
+    elif obj is None:
+        return []
+    else:
+        return [obj]
 
 # ################################################################################################################################
 
