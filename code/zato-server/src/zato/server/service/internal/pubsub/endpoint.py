@@ -132,7 +132,8 @@ class GetTopicList(AdminService):
     class SimpleIO:
         input_required = ('cluster_id', 'endpoint_id')
         output_required = ('topic_id', 'name', 'is_active', 'is_internal', 'max_depth')
-        output_optional = ('last_pub_time', AsIs('last_msg_id'), AsIs('last_correl_id'), 'last_in_reply_to')
+        output_optional = ('last_pub_time', AsIs('last_msg_id'), AsIs('last_correl_id'), 'last_in_reply_to',
+            AsIs('ext_client_id'))
         output_repeated = True
 
     def handle(self):
@@ -152,6 +153,7 @@ class GetTopicList(AdminService):
                 PubSubEndpointTopic.pub_msg_id.label('last_msg_id'),
                 PubSubEndpointTopic.pub_correl_id.label('last_correl_id'),
                 PubSubEndpointTopic.in_reply_to.label('last_in_reply_to'),
+                PubSubEndpointTopic.ext_client_id,
                 ).\
                 filter(PubSubEndpointTopic.topic_id==PubSubTopic.id).\
                 filter(PubSubEndpointTopic.endpoint_id==input.endpoint_id).\

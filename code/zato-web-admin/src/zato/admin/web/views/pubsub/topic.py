@@ -152,7 +152,8 @@ class TopicPublishers(_Index):
         input_required = ('cluster_id', 'topic_id')
         output_required = ('endpoint_id', 'name', 'is_active', 'is_internal')
         output_optional = ('service_id', 'security_id', 'ws_channel_id', 'last_seen', 'last_pub_time', 'last_msg_id',
-            'last_correl_id', 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name', 'pattern_matched')
+            'last_correl_id', 'last_in_reply_to', 'service_name', 'sec_name', 'ws_channel_name', 'pattern_matched',
+            'conn_status', 'ext_client_id')
         output_repeated = True
 
     def on_before_append_item(self, item):

@@ -28,7 +28,7 @@ from zato.common.exception import BadRequest, NotFound, Forbidden, TooManyReques
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
      PubSubSubscription, SecurityBase, Service as ODBService, ChannelWebSocket
 from zato.common.odb.query import pubsub_message, pubsub_messages_for_queue, pubsub_queue_message, query_wrapper
-from zato.common.time_util import datetime_to_ms, utcnow_as_ms
+from zato.common.time_util import datetime_from_ms, datetime_to_ms, utcnow_as_ms
 from zato.common.util import new_cid
 from zato.server.pubsub import get_expiration, get_priority
 from zato.server.service import AsIs, Bool, Int, Service
@@ -100,13 +100,13 @@ class TopicService(PubSubService):
     """
     class SimpleIO(PubSubService.SimpleIO):
         input_optional = PubSubService.SimpleIO.input_optional + (
-            Int('priority'), Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to', )
+            Int('priority'), Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to', AsIs('ext_client_id'))
         output_optional = (AsIs('msg_id'),)
 
 # ################################################################################################################################
 
     def _update_pub_metadata(self, topic_id, endpoint_id, cluster_id, now, pub_msg_id, pub_correl_id, in_reply_to,
-                             pattern_matched):
+        pattern_matched, ext_client_id):
         """ Updates in background metadata about a topic and publisher after each publication.
         """
 
@@ -135,6 +135,7 @@ class TopicService(PubSubService):
                     'pub_correl_id': pub_correl_id,
                     'in_reply_to': in_reply_to,
                     'pattern_matched': pattern_matched,
+                    'ext_client_id': ext_client_id,
                     }])
 
             # Already published before - update its metadata in that case.
@@ -147,6 +148,7 @@ class TopicService(PubSubService):
                         'pub_correl_id': pub_correl_id,
                         'in_reply_to': in_reply_to,
                         'pattern_matched': pattern_matched,
+                        'ext_client_id': ext_client_id,
                         }).\
                     where(EndpointTopic.c.topic_id==topic_id).\
                     where(EndpointTopic.c.endpoint_id==endpoint_id).\
@@ -216,6 +218,7 @@ class TopicService(PubSubService):
         pub_msg_id = 'zpsm%s' % _new_cid()
         pub_correl_id = input.get('correl_id')
         in_reply_to = input.get('in_reply_to')
+        ext_client_id = input.get('ext_client_id')
         has_gd = input.gd if isinstance(input.gd, bool) else topic.has_gd
 
         endpoint_id = pubsub.get_endpoint_id_by_sec_id(security_id)
@@ -239,6 +242,7 @@ class TopicService(PubSubService):
             'topic_id': topic.id,
             'cluster_id': cluster_id,
             'has_gd': has_gd,
+            'ext_client_id': ext_client_id,
         }
 
         # Operate under a global lock for that topic to rule out any interference
@@ -297,7 +301,7 @@ class TopicService(PubSubService):
 
         # After metadata in background
         spawn(self._update_pub_metadata, topic.id, endpoint_id, cluster_id, now, pub_msg_id, pub_correl_id, in_reply_to,
-              pattern_matched)
+              pattern_matched, ext_client_id)
 
         self.response.payload.msg_id = pub_msg_id
 
@@ -450,8 +454,7 @@ class GetFromQueue(AdminService):
                 for name in('expiration_time', 'recv_time', 'ext_pub_time', 'last_delivery_time'):
                     value = getattr(item, name, None)
                     if value:
-                        setattr(item, name, value.isoformat())
-
+                        setattr(item, name, datetime_from_ms(value))
 
                 self.response.payload = item
             else:

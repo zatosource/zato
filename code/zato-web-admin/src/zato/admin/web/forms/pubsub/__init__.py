@@ -16,4 +16,4 @@ class MsgForm(forms.Form):
     in_reply_to = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     expiration = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
     priority = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:20%'}))
-    mime_type = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    mime_type = forms.CharField(widget=forms.HiddenInput())

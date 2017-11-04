@@ -2074,6 +2074,8 @@ class PubSubTopic(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=name, cascade='all, delete, delete-orphan'))
 
+    ext_client_id = None # Not used by DB
+
 # ################################################################################################################################
 
 class PubSubEndpointTopic(Base):
@@ -2095,6 +2097,7 @@ class PubSubEndpointTopic(Base):
     pub_msg_id = Column(String(200), nullable=False)
     pub_correl_id = Column(String(200), nullable=True)
     in_reply_to = Column(String(200), nullable=True)
+    ext_client_id = Column(Text(), nullable=True)
 
     endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True)
     endpoint = relationship(
@@ -2131,6 +2134,16 @@ class PubSubMessage(Base):
     # Publicly visible ID of the message current message is a response to
     in_reply_to = Column(String(200), nullable=True)
 
+    # ID of an external client on whose behalf the endpoint published the message
+    ext_client_id = Column(Text(), nullable=True)
+
+    # Will group messages belonging logically to the same group, useful if multiple
+    # messages are published with the same timestamp by the same client but they still
+    # need to be correctly ordered.
+    group_id = Column(Text(), nullable=True)
+    position_in_group = Column(Integer, nullable=True)
+
+    # What matching pattern allowed an endpoint to publish this message
     pattern_matched = Column(Text, nullable=False)
 
     pub_time = Column(BigInteger(), nullable=False) # When the row was created

@@ -35,7 +35,7 @@ class GetFromTopic(AdminService):
         output_optional = ('topic_id', 'topic_name', AsIs('msg_id'), AsIs('correl_id'), 'in_reply_to', 'pub_time', \
             'ext_pub_time', 'pattern_matched', 'priority', 'data_format', 'mime_type', 'size', 'data',
             'expiration', 'expiration_time', 'endpoint_id', 'endpoint_name', Bool('has_gd'),
-            'pub_hook_service_id', 'pub_hook_service_name', )
+            'pub_hook_service_id', 'pub_hook_service_name', AsIs('ext_client_id'))
 
     def handle(self):
         with closing(self.odb.session()) as session:
