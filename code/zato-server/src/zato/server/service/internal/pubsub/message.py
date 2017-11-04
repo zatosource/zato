@@ -19,6 +19,7 @@ from zato.common.exception import BadRequest, NotFound, Forbidden, TooManyReques
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
      SecurityBase, Service as ODBService, ChannelWebSocket
 from zato.common.odb.query import pubsub_message, query_wrapper
+from zato.common.time_util import datetime_from_ms
 from zato.common.util import new_cid
 from zato.server.pubsub import get_expiration, get_priority
 from zato.server.service import AsIs, Bool, Int, Service
@@ -43,9 +44,9 @@ class GetFromTopic(AdminService):
                 first()
 
             if item:
-                item.pub_time = item.pub_time.isoformat()
-                item.ext_pub_time = item.ext_pub_time.isoformat() if item.ext_pub_time else ''
-                item.expiration_time = item.expiration_time.isoformat() if item.expiration_time else ''
+                item.pub_time = datetime_from_ms(item.pub_time)
+                item.ext_pub_time = datetime_from_ms(item.ext_pub_time) if item.ext_pub_time else ''
+                item.expiration_time = datetime_from_ms(item.expiration_time) if item.expiration_time else ''
                 self.response.payload = item
             else:
                 raise NotFound(self.cid, 'No such message `{}`'.format(self.request.input.msg_id))
@@ -144,6 +145,6 @@ class Update(AdminService):
 
             self.response.payload.found = True
             self.response.payload.size = item.size
-            self.response.payload.expiration_time = item.expiration_time.isoformat() if item.expiration_time else None
+            self.response.payload.expiration_time = datetime_from_ms(item.expiration_time) if item.expiration_time else None
 
 # ################################################################################################################################

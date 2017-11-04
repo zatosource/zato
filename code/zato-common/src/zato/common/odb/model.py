@@ -16,8 +16,8 @@ from json import dumps
 from dictalchemy import make_class_dictable
 
 # SQLAlchemy
-from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, func, Index, Integer, LargeBinary, Sequence, \
-     SmallInteger, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, Float, ForeignKey, func, Index, Integer, LargeBinary, \
+     Sequence, SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relation, relationship
 
@@ -1340,109 +1340,6 @@ class DeploymentStatus(Base):
 
 # ################################################################################################################################
 
-class DeliveryDefinitionBase(Base):
-    """ A guaranteed delivery's definition (base class).
-    """
-    __tablename__ = 'delivery_def_base'
-    __mapper_args__ = {'polymorphic_on': 'target_type'}
-
-    id = Column(Integer, Sequence('deliv_def_seq'), primary_key=True)
-    name = Column(String(200), nullable=False, index=True)
-    short_def = Column(String(200), nullable=False)
-    last_used = Column(DateTime(), nullable=True)
-
-    target_type = Column(String(200), nullable=False)
-    callback_list = Column(LargeBinary(10000), nullable=True)
-
-    expire_after = Column(Integer, nullable=False)
-    expire_arch_succ_after = Column(Integer, nullable=False)
-    expire_arch_fail_after = Column(Integer, nullable=False)
-    check_after = Column(Integer, nullable=False)
-    retry_repeats = Column(Integer, nullable=False)
-    retry_seconds = Column(Integer, nullable=False)
-
-    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('delivery_list', order_by=name, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class DeliveryDefinitionOutconnWMQ(DeliveryDefinitionBase):
-    """ A guaranteed delivery's definition (outgoing WebSphere MQ connections).
-    """
-    __tablename__ = 'delivery_def_out_wmq'
-    __mapper_args__ = {'polymorphic_identity': INVOCATION_TARGET.OUTCONN_WMQ}
-
-    id = Column(Integer, ForeignKey('delivery_def_base.id'), primary_key=True)
-    target_id = Column(Integer, ForeignKey('out_wmq.id', ondelete='CASCADE'), nullable=False, primary_key=False)
-    target = relationship(OutgoingWMQ, backref=backref('delivery_def_list', order_by=target_id, cascade='all, delete, delete-orphan'))
-
-    def __init__(self, id=None, target_id=None):
-        self.id = id
-        self.target_id = target_id
-
-# ################################################################################################################################
-
-class Delivery(Base):
-    """ A guaranteed delivery.
-    """
-    __tablename__ = 'delivery'
-
-    id = Column(Integer, Sequence('deliv_seq'), primary_key=True)
-    task_id = Column(String(64), unique=True, nullable=False, index=True)
-
-    name = Column(String(200), nullable=False)
-    creation_time = Column(DateTime(), nullable=False)
-
-    args = Column(LargeBinary(1000000), nullable=True)
-    kwargs = Column(LargeBinary(1000000), nullable=True)
-
-    last_used = Column(DateTime(), nullable=True)
-    resubmit_count = Column(Integer, nullable=False, default=0)
-
-    state = Column(String(200), nullable=False, index=True)
-
-    source_count = Column(Integer, nullable=False, default=1)
-    target_count = Column(Integer, nullable=False, default=0)
-
-    definition_id = Column(Integer, ForeignKey('delivery_def_base.id', ondelete='CASCADE'), nullable=False, primary_key=False)
-    definition = relationship(DeliveryDefinitionBase, backref=backref('delivery_list', order_by=creation_time, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
-class DeliveryPayload(Base):
-    """ A guaranteed delivery's payload.
-    """
-    __tablename__ = 'delivery_payload'
-
-    id = Column(Integer, Sequence('deliv_payl_seq'), primary_key=True)
-    task_id = Column(String(64), unique=True, nullable=False, index=True)
-
-    creation_time = Column(DateTime(), nullable=False)
-    payload = Column(LargeBinary(5000000), nullable=False)
-
-    delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)
-    delivery = relationship(Delivery, backref=backref('payload', uselist=False, cascade='all, delete, delete-orphan', single_parent=True))
-
-# ################################################################################################################################
-
-class DeliveryHistory(Base):
-    """ A guaranteed delivery's history.
-    """
-    __tablename__ = 'delivery_history'
-
-    id = Column(Integer, Sequence('deliv_payl_seq'), primary_key=True)
-    task_id = Column(String(64), unique=True, nullable=False, index=True)
-
-    entry_type = Column(String(64), nullable=False)
-    entry_time = Column(DateTime(), nullable=False, index=True)
-    entry_ctx = Column(LargeBinary(6000000), nullable=False)
-    resubmit_count = Column(Integer, nullable=False, default=0) # Copy of delivery.resubmit_count so it's known for each history entry
-
-    delivery_id = Column(Integer, ForeignKey('delivery.id', ondelete='CASCADE'), nullable=False, primary_key=False)
-    delivery = relationship(Delivery, backref=backref('history_list', order_by=entry_time, cascade='all, delete, delete-orphan'))
-
-# ################################################################################################################################
-
 class MsgNamespace(Base):
     """ A message namespace, used in XPath, for instance.
     """
@@ -2106,10 +2003,10 @@ class PubSubEndpoint(Base):
     is_internal = Column(Boolean(), nullable=False, default=False)
     is_active = Column(Boolean(), nullable=False, default=True) # Unusued for now
 
-    last_seen = Column(DateTime(), nullable=True)
-    last_pub_time = Column(DateTime(), nullable=True)
-    last_sub_time = Column(DateTime(), nullable=True)
-    last_deliv_time = Column(DateTime(), nullable=True)
+    last_seen = Column(BigInteger(), nullable=True)
+    last_pub_time = Column(BigInteger(), nullable=True)
+    last_sub_time = Column(BigInteger(), nullable=True)
+    last_deliv_time = Column(BigInteger(), nullable=True)
 
     # Endpoint's role, e.g. publisher, subscriber or both
     role = Column(String(40), nullable=False)
@@ -2169,7 +2066,7 @@ class PubSubTopic(Base):
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
     is_internal = Column(Boolean(), nullable=False, default=False)
-    last_pub_time = Column(DateTime(), nullable=True)
+    last_pub_time = Column(BigInteger(), nullable=True)
     max_depth = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH)
     current_depth = Column(Integer(), nullable=False, default=0)
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
@@ -2194,7 +2091,7 @@ class PubSubEndpointTopic(Base):
     id = Column(Integer, Sequence('pubsub_endpt_seq'), primary_key=True)
 
     pattern_matched = Column(Text, nullable=False)
-    last_pub_time = Column(DateTime(), nullable=False)
+    last_pub_time = Column(BigInteger(), nullable=False)
     pub_msg_id = Column(String(200), nullable=False)
     pub_correl_id = Column(String(200), nullable=True)
     in_reply_to = Column(String(200), nullable=True)
@@ -2235,9 +2132,12 @@ class PubSubMessage(Base):
     in_reply_to = Column(String(200), nullable=True)
 
     pattern_matched = Column(Text, nullable=False)
-    pub_time = Column(DateTime(), nullable=False, default=func.current_timestamp()) # When the row was created
-    last_updated = Column(DateTime(), nullable=True)
-    ext_pub_time = Column(DateTime(), nullable=True) # When the message was created by publisher
+
+    pub_time = Column(BigInteger(), nullable=False) # When the row was created
+    ext_pub_time = Column(BigInteger(), nullable=True) # When the message was created by publisher
+    expiration_time = Column(BigInteger(), nullable=True)
+    last_updated = Column(BigInteger(), nullable=True)
+
     data = Column(Text(), nullable=False)
     data_prefix = Column(Text(), nullable=False)
     data_prefix_short = Column(String(200), nullable=False)
@@ -2246,7 +2146,6 @@ class PubSubMessage(Base):
     size = Column(Integer, nullable=False)
     priority = Column(Integer, nullable=False)
     expiration = Column(Integer, nullable=False, default=0)
-    expiration_time = Column(DateTime(), nullable=True)
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
 
     published_by_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=False)
@@ -2275,7 +2174,7 @@ class PubSubSubscription(Base):
     id = Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False, default=False)
 
-    creation_time = Column(DateTime(), nullable=False)
+    creation_time = Column(BigInteger(), nullable=False)
     sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
     pattern_matched = Column(Text, nullable=False)
 
@@ -2289,7 +2188,7 @@ class PubSubSubscription(Base):
     delivery_data_format = Column(String(200), nullable=False, default=DATA_FORMAT.JSON)
     delivery_endpoint = Column(Text, nullable=True)
 
-    last_interaction_time = Column(DateTime(), nullable=True)
+    last_interaction_time = Column(BigInteger(), nullable=True)
     last_interaction_type = Column(String(200), nullable=True)
     last_interaction_details = Column(Text, nullable=True)
 
@@ -2339,10 +2238,10 @@ class PubSubEndpointEnqueuedMessage(Base):
     {})
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
-    creation_time = Column(DateTime(), nullable=False) # When was the message enqueued
+    creation_time = Column(BigInteger(), nullable=False) # When was the message enqueued
 
     delivery_count = Column(Integer, nullable=False)
-    last_delivery_time = Column(DateTime(), nullable=True)
+    last_delivery_time = Column(BigInteger(), nullable=True)
 
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
     is_in_staging = Column(Boolean(), nullable=False, default=False)
@@ -2395,7 +2294,7 @@ class PubSubEndpointQueueInteraction(Base):
     {})
 
     id = Column(Integer, Sequence('pubsub_msg_seq'), primary_key=True)
-    entry_timestamp = Column(DateTime(), nullable=False) # When the row was created
+    entry_timestamp = Column(BigInteger(), nullable=False) # When the row was created
 
     inter_type = Column(String(200), nullable=False)
     inter_details = Column(Text, nullable=True)

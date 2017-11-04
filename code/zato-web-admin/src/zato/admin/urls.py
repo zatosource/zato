@@ -1229,10 +1229,6 @@ urlpatterns += [
     url(r'^zato/pubsub/topic/messages/(?P<topic_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_topic.TopicMessages()), name=pubsub_topic.TopicMessages.url_name),
 
-    # Toggles time from local TZ to UTC or back
-    url(r'^zato/pubsub/message/toggle-time/cluster/(?P<cluster_id>.*)/value/(?P<value>.*)/$',
-        login_required(pubsub_message.toggle_time), name='pubsub-message-toggle-time'),
-
     # Details of an individual message
     url(r'^zato/pubsub/message/details/cluster/(?P<cluster_id>.*)/(?P<object_type>.*)/(?P<object_id>.*)/msg/(?P<msg_id>.*)$',
         login_required(pubsub_message.get), name='pubsub-message'),

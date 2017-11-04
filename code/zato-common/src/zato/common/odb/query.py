@@ -22,13 +22,13 @@ from zato.common import CACHE, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_POOL_SIZE,
      URL_PARAMS_PRIORITY
 from zato.common.odb.model import AWSS3, APIKeySecurity, AWSSecurity, Cache, CacheBuiltin, CacheMemcached, CassandraConn, \
      CassandraQuery, ChannelAMQP, ChannelSTOMP, ChannelWebSocket, ChannelWMQ, ChannelZMQ, Cluster, ConnDefAMQP, ConnDefWMQ, \
-     CronStyleJob, DeliveryDefinitionBase, Delivery, DeliveryHistory, DeliveryPayload, ElasticSearch, HTTPBasicAuth, HTTPSOAP, \
-     HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, MsgNamespace, NotificationOpenStackSwift as NotifOSS, \
-     NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, \
-     OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, \
-     PubSubSubscription, PubSubTopic, RBACClientRole, RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, \
-     Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, \
-     WebSocketClient, WebSocketSubscription, WSSDefinition, VaultConnection, XPath, XPathSecurity
+     CronStyleJob, ElasticSearch, HTTPBasicAuth, HTTPSOAP, HTTSOAPAudit, IMAP, IntervalBasedJob, Job, JSONPointer, JWT, \
+     MsgNamespace, NotificationOpenStackSwift as NotifOSS, NotificationSQL as NotifSQL, NTLM, OAuth, OutgoingOdoo, \
+     OpenStackSecurity, OpenStackSwift, OutgoingAMQP, OutgoingFTP, OutgoingSTOMP, OutgoingWMQ, OutgoingZMQ, PubSubEndpoint, \
+     PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic, RBACClientRole, \
+     RBACPermission, RBACRole, RBACRolePermission, SecurityBase, Server, Service, SMSTwilio, SMTP, Solr, SQLConnectionPool, \
+     TechnicalAccount, TLSCACert, TLSChannelSecurity, TLSKeyCertSecurity, WebSocketClient, WebSocketSubscription, \
+     WSSDefinition, VaultConnection, XPath, XPathSecurity
 from zato.common.search_util import SearchResults as _SearchResults
 
 # ################################################################################################################################
@@ -755,103 +755,6 @@ def service_list(session, cluster_id, return_internal=True, needs_columns=False)
     if not return_internal:
         result = result.filter(not_(Service.name.startswith('zato')))
     return result
-
-# ################################################################################################################################
-
-def _delivery_definition(session, cluster_id):
-    return session.query(DeliveryDefinitionBase).\
-        filter(Cluster.id==DeliveryDefinitionBase.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(DeliveryDefinitionBase.name)
-
-def delivery_definition_list(session, cluster_id, target_type=None):
-    """ Returns a list of delivery definitions for a given target type.
-    """
-    def_list = _delivery_definition(session, cluster_id)
-
-    if target_type:
-        def_list = def_list.\
-            filter(DeliveryDefinitionBase.target_type==target_type)
-
-    return def_list
-
-# ################################################################################################################################
-
-def delivery_count_by_state(session, def_id):
-    return session.query(Delivery.state, func.count(Delivery.state)).\
-        filter(Delivery.definition_id==def_id).\
-        group_by(Delivery.state)
-
-def delivery_list(session, cluster_id, def_name, state, start=None, stop=None, needs_payload=False):
-    columns = [
-        DeliveryDefinitionBase.name.label('def_name'),
-        DeliveryDefinitionBase.target_type,
-        Delivery.task_id,
-        Delivery.creation_time.label('creation_time_utc'),
-        Delivery.last_used.label('last_used_utc'),
-        Delivery.source_count,
-        Delivery.target_count,
-        Delivery.resubmit_count,
-        Delivery.state,
-        DeliveryDefinitionBase.retry_repeats,
-        DeliveryDefinitionBase.check_after,
-        DeliveryDefinitionBase.retry_seconds
-    ]
-
-    if needs_payload:
-        columns.extend([DeliveryPayload.payload, Delivery.args, Delivery.kwargs])
-
-    q = session.query(*columns).\
-        filter(DeliveryDefinitionBase.id==Delivery.definition_id).\
-        filter(DeliveryDefinitionBase.cluster_id==cluster_id).\
-        filter(DeliveryDefinitionBase.name==def_name).\
-        filter(Delivery.state.in_(state))
-
-    if needs_payload:
-        q = q.filter(DeliveryPayload.task_id==Delivery.task_id)
-
-    if start:
-        q = q.filter(Delivery.last_used >= start)
-
-    if stop:
-        q = q.filter(Delivery.last_used <= stop)
-
-    q = q.order_by(Delivery.last_used.desc())
-
-    return q
-
-def delivery(session, task_id, target_def_class):
-    return session.query(
-        target_def_class.name.label('def_name'),
-        target_def_class.target_type,
-        Delivery.task_id,
-        Delivery.creation_time.label('creation_time_utc'),
-        Delivery.last_used.label('last_used_utc'),
-        Delivery.source_count,
-        Delivery.target_count,
-        Delivery.resubmit_count,
-        Delivery.state,
-        target_def_class.retry_repeats,
-        target_def_class.check_after,
-        target_def_class.retry_seconds,
-        DeliveryPayload.payload,
-        Delivery.args,
-        Delivery.kwargs,
-        target_def_class.target,
-        ).\
-        filter(target_def_class.id==Delivery.definition_id).\
-        filter(Delivery.task_id==task_id).\
-        filter(DeliveryPayload.task_id==Delivery.task_id)
-
-@query_wrapper
-def delivery_history_list(session, task_id, needs_columns=True):
-    return session.query(
-        DeliveryHistory.entry_type,
-        DeliveryHistory.entry_time,
-        DeliveryHistory.entry_ctx,
-        DeliveryHistory.resubmit_count).\
-        filter(DeliveryHistory.task_id==task_id).\
-        order_by(DeliveryHistory.entry_time.desc())
 
 # ################################################################################################################################
 

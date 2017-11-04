@@ -16,6 +16,7 @@ from zato.common.broker_message import PUBSUB
 from zato.common.odb.model import ChannelWebSocket, PubSubEndpoint, PubSubEndpointTopic, PubSubEndpointEnqueuedMessage, PubSubMessage, \
      PubSubTopic, SecurityBase, Service as ODBService
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
+from zato.common.time_util import datetime_from_ms
 from zato.server.service import AsIs, Bool
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
@@ -44,7 +45,7 @@ def response_hook(service, input, instance, attrs, service_type):
     if service_type == 'get_list':
         for item in service.response.payload:
             if item.last_pub_time:
-                item.last_pub_time = item.last_pub_time.isoformat()
+                item.last_pub_time = datetime_from_ms(item.last_pub_time)
 
 # ################################################################################################################################
 
@@ -80,7 +81,7 @@ class Get(AdminService):
             topic = pubsub_topic(session, self.request.input.cluster_id, self.request.input.id)
 
         if topic.last_pub_time:
-            topic.last_pub_time = topic.last_pub_time.isoformat()
+            topic.last_pub_time = datetime_from_ms(topic.last_pub_time)
 
         self.response.payload = topic
 
@@ -138,8 +139,8 @@ class GetPublisherList(AdminService):
             last_data = pubsub_publishers_for_topic(session, self.request.input.cluster_id, self.request.input.topic_id).all()
 
             for item in last_data:
-                item.last_seen = item.last_pub_time.isoformat()
-                item.last_pub_time = item.last_pub_time.isoformat()
+                item.last_seen = datetime_from_ms(item.last_pub_time)
+                item.last_pub_time = datetime_from_ms(item.last_pub_time)
                 response.append(item)
 
         self.response.payload[:] = response
@@ -167,7 +168,7 @@ class GetMessageList(AdminService):
             self.response.payload[:] = self.get_data(session)
 
         for item in self.response.payload.zato_output:
-            item.pub_time = item.pub_time.isoformat()
-            item.ext_pub_time = item.ext_pub_time.isoformat() if item.ext_pub_time else ''
+            item.pub_time = datetime_from_ms(item.pub_time)
+            item.ext_pub_time = datetime_from_ms(item.ext_pub_time) if item.ext_pub_time else ''
 
 # ################################################################################################################################
