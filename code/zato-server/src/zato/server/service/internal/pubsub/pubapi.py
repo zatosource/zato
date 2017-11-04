@@ -27,7 +27,8 @@ from zato.common import CONTENT_TYPE, DATA_FORMAT, PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, TooManyRequests, ServiceUnavailable
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
      PubSubSubscription, SecurityBase, Service as ODBService, ChannelWebSocket
-from zato.common.odb.query import pubsub_message, pubsub_messages_for_queue, query_wrapper
+from zato.common.odb.query import pubsub_message, pubsub_messages_for_queue, pubsub_queue_message, query_wrapper
+from zato.common.time_util import datetime_to_ms, utcnow_as_ms
 from zato.common.util import new_cid
 from zato.server.pubsub import get_expiration, get_priority
 from zato.server.service import AsIs, Bool, Int, Service
@@ -105,7 +106,7 @@ class TopicService(PubSubService):
 # ################################################################################################################################
 
     def _update_pub_metadata(self, topic_id, endpoint_id, cluster_id, now, pub_msg_id, pub_correl_id, in_reply_to,
-        pattern_matched):
+                             pattern_matched):
         """ Updates in background metadata about a topic and publisher after each publication.
         """
 
@@ -117,15 +118,15 @@ class TopicService(PubSubService):
                 where(EndpointTopic.c.topic_id==topic_id).\
                 where(EndpointTopic.c.endpoint_id==endpoint_id).\
                 where(EndpointTopic.c.cluster_id==cluster_id)
-            ).\
-            fetchone()
+                ).\
+                fetchone()
 
             # Never published before - add a new row then
             if not endpoint_topic:
 
                 session.execute(
                     EndpointTopicInsert(), [{
-                    'endpoint_id': endpoint_id,
+                        'endpoint_id': endpoint_id,
                     'topic_id': topic_id,
                     'cluster_id': cluster_id,
 
@@ -134,7 +135,7 @@ class TopicService(PubSubService):
                     'pub_correl_id': pub_correl_id,
                     'in_reply_to': in_reply_to,
                     'pattern_matched': pattern_matched,
-                }])
+                    }])
 
             # Already published before - update its metadata in that case.
             else:
@@ -146,7 +147,7 @@ class TopicService(PubSubService):
                         'pub_correl_id': pub_correl_id,
                         'in_reply_to': in_reply_to,
                         'pattern_matched': pattern_matched,
-                    }).\
+                        }).\
                     where(EndpointTopic.c.topic_id==topic_id).\
                     where(EndpointTopic.c.endpoint_id==endpoint_id).\
                     where(EndpointTopic.c.cluster_id==cluster_id)
@@ -157,8 +158,8 @@ class TopicService(PubSubService):
                 update(Endpoint).\
                 values({
                     'last_seen': now,
-                    'last_pub_time': pub_msg_id,
-                }).\
+                    'last_pub_time': now,
+                    }).\
                 where(Endpoint.c.id==endpoint_id).\
                 where(Endpoint.c.cluster_id==cluster_id)
             )
@@ -207,8 +208,8 @@ class TopicService(PubSubService):
         # Get all subscribers for that topic from local worker store
         subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic_name)
 
-        now = _utcnow()
-        expiration_time = now + timedelta(seconds=expiration) if expiration else _dt_max
+        now = utcnow_as_ms()
+        expiration_time = now + (expiration * 1000)
 
         cluster_id = self.server.cluster_id
 
@@ -223,7 +224,7 @@ class TopicService(PubSubService):
             'pub_msg_id': pub_msg_id,
             'pub_correl_id': pub_correl_id,
             'in_reply_to': in_reply_to,
-            'creation_time': now,
+            'pub_time': now,
             'pattern_matched': pattern_matched,
             'data': data,
             'data_prefix': data[:2048],
@@ -241,37 +242,39 @@ class TopicService(PubSubService):
         }
 
         # Operate under a global lock for that topic to rule out any interference
-        with self.lock('zato.pubsub.publish.%s' % topic_name):
+        #with self.lock('zato.pubsub.publish.%s' % topic_name):
 
-            with closing(self.odb.session()) as session:
+        with closing(self.odb.session()) as session:
 
-                # Get current depth of this topic
-                current_depth = session.execute(
-                    select([Topic.c.current_depth]).\
-                    where(Topic.c.id==topic.id).\
-                    where(Topic.c.cluster_id==cluster_id)
+            # Get current depth of this topic
+            current_depth = session.execute(
+                select([Topic.c.current_depth]).\
+                where(Topic.c.id==topic.id).\
+                where(Topic.c.cluster_id==cluster_id)
                 ).\
                 fetchone()[0]
 
-                # Abort if max depth is already reached ..
-                if current_depth >= topic.max_depth:
-                    raise ServiceUnavailable(self.cid, 'Max depth already reached for `{}`'.format(topic.name))
+            # Abort if max depth is already reached ..
+            if 0:#current_depth >= topic.max_depth:
+                raise ServiceUnavailable(self.cid, 'Max depth already reached for `{}`'.format(topic.name))
 
-                # .. otherwise, update current depth and timestamp of last publication to the topic.
-                else:
-                    session.execute(
-                        update(Topic).\
-                        values({
-                            'current_depth': Topic.c.current_depth+1,
-                            'last_pub_time': now
+            # .. otherwise, update current depth and timestamp of last publication to the topic.
+            else:
+                session.execute(
+                    update(Topic).\
+                    values({
+                        'current_depth': Topic.c.current_depth+1,
+                        'last_pub_time': now
                         }).\
-                        where(Topic.c.id==topic.id).\
-                        where(Topic.c.cluster_id==cluster_id)
-                    )
+                    where(Topic.c.id==topic.id).\
+                    where(Topic.c.cluster_id==cluster_id)
+                )
 
-                # Insert the message and get is ID back
-                msg_insert_result = session.execute(MsgInsert().values([ps_msg]))
-                msg_id = msg_insert_result.inserted_primary_key
+            # Insert the message and get is ID back
+            msg_insert_result = session.execute(MsgInsert().values([ps_msg]))
+
+            if subscriptions_by_topic:
+                msg_id = msg_insert_result.inserted_primary_key[0]
 
                 queue_msgs = []
 
@@ -280,18 +283,17 @@ class TopicService(PubSubService):
                         'creation_time': now,
                         'delivery_count': 0,
                         'msg_id': msg_id,
-                        'endpoint_id': endpoint_id,
+                        'endpoint_id': sub.endpoint_id,
                         'topic_id': topic.id,
                         'subscription_id': sub.id,
                         'cluster_id': cluster_id,
                         'has_gd': False,
-                        'is_in_staging': False,
                     })
 
                 # Move the message to endpoint queues
                 session.execute(EnqueuedMsgInsert().values(queue_msgs))
 
-                session.commit()
+            session.commit()
 
         # After metadata in background
         spawn(self._update_pub_metadata, topic.id, endpoint_id, cluster_id, now, pub_msg_id, pub_correl_id, in_reply_to,
@@ -342,7 +344,7 @@ class SubscribeService(PubSubService):
 
             with closing(self.odb.session()) as session:
                 sub_exists = session.query(exists().where(and_(
-                        PubSubSubscription.endpoint_id==endpoint_id,
+                    PubSubSubscription.endpoint_id==endpoint_id,
                         PubSubSubscription.topic_id==topic.id,
                         PubSubSubscription.cluster_id==self.server.cluster_id,
                         ))).\
@@ -352,7 +354,7 @@ class SubscribeService(PubSubService):
                     raise BadRequest(self.cid, 'Subscription to topic `{}` already exists'.format(topic.name))
                 else:
 
-                    now = _utcnow()
+                    now = utcnow_as_ms()
                     sub_key = 'zpsk{}'.format(_new_cid())
 
                     # Create a new subscription object
@@ -360,6 +362,7 @@ class SubscribeService(PubSubService):
                     ps_sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
                     ps_sub.is_internal = False
                     ps_sub.creation_time = now
+                    ps_sub.pattern_matched = pattern_matched
                     ps_sub.sub_key = sub_key
                     ps_sub.has_gd = has_gd
                     ps_sub.topic_id = topic.id
@@ -400,7 +403,7 @@ class SubscribeService(PubSubService):
                             expr.column('has_gd'),
                             expr.column('is_in_staging'),
                             expr.column('cluster_id'),
-                    ), select_messages)
+                            ), select_messages)
 
                     # Commit changes to subscriber's queue
                     session.execute(insert_messages)
@@ -424,5 +427,64 @@ class SubscribeService(PubSubService):
 
     def handle_GET(self):
         pass
+
+# ################################################################################################################################
+
+class GetFromQueue(AdminService):
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', AsIs('msg_id'))
+        output_optional = (AsIs('msg_id'), 'recv_time', 'data', Int('delivery_count'), 'last_delivery_time',
+                           'is_in_staging', 'has_gd', 'queue_name', 'endpoint_id', 'endpoint_name', 'size', 'priority', 'mime_type',
+            'sub_pattern_matched', AsIs('correl_id'), 'in_reply_to', 'expiration', 'expiration_time',
+            AsIs('sub_hook_service_id'), 'sub_hook_service_name')
+
+    def handle(self):
+
+        with closing(self.odb.session()) as session:
+
+            item = pubsub_queue_message(session, self.request.input.cluster_id, self.request.input.msg_id).\
+                first()
+
+            if item:
+                item.expiration = item.expiration or None
+                for name in('expiration_time', 'recv_time', 'ext_pub_time', 'last_delivery_time'):
+                    value = getattr(item, name, None)
+                    if value:
+                        setattr(item, name, value.isoformat())
+
+
+                self.response.payload = item
+            else:
+                raise NotFound(self.cid, 'No such message `{}`'.format(self.request.input.msg_id))
+
+# ################################################################################################################################
+
+class GetHookService(AdminService):
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', AsIs('endpoint_id'))
+        output_optional = ('service_id', 'service_name')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = session.query(
+                ODBService.id.label('service_id'),
+                ODBService.name.label('service_name')).\
+                filter(ODBService.id==PubSubEndpoint.hook_service_id).\
+                filter(PubSubEndpoint.id==self.request.input.endpoint_id).\
+                filter(ODBService.cluster_id==self.server.cluster_id).\
+                first()
+
+            if item:
+                self.response.payload = item
+
+# ################################################################################################################################
+
+class Hook1(AdminService):
+    pass
+
+# ################################################################################################################################
+
+class Hook2(AdminService):
+    pass
 
 # ################################################################################################################################

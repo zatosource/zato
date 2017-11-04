@@ -21,6 +21,7 @@ from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage,
      PubSubSubscription, PubSubTopic
 from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_queue, pubsub_endpoint_queue_list, \
      pubsub_endpoint_list, pubsub_messages_for_queue
+from zato.common.time_util import datetime_from_ms
 from zato.common.util import new_cid
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -158,7 +159,7 @@ class GetTopicList(AdminService):
                 all()
 
             for item in last_data:
-                item.last_pub_time = item.last_pub_time.isoformat()
+                item.last_pub_time = datetime_from_ms(item.last_pub_time)
                 response.append(item)
 
         self.response.payload[:] = response
@@ -208,10 +209,10 @@ class GetEndpointQueueList(AdminService):
                 item.current_depth = current_depth
                 item.staging_depth = staging_depth
 
-                item.creation_time = item.creation_time.isoformat()
+                item.creation_time = datetime_from_ms(item.creation_time)
 
                 if item.last_interaction_time:
-                    item.last_interaction_time = item.last_interaction_time.isoformat()
+                    item.last_interaction_time = datetime_from_ms(item.last_interaction_time)
                 response.append(item)
 
         self.response.payload[:] = response
@@ -260,9 +261,9 @@ class GetEndpointQueue(AdminService):
         with closing(self.odb.session()) as session:
             item = pubsub_endpoint_queue(session, self.request.input.cluster_id, self.request.input.id)
 
-            item.creation_time = item.creation_time.isoformat()
+            item.creation_time = datetime_from_ms(item.creation_time)
             if item.last_interaction_time:
-                item.last_interaction_time = item.last_interaction_time.isoformat()
+                item.last_interaction_time = datetime_from_ms(item.last_interaction_time)
 
             self.response.payload = item
 
@@ -342,7 +343,7 @@ class GetEndpointQueueMessages(AdminService):
             self.response.payload[:] = self.get_data(session)
 
         for item in self.response.payload.zato_output:
-            item.recv_time = item.recv_time.isoformat()
-            item.last_delivery_time = item.last_delivery_time.isoformat() if item.last_delivery_time else ''
+            item.recv_time = datetime_from_ms(item.recv_time)
+            item.last_delivery_time = datetime_from_ms(item.last_delivery_time) if item.last_delivery_time else ''
 
 # ################################################################################################################################

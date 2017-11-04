@@ -857,7 +857,8 @@ class Create(ZatoCommand):
 
     def add_pubsub_sec_endpoints(self, session, cluster):
 
-        sec = HTTPBasicAuth(None, 'zato.pubsub', True, 'zato.pubsub', 'Zato pub/sub', uuid4().hex, cluster)
+        #sec = HTTPBasicAuth(None, 'zato.pubsub', True, 'zato.pubsub', 'Zato pub/sub', uuid4().hex, cluster)
+        sec = HTTPBasicAuth(None, 'zato.pubsub', True, 'zz', 'Zato pub/sub', 'zz', cluster)
         session.add(sec)
 
         endpoint = PubSubEndpoint()
@@ -882,6 +883,7 @@ class Create(ZatoCommand):
         sub.endpoint = endpoint
         sub.sub_key = 'zpsk{}'.format(new_cid())
         sub.has_gd = False
+        sub.pattern_matched = 'sub=zato.demo.*'
         sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
         sub.cluster = cluster
 
