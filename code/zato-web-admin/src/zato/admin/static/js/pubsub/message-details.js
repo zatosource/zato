@@ -22,18 +22,13 @@ $.fn.zato.pubsub.message.details.validate_save = function(e) {
     e.preventDefault();
 }
 
-$.fn.zato.pubsub.message.details.toggle_time = function(link_name) {
+$.fn.zato.pubsub.message.details.toggle_time = function(link_name, current_value, new_value) {
     var elem = $('#a_' + link_name);
-    var current_value = elem.text();
+    var href_format = "javascript:$.fn.zato.pubsub.message.details.toggle_time('{0}', '{1}', '{2}')"
+    var href_value = String.format(href_format, link_name, new_value, current_value);
 
-    var callback = function(data, status) {
-        elem.html(data.responseText);
-    }
-
-    var url = String.format(
-        '/zato/pubsub/message/toggle-time/cluster/{0}/value/{1}/', $('#cluster_id').val(), current_value);
-
-    $.fn.zato.post(url, callback, '', 'text', true);
+    elem.attr('href', href_value);
+    elem.html(new_value);
 
 }
 
