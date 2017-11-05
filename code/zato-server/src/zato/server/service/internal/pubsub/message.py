@@ -208,7 +208,6 @@ class Publish(AdminService):
 
         input = self.request.input
         pubsub = self.server.worker_store.pubsub
-
         endpoint_id = input.endpoint_id
 
         if not endpoint_id:

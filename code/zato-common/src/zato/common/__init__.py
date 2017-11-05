@@ -765,6 +765,7 @@ class PUBSUB:
     class DELIVERY_METHOD:
         NOTIFY = 'notify'
         PULL = 'pull'
+        WEB_SOCKET = 'web-socket'
 
     class PRIORITY:
         DEFAULT = 5
