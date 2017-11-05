@@ -956,8 +956,8 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.sub_key, PubSubSubscription.is_durable,
         PubSubSubscription.has_gd, PubSubSubscription.topic_id,
         PubSubSubscription.endpoint_id, PubSubSubscription.out_http_soap_id,
-        PubSubSubscription.out_amqp_id, PubSubSubscription.ws_client_id,
-        PubSubSubscription.ws_channel_id, PubSubSubscription.ws_server_id,
+        PubSubSubscription.out_amqp_id, PubSubSubscription.ws_sub_id,
+        PubSubSubscription.ws_channel_id,
         PubSubSubscription.cluster_id,
         PubSubSubscription.id.label('name'), # A 'name' attribute is needed by ConfigDict
         PubSubTopic.name.label('topic_name'),
