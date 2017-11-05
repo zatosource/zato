@@ -28,23 +28,12 @@ from zato.common.exception import BadRequest, NotFound, Forbidden, TooManyReques
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
      PubSubSubscription, SecurityBase, Service as ODBService, ChannelWebSocket
 from zato.common.odb.query import pubsub_message, pubsub_messages_for_queue, pubsub_queue_message, query_wrapper
+from zato.common.pubsub import new_msg_id, new_sub_key
 from zato.common.time_util import datetime_from_ms, datetime_to_ms, utcnow_as_ms
 from zato.common.util import new_cid
 from zato.server.pubsub import get_expiration, get_priority
 from zato.server.service import AsIs, Bool, Int, Service
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
-
-# ################################################################################################################################
-
-_JSON = DATA_FORMAT.JSON
-
-MsgInsert = PubSubMessage.__table__.insert
-EndpointTopicInsert = PubSubEndpointTopic.__table__.insert
-EnqueuedMsgInsert = PubSubEndpointEnqueuedMessage.__table__.insert
-
-Topic = PubSubTopic.__table__
-Endpoint = PubSubEndpoint.__table__
-EndpointTopic = PubSubEndpointTopic.__table__
 
 # ################################################################################################################################
 
@@ -105,91 +94,14 @@ class TopicService(PubSubService):
 
 # ################################################################################################################################
 
-    def _update_pub_metadata(self, topic_id, endpoint_id, cluster_id, now, pub_msg_id, pub_correl_id, in_reply_to,
-        pattern_matched, ext_client_id):
-        """ Updates in background metadata about a topic and publisher after each publication.
-        """
-
-        with closing(self.odb.session()) as session:
-
-            # Update information when this endpoint last published to the topic
-            endpoint_topic = session.execute(
-                select([EndpointTopic.c.id]).\
-                where(EndpointTopic.c.topic_id==topic_id).\
-                where(EndpointTopic.c.endpoint_id==endpoint_id).\
-                where(EndpointTopic.c.cluster_id==cluster_id)
-                ).\
-                fetchone()
-
-            # Never published before - add a new row then
-            if not endpoint_topic:
-
-                session.execute(
-                    EndpointTopicInsert(), [{
-                        'endpoint_id': endpoint_id,
-                    'topic_id': topic_id,
-                    'cluster_id': cluster_id,
-
-                    'last_pub_time': now,
-                    'pub_msg_id': pub_msg_id,
-                    'pub_correl_id': pub_correl_id,
-                    'in_reply_to': in_reply_to,
-                    'pattern_matched': pattern_matched,
-                    'ext_client_id': ext_client_id,
-                    }])
-
-            # Already published before - update its metadata in that case.
-            else:
-                session.execute(
-                    update(EndpointTopic).\
-                    values({
-                        'last_pub_time': now,
-                        'pub_msg_id': pub_msg_id,
-                        'pub_correl_id': pub_correl_id,
-                        'in_reply_to': in_reply_to,
-                        'pattern_matched': pattern_matched,
-                        'ext_client_id': ext_client_id,
-                        }).\
-                    where(EndpointTopic.c.topic_id==topic_id).\
-                    where(EndpointTopic.c.endpoint_id==endpoint_id).\
-                    where(EndpointTopic.c.cluster_id==cluster_id)
-                )
-
-            # Update metatadata for endpoint
-            session.execute(
-                update(Endpoint).\
-                values({
-                    'last_seen': now,
-                    'last_pub_time': now,
-                    }).\
-                where(Endpoint.c.id==endpoint_id).\
-                where(Endpoint.c.cluster_id==cluster_id)
-            )
-
-            session.commit()
-
-# ################################################################################################################################
-
-    def handle_POST(self, _JSON=_JSON, _new_cid=new_cid, _utcnow=datetime.utcnow, _dt_max=datetime.max):
+    def handle_POST(self):
 
         # Check credentials first
         security_id = self._pubsub_check_credentials()
 
-        # Local aliases
-        input = self.request.input
-        pubsub = self.server.worker_store.pubsub
-
-        # Credentials are fine, now check whether that user has access to the topic given on input
-        topic_name = input.topic_name
-
-        # Confirm if this client may publish at all to the topic it chose
-        pattern_matched = pubsub.is_allowed_pub_topic(topic_name, security_id=security_id)
-        if not pattern_matched:
-            raise Forbidden(self.cid)
-
         # Regardless of mime-type, we always accept it in JSON payload
         try:
-            loads(self.request.raw_request)
+            data_parsed = loads(self.request.raw_request)
         except ValueError:
             raise BadRequest(self.cid, 'JSON input could not be parsed')
         else:
@@ -199,111 +111,18 @@ class TopicService(PubSubService):
         mime_type = self.wsgi_environ.get('CONTENT_TYPE')
         mime_type = mime_type if mime_type != 'application/x-www-form-urlencoded' else CONTENT_TYPE.JSON
 
-        priority = get_priority(self.cid, input)
-        expiration = get_expiration(self.cid, input)
-
-        try:
-            topic = pubsub.get_topic_by_name(topic_name)
-        except KeyError:
-            raise NotFound(self.cid, 'No such topic `{}`'.format(topic_name))
-
-        # Get all subscribers for that topic from local worker store
-        subscriptions_by_topic = pubsub.get_subscriptions_by_topic(topic_name)
-
-        now = utcnow_as_ms()
-        expiration_time = now + (expiration * 1000)
-
-        cluster_id = self.server.cluster_id
-
-        pub_msg_id = 'zpsm%s' % _new_cid()
-        pub_correl_id = input.get('correl_id')
-        in_reply_to = input.get('in_reply_to')
-        ext_client_id = input.get('ext_client_id')
-        has_gd = input.gd if isinstance(input.gd, bool) else topic.has_gd
-
-        endpoint_id = pubsub.get_endpoint_id_by_sec_id(security_id)
-
-        ps_msg = {
-            'pub_msg_id': pub_msg_id,
-            'pub_correl_id': pub_correl_id,
-            'in_reply_to': in_reply_to,
-            'pub_time': now,
-            'pattern_matched': pattern_matched,
-            'data': data,
-            'data_prefix': data[:2048],
-            'data_prefix_short': data[:64],
-            'data_format': _JSON,
+        self.response.payload.msg_id = self.invoke('zato.pubsub.message.publish-impl', {
+            'topic_name': self.request.input.topic_name,
             'mime_type': mime_type,
-            'size': len(data),
-            'priority': priority,
-            'expiration': expiration,
-            'expiration_time': expiration_time,
-            'published_by_id': endpoint_id,
-            'topic_id': topic.id,
-            'cluster_id': cluster_id,
-            'has_gd': has_gd,
-            'ext_client_id': ext_client_id,
-        }
-
-        # Operate under a global lock for that topic to rule out any interference
-        #with self.lock('zato.pubsub.publish.%s' % topic_name):
-
-        with closing(self.odb.session()) as session:
-
-            # Get current depth of this topic
-            current_depth = session.execute(
-                select([Topic.c.current_depth]).\
-                where(Topic.c.id==topic.id).\
-                where(Topic.c.cluster_id==cluster_id)
-                ).\
-                fetchone()[0]
-
-            # Abort if max depth is already reached ..
-            if 0:#current_depth >= topic.max_depth:
-                raise ServiceUnavailable(self.cid, 'Max depth already reached for `{}`'.format(topic.name))
-
-            # .. otherwise, update current depth and timestamp of last publication to the topic.
-            else:
-                session.execute(
-                    update(Topic).\
-                    values({
-                        'current_depth': Topic.c.current_depth+1,
-                        'last_pub_time': now
-                        }).\
-                    where(Topic.c.id==topic.id).\
-                    where(Topic.c.cluster_id==cluster_id)
-                )
-
-            # Insert the message and get is ID back
-            msg_insert_result = session.execute(MsgInsert().values([ps_msg]))
-
-            if subscriptions_by_topic:
-                msg_id = msg_insert_result.inserted_primary_key[0]
-
-                queue_msgs = []
-
-                for sub in subscriptions_by_topic:
-                    queue_msgs.append({
-                        'creation_time': now,
-                        'delivery_count': 0,
-                        'msg_id': msg_id,
-                        'endpoint_id': sub.endpoint_id,
-                        'topic_id': topic.id,
-                        'subscription_id': sub.id,
-                        'cluster_id': cluster_id,
-                        'has_gd': False,
-                    })
-
-                # Move the message to endpoint queues
-                session.execute(EnqueuedMsgInsert().values(queue_msgs))
-
-            session.commit()
-
-        # After metadata in background
-        spawn(self._update_pub_metadata, topic.id, endpoint_id, cluster_id, now, pub_msg_id, pub_correl_id, in_reply_to,
-              pattern_matched, ext_client_id)
-
-        self.response.payload.msg_id = pub_msg_id
+            'security_id': security_id,
+            'data': data,
+            'data_parsed': data_parsed,
+            'priority': self.request.input.priority,
+            'expiration': self.request.input.expiration,
+            'correl_id': self.request.input.correl_id,
+            'in_reply_to': self.request.input.in_reply_to,
+            'ext_client_id': self.request.input.ext_client_id,
+        })['response']['msg_id']
 
 # ################################################################################################################################
 
@@ -359,7 +178,7 @@ class SubscribeService(PubSubService):
                 else:
 
                     now = utcnow_as_ms()
-                    sub_key = 'zpsk{}'.format(_new_cid())
+                    sub_key = new_sub_key()
 
                     # Create a new subscription object
                     ps_sub = PubSubSubscription()
@@ -431,54 +250,6 @@ class SubscribeService(PubSubService):
 
     def handle_GET(self):
         pass
-
-# ################################################################################################################################
-
-class GetFromQueue(AdminService):
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', AsIs('msg_id'))
-        output_optional = (AsIs('msg_id'), 'recv_time', 'data', Int('delivery_count'), 'last_delivery_time',
-                           'is_in_staging', 'has_gd', 'queue_name', 'endpoint_id', 'endpoint_name', 'size', 'priority', 'mime_type',
-            'sub_pattern_matched', AsIs('correl_id'), 'in_reply_to', 'expiration', 'expiration_time',
-            AsIs('sub_hook_service_id'), 'sub_hook_service_name')
-
-    def handle(self):
-
-        with closing(self.odb.session()) as session:
-
-            item = pubsub_queue_message(session, self.request.input.cluster_id, self.request.input.msg_id).\
-                first()
-
-            if item:
-                item.expiration = item.expiration or None
-                for name in('expiration_time', 'recv_time', 'ext_pub_time', 'last_delivery_time'):
-                    value = getattr(item, name, None)
-                    if value:
-                        setattr(item, name, datetime_from_ms(value))
-
-                self.response.payload = item
-            else:
-                raise NotFound(self.cid, 'No such message `{}`'.format(self.request.input.msg_id))
-
-# ################################################################################################################################
-
-class GetHookService(AdminService):
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', AsIs('endpoint_id'))
-        output_optional = ('service_id', 'service_name')
-
-    def handle(self):
-        with closing(self.odb.session()) as session:
-            item = session.query(
-                ODBService.id.label('service_id'),
-                ODBService.name.label('service_name')).\
-                filter(ODBService.id==PubSubEndpoint.hook_service_id).\
-                filter(PubSubEndpoint.id==self.request.input.endpoint_id).\
-                filter(ODBService.cluster_id==self.server.cluster_id).\
-                first()
-
-            if item:
-                self.response.payload = item
 
 # ################################################################################################################################
 
