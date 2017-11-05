@@ -15,10 +15,11 @@ from gevent import spawn
 
 # SQLAlchemy
 from sqlalchemy import and_, exists, select, update
+from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.common import DATA_FORMAT
-from zato.common.exception import NotFound, ServiceUnavailable
+from zato.common import DATA_FORMAT, PUBSUB
+from zato.common.exception import BadRequest, NotFound, ServiceUnavailable
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage
 from zato.common.odb.query import pubsub_message, pubsub_queue_message
 from zato.common.pubsub import new_msg_id
@@ -138,9 +139,9 @@ class Update(AdminService):
                 self.response.payload.found = False
                 return
 
-            item.data = input.data
-            item.data_prefix = input.data[:2048]
-            item.data_prefix_short = input.data[:64]
+            item.data = input.data.encode('utf8')
+            item.data_prefix = input.data[:2048].encode('utf8')
+            item.data_prefix_short = input.data[:64].encode('utf8')
             item.size = len(input.data)
             item.expiration = get_expiration(self.cid, input)
             item.priority = get_priority(self.cid, input)
@@ -150,7 +151,7 @@ class Update(AdminService):
             item.mime_type = input.mime_type
 
             if item.expiration:
-                item.expiration_time = item.pub_time + timedelta(seconds=item.expiration)
+                item.expiration_time = item.pub_time + (item.expiration * 1000)
             else:
                 item.expiration_time = None
 
@@ -191,13 +192,14 @@ class GetFromQueue(AdminService):
 
 # ################################################################################################################################
 
-class PublishImpl(AdminService):
+class Publish(AdminService):
     """ Actual implementation of message publishing exposed through other services to the outside world.
     """
     class SimpleIO:
         input_required = ('data', 'topic_name')
-        input_optional = (Bool('gd'), Int('priority'), Int('expiration'), 'mime_type', AsIs('correl_id'), 'in_reply_to',
-            AsIs('ext_client_id'), 'pattern_matched', 'security_id', 'ws_channel_id', 'service_id', 'data_parsed')
+        input_optional = (AsIs('msg_id'), 'has_gd', Int('priority'), Int('expiration'), 'mime_type', AsIs('correl_id'),
+            'in_reply_to', AsIs('ext_client_id'), 'pattern_matched', 'security_id', 'ws_channel_id', 'service_id', 'data_parsed',
+            'meta', Bool('skip_pattern_matching'), AsIs('group_id'), Int('position_in_group'), 'endpoint_id')
         output_optional = (AsIs('msg_id'),)
 
 # ################################################################################################################################
@@ -207,16 +209,21 @@ class PublishImpl(AdminService):
         input = self.request.input
         pubsub = self.server.worker_store.pubsub
 
-        if input.security_id:
+        endpoint_id = input.endpoint_id
 
+        if not endpoint_id:
+            if input.security_id:
+                endpoint_id = pubsub.get_endpoint_id_by_sec_id(input.security_id)
+            else:
+                raise NotImplementedError('To be implemented')
+
+        if input.skip_pattern_matching:
+            pattern_matched = PUBSUB.SKIPPED_PATTERN_MATCHING
+        else:
             # Confirm if this client may publish at all to the topic it chose
             pattern_matched = pubsub.is_allowed_pub_topic(input.topic_name, security_id=input.security_id)
             if not pattern_matched:
                 raise Forbidden(self.cid)
-
-            endpoint_id = pubsub.get_endpoint_id_by_sec_id(input.security_id)
-        else:
-            raise NotImplementedError('To be implemented')
 
         try:
             topic = pubsub.get_topic_by_name(input.topic_name)
@@ -233,12 +240,16 @@ class PublishImpl(AdminService):
         expiration_time = now + (expiration * 1000)
 
         cluster_id = self.server.cluster_id
+        pub_msg_id = self.request.input.msg_id.encode('utf8') or new_msg_id()
+        has_gd = input.has_gd if isinstance(input.has_gd, bool) else topic.has_gd
 
-        pub_msg_id = new_msg_id()
         pub_correl_id = input.get('correl_id')
         in_reply_to = input.get('in_reply_to')
         ext_client_id = input.get('ext_client_id')
-        has_gd = input.gd if isinstance(input.gd, bool) else topic.has_gd
+
+        pub_correl_id = pub_correl_id.encode('utf8') if pub_correl_id else None
+        in_reply_to = in_reply_to.encode('utf8') if in_reply_to else None
+        ext_client_id = ext_client_id.encode('utf8') if ext_client_id else None
 
         ps_msg = {
             'pub_msg_id': pub_msg_id,
@@ -246,9 +257,9 @@ class PublishImpl(AdminService):
             'in_reply_to': in_reply_to,
             'pub_time': now,
             'pattern_matched': pattern_matched,
-            'data': input.data,
-            'data_prefix': input.data[:2048],
-            'data_prefix_short': input.data[:64],
+            'data': input.data.encode('utf8'),
+            'data_prefix': input.data[:2048].encode('utf8'),
+            'data_prefix_short': input.data[:64].encode('utf8'),
             'mime_type': input.mime_type,
             'size': len(input.data),
             'priority': priority,
@@ -291,7 +302,13 @@ class PublishImpl(AdminService):
                     )
 
                 # Insert the message and get is ID back
-                msg_insert_result = session.execute(MsgInsert().values([ps_msg]))
+                try:
+                    msg_insert_result = session.execute(MsgInsert().values([ps_msg]))
+                except IntegrityError, e:
+                    if 'pubsb_msg_pubmsg_id_idx' in e.message:
+                        raise BadRequest(self.cid, 'Duplicate msg_id:`{}`'.format(pub_msg_id))
+                    else:
+                        raise
 
                 if subscriptions_by_topic:
                     msg_id = msg_insert_result.inserted_primary_key[0]

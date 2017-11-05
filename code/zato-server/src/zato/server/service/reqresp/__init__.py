@@ -397,7 +397,7 @@ class SimpleIOPayload(SIOConverter):
                     leave_as_is = isinstance(name, AsIs)
                     elem_value = self._getvalue(name, item, is_sa_namedtuple, is_required, leave_as_is)
 
-                    if elem_value == '':
+                    if elem_value == u'':
                         if self.zato_skip_empty_keys:
                             if name not in self.zato_force_empty_keys:
                                 continue
