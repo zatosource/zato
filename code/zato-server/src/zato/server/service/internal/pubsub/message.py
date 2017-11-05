@@ -334,7 +334,7 @@ class Publish(AdminService):
 
         # After metadata in background
         spawn(self._update_pub_metadata, topic.id, endpoint_id, self.server.cluster_id, now, pub_msg_id,
-            pub_correl_id, in_reply_to, input.pattern_matched, ext_client_id)
+            pub_correl_id, in_reply_to, pattern_matched, ext_client_id)
 
         self.response.payload.msg_id = pub_msg_id
 
