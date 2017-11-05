@@ -221,18 +221,22 @@ def publish_action(req):
             has_gd = asbool(gd)
 
         service_input = {
-            'cluster_id': req.POST['cluster_id'],
             'msg_id': msg_id,
             'has_gd': has_gd,
+            'skip_pattern_matching': True,
+            'endpoint_id': req.POST['publisher_id'],
         }
+
+        for name in('cluster_id', 'topic_name', 'data'):
+            service_input[name] = req.POST[name]
 
         for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group', 'pub_hook_service_id'):
             service_input[name] = req.POST[name] or None
 
-        req.zato.client.invoke('pubapi1.publish-message', service_input)
+        req.zato.client.invoke('zato.pubsub.message.publish', service_input)
 
     except Exception, e:
-        message = format_exc(e)
+        message = e.message
         is_ok = False
     else:
         message = 'Successfully published message `{}`'.format(msg_id)

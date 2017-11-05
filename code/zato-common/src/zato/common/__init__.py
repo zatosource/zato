@@ -730,6 +730,8 @@ class HTTP_SOAP_SERIALIZATION_TYPE:
 
 class PUBSUB:
 
+    SKIPPED_PATTERN_MATCHING = '<skipped>'
+
     class DEFAULT:
         TOPIC_MAX_DEPTH = 10000
 
