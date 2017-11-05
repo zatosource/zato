@@ -1908,11 +1908,12 @@ class WebSocketClient(Base):
     """
     __tablename__ = 'web_socket_client'
     __table_args__ = (
-        Index('wscl_pub_client_idx', 'pub_client_id', unique=True),
-        Index('wscl_cli_ext_n_idx', 'ext_client_name', unique=False),
-        Index('wscl_cli_ext_i_idx', 'ext_client_id', unique=False),
-        Index('wscl_pr_addr_idx', 'peer_address', unique=False),
-        Index('wscl_pr_fqdn_idx', 'peer_fqdn', unique=False),
+        Index('wscl_pub_client_idx', 'cluster_id', 'pub_client_id', unique=True),
+        Index('wscl_cli_ext_n_idx', 'cluster_id', 'ext_client_name', unique=False),
+        Index('wscl_cli_ext_i_idx', 'cluster_id', 'ext_client_id', unique=False),
+        Index('wscl_pr_addr_idx', 'cluster_id', 'peer_address', unique=False),
+        Index('wscl_pr_fqdn_idx', 'cluster_id', 'peer_fqdn', unique=False),
+        Index('wscl_pr_sub_key_idx', 'cluster_id', 'sub_key', unique=True),
     {})
 
     # This ID is for SQL
@@ -1934,6 +1935,9 @@ class WebSocketClient(Base):
     connection_time = Column(DateTime, nullable=False)
     last_seen = Column(DateTime, nullable=False)
 
+    # The same as in web_socket_sub.sub_key
+    sub_key = Column(Text, nullable=True)
+
     server_proc_pid = Column(Integer, nullable=False)
     server_name = Column(String(200), nullable=False) # References server.name
 
@@ -1945,39 +1949,31 @@ class WebSocketClient(Base):
     server = relationship(
         Server, backref=backref('server_web_socket_clients', order_by=local_address, cascade='all, delete, delete-orphan'))
 
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('web_socket_client_list', order_by=last_seen, cascade='all, delete, delete-orphan'))
+
 # ################################################################################################################################
 
 class WebSocketSubscription(Base):
-    """ Describes what kind of messages WebSocket clients elect to receive.
+    """ Persistent subscriptions pertaining to a given long-running, possibly restartable, WebSocket connection.
     """
     __tablename__ = 'web_socket_sub'
     __table_args__ = (
-        Index('wssub_channel_idx', 'channel_id', unique=False),
-        Index('wssub_patt_idx', 'pattern', unique=False),
-        Index('wssub_patt_is_idx', 'pattern', 'is_internal', 'is_by_ext_id', 'is_by_channel', unique=False),
+        Index('wssub_channel_idx', 'cluster_id', 'channel_id', unique=False),
+        Index('wssub_subkey_idx', 'cluster_id', 'sub_key', unique=True),
+        Index('wssub_subkey_chan_idx', 'cluster_id', 'sub_key', 'channel_id', unique=True),
     {})
 
     id = Column(Integer, Sequence('web_socket_sub_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False)
-    pattern = Column(String(400), nullable=False)
-
-    is_by_ext_id = Column(Boolean(), nullable=False)
-    is_by_channel = Column(Boolean(), nullable=False)
-
-    is_durable = Column(Boolean(), nullable=False)
-    has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
-
-    client_id = Column(Integer, ForeignKey('web_socket_client.id', ondelete='CASCADE'), nullable=True)
-    client = relationship(
-        WebSocketClient, backref=backref('subscriptions', order_by=pattern, cascade='all, delete, delete-orphan'))
+    sub_key = Column(Text, nullable=False)
 
     channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
     channel = relationship(
-        ChannelWebSocket, backref=backref('subscriptions', order_by=pattern, cascade='all, delete, delete-orphan'))
+        ChannelWebSocket, backref=backref('web_socket_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=True)
-    server = relationship(
-        Server, backref=backref('sub_web_socket_clients', order_by=pattern, cascade='all, delete, delete-orphan'))
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('web_socket_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 
@@ -2221,17 +2217,13 @@ class PubSubSubscription(Base):
     out_http_soap = relationship(
         HTTPSOAP, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
 
-    ws_client_id = Column(Integer, ForeignKey('web_socket_client.id', ondelete='CASCADE'), nullable=True)
-    ws_client = relationship(
-        WebSocketClient, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
+    ws_sub_id = Column(Integer, ForeignKey('web_socket_sub.id', ondelete='CASCADE'), nullable=True)
+    ws_sub = relationship(
+        WebSocketSubscription, backref=backref('pubsub_ws_subs', order_by=id, cascade='all, delete, delete-orphan'))
 
     ws_channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
     ws_channel = relationship(
-        ChannelWebSocket, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
-
-    ws_server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=True)
-    ws_server = relationship(
-        Server, backref=backref('pubsub_ws_clients', order_by=id, cascade='all, delete, delete-orphan'))
+        ChannelWebSocket, backref=backref('pubsub_ws_subs', order_by=id, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
     cluster = relationship(
