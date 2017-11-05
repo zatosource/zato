@@ -145,7 +145,7 @@ class PubSub(object):
         self.topics = {}                    # Topic ID       -> Topic object
 
         self.sec_id_to_endpoint_id = {}     # Sec def ID     -> Endpoint ID
-        self.ws_chan_id_to_endpoint_id = {} # WS chan def ID -> Endpoint ID
+        self.ws_channel_id_to_endpoint_id = {} # WS chan def ID -> Endpoint ID
         self.topic_name_to_id = {}          # Topic name     -> Topic ID
 
         self.lock = RLock()
@@ -176,9 +176,9 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_endpoint_id_by_chan_id(self, chan_id):
+    def get_endpoint_id_by_ws_channel_id(self, ws_channel_id):
         with self.lock:
-            return self.ws_chan_id_to_endpoint_id[chan_id]
+            return self.ws_channel_id_to_endpoint_id[ws_channel_id]
 
 # ################################################################################################################################
 
@@ -206,7 +206,7 @@ class PubSub(object):
             self.sec_id_to_endpoint_id[config['security_id']] = config.id
 
         if config['ws_channel_id']:
-            self.ws_chan_id_to_endpoint_id[config['ws_channel_id']] = config.id
+            self.ws_channel_id_to_endpoint_id[config['ws_channel_id']] = config.id
 
 # ################################################################################################################################
 
@@ -227,7 +227,7 @@ class PubSub(object):
                 sec_id = key
                 break
 
-        for key, value in self.ws_chan_id_to_endpoint_id.iteritems():
+        for key, value in self.ws_channel_id_to_endpoint_id.iteritems():
             if value == endpoint_id:
                 ws_chan_id = key
                 break
@@ -236,7 +236,7 @@ class PubSub(object):
             del self.sec_id_to_endpoint_id[sec_id]
 
         if ws_chan_id:
-            del self.ws_chan_id_to_endpoint_id[ws_chan_id]
+            del self.ws_channel_id_to_endpoint_id[ws_chan_id]
 
 # ################################################################################################################################
 
@@ -305,7 +305,7 @@ class PubSub(object):
         if security_id:
             source, id = self.sec_id_to_endpoint_id, security_id
         else:
-            source, id = self.ws_chan_id_to_endpoint_id, ws_channel_id
+            source, id = self.ws_channel_id_to_endpoint_id, ws_channel_id
 
         endpoint_id = source[id]
         endpoint = self.endpoints[endpoint_id]

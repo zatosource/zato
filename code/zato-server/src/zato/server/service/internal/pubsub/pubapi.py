@@ -111,42 +111,50 @@ class TopicService(PubSubService):
         mime_type = self.wsgi_environ.get('CONTENT_TYPE')
         mime_type = mime_type if mime_type != 'application/x-www-form-urlencoded' else CONTENT_TYPE.JSON
 
-        self.response.payload.msg_id = self.invoke('zato.pubsub.message.publish-impl', {
-            'topic_name': self.request.input.topic_name,
+        input = self.request.input
+
+        self.response.payload.msg_id = self.invoke('zato.pubsub.message.publish', {
+            'topic_name': input.topic_name,
             'mime_type': mime_type,
             'security_id': security_id,
             'data': data,
             'data_parsed': data_parsed,
-            'priority': self.request.input.priority,
-            'expiration': self.request.input.expiration,
-            'correl_id': self.request.input.correl_id,
-            'in_reply_to': self.request.input.in_reply_to,
-            'ext_client_id': self.request.input.ext_client_id,
+            'priority': input.priority,
+            'expiration': input.expiration,
+            'correl_id': input.correl_id,
+            'in_reply_to': input.in_reply_to,
+            'ext_client_id': input.ext_client_id,
+            'has_gd': input.gd,
         })['response']['msg_id']
 
 # ################################################################################################################################
 
-class SubscribeService(PubSubService):
-    """ Service through which clients subscribe to topics.
-    """
-    class SimpleIO(PubSubService.SimpleIO):
-        input_optional = PubSubService.SimpleIO.input_optional + ('sub_key', 'deliver_to', 'delivery_format')
+class SubscribeServiceImpl(AdminService):
+    name = 'pubapi1.subscribe-service-impl'
+
+    class SimpleIO(AdminSIO):
+        input_required = ('topic_name',)
+        input_optional = (Bool('gd'), 'deliver_to', 'delivery_format', 'security_id', 'ws_channel_id')
         output_optional = ('sub_key', Int('queue_depth'))
 
-    def handle_POST(self, _new_cid=new_cid, _utcnow=datetime.utcnow):
+# ################################################################################################################################
 
-        # Check credentials first
-        security_id = self._pubsub_check_credentials()
+    def handle(self):
 
-        # Local aliases
         input = self.request.input
+        topic_name = self.request.input.topic_name
         pubsub = self.server.worker_store.pubsub
 
-        # Credentials are fine, now check whether that user has access to the topic given on input
-        topic_name = input.topic_name
+        if input.security_id:
+            endpoint_id = pubsub.get_endpoint_id_by_sec_id(input.security_id)
+        elif input.ws_channel_id:
+            endpoint_id = pubsub.get_endpoint_id_by_ws_channel_id(input.ws_channel_id)
+        else:
+            raise NotImplementedError('To be implemented')
 
         # Confirm if this client may subscribe at all to the topic it chose
-        pattern_matched = pubsub.is_allowed_sub_topic(topic_name, security_id=security_id)
+        kwargs = {'security_id':input.security_id} if input.security_id else {'ws_channel_id':input.ws_channel_id}
+        pattern_matched = pubsub.is_allowed_sub_topic(topic_name, **kwargs)
         if not pattern_matched:
             raise Forbidden(self.cid)
 
@@ -155,7 +163,6 @@ class SubscribeService(PubSubService):
         except KeyError:
             raise NotFound(self.cid, 'No such topic `{}`'.format(topic_name))
 
-        endpoint_id = pubsub.get_endpoint_id_by_sec_id(security_id)
         has_gd = input.gd if isinstance(input.gd, bool) else topic.has_gd
         delivery_data_format = input.delivery_format or None
         deliver_to = input.deliver_to or None
@@ -245,6 +252,31 @@ class SubscribeService(PubSubService):
                     # Produce response
                     self.response.payload.sub_key = sub_key
                     self.response.payload.queue_depth = total_moved
+
+# ################################################################################################################################
+
+class SubscribeService(PubSubService):
+    """ Service through which HTTP Basic Auth-using clients subscribe to topics.
+    """
+    class SimpleIO(PubSubService.SimpleIO):
+        input_optional = PubSubService.SimpleIO.input_optional + ('deliver_to', 'delivery_format')
+        output_optional = ('sub_key', Int('queue_depth'))
+
+    def handle_POST(self, _new_cid=new_cid, _utcnow=datetime.utcnow):
+
+        # Check credentials first
+        security_id = self._pubsub_check_credentials()
+
+        response = self.invoke('pubapi1.subscribe-service-impl', {
+            'topic_name': self.request.input.topic_name,
+            'security_id': security_id,
+            'has_gd': self.request.input.gd,
+            'deliver_to': self.request.input.deliver_to,
+            'delivery_format': self.request.input.delivery_format,
+        })['response']
+
+        self.response.payload.sub_key = response['sub_key']
+        self.response.payload.queue_depth = response['queue_depth']
 
 # ################################################################################################################################
 
