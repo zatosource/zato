@@ -1043,19 +1043,26 @@ def pubsub_message(session, cluster_id, pub_msg_id):
 def _pubsub_endpoint_queue(session, cluster_id):
     return session.query(
         PubSubSubscription.id.label('sub_id'),
-        PubSubSubscription.active_status, PubSubSubscription.is_internal,
+        PubSubSubscription.active_status,
+        PubSubSubscription.is_internal,
         PubSubSubscription.creation_time,
-        PubSubSubscription.sub_key, PubSubSubscription.has_gd,
-        PubSubSubscription.delivery_method, PubSubSubscription.delivery_data_format,
-        PubSubSubscription.delivery_endpoint, PubSubSubscription.last_interaction_time,
-        PubSubSubscription.last_interaction_type, PubSubSubscription.last_interaction_details,
+        PubSubSubscription.sub_key,
+        PubSubSubscription.has_gd,
+        PubSubSubscription.delivery_method,
+        PubSubSubscription.delivery_data_format,
+        PubSubSubscription.delivery_endpoint,
+        PubSubSubscription.last_interaction_time,
+        PubSubSubscription.last_interaction_type,
+        PubSubSubscription.last_interaction_details,
         PubSubSubscription.is_staging_enabled,
         PubSubTopic.id.label('topic_id'),
         PubSubTopic.name.label('topic_name'),
         PubSubTopic.name.label('name'), # Currently queue names are the same as their originating topics
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubEndpoint.id.label('endpoint_id'),
+        WebSocketSubscription.ext_client_id.label('ws_ext_client_id'),
         ).\
+        outerjoin(WebSocketSubscription, WebSocketSubscription.id==PubSubSubscription.ws_sub_id).\
         filter(PubSubSubscription.topic_id==PubSubTopic.id).\
         filter(PubSubSubscription.cluster_id==cluster_id).\
         filter(PubSubSubscription.endpoint_id==PubSubEndpoint.id)
@@ -1064,7 +1071,9 @@ def _pubsub_endpoint_queue(session, cluster_id):
 
 def pubsub_endpoint_queue_list(session, cluster_id, endpoint_id):
     return _pubsub_endpoint_queue(session, cluster_id).\
-        filter(PubSubSubscription.endpoint_id==endpoint_id)
+        filter(PubSubSubscription.endpoint_id==endpoint_id).\
+        order_by(PubSubSubscription.last_interaction_time.desc()).\
+        order_by(PubSubSubscription.creation_time.desc())
 
 # ################################################################################################################################
 
@@ -1111,7 +1120,7 @@ def _pubsub_queue_message(session, cluster_id):
         PubSubEndpoint.name.label('endpoint_name'),
         PubSubSubscription.pattern_matched.label('sub_pattern_matched'),
         ).\
-        filter(PubSubEndpointEnqueuedMessage.msg_id==PubSubMessage.id).\
+        filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
         filter(PubSubEndpointEnqueuedMessage.topic_id==PubSubTopic.id).\
         filter(PubSubEndpointEnqueuedMessage.endpoint_id==PubSubEndpoint.id).\
         filter(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\

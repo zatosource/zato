@@ -58,3 +58,6 @@ class InternalServerError(Reportable):
 class ServiceUnavailable(Reportable):
     def __init__(self, cid, msg):
         super(ServiceUnavailable, self).__init__(cid, msg, SERVICE_UNAVAILABLE)
+
+class PubSubSubscriptionExists(BadRequest):
+    pass

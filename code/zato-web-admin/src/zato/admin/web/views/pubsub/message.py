@@ -49,11 +49,14 @@ def get(req, cluster_id, object_type, object_id, msg_id):
         object_service_name = 'zato.pubsub.endpoint.get-endpoint-queue'
         msg_service_name = 'zato.pubsub.message.get-from-queue'
 
-    return_data.object_name = req.zato.client.invoke(
+    object_service_response = req.zato.client.invoke(
         object_service_name, {
         'cluster_id':cluster_id,
         'id':object_id,
-    }).data.response.name
+    }).data.response
+
+    return_data.object_name = object_service_response.name
+    return_data.ws_ext_client_id = object_service_response.ws_ext_client_id
 
     return_data.object_name_slug = slugify(return_data.object_name)
 

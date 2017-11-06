@@ -1961,12 +1961,14 @@ class WebSocketSubscription(Base):
     __table_args__ = (
         Index('wssub_channel_idx', 'cluster_id', 'channel_id', unique=False),
         Index('wssub_subkey_idx', 'cluster_id', 'sub_key', unique=True),
+        Index('wssub_extcli_idx', 'cluster_id', 'ext_client_id', unique=True),
         Index('wssub_subkey_chan_idx', 'cluster_id', 'sub_key', 'channel_id', unique=True),
     {})
 
     id = Column(Integer, Sequence('web_socket_sub_seq'), primary_key=True)
     is_internal = Column(Boolean(), nullable=False)
     sub_key = Column(Text, nullable=False)
+    ext_client_id = Column(Text(), nullable=False)
 
     channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
     channel = relationship(
