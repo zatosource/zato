@@ -102,7 +102,12 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
-                        <td><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.name }}</a></td>
+                        <td><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.name }}</a>
+                            {% if item.ws_ext_client_id %}
+                                <br/>
+                                <span class="form_hint">{{ item.ws_ext_client_id }}</span>
+                            {% endif %}
+                        </td>
                         <td>{{ item.active_status }}</td>
 
                         <td>{{ item.has_gd|yesno:'Yes,No' }}</td>

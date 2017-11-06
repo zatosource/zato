@@ -209,7 +209,8 @@ class EndpointQueues(_EndpointObjects):
         output_required = ('sub_id', 'topic_id', 'topic_name', 'name', 'active_status', 'is_internal',
             'total_depth', 'current_depth', 'staging_depth')
         output_optional = ('creation_time', 'sub_key', 'has_gd', 'delivery_method', 'delivery_data_format', 'delivery_endpoint',
-            'last_interaction_time', 'last_interaction_type', 'last_interaction_details', 'endpoint_name', 'is_staging_enabled')
+            'last_interaction_time', 'last_interaction_type', 'last_interaction_details', 'endpoint_name', 'is_staging_enabled',
+            'ws_ext_client_id')
 
     def on_before_append_item(self, item):
         item.creation_time = from_utc_to_user(item.creation_time+'+00:00', self.req.zato.user_profile)
@@ -246,6 +247,7 @@ class EndpointQueueBrowser(_Index):
             'sub_id': self.input.sub_id,
             'name': service_response.name,
             'endpoint_id': service_response.endpoint_id,
+            'ws_ext_client_id': service_response.ws_ext_client_id
         }
 
     def on_before_append_item(self, item):

@@ -3,15 +3,12 @@
 
 $.fn.zato.data_table.PubSubSubscription = new Class({
     toString: function() {
-        var s = '<PubSubSubscription id:{0} active_status:{1} sub_key:{2} queue_name_slug:{3}>';
+        var s = '<PubSubSubscription id:{0} active_status:{1} sub_key:{2} name_slug:{3}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.active_status ? this.active_status : '(none)',
                                 this.sub_key ? this.sub_key : '(none)',
-                                this.queue_name_slug ? this.queue_name_slug : '(none)',
+                                this.name_slug ? this.name_slug : '(none)',
                                 );
-    },
-    get_name: function() {
-        return this.queue_name;
     }
 });
 
@@ -40,13 +37,13 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     var is_staging_enabled = data.is_staging_enabled ? 'Yes' : 'No';
 
     var total_link = $.fn.zato.pubsub.endpoint_queue.get_depth_link(
-        'total', data.cluster_id, data.id, data.queue_name_slug, data.total_depth);
+        'total', data.cluster_id, data.id, data.name_slug, data.total_depth);
 
     var current_link = $.fn.zato.pubsub.endpoint_queue.get_depth_link(
-        'current', data.cluster_id, data.id, data.queue_name_slug, data.current_depth);
+        'current', data.cluster_id, data.id, data.name_slug, data.current_depth);
 
     var staging_link = $.fn.zato.pubsub.endpoint_queue.get_depth_link(
-        'staging', data.cluster_id, data.id, data.queue_name_slug, data.staging_depth);
+        'staging', data.cluster_id, data.id, data.name_slug, data.staging_depth);
 
     var sub_key_link = String.format(
         '<a id="sub_key_{0}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key(\'{0}\')">Show</a>', data.id);
@@ -56,7 +53,7 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     if(data.last_interaction) {
         last_interaction_link = String.format(
             '<a href="/zato/pubsub/endpoint/queue/last-interaction/cluster/{0}/queue/{1}/{2}">{3}</a>',
-            data.cluster_id, data.id, data.queue_name_slug, data.staging_depth);
+            data.cluster_id, data.id, data.name_slug, data.staging_depth);
     }
     else {
         last_interaction = $.fn.zato.empty_value;
@@ -90,8 +87,8 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     row += String.format("<td class='ignore'>{0}</td>", data.sub_key);
     row += String.format("<td class='ignore'>{0}</td>", data.has_gd);
     row += String.format("<td class='ignore'>{0}</td>", data.is_staging_enabled);
-    row += String.format("<td class='ignore'>{0}</td>", data.queue_name);
-    row += String.format("<td class='ignore'>{0}</td>", data.queue_name_slug);
+    row += String.format("<td class='ignore'>{0}</td>", data.name);
+    row += String.format("<td class='ignore'>{0}</td>", data.name_slug);
 
     if(include_tr) {
         row += '</tr>';
@@ -104,10 +101,10 @@ $.fn.zato.pubsub.endpoint_queue.edit = function(id) {
     $.fn.zato.data_table._create_edit('edit', 'Update queue', id);
 }
 
-$.fn.zato.pubsub.endpoint_queue.get_depth_link = function(link_type, cluster_id, id, queue_name_slug, depth) {
+$.fn.zato.pubsub.endpoint_queue.get_depth_link = function(link_type, cluster_id, id, name_slug, depth) {
     return String.format(
         '<a href="/zato/pubsub/endpoint/queue/{0}/cluster/{1}/queue/{2}/{3}">{4}</a>',
-        link_type, cluster_id, id, queue_name_slug, depth);
+        link_type, cluster_id, id, name_slug, depth);
 }
 
 $.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id) {
@@ -120,13 +117,13 @@ $.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id) {
         if(success) {
 
             var total_link = $.fn.zato.pubsub.endpoint_queue.get_depth_link(
-                'total', cluster_id, instance.id, instance.queue_name_slug, 0);
+                'total', cluster_id, instance.id, instance.name_slug, 0);
 
             var current_link = $.fn.zato.pubsub.endpoint_queue.get_depth_link(
-                'current', cluster_id, instance.id, instance.queue_name_slug, 0);
+                'current', cluster_id, instance.id, instance.name_slug, 0);
 
             var staging_link = $.fn.zato.pubsub.endpoint_queue.get_depth_link(
-                'staging', cluster_id, instance.id, instance.queue_name_slug, 0);
+                'staging', cluster_id, instance.id, instance.name_slug, 0);
 
             $('#total_depth_' + instance.id).html(total_link);
             $('#current_depth_' + instance.id).html(current_link);
@@ -140,11 +137,11 @@ $.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id) {
     var jq_callback = function(ok) {
         if(ok) {
             var url = String.format('/zato/pubsub/endpoint/queue/clear/cluster/{0}/queue/{1}/', cluster_id, instance.id);
-            $.fn.zato.post(url, http_callback, {'queue_name': instance.queue_name}, 'text');
+            $.fn.zato.post(url, http_callback, {'queue_name': instance.name}, 'text');
         }
     }
 
-    var q = String.format('Are you sure you want to clear sub queue `{0}`?', instance.queue_name);
+    var q = String.format('Are you sure you want to clear sub queue `{0}`?', instance.name);
     jConfirm(q, 'Please confirm', jq_callback);
 }
 
