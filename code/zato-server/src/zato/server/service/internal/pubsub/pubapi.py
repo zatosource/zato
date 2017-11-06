@@ -25,8 +25,8 @@ from sqlalchemy.sql import expression as expr, func
 # Zato
 from zato.common import CONTENT_TYPE, DATA_FORMAT, PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, TooManyRequests, ServiceUnavailable
-from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
-     PubSubSubscription, SecurityBase, Service as ODBService, ChannelWebSocket
+from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, \
+     PubSubMessage, PubSubSubscription, SecurityBase, Service as ODBService, ChannelWebSocket, WebSocketSubscription
 from zato.common.odb.query import pubsub_message, pubsub_messages_for_queue, pubsub_queue_message, query_wrapper
 from zato.common.pubsub import new_msg_id, new_sub_key
 from zato.common.time_util import datetime_from_ms, datetime_to_ms, utcnow_as_ms
@@ -134,7 +134,8 @@ class SubscribeServiceImpl(AdminService):
 
     class SimpleIO(AdminSIO):
         input_required = ('topic_name',)
-        input_optional = (Bool('gd'), 'deliver_to', 'delivery_format', 'security_id', 'ws_channel_id')
+        input_optional = (Bool('gd'), 'deliver_to', 'delivery_format', 'security_id', 'ws_channel_id',
+            'deliver_by', 'is_internal')
         output_optional = ('sub_key', Int('queue_depth'))
 
 # ################################################################################################################################
@@ -145,15 +146,18 @@ class SubscribeServiceImpl(AdminService):
         topic_name = self.request.input.topic_name
         pubsub = self.server.worker_store.pubsub
 
-        if input.security_id:
-            endpoint_id = pubsub.get_endpoint_id_by_sec_id(input.security_id)
-        elif input.ws_channel_id:
-            endpoint_id = pubsub.get_endpoint_id_by_ws_channel_id(input.ws_channel_id)
+        security_id = input.security_id or None
+        ws_channel_id = input.ws_channel_id or None
+
+        if security_id:
+            endpoint_id = pubsub.get_endpoint_id_by_sec_id(security_id)
+        elif ws_channel_id:
+            endpoint_id = pubsub.get_endpoint_id_by_ws_channel_id(ws_channel_id)
         else:
             raise NotImplementedError('To be implemented')
 
         # Confirm if this client may subscribe at all to the topic it chose
-        kwargs = {'security_id':input.security_id} if input.security_id else {'ws_channel_id':input.ws_channel_id}
+        kwargs = {'security_id':security_id} if security_id else {'ws_channel_id':ws_channel_id}
         pattern_matched = pubsub.is_allowed_sub_topic(topic_name, **kwargs)
         if not pattern_matched:
             raise Forbidden(self.cid)
@@ -164,9 +168,16 @@ class SubscribeServiceImpl(AdminService):
             raise NotFound(self.cid, 'No such topic `{}`'.format(topic_name))
 
         has_gd = input.gd if isinstance(input.gd, bool) else topic.has_gd
+        is_internal = input.is_internal or False
+
         delivery_data_format = input.delivery_format or None
         deliver_to = input.deliver_to or None
-        delivery_method = PUBSUB.DELIVERY_METHOD.NOTIFY if deliver_to else PUBSUB.DELIVERY_METHOD.PULL
+        deliver_by = input.deliver_by or 'priority,ext_pub_time,pub_time'
+
+        if input.ws_channel_id:
+            delivery_method = PUBSUB.DELIVERY_METHOD.WEB_SOCKET
+        else:
+            delivery_method = PUBSUB.DELIVERY_METHOD.NOTIFY if deliver_to else PUBSUB.DELIVERY_METHOD.PULL
 
         with self.lock('zato.pubsub.subscribe.%s.%s' % (topic_name, endpoint_id)):
 
@@ -187,6 +198,17 @@ class SubscribeServiceImpl(AdminService):
                     now = utcnow_as_ms()
                     sub_key = new_sub_key()
 
+                    # If we subscribe a WSX client, we need to create its accompanying SQL model
+                    if ws_channel_id:
+                        ws_sub = WebSocketSubscription()
+                        ws_sub.is_internal = is_internal
+                        ws_sub.sub_key = sub_key
+                        ws_sub.channel_id = ws_channel_id
+                        ws_sub.cluster_id = self.server.cluster_id
+                        session.add(ws_sub)
+                    else:
+                        ws_sub = None
+
                     # Create a new subscription object
                     ps_sub = PubSubSubscription()
                     ps_sub.active_status = PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id
@@ -200,6 +222,9 @@ class SubscribeServiceImpl(AdminService):
                     ps_sub.delivery_method = delivery_method
                     ps_sub.delivery_data_format = delivery_data_format
                     ps_sub.delivery_endpoint = deliver_to
+                    ps_sub.deliver_by = deliver_by
+                    ps_sub.ws_channel_id = ws_channel_id
+                    ps_sub.ws_sub = ws_sub
                     ps_sub.cluster_id = self.server.cluster_id
 
                     session.add(ps_sub)

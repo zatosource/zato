@@ -2186,6 +2186,7 @@ class PubSubSubscription(Base):
     creation_time = Column(BigInteger(), nullable=False)
     sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
     pattern_matched = Column(Text, nullable=False)
+    deliver_by = Column(Text, nullable=False)
 
     is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
@@ -2236,6 +2237,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     """
     __tablename__ = 'pubsub_endp_msg_queue'
     __table_args__ = (
+        Index('pubsb_enms_q_id_idx', 'cluster_id', 'pub_msg_id', unique=True),
         Index('pubsb_enms_q_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_enms_q_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
         Index('pubsb_enms_q_subs_idx', 'cluster_id', 'subscription_id', unique=False),
@@ -2251,25 +2253,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
     is_in_staging = Column(Boolean(), nullable=False, default=False)
 
-    '''
-    # Attributes from the block below are copied over from PubSubMessage
-    # but they are all nullable because they are copied-on-write which doesn't happen by default.
-    pub_correl_id = Column(String(200), nullable=True)
-    in_reply_to = Column(String(200), nullable=True)
-    data = Column(LargeBinary(), nullable=True)
-    data_prefix = Column(Text(), nullable=True)
-    data_prefix_short = Column(String(200), nullable=True)
-    data_format = Column(String(200), nullable=True)
-    mime_type = Column(String(200), nullable=True)
-    size = Column(Integer, nullable=True)
-    priority = Column(Integer, nullable=True)
-    expiration = Column(Integer, nullable=True)
-    expiration_time = Column(DateTime(), nullable=True)
-    is_cow = Column(Boolean(), nullable=False) # Was it copied-on-write?
-    '''
-
-    msg_id = Column(Integer, ForeignKey('pubsub_message.id', ondelete='CASCADE'), nullable=False)
-    msg = relationship(PubSubMessage, backref=backref('pubsub_endp_q_list', order_by=id, cascade='all, delete, delete-orphan'))
+    pub_msg_id = Column(String(200), ForeignKey('pubsub_message.pub_msg_id', ondelete='CASCADE'), nullable=False)
 
     endpoint_id = Column(Integer, ForeignKey('pubsub_endpoint.id', ondelete='CASCADE'), nullable=True)
     endpoint = relationship(PubSubEndpoint,
