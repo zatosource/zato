@@ -1913,7 +1913,6 @@ class WebSocketClient(Base):
         Index('wscl_cli_ext_i_idx', 'cluster_id', 'ext_client_id', unique=False),
         Index('wscl_pr_addr_idx', 'cluster_id', 'peer_address', unique=False),
         Index('wscl_pr_fqdn_idx', 'cluster_id', 'peer_fqdn', unique=False),
-        Index('wscl_pr_sub_key_idx', 'cluster_id', 'sub_key', unique=True),
     {})
 
     # This ID is for SQL
@@ -1935,9 +1934,6 @@ class WebSocketClient(Base):
     connection_time = Column(DateTime, nullable=False)
     last_seen = Column(DateTime, nullable=False)
 
-    # The same as in web_socket_sub.sub_key
-    sub_key = Column(Text, nullable=True)
-
     server_proc_pid = Column(Integer, nullable=False)
     server_name = Column(String(200), nullable=False) # References server.name
 
@@ -1950,7 +1946,32 @@ class WebSocketClient(Base):
         Server, backref=backref('server_web_socket_clients', order_by=local_address, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
-    cluster = relationship(Cluster, backref=backref('web_socket_client_list', order_by=last_seen, cascade='all, delete, delete-orphan'))
+    cluster = relationship(
+        Cluster, backref=backref('web_socket_client_list', order_by=last_seen, cascade='all, delete, delete-orphan'))
+
+# ################################################################################################################################
+
+class WebSocketClientPubSubKeys(Base):
+    """ Associates currently active WebSocket clients with subscription keys.
+    """
+    __tablename__ = 'web_socket_cli_ps_keys'
+    __table_args__ = (
+        Index('wscl_psk_cli', 'cluster_id', 'client_id', unique=False),
+        Index('wscl_psk_sk', 'cluster_id', 'sub_key', unique=False),
+    {})
+
+    id = Column(Integer, Sequence('web_socket_cli_ps_seq'), primary_key=True)
+
+    # The same as in web_socket_sub.sub_key
+    sub_key = Column(Text, nullable=False)
+
+    client_id = Column(Integer, ForeignKey('web_socket_client.id', ondelete='CASCADE'), nullable=False)
+    client = relationship(
+        WebSocketClient, backref=backref('web_socket_cli_ps_keys', order_by=id, cascade='all, delete, delete-orphan'))
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref(
+        'web_socket_cli_ps_keys', order_by=id, cascade='all, delete, delete-orphan'))
 
 # ################################################################################################################################
 

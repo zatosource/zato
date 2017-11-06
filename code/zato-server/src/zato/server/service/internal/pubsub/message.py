@@ -265,6 +265,11 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
+    def _notify_pubsub_task_runners(self, topic_name, subscriptions):
+        spawn(self.invoke, 'pubapi1.pub-sub-after-publish', {'topic_name':topic_name, 'subscriptions': subscriptions})
+
+# ################################################################################################################################
+
     def handle(self):
 
         input = self.request.input
@@ -357,6 +362,7 @@ class Publish(AdminService):
                                 'subscription_id': sub.id,
                                 'cluster_id': self.server.cluster_id,
                                 'has_gd': False,
+                                'is_in_staging': False,
                             })
 
                     # Move the message to endpoint queues
@@ -364,8 +370,7 @@ class Publish(AdminService):
 
                 session.commit()
 
-        # After metadata in background
-
+        # Update metadata in background
         last_pub_msg_id = ps_msg_list[-1]['pub_msg_id']
         last_pub_correl_id = ps_msg_list[-1]['pub_correl_id']
         last_in_reply_to = ps_msg_list[-1]['in_reply_to']
@@ -373,6 +378,10 @@ class Publish(AdminService):
 
         spawn(self._update_pub_metadata, topic.id, endpoint_id, self.server.cluster_id, now, last_pub_msg_id,
             last_pub_correl_id, last_pub_correl_id, pattern_matched, last_ext_client_id)
+
+        # Also in background, notify pub/sub task runners that there are new messages for them
+        if subscriptions_by_topic:
+            self._notify_pubsub_task_runners(topic.name, subscriptions_by_topic)
 
         if len(ps_msg_list) == 1:
             self.response.payload.msg_id = last_pub_msg_id

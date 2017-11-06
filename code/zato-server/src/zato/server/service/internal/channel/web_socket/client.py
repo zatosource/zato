@@ -31,6 +31,7 @@ class Create(AdminService):
         input_required = (AsIs('pub_client_id'), AsIs('ext_client_id'), 'is_internal', 'local_address', 'peer_address',
             'peer_fqdn', 'connection_time', 'last_seen', 'channel_name')
         input_optional = ('ext_client_name',)
+        output_optional = ('ws_client_id',)
 
     def handle(self):
         req = self.request.input
@@ -61,14 +62,17 @@ class Create(AdminService):
             session.add(client)
             session.commit()
 
+            self.response.payload.ws_client_id = client.id
+
             # Create default subscriptions for the client
+            '''
             self.invoke('zato.channel.web-socket.subscription.create-default', {
                 'ext_client_id': req.ext_client_id,
                 'client_id': client.id,
                 'channel_id': channel.id,
                 'channel_name': channel.name,
             })
-
+            '''
 
 # ################################################################################################################################
 
