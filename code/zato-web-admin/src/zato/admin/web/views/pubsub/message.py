@@ -56,7 +56,9 @@ def get(req, cluster_id, object_type, object_id, msg_id):
     }).data.response
 
     return_data.object_name = object_service_response.name
-    return_data.ws_ext_client_id = object_service_response.ws_ext_client_id
+
+    if object_type=='queue':
+        return_data.ws_ext_client_id = object_service_response.ws_ext_client_id
 
     return_data.object_name_slug = slugify(return_data.object_name)
 
