@@ -2008,9 +2008,6 @@ class PubSubEndpoint(Base):
         Index('pubsb_endp_clust_idx', 'cluster_id', unique=False),
         Index('pubsb_endp_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_endp_name_idx', 'cluster_id', 'name', unique=True),
-        Index('pubsb_endp_sub_idx', 'cluster_id', 'sub_key', mysql_length={'sub_key':767}, unique=True),
-        Index('pubsb_endp_secsub_idx', 'cluster_id', 'security_id', 'sub_key', mysql_length={'sub_key':767}, unique=True),
-        Index('pubsb_endp_wscsub_idx', 'cluster_id', 'ws_channel_id', 'sub_key', mysql_length={'sub_key':767}, unique=True),
         UniqueConstraint('cluster_id', 'name'),
         UniqueConstraint('cluster_id', 'security_id'),
         UniqueConstraint('cluster_id', 'service_id'),
@@ -2029,9 +2026,6 @@ class PubSubEndpoint(Base):
 
     # Endpoint's role, e.g. publisher, subscriber or both
     role = Column(String(40), nullable=False)
-
-    # Subscription key, empty if endpoint's role is publisher only
-    sub_key = Column(Text, nullable=True)
 
     # Tags describing this endpoint
     tags = Column(Text, nullable=True) # Unusued for now
@@ -2220,6 +2214,7 @@ class PubSubSubscription(Base):
     delivery_method = Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY)
     delivery_data_format = Column(String(200), nullable=False, default=DATA_FORMAT.JSON)
     delivery_endpoint = Column(Text, nullable=True)
+    delivery_group_size = Column(Integer, nullable=False)
 
     last_interaction_time = Column(BigInteger(), nullable=True)
     last_interaction_type = Column(String(200), nullable=True)
@@ -2252,6 +2247,8 @@ class PubSubSubscription(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
     cluster = relationship(
         Cluster, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+    topic_name = None # Not used by DB
 
 # ################################################################################################################################
 

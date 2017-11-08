@@ -10,6 +10,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from contextlib import closing
 from datetime import datetime
 
+# datetutil
+from dateparser import parse as dt_parse
+
 # gevent
 from gevent import spawn
 
@@ -23,7 +26,7 @@ from zato.common.exception import BadRequest, Forbidden, NotFound, ServiceUnavai
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage
 from zato.common.odb.query import pubsub_message, pubsub_queue_message
 from zato.common.pubsub import new_msg_id
-from zato.common.time_util import datetime_from_ms, utcnow_as_ms
+from zato.common.time_util import datetime_to_ms, datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority
 from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal import AdminService, AdminSIO
@@ -217,7 +220,11 @@ class Publish(AdminService):
         pub_correl_id = input.get('correl_id')
         in_reply_to = input.get('in_reply_to')
         ext_client_id = input.get('ext_client_id')
+
         ext_pub_time = input.get('ext_pub_time')
+        if ext_pub_time:
+            ext_pub_time = dt_parse(ext_pub_time)
+            ext_pub_time = datetime_to_ms(ext_pub_time)
 
         pub_correl_id = pub_correl_id.encode('utf8') if pub_correl_id else None
         in_reply_to = in_reply_to.encode('utf8') if in_reply_to else None

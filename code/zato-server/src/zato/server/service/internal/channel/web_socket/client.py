@@ -26,8 +26,6 @@ class Create(AdminService):
     """ Stores in ODB information about an established connection of an authenciated WebSocket client.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_web_socket_client_create_request'
-        response_elem = 'zato_channel_web_socket_client_create_response'
         input_required = (AsIs('pub_client_id'), AsIs('ext_client_id'), 'is_internal', 'local_address', 'peer_address',
             'peer_fqdn', 'connection_time', 'last_seen', 'channel_name')
         input_optional = ('ext_client_name',)
@@ -80,8 +78,6 @@ class DeleteByPubId(AdminService):
     """ Deletes information about a previously established WebSocket connection. Called when a client disconnects.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_web_socket_client_delete_by_pub_id_request'
-        response_elem = 'zato_channel_web_socket_client_delete_by_pub_id_response'
         input_required = (AsIs('pub_client_id'),)
 
     def handle(self):
@@ -95,10 +91,6 @@ class DeleteByPubId(AdminService):
 class DeleteByServer(AdminService):
     """ Deletes information about a previously established WebSocket connection. Called when a server shuts down.
     """
-    class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_web_socket_client_delete_by_server_request'
-        response_elem = 'zato_channel_web_socket_client_delete_by_server_response'
-
     def handle(self):
 
         with closing(self.odb.session()) as session:
@@ -108,18 +100,16 @@ class DeleteByServer(AdminService):
 
 # ################################################################################################################################
 
-class DeliverRequest(AdminService):
-    """ Delivers request to a selected WebSocket client.
+class NotifyPubSubMessage(AdminService):
+    """ Notifies a WebSocket client of new messages available.
     """
     class SimpleIO(AdminSIO):
-        request_elem = 'zato_channel_web_socket_client_deliver_request_request'
-        response_elem = 'zato_channel_web_socket_client_deliver_request_response'
         input_required = (AsIs('pub_client_id'), 'channel_name', AsIs('request'))
         output_required = (AsIs('response'),)
 
     def handle(self):
         req = self.request.input
-        self.response.payload.response = self.server.worker_store.web_socket_api.invoke(
+        self.response.payload.response = self.server.worker_store.web_socket_api.notify_pubsub_message(
             req.channel_name, self.cid, req.pub_client_id, req.request)
 
 # ################################################################################################################################
