@@ -249,7 +249,7 @@ class Generator(object):
     def to_html(self, value):
         return markdown(value).lstrip('<p>').rstrip('</p>')
 
-    def get_info(self, ignore_prefix='zato'):
+    def get_info(self, ignore_prefix='TODO'):
         """ Returns a list of dicts containing metadata about services in the scope required to generate docs and API clients.
         """
         self.parse(ignore_prefix)

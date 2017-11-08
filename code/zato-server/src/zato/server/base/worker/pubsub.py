@@ -58,3 +58,13 @@ class PubSub(WorkerImpl):
         self.pubsub.delete_endpoint(msg.id)
 
 # ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_CREATE(self, msg):
+        self.pubsub.create_subscription(msg)
+
+# ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_SUBSCRIPTION_DELETE(self, msg):
+        self.pubsub.unsubscribe(msg.sub_key)
+
+# ################################################################################################################################

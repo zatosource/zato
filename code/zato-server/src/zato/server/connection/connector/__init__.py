@@ -405,3 +405,9 @@ class ConnectorStore(object):
         return self.connectors[name].invoke(*args, **kwargs)
 
 # ################################################################################################################################
+
+    def notify_pubsub_message(self, name, *args, **kwargs):
+        # type: (str, Any, Any)
+        return self.connectors[name].notify_pubsub_message(*args, **kwargs)
+
+# ################################################################################################################################

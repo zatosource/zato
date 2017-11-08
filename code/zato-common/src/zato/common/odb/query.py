@@ -894,7 +894,7 @@ def _pubsub_endpoint(session, cluster_id):
         PubSubEndpoint.id, PubSubEndpoint.name,
         PubSubEndpoint.is_internal, PubSubEndpoint.is_active,
         PubSubEndpoint.role, PubSubEndpoint.tags,
-        PubSubEndpoint.topic_patterns, PubSubEndpoint.sub_key,
+        PubSubEndpoint.topic_patterns,
         PubSubEndpoint.pub_tag_patterns, PubSubEndpoint.message_tag_patterns,
         PubSubEndpoint.security_id, PubSubEndpoint.ws_channel_id,
         PubSubEndpoint.hook_service_id,
