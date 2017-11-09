@@ -62,8 +62,8 @@ RUN echo 'cd $ZATO' >> /root/.bashrc
 RUN apt-get install -y \
     apt-utils apt-transport-https \
     python-software-properties software-properties-common \
-    curl ssh redis-server supervisor \
-    nano htop wget git sudo
+    curl ssh unzip redis-server supervisor \
+    nano htop wget git sudo sqlite
 
 # Install required tools
 RUN apt-get install -y \
@@ -87,8 +87,8 @@ ENV CYTHON="$ZATO/code/bin/cython"
 RUN pip install --upgrade pip distribute==0.7.3 virtualenv==15.1.0 zato-apitest
 RUN virtualenv .
 RUN bin/pip install --upgrade pip
-RUN bin/python bootstrap.py -v 1.7.0
-RUN bin/pip install setuptools==36.5.0 cython==0.27.1
+RUN bin/python bootstrap.py
+RUN bin/pip install cython==0.27.1
 RUN git log -n 1 --pretty=format:'%H' > release-info/revision.txt
 RUN bin/buildout
 ENV PATH=$PATH:$ZATO/code/bin
