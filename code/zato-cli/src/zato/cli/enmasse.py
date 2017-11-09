@@ -474,6 +474,11 @@ class Results(object):
         self.errors = errors or []
         self.service_name = service.get_name() if service else None
 
+    def add_error(self, raw, code, msg, *args):
+        if args:
+            msg = msg.format(args)
+        self.errors.append(Error(raw, msg, code))
+
     def _get_ok(self):
         return not(self.warnings or self.errors)
 
