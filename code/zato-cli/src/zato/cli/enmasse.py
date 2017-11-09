@@ -131,15 +131,184 @@ class Error(_Incorrect):
     pass
 
 class Results(object):
-    def __init__(self, warnings, errors, service=None):
-        self.warnings = warnings
-        self.errors = errors
+    def __init__(self, warnings=None, errors=None, service=None):
+        #: List of Warning instances.
+        self.warnings = warnings or []
+        #: List of Error instances.
+        self.errors = errors or []
         self.service_name = service.get_name() if service else None
 
     def _get_ok(self):
         return not(self.warnings or self.errors)
 
     ok = property(_get_ok)
+
+class InputValidator(object):
+    def __init__(self):
+        # Validation result.
+        self.results = Results()
+
+    def get_required_keys(self, service_name):
+        """
+        Return a set of keys required by a service definition.
+
+        :param service_name:
+            Service short name, e.g. "channel_amqp".
+        :rtype set:
+        """
+        service = self.create_services.get(service_name)
+        if service is None:
+            service = self.def_sec_services[service_name]
+
+        required = set()
+        for name in service.SimpleIO.input_required:
+            if name in self.skip_names:
+                continue
+            if isinstance(name, ForceType):
+                name = name.name
+            name = self.replace_names.get(name, name)
+            required.add(name)
+        return required
+
+    def _needs_password(self, key):
+        return 'sql' in key
+
+    def validate(self, json):
+        """
+        :param json:
+            Merged JSON import data.
+        :rtype Results:
+        """
+        for key, items in json.items():
+            for item in items:
+                if key == 'def_sec':
+                    sec_type = item.get('type')
+                    if not sec_type:
+                        item_dict = item.toDict()
+                        raw = (key, item_dict)
+                        value = "'{}' has no required 'type' key (def_sec) ".format(item_dict)
+                        self.results.errors.append(Error(raw, value, ERROR_TYPE_MISSING))
+                    else:
+                        class_ = self.def_sec_services.get(sec_type)
+                        if not class_:
+                            raw = (sec_type, self.def_sec_services_keys, item)
+                            value = "Invalid type '{}', must be one of '{}' (def_sec)".format(sec_type, self.def_sec_services_keys)
+                            self.results.errors.append(Error(raw, value, ERROR_INVALID_SEC_DEF_TYPE))
+                        else:
+                            self._validate(key, item, class_, True)
+                else:
+                    class_ = self.create_services.get(key)
+                    if not class_:
+                        raw = (key, self.create_services_keys)
+                        value = "Invalid key '{}', must be one of '{}'".format(key, self.create_services_keys)
+                        self.results.errors.append(Error(raw, value, ERROR_INVALID_KEY))
+                    else:
+                        self._validate(key, item, class_, False)
+
+        return self.results
+
+    def _validate(self, key, item, class_, is_sec):
+        name = item.get('name')
+        item_dict = item.toDict()
+        missing = None
+
+        if not name:
+            raw = (key, item_dict)
+            value = "No 'name' key found in item '{}' ({})".format(item_dict, key)
+            self.results.errors.append(Error(raw, value, ERROR_NAME_MISSING))
+        else:
+            if is_sec:
+                # We know we have one of correct types already so we can
+                # just look up required attributes.
+                required_keys = self.get_required_keys(item.get('type'))
+            else:
+                required_keys = self.get_required_keys(key)
+
+            if self._needs_password(key):
+                required_keys.add('password')
+
+            missing = sorted(required_keys - set(item))
+            if missing:
+                # Special case service and service_name because both can be used interchangeably
+                _missing = list(missing)
+                if len(_missing) == 1:
+                    service_and_service_name = missing[0] == 'service' and 'service_name' in item
+                    service_name_and_service = missing[0] == 'service_name' and 'service' in item
+                    if service_and_service_name or service_name_and_service:
+                        return
+
+                missing_value = "key '{}'".format(missing[0]) if len(missing) == 1 else "keys '{}'".format(missing)
+                raw = (key, name, item_dict, required_keys, missing)
+                value = "Missing {} in '{}', the rest is '{}' ({})".format(missing_value, name, item_dict, key)
+                self.results.errors.append(Error(raw, value, ERROR_KEYS_MISSING))
+
+            # OK, the keys are there, but do they all have non-None values?
+            else:
+                for req_key in required_keys:
+                    if item.get(req_key) is None: # 0 or '' can be correct values
+                        raw = (req_key, required, item_dict, key)
+                        value = "Key '{}' must not be None in '{}' ({})".format(req_key, item_dict, key)
+
+    replace_names = {
+        'def_id': 'def_name',
+    }
+
+    skip_names = ('cluster_id',)
+
+    create_services = {
+        'channel_amqp':channel_amqp_mod.Create,
+        'channel_jms_wmq':channel_jms_wmq_mod.Create,
+        'channel_plain_http':http_soap_mod.Create,
+        'channel_soap':http_soap_mod.Create,
+        'channel_zmq':channel_zmq_mod.Create,
+        'cloud_aws_s3': cloud_aws_s3.Create,
+        'def_cloud_openstack_swift': cloud_openstack_swift_mod.Create,
+        'def_amqp':definition_amqp_mod.Create,
+        'def_jms_wmq':definition_jms_wmq_mod.Create,
+        'def_cassandra':definition_cassandra_mod.Create,
+        'def_namespace': namespace_mod.Create,
+        'email_imap': email_imap_mod.Create,
+        'email_smtp': email_smtp_mod.Create,
+        'json_pointer': json_pointer_mod.Create,
+        'http_soap':http_soap_mod.Create,
+        'notif_cloud_openstack_swift':notif_cloud_openstack_swift_mod.Create,
+        'notif_sql':notif_sql_mod.Create,
+        'outconn_amqp':outgoing_amqp_mod.Create,
+        'outconn_ftp':outgoing_ftp_mod.Create,
+        'outconn_jms_wmq':outgoing_jms_wmq_mod.Create,
+        'outconn_odoo':outgoing_odoo_mod.Create,
+        'outconn_plain_http':http_soap_mod.Create,
+        'outconn_soap':http_soap_mod.Create,
+        'outconn_sql':outgoing_sql_mod.Create,
+        'outconn_zmq':outgoing_zmq_mod.Create,
+        'query_cassandra': query_cassandra_mod.Create,
+        'scheduler':scheduler_mod.Create,
+        'search_es': search_es.Create,
+        'search_solr': search_solr.Create,
+        'xpath': xpath_mod.Create,
+        'rbac_client_role': rbac_mod.client_role.Create,
+        'rbac_permission': rbac_mod.permission.Create,
+        'rbac_role': rbac_mod.role.Create,
+        'rbac_role_permission': rbac_mod.role_permission.Create,
+        'tls_ca_cert':sec_tls_ca_cert_mod.Create,
+    }
+
+    def_sec_services = {
+        'apikey':sec_apikey_mod.Create,
+        'aws':sec_aws_mod.Create,
+        'basic_auth':sec_basic_auth_mod.Create,
+        'ntlm':sec_ntlm_mod.Create,
+        'oauth':sec_oauth_mod.Create,
+        'tech_acc':sec_tech_account_mod.Create,
+        'tls_channel_sec':sec_tls_channel_mod.Create,
+        'tls_key_cert':sec_tls_key_cert_mod.Create,
+        'wss':sec_wss_mod.Create,
+        'xpath_sec':sec_xpath_mod.Create,
+    }
+
+    create_services_keys = sorted(create_services)
+    def_sec_services_keys = sorted(def_sec_services)
+
 
 class EnMasse(ManageCommand):
     """ Manages server objects en masse.
@@ -785,154 +954,8 @@ class EnMasse(ManageCommand):
 # ################################################################################################################################
 
     def validate_input(self):
-        errors = []
-        required = {}
+        return InputValidator().validate(self.json)
 
-        create_services = {
-            'channel_amqp':channel_amqp_mod.Create,
-            'channel_jms_wmq':channel_jms_wmq_mod.Create,
-            'channel_plain_http':http_soap_mod.Create,
-            'channel_soap':http_soap_mod.Create,
-            'channel_zmq':channel_zmq_mod.Create,
-            'cloud_aws_s3': cloud_aws_s3.Create,
-            'def_cloud_openstack_swift': cloud_openstack_swift_mod.Create,
-            'def_amqp':definition_amqp_mod.Create,
-            'def_jms_wmq':definition_jms_wmq_mod.Create,
-            'def_cassandra':definition_cassandra_mod.Create,
-            'def_namespace': namespace_mod.Create,
-            'email_imap': email_imap_mod.Create,
-            'email_smtp': email_smtp_mod.Create,
-            'json_pointer': json_pointer_mod.Create,
-            'http_soap':http_soap_mod.Create,
-            'notif_cloud_openstack_swift':notif_cloud_openstack_swift_mod.Create,
-            'notif_sql':notif_sql_mod.Create,
-            'outconn_amqp':outgoing_amqp_mod.Create,
-            'outconn_ftp':outgoing_ftp_mod.Create,
-            'outconn_jms_wmq':outgoing_jms_wmq_mod.Create,
-            'outconn_odoo':outgoing_odoo_mod.Create,
-            'outconn_plain_http':http_soap_mod.Create,
-            'outconn_soap':http_soap_mod.Create,
-            'outconn_sql':outgoing_sql_mod.Create,
-            'outconn_zmq':outgoing_zmq_mod.Create,
-            'query_cassandra': query_cassandra_mod.Create,
-            'scheduler':scheduler_mod.Create,
-            'search_es': search_es.Create,
-            'search_solr': search_solr.Create,
-            'xpath': xpath_mod.Create,
-            'rbac_client_role': rbac_mod.client_role.Create,
-            'rbac_permission': rbac_mod.permission.Create,
-            'rbac_role': rbac_mod.role.Create,
-            'rbac_role_permission': rbac_mod.role_permission.Create,
-            'tls_ca_cert':sec_tls_ca_cert_mod.Create,
-        }
-
-        def_sec_services = {
-            'apikey':sec_apikey_mod.Create,
-            'aws':sec_aws_mod.Create,
-            'basic_auth':sec_basic_auth_mod.Create,
-            'ntlm':sec_ntlm_mod.Create,
-            'oauth':sec_oauth_mod.Create,
-            'tech_acc':sec_tech_account_mod.Create,
-            'tls_channel_sec':sec_tls_channel_mod.Create,
-            'tls_key_cert':sec_tls_key_cert_mod.Create,
-            'wss':sec_wss_mod.Create,
-            'xpath_sec':sec_xpath_mod.Create,
-        }
-
-        create_services_keys = sorted(create_services)
-        def_sec_services_keys = sorted(def_sec_services)
-
-        replace_names = {
-            'def_id': 'def_name',
-        }
-
-        skip_names = ('cluster_id',)
-
-        def _needs_password(key):
-            return 'sql' in key
-
-        for key, service in chain(create_services.items(), def_sec_services.items()):
-            required[key] = set()
-            for name in service.SimpleIO.input_required:
-                if name in skip_names:
-                    continue
-                if isinstance(name, ForceType):
-                    name = name.name
-                name = replace_names.get(name, name)
-                required[key].add(name)
-
-        def _validate(key, item, class_, is_sec):
-            name = item.get('name')
-            item_dict = item.toDict()
-            missing = None
-
-            if not name:
-                raw = (key, item_dict)
-                value = "No 'name' key found in item '{}' ({})".format(item_dict, key)
-                errors.append(Error(raw, value, ERROR_NAME_MISSING))
-            else:
-                if is_sec:
-                    # We know we have one of correct types already so we can
-                    # just look up required attributes.
-                    required_keys = required[item.get('type')]
-                else:
-                    required_keys = required[key]
-
-                if _needs_password(key):
-                    required_keys.add('password')
-
-                missing = sorted(required_keys - set(item))
-
-                if missing:
-
-                    # Special case service and service_name because both can be used interchangeably
-                    _missing = list(missing)
-                    if len(_missing) == 1:
-                        service_and_service_name = missing[0] == 'service' and 'service_name' in item
-                        service_name_and_service = missing[0] == 'service_name' and 'service' in item
-                        if service_and_service_name or service_name_and_service:
-                            return
-
-                    missing_value = "key '{}'".format(missing[0]) if len(missing) == 1 else "keys '{}'".format(missing)
-                    raw = (key, name, item_dict, required_keys, missing)
-                    value = "Missing {} in '{}', the rest is '{}' ({})".format(missing_value, name, item_dict, key)
-                    errors.append(Error(raw, value, ERROR_KEYS_MISSING))
-
-                # OK, the keys are there, but do they all have non-None values?
-                else:
-                    for req_key in required_keys:
-                        if item.get(req_key) is None: # 0 or '' can be correct values
-                            raw = (req_key, required, item_dict, key)
-                            value = "Key '{}' must not be None in '{}' ({})".format(req_key, item_dict, key)
-
-        for key, items in self.json.items():
-            for item in items:
-                if key == 'def_sec':
-                    sec_type = item.get('type')
-                    if not sec_type:
-                        item_dict = item.toDict()
-                        raw = (key, item_dict)
-                        value = "'{}' has no required 'type' key (def_sec) ".format(item_dict)
-                        errors.append(Error(raw, value, ERROR_TYPE_MISSING))
-                    else:
-                        class_ = def_sec_services.get(sec_type)
-                        if not class_:
-                            raw = (sec_type, def_sec_services_keys, item)
-                            value = "Invalid type '{}', must be one of '{}' (def_sec)".format(sec_type, def_sec_services_keys)
-                            errors.append(Error(raw, value, ERROR_INVALID_SEC_DEF_TYPE))
-                        else:
-                            _validate(key, item, class_, True)
-                else:
-                    class_ = create_services.get(key)
-                    if not class_:
-                        raw = (key, create_services_keys)
-                        value = "Invalid key '{}', must be one of '{}'".format(key, create_services_keys)
-                        errors.append(Error(raw, value, ERROR_INVALID_KEY))
-                    else:
-                        _validate(key, item, class_, False)
-
-        if errors:
-            return Results([], errors)
 
 # ################################################################################################################################
 
