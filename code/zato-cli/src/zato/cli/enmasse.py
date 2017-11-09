@@ -785,6 +785,161 @@ class ObjectImporter(object):
         return None, None
 
 
+class ClusterObjectManager(object):
+    def __init__(self, client):
+        self.client = client
+        self.objects = Bunch()
+        self.services = Bunch()
+
+    def find(self, item_type, name):
+        for item in self.objects[item_type]:
+            if item.name == name:
+                return item
+
+    def refresh(self):
+        # Previous name: get_odb_objects()
+        self.get_via_odb_session()
+        self.get_via_service_client()
+        self.get_services()
+
+        for item_type, items in self.objects.items():
+            for item in items:
+                self.fix_up_odb_object(item_type, item)
+
+    def get_services(self):
+        response = self.client.invoke('zato.service.get-list', {
+            'cluster_id': self.client.cluster_id,
+            'name_filter': '*'
+        })
+
+        if response.has_data:
+            self.services = {
+                service['name']: Bunch(service)
+                for service in response.data
+            }
+
+    def _update_service_name(self, item):
+        item.service = self.client.odb_session.query(Service.name).\
+            filter(Service.id == item.service_id).one()[0]
+
+    def fix_up_odb_object(self, key, item):
+        if key == 'http_soap':
+            if item.connection == 'channel':
+                self._update_service_name(item)
+            if item.security_id:
+                item.sec_def = self.client.odb_session.query(SecurityBase.name).\
+                    filter(SecurityBase.id == item.security_id).one()[0]
+            else:
+                item.sec_def = NO_SEC_DEF_NEEDED
+        elif key == 'scheduler':
+            self._update_service_name(item)
+        elif 'sec_type' in item:
+            item['type'] = item['sec_type']
+            del item['sec_type']
+
+        return item
+
+    def get_fields(self, item):
+        return Bunch(loads(to_json(item))[0]['fields'])
+
+    def from_model_query(self, query, needs_password=False):
+        args = (True, True) if needs_password else (True,)
+        rows, columns = query(self.client.odb_session, self.client.cluster_id, *args)
+        columns = columns.keys()
+
+        target = []
+        for row in rows:
+            item = Bunch()
+            if isinstance(row, Base):
+                for idx, (key, value) in enumerate(row):
+                    item[key] = value
+            else:
+                for idx, value in enumerate(row):
+                    key = columns[idx]
+                    item[key] = value
+            target.append(item)
+        return target
+
+    IGNORED_NAMES = (
+        'admin.invoke',
+        'pubapi',
+        'zato.check.service',
+    )
+
+    def is_ignored_name(self, item):
+        name = item.name.lower()
+        return 'zato' not in name and name not in self.IGNORED_NAMES
+
+    def from_simple_query(self, model_class, include_all=False):
+        return [
+            self.get_fields(item)
+            for item in (
+                self.client.odb_session.query(model_class).\
+                    filter(model_class.cluster_id == self.client.cluster_id).\
+                    all()
+            )
+            if include_all or not self.is_ignored_name(item)
+        ]
+
+    SEC_DEF_KLASSES = [
+        APIKeySecurity,
+        AWSSecurity,
+        HTTPBasicAuth,
+        NTLM,
+        OAuth,
+        TechnicalAccount,
+        TLSChannelSecurity,
+        TLSKeyCertSecurity,
+        WSSDefinition,
+        XPathSecurity,
+    ]
+
+    def get_via_odb_session(self):
+        # Security definitions
+        self.objects.def_sec = [
+            item
+            for klass in self.SEC_DEF_KLASSES
+            for item in self.from_simple_query(klass)
+        ]
+
+        self.objects.def_amqp = self.from_simple_query(ConnDefAMQP, include_all=True)
+        self.objects.def_cassandra = self.from_simple_query(CassandraConn, include_all=True)
+        self.objects.def_cloud_openstack_swift = self.from_model_query(notif_cloud_openstack_swift_list, True)
+        self.objects.def_jms_wmq = self.from_simple_query(ConnDefWMQ, include_all=True)
+        self.objects.email_imap = self.from_simple_query(IMAP)
+        self.objects.email_smtp = self.from_simple_query(SMTP)
+        self.objects.notif_cloud_openstack_swift = self.from_model_query(cloud_openstack_swift_list, False)
+        self.objects.notif_sql = self.from_model_query(notif_sql_list, True)
+        self.objects.outconn_odoo = self.from_simple_query(OutgoingOdoo)
+        self.objects.outconn_sql = self.from_model_query(out_sql_list)
+
+        self.objects.http_soap = [
+            get_fields(item)
+            for item in self.client.odb_session.query(HTTPSOAP).\
+                filter(HTTPSOAP.cluster_id == self.client.cluster_id).\
+                filter(HTTPSOAP.is_internal == False).all()  # noqa E713 test for membership should be 'not in'
+            if not self.is_ignored_name(item)
+        ]
+
+    def get_via_service_client(self):
+        for sinfo in SERVICES + SECURITY_SERVICES:
+            # Temporarily preserve function of the old enmasse.
+            if sinfo.get_list_service is None:
+                continue
+            if sinfo.get_odb_objects_ignore:
+                continue
+
+            self.objects[sinfo.name] = []
+            response = self.client.invoke(sinfo.get_list_service, {
+                'cluster_id':self.client.cluster_id
+            })
+
+            if response.ok:
+                for item in response.data:
+                    if not 'zato' in item['name'].lower():
+                        self.objects[sinfo.name].append(Bunch(item))
+
+
 class EnMasse(ManageCommand):
     """ Manages server objects en masse.
     """
@@ -835,6 +990,7 @@ class EnMasse(ManageCommand):
 
             # Get client and issue a sanity check as quickly as possible
             self.client = get_client_from_server_conf(self.args.path)
+            self.object_mgr = ClusterObjectManager(self.client)
             self.client.invoke('zato.ping')
 
         # Imports and export are mutually excluding
@@ -1071,7 +1227,7 @@ class EnMasse(ManageCommand):
 
     def merge_odb_json(self):
         errors = []
-        merged = deepcopy(self.odb_objects)
+        merged = deepcopy(self.cluster_mgr.objects)
 
         for json_key, json_elems in self.json.items():
             if 'http' in json_key or 'soap' in json_key:
@@ -1107,164 +1263,6 @@ class EnMasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def get_odb_objects(self):
-
-        def _update_service_name(item):
-            item.service = self.client.odb_session.query(Service.name).\
-                filter(Service.id == item.service_id).one()[0]
-
-        def fix_up_odb_object(key, item):
-            if key == 'http_soap':
-                if item.connection == 'channel':
-                    _update_service_name(item)
-                if item.security_id:
-                    item.sec_def = self.client.odb_session.query(SecurityBase.name).\
-                        filter(SecurityBase.id == item.security_id).one()[0]
-                else:
-                    item.sec_def = NO_SEC_DEF_NEEDED
-            elif key == 'scheduler':
-                _update_service_name(item)
-            elif 'sec_type' in item:
-                item['type'] = item['sec_type']
-                del item['sec_type']
-
-            return item
-
-        def get_fields(item):
-            return Bunch(loads(to_json(item))[0]['fields'])
-
-        def add_from_model_query(query, target, needs_password=False):
-            args = (True, True) if needs_password else (True,)
-            rows, columns = query(self.client.odb_session, self.client.cluster_id, *args)
-            columns = columns.keys()
-
-            for row in rows:
-                item = Bunch()
-                if isinstance(row, Base):
-                    for idx, (key, value) in enumerate(row):
-                        item[key] = value
-                else:
-                    for idx, value in enumerate(row):
-                        key = columns[idx]
-                        item[key] = value
-                target.append(item)
-
-        def add_from_simple_query(queries, target):
-            for query in queries:
-                for item in query.all():
-                    name = item.name.lower()
-                    if not 'zato' in name and name not in('admin.invoke', 'pubapi'):
-                        target.append(get_fields(item))
-
-        self.odb_objects.def_amqp = []
-        self.odb_objects.def_cassandra = []
-        self.odb_objects.def_cloud_openstack_swift = []
-        self.odb_objects.def_jms_wmq = []
-        self.odb_objects.def_sec = []
-        self.odb_objects.email_imap = []
-        self.odb_objects.email_smtp = []
-        self.odb_objects.http_soap = []
-        self.odb_objects.notif_cloud_openstack_swift = []
-        self.odb_objects.notif_sql = []
-        self.odb_objects.outconn_odoo = []
-        self.odb_objects.outconn_sql = []
-
-        # Security definitions
-
-        apikey = self.client.odb_session.query(APIKeySecurity).\
-            filter(APIKeySecurity.cluster_id == self.client.cluster_id)
-
-        aws = self.client.odb_session.query(AWSSecurity).\
-            filter(AWSSecurity.cluster_id == self.client.cluster_id)
-
-        basic_auth = self.client.odb_session.query(HTTPBasicAuth).\
-            filter(HTTPBasicAuth.cluster_id == self.client.cluster_id)
-
-        ntlm = self.client.odb_session.query(NTLM).\
-            filter(NTLM.cluster_id == self.client.cluster_id)
-
-        oauth = self.client.odb_session.query(OAuth).\
-            filter(OAuth.cluster_id == self.client.cluster_id)
-
-        tech_acc = self.client.odb_session.query(TechnicalAccount).\
-            filter(TechnicalAccount.cluster_id == self.client.cluster_id)
-
-        tls_channel_sec = self.client.odb_session.query(TLSChannelSecurity).\
-            filter(TLSChannelSecurity.cluster_id == self.client.cluster_id)
-
-        tls_key_cert = self.client.odb_session.query(TLSKeyCertSecurity).\
-            filter(TLSKeyCertSecurity.cluster_id == self.client.cluster_id)
-
-        wss = self.client.odb_session.query(WSSDefinition).\
-            filter(WSSDefinition.cluster_id == self.client.cluster_id)
-
-        xpath_sec = self.client.odb_session.query(XPathSecurity).\
-            filter(XPathSecurity.cluster_id == self.client.cluster_id)
-
-        # Connections that need passwords - get-list doesn't return passwords.
-
-        email_imap = self.client.odb_session.query(IMAP).\
-            filter(IMAP.cluster_id == self.client.cluster_id)
-
-        email_smtp = self.client.odb_session.query(SMTP).\
-            filter(SMTP.cluster_id == self.client.cluster_id)
-
-        outconn_odoo = self.client.odb_session.query(OutgoingOdoo).\
-            filter(OutgoingOdoo.cluster_id == self.client.cluster_id)
-
-        add_from_simple_query(
-            [apikey, aws, basic_auth, ntlm, oauth, tech_acc, tls_channel_sec, tls_key_cert, wss, xpath_sec],
-            self.odb_objects.def_sec)
-
-        add_from_simple_query([email_imap], self.odb_objects.email_imap)
-        add_from_simple_query([email_smtp], self.odb_objects.email_smtp)
-        add_from_simple_query([outconn_odoo], self.odb_objects.outconn_odoo)
-
-        add_from_model_query(notif_cloud_openstack_swift_list, self.odb_objects.notif_cloud_openstack_swift, True)
-        add_from_model_query(cloud_openstack_swift_list, self.odb_objects.def_cloud_openstack_swift, False)
-
-        add_from_model_query(notif_sql_list, self.odb_objects.notif_sql, True)
-        add_from_model_query(out_sql_list, self.odb_objects.outconn_sql)
-
-        for item in self.client.odb_session.query(ConnDefAMQP).\
-            filter(ConnDefAMQP.cluster_id == self.client.cluster_id).all():
-            self.odb_objects.def_amqp.append(get_fields(item))
-
-        for item in self.client.odb_session.query(ConnDefWMQ).\
-            filter(ConnDefWMQ.cluster_id == self.client.cluster_id).all():
-            self.odb_objects.def_jms_wmq.append(get_fields(item))
-
-        for item in self.client.odb_session.query(CassandraConn).\
-            filter(CassandraConn.cluster_id == self.client.cluster_id).all():
-            self.odb_objects.def_cassandra.append(get_fields(item))
-
-        for item in self.client.odb_session.query(HTTPSOAP).\
-            filter(HTTPSOAP.cluster_id == self.client.cluster_id).\
-            filter(HTTPSOAP.is_internal == False).all(): # noqa E713 test for membership should be 'not in'
-            if item.name not in('admin.invoke', 'pubapi', 'zato.check.service'):
-                self.odb_objects.http_soap.append(get_fields(item))
-
-        for sinfo in SERVICES + SECURITY_SERVICES:
-            # Temporarily preserve function of the old enmasse.
-            if sinfo.get_list_service is None:
-                continue
-
-            self.odb_objects[sinfo.name] = []
-            response = self.client.invoke(sinfo.get_list_service, {
-                'cluster_id':self.client.cluster_id
-            })
-
-            if response.ok:
-                for item in response.data:
-                    if not 'zato' in item['name'].lower():
-                        self.odb_objects[sinfo.name].append(Bunch(item))
-
-        for key, items in self.odb_objects.items():
-            for item in items:
-                fix_up_odb_object(key, item)
-
-# ################################################################################################################################
-
     def find_already_existing_odb_objects(self):
         warnings = []
         errors = []
@@ -1286,12 +1284,12 @@ class EnMasse(ManageCommand):
                     connection = value_dict.get('connection')
                     transport = value_dict.get('transport')
 
-                    for item in self.odb_objects.http_soap:
+                    for item in self.object_mgr.objects.http_soap:
                         if connection == item.connection and transport == item.transport:
                             if value_name == item.name:
                                 add_warning(key, value_dict, item)
                 else:
-                    odb_defs = self.odb_objects[key.replace('-', '_')]
+                    odb_defs = self.object_mgr.objects[key.replace('-', '_')]
                     for odb_def in odb_defs:
                         if odb_def.name == value_name:
                             add_warning(key, value_dict, odb_def)
@@ -1330,7 +1328,6 @@ class EnMasse(ManageCommand):
         _no_sec_needed = ('channel-plain-http', 'channel-soap', 'outconn-plain-http', 'outconn-soap')
 
         def get_needed_defs():
-
             for json_key, json_items in self.json.items():
                 for def_name, def_keys in defs_keys.items():
                     for def_key in def_keys:
@@ -1477,7 +1474,7 @@ class EnMasse(ManageCommand):
                         value = "No service defined in '{}' ({})".format(item_dict, json_key)
                         errors.append(Error(raw, value, ERROR_SERVICE_NAME_MISSING))
                     else:
-                        if service_name not in self.odb_services:
+                        if service_name not in self.object_mgr.services:
                             value = "Service '{}' from '{}' missing in ODB ({})".format(service_name, item_dict, json_key)
                             errors.append(Error(raw, value, ERROR_SERVICE_MISSING))
 
@@ -1487,12 +1484,7 @@ class EnMasse(ManageCommand):
         return ObjectImporter().import_objects(already_existing)
 
     def import_(self):
-        self.get_odb_objects()
-
-        odb_services = self.client.invoke('zato.service.get-list', {'cluster_id':self.client.cluster_id, 'name_filter':'*'})
-        if odb_services.has_data:
-            for service in odb_services.data:
-                self.odb_services[service['name']] = Bunch(service)
+        self.object_mgr.refresh()
 
         # Find channels and jobs that require services that don't exist
         results = self.validate_import_data()
