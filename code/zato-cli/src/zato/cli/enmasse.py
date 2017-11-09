@@ -84,7 +84,8 @@ class ServiceInfo(object):
     def __init__(self, name, module_name, needs_password=False,
                  create_class_name='Create',
                  edit_class_name='Edit',
-                 supports_import=True):
+                 supports_import=True,
+                 get_list_service=None):
         #: Short service name as appears in export data.
         self.name = name
         #: Canonical name of service's implementation module.
@@ -93,10 +94,15 @@ class ServiceInfo(object):
         self.needs_password = needs_password
         #: Name of the object creation class in the service module.
         self.create_class_name = create_class_name
+        #: Name of the object modification class in the service module.
+        self.edit_class_name = edit_class_name
         #: True if importer accepts this object. Some services were not
         #: supported previously; this is to maintain temporary compatibility
         #: with the old code.
         self.supports_import = supports_import
+        #: Optional name of the object enumeration/retrieval service. CAUTION:
+        #: see get_odb_objects() before adding this to every ServiceInfo.
+        self.get_list_service = get_list_service
 
     def get_module(self):
         """Import and return the module containing the service
@@ -109,6 +115,8 @@ class ServiceInfo(object):
         return getattr(self.get_module(), self.create_class_name)
 
     def get_edit_class(self):
+        """Import and return the class implementation for editing objects in
+        the service."""
         return getattr(self.get_module(), self.edit_class_name)
 
     def __repr__(self):
@@ -124,6 +132,7 @@ SERVICES = [
     ServiceInfo(
         name='channel_amqp',
         module_name='zato.server.service.internal.channel.amqp_',
+        get_list_service='zato.channel.amqp.get-list',
     ),
     ServiceInfo(
         name='channel_jms_wmq',
@@ -142,6 +151,7 @@ SERVICES = [
     ServiceInfo(
         name='channel_zmq',
         module_name='zato.server.service.internal.channel.zmq',
+        get_list_service='zato.channel.zmq.get-list',
     ),
     ServiceInfo(
         name='def_amqp',
@@ -150,6 +160,7 @@ SERVICES = [
     ServiceInfo(
         name='def_jms_wmq',
         module_name='zato.server.service.internal.definition.jms_wmq',
+        get_list_service='zato.definition.jms-wmq.get-list',
     ),
     ServiceInfo(
         name='def_cassandra',
@@ -168,6 +179,7 @@ SERVICES = [
     ServiceInfo(
         name='json_pointer',
         module_name='zato.server.service.internal.message.json_pointer',
+        get_list_service='zato.message.json-pointer.get-list',
     ),
     ServiceInfo(
         name='http_soap',
@@ -176,6 +188,7 @@ SERVICES = [
     ServiceInfo(
         name='def_namespace',
         module_name='zato.server.service.internal.message.namespace',
+        get_list_service='zato.message.namespace.get-list',
     ),
     ServiceInfo(
         name='notif_cloud_openstack_swift',
@@ -188,11 +201,13 @@ SERVICES = [
     ServiceInfo(
         name='outconn_amqp',
         module_name='zato.server.service.internal.outgoing.amqp_',
+        get_list_service='zato.outgoing.amqp.get-list',
     ),
     ServiceInfo(
         name='outconn_ftp',
         module_name='zato.server.service.internal.outgoing.ftp',
-        needs_password=MAYBE_NEEDS_PASSWORD
+        needs_password=MAYBE_NEEDS_PASSWORD,
+        get_list_service='zato.outgoing.ftp.get-list',
     ),
     ServiceInfo(
         name='outconn_odoo',
@@ -201,6 +216,7 @@ SERVICES = [
     ServiceInfo(
         name='outconn_jms_wmq',
         module_name='zato.server.service.internal.outgoing.jms_wmq',
+        get_list_service='zato.outgoing.jms-wmq.get-list',
     ),
     ServiceInfo(
         name='outconn_sql',
@@ -210,18 +226,22 @@ SERVICES = [
     ServiceInfo(
         name='outconn_zmq',
         module_name='zato.server.service.internal.outgoing.zmq',
+        get_list_service='zato.outgoing.zmq.get-list',
     ),
     ServiceInfo(
         name='scheduler',
         module_name='zato.server.service.internal.scheduler',
+        get_list_service='zato.scheduler.job.get-list',
     ),
     ServiceInfo(
         name='xpath',
         module_name='zato.server.service.internal.message.xpath',
+        get_list_service='zato.message.xpath.get-list',
     ),
     ServiceInfo(
         name='cloud_aws_s3',
         module_name='zato.server.service.internal.cloud.aws.s3',
+        get_list_service='zato.cloud.aws.s3.get-list',
     ),
     ServiceInfo(
         name='def_cloud_openstack_swift',
@@ -230,30 +250,37 @@ SERVICES = [
     ServiceInfo(
         name='search_es',
         module_name='zato.server.service.internal.search.es',
+        get_list_service='zato.search.es.get-list',
     ),
     ServiceInfo(
         name='search_solr',
         module_name='zato.server.service.internal.search.solr',
+        get_list_service='zato.search.solr.get-list',
     ),
     ServiceInfo(
         name='rbac_permission',
         module_name='zato.server.service.internal.security.rbac.permission',
+        get_list_service='zato.security.rbac.permission.get-list',
     ),
     ServiceInfo(
         name='rbac_role',
         module_name='zato.server.service.internal.security.rbac.role',
+        get_list_service='zato.security.rbac.role.get-list',
     ),
     ServiceInfo(
         name='rbac_client_role',
         module_name='zato.server.service.internal.security.rbac.client_role',
+        get_list_service='zato.security.rbac.client-role.get-list',
     ),
     ServiceInfo(
         name='rbac_role_permission',
         module_name='zato.server.service.internal.security.rbac.role_permission',
+        get_list_service='zato.security.rbac.role-permission.get-list',
     ),
     ServiceInfo(
         name='tls_ca_cert',
         module_name='zato.server.service.internal.security.tls.ca_cert',
+        get_list_service='zato.security.tls.ca-cert.get-list',
     ),
     # Added for the exporter.
     ServiceInfo(
@@ -270,6 +297,7 @@ SERVICES = [
         name='query_cassandra',
         module_name='zato.server.service.internal.query.cassandra',
         supports_import=False,
+        get_list_service='zato.query.cassandra.get-list',
     ),
 
 ]
@@ -1151,39 +1179,20 @@ class EnMasse(ManageCommand):
             if item.name not in('admin.invoke', 'pubapi', 'zato.check.service'):
                 self.odb_objects.http_soap.append(get_fields(item))
 
-        service_key = {
-            'zato.channel.amqp.get-list':'channel_amqp',
-            'zato.channel.jms-wmq.get-list':'channel_jms_wmq',
-            'zato.channel.zmq.get-list':'channel_zmq',
-            'zato.cloud.aws.s3.get-list':'cloud_aws_s3',
-            'zato.message.json-pointer.get-list':'json_pointer',
-            'zato.message.namespace.get-list':'def_namespace',
-            'zato.message.xpath.get-list':'xpath',
-            'zato.definition.jms-wmq.get-list':'def_jms_wmq',
-            'zato.outgoing.amqp.get-list':'outconn_amqp',
-            'zato.outgoing.ftp.get-list':'outconn_ftp',
-            'zato.outgoing.jms-wmq.get-list':'outconn_jms_wmq',
-            'zato.outgoing.zmq.get-list':'outconn_zmq',
-            'zato.scheduler.job.get-list':'scheduler',
-            'zato.search.es.get-list':'search_es',
-            'zato.search.solr.get-list':'search_solr',
-            'zato.query.cassandra.get-list':'query_cassandra',
-            'zato.security.rbac.client-role.get-list':'rbac_client_role',
-            'zato.security.rbac.permission.get-list':'rbac_permission',
-            'zato.security.rbac.role.get-list':'rbac_role',
-            'zato.security.rbac.role-permission.get-list':'rbac_role_permission',
-            'zato.security.tls.ca-cert.get-list':'tls_ca_cert',
-            }
+        for sinfo in SERVICES + SECURITY_SERVICES:
+            # Temporarily preserve function of the old enmasse.
+            if sinfo.get_list_service is None:
+                continue
 
-        for value in service_key.values():
-            self.odb_objects[value] = []
+            self.odb_objects[sinfo.name] = []
+            response = self.client.invoke(sinfo.get_list_service, {
+                'cluster_id':self.client.cluster_id
+            })
 
-        for service, key in service_key.items():
-            response = self.client.invoke(service, {'cluster_id':self.client.cluster_id})
             if response.ok:
                 for item in response.data:
                     if not 'zato' in item['name'].lower():
-                        self.odb_objects[key].append(Bunch(item))
+                        self.odb_objects[sinfo.name].append(Bunch(item))
 
         for key, items in self.odb_objects.items():
             for item in items:
