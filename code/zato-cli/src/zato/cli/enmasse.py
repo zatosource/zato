@@ -517,33 +517,41 @@ class InputValidator(object):
     def _needs_password(self, key):
         return 'sql' in key
 
+    def validate_def_sec(self, item):
+        sec_type = item.get('type')
+        if not sec_type:
+            item_dict = item.toDict()
+            raw = (key, item_dict)
+            self.results.add_error(raw, ERROR_TYPE_MISSING,
+                                   "'{}' has no required 'type' key (def_sec)",
+                                   item_dict)
+        elif sec_type not in SECURITY_SERVICE_BY_NAME:
+            raw = (sec_type, SECURITY_SERVICE_NAMES, item)
+            self.results.add_error(raw, ERROR_INVALID_SEC_DEF_TYPE ,
+                                   "Invalid type '{}', must be one of '{}' (def_sec)",
+                                   sec_type, SECURITY_SERVICE_NAMES)
+        else:
+            self._validate(key, item, True)
+
+    def validate_other(self, item_type, item):
+        if key not in SERVICE_BY_NAME:
+            raw = (key, SERVICE_NAMES)
+            self.results.add_error(raw, ERROR_INVALID_KEY,
+                                   "Invalid key '{}', must be one of '{}'",
+                                   key, SERVICE_NAMES)
+        else:
+            self._validate(key, item, False)
+
     def validate(self):
         """
         :rtype Results:
         """
-        for key, items in self.json.items():
+        for item_type, items in self.json.items():
             for item in items:
-                if key == 'def_sec':
-                    sec_type = item.get('type')
-                    if not sec_type:
-                        item_dict = item.toDict()
-                        raw = (key, item_dict)
-                        value = "'{}' has no required 'type' key (def_sec) ".format(item_dict)
-                        self.results.errors.append(Error(raw, value, ERROR_TYPE_MISSING))
-                    else:
-                        if sec_type not in SECURITY_SERVICE_BY_NAME:
-                            raw = (sec_type, SECURITY_SERVICE_NAMES, item)
-                            value = "Invalid type '{}', must be one of '{}' (def_sec)".format(sec_type, SECURITY_SERVICE_NAMES)
-                            self.results.errors.append(Error(raw, value, ERROR_INVALID_SEC_DEF_TYPE))
-                        else:
-                            self._validate(key, item, True)
+                if item_type == 'def_sec':
+                    self.validate_def_sec(item_type, item)
                 else:
-                    if key not in SERVICE_BY_NAME:
-                        raw = (key, SERVICE_NAMES)
-                        value = "Invalid key '{}', must be one of '{}'".format(key, SERVICE_NAMES)
-                        self.results.errors.append(Error(raw, value, ERROR_INVALID_KEY))
-                    else:
-                        self._validate(key, item, False)
+                    self.validate_other(item_type, item)
 
         return self.results
 
@@ -554,8 +562,9 @@ class InputValidator(object):
 
         if not name:
             raw = (key, item_dict)
-            value = "No 'name' key found in item '{}' ({})".format(item_dict, key)
-            self.results.errors.append(Error(raw, value, ERROR_NAME_MISSING))
+            self.results.add_error(raw, ERROR_NAME_MISSING,
+                                   "No 'name' key found in item '{}' ({})",
+                                   item_dict, key)
         else:
             if is_sec:
                 # We know we have one of correct types already so we can
