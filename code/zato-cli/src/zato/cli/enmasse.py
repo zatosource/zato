@@ -144,9 +144,11 @@ class Results(object):
     ok = property(_get_ok)
 
 class InputValidator(object):
-    def __init__(self):
-        # Validation result.
+    def __init__(self, json):
+        #: Validation result.
         self.results = Results()
+        #: Input JSON to validate.
+        self.json = json
 
     def get_required_keys(self, service_name):
         """
@@ -173,13 +175,11 @@ class InputValidator(object):
     def _needs_password(self, key):
         return 'sql' in key
 
-    def validate(self, json):
+    def validate(self):
         """
-        :param json:
-            Merged JSON import data.
         :rtype Results:
         """
-        for key, items in json.items():
+        for key, items in self.json.items():
             for item in items:
                 if key == 'def_sec':
                     sec_type = item.get('type')
@@ -309,6 +309,237 @@ class InputValidator(object):
     create_services_keys = sorted(create_services)
     def_sec_services_keys = sorted(def_sec_services)
 
+
+class ImportInfo(object):
+    def __init__(self, mod, needs_password=False):
+        self.mod = mod
+        self.needs_password = needs_password
+
+    def __repr__(self):
+        return "<{} at {} mod:'{}' needs_password:'{}'>".format(
+            self.__class__.__name__, hex(id(self)), self.mod, self.needs_password)
+
+
+class ObjectImporter(object):
+    def __init__(self, json):
+        #: Validation result.
+        self.results = Results()
+        #: JSON to import.
+        self.json = json
+
+    def import_objects(self, already_existing):
+        existing_defs = []
+        existing_other = []
+
+        new_defs = []
+        new_other = []
+
+        self.json_to_import = Bunch(deepcopy(self.json))
+
+        def get_odb_item(item_type, name):
+            for item in self.odb_objects[item_type]:
+                if item.name == name:
+                    return item
+
+        def get_security_by_name(name):
+            for item in self.odb_objects.def_sec:
+                if item.name == name:
+                    return item.id
+
+        def _swap_service_name(service_class, attrs, first, second):
+            if first in getattr(service_class.SimpleIO, 'input_required', []) and second in attrs:
+                attrs[first] = attrs[second]
+
+        def remove_from_import_list(item_type, name):
+            for json_item_type, items in self.json_to_import.items():
+                if json_item_type == item_type:
+                    for item in items:
+                        if item.name == name:
+                            items.remove(item)
+
+                            # Name is unique, we can stop now
+                            return
+
+        def should_skip_item(item_type, attrs, is_edit):
+
+            # Root RBAC role cannot be edited
+            if item_type == 'rbac_role' and attrs.name == 'Root':
+                return True
+
+        def _import(item_type, attrs, is_edit):
+            attrs_dict = attrs.toDict()
+            attrs.cluster_id = self.client.cluster_id
+            service_name, error_response = self._import_object(item_type, attrs, is_edit)
+
+            # We quit on first error encountered
+            if error_response:
+                raw = (item_type, attrs_dict, error_response)
+                value = "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'".format(
+                    is_edit, attrs.name, attrs_dict, service_name, error_response)
+                self.results.errors.append(Error(raw, value, ERROR_COULD_NOT_IMPORT_OBJECT))
+                return self.results
+
+            # It's been just imported so we don't want to create in next steps
+            # (this in fact would result in an error as the object already exists).
+            if is_edit:
+                remove_from_import_list(item_type, attrs.name)
+
+            # We'll see how expensive this call is. Seems to be but
+            # let's see in practice if it's a burden.
+            self.get_odb_objects()
+
+        #
+        # Update already existing objects first, definitions before any object
+        # that may depend on them ..
+        #
+        for w in already_existing.warnings:
+            item_type, _ = w.value_raw
+            existing = existing_defs if 'def' in item_type else existing_other
+            existing.append(w)
+
+        #
+        # .. actually invoke the updates now ..
+        #
+        for w in chain(existing_defs, existing_other):
+            item_type, attrs = w.value_raw
+
+            if should_skip_item(item_type, attrs, True):
+                continue
+
+            results = _import(item_type, attrs, True)
+            if results:
+                return results
+
+        #
+        # Create new objects, again, definitions come first ..
+        #
+        for item_type, items in self.json_to_import.items():
+            new = new_defs if 'def' in item_type else new_other
+            new.append({item_type:items})
+
+        #
+        # .. actually create the objects now.
+        #
+        for elem in chain(new_defs, new_other):
+            for item_type, attr_list in elem.items():
+                for attrs in attr_list:
+
+                    if should_skip_item(item_type, attrs, False):
+                        continue
+
+                    results = _import(item_type, attrs, False)
+                    if results:
+                        return results
+
+        return self.results
+
+    def _import_object(self, def_type, attrs, is_edit):
+        attrs_dict = attrs.toDict()
+        info_dict, info_key = (def_sec_info, attrs.type) if 'sec' in def_type else (service_info, def_type)
+        import_info = info_dict[info_key]
+        service_class = getattr(import_info.mod, 'Edit' if is_edit else 'Create')
+        service_name = service_class.get_name()
+
+        # service and service_name are interchangeable
+        _swap_service_name(service_class, attrs, 'service', 'service_name')
+        _swap_service_name(service_class, attrs, 'service_name', 'service')
+
+        # Fetch an item from a cache of ODB object and assign its ID
+        # to attrs so that the Edit service knows what to update.
+        if is_edit:
+            odb_item = get_odb_item(def_type, attrs.name)
+            attrs.id = odb_item.id
+
+        if def_type == 'http_soap':
+            if attrs.sec_def == NO_SEC_DEF_NEEDED:
+                attrs.security_id = None
+            else:
+                attrs.security_id = get_security_by_name(attrs.sec_def)
+
+        if def_type in('channel_amqp', 'channel_jms_wmq', 'outconn_amqp', 'outconn_jms_wmq'):
+            def_type_name = def_type.replace('channel', 'def').replace('outconn', 'def')
+            odb_item = get_odb_item(def_type_name, attrs.get('def_name'))
+            attrs.def_id = odb_item.id
+
+        response = self.client.invoke(service_name, attrs)
+        if not response.ok:
+            return service_name, response.details
+        else:
+            verb = 'Updated' if is_edit else 'Created'
+            self.logger.info("{} object '{}' ({} {})".format(verb, attrs.name, item_type, service_name))
+            if import_info.needs_password:
+
+                password = attrs.get('password')
+                if not password:
+                    if import_info.needs_password == self.MAYBE_NEEDS_PASSWORD:
+                        self.logger.info("Password missing but not required '{}' ({} {})".format(
+                            attrs.name, item_type, service_name))
+                    else:
+                        return service_name, "Password missing but is required '{}' ({} {}) attrs '{}'".format(
+                            attrs.name, item_type, service_name, attrs_dict)
+                else:
+                    if not is_edit:
+                        attrs.id = response.data['id']
+
+                    service_class = getattr(import_info.mod, 'ChangePassword')
+                    request = {'id':attrs.id, 'password1':attrs.password, 'password2':attrs.password}
+                    response = self.client.invoke(service_class.get_name(), request)
+                    if not response.ok:
+                        return service_name, response.details
+                    else:
+                        self.logger.info("Updated password '{}' ({} {})".format(attrs.name, item_type, service_name))
+
+        return None, None
+
+    # FTP definition may use a password but are not required to.
+    MAYBE_NEEDS_PASSWORD = 'MAYBE_NEEDS_PASSWORD'
+
+    service_info = {
+        'channel_amqp':ImportInfo(channel_amqp_mod),
+        'channel_jms_wmq':ImportInfo(channel_jms_wmq_mod),
+        'channel_zmq':ImportInfo(channel_zmq_mod),
+        'def_amqp':ImportInfo(definition_amqp_mod, True),
+        'def_jms_wmq':ImportInfo(definition_jms_wmq_mod),
+        'def_cassandra':ImportInfo(definition_cassandra_mod),
+        'email_imap':ImportInfo(email_imap_mod, MAYBE_NEEDS_PASSWORD),
+        'email_smtp':ImportInfo(email_smtp_mod, MAYBE_NEEDS_PASSWORD),
+        'json_pointer':ImportInfo(json_pointer_mod),
+        'http_soap':ImportInfo(http_soap_mod),
+        'def_namespace':ImportInfo(namespace_mod),
+        'notif_cloud_openstack_swift':ImportInfo(notif_cloud_openstack_swift_mod),
+        'notif_sql':ImportInfo(notif_sql_mod),
+        'outconn_amqp':ImportInfo(outgoing_amqp_mod),
+        'outconn_ftp':ImportInfo(outgoing_ftp_mod, MAYBE_NEEDS_PASSWORD),
+        'outconn_odoo':ImportInfo(outgoing_odoo_mod, True),
+        'outconn_jms_wmq':ImportInfo(outgoing_jms_wmq_mod),
+        'outconn_sql':ImportInfo(outgoing_sql_mod, True),
+        'outconn_zmq':ImportInfo(outgoing_zmq_mod),
+        'scheduler':ImportInfo(scheduler_mod),
+        'xpath':ImportInfo(xpath_mod),
+        'cloud_aws_s3': ImportInfo(cloud_aws_s3),
+        'def_cloud_openstack_swift': ImportInfo(cloud_openstack_swift_mod),
+        'search_es': ImportInfo(search_es),
+        'search_solr': ImportInfo(search_solr),
+        'rbac_permission': ImportInfo(rbac_mod.permission),
+        'rbac_role': ImportInfo(rbac_mod.role),
+        'rbac_client_role': ImportInfo(rbac_mod.client_role),
+        'rbac_role_permission': ImportInfo(rbac_mod.role_permission),
+        'tls_ca_cert':ImportInfo(sec_tls_ca_cert_mod),
+    }
+
+    def_sec_info = {
+        'apikey':ImportInfo(sec_apikey_mod, True),
+        'aws':ImportInfo(sec_aws_mod, True),
+        'basic_auth':ImportInfo(sec_basic_auth_mod, True),
+        'ntlm':ImportInfo(sec_ntlm_mod, True),
+        'oauth':ImportInfo(sec_oauth_mod, True),
+        'tech_acc':ImportInfo(sec_tech_account_mod, True),
+        'tls_key_cert':ImportInfo(sec_tls_key_cert_mod),
+        'tls_channel_sec':ImportInfo(sec_tls_channel_mod),
+        'wss':ImportInfo(sec_wss_mod, True),
+        'xpath_sec':ImportInfo(sec_xpath_mod, True),
+    }
+    
 
 class EnMasse(ManageCommand):
     """ Manages server objects en masse.
@@ -954,7 +1185,7 @@ class EnMasse(ManageCommand):
 # ################################################################################################################################
 
     def validate_input(self):
-        return InputValidator().validate(self.json)
+        return InputValidator(self.json).validate()
 
 
 # ################################################################################################################################
@@ -1050,229 +1281,7 @@ class EnMasse(ManageCommand):
         return Results(warnings, errors)
 
     def import_objects(self, already_existing):
-        warnings = []
-        errors = []
-
-        existing_defs = []
-        existing_other = []
-
-        new_defs = []
-        new_other = []
-
-        # FTP definition may use a password but are not required to.
-        MAYBE_NEEDS_PASSWORD = 'MAYBE_NEEDS_PASSWORD'
-
-        self.json_to_import = Bunch(deepcopy(self.json))
-
-        class ImportInfo(object):
-            def __init__(self, mod, needs_password=False):
-                self.mod = mod
-                self.needs_password = needs_password
-
-            def __repr__(self):
-                return "<{} at {} mod:'{}' needs_password:'{}'>".format(
-                    self.__class__.__name__, hex(id(self)), self.mod, self.needs_password)
-
-        service_info = {
-            'channel_amqp':ImportInfo(channel_amqp_mod),
-            'channel_jms_wmq':ImportInfo(channel_jms_wmq_mod),
-            'channel_zmq':ImportInfo(channel_zmq_mod),
-            'def_amqp':ImportInfo(definition_amqp_mod, True),
-            'def_jms_wmq':ImportInfo(definition_jms_wmq_mod),
-            'def_cassandra':ImportInfo(definition_cassandra_mod),
-            'email_imap':ImportInfo(email_imap_mod, MAYBE_NEEDS_PASSWORD),
-            'email_smtp':ImportInfo(email_smtp_mod, MAYBE_NEEDS_PASSWORD),
-            'json_pointer':ImportInfo(json_pointer_mod),
-            'http_soap':ImportInfo(http_soap_mod),
-            'def_namespace':ImportInfo(namespace_mod),
-            'notif_cloud_openstack_swift':ImportInfo(notif_cloud_openstack_swift_mod),
-            'notif_sql':ImportInfo(notif_sql_mod),
-            'outconn_amqp':ImportInfo(outgoing_amqp_mod),
-            'outconn_ftp':ImportInfo(outgoing_ftp_mod, MAYBE_NEEDS_PASSWORD),
-            'outconn_odoo':ImportInfo(outgoing_odoo_mod, True),
-            'outconn_jms_wmq':ImportInfo(outgoing_jms_wmq_mod),
-            'outconn_sql':ImportInfo(outgoing_sql_mod, True),
-            'outconn_zmq':ImportInfo(outgoing_zmq_mod),
-            'scheduler':ImportInfo(scheduler_mod),
-            'xpath':ImportInfo(xpath_mod),
-            'cloud_aws_s3': ImportInfo(cloud_aws_s3),
-            'def_cloud_openstack_swift': ImportInfo(cloud_openstack_swift_mod),
-            'search_es': ImportInfo(search_es),
-            'search_solr': ImportInfo(search_solr),
-            'rbac_permission': ImportInfo(rbac_mod.permission),
-            'rbac_role': ImportInfo(rbac_mod.role),
-            'rbac_client_role': ImportInfo(rbac_mod.client_role),
-            'rbac_role_permission': ImportInfo(rbac_mod.role_permission),
-            'tls_ca_cert':ImportInfo(sec_tls_ca_cert_mod),
-        }
-
-        def_sec_info = {
-            'apikey':ImportInfo(sec_apikey_mod, True),
-            'aws':ImportInfo(sec_aws_mod, True),
-            'basic_auth':ImportInfo(sec_basic_auth_mod, True),
-            'ntlm':ImportInfo(sec_ntlm_mod, True),
-            'oauth':ImportInfo(sec_oauth_mod, True),
-            'tech_acc':ImportInfo(sec_tech_account_mod, True),
-            'tls_key_cert':ImportInfo(sec_tls_key_cert_mod),
-            'tls_channel_sec':ImportInfo(sec_tls_channel_mod),
-            'wss':ImportInfo(sec_wss_mod, True),
-            'xpath_sec':ImportInfo(sec_xpath_mod, True),
-        }
-
-        def get_odb_item(item_type, name):
-            for item in self.odb_objects[item_type]:
-                if item.name == name:
-                    return item
-
-        def get_security_by_name(name):
-            for item in self.odb_objects.def_sec:
-                if item.name == name:
-                    return item.id
-
-        def _swap_service_name(service_class, attrs, first, second):
-            if first in getattr(service_class.SimpleIO, 'input_required', []) and second in attrs:
-                attrs[first] = attrs[second]
-
-        def import_object(def_type, attrs, is_edit):
-            attrs_dict = attrs.toDict()
-            info_dict, info_key = (def_sec_info, attrs.type) if 'sec' in def_type else (service_info, def_type)
-            import_info = info_dict[info_key]
-            service_class = getattr(import_info.mod, 'Edit' if is_edit else 'Create')
-            service_name = service_class.get_name()
-
-            # service and service_name are interchangeable
-            _swap_service_name(service_class, attrs, 'service', 'service_name')
-            _swap_service_name(service_class, attrs, 'service_name', 'service')
-
-            # Fetch an item from a cache of ODB object and assign its ID
-            # to attrs so that the Edit service knows what to update.
-            if is_edit:
-                odb_item = get_odb_item(def_type, attrs.name)
-                attrs.id = odb_item.id
-
-            if def_type == 'http_soap':
-                if attrs.sec_def == NO_SEC_DEF_NEEDED:
-                    attrs.security_id = None
-                else:
-                    attrs.security_id = get_security_by_name(attrs.sec_def)
-
-            if def_type in('channel_amqp', 'channel_jms_wmq', 'outconn_amqp', 'outconn_jms_wmq'):
-                def_type_name = def_type.replace('channel', 'def').replace('outconn', 'def')
-                odb_item = get_odb_item(def_type_name, attrs.get('def_name'))
-                attrs.def_id = odb_item.id
-
-            response = self.client.invoke(service_name, attrs)
-            if not response.ok:
-                return service_name, response.details
-            else:
-                verb = 'Updated' if is_edit else 'Created'
-                self.logger.info("{} object '{}' ({} {})".format(verb, attrs.name, item_type, service_name))
-                if import_info.needs_password:
-
-                    password = attrs.get('password')
-                    if not password:
-                        if import_info.needs_password == MAYBE_NEEDS_PASSWORD:
-                            self.logger.info("Password missing but not required '{}' ({} {})".format(
-                                attrs.name, item_type, service_name))
-                        else:
-                            return service_name, "Password missing but is required '{}' ({} {}) attrs '{}'".format(
-                                attrs.name, item_type, service_name, attrs_dict)
-                    else:
-                        if not is_edit:
-                            attrs.id = response.data['id']
-
-                        service_class = getattr(import_info.mod, 'ChangePassword')
-                        request = {'id':attrs.id, 'password1':attrs.password, 'password2':attrs.password}
-                        response = self.client.invoke(service_class.get_name(), request)
-                        if not response.ok:
-                            return service_name, response.details
-                        else:
-                            self.logger.info("Updated password '{}' ({} {})".format(attrs.name, item_type, service_name))
-
-            return None, None
-
-        def remove_from_import_list(item_type, name):
-            for json_item_type, items in self.json_to_import.items():
-                if json_item_type == item_type:
-                    for item in items:
-                        if item.name == name:
-                            items.remove(item)
-
-                            # Name is unique, we can stop now
-                            return
-
-        def should_skip_item(item_type, attrs, is_edit):
-
-            # Root RBAC role cannot be edited
-            if item_type == 'rbac_role' and attrs.name == 'Root':
-                return True
-
-        def _import(item_type, attrs, is_edit):
-            attrs_dict = attrs.toDict()
-            attrs.cluster_id = self.client.cluster_id
-            service_name, error_response = import_object(item_type, attrs, is_edit)
-
-            # We quit on first error encountered
-            if error_response:
-                raw = (item_type, attrs_dict, error_response)
-                value = "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'".format(
-                    is_edit, attrs.name, attrs_dict, service_name, error_response)
-                errors.append(Error(raw, value, ERROR_COULD_NOT_IMPORT_OBJECT))
-                return Results(warnings, errors)
-
-            # It's been just imported so we don't want to create in next steps
-            # (this in fact would result in an error as the object already exists).
-            if is_edit:
-                remove_from_import_list(item_type, attrs.name)
-
-            # We'll see how expensive this call is. Seems to be but
-            # let's see in practice if it's a burden.
-            self.get_odb_objects()
-
-        #
-        # Update already existing objects first, definitions before any object
-        # that may depend on them ..
-        #
-        for w in already_existing.warnings:
-            item_type, _ = w.value_raw
-            existing = existing_defs if 'def' in item_type else existing_other
-            existing.append(w)
-
-        #
-        # .. actually invoke the updates now ..
-        #
-        for w in chain(existing_defs, existing_other):
-            item_type, attrs = w.value_raw
-
-            if should_skip_item(item_type, attrs, True):
-                continue
-
-            results = _import(item_type, attrs, True)
-            if results:
-                return results
-
-        #
-        # Create new objects, again, definitions come first ..
-        #
-        for item_type, items in self.json_to_import.items():
-            new = new_defs if 'def' in item_type else new_other
-            new.append({item_type:items})
-
-        #
-        # .. actually create the objects now.
-        #
-        for elem in chain(new_defs, new_other):
-            for item_type, attr_list in elem.items():
-                for attrs in attr_list:
-
-                    if should_skip_item(item_type, attrs, False):
-                        continue
-
-                    results = _import(item_type, attrs, False)
-                    if results:
-                        return results
-
-        return Results(warnings, errors)
+        return ObjectImporter().import_objects(already_existing)
 
     def import_(self):
         self.get_odb_objects()
