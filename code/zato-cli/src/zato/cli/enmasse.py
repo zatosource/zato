@@ -38,6 +38,8 @@ from zato.common.odb.model import APIKeySecurity, AWSSecurity, Base, CassandraCo
 from zato.common.odb.query import cloud_openstack_swift_list, notif_cloud_openstack_swift_list, notif_sql_list, out_sql_list
 from zato.common.util import get_client_from_server_conf
 from zato.server.service import ForceType
+
+# --------------- IMPORTS HERE WILL BE REMOVED SOON --------------------
 from zato.server.service.internal import http_soap as http_soap_mod
 from zato.server.service.internal.channel import amqp_ as channel_amqp_mod
 from zato.server.service.internal.channel import jms_wmq as channel_jms_wmq_mod
@@ -46,7 +48,6 @@ from zato.server.service.internal.cloud.aws import s3 as cloud_aws_s3
 from zato.server.service.internal.cloud.openstack import swift as cloud_openstack_swift_mod
 from zato.server.service.internal.definition import amqp_ as definition_amqp_mod
 from zato.server.service.internal.definition import jms_wmq as definition_jms_wmq_mod
-from zato.server.service.internal.definition import cassandra as definition_cassandra_mod
 from zato.server.service.internal.email import imap as email_imap_mod
 from zato.server.service.internal.email import smtp as email_smtp_mod
 from zato.server.service.internal.message import json_pointer as json_pointer_mod
@@ -61,7 +62,6 @@ from zato.server.service.internal.outgoing import odoo as outgoing_odoo_mod
 from zato.server.service.internal.outgoing import sql as outgoing_sql_mod
 from zato.server.service.internal.outgoing import zmq as outgoing_zmq_mod
 from zato.server.service.internal import scheduler as scheduler_mod
-from zato.server.service.internal.query import cassandra as query_cassandra_mod
 from zato.server.service.internal.search import es as search_es
 from zato.server.service.internal.search import solr as search_solr
 from zato.server.service.internal.security import apikey as sec_apikey_mod
@@ -69,13 +69,20 @@ from zato.server.service.internal.security import aws as sec_aws_mod
 from zato.server.service.internal.security import basic_auth as sec_basic_auth_mod
 from zato.server.service.internal.security import ntlm as sec_ntlm_mod
 from zato.server.service.internal.security import oauth as sec_oauth_mod
-from zato.server.service.internal.security import rbac as rbac_mod
 from zato.server.service.internal.security import tech_account as sec_tech_account_mod
 from zato.server.service.internal.security import wss as sec_wss_mod
 from zato.server.service.internal.security import xpath as sec_xpath_mod
 from zato.server.service.internal.security.tls import ca_cert as sec_tls_ca_cert_mod
 from zato.server.service.internal.security.tls import channel as sec_tls_channel_mod
 from zato.server.service.internal.security.tls import key_cert as sec_tls_key_cert_mod
+# ---------- END OF OBSOLETE IMPORTS ------------
+
+# ----------- TODO: THESE MODULES HAD NO IMPORTER DESCRIPTION -------------
+from zato.server.service.internal.definition import cassandra as definition_cassandra_mod
+from zato.server.service.internal.query import cassandra as query_cassandra_mod
+# TODO rbac_mod, rbac_mod.permission, rbac_mod.role, client_role, 
+from zato.server.service.internal.security import rbac as rbac_mod
+# -------------------------------------------------------------------------
 
 DEFAULT_COLS_WIDTH = '15,100'
 NO_SEC_DEF_NEEDED = 'zato-no-security'
@@ -106,6 +113,237 @@ ERROR_SERVICE_NAME_MISSING = Code('E11', 'service name missing')
 ERROR_SERVICE_MISSING = Code('E12', 'service missing')
 ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
 ERROR_TYPE_MISSING = Code('E04', 'type missing')
+
+def import_module(modname):
+    """Import and return the Python module `modname`."""
+    module = None
+    exec('import %s as module' % (modname,))
+    return module
+
+class ServiceInfo(object):
+    def __init__(self, name, module_name, needs_password=False,
+                 create_class_name='Create'):
+        #: Short service name as appears in export data.
+        self.name = name
+        #: Canonical name of service's implementation module.
+        self.module_name = module_name
+        #: True if service requires a password key.
+        self.needs_password = needs_password
+        #: Name of the object creation class in the service module.
+        self.create_class_name = create_class_name
+
+    def module(self):
+        """Import and return the module containing the service
+        implementation."""
+        return import_module(self.module_name)
+
+    def create_class(self):
+        """Import and return the class implementation for creating objects in
+        the service."""
+        return getattr(self.module(), self.create_class_name)
+
+    def __repr__(self):
+        return "<{} at {} mod:'{}' needs_password:'{}'>".format(
+            self.__class__.__name__, hex(id(self)), self.mod, self.needs_password)
+
+#: FTP definition may use a password but are not required to.
+MAYBE_NEEDS_PASSWORD = 'MAYBE_NEEDS_PASSWORD'
+
+#: List of ServiceInfo objects for all supported services. To be replaced by
+#: introspection later.
+SERVICES = [
+    ServiceInfo(
+        name='channel_amqp',
+        module_name='zato.server.service.internal.channel.amqp_',
+    ),
+    ServiceInfo(
+        name='channel_jms_wmq',
+        module_name='zato.server.service.internal.channel.jms_wmq',
+    ),
+    ServiceInfo(
+        name='channel_zmq',
+        module_name='zato.server.service.internal.channel.zmq',
+    ),
+    ServiceInfo(
+        name='def_amqp',
+        module_name='zato.server.service.internal.definition.amqp_',
+    ),
+    ServiceInfo(
+        name='def_jms_wmq',
+        module_name='zato.server.service.internal.definition.jms_wmq',
+    ),
+    ServiceInfo(
+        name='def_cassandra',
+        module_name='zato.server.service.internal.definition.cassandra',
+    ),
+    ServiceInfo(
+        name='email_imap',
+        module_name='zato.server.service.internal.email.imap',
+        needs_password=MAYBE_NEEDS_PASSWORD
+    ),
+    ServiceInfo(
+        name='email_smtp',
+        module_name='zato.server.service.internal.email.smtp',
+        needs_password=MAYBE_NEEDS_PASSWORD
+    ),
+    ServiceInfo(
+        name='json_pointer',
+        module_name='zato.server.service.internal.message.json_pointer',
+    ),
+    ServiceInfo(
+        name='http_soap',
+        module_name='zato.server.service.internal.http_soap',
+    ),
+    ServiceInfo(
+        name='def_namespace',
+        module_name='zato.server.service.internal.message.namespace',
+    ),
+    ServiceInfo(
+        name='notif_cloud_openstack_swift',
+        module_name='zato.server.service.internal.notif.cloud.openstack.swift',
+    ),
+    ServiceInfo(
+        name='notif_sql',
+        module_name='zato.server.service.internal.notif.sql',
+    ),
+    ServiceInfo(
+        name='outconn_amqp',
+        module_name='zato.server.service.internal.outgoing.amqp_',
+    ),
+    ServiceInfo(
+        name='outconn_ftp',
+        module_name='zato.server.service.internal.outgoing.ftp',
+        needs_password=MAYBE_NEEDS_PASSWORD
+    ),
+    ServiceInfo(
+        name='outconn_odoo',
+        module_name='zato.server.service.internal.outgoing.odoo',
+    ),
+    ServiceInfo(
+        name='outconn_jms_wmq',
+        module_name='zato.server.service.internal.outgoing.jms_wmq',
+    ),
+    ServiceInfo(
+        name='outconn_sql',
+        module_name='zato.server.service.internal.outgoing.sql',
+        needs_password=True,
+    ),
+    ServiceInfo(
+        name='outconn_zmq',
+        module_name='zato.server.service.internal.outgoing.zmq',
+    ),
+    ServiceInfo(
+        name='scheduler',
+        module_name='zato.server.service.internal.scheduler',
+    ),
+    ServiceInfo(
+        name='xpath',
+        module_name='zato.server.service.internal.message.xpath',
+    ),
+    ServiceInfo(
+        name='cloud_aws_s3',
+        module_name='zato.server.service.internal.cloud.aws.s3',
+    ),
+    ServiceInfo(
+        name='def_cloud_openstack_swift',
+        module_name='zato.server.service.internal.cloud.openstack.swift',
+    ),
+    ServiceInfo(
+        name='search_es',
+        module_name='zato.server.service.internal.search.es',
+    ),
+    ServiceInfo(
+        name='search_solr',
+        module_name='zato.server.service.internal.search.solr',
+    ),
+    ServiceInfo(
+        name='rbac_permission',
+        module_name='zato.server.service.internal.security.rbac.permission',
+    ),
+    ServiceInfo(
+        name='rbac_role',
+        module_name='zato.server.service.internal.security.rbac.role',
+    ),
+    ServiceInfo(
+        name='rbac_client_role',
+        module_name='zato.server.service.internal.security.rbac.client_role',
+    ),
+    ServiceInfo(
+        name='rbac_role_permission',
+        module_name='zato.server.service.internal.security.rbac.role_permission',
+    ),
+    ServiceInfo(
+        name='tls_ca_cert',
+        module_name='zato.server.service.internal.security.tls.ca_cert',
+    ),
+]
+
+#: List of security services. To be merged with SERVICES later.
+SECURITY_SERVICES = [
+    ServiceInfo(
+        name='apikey',
+        module_name='zato.server.service.internal.security.apikey',
+        needs_password=True,
+    ),
+    ServiceInfo(
+        name='aws',
+        module_name='zato.server.service.internal.security.aws',
+        needs_password=True,
+    ),
+    ServiceInfo(
+        name='basic_auth',
+        module_name='zato.server.service.internal.security.basic_auth',
+        needs_password=True,
+    ),
+    ServiceInfo(
+        name='ntlm',
+        module_name='zato.server.service.internal.security.ntlm',
+        needs_password=True,
+    ),
+    ServiceInfo(
+        name='oauth',
+        module_name='zato.server.service.internal.security.oauth',
+        needs_password=True,
+    ),
+    ServiceInfo(
+        name='tech_acc',
+        module_name='zato.server.service.internal.security.tech_account',
+        needs_password=True,
+    ),
+    ServiceInfo(
+        name='tls_key_cert',
+        module_name='zato.server.service.internal.security.tls.key_cert',
+    ),
+    ServiceInfo(
+        name='tls_channel_sec',
+        module_name='zato.server.service.internal.security.tls.channel',
+    ),
+    ServiceInfo(
+        name='wss',
+        module_name='zato.server.service.internal.security.wss',
+        needs_password=True,
+    ),
+    ServiceInfo(
+        name='xpath_sec',
+        module_name='zato.server.service.internal.security.xpath',
+        needs_password=True,
+    ),
+]
+
+# channels - chan_
+# outgoing connections - outconn_
+# definitions - def_
+# secdef_ 
+
+SERVICE_BY_NAME = {
+    info.name: info
+    for info in SERVICES
+}
+
+SECURITY_SERVICE_BY_NAME = {
+    info.name: info
+    for info in SECURITY_SERVICES
+}
 
 class _DummyLink(object):
     """ Pip requires URLs to have a .url attribute.
@@ -309,17 +547,6 @@ class InputValidator(object):
     create_services_keys = sorted(create_services)
     def_sec_services_keys = sorted(def_sec_services)
 
-
-class ImportInfo(object):
-    def __init__(self, mod, needs_password=False):
-        self.mod = mod
-        self.needs_password = needs_password
-
-    def __repr__(self):
-        return "<{} at {} mod:'{}' needs_password:'{}'>".format(
-            self.__class__.__name__, hex(id(self)), self.mod, self.needs_password)
-
-
 class ObjectImporter(object):
     def __init__(self, json):
         #: Validation result.
@@ -435,7 +662,13 @@ class ObjectImporter(object):
 
     def _import_object(self, def_type, attrs, is_edit):
         attrs_dict = attrs.toDict()
-        info_dict, info_key = (def_sec_info, attrs.type) if 'sec' in def_type else (service_info, def_type)
+        if 'sec' in def_type:
+            info_dict = SECURITY_SERVICE_INFO
+            info_key = attrs.type
+        else:
+            info_dict = SERVICE_INFO
+            info_key = def_type
+
         import_info = info_dict[info_key]
         service_class = getattr(import_info.mod, 'Edit' if is_edit else 'Create')
         service_name = service_class.get_name()
@@ -491,55 +724,6 @@ class ObjectImporter(object):
 
         return None, None
 
-    # FTP definition may use a password but are not required to.
-    MAYBE_NEEDS_PASSWORD = 'MAYBE_NEEDS_PASSWORD'
-
-    service_info = {
-        'channel_amqp':ImportInfo(channel_amqp_mod),
-        'channel_jms_wmq':ImportInfo(channel_jms_wmq_mod),
-        'channel_zmq':ImportInfo(channel_zmq_mod),
-        'def_amqp':ImportInfo(definition_amqp_mod, True),
-        'def_jms_wmq':ImportInfo(definition_jms_wmq_mod),
-        'def_cassandra':ImportInfo(definition_cassandra_mod),
-        'email_imap':ImportInfo(email_imap_mod, MAYBE_NEEDS_PASSWORD),
-        'email_smtp':ImportInfo(email_smtp_mod, MAYBE_NEEDS_PASSWORD),
-        'json_pointer':ImportInfo(json_pointer_mod),
-        'http_soap':ImportInfo(http_soap_mod),
-        'def_namespace':ImportInfo(namespace_mod),
-        'notif_cloud_openstack_swift':ImportInfo(notif_cloud_openstack_swift_mod),
-        'notif_sql':ImportInfo(notif_sql_mod),
-        'outconn_amqp':ImportInfo(outgoing_amqp_mod),
-        'outconn_ftp':ImportInfo(outgoing_ftp_mod, MAYBE_NEEDS_PASSWORD),
-        'outconn_odoo':ImportInfo(outgoing_odoo_mod, True),
-        'outconn_jms_wmq':ImportInfo(outgoing_jms_wmq_mod),
-        'outconn_sql':ImportInfo(outgoing_sql_mod, True),
-        'outconn_zmq':ImportInfo(outgoing_zmq_mod),
-        'scheduler':ImportInfo(scheduler_mod),
-        'xpath':ImportInfo(xpath_mod),
-        'cloud_aws_s3': ImportInfo(cloud_aws_s3),
-        'def_cloud_openstack_swift': ImportInfo(cloud_openstack_swift_mod),
-        'search_es': ImportInfo(search_es),
-        'search_solr': ImportInfo(search_solr),
-        'rbac_permission': ImportInfo(rbac_mod.permission),
-        'rbac_role': ImportInfo(rbac_mod.role),
-        'rbac_client_role': ImportInfo(rbac_mod.client_role),
-        'rbac_role_permission': ImportInfo(rbac_mod.role_permission),
-        'tls_ca_cert':ImportInfo(sec_tls_ca_cert_mod),
-    }
-
-    def_sec_info = {
-        'apikey':ImportInfo(sec_apikey_mod, True),
-        'aws':ImportInfo(sec_aws_mod, True),
-        'basic_auth':ImportInfo(sec_basic_auth_mod, True),
-        'ntlm':ImportInfo(sec_ntlm_mod, True),
-        'oauth':ImportInfo(sec_oauth_mod, True),
-        'tech_acc':ImportInfo(sec_tech_account_mod, True),
-        'tls_key_cert':ImportInfo(sec_tls_key_cert_mod),
-        'tls_channel_sec':ImportInfo(sec_tls_channel_mod),
-        'wss':ImportInfo(sec_wss_mod, True),
-        'xpath_sec':ImportInfo(sec_xpath_mod, True),
-    }
-    
 
 class EnMasse(ManageCommand):
     """ Manages server objects en masse.
