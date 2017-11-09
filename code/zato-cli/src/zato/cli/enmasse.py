@@ -417,10 +417,19 @@ SECURITY_SERVICES = [
     ),
 ]
 
+
 # channels - chan_
 # outgoing connections - outconn_
 # definitions - def_
 # secdef_ 
+
+SERVICE_NAMES = sorted(s.name for s in SERVICES)
+assert len(set(SERVICE_NAMES)) == len(SERVICE_NAMES), \
+    "Duplicate service name."
+
+SECURITY_SERVICE_NAMES = sorted(s.name for s in SECURITY_SERVICES)
+assert len(set(SECURITY_SERVICE_NAMES)) == len(SECURITY_SERVICE_NAMES), \
+    "Duplicate security service name name."
 
 SERVICE_BY_NAME = {
     info.name: info
@@ -432,8 +441,6 @@ SECURITY_SERVICE_BY_NAME = {
     for info in SECURITY_SERVICES
 }
 
-SERVICE_NAMES = sorted(SERVICE_BY_NAME)
-SECURITY_SERVICE_NAMES = sorted(SECURITY_SERVICE_BY_NAME)
 
 
 class _DummyLink(object):
