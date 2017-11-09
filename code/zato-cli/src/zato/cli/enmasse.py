@@ -803,28 +803,6 @@ class EnMasse(ManageCommand):
 
 # ################################################################################################################################
 
-    '''
-    def set_client(self):
-
-        repo_dir = os.path.join(os.path.abspath(os.path.join(self.args.path)), 'config', 'repo')
-        config = get_config(repo_dir, 'server.conf')
-
-        server_url = self.args.server_url if self.args.server_url else config.main.gunicorn_bind
-        self.client = ZatoClient('http://{}'.format(server_url),
-            '/zato/admin/invoke', self.get_server_client_auth(config, repo_dir), max_response_repr=15000)
-
-        session = self.get_odb_session_from_server_config(
-            config, self.get_crypto_manager_from_server_config(config, repo_dir))
-
-        self.client.cluster_id = session.query(Server).\
-            filter(Server.token == config.main.token).\
-            one().cluster_id
-
-        self.client.odb_session = session
-        '''
-
-# ################################################################################################################################
-
     def ensure_input_exists(self):
         input_path = abspath(join(self.curdir, self.args.input))
         if not exists(input_path):
