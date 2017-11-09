@@ -25,7 +25,7 @@ sudo apt-get install -y git bzr gfortran haproxy \
     libumfpack* openssl python2.7-dev python-numpy python-pip \
     python-scipy python-zdaemon swig uuid-dev uuid-runtime libffi-dev libssl-dev
 
-# On Debian and Ubuntu the binary goes to /usr/sbin/haproxy so we need to symlink it 
+# On Debian and Ubuntu the binary goes to /usr/sbin/haproxy so we need to symlink it
 # to a directory that can be easily found on PATH so that starting the load-balancer
 # is possible without tweaking its configuration file.
 
@@ -49,8 +49,7 @@ sudo pip install zato-apitest
 virtualenv $CURDIR
 $CURDIR/bin/pip install --upgrade pip
 
-$CURDIR/bin/python bootstrap.py -v 1.7.0
-$CURDIR/bin/pip install setuptools==31.0.1
+$CURDIR/bin/python bootstrap.py
 $CURDIR/bin/pip install cython==0.22
 $CURDIR/bin/buildout
 
