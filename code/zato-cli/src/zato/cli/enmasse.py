@@ -742,12 +742,12 @@ class ObjectImporter(object):
             return service_name, response.details
         else:
             verb = 'Updated' if is_edit else 'Created'
-            self.logger.info("{} object '{}' ({} {})".format(verb, attrs.name, item_type, service_name))
-            if import_info.needs_password:
+            self.logger.info("{} object '{}' ({} {})".format(verb, attrs.name, def_type, service_name))
+            if sinfo.needs_password:
 
                 password = attrs.get('password')
                 if not password:
-                    if import_info.needs_password == MAYBE_NEEDS_PASSWORD:
+                    if sinfo.needs_password == MAYBE_NEEDS_PASSWORD:
                         self.logger.info("Password missing but not required '{}' ({} {})".format(
                             attrs.name, item_type, service_name))
                     else:
@@ -757,7 +757,7 @@ class ObjectImporter(object):
                     if not is_edit:
                         attrs.id = response.data['id']
 
-                    service_class = getattr(import_info.mod, 'ChangePassword')
+                    service_class = sinfo.get_module().ChangePassword
                     request = {'id':attrs.id, 'password1':attrs.password, 'password2':attrs.password}
                     response = self.client.invoke(service_class.get_name(), request)
                     if not response.ok:
