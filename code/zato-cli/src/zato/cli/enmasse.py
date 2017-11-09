@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 """
 Copyright (C) 2013 Dariusz Suchojad <dsuch at zato.io>
 
@@ -40,49 +39,10 @@ from zato.common.util import get_client_from_server_conf
 from zato.server.service import ForceType
 
 # --------------- IMPORTS HERE WILL BE REMOVED SOON --------------------
-from zato.server.service.internal import http_soap as http_soap_mod
-from zato.server.service.internal.channel import amqp_ as channel_amqp_mod
-from zato.server.service.internal.channel import jms_wmq as channel_jms_wmq_mod
-from zato.server.service.internal.channel import zmq as channel_zmq_mod
 from zato.server.service.internal.cloud.aws import s3 as cloud_aws_s3
-from zato.server.service.internal.cloud.openstack import swift as cloud_openstack_swift_mod
-from zato.server.service.internal.definition import amqp_ as definition_amqp_mod
-from zato.server.service.internal.definition import jms_wmq as definition_jms_wmq_mod
-from zato.server.service.internal.email import imap as email_imap_mod
-from zato.server.service.internal.email import smtp as email_smtp_mod
-from zato.server.service.internal.message import json_pointer as json_pointer_mod
-from zato.server.service.internal.message import namespace as namespace_mod
-from zato.server.service.internal.message import xpath as xpath_mod
-from zato.server.service.internal.notif.cloud.openstack import swift as notif_cloud_openstack_swift_mod
-from zato.server.service.internal.notif import sql as notif_sql_mod
-from zato.server.service.internal.outgoing import amqp_ as outgoing_amqp_mod
-from zato.server.service.internal.outgoing import ftp as outgoing_ftp_mod
-from zato.server.service.internal.outgoing import jms_wmq as outgoing_jms_wmq_mod
-from zato.server.service.internal.outgoing import odoo as outgoing_odoo_mod
-from zato.server.service.internal.outgoing import sql as outgoing_sql_mod
-from zato.server.service.internal.outgoing import zmq as outgoing_zmq_mod
-from zato.server.service.internal import scheduler as scheduler_mod
 from zato.server.service.internal.search import es as search_es
 from zato.server.service.internal.search import solr as search_solr
-from zato.server.service.internal.security import apikey as sec_apikey_mod
-from zato.server.service.internal.security import aws as sec_aws_mod
-from zato.server.service.internal.security import basic_auth as sec_basic_auth_mod
-from zato.server.service.internal.security import ntlm as sec_ntlm_mod
-from zato.server.service.internal.security import oauth as sec_oauth_mod
-from zato.server.service.internal.security import tech_account as sec_tech_account_mod
-from zato.server.service.internal.security import wss as sec_wss_mod
-from zato.server.service.internal.security import xpath as sec_xpath_mod
-from zato.server.service.internal.security.tls import ca_cert as sec_tls_ca_cert_mod
-from zato.server.service.internal.security.tls import channel as sec_tls_channel_mod
-from zato.server.service.internal.security.tls import key_cert as sec_tls_key_cert_mod
 # ---------- END OF OBSOLETE IMPORTS ------------
-
-# ----------- TODO: THESE MODULES HAD NO IMPORTER DESCRIPTION -------------
-from zato.server.service.internal.definition import cassandra as definition_cassandra_mod
-from zato.server.service.internal.query import cassandra as query_cassandra_mod
-# TODO rbac_mod, rbac_mod.permission, rbac_mod.role, client_role, 
-from zato.server.service.internal.security import rbac as rbac_mod
-# -------------------------------------------------------------------------
 
 DEFAULT_COLS_WIDTH = '15,100'
 NO_SEC_DEF_NEEDED = 'zato-no-security'
@@ -122,7 +82,9 @@ def import_module(modname):
 
 class ServiceInfo(object):
     def __init__(self, name, module_name, needs_password=False,
-                 create_class_name='Create'):
+                 create_class_name='Create',
+                 edit_class_name='Edit',
+                 supports_import=True):
         #: Short service name as appears in export data.
         self.name = name
         #: Canonical name of service's implementation module.
@@ -131,16 +93,23 @@ class ServiceInfo(object):
         self.needs_password = needs_password
         #: Name of the object creation class in the service module.
         self.create_class_name = create_class_name
+        #: True if importer accepts this object. Some services were not
+        #: supported previously; this is to maintain temporary compatibility
+        #: with the old code.
+        self.supports_import = supports_import
 
-    def module(self):
+    def get_module(self):
         """Import and return the module containing the service
         implementation."""
         return import_module(self.module_name)
 
-    def create_class(self):
+    def get_create_class(self):
         """Import and return the class implementation for creating objects in
         the service."""
-        return getattr(self.module(), self.create_class_name)
+        return getattr(self.get_module(), self.create_class_name)
+
+    def get_edit_class(self):
+        return getattr(self.get_module(), self.edit_class_name)
 
     def __repr__(self):
         return "<{} at {} mod:'{}' needs_password:'{}'>".format(
@@ -159,6 +128,16 @@ SERVICES = [
     ServiceInfo(
         name='channel_jms_wmq',
         module_name='zato.server.service.internal.channel.jms_wmq',
+    ),
+    ServiceInfo(
+        name='channel_plain_http',
+        module_name='zato.server.service.internal.http_soap',
+        supports_import=False,
+    ),
+    ServiceInfo(
+        name='channel_soap',
+        module_name='zato.server.service.internal.http_soap',
+        supports_import=False,
     ),
     ServiceInfo(
         name='channel_zmq',
@@ -276,6 +255,23 @@ SERVICES = [
         name='tls_ca_cert',
         module_name='zato.server.service.internal.security.tls.ca_cert',
     ),
+    # Added for the exporter.
+    ServiceInfo(
+        name='outconn_plain_http',
+        module_name='zato.server.service.internal.http_soap',
+        supports_import=False,
+    ),
+    ServiceInfo(
+        name='outconn_soap',
+        module_name='zato.server.service.internal.http_soap',
+        supports_import=False,
+    ),
+    ServiceInfo(
+        name='query_cassandra',
+        module_name='zato.server.service.internal.query.cassandra',
+        supports_import=False,
+    ),
+
 ]
 
 #: List of security services. To be merged with SERVICES later.
@@ -345,6 +341,10 @@ SECURITY_SERVICE_BY_NAME = {
     for info in SECURITY_SERVICES
 }
 
+SERVICE_NAMES = sorted(SERVICE_BY_NAME)
+SECURITY_SERVICE_NAMES = sorted(SECURITY_SERVICE_BY_NAME)
+
+
 class _DummyLink(object):
     """ Pip requires URLs to have a .url attribute.
     """
@@ -396,12 +396,13 @@ class InputValidator(object):
             Service short name, e.g. "channel_amqp".
         :rtype set:
         """
-        service = self.create_services.get(service_name)
-        if service is None:
-            service = self.def_sec_services[service_name]
+        sinfo = SERVICE_BY_NAME.get(service_name)
+        if sinfo is None:
+            sinfo = SECURITY_SERVICE_BY_NAME[service_name]
 
         required = set()
-        for name in service.SimpleIO.input_required:
+        create_class = sinfo.get_create_class()
+        for name in create_class.SimpleIO.input_required:
             if name in self.skip_names:
                 continue
             if isinstance(name, ForceType):
@@ -427,25 +428,23 @@ class InputValidator(object):
                         value = "'{}' has no required 'type' key (def_sec) ".format(item_dict)
                         self.results.errors.append(Error(raw, value, ERROR_TYPE_MISSING))
                     else:
-                        class_ = self.def_sec_services.get(sec_type)
-                        if not class_:
-                            raw = (sec_type, self.def_sec_services_keys, item)
-                            value = "Invalid type '{}', must be one of '{}' (def_sec)".format(sec_type, self.def_sec_services_keys)
+                        if sec_type not in SECURITY_SERVICE_BY_NAME:
+                            raw = (sec_type, SECURITY_SERVICE_NAMES, item)
+                            value = "Invalid type '{}', must be one of '{}' (def_sec)".format(sec_type, SECURITY_SERVICE_NAMES)
                             self.results.errors.append(Error(raw, value, ERROR_INVALID_SEC_DEF_TYPE))
                         else:
-                            self._validate(key, item, class_, True)
+                            self._validate(key, item, True)
                 else:
-                    class_ = self.create_services.get(key)
-                    if not class_:
-                        raw = (key, self.create_services_keys)
-                        value = "Invalid key '{}', must be one of '{}'".format(key, self.create_services_keys)
+                    if key not in SERVICE_BY_NAME:
+                        raw = (key, SERVICE_NAMES)
+                        value = "Invalid key '{}', must be one of '{}'".format(key, SERVICE_NAMES)
                         self.results.errors.append(Error(raw, value, ERROR_INVALID_KEY))
                     else:
-                        self._validate(key, item, class_, False)
+                        self._validate(key, item, False)
 
         return self.results
 
-    def _validate(self, key, item, class_, is_sec):
+    def _validate(self, key, item, is_sec):
         name = item.get('name')
         item_dict = item.toDict()
         missing = None
@@ -492,60 +491,6 @@ class InputValidator(object):
     }
 
     skip_names = ('cluster_id',)
-
-    create_services = {
-        'channel_amqp':channel_amqp_mod.Create,
-        'channel_jms_wmq':channel_jms_wmq_mod.Create,
-        'channel_plain_http':http_soap_mod.Create,
-        'channel_soap':http_soap_mod.Create,
-        'channel_zmq':channel_zmq_mod.Create,
-        'cloud_aws_s3': cloud_aws_s3.Create,
-        'def_cloud_openstack_swift': cloud_openstack_swift_mod.Create,
-        'def_amqp':definition_amqp_mod.Create,
-        'def_jms_wmq':definition_jms_wmq_mod.Create,
-        'def_cassandra':definition_cassandra_mod.Create,
-        'def_namespace': namespace_mod.Create,
-        'email_imap': email_imap_mod.Create,
-        'email_smtp': email_smtp_mod.Create,
-        'json_pointer': json_pointer_mod.Create,
-        'http_soap':http_soap_mod.Create,
-        'notif_cloud_openstack_swift':notif_cloud_openstack_swift_mod.Create,
-        'notif_sql':notif_sql_mod.Create,
-        'outconn_amqp':outgoing_amqp_mod.Create,
-        'outconn_ftp':outgoing_ftp_mod.Create,
-        'outconn_jms_wmq':outgoing_jms_wmq_mod.Create,
-        'outconn_odoo':outgoing_odoo_mod.Create,
-        'outconn_plain_http':http_soap_mod.Create,
-        'outconn_soap':http_soap_mod.Create,
-        'outconn_sql':outgoing_sql_mod.Create,
-        'outconn_zmq':outgoing_zmq_mod.Create,
-        'query_cassandra': query_cassandra_mod.Create,
-        'scheduler':scheduler_mod.Create,
-        'search_es': search_es.Create,
-        'search_solr': search_solr.Create,
-        'xpath': xpath_mod.Create,
-        'rbac_client_role': rbac_mod.client_role.Create,
-        'rbac_permission': rbac_mod.permission.Create,
-        'rbac_role': rbac_mod.role.Create,
-        'rbac_role_permission': rbac_mod.role_permission.Create,
-        'tls_ca_cert':sec_tls_ca_cert_mod.Create,
-    }
-
-    def_sec_services = {
-        'apikey':sec_apikey_mod.Create,
-        'aws':sec_aws_mod.Create,
-        'basic_auth':sec_basic_auth_mod.Create,
-        'ntlm':sec_ntlm_mod.Create,
-        'oauth':sec_oauth_mod.Create,
-        'tech_acc':sec_tech_account_mod.Create,
-        'tls_channel_sec':sec_tls_channel_mod.Create,
-        'tls_key_cert':sec_tls_key_cert_mod.Create,
-        'wss':sec_wss_mod.Create,
-        'xpath_sec':sec_xpath_mod.Create,
-    }
-
-    create_services_keys = sorted(create_services)
-    def_sec_services_keys = sorted(def_sec_services)
 
 class ObjectImporter(object):
     def __init__(self, json):
@@ -663,14 +608,14 @@ class ObjectImporter(object):
     def _import_object(self, def_type, attrs, is_edit):
         attrs_dict = attrs.toDict()
         if 'sec' in def_type:
-            info_dict = SECURITY_SERVICE_INFO
-            info_key = attrs.type
+            sinfo = SECURITY_SERVICE_BY_NAME[attrs.type]
         else:
-            info_dict = SERVICE_INFO
-            info_key = def_type
+            sinfo = SERVICE_BY_NAME[def_type]
 
-        import_info = info_dict[info_key]
-        service_class = getattr(import_info.mod, 'Edit' if is_edit else 'Create')
+        if is_edit:
+            service_class = sinfo.get_edit_class()
+        else:
+            service_class = sinfo.get_create_class()
         service_name = service_class.get_name()
 
         # service and service_name are interchangeable
@@ -704,7 +649,7 @@ class ObjectImporter(object):
 
                 password = attrs.get('password')
                 if not password:
-                    if import_info.needs_password == self.MAYBE_NEEDS_PASSWORD:
+                    if import_info.needs_password == MAYBE_NEEDS_PASSWORD:
                         self.logger.info("Password missing but not required '{}' ({} {})".format(
                             attrs.name, item_type, service_name))
                     else:
