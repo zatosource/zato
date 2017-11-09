@@ -106,6 +106,16 @@ class SQLConnectionPool(object):
         elif self.engine_name.startswith('postgres'):
             _extra['connect_args'] = {'application_name': get_component_name()}
 
+        # MSSQL library pymssql gevent support, manually set wait callback. 
+        # This function should be inside pymssql library, not outside.
+        # Also gevents shortcoming, you need to be aware of the library
+        # and implicilty support it.
+        elif self.engine_name.startswith('mssql'):
+            import pymssql, gevent.socket
+            def wait_callback(read_fileno):
+                gevent.socket.wait_read(read_fileno)
+            pymssql.set_wait_callback(wait_callback)
+
         extra = self.config.get('extra') # Optional, hence .get
         _extra.update(parse_extra_into_dict(extra))
 
