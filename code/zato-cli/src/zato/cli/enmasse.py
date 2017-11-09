@@ -85,7 +85,9 @@ class ServiceInfo(object):
                  create_class_name='Create',
                  edit_class_name='Edit',
                  supports_import=True,
-                 get_list_service=None):
+                 get_list_service=None,
+                 get_odb_objects_ignore=False,
+                 dependencies=None):
         #: Short service name as appears in export data.
         self.name = name
         #: Canonical name of service's implementation module.
@@ -103,6 +105,13 @@ class ServiceInfo(object):
         #: Optional name of the object enumeration/retrieval service. CAUTION:
         #: see get_odb_objects() before adding this to every ServiceInfo.
         self.get_list_service = get_list_service
+        #: If True, tell get_odb_objects() to ignore this type temporarily.
+        #: This allows setting get_list_service for new bits of code.
+        self.get_odb_objects_ignore = get_odb_objects_ignore
+        #: Specifies a list of dependencies:
+        #:      field_name: {"dependent_type": "shortname",
+        #:                   "dependent_field": "fieldname"}
+        self.dependencies = dependencies or {}
 
     def get_module(self):
         """Import and return the module containing the service
@@ -133,20 +142,45 @@ SERVICES = [
         name='channel_amqp',
         module_name='zato.server.service.internal.channel.amqp_',
         get_list_service='zato.channel.amqp.get-list',
+        dependencies={
+            'def_name': {
+                'dependent_type': 'def_amqp',
+                'dependent_field': 'name',
+            },
+        },
     ),
     ServiceInfo(
         name='channel_jms_wmq',
         module_name='zato.server.service.internal.channel.jms_wmq',
+        get_list_service='zato.server.service.internal.jms_wmq',
+        dependencies={
+            'def_name': {
+                'dependent_type': 'def_jms_wmq',
+                'dependent_field': 'name',
+            },
+        },
     ),
     ServiceInfo(
         name='channel_plain_http',
         module_name='zato.server.service.internal.http_soap',
         supports_import=False,
+        dependencies={
+            'sec_def': {
+                'dependent_type': 'def_sec',
+                'dependent_field': 'name',
+            },
+        },
     ),
     ServiceInfo(
         name='channel_soap',
         module_name='zato.server.service.internal.http_soap',
         supports_import=False,
+        dependencies={
+            'sec_def': {
+                'dependent_type': 'def_sec',
+                'dependent_field': 'name',
+            },
+        },
     ),
     ServiceInfo(
         name='channel_zmq',
@@ -156,6 +190,14 @@ SERVICES = [
     ServiceInfo(
         name='def_amqp',
         module_name='zato.server.service.internal.definition.amqp_',
+        get_list_service='zato.definition.amqp.get-list',
+        get_odb_objects_ignore=True,
+    ),
+    ServiceInfo(
+        name='def_sec',
+        module_name='zato.server.service.internal.security',
+        get_list_service='zato.security.get-list',
+        get_odb_objects_ignore=True,
     ),
     ServiceInfo(
         name='def_jms_wmq',
@@ -165,6 +207,8 @@ SERVICES = [
     ServiceInfo(
         name='def_cassandra',
         module_name='zato.server.service.internal.definition.cassandra',
+        get_list_service='zato.definition.cassandra.get-list',
+        get_odb_objects_ignore=True,
     ),
     ServiceInfo(
         name='email_imap',
@@ -184,6 +228,13 @@ SERVICES = [
     ServiceInfo(
         name='http_soap',
         module_name='zato.server.service.internal.http_soap',
+        # TODO: note: covers all of outconn_plain_http, outconn_soap, http_soap
+        dependencies={
+            'sec_def': {
+                'dependent_type': 'def_sec',
+                'dependent_field': 'name',
+            },
+        },
     ),
     ServiceInfo(
         name='def_namespace',
@@ -202,6 +253,12 @@ SERVICES = [
         name='outconn_amqp',
         module_name='zato.server.service.internal.outgoing.amqp_',
         get_list_service='zato.outgoing.amqp.get-list',
+        dependencies={
+            'def_name': {
+                'dependent_type': 'def_amqp',
+                'dependent_field': 'name',
+            },
+        },
     ),
     ServiceInfo(
         name='outconn_ftp',
@@ -217,6 +274,12 @@ SERVICES = [
         name='outconn_jms_wmq',
         module_name='zato.server.service.internal.outgoing.jms_wmq',
         get_list_service='zato.outgoing.jms-wmq.get-list',
+        dependencies={
+            'def_name': {
+                'dependent_type': 'def_jms_wmq',
+                'dependent_field': 'name',
+            },
+        },
     ),
     ServiceInfo(
         name='outconn_sql',
