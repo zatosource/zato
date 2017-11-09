@@ -34,7 +34,8 @@ class GetListTestCase(ServiceTestCase):
     def test_sio(self):
         self.assertEquals(self.sio.request_elem, 'zato_kvdb_data_dict_dictionary_get_list_request')
         self.assertEquals(self.sio.response_elem, 'zato_kvdb_data_dict_dictionary_get_list_response')
-        self.assertEquals(self.sio.output_required, ('id', 'system', 'key', 'value'))
+        self.assertEquals(self.sio.output_required, ('id', 'system', 'key'))
+        self.assertEquals(self.sio.output_optional, ('value',))
         self.assertEquals(self.sio.namespace, zato_namespace)
         self.assertEquals(self.sio.input_optional, GetListAdminSIO.input_optional)
         self.assertRaises(AttributeError, getattr, self.sio, 'output_optional')
@@ -60,8 +61,8 @@ class CreateTestCase(ServiceTestCase):
 
         self.assertEquals(self.sio.request_elem, 'zato_kvdb_data_dict_dictionary_create_request')
         self.assertEquals(self.sio.response_elem, 'zato_kvdb_data_dict_dictionary_create_response')
-        self.assertEquals(self.sio.input_required, ('system', 'key', 'value'))
-        self.assertEquals(self.sio.input_optional, ('id',))
+        self.assertEquals(self.sio.input_required, ('system', 'key'))
+        self.assertEquals(self.sio.input_optional, ('id', 'value'))
         self.assertEquals(self.sio.output_required, ('id',))
         self.assertEquals(self.sio.namespace, zato_namespace)
 
@@ -85,8 +86,8 @@ class EditTestCase(ServiceTestCase):
     def test_sio(self):
         self.assertEquals(self.sio.request_elem, 'zato_kvdb_data_dict_dictionary_edit_request')
         self.assertEquals(self.sio.response_elem, 'zato_kvdb_data_dict_dictionary_edit_response')
-        self.assertEquals(self.sio.input_required, ('system', 'key', 'value'))
-        self.assertEquals(self.sio.input_optional, ('id',))
+        self.assertEquals(self.sio.input_required, ('system', 'key')
+        self.assertEquals(self.sio.input_optional, ('id', 'value')))
         self.assertEquals(self.sio.output_required, ('id',))
         self.assertEquals(self.sio.namespace, zato_namespace)
 

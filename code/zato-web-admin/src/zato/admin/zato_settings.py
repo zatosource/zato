@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import os
+from collections import OrderedDict
 
 # Zato
 from zato.common import SCHEDULER
@@ -41,31 +42,33 @@ def update_globals(config, base_dir='.'):
 # ##############################################################################
 
 # Maps SQLAlchemy engine's name to a UI-friendly one.
-engine_friendly_name = {
-    'postgresql+pg8000': 'PostgreSQL',
-    'oracle': 'Oracle',
-    'mysql+pymysql': 'MySQL',
+engine_friendly_name = OrderedDict([
+    ('postgresql+pg8000', 'PostgreSQL'),
+    ('oracle', 'Oracle'),
+    ('mysql+pymysql', 'MySQL'),
+    ('mssql', 'MS SQL Server'),
 
     # These are not supported /yet/.
-    # 'mssql': 'MS SQL Server',
     # 'access': 'MS Access',
     # 'firebird': 'Firebird',
     # 'db2': 'DB2',
     # 'informix':'Informix'
-}
+])
 
-odb_engine_friendly_name = {
-    'postgresql+pg8000': 'PostgreSQL',
-    'oracle': 'Oracle',
-    'mysql+pymysql': 'MySQL',
-}
+odb_engine_friendly_name = OrderedDict([
+    ('postgresql+pg8000', 'PostgreSQL'),
+    ('oracle', 'Oracle'),
+    ('mysql+pymysql', 'MySQL'),
+    ('mssql', 'MS SQL Server'),
+])
 
 django_sqlalchemy_engine = {
+    'dummy':'dummy',
+    'sqlite':'sqlite3',
     'postgresql': 'postgresql_psycopg2',
     'mysql':'mysql',
     'oracle':'oracle',
-    'sqlite':'sqlite3',
-    'dummy':'dummy'
+    'mssql':'mssql', 
 }
 
 sqlalchemy_django_engine = dict((v,k) for k,v in django_sqlalchemy_engine.items())

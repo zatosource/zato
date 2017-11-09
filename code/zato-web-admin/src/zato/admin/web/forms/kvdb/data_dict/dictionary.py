@@ -14,7 +14,7 @@ from django import forms
 class CreateForm(forms.Form):
     system = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    value = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%'}))
+    value = forms.CharField(required=False, widget=forms.Textarea(attrs={'style':'width:100%'}))
 
 class EditForm(CreateForm):
     pass

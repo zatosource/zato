@@ -1,0 +1,4 @@
+#!/bin/bash
+
+rm -f $ZATO/env/qs-1/web-admin/pidfile
+zato start $ZATO/env/qs-1/web-admin --fg
