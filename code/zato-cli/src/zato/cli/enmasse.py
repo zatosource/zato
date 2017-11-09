@@ -491,6 +491,14 @@ class InputValidator(object):
         #: Input JSON to validate.
         self.json = json
 
+    #: Fields that may be marked as required by SimpleIO that are always
+    #: optional during import.
+    always_optional_fields = ('cluster_id',)
+
+    replace_names = {
+        'def_id': 'def_name',
+    }
+
     def get_required_keys(self, service_name):
         """
         Return a set of keys required by a service definition.
@@ -506,7 +514,7 @@ class InputValidator(object):
         required = set()
         create_class = sinfo.get_create_class()
         for name in create_class.SimpleIO.input_required:
-            if name in self.skip_names:
+            if name in self.always_optional_fields:
                 continue
             if isinstance(name, ForceType):
                 name = name.name
@@ -598,11 +606,6 @@ class InputValidator(object):
                         raw = (req_key, required, item_dict, key)
                         value = "Key '{}' must not be None in '{}' ({})".format(req_key, item_dict, key)
 
-    replace_names = {
-        'def_id': 'def_name',
-    }
-
-    skip_names = ('cluster_id',)
 
 class ObjectImporter(object):
     def __init__(self, json):
