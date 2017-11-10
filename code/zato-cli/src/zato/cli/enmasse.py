@@ -447,15 +447,13 @@ SECURITY_SERVICE_BY_NAME = {
     for info in SECURITY_SERVICES
 }
 
-
-
 class _DummyLink(object):
     """ Pip requires URLs to have a .url attribute.
     """
     def __init__(self, url):
         self.url = url
 
-class _Incorrect(object):
+class Notice(object):
     def __init__(self, value_raw, value, code):
         self.value_raw = value_raw
         self.value = value
@@ -465,12 +463,6 @@ class _Incorrect(object):
         return "<{} at {} value_raw:'{}' value:'{}' code:'{}'>".format(
             self.__class__.__name__, hex(id(self)), self.value_raw,
             self.value, self.code)
-
-class Warning(_Incorrect):
-    pass
-
-class Error(_Incorrect):
-    pass
 
 class Results(object):
     def __init__(self, warnings=None, errors=None, service=None):
@@ -483,12 +475,12 @@ class Results(object):
     def add_error(self, raw, code, msg, *args):
         if args:
             msg = msg.format(*args)
-        self.errors.append(Error(raw, msg, code))
+        self.errors.append(Notice(raw, msg, code))
 
     def add_warning(self, raw, code, msg, *args):
         if args:
             msg = msg.format(*args)
-        self.errors.append(Warning(raw, msg, code))
+        self.warnings.append(Notice(raw, msg, code))
 
     def _get_ok(self):
         return not(self.warnings or self.errors)
@@ -710,8 +702,9 @@ class DependencyScanner(object):
                     continue
                 dependants = sorted(dependants)
                 raw = (def_key, missing_def, existing_ones, dependants)
-                value = "'{}' is needed by '{}' but was not among '{}'".format(missing_def, dependants, existing_ones)
-                self.results.warnings.append(Warning(raw, value, WARNING_MISSING_DEF))
+                self.results.add_warning(raw, WARNING_MISSING_DEF,
+                    "'{}' is needed by '{}' but was not among '{}'",
+                    missing_def, dependants, existing_ones)
 
         return self.results
 
@@ -1358,23 +1351,23 @@ class EnMasse(ManageCommand):
         return unparsable
 
     def json_sanity_check(self):
-        errors = []
+        results = Results()
 
         for raw, keys in sorted(self.json_find_include_dups().items()):
             len_keys = len(keys)
             keys = sorted(set(keys))
-            value = '{} included multiple times ({}) \n{}'.format(
+            results.add_error(raw, ERROR_ITEM_INCLUDED_MULTIPLE_TIMES,
+                '{} included multiple times ({}) \n{}',
                 raw, len_keys, '\n'.join(' - {}'.format(name) for name in keys))
-            errors.append(Error(raw, value, ERROR_ITEM_INCLUDED_MULTIPLE_TIMES))
 
         missing_items = sorted(self.json_find_missing_includes().items())
         for raw, keys in missing_items:
             missing, missing_abs = raw
             len_keys = len(keys)
             keys = sorted(set(keys))
-            value = '{} ({}) missing but needed in multiple definitions ({}) \n{}'.format(
+            results.add_error(raw, ERROR_ITEM_INCLUDED_BUT_MISSING,
+                '{} ({}) missing but needed in multiple definitions ({}) \n{}',
                 missing, missing_abs, len_keys, '\n'.join(' - {}'.format(name) for name in keys))
-            errors.append(Error(raw, value, ERROR_ITEM_INCLUDED_BUT_MISSING))
 
         unparsable = self.json_find_unparsable_includes([elem[0][1] for elem in missing_items])
         for raw, keys in unparsable.items():
@@ -1382,11 +1375,11 @@ class EnMasse(ManageCommand):
             len_keys = len(keys)
             suffix = '' if len_keys == 1 else 's'
             keys = sorted(set(keys))
-            value = '{} ({}) could not be parsed as JSON, used in ({}) definition{}\n{} \n{}'.format(
+            results.add_error(raw, ERROR_INCLUDE_COULD_NOT_BE_PARSED,
+                '{} ({}) could not be parsed as JSON, used in ({}) definition{}\n{} \n{}',
                 include, abs_path, len_keys, suffix, '\n'.join(' - {}'.format(name) for name in keys), exc_pretty)
-            errors.append(Error(raw, value, ERROR_INCLUDE_COULD_NOT_BE_PARSED))
 
-        return Results([], errors)
+        return results
 
     def merge_includes(self):
         json_with_includes = Bunch()
@@ -1404,7 +1397,7 @@ class EnMasse(ManageCommand):
         self.logger.info('Includes merged in successfully')
 
     def merge_odb_json(self):
-        errors = []
+        results = Results()
         merged = deepcopy(self.object_mgr.objects)
 
         for json_key, json_elems in self.json.items():
@@ -1416,8 +1409,9 @@ class EnMasse(ManageCommand):
             if odb_key not in merged:
                 sorted_merged = sorted(merged)
                 raw = (json_key, odb_key, sorted_merged)
-                value = "JSON key '{}' not one of '{}'".format(odb_key, sorted_merged)
-                errors.append(Error(raw, value, ERROR_INVALID_KEY))
+                results.add_error(raw, ERROR_INVALID_KEY,
+                    "JSON key '{}' not one of '{}'",
+                    odb_key, sorted_merged)
             else:
                 for json_elem in json_elems:
                     if 'http' in json_key or 'soap' in json_key:
@@ -1434,10 +1428,10 @@ class EnMasse(ManageCommand):
                                 merged[odb_key].remove(odb_elem)
                     merged[odb_key].append(json_elem)
 
-        if errors:
-            return Results([], errors)
+        if results.ok:
+            self.json = merged
+        return results
 
-        self.json = merged
 
 # ################################################################################################################################
 
@@ -1468,9 +1462,9 @@ class EnMasse(ManageCommand):
         self.object_mgr.refresh()
         self.logger.info('ODB objects read')
 
-        errors = self.merge_odb_json()
-        if errors:
-            return [errors]
+        results = self.merge_odb_json()
+        if not results.ok:
+            return [results]
         self.logger.info('ODB objects merged in')
 
         return self.export_local(False)
