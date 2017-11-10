@@ -1129,17 +1129,11 @@ class EnMasse(ManageCommand):
     ]
 
     def _on_server(self, args):
-
         self.args = args
         self.curdir = abspath(self.original_dir)
-        self.replace_odb_objects = self.args.replace_odb_objects
         self.has_import = getattr(args, 'import')
         self.ignore_missing_defs = args.ignore_missing_defs
         self.json = {}
-        self.json_to_import = {}
-
-        self.odb_objects = Bunch()
-        self.odb_services = Bunch()
 
         #
         # Tasks and scenarios
@@ -1436,8 +1430,6 @@ class EnMasse(ManageCommand):
 
 # ################################################################################################################################
 
-# ################################################################################################################################
-
     def export(self):
         # Find any definitions that are missing
         dep_scanner = DependencyScanner(self.json, self.object_mgr)
@@ -1447,7 +1439,7 @@ class EnMasse(ManageCommand):
             return [missing_defs]
 
         # Validate if every required input element has been specified.
-        invalid_reqs = self.validate_input()
+        invalid_reqs = InputValidator(self.json).validate()
         if invalid_reqs:
             self.logger.error('Required elements missing')
             return [invalid_reqs]
@@ -1462,7 +1454,7 @@ class EnMasse(ManageCommand):
     def export_local_odb(self, needs_local=True):
         if needs_local:
             self.merge_includes()
-        self.get_odb_objects()
+        self.object_mgr.refresh()
         self.logger.info('ODB objects read')
 
         errors = self.merge_odb_json()
