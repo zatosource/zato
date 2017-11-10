@@ -95,7 +95,8 @@ class ServiceInfo(object):
                  supports_import=True,
                  get_list_service=None,
                  get_odb_objects_ignore=False,
-                 dependencies=None):
+                 dependencies=None,
+                 is_security=False):
         #: Short service name as appears in export data.
         self.name = name
         #: Canonical name of service's implementation module.
@@ -121,6 +122,9 @@ class ServiceInfo(object):
         #:                   "dependent_field": "fieldname",
         #:                   "empty_value": None, or e.g. NO_SEC_DEF_NEEDED}
         self.dependencies = dependencies or {}
+        #: If True, indicates the service is source of authentication
+        #: credentials for use in another service.
+        self.is_security = is_security
 
     def get_module(self):
         """Import and return the module containing the service
@@ -389,58 +393,63 @@ SERVICES = [
         supports_import=False,
         get_list_service='zato.query.cassandra.get-list',
     ),
-
-]
-
-#: List of security services. To be merged with SERVICES later.
-SECURITY_SERVICES = [
     ServiceInfo(
         name='apikey',
         module_name='zato.server.service.internal.security.apikey',
         needs_password=True,
+        is_security=True,
     ),
     ServiceInfo(
         name='aws',
         module_name='zato.server.service.internal.security.aws',
         needs_password=True,
+        is_security=True,
     ),
     ServiceInfo(
         name='basic_auth',
         module_name='zato.server.service.internal.security.basic_auth',
         needs_password=True,
+        is_security=True,
     ),
     ServiceInfo(
         name='ntlm',
         module_name='zato.server.service.internal.security.ntlm',
         needs_password=True,
+        is_security=True,
     ),
     ServiceInfo(
         name='oauth',
         module_name='zato.server.service.internal.security.oauth',
         needs_password=True,
+        is_security=True,
     ),
     ServiceInfo(
         name='tech_acc',
         module_name='zato.server.service.internal.security.tech_account',
         needs_password=True,
+        is_security=True,
     ),
     ServiceInfo(
         name='tls_key_cert',
         module_name='zato.server.service.internal.security.tls.key_cert',
+        is_security=True,
     ),
     ServiceInfo(
         name='tls_channel_sec',
         module_name='zato.server.service.internal.security.tls.channel',
+        is_security=True,
     ),
     ServiceInfo(
         name='wss',
         module_name='zato.server.service.internal.security.wss',
         needs_password=True,
+        is_security=True,
     ),
     ServiceInfo(
         name='xpath_sec',
         module_name='zato.server.service.internal.security.xpath',
         needs_password=True,
+        is_security=True,
     ),
 ]
 
@@ -450,28 +459,12 @@ SECURITY_SERVICES = [
 # definitions - def_
 # secdef_ 
 
-SERVICE_NAMES = sorted(s.name for s in SERVICES)
-assert len(set(SERVICE_NAMES)) == len(SERVICE_NAMES), \
-    "Duplicate service name."
-
-SECURITY_SERVICE_NAMES = sorted(s.name for s in SECURITY_SERVICES)
-assert len(set(SECURITY_SERVICE_NAMES)) == len(SECURITY_SERVICE_NAMES), \
-    "Duplicate security service name name."
+SERVICE_NAMES = set(s.name for s in SERVICES)
+SECURITY_SERVICE_NAMES = set(s.name for s in SERVICES if s.is_security)
 
 SERVICE_BY_NAME = {
     info.name: info
     for info in SERVICES
-}
-
-#: Eventually this will become SERVICE_BY_NAME.
-ALL_SERVICES_BY_NAME = {
-    info.name: info
-    for info in SERVICES + SECURITY_SERVICES
-}
-
-SECURITY_SERVICE_BY_NAME = {
-    info.name: info
-    for info in SECURITY_SERVICES
 }
 
 class _DummyLink(object):
@@ -537,10 +530,7 @@ class InputValidator(object):
             Service short name, e.g. "channel_amqp".
         :rtype set:
         """
-        sinfo = SERVICE_BY_NAME.get(service_name)
-        if sinfo is None:
-            sinfo = SECURITY_SERVICE_BY_NAME[service_name]
-
+        sinfo = SERVICE_BY_NAME[service_name]
         required = set()
         create_class = sinfo.get_create_class()
         for name in create_class.SimpleIO.input_required:
@@ -563,7 +553,7 @@ class InputValidator(object):
             self.results.add_error(raw, ERROR_TYPE_MISSING,
                                    "'{}' has no required 'type' key (def_sec)",
                                    item_dict)
-        elif sec_type not in SECURITY_SERVICE_BY_NAME:
+        elif sec_type not in SECURITY_SERVICE_NAMES:
             raw = (sec_type, SECURITY_SERVICE_NAMES, item)
             self.results.add_error(raw, ERROR_INVALID_SEC_DEF_TYPE,
                                    "Invalid type '{}', must be one of '{}' (def_sec)",
@@ -670,7 +660,7 @@ class DependencyScanner(object):
         :param item_type: ServiceInfo.name of the item's type.
         :param item: dict describing the item.
         """
-        sinfo = ALL_SERVICES_BY_NAME[item_type]
+        sinfo = SERVICE_BY_NAME[item_type]
         for dep_key, dep_info in sinfo.dependencies.items():
             if ((item.get(dep_key) != dep_info.get('empty_value')) and
                 self.find_by_type_and_value(dep_info['dependent_type'],
@@ -879,9 +869,11 @@ class ObjectImporter(object):
     def _import_object(self, def_type, attrs, is_edit):
         attrs_dict = attrs.toDict()
         if 'sec' in def_type:
-            sinfo = SECURITY_SERVICE_BY_NAME[attrs.type]
+            sinfo = SERVICE_BY_NAME[attrs.type]
+            assert sinfo.is_security
         else:
             sinfo = SERVICE_BY_NAME[def_type]
+            assert not sinfo.is_security
 
         if is_edit:
             service_class = sinfo.get_edit_class()
@@ -949,7 +941,7 @@ class ClusterObjectManager(object):
         self.services = Bunch()
 
     def has_def(self, def_type, def_name):
-        sinfo = ALL_SERVICES_BY_NAME[def_type]
+        sinfo = SERVICE_BY_NAME[def_type]
         assert sinfo.get_list_service is not None
 
         response = self.client.invoke(sinfo.get_list_service, {
@@ -1091,7 +1083,7 @@ class ClusterObjectManager(object):
         ]
 
     def get_via_service_client(self):
-        for sinfo in SERVICES + SECURITY_SERVICES:
+        for sinfo in SERVICES:
             # Temporarily preserve function of the old enmasse.
             if sinfo.get_list_service is None:
                 continue
