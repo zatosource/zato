@@ -95,7 +95,8 @@ class ServiceInfo(object):
                  supports_import=True,
                  get_list_service=None,
                  get_odb_objects_ignore=False,
-                 dependencies=None,
+                 object_dependencies=None,
+                 service_dependencies=None,
                  is_security=False):
         #: Short service name as appears in export data.
         self.name = name
@@ -117,11 +118,15 @@ class ServiceInfo(object):
         #: If True, tell get_odb_objects() to ignore this type temporarily.
         #: This allows setting get_list_service for new bits of code.
         self.get_odb_objects_ignore = get_odb_objects_ignore
-        #: Specifies a list of dependencies:
+        #: Specifies a list of object dependencies:
         #:      field_name: {"dependent_type": "shortname",
         #:                   "dependent_field": "fieldname",
         #:                   "empty_value": None, or e.g. NO_SEC_DEF_NEEDED}
-        self.dependencies = dependencies or {}
+        self.object_dependencies = object_dependencies or {}
+        #: Specifies a list of service dependencies:
+        #:      field_name: {"only_if_field": "field_name" or None,
+        #:                   "only_if_value": "vlaue" or None}
+        self.service_dependencies = service_dependencies or {}
         #: If True, indicates the service is source of authentication
         #: credentials for use in another service.
         self.is_security = is_security
@@ -155,53 +160,74 @@ SERVICES = [
         name='channel_amqp',
         module_name='zato.server.service.internal.channel.amqp_',
         get_list_service='zato.channel.amqp.get-list',
-        dependencies={
+        object_dependencies={
             'def_name': {
                 'dependent_type': 'def_amqp',
                 'dependent_field': 'name',
             },
         },
+        service_dependencies={
+            'service_name': {}
+        },
     ),
     ServiceInfo(
         name='channel_jms_wmq',
         module_name='zato.server.service.internal.channel.jms_wmq',
-        get_list_service='zato.server.service.internal.jms_wmq',
-        dependencies={
+        get_list_service='zato.channel.jms-wmq.get-list',
+        object_dependencies={
             'def_name': {
                 'dependent_type': 'def_jms_wmq',
                 'dependent_field': 'name',
                 'empty_value': NO_SEC_DEF_NEEDED,
             },
         },
+        service_dependencies={
+            'service_name': {}
+        },
     ),
     ServiceInfo(
         name='channel_plain_http',
         module_name='zato.server.service.internal.http_soap',
         supports_import=False,
-        dependencies={
+        object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
                 'empty_value': NO_SEC_DEF_NEEDED,
             },
+        },
+        service_dependencies={
+            'service_name': {}
         },
     ),
     ServiceInfo(
         name='channel_soap',
         module_name='zato.server.service.internal.http_soap',
         supports_import=False,
-        dependencies={
+        object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
                 'empty_value': NO_SEC_DEF_NEEDED,
             },
         },
+        service_dependencies={
+            'service_name': {}
+        },
     ),
     ServiceInfo(
         name='channel_zmq',
         module_name='zato.server.service.internal.channel.zmq',
         get_list_service='zato.channel.zmq.get-list',
+        object_dependencies={
+            'def_name': {
+                'dependent_type': 'def_amqp',
+                'dependent_field': 'name',
+            },
+        },
+        service_dependencies={
+            'service_name': {}
+        },
     ),
     ServiceInfo(
         name='def_amqp',
@@ -245,12 +271,18 @@ SERVICES = [
         name='http_soap',
         module_name='zato.server.service.internal.http_soap',
         # TODO: note: covers all of outconn_plain_http, outconn_soap, http_soap
-        dependencies={
+        object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
                 'empty_value': NO_SEC_DEF_NEEDED,
             },
+        },
+        service_dependencies={
+            'service_name': {
+                'only_if_field': 'connection',
+                'only_if_value': 'channel',
+            }
         },
     ),
     ServiceInfo(
@@ -270,7 +302,7 @@ SERVICES = [
         name='outconn_amqp',
         module_name='zato.server.service.internal.outgoing.amqp_',
         get_list_service='zato.outgoing.amqp.get-list',
-        dependencies={
+        object_dependencies={
             'def_name': {
                 'dependent_type': 'def_amqp',
                 'dependent_field': 'name',
@@ -291,11 +323,14 @@ SERVICES = [
         name='outconn_jms_wmq',
         module_name='zato.server.service.internal.outgoing.jms_wmq',
         get_list_service='zato.outgoing.jms-wmq.get-list',
-        dependencies={
+        object_dependencies={
             'def_name': {
                 'dependent_type': 'def_jms_wmq',
                 'dependent_field': 'name',
             },
+        },
+        service_dependencies={
+            'service': {}
         },
     ),
     ServiceInfo(
@@ -367,7 +402,7 @@ SERVICES = [
         name='outconn_plain_http',
         module_name='zato.server.service.internal.http_soap',
         supports_import=False,
-        dependencies={
+        object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
@@ -379,7 +414,7 @@ SERVICES = [
         name='outconn_soap',
         module_name='zato.server.service.internal.http_soap',
         supports_import=False,
-        dependencies={
+        object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
@@ -661,7 +696,7 @@ class DependencyScanner(object):
         :param item: dict describing the item.
         """
         sinfo = SERVICE_BY_NAME[item_type]
-        for dep_key, dep_info in sinfo.dependencies.items():
+        for dep_key, dep_info in sinfo.object_dependencies.items():
             if ((item.get(dep_key) != dep_info.get('empty_value')) and
                 self.find_by_type_and_value(dep_info['dependent_type'],
                                             dep_info['dependent_field'],
@@ -703,9 +738,27 @@ class ObjectImporter(object):
         self.json = Bunch(deepcopy(json))
         self.ignore_missing = ignore_missing
 
-    def needs_service(self, json_key, item):
-        return 'channel' in json_key or json_key == 'scheduler' or \
-               ('http_soap' in json_key and item.get('connection') == 'channel')
+    def validate_service_required(self, item_type, item):
+        sinfo = SERVICE_BY_NAME[item_type]
+        item_dict = item.toDict()
+
+        for dep_field, dep_info in sinfo.service_dependencies.items():
+            only_if_field = dep_info.get('only_if_field')
+            only_if_value = dep_info.get('only_if_value')
+            if only_if_field and item.get(only_if_value) != only_if_value:
+                continue
+
+            service_name = item.get(dep_field)
+            raw = (service_name, item_dict, item_type)
+            if not service_name:
+                self.results.add_error(raw, ERROR_SERVICE_NAME_MISSING,
+                    "No service defined in '{}' ({})",
+                    item_dict, item_type)
+            else:
+                if service_name not in self.object_mgr.services:
+                    self.results.add_error(raw, ERROR_SERVICE_MISSING,
+                        "Service '{}' from '{}' missing in ODB ({})",
+                        service_name, item_dict, item_type)
 
     def validate_import_data(self):
         results = Results()
@@ -722,32 +775,19 @@ class ObjectImporter(object):
                         "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
                         missing_name, missing_type, dep_names)
 
-        for json_key, items in self.json.items():
+        for item_type, items in self.json.items():
             for item in items:
-                if self.needs_service(json_key, item):
-                    item_dict = item.toDict()
-                    service_name = item.get('service') or item.get('service_name')
-                    raw = (service_name, item_dict, json_key)
-                    if not service_name:
-                        results.add_error(raw, ERROR_SERVICE_NAME_MISSING,
-                            "No service defined in '{}' ({})",
-                            item_dict, json_key)
-                    else:
-                        if service_name not in self.object_mgr.services:
-                            results.add_error(raw, ERROR_SERVICE_MISSING,
-                                "Service '{}' from '{}' missing in ODB ({})",
-                                service_name, item_dict, json_key)
+                self.validate_service_required(item_type, item)
 
         return results
 
     def remove_from_import_list(self, item_type, name):
-        for item in self.json.get(item_type, []):
-            if item.name == name:
-                self.json[item_type].remove(item)
-                return
-
-        raise ValueError('Tried to remove missing (type %r name %r)' %
-                         (item_type, name))
+        lst = self.json.get(item_type, [])
+        item = find_first(lst, lambda item: item.name == name)
+        if item:
+            lst.remove(item)
+        else:
+            raise ValueError('Tried to remove missing %r named %r' % (item_type, name))
 
     def should_skip_item(self, item_type, attrs, is_edit):
         # Root RBAC role cannot be edited
@@ -935,6 +975,8 @@ class ObjectImporter(object):
 
 
 class ClusterObjectManager(object):
+    logger = logging.getLogger('ClusterObjectManager')
+
     def __init__(self, client):
         self.client = client
         self.objects = Bunch()
@@ -947,6 +989,9 @@ class ClusterObjectManager(object):
         response = self.client.invoke(sinfo.get_list_service, {
             'cluster_id':self.client.cluster_id
         })
+
+        if not response.ok:
+            self.logger.error('While attempting to verify {}, {}: {}'.format(def_type, def_name, response))
 
         match = None
         if response.ok:
