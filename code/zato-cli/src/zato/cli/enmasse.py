@@ -773,31 +773,75 @@ class ObjectImporter(object):
                 self.json[item_type].remove(item)
                 return
 
-            # Root RBAC role cannot be edited
-            if item_type == 'rbac_role' and attrs.name == 'Root':
-                return True
+        raise ValueError('Tried to remove missing (type %r name %r)' %
+                         (item_type, name))
 
-        def _import(item_type, attrs, is_edit):
-            attrs_dict = attrs.toDict()
-            attrs.cluster_id = self.client.cluster_id
-            service_name, error_response = self._import_object(item_type, attrs, is_edit)
+    def should_skip_item(self, item_type, attrs, is_edit):
+        # Root RBAC role cannot be edited
+        if item_type == 'rbac_role' and attrs.name == 'Root':
+            return True
 
-            # We quit on first error encountered
-            if error_response:
-                raw = (item_type, attrs_dict, error_response)
-                value = "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'".format(
-                    is_edit, attrs.name, attrs_dict, service_name, error_response)
-                self.results.errors.append(Error(raw, value, ERROR_COULD_NOT_IMPORT_OBJECT))
-                return self.results
+    def _import(self, item_type, attrs, is_edit):
+        attrs_dict = attrs.toDict()
+        attrs.cluster_id = self.client.cluster_id
+        service_name, error_response = self._import_object(item_type, attrs, is_edit)
 
-            # It's been just imported so we don't want to create in next steps
-            # (this in fact would result in an error as the object already exists).
-            if is_edit:
-                remove_from_import_list(item_type, attrs.name)
+        # We quit on first error encountered
+        if error_response:
+            raw = (item_type, attrs_dict, error_response)
+            self.results.add_error(raw, ERROR_COULD_NOT_IMPORT_OBJECT,
+                                   "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'",
+                                    is_edit, attrs.name, attrs_dict, service_name, error_response)
+            return self.results
 
-            # We'll see how expensive this call is. Seems to be but
-            # let's see in practice if it's a burden.
-            self.get_odb_objects()
+        # It's been just imported so we don't want to create in next steps
+        # (this in fact would result in an error as the object already exists).
+        if is_edit:
+            self.remove_from_import_list(item_type, attrs.name)
+
+        # We'll see how expensive this call is. Seems to be but
+        # let's see in practice if it's a burden.
+        self.object_mgr.refresh()
+
+    def find_already_existing_odb_objects(self):
+        warnings = []
+        errors = []
+
+        def add_warning(key, value_dict, item):
+            raw = (key, value_dict)
+            msg = '{} already exists in ODB {} ({})'.format(value_dict.toDict(), item.toDict(), key)
+            warnings.append(Warning(raw, msg, WARNING_ALREADY_EXISTS_IN_ODB))
+
+        for key, values in self.json.items():
+            for value_dict in values:
+                value_name = value_dict.get('name')
+                if not value_name:
+                    raw = (key, value_dict)
+                    msg = "{} has no 'name' key ({})".format(value_dict.toDict(), key)
+                    errors.append(Error(raw, msg, ERROR_NAME_MISSING))
+
+                if key == 'http_soap':
+                    connection = value_dict.get('connection')
+                    transport = value_dict.get('transport')
+
+                    for item in self.object_mgr.objects.http_soap:
+                        if connection == item.connection and transport == item.transport:
+                            if value_name == item.name:
+                                add_warning(key, value_dict, item)
+                else:
+                    odb_defs = self.object_mgr.objects[key.replace('-', '_')]
+                    for odb_def in odb_defs:
+                        if odb_def.name == value_name:
+                            add_warning(key, value_dict, odb_def)
+
+        return Results(warnings, errors)
+
+    def import_objects(self, already_existing):
+        existing_defs = []
+        existing_other = []
+
+        new_defs = []
+        new_other = []
 
         #
         # Update already existing objects first, definitions before any object
@@ -814,17 +858,17 @@ class ObjectImporter(object):
         for w in chain(existing_defs, existing_other):
             item_type, attrs = w.value_raw
 
-            if should_skip_item(item_type, attrs, True):
+            if self.should_skip_item(item_type, attrs, True):
                 continue
 
-            results = _import(item_type, attrs, True)
+            results = self._import(item_type, attrs, True)
             if results:
                 return results
 
         #
         # Create new objects, again, definitions come first ..
         #
-        for item_type, items in self.json_to_import.items():
+        for item_type, items in self.json.items():
             new = new_defs if 'def' in item_type else new_other
             new.append({item_type:items})
 
@@ -835,14 +879,19 @@ class ObjectImporter(object):
             for item_type, attr_list in elem.items():
                 for attrs in attr_list:
 
-                    if should_skip_item(item_type, attrs, False):
+                    if self.should_skip_item(item_type, attrs, False):
                         continue
 
-                    results = _import(item_type, attrs, False)
+                    results = self._import(item_type, attrs, False)
                     if results:
                         return results
 
         return self.results
+
+    def _swap_service_name(self, service_class, attrs, first, second):
+        required = getattr(service_class.SimpleIO, 'input_required', [])
+        if first in required and second in attrs:
+            attrs[first] = attrs[second]
 
     def _import_object(self, def_type, attrs, is_edit):
         attrs_dict = attrs.toDict()
@@ -858,24 +907,25 @@ class ObjectImporter(object):
         service_name = service_class.get_name()
 
         # service and service_name are interchangeable
-        _swap_service_name(service_class, attrs, 'service', 'service_name')
-        _swap_service_name(service_class, attrs, 'service_name', 'service')
+        self._swap_service_name(service_class, attrs, 'service', 'service_name')
+        self._swap_service_name(service_class, attrs, 'service_name', 'service')
 
         # Fetch an item from a cache of ODB object and assign its ID
         # to attrs so that the Edit service knows what to update.
         if is_edit:
-            odb_item = get_odb_item(def_type, attrs.name)
+            odb_item = self.object_mgr.find(def_type, attrs.name)
             attrs.id = odb_item.id
 
         if def_type == 'http_soap':
             if attrs.sec_def == NO_SEC_DEF_NEEDED:
                 attrs.security_id = None
             else:
-                attrs.security_id = get_security_by_name(attrs.sec_def)
+                sec = self.object_mgr.find('def_sec', attrs.sec_def)
+                attrs.security_id = sec.id
 
         if def_type in('channel_amqp', 'channel_jms_wmq', 'outconn_amqp', 'outconn_jms_wmq'):
             def_type_name = def_type.replace('channel', 'def').replace('outconn', 'def')
-            odb_item = get_odb_item(def_type_name, attrs.get('def_name'))
+            odb_item = self.object_mgr.find(def_type_name, attrs.get('def_name'))
             attrs.def_id = odb_item.id
 
         response = self.client.invoke(service_name, attrs)
@@ -890,10 +940,10 @@ class ObjectImporter(object):
                 if not password:
                     if sinfo.needs_password == MAYBE_NEEDS_PASSWORD:
                         self.logger.info("Password missing but not required '{}' ({} {})".format(
-                            attrs.name, item_type, service_name))
+                            attrs.name, def_type, service_name))
                     else:
                         return service_name, "Password missing but is required '{}' ({} {}) attrs '{}'".format(
-                            attrs.name, item_type, service_name, attrs_dict)
+                            attrs.name, def_type, service_name, attrs_dict)
                 else:
                     if not is_edit:
                         attrs.id = response.data['id']
@@ -904,7 +954,7 @@ class ObjectImporter(object):
                     if not response.ok:
                         return service_name, response.details
                     else:
-                        self.logger.info("Updated password '{}' ({} {})".format(attrs.name, item_type, service_name))
+                        self.logger.info("Updated password '{}' ({} {})".format(attrs.name, def_type, service_name))
 
         return None, None
 
@@ -1204,7 +1254,6 @@ class EnMasse(ManageCommand):
         return warn_err, warn_no, error_no
 
     def report_warnings_errors(self, items):
-
         warn_err, warn_no, error_no = self.get_warnings_errors(items)
         table = self.get_table(warn_err)
 
@@ -1351,7 +1400,7 @@ class EnMasse(ManageCommand):
 
     def merge_odb_json(self):
         errors = []
-        merged = deepcopy(self.cluster_mgr.objects)
+        merged = deepcopy(self.object_mgr.objects)
 
         for json_key, json_elems in self.json.items():
             if 'http' in json_key or 'soap' in json_key:
@@ -1428,60 +1477,6 @@ class EnMasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def validate_import_data(self):
-        warnings = []
-        errors = []
-
-        items_defs = {
-            'def_amqp':'zato.definition.amqp.get-list',
-            'def_jms_wmq':'zato.definition.jms-wmq.get-list',
-            'def_cassandra':'zato.definition.cassandra.get-list',
-            'def_sec':'zato.security.get-list',
-        }
-
-        def has_def(def_type, def_name):
-            service = items_defs[def_type]
-            response = self.client.invoke(service, {'cluster_id':self.client.cluster_id})
-            if response.ok:
-                for item in response.data:
-                    if item['name'] == def_name:
-                        return False
-
-            return False
-
-        missing_defs = self.find_missing_defs()
-        if missing_defs:
-            for warning in missing_defs.warnings:
-                def_type, def_name, _, dependants = warning.value_raw
-                if not has_def(def_type, def_name):
-                    raw = (def_type, def_name)
-                    value = "Definition '{}' not found in JSON/ODB ({}), needed by '{}'".format(
-                        def_name, def_type, dependants)
-                    warnings.append(Warning(raw, value, WARNING_MISSING_DEF_INCL_ODB))
-
-        def needs_service(json_key, item):
-            return 'channel' in json_key or json_key == 'scheduler' or \
-                   ('http_soap' in json_key and item.get('connection') == 'channel')
-
-        for json_key, items in self.json.items():
-            for item in items:
-                if needs_service(json_key, item):
-                    item_dict = item.toDict()
-                    service_name = item.get('service') or item.get('service_name')
-                    raw = (service_name, item_dict, json_key)
-                    if not service_name:
-                        value = "No service defined in '{}' ({})".format(item_dict, json_key)
-                        errors.append(Error(raw, value, ERROR_SERVICE_NAME_MISSING))
-                    else:
-                        if service_name not in self.object_mgr.services:
-                            value = "Service '{}' from '{}' missing in ODB ({})".format(service_name, item_dict, json_key)
-                            errors.append(Error(raw, value, ERROR_SERVICE_MISSING))
-
-        return Results(warnings, errors)
-
-    def import_objects(self, already_existing):
-        return ObjectImporter().import_objects(already_existing)
-
     def import_(self):
         self.object_mgr.refresh()
 
@@ -1490,11 +1485,12 @@ class EnMasse(ManageCommand):
         if not results.ok:
             return [results]
 
-        already_existing = self.find_already_existing_odb_objects()
-        if not already_existing.ok and not self.replace_odb_objects:
+        importer = ObjectImporter(self.client, self.object_mgr, self.json)
+        already_existing = importer.find_already_existing_odb_objects()
+        if not already_existing.ok and not self.args.replace_odb_objects:
             return [already_existing]
 
-        results = self.import_objects(already_existing)
+        results = importer.import_objects(already_existing)
         if not results.ok:
             return [results]
 
