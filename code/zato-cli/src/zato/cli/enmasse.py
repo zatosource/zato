@@ -436,6 +436,12 @@ SERVICE_BY_NAME = {
     for info in SERVICES
 }
 
+#: Eventually this will become SERVICE_BY_NAME.
+ALL_SERVICES_BY_NAME = {
+    info.name: info
+    for info in SERVICES + SECURITY_SERVICES
+}
+
 SECURITY_SERVICE_BY_NAME = {
     info.name: info
     for info in SECURITY_SERVICES
@@ -643,9 +649,9 @@ class DependencyScanner(object):
 
     def _add_error(self, item, key_name, def_, json_key):
         raw = (item, def_)
-        results.add_error(raw, ERROR_DEF_KEY_NOT_DEFINED,
-                          "{} does not define '{}' (value is {}) ({})",
-                          item.toDict(), key_name, def_, json_key)
+        self.results.add_error(raw, ERROR_DEF_KEY_NOT_DEFINED,
+                               "{} does not define '{}' (value is {}) ({})",
+                               item.toDict(), key_name, def_, json_key)
 
     def get_needed_defs(self):
         for json_key, json_items in self.json.items():
@@ -674,9 +680,9 @@ class DependencyScanner(object):
                     items_defs_pretty.append('`{} = {}`'.format(k, v))
 
                 raw = (info_dict, self.items_defs)
-                results.add_error(raw, ERROR_NO_DEF_KEY_IN_LOOKUP_TABLE,
-                                  "Could not find a def key in \n{}\nfor item_key '{}'",
-                                  '\n'.join(items_defs_pretty), item_key)
+                self.results.add_error(raw, ERROR_NO_DEF_KEY_IN_LOOKUP_TABLE,
+                                       "Could not find a def key in \n{}\nfor item_key '{}'",
+                                       '\n'.join(items_defs_pretty), item_key)
 
             else:
                 defs = self.json.get(def_key)
@@ -700,7 +706,7 @@ class DependencyScanner(object):
                 dependants = sorted(dependants)
                 raw = (def_key, missing_def, existing_ones, dependants)
                 value = "'{}' is needed by '{}' but was not among '{}'".format(missing_def, dependants, existing_ones)
-                results.warnings.append(Warning(raw, value, WARNING_MISSING_DEF))
+                self.results.warnings.append(Warning(raw, value, WARNING_MISSING_DEF))
 
         return self.results
 
@@ -718,25 +724,23 @@ class ObjectImporter(object):
         self.json = Bunch(deepcopy(json))
         self.ignore_missing_defs = ignore_missing_defs
 
+    def has_def(self, def_type, def_name):
+        sinfo = ALL_SERVICES_BY_NAME[def_type]
+        assert sinfo.get_list_service is not None
+
+        response = self.client.invoke(sinfo.get_list_service, {
+            'cluster_id':self.client.cluster_id
+        })
+        if response.ok:
+            for item in response.data:
+                if item['name'] == def_name:
+                    return False
+
+        return False
+
     def validate_import_data(self):
         warnings = []
         errors = []
-
-        items_defs = {
-            sinfo.name: sinfo.get_list_service
-            for sinfo in SERVICES + SECURITY_SERVICES
-                if sinfo.get_list_service is not None
-        }
-
-        def has_def(def_type, def_name):
-            service = items_defs[def_type]
-            response = self.client.invoke(service, {'cluster_id':self.client.cluster_id})
-            if response.ok:
-                for item in response.data:
-                    if item['name'] == def_name:
-                        return False
-
-            return False
 
         dep_scanner = DependencyScanner(self.json,
             ignore_missing_defs=self.ignore_missing_defs)
@@ -744,7 +748,7 @@ class ObjectImporter(object):
         if missing_defs:
             for warning in missing_defs.warnings:
                 def_type, def_name, _, dependants = warning.value_raw
-                if not has_def(def_type, def_name):
+                if not self.has_def(def_type, def_name):
                     raw = (def_type, def_name)
                     value = "Definition '{}' not found in JSON/ODB ({}), needed by '{}'".format(
                         def_name, def_type, dependants)
