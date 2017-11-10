@@ -596,16 +596,17 @@ class InputValidator(object):
 
                 missing_value = "key '{}'".format(missing[0]) if len(missing) == 1 else "keys '{}'".format(missing)
                 raw = (key, name, item_dict, required_keys, missing)
-                value = "Missing {} in '{}', the rest is '{}' ({})".format(missing_value, name, item_dict, key)
-                self.results.errors.append(Error(raw, value, ERROR_KEYS_MISSING))
-
-            # OK, the keys are there, but do they all have non-None values?
+                self.results.add_error(raw, ERROR_KEYS_MISSING,
+                                       "Missing {} in '{}', the rest is '{}' ({})",
+                                       missing_value, name, item_dict, key)
             else:
+                # OK, the keys are there, but do they all have non-None values?
                 for req_key in required_keys:
                     if item.get(req_key) is None: # 0 or '' can be correct values
-                        raw = (req_key, required, item_dict, key)
-                        value = "Key '{}' must not be None in '{}' ({})".format(req_key, item_dict, key)
-
+                        raw = (req_key, required_keys, item_dict, key)
+                        self.results.add_error(raw, ERROR_KEYS_MISSING,
+                                               "Key '{}' must not be None in '{}' ({})",
+                                               req_key, item_dict, key)
 
 class ObjectImporter(object):
     def __init__(self, json):
