@@ -525,7 +525,7 @@ class InputValidator(object):
     def _needs_password(self, key):
         return 'sql' in key
 
-    def validate_def_sec(self, item):
+    def validate_def_sec(self, item_type, item):
         sec_type = item.get('type')
         if not sec_type:
             item_dict = item.toDict()
@@ -539,16 +539,16 @@ class InputValidator(object):
                                    "Invalid type '{}', must be one of '{}' (def_sec)",
                                    sec_type, SECURITY_SERVICE_NAMES)
         else:
-            self._validate(key, item, True)
+            self._validate(item_type, item, True)
 
     def validate_other(self, item_type, item):
-        if key not in SERVICE_BY_NAME:
-            raw = (key, SERVICE_NAMES)
+        if item_type not in SERVICE_BY_NAME:
+            raw = (item_type, SERVICE_NAMES)
             self.results.add_error(raw, ERROR_INVALID_KEY,
                                    "Invalid key '{}', must be one of '{}'",
-                                   key, SERVICE_NAMES)
+                                   item_type, SERVICE_NAMES)
         else:
-            self._validate(key, item, False)
+            self._validate(item_type, item, False)
 
     def validate(self):
         """
