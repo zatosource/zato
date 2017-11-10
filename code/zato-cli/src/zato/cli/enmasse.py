@@ -68,6 +68,20 @@ ERROR_SERVICE_MISSING = Code('E12', 'service missing')
 ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
 ERROR_TYPE_MISSING = Code('E04', 'type missing')
 
+def find_first(it, pred):
+    """Given any iterable, return the first element `elem` from it matching
+    `pred(elem)`
+
+    ::
+
+        strings = [("a", 1), ("b", 2), ("c", 3)]
+        _, n = find_first(strings, lambda (x, y): x == 'b')
+        assert n == 2
+    """
+    for obj in it:
+        if pred(obj):
+            return obj
+
 def import_module(modname):
     """Import and return the Python module `modname`."""
     module = None
@@ -104,7 +118,8 @@ class ServiceInfo(object):
         self.get_odb_objects_ignore = get_odb_objects_ignore
         #: Specifies a list of dependencies:
         #:      field_name: {"dependent_type": "shortname",
-        #:                   "dependent_field": "fieldname"}
+        #:                   "dependent_field": "fieldname",
+        #:                   "empty_value": None, or e.g. NO_SEC_DEF_NEEDED}
         self.dependencies = dependencies or {}
 
     def get_module(self):
@@ -151,6 +166,7 @@ SERVICES = [
             'def_name': {
                 'dependent_type': 'def_jms_wmq',
                 'dependent_field': 'name',
+                'empty_value': NO_SEC_DEF_NEEDED,
             },
         },
     ),
@@ -162,6 +178,7 @@ SERVICES = [
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
+                'empty_value': NO_SEC_DEF_NEEDED,
             },
         },
     ),
@@ -173,6 +190,7 @@ SERVICES = [
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
+                'empty_value': NO_SEC_DEF_NEEDED,
             },
         },
     ),
@@ -227,6 +245,7 @@ SERVICES = [
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
+                'empty_value': NO_SEC_DEF_NEEDED,
             },
         },
     ),
@@ -344,11 +363,25 @@ SERVICES = [
         name='outconn_plain_http',
         module_name='zato.server.service.internal.http_soap',
         supports_import=False,
+        dependencies={
+            'sec_def': {
+                'dependent_type': 'def_sec',
+                'dependent_field': 'name',
+                'empty_value': NO_SEC_DEF_NEEDED,
+            },
+        },
     ),
     ServiceInfo(
         name='outconn_soap',
         module_name='zato.server.service.internal.http_soap',
         supports_import=False,
+        dependencies={
+            'sec_def': {
+                'dependent_type': 'def_sec',
+                'dependent_field': 'name',
+                'empty_value': NO_SEC_DEF_NEEDED,
+            },
+        },
     ),
     ServiceInfo(
         name='query_cassandra',
@@ -606,107 +639,70 @@ class InputValidator(object):
                                                req_key, item_dict, key)
 
 class DependencyScanner(object):
-    def __init__(self, json, ignore_missing_defs=False):
+    def __init__(self, json, ignore_missing=False):
         self.json = json
-        self.results = Results()
-        self.missing_def_names = {}
-        self.ignore_missing_defs = ignore_missing_defs
+        self.ignore_missing = ignore_missing
+        #: (item_type, name): [(item_type, name), ..]
+        self.missing = {}
 
-    defs_keys = {
-        'def_name': ('jms-wmq', 'amqp'),
-        'sec_def': ('plain-http', 'soap'),
-    }
+    def find_by_type_and_value(self, item_type, field, value):
+        """
+        Find an object in :py:attr:`json` of a particular type with a field
+        matching a particular value. Used to scan for matching dependencies.
 
-    items_defs = {
-        # TODO
-        'channel_amqp':'def_amqp',
-        'channel_jms_wmq':'def_jms_wmq',
-        'channel_plain_http':'def_sec',
-        'channel_soap':'def_sec',
-        'outconn_amqp':'def_amqp',
-        'outconn_jms_wmq':'def_jms_wmq',
-        'outconn_plain_http':'def_sec',
-        'outconn_soap':'def_sec',
-        'http_soap':'def_sec'
-        # ---
-    }
+        :param item_type:
+            ServiceInfo.name of the item's type.
+        :param field:
+            The name of the field in the item to compare.
+        :param value:
+            The value to match.
+        :return:
+            First matching object, or ``None`` if no such object exists.
+        """
+        lst = self.json.get(item_type, ())
+        return find_first(lst, lambda item: item[field] == value)
 
-    _no_sec_needed = (
-        'channel-plain-http',
-        'channel-soap',
-        'outconn-plain-http',
-        'outconn-soap'
-    )
+    def scan_item(self, item_type, item):
+        """
+        Scan the data of a single item for required dependencies, recording any
+        that are missing in :py:attr:`missing`.
 
-    def _add_error(self, item, key_name, def_, json_key):
-        raw = (item, def_)
-        self.results.add_error(raw, ERROR_DEF_KEY_NOT_DEFINED,
-                               "{} does not define '{}' (value is {}) ({})",
-                               item.toDict(), key_name, def_, json_key)
+        :param item_type: ServiceInfo.name of the item's type.
+        :param item: dict describing the item.
+        """
+        sinfo = ALL_SERVICES_BY_NAME[item_type]
+        for dep_key, dep_info in sinfo.dependencies.items():
+            if ((item.get(dep_key) != dep_info.get('empty_value')) and
+                self.find_by_type_and_value(dep_info['dependent_type'],
+                                            dep_info['dependent_field'],
+                                            item[dep_key]) is None):
+                key = (dep_info['dependent_type'], item[dep_key])
+                names = self.missing.setdefault(key, [])
+                names.append(item.name)
 
-    def get_needed_defs(self):
-        for json_key, json_items in self.json.items():
-            for def_name, def_keys in self.defs_keys.items():
-                for def_key in def_keys:
-                    if def_key in json_key:
-                        for json_item in json_items:
-                            if 'def' in json_key:
-                                continue
-                            def_ = json_item.get(def_name)
-                            if not def_:
-                                self._add_error(json_item, def_name, def_, json_key)
-                            yield ({json_key:def_})
-
-    def find_missing_defs(self):
+    def scan(self):
         """
         :rtype Results:
         """
-        needed_defs = list(self.get_needed_defs())
-        for info_dict in needed_defs:
-            item_key, def_name = info_dict.items()[0]
-            def_key = self.items_defs.get(item_key)
+        results = Results()
+        for item_type, items in self.json.items():
+            for item in items:
+                self.scan_item(item_type, item)
 
-            if not def_key:
-                items_defs_pretty = []
-                for k, v in sorted(self.items_defs.items()):
-                    items_defs_pretty.append('`{} = {}`'.format(k, v))
-
-                raw = (info_dict, self.items_defs)
-                self.results.add_error(raw, ERROR_NO_DEF_KEY_IN_LOOKUP_TABLE,
-                                       "Could not find a def key in \n{}\nfor item_key '{}'",
-                                       '\n'.join(items_defs_pretty), item_key)
-
-            else:
-                defs = self.json.get(def_key)
-
-                for item in defs:
-                    if item.get('name') == def_name:
-                        break
-                else:
-                    if def_name == NO_SEC_DEF_NEEDED and item_key in self._no_sec_needed:
-                        continue
-
-                    def_names = tuple(sorted([def_.name for def_ in defs]))
-                    raw = (def_key, def_name, def_names)
-                    dependants = self.missing_def_names.setdefault(raw, set())
-                    dependants.add(item_key)
-
-        if not self.ignore_missing_defs:
-            for(def_key, missing_def, existing_ones), dependants in self.missing_def_names.items():
-                if missing_def == NO_SEC_DEF_NEEDED:
-                    continue
-                dependants = sorted(dependants)
-                raw = (def_key, missing_def, existing_ones, dependants)
-                self.results.add_warning(raw, WARNING_MISSING_DEF,
+        if not self.ignore_missing:
+            for (missing_type, missing_name), dep_names in sorted(self.missing.items()):
+                existing = sorted(item.name for item in self.json.get(missing_type, []))
+                raw = (missing_type, missing_name, dep_names, existing)
+                results.add_warning(raw, WARNING_MISSING_DEF,
                     "'{}' is needed by '{}' but was not among '{}'",
-                    missing_def, dependants, existing_ones)
+                    missing_name, sorted(dep_names), existing)
 
-        return self.results
+        return results
 
 class ObjectImporter(object):
     logger = logging.getLogger('ObjectImporter')
 
-    def __init__(self, client, object_mgr, json, ignore_missing_defs):
+    def __init__(self, client, object_mgr, json, ignore_missing):
         #: Validation result.
         self.results = Results()
         #: Zato client.
@@ -715,21 +711,7 @@ class ObjectImporter(object):
         self.object_mgr = object_mgr
         #: JSON to import.
         self.json = Bunch(deepcopy(json))
-        self.ignore_missing_defs = ignore_missing_defs
-
-    def has_def(self, def_type, def_name):
-        sinfo = ALL_SERVICES_BY_NAME[def_type]
-        assert sinfo.get_list_service is not None
-
-        response = self.client.invoke(sinfo.get_list_service, {
-            'cluster_id':self.client.cluster_id
-        })
-        if response.ok:
-            for item in response.data:
-                if item['name'] == def_name:
-                    return False
-
-        return False
+        self.ignore_missing = ignore_missing
 
     def needs_service(self, json_key, item):
         return 'channel' in json_key or json_key == 'scheduler' or \
@@ -738,16 +720,17 @@ class ObjectImporter(object):
     def validate_import_data(self):
         results = Results()
         dep_scanner = DependencyScanner(self.json,
-            ignore_missing_defs=self.ignore_missing_defs)
-        missing_defs = dep_scanner.find_missing_defs()
+            ignore_missing=self.ignore_missing)
+
+        missing_defs = dep_scanner.scan()
         if missing_defs:
             for warning in missing_defs.warnings:
-                def_type, def_name, _, dependants = warning.value_raw
-                if not self.has_def(def_type, def_name):
-                    raw = (def_type, def_name)
+                missing_type, missing_name, dep_names, existing = warning.value_raw
+                if not self.object_mgr.has_def(missing_type, missing_name):
+                    raw = (missing_type, missing_name)
                     results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB,
                         "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
-                        def_name, def_type, dependants)
+                        missing_name, missing_type, dep_names)
 
         for json_key, items in self.json.items():
             for item in items:
@@ -965,10 +948,22 @@ class ClusterObjectManager(object):
         self.objects = Bunch()
         self.services = Bunch()
 
+    def has_def(self, def_type, def_name):
+        sinfo = ALL_SERVICES_BY_NAME[def_type]
+        assert sinfo.get_list_service is not None
+
+        response = self.client.invoke(sinfo.get_list_service, {
+            'cluster_id':self.client.cluster_id
+        })
+
+        match = None
+        if response.ok:
+            match = find_first(response.data, lambda item: item['name'] == def_name)
+        return match is not None
+
     def find(self, item_type, name):
-        for item in self.objects[item_type]:
-            if item.name == name:
-                return item
+        lst = self.objects.get(item_type, ())
+        return find_first(lst, lambda item: item.name == name)
 
     def refresh(self):
         # Previous name: get_odb_objects()
@@ -1432,9 +1427,8 @@ class EnMasse(ManageCommand):
 
     def export(self):
         # Find any definitions that are missing
-        dep_scanner = DependencyScanner(self.json, self.object_mgr,
-            ignore_missing_defs=self.args.ignore_missing_defs)
-        missing_defs = dep_scanner.find_missing_defs()
+        dep_scanner = DependencyScanner(self.json, ignore_missing=self.args.ignore_missing_defs)
+        missing_defs = dep_scanner.scan()
         if not missing_defs.ok:
             self.logger.error('Failed to find all definitions needed')
             return [missing_defs]
@@ -1471,7 +1465,7 @@ class EnMasse(ManageCommand):
     def import_(self):
         self.object_mgr.refresh()
         importer = ObjectImporter(self.client, self.object_mgr, self.json,
-            ignore_missing_defs=self.args.ignore_missing_defs)
+            ignore_missing=self.args.ignore_missing_defs)
 
         # Find channels and jobs that require services that don't exist
         results = importer.validate_import_data()
