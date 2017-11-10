@@ -526,13 +526,13 @@ class InputValidator(object):
         sec_type = item.get('type')
         if not sec_type:
             item_dict = item.toDict()
-            raw = (key, item_dict)
+            raw = (item_type, item_dict)
             self.results.add_error(raw, ERROR_TYPE_MISSING,
                                    "'{}' has no required 'type' key (def_sec)",
                                    item_dict)
         elif sec_type not in SECURITY_SERVICE_BY_NAME:
             raw = (sec_type, SECURITY_SERVICE_NAMES, item)
-            self.results.add_error(raw, ERROR_INVALID_SEC_DEF_TYPE ,
+            self.results.add_error(raw, ERROR_INVALID_SEC_DEF_TYPE,
                                    "Invalid type '{}', must be one of '{}' (def_sec)",
                                    sec_type, SECURITY_SERVICE_NAMES)
         else:
@@ -654,11 +654,12 @@ class DependencyScanner(object):
                                 continue
                             def_ = json_item.get(def_name)
                             if not def_:
-                                _add_error(json_item, def_name, def_, json_key)
+                                self._add_error(json_item, def_name, def_, json_key)
                             yield ({json_key:def_})
 
     def find_missing_defs(self):
         """
+        :rtype Results:
         """
         needed_defs = list(self.get_needed_defs())
         for info_dict in needed_defs:
@@ -1047,8 +1048,8 @@ class ClusterObjectManager(object):
         return [
             self.get_fields(item)
             for item in (
-                self.client.odb_session.query(model_class).\
-                    filter(model_class.cluster_id == self.client.cluster_id).\
+                self.client.odb_session.query(model_class).
+                    filter(model_class.cluster_id == self.client.cluster_id).
                     all()
             )
             if include_all or not self.is_ignored_name(item)
@@ -1087,9 +1088,9 @@ class ClusterObjectManager(object):
         self.objects.outconn_sql = self.from_model_query(out_sql_list)
 
         self.objects.http_soap = [
-            get_fields(item)
-            for item in self.client.odb_session.query(HTTPSOAP).\
-                filter(HTTPSOAP.cluster_id == self.client.cluster_id).\
+            self.get_fields(item)
+            for item in self.client.odb_session.query(HTTPSOAP).
+                filter(HTTPSOAP.cluster_id == self.client.cluster_id).
                 filter(HTTPSOAP.is_internal == False).all()  # noqa E713 test for membership should be 'not in'
             if not self.is_ignored_name(item)
         ]
@@ -1431,7 +1432,8 @@ class EnMasse(ManageCommand):
 
     def export(self):
         # Find any definitions that are missing
-        dep_scanner = DependencyScanner(self.json, self.object_mgr)
+        dep_scanner = DependencyScanner(self.json, self.object_mgr,
+            ignore_missing_defs=self.args.ignore_missing_defs)
         missing_defs = dep_scanner.find_missing_defs()
         if not missing_defs.ok:
             self.logger.error('Failed to find all definitions needed')
