@@ -608,47 +608,170 @@ class InputValidator(object):
                                                "Key '{}' must not be None in '{}' ({})",
                                                req_key, item_dict, key)
 
-class ObjectImporter(object):
+class DependencyScanner(object):
     def __init__(self, json):
+        self.json = json
+        self.results = Results()
+        self.missing_def_names = {}
+
+    defs_keys = {
+        'def_name': ('jms-wmq', 'amqp'),
+        'sec_def': ('plain-http', 'soap'),
+    }
+
+    items_defs = {
+        # TODO
+        'channel_amqp':'def_amqp',
+        'channel_jms_wmq':'def_jms_wmq',
+        'channel_plain_http':'def_sec',
+        'channel_soap':'def_sec',
+        'outconn_amqp':'def_amqp',
+        'outconn_jms_wmq':'def_jms_wmq',
+        'outconn_plain_http':'def_sec',
+        'outconn_soap':'def_sec',
+        'http_soap':'def_sec'
+        # ---
+    }
+
+    _no_sec_needed = (
+        'channel-plain-http',
+        'channel-soap',
+        'outconn-plain-http',
+        'outconn-soap'
+    )
+
+    def _add_error(self, item, key_name, def_, json_key):
+        raw = (item, def_)
+        results.add_error(raw, ERROR_DEF_KEY_NOT_DEFINED,
+                          "{} does not define '{}' (value is {}) ({})",
+                          item.toDict(), key_name, def_, json_key)
+
+    def get_needed_defs(self):
+        for json_key, json_items in self.json.items():
+            for def_name, def_keys in self.defs_keys.items():
+                for def_key in def_keys:
+                    if def_key in json_key:
+                        for json_item in json_items:
+                            if 'def' in json_key:
+                                continue
+                            def_ = json_item.get(def_name)
+                            if not def_:
+                                _add_error(json_item, def_name, def_, json_key)
+                            yield ({json_key:def_})
+
+    def find_missing_defs(self):
+        """
+        """
+        needed_defs = list(get_needed_defs())
+        for info_dict in needed_defs:
+            item_key, def_name = info_dict.items()[0]
+            def_key = self.items_defs.get(item_key)
+
+            if not def_key:
+                items_defs_pretty = []
+                for k, v in sorted(self.items_defs.items()):
+                    items_defs_pretty.append('`{} = {}`'.format(k, v))
+
+                raw = (info_dict, self.items_defs)
+                results.add_error(raw, ERROR_NO_DEF_KEY_IN_LOOKUP_TABLE,
+                                  "Could not find a def key in \n{}\nfor item_key '{}'",
+                                  '\n'.join(items_defs_pretty), item_key)
+
+            else:
+                defs = self.json.get(def_key)
+
+                for item in defs:
+                    if item.get('name') == def_name:
+                        break
+                else:
+                    if def_name == NO_SEC_DEF_NEEDED and item_key in self._no_sec_needed:
+                        continue
+
+                    def_names = tuple(sorted([def_.name for def_ in defs]))
+                    raw = (def_key, def_name, def_names)
+                    dependants = missing_def_names.setdefault(raw, set())
+                    dependants.add(item_key)
+
+        if not self.ignore_missing_defs:
+            for(def_key, missing_def, existing_ones), dependants in missing_def_names.items():
+                if missing_def == NO_SEC_DEF_NEEDED:
+                    continue
+                dependants = sorted(dependants)
+                raw = (def_key, missing_def, existing_ones, dependants)
+                value = "'{}' is needed by '{}' but was not among '{}'".format(missing_def, dependants, existing_ones)
+                results.warnings.append(Warning(raw, value, WARNING_MISSING_DEF))
+
+        return results
+
+class ObjectImporter(object):
+    logger = logging.getLogger('ObjectImporter')
+
+    def __init__(self, client, object_mgr, json):
         #: Validation result.
         self.results = Results()
+        #: Zato client.
+        self.client = client
+        #: ClusterObjectManager instance.
+        self.object_mgr = object_mgr
         #: JSON to import.
-        self.json = json
+        self.json = Bunch(deepcopy(json))
 
-    def import_objects(self, already_existing):
-        existing_defs = []
-        existing_other = []
+    def validate_import_data(self):
+        warnings = []
+        errors = []
 
-        new_defs = []
-        new_other = []
+        items_defs = {
+            sinfo.name: sinfo.get_list_service
+            for sinfo in SERVICES + SECURITY_SERVICES
+                if sinfo.get_list_service is not None
+        }
 
-        self.json_to_import = Bunch(deepcopy(self.json))
+        def has_def(def_type, def_name):
+            service = items_defs[def_type]
+            response = self.client.invoke(service, {'cluster_id':self.client.cluster_id})
+            if response.ok:
+                for item in response.data:
+                    if item['name'] == def_name:
+                        return False
 
-        def get_odb_item(item_type, name):
-            for item in self.odb_objects[item_type]:
-                if item.name == name:
-                    return item
+            return False
 
-        def get_security_by_name(name):
-            for item in self.odb_objects.def_sec:
-                if item.name == name:
-                    return item.id
+        dep_scanner = DependencyScanner(self.json, self.object_mgr)
+        missing_defs = dep_scanner.find_missing_defs()
+        if missing_defs:
+            for warning in missing_defs.warnings:
+                def_type, def_name, _, dependants = warning.value_raw
+                if not has_def(def_type, def_name):
+                    raw = (def_type, def_name)
+                    value = "Definition '{}' not found in JSON/ODB ({}), needed by '{}'".format(
+                        def_name, def_type, dependants)
+                    warnings.append(Warning(raw, value, WARNING_MISSING_DEF_INCL_ODB))
 
-        def _swap_service_name(service_class, attrs, first, second):
-            if first in getattr(service_class.SimpleIO, 'input_required', []) and second in attrs:
-                attrs[first] = attrs[second]
+        def needs_service(json_key, item):
+            return 'channel' in json_key or json_key == 'scheduler' or \
+                   ('http_soap' in json_key and item.get('connection') == 'channel')
 
-        def remove_from_import_list(item_type, name):
-            for json_item_type, items in self.json_to_import.items():
-                if json_item_type == item_type:
-                    for item in items:
-                        if item.name == name:
-                            items.remove(item)
+        for json_key, items in self.json.items():
+            for item in items:
+                if needs_service(json_key, item):
+                    item_dict = item.toDict()
+                    service_name = item.get('service') or item.get('service_name')
+                    raw = (service_name, item_dict, json_key)
+                    if not service_name:
+                        value = "No service defined in '{}' ({})".format(item_dict, json_key)
+                        errors.append(Error(raw, value, ERROR_SERVICE_NAME_MISSING))
+                    else:
+                        if service_name not in self.object_mgr.services:
+                            value = "Service '{}' from '{}' missing in ODB ({})".format(service_name, item_dict, json_key)
+                            errors.append(Error(raw, value, ERROR_SERVICE_MISSING))
 
-                            # Name is unique, we can stop now
-                            return
+        return Results(warnings, errors)
 
-        def should_skip_item(item_type, attrs, is_edit):
+    def remove_from_import_list(self, item_type, name):
+        for item in self.json.get(item_type, []):
+            if item.name == name:
+                self.json[item_type].remove(item)
+                return
 
             # Root RBAC role cannot be edited
             if item_type == 'rbac_role' and attrs.name == 'Root':
@@ -1264,138 +1387,13 @@ class EnMasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def find_already_existing_odb_objects(self):
-        warnings = []
-        errors = []
-
-        def add_warning(key, value_dict, item):
-            raw = (key, value_dict)
-            msg = '{} already exists in ODB {} ({})'.format(value_dict.toDict(), item.toDict(), key)
-            warnings.append(Warning(raw, msg, WARNING_ALREADY_EXISTS_IN_ODB))
-
-        for key, values in self.json.items():
-            for value_dict in values:
-                value_name = value_dict.get('name')
-                if not value_name:
-                    raw = (key, value_dict)
-                    msg = "{} has no 'name' key ({})".format(value_dict.toDict(), key)
-                    errors.append(Error(raw, msg, ERROR_NAME_MISSING))
-
-                if key == 'http_soap':
-                    connection = value_dict.get('connection')
-                    transport = value_dict.get('transport')
-
-                    for item in self.object_mgr.objects.http_soap:
-                        if connection == item.connection and transport == item.transport:
-                            if value_name == item.name:
-                                add_warning(key, value_dict, item)
-                else:
-                    odb_defs = self.object_mgr.objects[key.replace('-', '_')]
-                    for odb_def in odb_defs:
-                        if odb_def.name == value_name:
-                            add_warning(key, value_dict, odb_def)
-
-        return Results(warnings, errors)
-
-# ################################################################################################################################
-
-    def find_missing_defs(self):
-        warnings = []
-        errors = []
-        missing_def_names = {}
-
-        def _add_error(item, key_name, def_, json_key):
-            raw = (item, def_)
-            value = "{} does not define '{}' (value is {}) ({})".format(item.toDict(), key_name, def_, json_key)
-            errors.append(Error(raw, value, ERROR_DEF_KEY_NOT_DEFINED))
-
-        defs_keys = {
-                'def_name': ('jms-wmq', 'amqp'),
-                'sec_def': ('plain-http', 'soap'),
-            }
-
-        items_defs = {
-            'channel_amqp':'def_amqp',
-            'channel_jms_wmq':'def_jms_wmq',
-            'channel_plain_http':'def_sec',
-            'channel_soap':'def_sec',
-            'outconn_amqp':'def_amqp',
-            'outconn_jms_wmq':'def_jms_wmq',
-            'outconn_plain_http':'def_sec',
-            'outconn_soap':'def_sec',
-            'http_soap':'def_sec'
-        }
-
-        _no_sec_needed = ('channel-plain-http', 'channel-soap', 'outconn-plain-http', 'outconn-soap')
-
-        def get_needed_defs():
-            for json_key, json_items in self.json.items():
-                for def_name, def_keys in defs_keys.items():
-                    for def_key in def_keys:
-                        if def_key in json_key:
-                            for json_item in json_items:
-                                if 'def' in json_key:
-                                    continue
-                                def_ = json_item.get(def_name)
-                                if not def_:
-                                    _add_error(json_item, def_name, def_, json_key)
-                                yield ({json_key:def_})
-
-        needed_defs = list(get_needed_defs())
-        for info_dict in needed_defs:
-            item_key, def_name = info_dict.items()[0]
-            def_key = items_defs.get(item_key)
-
-            if not def_key:
-                raw = (info_dict, items_defs)
-
-                items_defs_pretty = []
-                for k, v in sorted(items_defs.items()):
-                    items_defs_pretty.append('`{} = {}`'.format(k, v))
-
-                value = "Could not find a def key in \n{}\nfor item_key '{}'".format('\n'.join(items_defs_pretty), item_key)
-                errors.append(Error(raw, value, ERROR_NO_DEF_KEY_IN_LOOKUP_TABLE))
-
-            else:
-                defs = self.json.get(def_key)
-
-                for item in defs:
-                    if item.get('name') == def_name:
-                        break
-                else:
-                    if def_name == NO_SEC_DEF_NEEDED and item_key in _no_sec_needed:
-                        continue
-
-                    def_names = tuple(sorted([def_.name for def_ in defs]))
-                    raw = (def_key, def_name, def_names)
-                    dependants = missing_def_names.setdefault(raw, set())
-                    dependants.add(item_key)
-
-        if not self.ignore_missing_defs:
-            for(def_key, missing_def, existing_ones), dependants in missing_def_names.items():
-                if missing_def == NO_SEC_DEF_NEEDED:
-                    continue
-                dependants = sorted(dependants)
-                raw = (def_key, missing_def, existing_ones, dependants)
-                value = "'{}' is needed by '{}' but was not among '{}'".format(missing_def, dependants, existing_ones)
-                warnings.append(Warning(raw, value, WARNING_MISSING_DEF))
-
-        if warnings or errors:
-            return Results(warnings, errors)
-
-# ################################################################################################################################
-
-    def validate_input(self):
-        return InputValidator(self.json).validate()
-
-
 # ################################################################################################################################
 
     def export(self):
-
         # Find any definitions that are missing
-        missing_defs = self.find_missing_defs()
-        if missing_defs:
+        dep_scanner = DependencyScanner(self.json, self.object_mgr)
+        missing_defs = dep_scanner.find_missing_defs()
+        if not missing_defs.ok:
             self.logger.error('Failed to find all definitions needed')
             return [missing_defs]
 
