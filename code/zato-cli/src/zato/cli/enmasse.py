@@ -485,6 +485,11 @@ class Results(object):
             msg = msg.format(*args)
         self.errors.append(Error(raw, msg, code))
 
+    def add_warning(self, raw, code, msg, *args):
+        if args:
+            msg = msg.format(*args)
+        self.errors.append(Warning(raw, msg, code))
+
     def _get_ok(self):
         return not(self.warnings or self.errors)
 
@@ -738,10 +743,12 @@ class ObjectImporter(object):
 
         return False
 
-    def validate_import_data(self):
-        warnings = []
-        errors = []
+    def needs_service(self, json_key, item):
+        return 'channel' in json_key or json_key == 'scheduler' or \
+               ('http_soap' in json_key and item.get('connection') == 'channel')
 
+    def validate_import_data(self):
+        results = Results()
         dep_scanner = DependencyScanner(self.json,
             ignore_missing_defs=self.ignore_missing_defs)
         missing_defs = dep_scanner.find_missing_defs()
@@ -750,29 +757,27 @@ class ObjectImporter(object):
                 def_type, def_name, _, dependants = warning.value_raw
                 if not self.has_def(def_type, def_name):
                     raw = (def_type, def_name)
-                    value = "Definition '{}' not found in JSON/ODB ({}), needed by '{}'".format(
+                    results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB,
+                        "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
                         def_name, def_type, dependants)
-                    warnings.append(Warning(raw, value, WARNING_MISSING_DEF_INCL_ODB))
-
-        def needs_service(json_key, item):
-            return 'channel' in json_key or json_key == 'scheduler' or \
-                   ('http_soap' in json_key and item.get('connection') == 'channel')
 
         for json_key, items in self.json.items():
             for item in items:
-                if needs_service(json_key, item):
+                if self.needs_service(json_key, item):
                     item_dict = item.toDict()
                     service_name = item.get('service') or item.get('service_name')
                     raw = (service_name, item_dict, json_key)
                     if not service_name:
-                        value = "No service defined in '{}' ({})".format(item_dict, json_key)
-                        errors.append(Error(raw, value, ERROR_SERVICE_NAME_MISSING))
+                        results.add_error(raw, ERROR_SERVICE_NAME_MISSING,
+                            "No service defined in '{}' ({})",
+                            item_dict, json_key)
                     else:
                         if service_name not in self.object_mgr.services:
-                            value = "Service '{}' from '{}' missing in ODB ({})".format(service_name, item_dict, json_key)
-                            errors.append(Error(raw, value, ERROR_SERVICE_MISSING))
+                            results.add_error(raw, ERROR_SERVICE_MISSING,
+                                "Service '{}' from '{}' missing in ODB ({})",
+                                service_name, item_dict, json_key)
 
-        return Results(warnings, errors)
+        return results
 
     def remove_from_import_list(self, item_type, name):
         for item in self.json.get(item_type, []):
@@ -810,22 +815,22 @@ class ObjectImporter(object):
         # let's see in practice if it's a burden.
         self.object_mgr.refresh()
 
+    def add_warning(self, results, key, value_dict, item):
+        raw = (key, value_dict)
+        results.add_warning(raw, WARNING_ALREADY_EXISTS_IN_ODB,
+            '{} already exists in ODB {} ({})',
+            value_dict.toDict(), item.toDict(), key)
+
     def find_already_existing_odb_objects(self):
-        warnings = []
-        errors = []
-
-        def add_warning(key, value_dict, item):
-            raw = (key, value_dict)
-            msg = '{} already exists in ODB {} ({})'.format(value_dict.toDict(), item.toDict(), key)
-            warnings.append(Warning(raw, msg, WARNING_ALREADY_EXISTS_IN_ODB))
-
+        results = Results()
         for key, values in self.json.items():
             for value_dict in values:
                 value_name = value_dict.get('name')
                 if not value_name:
                     raw = (key, value_dict)
-                    msg = "{} has no 'name' key ({})".format(value_dict.toDict(), key)
-                    errors.append(Error(raw, msg, ERROR_NAME_MISSING))
+                    results.add_error(raw, ERROR_NAME_MISSING,
+                        "{} has no 'name' key ({})",
+                        value_dict.toDict(), key)
 
                 if key == 'http_soap':
                     connection = value_dict.get('connection')
@@ -834,14 +839,14 @@ class ObjectImporter(object):
                     for item in self.object_mgr.objects.http_soap:
                         if connection == item.connection and transport == item.transport:
                             if value_name == item.name:
-                                add_warning(key, value_dict, item)
+                                self.add_warning(results, key, value_dict, item)
                 else:
                     odb_defs = self.object_mgr.objects[key.replace('-', '_')]
                     for odb_def in odb_defs:
                         if odb_def.name == value_name:
-                            add_warning(key, value_dict, odb_def)
+                            self.add_warning(results, key, value_dict, odb_def)
 
-        return Results(warnings, errors)
+        return results
 
     def import_objects(self, already_existing):
         existing_defs = []
