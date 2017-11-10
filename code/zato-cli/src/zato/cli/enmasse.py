@@ -609,10 +609,11 @@ class InputValidator(object):
                                                req_key, item_dict, key)
 
 class DependencyScanner(object):
-    def __init__(self, json):
+    def __init__(self, json, ignore_missing_defs=False):
         self.json = json
         self.results = Results()
         self.missing_def_names = {}
+        self.ignore_missing_defs = ignore_missing_defs
 
     defs_keys = {
         'def_name': ('jms-wmq', 'amqp'),
@@ -662,7 +663,7 @@ class DependencyScanner(object):
     def find_missing_defs(self):
         """
         """
-        needed_defs = list(get_needed_defs())
+        needed_defs = list(self.get_needed_defs())
         for info_dict in needed_defs:
             item_key, def_name = info_dict.items()[0]
             def_key = self.items_defs.get(item_key)
@@ -689,11 +690,11 @@ class DependencyScanner(object):
 
                     def_names = tuple(sorted([def_.name for def_ in defs]))
                     raw = (def_key, def_name, def_names)
-                    dependants = missing_def_names.setdefault(raw, set())
+                    dependants = self.missing_def_names.setdefault(raw, set())
                     dependants.add(item_key)
 
         if not self.ignore_missing_defs:
-            for(def_key, missing_def, existing_ones), dependants in missing_def_names.items():
+            for(def_key, missing_def, existing_ones), dependants in self.missing_def_names.items():
                 if missing_def == NO_SEC_DEF_NEEDED:
                     continue
                 dependants = sorted(dependants)
@@ -701,12 +702,12 @@ class DependencyScanner(object):
                 value = "'{}' is needed by '{}' but was not among '{}'".format(missing_def, dependants, existing_ones)
                 results.warnings.append(Warning(raw, value, WARNING_MISSING_DEF))
 
-        return results
+        return self.results
 
 class ObjectImporter(object):
     logger = logging.getLogger('ObjectImporter')
 
-    def __init__(self, client, object_mgr, json):
+    def __init__(self, client, object_mgr, json, ignore_missing_defs):
         #: Validation result.
         self.results = Results()
         #: Zato client.
@@ -715,6 +716,7 @@ class ObjectImporter(object):
         self.object_mgr = object_mgr
         #: JSON to import.
         self.json = Bunch(deepcopy(json))
+        self.ignore_missing_defs = ignore_missing_defs
 
     def validate_import_data(self):
         warnings = []
@@ -736,7 +738,8 @@ class ObjectImporter(object):
 
             return False
 
-        dep_scanner = DependencyScanner(self.json, self.object_mgr)
+        dep_scanner = DependencyScanner(self.json,
+            ignore_missing_defs=self.ignore_missing_defs)
         missing_defs = dep_scanner.find_missing_defs()
         if missing_defs:
             for warning in missing_defs.warnings:
@@ -1132,7 +1135,6 @@ class EnMasse(ManageCommand):
         self.args = args
         self.curdir = abspath(self.original_dir)
         self.has_import = getattr(args, 'import')
-        self.ignore_missing_defs = args.ignore_missing_defs
         self.json = {}
 
         #
@@ -1467,17 +1469,16 @@ class EnMasse(ManageCommand):
     def export_odb(self):
         return self.export_local_odb(False)
 
-# ################################################################################################################################
-
     def import_(self):
         self.object_mgr.refresh()
+        importer = ObjectImporter(self.client, self.object_mgr, self.json,
+            ignore_missing_defs=self.args.ignore_missing_defs)
 
         # Find channels and jobs that require services that don't exist
-        results = self.validate_import_data()
+        results = importer.validate_import_data()
         if not results.ok:
             return [results]
 
-        importer = ObjectImporter(self.client, self.object_mgr, self.json)
         already_existing = importer.find_already_existing_odb_objects()
         if not already_existing.ok and not self.args.replace_odb_objects:
             return [already_existing]
@@ -1487,5 +1488,3 @@ class EnMasse(ManageCommand):
             return [results]
 
         return []
-
-# ################################################################################################################################
