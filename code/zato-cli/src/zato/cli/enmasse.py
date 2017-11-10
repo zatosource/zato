@@ -476,7 +476,7 @@ class Results(object):
 
     def add_error(self, raw, code, msg, *args):
         if args:
-            msg = msg.format(args)
+            msg = msg.format(*args)
         self.errors.append(Error(raw, msg, code))
 
     def _get_ok(self):
