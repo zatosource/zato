@@ -38,12 +38,6 @@ from zato.common.odb.query import cloud_openstack_swift_list, notif_cloud_openst
 from zato.common.util import get_client_from_server_conf
 from zato.server.service import ForceType
 
-# --------------- IMPORTS HERE WILL BE REMOVED SOON --------------------
-from zato.server.service.internal.cloud.aws import s3 as cloud_aws_s3
-from zato.server.service.internal.search import es as search_es
-from zato.server.service.internal.search import solr as search_solr
-# ---------- END OF OBSOLETE IMPORTS ------------
-
 DEFAULT_COLS_WIDTH = '15,100'
 NO_SEC_DEF_NEEDED = 'zato-no-security'
 
