@@ -65,14 +65,7 @@ ERROR_TYPE_MISSING = Code('E04', 'type missing')
 
 def find_first(it, pred):
     """Given any iterable, return the first element `elem` from it matching
-    `pred(elem)`
-
-    ::
-
-        strings = [("a", 1), ("b", 2), ("c", 3)]
-        _, n = find_first(strings, lambda (x, y): x == 'b')
-        assert n == 2
-    """
+    `pred(elem)`"""
     for obj in it:
         if pred(obj):
             return obj
@@ -85,8 +78,6 @@ def import_module(modname):
 
 class ServiceInfo(object):
     def __init__(self, name, module_name, needs_password=False,
-                 create_class_name='Create',
-                 edit_class_name='Edit',
                  get_list_service=None,
                  object_dependencies=None,
                  service_dependencies=None):
@@ -96,10 +87,6 @@ class ServiceInfo(object):
         self.module_name = module_name
         #: True if service requires a password key.
         self.needs_password = needs_password
-        #: Name of the object creation class in the service module.
-        self.create_class_name = create_class_name
-        #: Name of the object modification class in the service module.
-        self.edit_class_name = edit_class_name
         #: Optional name of the object enumeration/retrieval service. CAUTION:
         #: see get_odb_objects() before adding this to every ServiceInfo.
         self.get_list_service = get_list_service
@@ -128,12 +115,12 @@ class ServiceInfo(object):
     def get_create_class(self):
         """Import and return the class implementation for creating objects in
         the service."""
-        return getattr(self.get_module(), self.create_class_name)
+        return getattr(self.get_module(), 'Create')
 
     def get_edit_class(self):
         """Import and return the class implementation for editing objects in
         the service."""
-        return getattr(self.get_module(), self.edit_class_name)
+        return getattr(self.get_module(), 'Edit')
 
     replace_names = {
         'def_id': 'def_name',
@@ -990,15 +977,10 @@ class ClusterObjectManager(object):
         return find_first(lst, lambda item: item.name == name)
 
     def refresh(self):
-        # Previous name: get_odb_objects()
-        self.get_via_service_client()
-        self.get_services()
+        self._refresh_services()
+        self._refresh_objects()
 
-        for item_type, items in self.objects.items():
-            for item in items:
-                self.fix_up_odb_object(item_type, item)
-
-    def get_services(self):
+    def _refresh_services(self):
         response = self.client.invoke('zato.service.get-list', {
             'cluster_id': self.client.cluster_id,
             'name_filter': '*'
@@ -1044,7 +1026,7 @@ class ClusterObjectManager(object):
         name = item.name.lower()
         return 'zato' in name or name in self.IGNORED_NAMES
 
-    def get_via_service_client(self):
+    def _refresh_objects(self):
         for sinfo in SERVICES:
             # Temporarily preserve function of the old enmasse.
             if sinfo.get_list_service is None:
@@ -1075,6 +1057,7 @@ class ClusterObjectManager(object):
                 if sinfo.is_security:
                     item.type = sinfo.name
 
+                self.fix_up_odb_object(sinfo.name, item)
                 lst.append(item)
 
 class EnMasse(ManageCommand):
