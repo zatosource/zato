@@ -673,7 +673,7 @@ class DependencyScanner(object):
     def find_by_type_and_value(self, item_type, field, value):
         """
         Find an object in :py:attr:`json` of a particular type with a field
-        matching a particular value. Used to scan for matching dependencies.
+        matching a particular value.
 
         :param item_type:
             ServiceInfo.name of the item's type.
@@ -1069,12 +1069,11 @@ class ClusterObjectManager(object):
     IGNORED_NAMES = (
         'admin.invoke',
         'pubapi',
-        'zato.check.service',
     )
 
     def is_ignored_name(self, item):
         name = item.name.lower()
-        return 'zato' not in name and name not in self.IGNORED_NAMES
+        return 'zato' in name or name in self.IGNORED_NAMES
 
     def from_simple_query(self, model_class, include_all=False):
         return [
