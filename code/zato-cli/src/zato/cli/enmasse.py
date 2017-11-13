@@ -87,7 +87,6 @@ class ServiceInfo(object):
     def __init__(self, name, module_name, needs_password=False,
                  create_class_name='Create',
                  edit_class_name='Edit',
-                 supports_import=True,
                  get_list_service=None,
                  object_dependencies=None,
                  service_dependencies=None):
@@ -101,10 +100,6 @@ class ServiceInfo(object):
         self.create_class_name = create_class_name
         #: Name of the object modification class in the service module.
         self.edit_class_name = edit_class_name
-        #: True if importer accepts this object. Some services were not
-        #: supported previously; this is to maintain temporary compatibility
-        #: with the old code.
-        self.supports_import = supports_import
         #: Optional name of the object enumeration/retrieval service. CAUTION:
         #: see get_odb_objects() before adding this to every ServiceInfo.
         self.get_list_service = get_list_service
@@ -182,7 +177,6 @@ SERVICES = [
     ServiceInfo(
         name='channel_plain_http',
         module_name='zato.server.service.internal.http_soap',
-        supports_import=False,
         object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
@@ -399,7 +393,6 @@ SERVICES = [
     ServiceInfo(
         name='outconn_plain_http',
         module_name='zato.server.service.internal.http_soap',
-        supports_import=False,
         object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
@@ -411,7 +404,6 @@ SERVICES = [
     ServiceInfo(
         name='outconn_soap',
         module_name='zato.server.service.internal.http_soap',
-        supports_import=False,
         object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
@@ -423,7 +415,6 @@ SERVICES = [
     ServiceInfo(
         name='query_cassandra',
         module_name='zato.server.service.internal.query.cassandra',
-        supports_import=False,
         get_list_service='zato.query.cassandra.get-list',
         object_dependencies={
             'sec_def': {
