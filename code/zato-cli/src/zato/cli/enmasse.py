@@ -1057,6 +1057,60 @@ class ClusterObjectManager(object):
                 self.fix_up_odb_object(sinfo.name, item)
                 lst.append(item)
 
+class JsonParser(object):
+    logger = logging.getLogger('JsonParser')
+
+    def __init__(self, path):
+        self.path = os.path.abspath(path)
+        self.seen_includes = set()
+
+    def _parse_file(self, path, results):
+        try:
+            with open(path) as fp:
+                return anyjson.loads(fp.read())
+        except (IOError, TypeError, ValueError) as e:
+            raw = (path, e)
+            results.add_error(raw, ERROR_INVALID_INPUT, 'Failed to parse {}: {}', path, exc)
+            return None
+
+    def _get_include_path(self, include_path):
+        curdir = os.path.dirname(self.path)
+        joined = os.path.join(curdir, include_path.replace('file://', ''))
+        return os.path.abspath(joined)
+
+    def is_include(self, value):
+        return isinstance(value, basestring)
+
+    def merge_include(self, item, results):
+        abs_path = self.get_include_abspath(self.curdir, item)
+        if abs_path in self.seen_includes:
+            raw = (abs_path,)
+            results.add_error(raw, ERROR_ITEM_INCLUDED_MULTIPLE_TIMES, '{} included multiple times', abs_path)
+        self.seen_includes.add(abs_path)
+        return self._parse_file(abs_path, results)
+
+    def merge_includes(self, results):
+        merged = Bunch()
+
+        for item_type, items in self.json.items():
+            merged_items = merged.setdefault(item_type, [])
+            for item in items:
+                if self.is_include(item):
+                    item = self.merge_include(item, reults)
+                merged_items.append(item)
+
+        if results.ok:
+            self.json = merged
+            self.logger.info('Includes merged in successfully')
+
+    def parse(self, merge=True):
+        results = Results()
+        self.json = bunchify(self._parse_file(self.path, results))
+        if results.ok and merge:
+            self.merge_includes(results)
+
+        return results
+
 class EnMasse(ManageCommand):
     """ Manages server objects en masse.
     """
@@ -1073,8 +1127,7 @@ class EnMasse(ManageCommand):
 
     def _on_server(self, args):
         self.args = args
-        self.curdir = abspath(self.original_dir)
-        self.has_import = getattr(args, 'import')
+        self.curdir = os.path.abspath(self.original_dir)
         self.json = {}
 
         #
@@ -1088,8 +1141,14 @@ class EnMasse(ManageCommand):
         #    4b) override whatever is found in ODB with values from JSON (--replace-odb-objects)
         #
 
-        if args.export_odb or self.has_import:
+        # Get client and issue a sanity check as quickly as possible
+        self.client = get_client_from_server_conf(self.args.path)
+        self.object_mgr = ClusterObjectManager(self.client)
+        self.client.invoke('zato.ping')
+        populate_services_from_apispec(self.client)
 
+        has_import = getattr(args, 'import')
+        if args.export_odb or has_import:
             # Checks if connections to ODB/Redis are configured properly
             cc = CheckConfig(self.args)
             cc.show_output = False
@@ -1098,27 +1157,19 @@ class EnMasse(ManageCommand):
             # Get back to the directory we started in so following commands start afresh as well
             os.chdir(self.curdir)
 
-            # Get client and issue a sanity check as quickly as possible
-            self.client = get_client_from_server_conf(self.args.path)
-            self.object_mgr = ClusterObjectManager(self.client)
-            self.client.invoke('zato.ping')
-            populate_services_from_apispec(self.client)
-
         # Imports and export are mutually excluding
-        if self.has_import and (args.export_local or args.export_odb):
+        if has_import and (args.export_local or args.export_odb):
             self.logger.error('Cannot specify import and export options at the same time, stopping now')
             sys.exit(self.SYS_ERROR.CONFLICTING_OPTIONS)
 
-        if args.export_local or self.has_import:
-            input_path = self.ensure_input_exists()
-            self.json = bunchify(loads(open(input_path).read()))
-
-            # Local JSON sanity check first
-            json_sanity_results = self.json_sanity_check()
-            if not json_sanity_results.ok:
-                self.logger.error('JSON sanity check failed')
-                self.report_warnings_errors([json_sanity_results])
+        if args.export_local or has_import:
+            parser = JsonParser(os.path.join(self.curdir, self.args.input))
+            results = parser.parse()
+            if not results.ok:
+                self.logger.error('JSON parsing failed')
+                self.report_warnings_errors([results])
                 sys.exit(self.SYS_ERROR.INVALID_INPUT)
+            self.json = parser.json
 
         # 3)
         if args.export_local and args.export_odb:
@@ -1136,7 +1187,7 @@ class EnMasse(ManageCommand):
             self.save_json()
 
         # 4) a/b
-        elif self.has_import:
+        elif has_import:
             self.report_warnings_errors(self.import_())
 
         else:
@@ -1149,23 +1200,10 @@ class EnMasse(ManageCommand):
         now = datetime.now().isoformat() # Not in UTC, we want to use user's TZ
         name = 'zato-export-{}.json'.format(now.replace(':', '_').replace('.', '_'))
 
-        f = open(join(self.curdir, name), 'w')
-        f.write(dumps(self.json, indent=1, sort_keys=True))
-        f.close()
+        with open(os.path.join(self.curdir, name), 'w') as f:
+            f.write(json.dumps(self.json, indent=1, sort_keys=True))
 
         self.logger.info('Data exported to {}'.format(f.name))
-
-# ################################################################################################################################
-
-    def ensure_input_exists(self):
-        input_path = abspath(join(self.curdir, self.args.input))
-        if not exists(input_path):
-            self.logger.error('No such path: [{}]'.format(input_path))
-
-            # TODO: ManageCommand should not ignore exit codes subclasses return
-            sys.exit(self.SYS_ERROR.NO_INPUT)
-
-        return input_path
 
 # ################################################################################################################################
 
@@ -1232,108 +1270,6 @@ class EnMasse(ManageCommand):
         return table
 
 # ################################################################################################################################
-
-    def get_include_abspath(self, curdir, value):
-        return abspath(join(curdir, value.replace('file://', '')))
-
-    def is_include(self, value):
-        return isinstance(value, basestring)
-
-    def get_json_includes(self):
-        for key in sorted(self.json):
-            for value in self.json[key]:
-                if self.is_include(value):
-                    yield key, value
-
-    def json_find_include_dups(self):
-        seen_includes = {}
-
-        for key, value in self.get_json_includes():
-            keys = seen_includes.setdefault(value, [])
-            keys.append(key)
-
-        dups = dict((k,v) for (k,v) in seen_includes.items() if len(v) > 1)
-
-        return dups
-
-    def json_find_missing_includes(self):
-        missing = {}
-        for key in sorted(self.json):
-            for value in self.json[key]:
-                if self.is_include(value):
-                    if download.is_file_url(_DummyLink(value)):
-                        abs_path = self.get_include_abspath(self.curdir, value)
-                        if not exists(abs_path):
-                            item = missing.setdefault((value, abs_path), [])
-                            item.append(key)
-        return missing
-
-    def json_find_unparsable_includes(self, missing):
-        unparsable = {}
-
-        for key in sorted(self.json):
-            for value in self.json[key]:
-                if self.is_include(value):
-                    if download.is_file_url(_DummyLink(value)):
-                        abs_path = self.get_include_abspath(self.curdir, value)
-
-                        # No point in parsing what is already known not to exist
-                        if abs_path not in missing:
-                            try:
-                                loads(open(abs_path).read())
-                            except Exception, e:
-                                exc_pretty = format_exc(e)
-
-                                item = unparsable.setdefault((value, abs_path, exc_pretty), [])
-                                item.append(key)
-
-        return unparsable
-
-    def json_sanity_check(self):
-        results = Results()
-
-        for raw, keys in sorted(self.json_find_include_dups().items()):
-            len_keys = len(keys)
-            keys = sorted(set(keys))
-            results.add_error(raw, ERROR_ITEM_INCLUDED_MULTIPLE_TIMES,
-                '{} included multiple times ({}) \n{}',
-                raw, len_keys, '\n'.join(' - {}'.format(name) for name in keys))
-
-        missing_items = sorted(self.json_find_missing_includes().items())
-        for raw, keys in missing_items:
-            missing, missing_abs = raw
-            len_keys = len(keys)
-            keys = sorted(set(keys))
-            results.add_error(raw, ERROR_ITEM_INCLUDED_BUT_MISSING,
-                '{} ({}) missing but needed in multiple definitions ({}) \n{}',
-                missing, missing_abs, len_keys, '\n'.join(' - {}'.format(name) for name in keys))
-
-        unparsable = self.json_find_unparsable_includes([elem[0][1] for elem in missing_items])
-        for raw, keys in unparsable.items():
-            include, abs_path, exc_pretty = raw
-            len_keys = len(keys)
-            suffix = '' if len_keys == 1 else 's'
-            keys = sorted(set(keys))
-            results.add_error(raw, ERROR_INCLUDE_COULD_NOT_BE_PARSED,
-                '{} ({}) could not be parsed as JSON, used in ({}) definition{}\n{} \n{}',
-                include, abs_path, len_keys, suffix, '\n'.join(' - {}'.format(name) for name in keys), exc_pretty)
-
-        return results
-
-    def merge_includes(self):
-        json_with_includes = Bunch()
-        for key, values in self.json.items():
-            values_with_includes = json_with_includes.setdefault(key, [])
-            for value in values:
-                if self.is_include(value):
-                    abs_path = self.get_include_abspath(self.curdir, value)
-                    include = Bunch(loads(open(abs_path).read()))
-                    values_with_includes.append(include)
-                else:
-                    values_with_includes.append(value)
-
-        self.json = json_with_includes
-        self.logger.info('Includes merged in successfully')
 
     def merge_odb_json(self):
         results = Results()
