@@ -8,7 +8,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import logging, os, sys
+import collections, logging, os, sys
 from copy import deepcopy
 from datetime import datetime
 from json import dumps
@@ -36,14 +36,7 @@ from zato.server.service import ForceType
 DEFAULT_COLS_WIDTH = '15,100'
 NO_SEC_DEF_NEEDED = 'zato-no-security'
 
-class Code(object):
-    def __init__(self, symbol, desc):
-        self.symbol = symbol
-        self.desc = desc
-
-    def __repr__(self):
-        return "<{} at {} symbol:'{}' desc:'{}'>".format(
-            self.__class__.__name__, hex(id(self)), self.symbol, self.desc)
+Code = collections.namedtuple('Code', ('symbol', 'desc'))
 
 WARNING_ALREADY_EXISTS_IN_ODB = Code('W01', 'already exists in ODB')
 WARNING_MISSING_DEF = Code('W02', 'missing def')
@@ -70,27 +63,51 @@ def find_first(it, pred):
         if pred(obj):
             return obj
 
-def import_module(modname):
-    """Import and return the Python module `modname`."""
-    module = None
-    exec('import %s as module' % (modname,))
-    return module
+def populate_services_from_apispec(client):
+    """Request a list of services from the APISpec service, and merge the
+    results into SERVICES_BY_PREFIX, creating new ServiceInfo instances to
+    represent previously unknown services as appropriate."""
+    # { "zato.apispec": {"get-api-spec": { .. } } }
+    by_prefix = {}
+
+    response = client.invoke('zato.apispec.get-api-spec')
+    if not response.ok:
+        logger.error('could not fetch service list')
+        return
+
+    services = response.data['namespaces']['']['services']
+    for service in services:
+        prefix, _, name = service['name'].rpartition('.')
+        methods = by_prefix.setdefault(prefix, {})
+        methods[name] = service
+
+    for prefix, methods in by_prefix.items():
+        # Ignores prefixes lacking "get-list", "create" and "edit" methods.
+        if not all(n in methods for n in ('get-list', 'create', 'edit')):
+            continue
+
+        sinfo = SERVICE_BY_PREFIX.get(prefix)
+        if sinfo is None:
+            sinfo = ServiceInfo(prefix=prefix)
+            SERVICE_BY_PREFIX[prefix] = sinfo
+
+        sinfo.methods = methods
 
 class ServiceInfo(object):
-    def __init__(self, name, module_name,
-                 prefix=None,
+    def __init__(self, prefix=None,
+                 name=None,
                  needs_password=False,
                  object_dependencies=None,
                  service_dependencies=None,
                  export_filter=None):
+        assert name or prefix
         #: Short service name as appears in export data.
-        self.name = name
-        #: Canonical name of service's implementation module.
-        self.module_name = module_name
+        self.name = name or prefix
         #: True if service requires a password key.
         self.needs_password = needs_password
         #: Optional name of the object enumeration/retrieval service.
-        self.prefix = None
+        self.prefix = prefix
+        self.methods = None
         #: Specifies a list of object dependencies:
         #:      field_name: {"dependent_type": "shortname",
         #:                   "dependent_field": "fieldname",
@@ -115,15 +132,18 @@ class ServiceInfo(object):
 
     @property
     def create_service(self):
-        return self.prefix + '.create'
+        if self.prefix:
+            return self.prefix + '.create'
 
     @property
     def edit_service(self):
-        return self.prefix + '.edit'
+        if self.prefix:
+            return self.prefix + '.edit'
 
     @property
     def get_list_service(self):
-        return self.prefix + '.get-list'
+        if self.prefix:
+            return self.prefix + '.get-list'
 
     @property
     def change_password_service(self):
@@ -135,13 +155,15 @@ class ServiceInfo(object):
 
     def get_required_keys(self):
         """Return the set of keys required to create a new instance."""
+        method_sig = self.methods.get('create')
+        if method_sig is None:
+            return set()
+
         required = set()
-        create_class = import_module(self.module_name).Create
-        for name in create_class.SimpleIO.input_required:
-            if isinstance(name, ForceType):
-                name = name.name
-            name = self.replace_names.get(name, name)
-            required.add(name)
+        fields = method_sig['simple_io']['zato']['input_required']
+        for field_info in fields:
+            name = field_info['name']
+            required.add(self.replace_names.get(name, name))
 
         if 'sql' in self.name:  # TODO
             required.add('password')
@@ -160,7 +182,6 @@ MAYBE_NEEDS_PASSWORD = 'MAYBE_NEEDS_PASSWORD'
 SERVICES = [
     ServiceInfo(
         name='channel_amqp',
-        module_name='zato.server.service.internal.channel.amqp_',
         prefix='zato.channel.amqp',
         object_dependencies={
             'def_name': {
@@ -174,7 +195,6 @@ SERVICES = [
     ),
     ServiceInfo(
         name='channel_jms_wmq',
-        module_name='zato.server.service.internal.channel.jms_wmq',
         prefix='zato.channel.jms-wmq',
         object_dependencies={
             'def_name': {
@@ -189,7 +209,6 @@ SERVICES = [
     ),
     ServiceInfo(
         name='channel_plain_http',
-        module_name='zato.server.service.internal.http_soap',
         object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
@@ -203,7 +222,6 @@ SERVICES = [
     ),
     ServiceInfo(
         name='channel_soap',
-        module_name='zato.server.service.internal.http_soap',
         object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
@@ -217,7 +235,6 @@ SERVICES = [
     ),
     ServiceInfo(
         name='channel_zmq',
-        module_name='zato.server.service.internal.channel.zmq',
         prefix='zato.channel.zmq',
         service_dependencies={
             'service_name': {}
@@ -225,44 +242,36 @@ SERVICES = [
     ),
     ServiceInfo(
         name='def_amqp',
-        module_name='zato.server.service.internal.definition.amqp_',
         prefix='zato.definition.amqp',
     ),
     ServiceInfo(
         name='def_sec',
-        module_name='zato.server.service.internal.security',
         prefix='zato.security',
     ),
     ServiceInfo(
         name='def_jms_wmq',
-        module_name='zato.server.service.internal.definition.jms_wmq',
         prefix='zato.definition.jms-wmq',
     ),
     ServiceInfo(
         name='def_cassandra',
-        module_name='zato.server.service.internal.definition.cassandra',
         prefix='zato.definition.cassandra',
     ),
     ServiceInfo(
         name='email_imap',
         prefix='zato.email.imap',
-        module_name='zato.server.service.internal.email.imap',
         needs_password=MAYBE_NEEDS_PASSWORD
     ),
     ServiceInfo(
         name='email_smtp',
-        module_name='zato.server.service.internal.email.smtp',
         prefix='zato.email.smtp',
         needs_password=MAYBE_NEEDS_PASSWORD
     ),
     ServiceInfo(
         name='json_pointer',
-        module_name='zato.server.service.internal.message.json_pointer',
         prefix='zato.message.json-pointer',
     ),
     ServiceInfo(
         name='http_soap',
-        module_name='zato.server.service.internal.http_soap',
         prefix='zato.http-soap',
         # TODO: note: covers all of outconn_plain_http, outconn_soap, http_soap
         object_dependencies={
@@ -284,17 +293,14 @@ SERVICES = [
     ),
     ServiceInfo(
         name='def_namespace',
-        module_name='zato.server.service.internal.message.namespace',
         prefix='zato.message.namespace',
     ),
     ServiceInfo(
         name='notif_cloud_openstack_swift',
         prefix='zato.notif.cloud.openstack.swift',
-        module_name='zato.server.service.internal.notif.cloud.openstack.swift',
     ),
     ServiceInfo(
         name='notif_sql',
-        module_name='zato.server.service.internal.notif.sql',
         prefix='zato.notif.sql',
         object_dependencies={
             'def_name': {
@@ -305,7 +311,6 @@ SERVICES = [
     ),
     ServiceInfo(
         name='outconn_amqp',
-        module_name='zato.server.service.internal.outgoing.amqp_',
         prefix='zato.outgoing.amqp',
         object_dependencies={
             'def_name': {
@@ -316,18 +321,15 @@ SERVICES = [
     ),
     ServiceInfo(
         name='outconn_ftp',
-        module_name='zato.server.service.internal.outgoing.ftp',
         needs_password=MAYBE_NEEDS_PASSWORD,
         prefix='zato.outgoing.ftp',
     ),
     ServiceInfo(
         name='outconn_odoo',
-        module_name='zato.server.service.internal.outgoing.odoo',
         prefix='zato.outgoing.odoo',
     ),
     ServiceInfo(
         name='outconn_jms_wmq',
-        module_name='zato.server.service.internal.outgoing.jms_wmq',
         prefix='zato.outgoing.jms-wmq',
         object_dependencies={
             'def_name': {
@@ -341,74 +343,60 @@ SERVICES = [
     ),
     ServiceInfo(
         name='outconn_sql',
-        module_name='zato.server.service.internal.outgoing.sql',
         prefix='zato.outgoing.sql',
         needs_password=True,
     ),
     ServiceInfo(
         name='outconn_zmq',
-        module_name='zato.server.service.internal.outgoing.zmq',
         prefix='zato.outgoing.zmq',
     ),
     ServiceInfo(
         name='scheduler',
-        module_name='zato.server.service.internal.scheduler',
         prefix='zato.scheduler.job',
     ),
     ServiceInfo(
         name='xpath',
-        module_name='zato.server.service.internal.message.xpath',
         prefix='zato.message.xpath',
     ),
     ServiceInfo(
         name='cloud_aws_s3',
-        module_name='zato.server.service.internal.cloud.aws.s3',
         prefix='zato.cloud.aws.s3',
     ),
     ServiceInfo(
         name='def_cloud_openstack_swift',
-        module_name='zato.server.service.internal.cloud.openstack.swift',
         prefix='zato.cloud.openstack.swift',
     ),
     ServiceInfo(
         name='search_es',
-        module_name='zato.server.service.internal.search.es',
         prefix='zato.search.es',
     ),
     ServiceInfo(
         name='search_solr',
-        module_name='zato.server.service.internal.search.solr',
         prefix='zato.search.solr',
     ),
     ServiceInfo(
         name='rbac_permission',
-        module_name='zato.server.service.internal.security.rbac.permission',
         prefix='zato.security.rbac.permission',
     ),
     ServiceInfo(
         name='rbac_role',
-        module_name='zato.server.service.internal.security.rbac.role',
         prefix='zato.security.rbac.role',
     ),
     ServiceInfo(
         name='rbac_client_role',
-        module_name='zato.server.service.internal.security.rbac.client_role',
         prefix='zato.security.rbac.client-role',
     ),
     ServiceInfo(
         name='rbac_role_permission',
-        module_name='zato.server.service.internal.security.rbac.role_permission',
         prefix='zato.security.rbac.role-permission',
     ),
     ServiceInfo(
         name='tls_ca_cert',
-        module_name='zato.server.service.internal.security.tls.ca_cert',
         prefix='zato.security.tls.ca-cert',
     ),
     # Added for the exporter.
     ServiceInfo(
         name='outconn_plain_http',
-        module_name='zato.server.service.internal.http_soap',
         object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
@@ -419,7 +407,6 @@ SERVICES = [
     ),
     ServiceInfo(
         name='outconn_soap',
-        module_name='zato.server.service.internal.http_soap',
         object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
@@ -430,7 +417,6 @@ SERVICES = [
     ),
     ServiceInfo(
         name='query_cassandra',
-        module_name='zato.server.service.internal.query.cassandra',
         prefix='zato.query.cassandra',
         object_dependencies={
             'sec_def': {
@@ -442,75 +428,63 @@ SERVICES = [
     ),
     ServiceInfo(
         name='apikey',
-        module_name='zato.server.service.internal.security.apikey',
         prefix='zato.security.apikey',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='aws',
-        module_name='zato.server.service.internal.security.aws',
         prefix='zato.security.aws',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='basic_auth',
-        module_name='zato.server.service.internal.security.basic_auth',
         prefix='zato.security.basic-auth',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='ntlm',
-        module_name='zato.server.service.internal.security.ntlm',
         prefix='zato.security.ntlm',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='oauth',
-        module_name='zato.server.service.internal.security.oauth',
         prefix='zato.security.oauth',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='tech_acc',
-        module_name='zato.server.service.internal.security.tech_account',
         prefix='zato.security.tech-account',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='tls_key_cert',
-        module_name='zato.server.service.internal.security.tls.key_cert',
         prefix='zato.security.tls.key-cert',
     ),
     ServiceInfo(
         name='tls_channel_sec',
-        module_name='zato.server.service.internal.security.tls.channel',
         prefix='zato.security.tls.channel',
     ),
     ServiceInfo(
         name='wss',
-        module_name='zato.server.service.internal.security.wss',
         prefix='zato.security.wss',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='xpath_sec',
-        module_name='zato.server.service.internal.security.xpath',
         prefix='zato.security.xpath',
         needs_password=True,
     ),
 ]
 
-
-# channels - chan_
-# outgoing connections - outconn_
-# definitions - def_
-# secdef_ 
-
-SERVICE_NAMES = set(s.name for s in SERVICES)
 SECURITY_SERVICE_NAMES = set(s.name for s in SERVICES if s.is_security)
 
 SERVICE_BY_NAME = {
     info.name: info
+    for info in SERVICES
+}
+
+SERVICE_BY_PREFIX = {
+    info.prefix: info
     for info in SERVICES
 }
 
@@ -579,10 +553,10 @@ class InputValidator(object):
 
     def validate_other(self, item_type, item):
         if item_type not in SERVICE_BY_NAME:
-            raw = (item_type, SERVICE_NAMES)
+            raw = (item_type, sorted(SERVICE_BY_NAME))
             self.results.add_error(raw, ERROR_INVALID_KEY,
                                    "Invalid key '{}', must be one of '{}'",
-                                   item_type, SERVICE_NAMES)
+                                   item_type, sorted(SERVICE_BY_NAME))
         else:
             self._validate(item_type, item, False)
 
@@ -749,7 +723,7 @@ class ObjectImporter(object):
         if missing_defs:
             for warning in missing_defs.warnings:
                 missing_type, missing_name, dep_names, existing = warning.value_raw
-                if not self.object_mgr.has_def(missing_type, missing_name):
+                if not self.object_mgr.find(missing_type, missing_name):
                     raw = (missing_type, missing_name)
                     results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB,
                         "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
@@ -963,22 +937,6 @@ class ClusterObjectManager(object):
         self.objects = Bunch()
         self.services = Bunch()
 
-    def has_def(self, def_type, def_name):
-        sinfo = SERVICE_BY_NAME[def_type]
-        assert sinfo.get_list_service is not None
-
-        response = self.client.invoke(sinfo.get_list_service, {
-            'cluster_id':self.client.cluster_id
-        })
-
-        if not response.ok:
-            self.logger.error('While attempting to verify {}, {}: {}'.format(def_type, def_name, response))
-
-        match = None
-        if response.ok:
-            match = find_first(response.data, lambda item: item['name'] == def_name)
-        return match is not None
-
     def find(self, item_type, name):
         lst = self.objects.get(item_type, ())
         return find_first(lst, lambda item: item.name == name)
@@ -1112,6 +1070,7 @@ class EnMasse(ManageCommand):
             self.client = get_client_from_server_conf(self.args.path)
             self.object_mgr = ClusterObjectManager(self.client)
             self.client.invoke('zato.ping')
+            populate_services_from_apispec(self.client)
 
         # Imports and export are mutually excluding
         if self.has_import and (args.export_local or args.export_odb):
