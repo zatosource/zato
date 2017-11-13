@@ -67,31 +67,62 @@ def populate_services_from_apispec(client):
     """Request a list of services from the APISpec service, and merge the
     results into SERVICES_BY_PREFIX, creating new ServiceInfo instances to
     represent previously unknown services as appropriate."""
-    # { "zato.apispec": {"get-api-spec": { .. } } }
-    by_prefix = {}
+    response = client.invoke('zato.apispec.get-api-spec', {
+        'return_internal': True
+    })
 
-    response = client.invoke('zato.apispec.get-api-spec')
     if not response.ok:
         logger.error('could not fetch service list')
         return
 
-    services = response.data['namespaces']['']['services']
-    for service in services:
+    by_prefix = {}  # { "zato.apispec": {"get-api-spec": { .. } } }
+    for service in response.data['namespaces']['']['services']:
         prefix, _, name = service['name'].rpartition('.')
         methods = by_prefix.setdefault(prefix, {})
         methods[name] = service
 
     for prefix, methods in by_prefix.items():
-        # Ignores prefixes lacking "get-list", "create" and "edit" methods.
+        # Ignore prefixes lacking "get-list", "create" and "edit" methods.
         if not all(n in methods for n in ('get-list', 'create', 'edit')):
             continue
 
         sinfo = SERVICE_BY_PREFIX.get(prefix)
         if sinfo is None:
-            sinfo = ServiceInfo(prefix=prefix)
+            sinfo = ServiceInfo(prefix=prefix, name=make_service_name(prefix))
             SERVICE_BY_PREFIX[prefix] = sinfo
+            SERVICE_BY_NAME[sinfo.name] = sinfo
 
         sinfo.methods = methods
+
+
+#: The common prefix for a set of services is tested against the first element
+#: in this list using startswith(). If it matches, that prefix is replaced by
+#: the second element. The prefixes must match exactly if the first element
+#: does not end in a period.
+SHORTNAME_BY_PREFIX = [
+    ('zato.definition.', 'def'),
+    ('zato.email.', 'email'),
+    ('zato.message.namespace', 'def_namespace'),
+    ('zato.message.xpath', 'xpath'),
+    ('zato.message.json-pointer', 'json_pointer'),
+    ('zato.notif.', 'notif'),
+    ('zato.outgoing.', 'outconn'),
+    ('zato.scheduler.job', 'scheduler'),
+    ('zato.search.', 'search'),
+    ('zato.security.', ''),
+]
+
+def make_service_name(prefix):
+    escaped = re.sub('[.-]', '_', prefix)
+    for module_prefix, name_prefix in SHORTNAME_BY_PREFIX:
+        if prefix.startswith(module_prefix) and module_prefix.endswith('.'):
+            name = escaped[len(module_prefix):]
+            if name_prefix:
+                name = '{}_{}'.format(name_prefix, name)
+            return name
+        elif prefix == module_prefix:
+            return name_prefix
+    return escaped
 
 class ServiceInfo(object):
     def __init__(self, prefix=None,
