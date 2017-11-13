@@ -584,16 +584,17 @@ class ObjectImporter(object):
     def _import(self, item_type, attrs, is_edit):
         attrs_dict = attrs.toDict()
         attrs.cluster_id = self.client.cluster_id
-        service_name, error_response = self._import_object(item_type, attrs, is_edit)
-        if error_response is None:
-            error_response = self._maybe_change_password(item_type, attrs, is_edit)
+
+        response = self._import_object(item_type, attrs, is_edit)
+        if response is None:
+            response = self._maybe_change_password(item_type, attrs, is_edit)
 
         # We quit on first error encountered
-        if error_response:
-            raw = (item_type, attrs_dict, error_response)
+        if not response.ok:
+            raw = (item_type, attrs_dict, response.details)
             self.results.add_error(raw, ERROR_COULD_NOT_IMPORT_OBJECT,
                                    "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'",
-                                    is_edit, attrs.name, attrs_dict, service_name, error_response)
+                                    is_edit, attrs.name, attrs_dict, service_name, response.details)
             return self.results
 
         # It's been just imported so we don't want to create in next steps
@@ -728,12 +729,10 @@ class ObjectImporter(object):
             attrs.def_id = odb_item.id
 
         response = self.client.invoke(service_name, attrs)
-        if not response.ok:
-            return service_name, response.details
-        else:
+        if response.ok:
             verb = 'Updated' if is_edit else 'Created'
-            self.logger.info("{} object '{}' ({} {})".format(verb, attrs.name, def_type, service_name))
-            return None, None
+            self.logger.info("{} object '{}' with {}".format(verb, attrs.name, service_name))
+        return response
 
     def _maybe_change_password(self, def_type, attrs, is_edit):
         sinfo = SERVICE_BY_NAME[def_type]
