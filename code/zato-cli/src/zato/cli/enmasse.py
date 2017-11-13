@@ -31,10 +31,7 @@ from texttable import Texttable
 # Zato
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
-from zato.common.odb.model import APIKeySecurity, AWSSecurity, Base, CassandraConn, ConnDefAMQP, ConnDefWMQ, HTTPBasicAuth, \
-     HTTPSOAP, IMAP, NTLM, OAuth, OutgoingOdoo, SecurityBase, Service, SMTP, TechnicalAccount, TLSChannelSecurity, \
-     TLSKeyCertSecurity, to_json, WSSDefinition, XPathSecurity
-from zato.common.odb.query import cloud_openstack_swift_list, notif_cloud_openstack_swift_list, notif_sql_list, out_sql_list
+from zato.common.odb.model import Base, HTTPSOAP, SecurityBase, Service, to_json
 from zato.common.util import get_client_from_server_conf
 from zato.server.service import ForceType
 
@@ -444,58 +441,68 @@ SERVICES = [
     ServiceInfo(
         name='apikey',
         module_name='zato.server.service.internal.security.apikey',
-        needs_password=True,
+        get_list_service='zato.security.apikey.get-list',
+        # TODO: needs_password=True,
         is_security=True,
     ),
     ServiceInfo(
         name='aws',
         module_name='zato.server.service.internal.security.aws',
-        needs_password=True,
+        get_list_service='zato.security.aws.get-list',
+        # TODO: needs_password=True,
         is_security=True,
     ),
     ServiceInfo(
         name='basic_auth',
         module_name='zato.server.service.internal.security.basic_auth',
-        needs_password=True,
+        get_list_service='zato.security.basic-auth.get-list',
+        # TODO: needs_password=True,
         is_security=True,
     ),
     ServiceInfo(
         name='ntlm',
         module_name='zato.server.service.internal.security.ntlm',
-        needs_password=True,
+        get_list_service='zato.security.ntlm.get-list',
+        # TODO: needs_password=True,
         is_security=True,
     ),
     ServiceInfo(
         name='oauth',
         module_name='zato.server.service.internal.security.oauth',
-        needs_password=True,
+        get_list_service='zato.security.oauth.get-list',
+        # TODO: needs_password=True,
         is_security=True,
     ),
     ServiceInfo(
         name='tech_acc',
         module_name='zato.server.service.internal.security.tech_account',
-        needs_password=True,
+        get_list_service='zato.security.tech-account.get-list',
+        # TODO: needs_password=True,
         is_security=True,
     ),
     ServiceInfo(
         name='tls_key_cert',
         module_name='zato.server.service.internal.security.tls.key_cert',
+        get_list_service='zato.security.tls.key-cert.get-list',
         is_security=True,
     ),
     ServiceInfo(
         name='tls_channel_sec',
         module_name='zato.server.service.internal.security.tls.channel',
+        get_list_service='zato.security.tls.channel.get-list',
         is_security=True,
     ),
     ServiceInfo(
         name='wss',
         module_name='zato.server.service.internal.security.wss',
-        needs_password=True,
+        get_list_service='zato.security.wss.get-list',
+        # TODO: needs_password=True,
         is_security=True,
     ),
     ServiceInfo(
         name='xpath_sec',
         module_name='zato.server.service.internal.security.xpath',
+        get_list_service='zato.message.xpath.get-list',
         needs_password=True,
         is_security=True,
     ),
@@ -1058,27 +1065,6 @@ class ClusterObjectManager(object):
 
         return item
 
-    def get_fields(self, item):
-        return Bunch(loads(to_json(item))[0]['fields'])
-
-    def from_model_query(self, query, needs_password=False):
-        args = (True, True) if needs_password else (True,)
-        rows, columns = query(self.client.odb_session, self.client.cluster_id, *args)
-        columns = columns.keys()
-
-        target = []
-        for row in rows:
-            item = Bunch()
-            if isinstance(row, Base):
-                for idx, (key, value) in enumerate(row):
-                    item[key] = value
-            else:
-                for idx, value in enumerate(row):
-                    key = columns[idx]
-                    item[key] = value
-            target.append(item)
-        return target
-
     IGNORED_NAMES = (
         'admin.invoke',
         'pubapi',
@@ -1088,45 +1074,23 @@ class ClusterObjectManager(object):
         name = item.name.lower()
         return 'zato' in name or name in self.IGNORED_NAMES
 
-    def from_simple_query(self, model_class, include_all=False):
-        return [
-            self.get_fields(item)
-            for item in (
-                self.client.odb_session.query(model_class).
-                    filter(model_class.cluster_id == self.client.cluster_id).
-                    all()
-            )
-            if include_all or not self.is_ignored_name(item)
-        ]
-
-    SEC_DEF_KLASSES = [
-        APIKeySecurity,
-        AWSSecurity,
-        HTTPBasicAuth,
-        NTLM,
-        OAuth,
-        TechnicalAccount,
-        TLSChannelSecurity,
-        TLSKeyCertSecurity,
-        WSSDefinition,
-        XPathSecurity,
-    ]
-
     def get_via_odb_session(self):
-        # Security definitions
-        self.objects.def_sec = [
-            item
-            for klass in self.SEC_DEF_KLASSES
-            for item in self.from_simple_query(klass)
-        ]
-
         self.objects.http_soap = [
-            self.get_fields(item)
+            Bunch(loads(to_json(item))[0]['fields'])
             for item in self.client.odb_session.query(HTTPSOAP).
                 filter(HTTPSOAP.cluster_id == self.client.cluster_id).
                 filter(HTTPSOAP.is_internal == False).all()  # noqa E713 test for membership should be 'not in'
             if not self.is_ignored_name(item)
         ]
+
+    def append_regular_item(self, sinfo, item):
+        lst = self.objects.setdefault(sinfo.name, [])
+        lst.append(item)
+
+    def append_security_item(self, sinfo, item):
+        item.type = sinfo.name
+        lst = self.objects.setdefault('def_sec', [])
+        lst.append(item)
 
     def get_via_service_client(self):
         for sinfo in SERVICES:
@@ -1135,16 +1099,23 @@ class ClusterObjectManager(object):
                 continue
             if sinfo.get_odb_objects_ignore:
                 continue
-            self.objects[sinfo.name] = []
+
             response = self.client.invoke(sinfo.get_list_service, {
                 'cluster_id':self.client.cluster_id
             })
 
-            if response.ok:
-                for item in response.data:
-                    if not 'zato' in item['name'].lower():
-                        self.objects[sinfo.name].append(Bunch(item))
+            if not response.ok:
+                self.logger.warning('Could not fetch objects of type {}'.format(sinfo.name))
+                return
 
+            if sinfo.is_security:
+                appender = self.append_security_item
+            else:
+                appender = self.append_regular_item
+
+            for item in map(Bunch, response.data):
+                if not self.is_ignored_name(item):
+                    appender(sinfo, Bunch(item))
 
 class EnMasse(ManageCommand):
     """ Manages server objects en masse.
