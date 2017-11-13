@@ -90,8 +90,7 @@ class ServiceInfo(object):
                  supports_import=True,
                  get_list_service=None,
                  object_dependencies=None,
-                 service_dependencies=None,
-                 is_security=False):
+                 service_dependencies=None):
         #: Short service name as appears in export data.
         self.name = name
         #: Canonical name of service's implementation module.
@@ -119,9 +118,12 @@ class ServiceInfo(object):
         #:      field_name: {"only_if_field": "field_name" or None,
         #:                   "only_if_value": "vlaue" or None}
         self.service_dependencies = service_dependencies or {}
-        #: If True, indicates the service is source of authentication
-        #: credentials for use in another service.
-        self.is_security = is_security
+
+    @property
+    def is_security(self):
+        """If True, indicates the service is source of authentication
+        credentials for use in another service."""
+        return self.get_list_service.startswith('zato.security.')
 
     def get_module(self):
         """Import and return the module containing the service
@@ -436,68 +438,58 @@ SERVICES = [
         module_name='zato.server.service.internal.security.apikey',
         get_list_service='zato.security.apikey.get-list',
         # TODO: needs_password=True,
-        is_security=True,
     ),
     ServiceInfo(
         name='aws',
         module_name='zato.server.service.internal.security.aws',
         get_list_service='zato.security.aws.get-list',
         # TODO: needs_password=True,
-        is_security=True,
     ),
     ServiceInfo(
         name='basic_auth',
         module_name='zato.server.service.internal.security.basic_auth',
         get_list_service='zato.security.basic-auth.get-list',
         # TODO: needs_password=True,
-        is_security=True,
     ),
     ServiceInfo(
         name='ntlm',
         module_name='zato.server.service.internal.security.ntlm',
         get_list_service='zato.security.ntlm.get-list',
         # TODO: needs_password=True,
-        is_security=True,
     ),
     ServiceInfo(
         name='oauth',
         module_name='zato.server.service.internal.security.oauth',
         get_list_service='zato.security.oauth.get-list',
         # TODO: needs_password=True,
-        is_security=True,
     ),
     ServiceInfo(
         name='tech_acc',
         module_name='zato.server.service.internal.security.tech_account',
         get_list_service='zato.security.tech-account.get-list',
         # TODO: needs_password=True,
-        is_security=True,
     ),
     ServiceInfo(
         name='tls_key_cert',
         module_name='zato.server.service.internal.security.tls.key_cert',
         get_list_service='zato.security.tls.key-cert.get-list',
-        is_security=True,
     ),
     ServiceInfo(
         name='tls_channel_sec',
         module_name='zato.server.service.internal.security.tls.channel',
         get_list_service='zato.security.tls.channel.get-list',
-        is_security=True,
     ),
     ServiceInfo(
         name='wss',
         module_name='zato.server.service.internal.security.wss',
         get_list_service='zato.security.wss.get-list',
         # TODO: needs_password=True,
-        is_security=True,
     ),
     ServiceInfo(
         name='xpath_sec',
         module_name='zato.server.service.internal.security.xpath',
         get_list_service='zato.message.xpath.get-list',
         needs_password=True,
-        is_security=True,
     ),
 ]
 
