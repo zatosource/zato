@@ -77,19 +77,20 @@ def import_module(modname):
     return module
 
 class ServiceInfo(object):
-    def __init__(self, name, module_name, needs_password=False,
-                 get_list_service=None,
+    def __init__(self, name, module_name,
+                 prefix=None,
+                 needs_password=False,
                  object_dependencies=None,
-                 service_dependencies=None):
+                 service_dependencies=None,
+                 export_filter=None):
         #: Short service name as appears in export data.
         self.name = name
         #: Canonical name of service's implementation module.
         self.module_name = module_name
         #: True if service requires a password key.
         self.needs_password = needs_password
-        #: Optional name of the object enumeration/retrieval service. CAUTION:
-        #: see get_odb_objects() before adding this to every ServiceInfo.
-        self.get_list_service = get_list_service
+        #: Optional name of the object enumeration/retrieval service.
+        self.prefix = None
         #: Specifies a list of object dependencies:
         #:      field_name: {"dependent_type": "shortname",
         #:                   "dependent_field": "fieldname",
@@ -100,27 +101,33 @@ class ServiceInfo(object):
         #:      field_name: {"only_if_field": "field_name" or None,
         #:                   "only_if_value": "vlaue" or None}
         self.service_dependencies = service_dependencies or {}
+        #: List of field/value specifications that should be ignored during
+        #: export:
+        #:      field_name: value
+        self.export_filter = export_filter or {}
 
     @property
     def is_security(self):
         """If True, indicates the service is source of authentication
         credentials for use in another service."""
-        return self.get_list_service.startswith('zato.security.')
+        return (self.get_list_service is not None and
+                self.get_list_service.startswith('zato.security.'))
 
-    def get_module(self):
-        """Import and return the module containing the service
-        implementation."""
-        return import_module(self.module_name)
+    @property
+    def create_service(self):
+        return self.prefix + '.create'
 
-    def get_create_class(self):
-        """Import and return the class implementation for creating objects in
-        the service."""
-        return getattr(self.get_module(), 'Create')
+    @property
+    def edit_service(self):
+        return self.prefix + '.edit'
 
-    def get_edit_class(self):
-        """Import and return the class implementation for editing objects in
-        the service."""
-        return getattr(self.get_module(), 'Edit')
+    @property
+    def get_list_service(self):
+        return self.prefix + '.get-list'
+
+    @property
+    def change_password_service(self):
+        return self.prefix + '.change-password'
 
     replace_names = {
         'def_id': 'def_name',
@@ -129,10 +136,8 @@ class ServiceInfo(object):
     def get_required_keys(self):
         """Return the set of keys required to create a new instance."""
         required = set()
-        create_class = self.get_create_class()
+        create_class = import_module(self.module_name).Create
         for name in create_class.SimpleIO.input_required:
-            if name in self.always_optional_fields:
-                continue
             if isinstance(name, ForceType):
                 name = name.name
             name = self.replace_names.get(name, name)
@@ -156,7 +161,7 @@ SERVICES = [
     ServiceInfo(
         name='channel_amqp',
         module_name='zato.server.service.internal.channel.amqp_',
-        get_list_service='zato.channel.amqp.get-list',
+        prefix='zato.channel.amqp',
         object_dependencies={
             'def_name': {
                 'dependent_type': 'def_amqp',
@@ -170,7 +175,7 @@ SERVICES = [
     ServiceInfo(
         name='channel_jms_wmq',
         module_name='zato.server.service.internal.channel.jms_wmq',
-        get_list_service='zato.channel.jms-wmq.get-list',
+        prefix='zato.channel.jms-wmq',
         object_dependencies={
             'def_name': {
                 'dependent_type': 'def_jms_wmq',
@@ -213,7 +218,7 @@ SERVICES = [
     ServiceInfo(
         name='channel_zmq',
         module_name='zato.server.service.internal.channel.zmq',
-        get_list_service='zato.channel.zmq.get-list',
+        prefix='zato.channel.zmq',
         service_dependencies={
             'service_name': {}
         },
@@ -221,44 +226,44 @@ SERVICES = [
     ServiceInfo(
         name='def_amqp',
         module_name='zato.server.service.internal.definition.amqp_',
-        get_list_service='zato.definition.amqp.get-list',
+        prefix='zato.definition.amqp',
     ),
     ServiceInfo(
         name='def_sec',
         module_name='zato.server.service.internal.security',
-        get_list_service='zato.security.get-list',
+        prefix='zato.security',
     ),
     ServiceInfo(
         name='def_jms_wmq',
         module_name='zato.server.service.internal.definition.jms_wmq',
-        get_list_service='zato.definition.jms-wmq.get-list',
+        prefix='zato.definition.jms-wmq',
     ),
     ServiceInfo(
         name='def_cassandra',
         module_name='zato.server.service.internal.definition.cassandra',
-        get_list_service='zato.definition.cassandra.get-list',
+        prefix='zato.definition.cassandra',
     ),
     ServiceInfo(
         name='email_imap',
-        get_list_service='zato.email.imap.get-list',
+        prefix='zato.email.imap',
         module_name='zato.server.service.internal.email.imap',
         needs_password=MAYBE_NEEDS_PASSWORD
     ),
     ServiceInfo(
         name='email_smtp',
         module_name='zato.server.service.internal.email.smtp',
-        get_list_service='zato.email.smtp.get-list',
+        prefix='zato.email.smtp',
         needs_password=MAYBE_NEEDS_PASSWORD
     ),
     ServiceInfo(
         name='json_pointer',
         module_name='zato.server.service.internal.message.json_pointer',
-        get_list_service='zato.message.json-pointer.get-list',
+        prefix='zato.message.json-pointer',
     ),
     ServiceInfo(
         name='http_soap',
         module_name='zato.server.service.internal.http_soap',
-        get_list_service='zato.http-soap.get-list',
+        prefix='zato.http-soap',
         # TODO: note: covers all of outconn_plain_http, outconn_soap, http_soap
         object_dependencies={
             'sec_def': {
@@ -273,21 +278,24 @@ SERVICES = [
                 'only_if_value': 'channel',
             }
         },
+        export_filter={
+            'is_internal': True,
+        }
     ),
     ServiceInfo(
         name='def_namespace',
         module_name='zato.server.service.internal.message.namespace',
-        get_list_service='zato.message.namespace.get-list',
+        prefix='zato.message.namespace',
     ),
     ServiceInfo(
         name='notif_cloud_openstack_swift',
-        get_list_service='zato.notif.cloud.openstack.swift.get-list',
+        prefix='zato.notif.cloud.openstack.swift',
         module_name='zato.server.service.internal.notif.cloud.openstack.swift',
     ),
     ServiceInfo(
         name='notif_sql',
         module_name='zato.server.service.internal.notif.sql',
-        get_list_service='zato.notif.sql.get-list',
+        prefix='zato.notif.sql',
         object_dependencies={
             'def_name': {
                 'dependent_type': 'outconn_sql',
@@ -298,7 +306,7 @@ SERVICES = [
     ServiceInfo(
         name='outconn_amqp',
         module_name='zato.server.service.internal.outgoing.amqp_',
-        get_list_service='zato.outgoing.amqp.get-list',
+        prefix='zato.outgoing.amqp',
         object_dependencies={
             'def_name': {
                 'dependent_type': 'def_amqp',
@@ -310,17 +318,17 @@ SERVICES = [
         name='outconn_ftp',
         module_name='zato.server.service.internal.outgoing.ftp',
         needs_password=MAYBE_NEEDS_PASSWORD,
-        get_list_service='zato.outgoing.ftp.get-list',
+        prefix='zato.outgoing.ftp',
     ),
     ServiceInfo(
         name='outconn_odoo',
         module_name='zato.server.service.internal.outgoing.odoo',
-        get_list_service='zato.outgoing.odoo.get-list',
+        prefix='zato.outgoing.odoo',
     ),
     ServiceInfo(
         name='outconn_jms_wmq',
         module_name='zato.server.service.internal.outgoing.jms_wmq',
-        get_list_service='zato.outgoing.jms-wmq.get-list',
+        prefix='zato.outgoing.jms-wmq',
         object_dependencies={
             'def_name': {
                 'dependent_type': 'def_jms_wmq',
@@ -334,68 +342,68 @@ SERVICES = [
     ServiceInfo(
         name='outconn_sql',
         module_name='zato.server.service.internal.outgoing.sql',
-        get_list_service='zato.outgoing.sql.get-list',
+        prefix='zato.outgoing.sql',
         needs_password=True,
     ),
     ServiceInfo(
         name='outconn_zmq',
         module_name='zato.server.service.internal.outgoing.zmq',
-        get_list_service='zato.outgoing.zmq.get-list',
+        prefix='zato.outgoing.zmq',
     ),
     ServiceInfo(
         name='scheduler',
         module_name='zato.server.service.internal.scheduler',
-        get_list_service='zato.scheduler.job.get-list',
+        prefix='zato.scheduler.job',
     ),
     ServiceInfo(
         name='xpath',
         module_name='zato.server.service.internal.message.xpath',
-        get_list_service='zato.message.xpath.get-list',
+        prefix='zato.message.xpath',
     ),
     ServiceInfo(
         name='cloud_aws_s3',
         module_name='zato.server.service.internal.cloud.aws.s3',
-        get_list_service='zato.cloud.aws.s3.get-list',
+        prefix='zato.cloud.aws.s3',
     ),
     ServiceInfo(
         name='def_cloud_openstack_swift',
         module_name='zato.server.service.internal.cloud.openstack.swift',
-        get_list_service='zato.cloud.openstack.swift.get-list',
+        prefix='zato.cloud.openstack.swift',
     ),
     ServiceInfo(
         name='search_es',
         module_name='zato.server.service.internal.search.es',
-        get_list_service='zato.search.es.get-list',
+        prefix='zato.search.es',
     ),
     ServiceInfo(
         name='search_solr',
         module_name='zato.server.service.internal.search.solr',
-        get_list_service='zato.search.solr.get-list',
+        prefix='zato.search.solr',
     ),
     ServiceInfo(
         name='rbac_permission',
         module_name='zato.server.service.internal.security.rbac.permission',
-        get_list_service='zato.security.rbac.permission.get-list',
+        prefix='zato.security.rbac.permission',
     ),
     ServiceInfo(
         name='rbac_role',
         module_name='zato.server.service.internal.security.rbac.role',
-        get_list_service='zato.security.rbac.role.get-list',
+        prefix='zato.security.rbac.role',
     ),
     ServiceInfo(
         name='rbac_client_role',
         module_name='zato.server.service.internal.security.rbac.client_role',
-        get_list_service='zato.security.rbac.client-role.get-list',
+        prefix='zato.security.rbac.client-role',
     ),
     ServiceInfo(
         name='rbac_role_permission',
         module_name='zato.server.service.internal.security.rbac.role_permission',
-        get_list_service='zato.security.rbac.role-permission.get-list',
+        prefix='zato.security.rbac.role-permission',
     ),
     ServiceInfo(
         name='tls_ca_cert',
         module_name='zato.server.service.internal.security.tls.ca_cert',
-        get_list_service='zato.security.tls.ca-cert.get-list',
+        prefix='zato.security.tls.ca-cert',
     ),
     # Added for the exporter.
     ServiceInfo(
@@ -423,7 +431,7 @@ SERVICES = [
     ServiceInfo(
         name='query_cassandra',
         module_name='zato.server.service.internal.query.cassandra',
-        get_list_service='zato.query.cassandra.get-list',
+        prefix='zato.query.cassandra',
         object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_cassandra',
@@ -435,59 +443,59 @@ SERVICES = [
     ServiceInfo(
         name='apikey',
         module_name='zato.server.service.internal.security.apikey',
-        get_list_service='zato.security.apikey.get-list',
+        prefix='zato.security.apikey',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='aws',
         module_name='zato.server.service.internal.security.aws',
-        get_list_service='zato.security.aws.get-list',
+        prefix='zato.security.aws',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='basic_auth',
         module_name='zato.server.service.internal.security.basic_auth',
-        get_list_service='zato.security.basic-auth.get-list',
+        prefix='zato.security.basic-auth',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='ntlm',
         module_name='zato.server.service.internal.security.ntlm',
-        get_list_service='zato.security.ntlm.get-list',
+        prefix='zato.security.ntlm',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='oauth',
         module_name='zato.server.service.internal.security.oauth',
-        get_list_service='zato.security.oauth.get-list',
+        prefix='zato.security.oauth',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='tech_acc',
         module_name='zato.server.service.internal.security.tech_account',
-        get_list_service='zato.security.tech-account.get-list',
+        prefix='zato.security.tech-account',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='tls_key_cert',
         module_name='zato.server.service.internal.security.tls.key_cert',
-        get_list_service='zato.security.tls.key-cert.get-list',
+        prefix='zato.security.tls.key-cert',
     ),
     ServiceInfo(
         name='tls_channel_sec',
         module_name='zato.server.service.internal.security.tls.channel',
-        get_list_service='zato.security.tls.channel.get-list',
+        prefix='zato.security.tls.channel',
     ),
     ServiceInfo(
         name='wss',
         module_name='zato.server.service.internal.security.wss',
-        get_list_service='zato.security.wss.get-list',
+        prefix='zato.security.wss',
         # TODO: needs_password=True,
     ),
     ServiceInfo(
         name='xpath_sec',
         module_name='zato.server.service.internal.security.xpath',
-        get_list_service='zato.message.xpath.get-list',
+        prefix='zato.security.xpath',
         needs_password=True,
     ),
 ]
@@ -875,8 +883,7 @@ class ObjectImporter(object):
 
         return self.results
 
-    def _swap_service_name(self, service_class, attrs, first, second):
-        required = getattr(service_class.SimpleIO, 'input_required', [])
+    def _swap_service_name(self, required, attrs, first, second):
         if first in required and second in attrs:
             attrs[first] = attrs[second]
 
@@ -890,14 +897,14 @@ class ObjectImporter(object):
             assert not sinfo.is_security
 
         if is_edit:
-            service_class = sinfo.get_edit_class()
+            service_name = sinfo.edit_service()
         else:
-            service_class = sinfo.get_create_class()
-        service_name = service_class.get_name()
+            service_name = sinfo.create_service()
 
         # service and service_name are interchangeable
-        self._swap_service_name(service_class, attrs, 'service', 'service_name')
-        self._swap_service_name(service_class, attrs, 'service_name', 'service')
+        required = sinfo.get_required_keys()
+        self._swap_service_name(required, attrs, 'service', 'service_name')
+        self._swap_service_name(required, attrs, 'service_name', 'service')
 
         # Fetch an item from a cache of ODB object and assign its ID
         # to attrs so that the Edit service knows what to update.
@@ -937,9 +944,9 @@ class ObjectImporter(object):
                     if not is_edit:
                         attrs.id = response.data['id']
 
-                    service_class = sinfo.get_module().ChangePassword
                     request = {'id':attrs.id, 'password1':attrs.password, 'password2':attrs.password}
-                    response = self.client.invoke(service_class.get_name(), request)
+                    service_name = sinfo.change_password_service()
+                    response = self.client.invoke(service_name, request)
                     if not response.ok:
                         return service_name, response.details
                     else:
@@ -1049,7 +1056,7 @@ class ClusterObjectManager(object):
 
             for item in map(Bunch, response.data):
                 if any(getattr(item, key, None) == value
-                       for key, value in sinfo.export_ignore.items()):
+                       for key, value in sinfo.export_filter.items()):
                     continue
                 if self.is_ignored_name(item):
                     continue
