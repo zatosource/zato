@@ -38,7 +38,6 @@ WARNING_MISSING_DEF = Code('W02', 'missing def')
 WARNING_MISSING_DEF_INCL_ODB = Code('W04', 'missing def incl. ODB')
 ERROR_ITEM_INCLUDED_MULTIPLE_TIMES = Code('E01', 'item incl multiple')
 ERROR_INCLUDE_COULD_NOT_BE_PARSED = Code('E03', 'incl parsing error')
-ERROR_NAME_MISSING = Code('E04', 'name missing')
 ERROR_INVALID_INPUT = Code('E05', 'invalid JSON')
 ERROR_KEYS_MISSING = Code('E08', 'missing keys')
 ERROR_INVALID_SEC_DEF_TYPE = Code('E09', 'invalid sec def type')
@@ -83,9 +82,9 @@ def populate_services_from_apispec(client):
             sinfo = ServiceInfo(prefix=prefix, name=make_service_name(prefix))
             SERVICE_BY_PREFIX[prefix] = sinfo
             SERVICE_BY_NAME[sinfo.name] = sinfo
+            SERVICES.append(sinfo)
 
         sinfo.methods = methods
-
 
 #: The common prefix for a set of services is tested against the first element
 #: in this list using startswith(). If it matches, that prefix is replaced by
