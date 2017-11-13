@@ -123,7 +123,8 @@ class ServiceInfo(object):
         #:                   "dependent_field": "fieldname",
         #:                   "empty_value": None, or e.g. NO_SEC_DEF_NEEDED}
         self.object_dependencies = object_dependencies or {}
-        #: Specifies a list of service dependencies:
+        #: Specifies a list of service dependencies. The field's value contains
+        #: the name of a service that must exist.
         #:      field_name: {"only_if_field": "field_name" or None,
         #:                   "only_if_value": "vlaue" or None}
         self.service_dependencies = service_dependencies or {}
@@ -219,12 +220,6 @@ SERVICES = [
         name='channel_zmq',
         module_name='zato.server.service.internal.channel.zmq',
         get_list_service='zato.channel.zmq.get-list',
-        object_dependencies={
-            'def_name': {
-                'dependent_type': 'def_amqp',
-                'dependent_field': 'name',
-            },
-        },
         service_dependencies={
             'service_name': {}
         },
@@ -233,7 +228,6 @@ SERVICES = [
         name='def_amqp',
         module_name='zato.server.service.internal.definition.amqp_',
         get_list_service='zato.definition.amqp.get-list',
-        get_odb_objects_ignore=True,
     ),
     ServiceInfo(
         name='def_sec',
@@ -250,16 +244,17 @@ SERVICES = [
         name='def_cassandra',
         module_name='zato.server.service.internal.definition.cassandra',
         get_list_service='zato.definition.cassandra.get-list',
-        get_odb_objects_ignore=True,
     ),
     ServiceInfo(
         name='email_imap',
+        get_list_service='zato.email.imap.get-list',
         module_name='zato.server.service.internal.email.imap',
         needs_password=MAYBE_NEEDS_PASSWORD
     ),
     ServiceInfo(
         name='email_smtp',
         module_name='zato.server.service.internal.email.smtp',
+        get_list_service='zato.email.smtp.get-list',
         needs_password=MAYBE_NEEDS_PASSWORD
     ),
     ServiceInfo(
@@ -292,11 +287,19 @@ SERVICES = [
     ),
     ServiceInfo(
         name='notif_cloud_openstack_swift',
+        get_list_service='zato.notif.cloud.openstack.swift.get-list',
         module_name='zato.server.service.internal.notif.cloud.openstack.swift',
     ),
     ServiceInfo(
         name='notif_sql',
         module_name='zato.server.service.internal.notif.sql',
+        get_list_service='zato.notif.sql.get-list',
+        object_dependencies={
+            'def_name': {
+                'dependent_type': 'outconn_sql',
+                'dependent_field': 'name',
+            },
+        },
     ),
     ServiceInfo(
         name='outconn_amqp',
@@ -318,6 +321,7 @@ SERVICES = [
     ServiceInfo(
         name='outconn_odoo',
         module_name='zato.server.service.internal.outgoing.odoo',
+        get_list_service='zato.outgoing.odoo.get-list',
     ),
     ServiceInfo(
         name='outconn_jms_wmq',
@@ -336,6 +340,7 @@ SERVICES = [
     ServiceInfo(
         name='outconn_sql',
         module_name='zato.server.service.internal.outgoing.sql',
+        get_list_service='zato.outgoing.sql.get-list',
         needs_password=True,
     ),
     ServiceInfo(
@@ -361,6 +366,7 @@ SERVICES = [
     ServiceInfo(
         name='def_cloud_openstack_swift',
         module_name='zato.server.service.internal.cloud.openstack.swift',
+        get_list_service='zato.cloud.openstack.swift.get-list',
     ),
     ServiceInfo(
         name='search_es',
@@ -427,6 +433,13 @@ SERVICES = [
         module_name='zato.server.service.internal.query.cassandra',
         supports_import=False,
         get_list_service='zato.query.cassandra.get-list',
+        object_dependencies={
+            'sec_def': {
+                'dependent_type': 'def_cassandra',
+                'dependent_field': 'name',
+                'empty_value': NO_SEC_DEF_NEEDED,
+            },
+        },
     ),
     ServiceInfo(
         name='apikey',
@@ -745,7 +758,7 @@ class ObjectImporter(object):
         for dep_field, dep_info in sinfo.service_dependencies.items():
             only_if_field = dep_info.get('only_if_field')
             only_if_value = dep_info.get('only_if_value')
-            if only_if_field and item.get(only_if_value) != only_if_value:
+            if only_if_field and item.get(only_if_field) != only_if_value:
                 continue
 
             service_name = item.get(dep_field)
@@ -787,7 +800,7 @@ class ObjectImporter(object):
         if item:
             lst.remove(item)
         else:
-            raise ValueError('Tried to remove missing %r named %r' % (item_type, name))
+            raise KeyError('Tried to remove missing %r named %r' % (item_type, name))
 
     def should_skip_item(self, item_type, attrs, is_edit):
         # Root RBAC role cannot be edited
@@ -1107,17 +1120,6 @@ class ClusterObjectManager(object):
             for item in self.from_simple_query(klass)
         ]
 
-        self.objects.def_amqp = self.from_simple_query(ConnDefAMQP, include_all=True)
-        self.objects.def_cassandra = self.from_simple_query(CassandraConn, include_all=True)
-        self.objects.def_cloud_openstack_swift = self.from_model_query(notif_cloud_openstack_swift_list, True)
-        self.objects.def_jms_wmq = self.from_simple_query(ConnDefWMQ, include_all=True)
-        self.objects.email_imap = self.from_simple_query(IMAP)
-        self.objects.email_smtp = self.from_simple_query(SMTP)
-        self.objects.notif_cloud_openstack_swift = self.from_model_query(cloud_openstack_swift_list, False)
-        self.objects.notif_sql = self.from_model_query(notif_sql_list, True)
-        self.objects.outconn_odoo = self.from_simple_query(OutgoingOdoo)
-        self.objects.outconn_sql = self.from_model_query(out_sql_list)
-
         self.objects.http_soap = [
             self.get_fields(item)
             for item in self.client.odb_session.query(HTTPSOAP).
@@ -1133,7 +1135,6 @@ class ClusterObjectManager(object):
                 continue
             if sinfo.get_odb_objects_ignore:
                 continue
-
             self.objects[sinfo.name] = []
             response = self.client.invoke(sinfo.get_list_service, {
                 'cluster_id':self.client.cluster_id
