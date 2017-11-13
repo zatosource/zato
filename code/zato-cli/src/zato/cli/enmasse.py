@@ -135,6 +135,27 @@ class ServiceInfo(object):
         the service."""
         return getattr(self.get_module(), self.edit_class_name)
 
+    replace_names = {
+        'def_id': 'def_name',
+    }
+
+    def get_required_keys(self):
+        """Return the set of keys required to create a new instance."""
+        required = set()
+        create_class = self.get_create_class()
+        for name in create_class.SimpleIO.input_required:
+            if name in self.always_optional_fields:
+                continue
+            if isinstance(name, ForceType):
+                name = name.name
+            name = self.replace_names.get(name, name)
+            required.add(name)
+
+        if 'sql' in self.name:  # TODO
+            required.add('password')
+        required.discard('cluster_id')
+        return required
+
     def __repr__(self):
         return "<{} at {} mod:'{}' needs_password:'{}'>".format(
             self.__class__.__name__, hex(id(self)), self.mod, self.needs_password)
@@ -545,37 +566,6 @@ class InputValidator(object):
         #: Input JSON to validate.
         self.json = json
 
-    #: Fields that may be marked as required by SimpleIO that are always
-    #: optional during import.
-    always_optional_fields = ('cluster_id',)
-
-    replace_names = {
-        'def_id': 'def_name',
-    }
-
-    def get_required_keys(self, service_name):
-        """
-        Return a set of keys required by a service definition.
-
-        :param service_name:
-            Service short name, e.g. "channel_amqp".
-        :rtype set:
-        """
-        sinfo = SERVICE_BY_NAME[service_name]
-        required = set()
-        create_class = sinfo.get_create_class()
-        for name in create_class.SimpleIO.input_required:
-            if name in self.always_optional_fields:
-                continue
-            if isinstance(name, ForceType):
-                name = name.name
-            name = self.replace_names.get(name, name)
-            required.add(name)
-        return required
-
-    def _needs_password(self, key):
-        return 'sql' in key
-
     def validate_def_sec(self, item_type, item):
         sec_type = item.get('type')
         if not sec_type:
@@ -614,27 +604,25 @@ class InputValidator(object):
 
         return self.results
 
-    def _validate(self, key, item, is_sec):
+    def _validate(self, item_type, item, is_sec):
         name = item.get('name')
         item_dict = item.toDict()
         missing = None
 
         if not name:
-            raw = (key, item_dict)
+            raw = (item_type, item_dict)
             self.results.add_error(raw, ERROR_NAME_MISSING,
                                    "No 'name' key found in item '{}' ({})",
-                                   item_dict, key)
+                                   item_dict, item_type)
         else:
             if is_sec:
                 # We know we have one of correct types already so we can
                 # just look up required attributes.
-                required_keys = self.get_required_keys(item.get('type'))
+                sinfo = SERVICE_BY_NAME[item.type]
             else:
-                required_keys = self.get_required_keys(key)
+                sinfo = SERVICE_BY_NAME[item_type]
 
-            if self._needs_password(key):
-                required_keys.add('password')
-
+            required_keys = sinfo.get_required_keys()
             missing = sorted(required_keys - set(item))
             if missing:
                 # Special case service and service_name because both can be used interchangeably
@@ -646,18 +634,19 @@ class InputValidator(object):
                         return
 
                 missing_value = "key '{}'".format(missing[0]) if len(missing) == 1 else "keys '{}'".format(missing)
-                raw = (key, name, item_dict, required_keys, missing)
+                raw = (item_type, name, item_dict, required_keys, missing)
                 self.results.add_error(raw, ERROR_KEYS_MISSING,
                                        "Missing {} in '{}', the rest is '{}' ({})",
-                                       missing_value, name, item_dict, key)
+                                       missing_value, name, item_dict,
+                                       item_type)
             else:
                 # OK, the keys are there, but do they all have non-None values?
                 for req_key in required_keys:
                     if item.get(req_key) is None: # 0 or '' can be correct values
-                        raw = (req_key, required_keys, item_dict, key)
+                        raw = (req_key, required_keys, item_dict, item_type)
                         self.results.add_error(raw, ERROR_KEYS_MISSING,
                                                "Key '{}' must not be None in '{}' ({})",
-                                               req_key, item_dict, key)
+                                               req_key, item_dict, item_type)
 
 class DependencyScanner(object):
     def __init__(self, json, ignore_missing=False):
