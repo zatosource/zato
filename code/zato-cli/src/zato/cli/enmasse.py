@@ -91,7 +91,6 @@ class ServiceInfo(object):
                  edit_class_name='Edit',
                  supports_import=True,
                  get_list_service=None,
-                 get_odb_objects_ignore=False,
                  object_dependencies=None,
                  service_dependencies=None,
                  is_security=False):
@@ -112,9 +111,6 @@ class ServiceInfo(object):
         #: Optional name of the object enumeration/retrieval service. CAUTION:
         #: see get_odb_objects() before adding this to every ServiceInfo.
         self.get_list_service = get_list_service
-        #: If True, tell get_odb_objects() to ignore this type temporarily.
-        #: This allows setting get_list_service for new bits of code.
-        self.get_odb_objects_ignore = get_odb_objects_ignore
         #: Specifies a list of object dependencies:
         #:      field_name: {"dependent_type": "shortname",
         #:                   "dependent_field": "fieldname",
@@ -230,7 +226,6 @@ SERVICES = [
         name='def_sec',
         module_name='zato.server.service.internal.security',
         get_list_service='zato.security.get-list',
-        get_odb_objects_ignore=True,
     ),
     ServiceInfo(
         name='def_jms_wmq',
@@ -1097,16 +1092,16 @@ class ClusterObjectManager(object):
             # Temporarily preserve function of the old enmasse.
             if sinfo.get_list_service is None:
                 continue
-            if sinfo.get_odb_objects_ignore:
+            if sinfo.name == 'def_sec':
                 continue
 
             response = self.client.invoke(sinfo.get_list_service, {
-                'cluster_id':self.client.cluster_id
+                'cluster_id': self.client.cluster_id
             })
 
             if not response.ok:
                 self.logger.warning('Could not fetch objects of type {}'.format(sinfo.name))
-                return
+                continue
 
             if sinfo.is_security:
                 appender = self.append_security_item
