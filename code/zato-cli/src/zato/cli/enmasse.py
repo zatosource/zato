@@ -770,38 +770,37 @@ class ObjectImporter(object):
         # let's see in practice if it's a burden.
         self.object_mgr.refresh()
 
-    def add_warning(self, results, key, value_dict, item):
-        raw = (key, value_dict)
+    def add_warning(self, results, item_type, value_dict, item):
+        raw = (item_type, value_dict)
         results.add_warning(raw, WARNING_ALREADY_EXISTS_IN_ODB,
             '{} already exists in ODB {} ({})',
-            value_dict.toDict(), item.toDict(), key)
+            value_dict.toDict(), item.toDict(), item_type)
 
     def find_already_existing_odb_objects(self):
         results = Results()
-        for key, values in self.json.items():
-            for value_dict in values:
-                value_name = value_dict.get('name')
-                if not value_name:
-                    raw = (key, value_dict)
+        for item_type, items in self.json.items():
+            for item in items:
+                name = item.get('name')
+                if not name:
+                    raw = (item_type, item)
                     results.add_error(raw, ERROR_NAME_MISSING,
                         "{} has no 'name' key ({})",
-                        value_dict.toDict(), key)
+                        item.toDict(), item_type)
 
-                if key == 'http_soap':
-                    connection = value_dict.get('connection')
-                    transport = value_dict.get('transport')
+                if item_type == 'http_soap':
+                    connection = item.get('connection')
+                    transport = item.get('transport')
 
                     item = find_first(self.object_mgr.objects.http_soap,
                         lambda item: connection == item.connection and
                                      transport == item.transport and
-                                     value_name == item.name)
+                                     name == item.name)
                     if item is not None:
-                        self.add_warning(results, key, value_dict, item)
+                        self.add_warning(results, item_type, item, item)
                 else:
-                    odb_defs = self.object_mgr.objects[key.replace('-', '_')]
-                    for odb_def in odb_defs:
-                        if odb_def.name == value_name:
-                            self.add_warning(results, key, value_dict, odb_def)
+                    existing = self.object_mgr.find(item_type, name)
+                    if existing is not None:
+                        self.add_warning(results, item_type, item, existing)
 
         return results
 
@@ -938,6 +937,8 @@ class ClusterObjectManager(object):
         self.services = Bunch()
 
     def find(self, item_type, name):
+        # This probably isn't necessary any more:
+        item_type = item_type.replace('-', '_')
         lst = self.objects.get(item_type, ())
         return find_first(lst, lambda item: item.name == name)
 
