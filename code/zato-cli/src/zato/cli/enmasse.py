@@ -8,30 +8,25 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-import collections, logging, os, sys
-from copy import deepcopy
+import collections, copy, json, logging, os, re, sys
 from datetime import datetime
-from json import dumps
-from os.path import abspath, exists, join
-from traceback import format_exc
 
 # anyjson
-from anyjson import loads
+import anyjson
 
 # Bunch
 from bunch import Bunch, bunchify
 
 # Pip
-from pip import download
+import pip
 
 # Texttable
-from texttable import Texttable
+import texttable
 
 # Zato
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
 from zato.common.util import get_client_from_server_conf
-from zato.server.service import ForceType
 
 DEFAULT_COLS_WIDTH = '15,100'
 NO_SEC_DEF_NEEDED = 'zato-no-security'
@@ -40,14 +35,11 @@ Code = collections.namedtuple('Code', ('symbol', 'desc'))
 
 WARNING_ALREADY_EXISTS_IN_ODB = Code('W01', 'already exists in ODB')
 WARNING_MISSING_DEF = Code('W02', 'missing def')
-WARNING_NO_DEF_FOUND = Code('W03', 'no def found')
 WARNING_MISSING_DEF_INCL_ODB = Code('W04', 'missing def incl. ODB')
 ERROR_ITEM_INCLUDED_MULTIPLE_TIMES = Code('E01', 'item incl multiple')
-ERROR_ITEM_INCLUDED_BUT_MISSING = Code('E02', 'incl missing')
 ERROR_INCLUDE_COULD_NOT_BE_PARSED = Code('E03', 'incl parsing error')
 ERROR_NAME_MISSING = Code('E04', 'name missing')
-ERROR_DEF_KEY_NOT_DEFINED = Code('E05', 'def key not defined')
-ERROR_NO_DEF_KEY_IN_LOOKUP_TABLE = Code('E06', 'no def key in lookup')
+ERROR_INVALID_INPUT = Code('E05', 'invalid JSON')
 ERROR_KEYS_MISSING = Code('E08', 'missing keys')
 ERROR_INVALID_SEC_DEF_TYPE = Code('E09', 'invalid sec def type')
 ERROR_INVALID_KEY = Code('E10', 'invalid key')
@@ -400,10 +392,9 @@ class Results(object):
             msg = msg.format(*args)
         self.warnings.append(Notice(raw, msg, code))
 
-    def _get_ok(self):
-        return not(self.warnings or self.errors)
-
-    ok = property(_get_ok)
+    @property
+    def ok(self):
+        return not (self.warnings or self.errors)
 
 class InputValidator(object):
     def __init__(self, json):
@@ -566,7 +557,7 @@ class ObjectImporter(object):
         #: ClusterObjectManager instance.
         self.object_mgr = object_mgr
         #: JSON to import.
-        self.json = Bunch(deepcopy(json))
+        self.json = Bunch(copy.deepcopy(json))
         self.ignore_missing = ignore_missing
 
     def validate_service_required(self, item_type, item):
@@ -629,6 +620,8 @@ class ObjectImporter(object):
         attrs_dict = attrs.toDict()
         attrs.cluster_id = self.client.cluster_id
         service_name, error_response = self._import_object(item_type, attrs, is_edit)
+        if error_response is None:
+            error_response = self._maybe_change_password(item_type, attrs, is_edit)
 
         # We quit on first error encountered
         if error_response:
@@ -780,29 +773,32 @@ class ObjectImporter(object):
         else:
             verb = 'Updated' if is_edit else 'Created'
             self.logger.info("{} object '{}' ({} {})".format(verb, attrs.name, def_type, service_name))
-            if sinfo.needs_password:
+            return None, None
 
-                password = attrs.get('password')
-                if not password:
-                    if sinfo.needs_password == MAYBE_NEEDS_PASSWORD:
-                        self.logger.info("Password missing but not required '{}' ({} {})".format(
-                            attrs.name, def_type, service_name))
-                    else:
-                        return service_name, "Password missing but is required '{}' ({} {}) attrs '{}'".format(
-                            attrs.name, def_type, service_name, attrs_dict)
-                else:
-                    if not is_edit:
-                        attrs.id = response.data['id']
+    def _maybe_change_password(self, def_type, attrs, is_edit):
+        sinfo = SERVICE_BY_NAME[def_type]
+        service_name = sinfo.get_service_name('change-password')
+        if not service_name:
+            return None
 
-                    request = {'id':attrs.id, 'password1':attrs.password, 'password2':attrs.password}
-                    service_name = sinfo.change_password_service()
-                    response = self.client.invoke(service_name, request)
-                    if not response.ok:
-                        return service_name, response.details
-                    else:
-                        self.logger.info("Updated password '{}' ({} {})".format(attrs.name, def_type, service_name))
+        if not attrs.get('password'):
+            if sinfo.has_service('change-password'):
+                self.logger.info("Password missing but not required '{}' ({} {})".format(
+                    attrs.name, def_type, sinfo.get_service_name('change-password')))
+            else:
+                return "Password missing but is required '{}' ({} {}) attrs '{}'".format(
+                    attrs.name, def_type, service_name, attrs_dict)
+        else:
+            if not is_edit:
+                attrs.id = response.data['id']
 
-        return None, None
+            request = {'id':attrs.id, 'password1':attrs.password, 'password2':attrs.password}
+            service_name = sinfo.get_service_name('change-password')
+            response = self.client.invoke(service_name, request)
+            if not response.ok:
+                return response.details
+            else:
+                self.logger.info("Updated password '{}' ({} {})".format(attrs.name, def_type, service_name))
 
 
 class ClusterObjectManager(object):
@@ -1106,7 +1102,7 @@ class EnMasse(ManageCommand):
         cols_width = (elem.strip() for elem in cols_width.split(','))
         cols_width = [int(elem) for elem in cols_width]
 
-        table = Texttable()
+        table = texttable.Texttable()
         table.set_cols_width(cols_width)
 
         # Use text ('t') instead of auto so that boolean values don't get converted into ints
@@ -1123,7 +1119,7 @@ class EnMasse(ManageCommand):
 
     def merge_odb_json(self):
         results = Results()
-        merged = deepcopy(self.object_mgr.objects)
+        merged = copy.deepcopy(self.object_mgr.objects)
 
         for json_key, json_elems in self.json.items():
             if 'http' in json_key or 'soap' in json_key:
@@ -1169,10 +1165,10 @@ class EnMasse(ManageCommand):
             return [missing_defs]
 
         # Validate if every required input element has been specified.
-        invalid_reqs = InputValidator(self.json).validate()
-        if invalid_reqs:
+        results = InputValidator(self.json).validate()
+        if not results.ok:
             self.logger.error('Required elements missing')
-            return [invalid_reqs]
+            return [results]
 
         return []
 
