@@ -127,18 +127,16 @@ def make_service_name(prefix):
 class ServiceInfo(object):
     def __init__(self, prefix=None,
                  name=None,
-                 needs_password=False,
                  object_dependencies=None,
                  service_dependencies=None,
                  export_filter=None):
         assert name or prefix
         #: Short service name as appears in export data.
         self.name = name or prefix
-        #: True if service requires a password key.
-        self.needs_password = needs_password
         #: Optional name of the object enumeration/retrieval service.
         self.prefix = prefix
-        self.methods = None
+        #: Overwritten by populate_services_from_apispec().
+        self.methods = {}
         #: Specifies a list of object dependencies:
         #:      field_name: {"dependent_type": "shortname",
         #:                   "dependent_field": "fieldname",
@@ -158,27 +156,13 @@ class ServiceInfo(object):
     def is_security(self):
         """If True, indicates the service is source of authentication
         credentials for use in another service."""
-        return (self.get_list_service is not None and
-                self.get_list_service.startswith('zato.security.'))
+        return self.prefix and self.prefix.startswith('zato.security.')
 
-    @property
-    def create_service(self):
-        if self.prefix:
-            return self.prefix + '.create'
+    def get_service_name(self, method):
+        return self.methods.get(method, {}).get('name')
 
-    @property
-    def edit_service(self):
-        if self.prefix:
-            return self.prefix + '.edit'
-
-    @property
-    def get_list_service(self):
-        if self.prefix:
-            return self.prefix + '.get-list'
-
-    @property
-    def change_password_service(self):
-        return self.prefix + '.change-password'
+    def has_service(self, name):
+        return self.get_service_name(name) is not None
 
     replace_names = {
         'def_id': 'def_name',
@@ -190,23 +174,17 @@ class ServiceInfo(object):
         if method_sig is None:
             return set()
 
-        required = set()
-        fields = method_sig['simple_io']['zato']['input_required']
-        for field_info in fields:
-            name = field_info['name']
-            required.add(self.replace_names.get(name, name))
-
+        required = set(
+            self.replace_names.get(f['name'], f['name'])
+            for f in method_sig['simple_io']['zato']['input_required']
+        )
         if 'sql' in self.name:  # TODO
             required.add('password')
         required.discard('cluster_id')
         return required
 
     def __repr__(self):
-        return "<{} at {} mod:'{}' needs_password:'{}'>".format(
-            self.__class__.__name__, hex(id(self)), self.mod, self.needs_password)
-
-#: FTP definition may use a password but are not required to.
-MAYBE_NEEDS_PASSWORD = 'MAYBE_NEEDS_PASSWORD'
+        return '<ServiceInfo for {}>'.format(self.prefix)
 
 #: List of ServiceInfo objects for all supported services. To be replaced by
 #: introspection later.
@@ -272,34 +250,8 @@ SERVICES = [
         },
     ),
     ServiceInfo(
-        name='def_amqp',
-        prefix='zato.definition.amqp',
-    ),
-    ServiceInfo(
         name='def_sec',
         prefix='zato.security',
-    ),
-    ServiceInfo(
-        name='def_jms_wmq',
-        prefix='zato.definition.jms-wmq',
-    ),
-    ServiceInfo(
-        name='def_cassandra',
-        prefix='zato.definition.cassandra',
-    ),
-    ServiceInfo(
-        name='email_imap',
-        prefix='zato.email.imap',
-        needs_password=MAYBE_NEEDS_PASSWORD
-    ),
-    ServiceInfo(
-        name='email_smtp',
-        prefix='zato.email.smtp',
-        needs_password=MAYBE_NEEDS_PASSWORD
-    ),
-    ServiceInfo(
-        name='json_pointer',
-        prefix='zato.message.json-pointer',
     ),
     ServiceInfo(
         name='http_soap',
@@ -323,14 +275,6 @@ SERVICES = [
         }
     ),
     ServiceInfo(
-        name='def_namespace',
-        prefix='zato.message.namespace',
-    ),
-    ServiceInfo(
-        name='notif_cloud_openstack_swift',
-        prefix='zato.notif.cloud.openstack.swift',
-    ),
-    ServiceInfo(
         name='notif_sql',
         prefix='zato.notif.sql',
         object_dependencies={
@@ -351,15 +295,6 @@ SERVICES = [
         },
     ),
     ServiceInfo(
-        name='outconn_ftp',
-        needs_password=MAYBE_NEEDS_PASSWORD,
-        prefix='zato.outgoing.ftp',
-    ),
-    ServiceInfo(
-        name='outconn_odoo',
-        prefix='zato.outgoing.odoo',
-    ),
-    ServiceInfo(
         name='outconn_jms_wmq',
         prefix='zato.outgoing.jms-wmq',
         object_dependencies={
@@ -373,57 +308,12 @@ SERVICES = [
         },
     ),
     ServiceInfo(
-        name='outconn_sql',
-        prefix='zato.outgoing.sql',
-        needs_password=True,
-    ),
-    ServiceInfo(
-        name='outconn_zmq',
-        prefix='zato.outgoing.zmq',
-    ),
-    ServiceInfo(
-        name='scheduler',
-        prefix='zato.scheduler.job',
-    ),
-    ServiceInfo(
-        name='xpath',
-        prefix='zato.message.xpath',
-    ),
-    ServiceInfo(
         name='cloud_aws_s3',
         prefix='zato.cloud.aws.s3',
     ),
     ServiceInfo(
         name='def_cloud_openstack_swift',
         prefix='zato.cloud.openstack.swift',
-    ),
-    ServiceInfo(
-        name='search_es',
-        prefix='zato.search.es',
-    ),
-    ServiceInfo(
-        name='search_solr',
-        prefix='zato.search.solr',
-    ),
-    ServiceInfo(
-        name='rbac_permission',
-        prefix='zato.security.rbac.permission',
-    ),
-    ServiceInfo(
-        name='rbac_role',
-        prefix='zato.security.rbac.role',
-    ),
-    ServiceInfo(
-        name='rbac_client_role',
-        prefix='zato.security.rbac.client-role',
-    ),
-    ServiceInfo(
-        name='rbac_role_permission',
-        prefix='zato.security.rbac.role-permission',
-    ),
-    ServiceInfo(
-        name='tls_ca_cert',
-        prefix='zato.security.tls.ca-cert',
     ),
     # Added for the exporter.
     ServiceInfo(
@@ -458,66 +348,22 @@ SERVICES = [
         },
     ),
     ServiceInfo(
-        name='apikey',
-        prefix='zato.security.apikey',
-        # TODO: needs_password=True,
-    ),
-    ServiceInfo(
-        name='aws',
-        prefix='zato.security.aws',
-        # TODO: needs_password=True,
-    ),
-    ServiceInfo(
-        name='basic_auth',
-        prefix='zato.security.basic-auth',
-        # TODO: needs_password=True,
-    ),
-    ServiceInfo(
-        name='ntlm',
-        prefix='zato.security.ntlm',
-        # TODO: needs_password=True,
-    ),
-    ServiceInfo(
-        name='oauth',
-        prefix='zato.security.oauth',
-        # TODO: needs_password=True,
-    ),
-    ServiceInfo(
         name='tech_acc',
         prefix='zato.security.tech-account',
-        # TODO: needs_password=True,
-    ),
-    ServiceInfo(
-        name='tls_key_cert',
-        prefix='zato.security.tls.key-cert',
     ),
     ServiceInfo(
         name='tls_channel_sec',
         prefix='zato.security.tls.channel',
     ),
     ServiceInfo(
-        name='wss',
-        prefix='zato.security.wss',
-        # TODO: needs_password=True,
-    ),
-    ServiceInfo(
         name='xpath_sec',
         prefix='zato.security.xpath',
-        needs_password=True,
     ),
 ]
 
 SECURITY_SERVICE_NAMES = set(s.name for s in SERVICES if s.is_security)
-
-SERVICE_BY_NAME = {
-    info.name: info
-    for info in SERVICES
-}
-
-SERVICE_BY_PREFIX = {
-    info.prefix: info
-    for info in SERVICES
-}
+SERVICE_BY_NAME = {info.name: info for info in SERVICES}
+SERVICE_BY_PREFIX = {info.prefix: info for info in SERVICES}
 
 class _DummyLink(object):
     """ Pip requires URLs to have a .url attribute.
@@ -901,9 +747,9 @@ class ObjectImporter(object):
             assert not sinfo.is_security
 
         if is_edit:
-            service_name = sinfo.edit_service()
+            service_name = sinfo.get_service_name('edit')
         else:
-            service_name = sinfo.create_service()
+            service_name = sinfo.get_service_name('create')
 
         # service and service_name are interchangeable
         required = sinfo.get_required_keys()
@@ -923,7 +769,7 @@ class ObjectImporter(object):
                 sec = self.object_mgr.find('def_sec', attrs.sec_def)
                 attrs.security_id = sec.id
 
-        if def_type in('channel_amqp', 'channel_jms_wmq', 'outconn_amqp', 'outconn_jms_wmq'):
+        if def_type in ('channel_amqp', 'channel_jms_wmq', 'outconn_amqp', 'outconn_jms_wmq'):
             def_type_name = def_type.replace('channel', 'def').replace('outconn', 'def')
             odb_item = self.object_mgr.find(def_type_name, attrs.get('def_name'))
             attrs.def_id = odb_item.id
@@ -1026,12 +872,16 @@ class ClusterObjectManager(object):
     def _refresh_objects(self):
         for sinfo in SERVICES:
             # Temporarily preserve function of the old enmasse.
-            if sinfo.get_list_service is None:
+            service_name = sinfo.get_service_name('get-list')
+            if service_name is None:
+                print("skipping missing get-list:", sinfo.name)
                 continue
             if sinfo.name == 'def_sec':
+                print("skipping def_sec")
                 continue
 
-            response = self.client.invoke(sinfo.get_list_service, {
+            print("invoking", service_name, "for", sinfo.name)
+            response = self.client.invoke(service_name, {
                 'cluster_id': self.client.cluster_id
             })
 
