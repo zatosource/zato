@@ -547,13 +547,12 @@ class DependencyScanner(object):
         return results
 
 class ObjectImporter(object):
-    logger = logging.getLogger('ObjectImporter')
-
-    def __init__(self, client, object_mgr, json, ignore_missing):
-        #: Validation result.
-        self.results = Results()
+    def __init__(self, client, logger, object_mgr, json, ignore_missing):
         #: Zato client.
         self.client = client
+        self.logger = logger
+        #: Validation result.
+        self.results = Results()
         #: ClusterObjectManager instance.
         self.object_mgr = object_mgr
         #: JSON to import.
@@ -638,7 +637,7 @@ class ObjectImporter(object):
 
         # We'll see how expensive this call is. Seems to be but
         # let's see in practice if it's a burden.
-        self.object_mgr.refresh()
+        self.object_mgr.refresh_by_type(item_type)
 
     def add_warning(self, results, item_type, value_dict, item):
         raw = (item_type, value_dict)
@@ -759,7 +758,7 @@ class ObjectImporter(object):
             if attrs.sec_def == NO_SEC_DEF_NEEDED:
                 attrs.security_id = None
             else:
-                sec = self.object_mgr.find('def_sec', attrs.sec_def)
+                sec = self.object_mgr.find_sec(attrs.sec_def)
                 attrs.security_id = sec.id
 
         if def_type in ('channel_amqp', 'channel_jms_wmq', 'outconn_amqp', 'outconn_jms_wmq'):
@@ -802,18 +801,23 @@ class ObjectImporter(object):
 
 
 class ClusterObjectManager(object):
-    logger = logging.getLogger('ClusterObjectManager')
-
-    def __init__(self, client):
+    def __init__(self, client, logger):
         self.client = client
-        self.objects = Bunch()
-        self.services = Bunch()
+        self.logger = logger
 
     def find(self, item_type, name):
         # This probably isn't necessary any more:
         item_type = item_type.replace('-', '_')
         lst = self.objects.get(item_type, ())
         return find_first(lst, lambda item: item.name == name)
+
+    def find_sec(self, name):
+        """Find any security definition with the given name."""
+        for service in SERVICES:
+            if service.is_security:
+                item = self.find(service_name, name)
+                if item is not None:
+                    return item
 
     def refresh(self):
         self._refresh_services()
@@ -865,49 +869,68 @@ class ClusterObjectManager(object):
         name = item.name.lower()
         return 'zato' in name or name in self.IGNORED_NAMES
 
+    def delete(self, item_type, item):
+        sinfo = SERVICE_BY_NAME[item_type]
+
+        service_name = sinfo.get_service_name('delete')
+        if service_name is None:
+            self.logger.error('Prefix {} has no delete service'.format(item_type))
+            return
+
+        response = self.client.invoke(service_name, {
+            'cluster_id': self.client.cluster_id,
+            'id': item.id,
+        })
+        if response.ok:
+            self.logger.info("Deleted {} ID {}".format(item_type, item.id))
+        else:
+            self.logger.error("Could not delete {} ID {}: {}".format(item_type, item.id, response))
+
+    def delete_all(self):
+        count = 0
+        for item_type, items in self.objects.items():
+            for item in items:
+                self.delete(item_type, item)
+                count += 1
+        return count
+
+    def refresh_by_type(self, item_type):
+        sinfo = SERVICE_BY_NAME[item_type]
+        # Temporarily preserve function of the old enmasse.
+        service_name = sinfo.get_service_name('get-list')
+        if service_name is None:
+            self.logger.debug("Type {} has no 'get-list' service".format(sinfo.name))
+            return
+
+        self.logger.debug("Invoking {} for {}".format(service_name, sinfo.name))
+        response = self.client.invoke(service_name, {
+            'cluster_id': self.client.cluster_id
+        })
+
+        if not response.ok:
+            self.logger.warning('Could not fetch objects of type {}: {}'.format(sinfo.name, response.details))
+            return
+
+        self.objects[sinfo.name] = []
+        for item in map(Bunch, response.data):
+            if any(getattr(item, key, None) == value
+                   for key, value in sinfo.export_filter.items()):
+                continue
+            if self.is_ignored_name(item):
+                continue
+
+            self.fix_up_odb_object(sinfo.name, item)
+            self.objects[sinfo.name].append(item)
+
     def _refresh_objects(self):
+        self.objects = Bunch()
         for sinfo in SERVICES:
-            # Temporarily preserve function of the old enmasse.
-            service_name = sinfo.get_service_name('get-list')
-            if service_name is None:
-                print("skipping missing get-list:", sinfo.name)
-                continue
-            if sinfo.name == 'def_sec':
-                print("skipping def_sec")
-                continue
-
-            print("invoking", service_name, "for", sinfo.name)
-            response = self.client.invoke(service_name, {
-                'cluster_id': self.client.cluster_id
-            })
-
-            if not response.ok:
-                self.logger.warning('Could not fetch objects of type {}'.format(sinfo.name))
-                continue
-
-            if sinfo.is_security:
-                lst = self.objects.setdefault('def_sec', [])
-            else:
-                lst = self.objects.setdefault(sinfo.name, [])
-
-            for item in map(Bunch, response.data):
-                if any(getattr(item, key, None) == value
-                       for key, value in sinfo.export_filter.items()):
-                    continue
-                if self.is_ignored_name(item):
-                    continue
-
-                if sinfo.is_security:
-                    item.type = sinfo.name
-
-                self.fix_up_odb_object(sinfo.name, item)
-                lst.append(item)
+            self.refresh_by_type(sinfo.name)
 
 class JsonParser(object):
-    logger = logging.getLogger('JsonParser')
-
-    def __init__(self, path):
+    def __init__(self, path, logger):
         self.path = os.path.abspath(path)
+        self.logger = logger
         self.seen_includes = set()
 
     def _parse_file(self, path, results):
@@ -965,6 +988,7 @@ class EnMasse(ManageCommand):
         {'name':'--export-local', 'help':'Export local JSON definitions into one file (can be used with --export-odb)', 'action':'store_true'},
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
         {'name':'--import', 'help':'Import definitions from a local JSON (excludes --export-*)', 'action':'store_true'},
+        {'name':'--clean-odb', 'help':'Delete all ODB definitions before proceeding', 'action':'store_true'},
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to JSON', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
         {'name':'--input', 'help':'Path to an input JSON document'},
@@ -989,11 +1013,20 @@ class EnMasse(ManageCommand):
 
         # Get client and issue a sanity check as quickly as possible
         self.client = get_client_from_server_conf(self.args.path)
-        self.object_mgr = ClusterObjectManager(self.client)
+        self.object_mgr = ClusterObjectManager(self.client, self.logger)
         self.client.invoke('zato.ping')
         populate_services_from_apispec(self.client)
 
         has_import = getattr(args, 'import')
+        if True not in (args.export_local, args.export_odb, args.clean_odb, has_import):
+            self.logger.error('At least one of --clean, --export-local, --export-odb or --import is required, stopping now')
+            sys.exit(self.SYS_ERROR.NO_OPTIONS)
+
+        if args.clean_odb:
+            self.object_mgr.refresh()
+            count = self.object_mgr.delete_all()
+            self.logger.info('Deleted {} items'.format(count))
+
         if args.export_odb or has_import:
             # Checks if connections to ODB/Redis are configured properly
             cc = CheckConfig(self.args)
@@ -1009,7 +1042,8 @@ class EnMasse(ManageCommand):
             sys.exit(self.SYS_ERROR.CONFLICTING_OPTIONS)
 
         if args.export_local or has_import:
-            parser = JsonParser(os.path.join(self.curdir, self.args.input))
+            path = os.path.join(self.curdir, self.args.input)
+            parser = JsonParser(path, self.logger)
             results = parser.parse()
             if not results.ok:
                 self.logger.error('JSON parsing failed')
@@ -1034,11 +1068,7 @@ class EnMasse(ManageCommand):
 
         # 4) a/b
         elif has_import:
-            self.report_warnings_errors(self.import_())
-
-        else:
-            self.logger.error('At least one of --export-local, --export-odb or --import is required, stopping now')
-            sys.exit(self.SYS_ERROR.NO_OPTIONS)
+            self.report_warnings_errors(self.run_import())
 
 # ################################################################################################################################
 
@@ -1153,7 +1183,6 @@ class EnMasse(ManageCommand):
             self.json = merged
         return results
 
-
 # ################################################################################################################################
 
     def export(self):
@@ -1193,9 +1222,10 @@ class EnMasse(ManageCommand):
     def export_odb(self):
         return self.export_local_odb(False)
 
-    def import_(self):
+    def run_import(self):
         self.object_mgr.refresh()
-        importer = ObjectImporter(self.client, self.object_mgr, self.json,
+        importer = ObjectImporter(self.client, self.logger,
+            self.object_mgr, self.json,
             ignore_missing=self.args.ignore_missing_defs)
 
         # Find channels and jobs that require services that don't exist
