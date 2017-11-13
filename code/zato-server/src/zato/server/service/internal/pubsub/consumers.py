@@ -32,14 +32,15 @@ class GetList(AdminService):
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_pubsub_consumers_get_list_request'
         response_elem = 'zato_pubsub_consumers_get_list_response'
-        input_required = ('cluster_id', 'topic_name')
+        input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'sec_type', 'client_id', Int('max_depth'), Int('current_depth'),
-            Int('in_flight_depth'), 'sub_key', 'delivery_mode')
+            Int('in_flight_depth'), 'sub_key', 'delivery_mode', 'topic_name')
         output_optional = (UTC('last_seen'), 'callback')
         output_repeated = True
 
     def get_data(self, session):
-        for item in pubsub_consumer_list(session, self.request.input.cluster_id, self.request.input.topic_name)[0]:
+        topic_name = self.request.input.get('topic_name')
+        for item in pubsub_consumer_list(session, self.request.input.cluster_id, topic_name):
             item.last_seen = self.pubsub.get_consumer_last_seen(item.client_id)
             item.current_depth = self.pubsub.get_consumer_queue_current_depth(item.sub_key)
             item.in_flight_depth = self.pubsub.get_consumer_queue_in_flight_depth(item.sub_key)
