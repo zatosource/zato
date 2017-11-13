@@ -115,6 +115,15 @@ def make_service_name(prefix):
             return name_prefix
     return escaped
 
+def normalize_service_name(item):
+    """Given an item originating from the API or from an import file, if the
+    item contains either the 'service' or 'service_name' keys, ensure the other
+    key is set. Either the dict contains neither key, or both keys set to the
+    same value."""
+    if 'service' in item or 'service_name' in item:
+        item.setdefault('service', item.get('service_name'))
+        item.setdefault('service_name', item.get('service'))
+
 class ServiceInfo(object):
     def __init__(self, prefix=None,
                  name=None,
@@ -402,87 +411,46 @@ class InputValidator(object):
         #: Input JSON to validate.
         self.json = json
 
-    def validate_def_sec(self, item_type, item):
-        sec_type = item.get('type')
-        if not sec_type:
-            item_dict = item.toDict()
-            raw = (item_type, item_dict)
-            self.results.add_error(raw, ERROR_TYPE_MISSING,
-                                   "'{}' has no required 'type' key (def_sec)",
-                                   item_dict)
-        elif sec_type not in SECURITY_SERVICE_NAMES:
-            raw = (sec_type, SECURITY_SERVICE_NAMES, item)
-            self.results.add_error(raw, ERROR_INVALID_SEC_DEF_TYPE,
-                                   "Invalid type '{}', must be one of '{}' (def_sec)",
-                                   sec_type, SECURITY_SERVICE_NAMES)
-        else:
-            self._validate(item_type, item, True)
-
-    def validate_other(self, item_type, item):
-        if item_type not in SERVICE_BY_NAME:
-            raw = (item_type, sorted(SERVICE_BY_NAME))
-            self.results.add_error(raw, ERROR_INVALID_KEY,
-                                   "Invalid key '{}', must be one of '{}'",
-                                   item_type, sorted(SERVICE_BY_NAME))
-        else:
-            self._validate(item_type, item, False)
-
     def validate(self):
         """
         :rtype Results:
         """
         for item_type, items in self.json.items():
             for item in items:
-                if item_type == 'def_sec':
-                    self.validate_def_sec(item_type, item)
-                else:
-                    self.validate_other(item_type, item)
+                self.validate_one(item_type, item)
 
         return self.results
 
-    def _validate(self, item_type, item, is_sec):
-        name = item.get('name')
+    def validate_one(self, item_type, item):
+        if item_type not in SERVICE_BY_NAME:
+            raw = (item_type, sorted(SERVICE_BY_NAME))
+            self.results.add_error(raw, ERROR_INVALID_KEY,
+                                   "Invalid key '{}', must be one of '{}'",
+                                   item_type, sorted(SERVICE_BY_NAME))
+            return
+
         item_dict = item.toDict()
         missing = None
 
-        if not name:
-            raw = (item_type, item_dict)
-            self.results.add_error(raw, ERROR_NAME_MISSING,
-                                   "No 'name' key found in item '{}' ({})",
-                                   item_dict, item_type)
-        else:
-            if is_sec:
-                # We know we have one of correct types already so we can
-                # just look up required attributes.
-                sinfo = SERVICE_BY_NAME[item.type]
-            else:
-                sinfo = SERVICE_BY_NAME[item_type]
+        sinfo = SERVICE_BY_NAME[item_type]
+        required_keys = sinfo.get_required_keys()
+        missing = sorted(required_keys - set(item))
+        if missing:
+            missing_value = "key '{}'".format(missing[0]) if len(missing) == 1 else "keys '{}'".format(missing)
+            name = item.get('name')
+            raw = (item_type, name, item_dict, required_keys, missing)
+            self.results.add_error(raw, ERROR_KEYS_MISSING,
+                                   "Missing {} in '{}', the rest is '{}' ({})",
+                                   missing_value, name, item_dict,
+                                   item_type)
 
-            required_keys = sinfo.get_required_keys()
-            missing = sorted(required_keys - set(item))
-            if missing:
-                # Special case service and service_name because both can be used interchangeably
-                _missing = list(missing)
-                if len(_missing) == 1:
-                    service_and_service_name = missing[0] == 'service' and 'service_name' in item
-                    service_name_and_service = missing[0] == 'service_name' and 'service' in item
-                    if service_and_service_name or service_name_and_service:
-                        return
-
-                missing_value = "key '{}'".format(missing[0]) if len(missing) == 1 else "keys '{}'".format(missing)
-                raw = (item_type, name, item_dict, required_keys, missing)
+        # OK, the keys are there, but do they all have non-None values?
+        for req_key in required_keys:
+            if item.get(req_key) is None: # 0 or '' can be correct values
+                raw = (req_key, required_keys, item_dict, item_type)
                 self.results.add_error(raw, ERROR_KEYS_MISSING,
-                                       "Missing {} in '{}', the rest is '{}' ({})",
-                                       missing_value, name, item_dict,
-                                       item_type)
-            else:
-                # OK, the keys are there, but do they all have non-None values?
-                for req_key in required_keys:
-                    if item.get(req_key) is None: # 0 or '' can be correct values
-                        raw = (req_key, required_keys, item_dict, item_type)
-                        self.results.add_error(raw, ERROR_KEYS_MISSING,
-                                               "Key '{}' must not be None in '{}' ({})",
-                                               req_key, item_dict, item_type)
+                                       "Key '{}' must not be None in '{}' ({})",
+                                       req_key, item_dict, item_type)
 
 class DependencyScanner(object):
     def __init__(self, json, ignore_missing=False):
@@ -574,11 +542,10 @@ class ObjectImporter(object):
                 self.results.add_error(raw, ERROR_SERVICE_NAME_MISSING,
                     "No service defined in '{}' ({})",
                     item_dict, item_type)
-            else:
-                if service_name not in self.object_mgr.services:
-                    self.results.add_error(raw, ERROR_SERVICE_MISSING,
-                        "Service '{}' from '{}' missing in ODB ({})",
-                        service_name, item_dict, item_type)
+            elif service_name not in self.object_mgr.services:
+                self.results.add_error(raw, ERROR_SERVICE_MISSING,
+                    "Service '{}' from '{}' missing in ODB ({})",
+                    service_name, item_dict, item_type)
 
     def validate_import_data(self):
         results = Results()
@@ -730,12 +697,7 @@ class ObjectImporter(object):
 
     def _import_object(self, def_type, attrs, is_edit):
         attrs_dict = attrs.toDict()
-        if 'sec' in def_type:
-            sinfo = SERVICE_BY_NAME[attrs.type]
-            assert sinfo.is_security
-        else:
-            sinfo = SERVICE_BY_NAME[def_type]
-            assert not sinfo.is_security
+        sinfo = SERVICE_BY_NAME[def_type]
 
         if is_edit:
             service_name = sinfo.get_service_name('edit')
@@ -971,10 +933,48 @@ class JsonParser(object):
             self.json = merged
             self.logger.info('Includes merged in successfully')
 
+    def parse_def_sec(self, item, results):
+        # While reading old enmasse files, expand def_sec entries out to their
+        # original service type.
+        sec_type = item.pop('type', None)
+        if sec_type is None:
+            raw = ('def_sec', item)
+            results.add_error(raw, ERROR_TYPE_MISSING,
+                              "security definition '{}' has no required 'type' key (def_sec)",
+                              item)
+            return
+
+        service_names = [si.name for si in SERVICES if si.is_security]
+        if sec_type not in service_names:
+            raw = (sec_type, service_names, item)
+            results.add_error(raw, ERROR_INVALID_SEC_DEF_TYPE,
+                              "Invalid type '{}', must be one of '{}' (def_sec)",
+                              sec_type, service_names)
+            return
+
+        self.json.setdefault(sec_type, []).append(Bunch(item))
+
+    def parse_item(self, item_type, item, results):
+        normalize_service_name(item)
+
+        if item_type == 'def_sec':
+            return self.parse_def_sec(item, results)
+        else:
+            self.json.setdefault(item_type, []).append(Bunch(item))
+
     def parse(self, merge=True):
         results = Results()
-        self.json = bunchify(self._parse_file(self.path, results))
-        if results.ok and merge:
+        self.json = {}
+
+        parsed = self._parse_file(self.path, results)
+        if not results.ok:
+            return results
+
+        for item_type, items in parsed.items():
+            for item in items:
+                self.parse_item(item_type, item, results)
+
+        if merge:
             self.merge_includes(results)
 
         return results
@@ -1074,6 +1074,19 @@ class EnMasse(ManageCommand):
     def save_json(self):
         now = datetime.now().isoformat() # Not in UTC, we want to use user's TZ
         name = 'zato-export-{}.json'.format(now.replace(':', '_').replace('.', '_'))
+
+        # Preserve old format by wrapping all security services into a single
+        # key.
+        self.json['def_sec'] = [
+            dict(item, type=sinfo.name)
+            for sinfo in SERVICES
+            for item in self.json.pop(sinfo.name, [])
+            if sinfo.is_security
+        ]
+
+        for _, items in self.json.items():
+            for item in items:
+                normalize_service_name(item)
 
         with open(os.path.join(self.curdir, name), 'w') as f:
             f.write(json.dumps(self.json, indent=1, sort_keys=True))
