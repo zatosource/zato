@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import logging, os, sys
 from copy import deepcopy
 from datetime import datetime
-from itertools import chain
 from json import dumps
 from os.path import abspath, exists, join
 from traceback import format_exc
@@ -31,7 +30,6 @@ from texttable import Texttable
 # Zato
 from zato.cli import ManageCommand
 from zato.cli.check_config import CheckConfig
-from zato.common.odb.model import Base, HTTPSOAP, SecurityBase, Service, to_json
 from zato.common.util import get_client_from_server_conf
 from zato.server.service import ForceType
 
@@ -197,7 +195,6 @@ SERVICES = [
     ServiceInfo(
         name='channel_soap',
         module_name='zato.server.service.internal.http_soap',
-        supports_import=False,
         object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
@@ -257,6 +254,7 @@ SERVICES = [
     ServiceInfo(
         name='http_soap',
         module_name='zato.server.service.internal.http_soap',
+        get_list_service='zato.http-soap.get-list',
         # TODO: note: covers all of outconn_plain_http, outconn_soap, http_soap
         object_dependencies={
             'sec_def': {
@@ -852,10 +850,12 @@ class ObjectImporter(object):
                     connection = value_dict.get('connection')
                     transport = value_dict.get('transport')
 
-                    for item in self.object_mgr.objects.http_soap:
-                        if connection == item.connection and transport == item.transport:
-                            if value_name == item.name:
-                                self.add_warning(results, key, value_dict, item)
+                    item = find_first(self.object_mgr.objects.http_soap,
+                        lambda item: connection == item.connection and
+                                     transport == item.transport and
+                                     value_name == item.name)
+                    if item is not None:
+                        self.add_warning(results, key, value_dict, item)
                 else:
                     odb_defs = self.object_mgr.objects[key.replace('-', '_')]
                     for odb_def in odb_defs:
@@ -883,7 +883,7 @@ class ObjectImporter(object):
         #
         # .. actually invoke the updates now ..
         #
-        for w in chain(existing_defs, existing_other):
+        for w in existing_defs + existing_other:
             item_type, attrs = w.value_raw
 
             if self.should_skip_item(item_type, attrs, True):
@@ -903,7 +903,7 @@ class ObjectImporter(object):
         #
         # .. actually create the objects now.
         #
-        for elem in chain(new_defs, new_other):
+        for elem in new_defs + new_other:
             for item_type, attr_list in elem.items():
                 for attrs in attr_list:
 
@@ -1019,7 +1019,6 @@ class ClusterObjectManager(object):
 
     def refresh(self):
         # Previous name: get_odb_objects()
-        self.get_via_odb_session()
         self.get_via_service_client()
         self.get_services()
 
@@ -1040,16 +1039,20 @@ class ClusterObjectManager(object):
             }
 
     def _update_service_name(self, item):
-        item.service = self.client.odb_session.query(Service.name).\
-            filter(Service.id == item.service_id).one()[0]
+        service = find_first(self.services.values(),
+            lambda s: s.id == item.service_id)
+        if service:
+            item.service = service.name
 
     def fix_up_odb_object(self, key, item):
         if key == 'http_soap':
             if item.connection == 'channel':
                 self._update_service_name(item)
             if item.security_id:
-                item.sec_def = self.client.odb_session.query(SecurityBase.name).\
-                    filter(SecurityBase.id == item.security_id).one()[0]
+                sec_def = find_first(self.objects.sec_def,
+                    lambda sec_def: sec_def.id == item.security_id)
+                if sec_def is not None:
+                    item.sec_def = sec_def.name
             else:
                 item.sec_def = NO_SEC_DEF_NEEDED
         elif key == 'scheduler':
@@ -1069,24 +1072,6 @@ class ClusterObjectManager(object):
         name = item.name.lower()
         return 'zato' in name or name in self.IGNORED_NAMES
 
-    def get_via_odb_session(self):
-        self.objects.http_soap = [
-            Bunch(loads(to_json(item))[0]['fields'])
-            for item in self.client.odb_session.query(HTTPSOAP).
-                filter(HTTPSOAP.cluster_id == self.client.cluster_id).
-                filter(HTTPSOAP.is_internal == False).all()  # noqa E713 test for membership should be 'not in'
-            if not self.is_ignored_name(item)
-        ]
-
-    def append_regular_item(self, sinfo, item):
-        lst = self.objects.setdefault(sinfo.name, [])
-        lst.append(item)
-
-    def append_security_item(self, sinfo, item):
-        item.type = sinfo.name
-        lst = self.objects.setdefault('def_sec', [])
-        lst.append(item)
-
     def get_via_service_client(self):
         for sinfo in SERVICES:
             # Temporarily preserve function of the old enmasse.
@@ -1104,13 +1089,21 @@ class ClusterObjectManager(object):
                 continue
 
             if sinfo.is_security:
-                appender = self.append_security_item
+                lst = self.objects.setdefault('def_sec', [])
             else:
-                appender = self.append_regular_item
+                lst = self.objects.setdefault(sinfo.name, [])
 
             for item in map(Bunch, response.data):
-                if not self.is_ignored_name(item):
-                    appender(sinfo, Bunch(item))
+                if any(getattr(item, key, None) == value
+                       for key, value in sinfo.export_ignore.items()):
+                    continue
+                if self.is_ignored_name(item):
+                    continue
+
+                if sinfo.is_security:
+                    item.type = sinfo.name
+
+                lst.append(item)
 
 class EnMasse(ManageCommand):
     """ Manages server objects en masse.
