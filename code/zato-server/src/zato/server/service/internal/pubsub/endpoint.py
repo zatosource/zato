@@ -138,7 +138,6 @@ class GetTopicList(AdminService):
 
     def handle(self):
         input = self.request.input
-        pubsub = self.server.worker_store.pubsub
         response = []
 
         with closing(self.odb.session()) as session:
