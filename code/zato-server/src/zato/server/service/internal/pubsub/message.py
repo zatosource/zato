@@ -28,7 +28,7 @@ from zato.common.odb.query import pubsub_message, pubsub_queue_message
 from zato.common.pubsub import new_msg_id
 from zato.common.time_util import datetime_to_ms, datetime_from_ms, utcnow_as_ms
 from zato.server.pubsub import get_expiration, get_priority
-from zato.server.service import AsIs, Bool, Int, List, Opaque
+from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -352,10 +352,10 @@ class Publish(AdminService):
 
                 # Insert the message and get its ID back
                 try:
-                    msg_insert_result = session.execute(MsgInsert().values(ps_msg_list))
+                    session.execute(MsgInsert().values(ps_msg_list))
                 except IntegrityError, e:
                     if 'pubsb_msg_pubmsg_id_idx' in e.message:
-                        raise BadRequest(self.cid, 'Duplicate msg_id:`{}`'.format(pub_msg_id))
+                        raise BadRequest(self.cid, 'Duplicate msg_id:`{}`'.format(e.message))
                     else:
                         raise
 
@@ -383,7 +383,6 @@ class Publish(AdminService):
         # Update metadata in background
         last_pub_msg_id = ps_msg_list[-1]['pub_msg_id']
         last_pub_correl_id = ps_msg_list[-1]['pub_correl_id']
-        last_in_reply_to = ps_msg_list[-1]['in_reply_to']
         last_ext_client_id = ps_msg_list[-1]['ext_client_id']
 
         spawn(self._update_pub_metadata, topic.id, endpoint_id, self.server.cluster_id, now, last_pub_msg_id,
@@ -461,52 +460,5 @@ class Publish(AdminService):
             )
 
             session.commit()
-
-# ################################################################################################################################
-
-    class PubSubAfterPublish(AdminService):
-        class SimpleIO(AdminSIO):
-            input_required = ('topic_name',)
-            input_optional = (Opaque('subscriptions'), Opaque('non_gd_messages'))
-
-        def handle(self):
-            topic_name = self.request.input.topic_name
-
-            # Notify all background tasks that new messages are available for their recipients.
-            # However, this needs to take into account the fact that there may be many notifications
-            # pointing to a single server so instead of sending notifications one by one,
-            # we first find all servers and then notify each server once giving it a list of subscriptions
-            # on input.
-
-            # We also need to remember that recipients may be currently offline, in which case we do nothing
-            # for GD messages but for non-GD ones, we keep them in our server's RAM.
-
-            server_messages = {} # Server name/PID/channel_name -> sub keys
-            sub_keys = [sub.config.sub_key for sub in self.request.input.subscriptions]
-
-            with closing(self.odb.session()) as session:
-                current_ws_clients = session.query(
-                    WebSocketClientPubSubKeys.sub_key,
-                    WebSocketClient.pub_client_id,
-                    WebSocketClient.server_id,
-                    WebSocketClient.server_name,
-                    WebSocketClient.server_proc_pid,
-                    ChannelWebSocket.name.label('channel_name'),
-                    ).\
-                    filter(WebSocketClientPubSubKeys.client_id==WebSocketClient.id).\
-                    filter(ChannelWebSocket.id==WebSocketClient.channel_id).\
-                    filter(WebSocketClientPubSubKeys.cluster_id==self.server.cluster_id).\
-                    filter(WebSocketClientPubSubKeys.sub_key.in_(sub_keys)).\
-                    all()
-
-            for elem in current_ws_clients:
-                self.server.servers[elem.server_name].invoke('zato.channel.web-socket.client.notify-pub-sub-message', {
-                    'pub_client_id': elem.pub_client_id,
-                    'channel_name': elem.channel_name,
-                    'request': {
-                        'has_gd': True,
-                        'sub_key': elem.sub_key,
-                    },
-                }, pid=elem.server_proc_pid)
 
 # ################################################################################################################################

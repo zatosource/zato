@@ -51,7 +51,7 @@ def get_expiration(cid, input, default_expiration=2147483647):
     """
     expiration = input.get('expiration')
     if expiration is not None and expiration < 0:
-        raise BadRequest(self.cid, 'Expiration `{}` must not be negative'.format(expiration))
+        raise BadRequest(cid, 'Expiration `{}` must not be negative'.format(expiration))
 
     return expiration or default_expiration
 

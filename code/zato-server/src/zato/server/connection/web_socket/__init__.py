@@ -11,8 +11,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from copy import deepcopy
 from datetime import datetime, timedelta
+from errno import EADDRINUSE
 from httplib import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import getLogger
+from socket import error as SocketError
 from traceback import format_exc
 from urlparse import urlparse
 
@@ -539,7 +541,7 @@ class WebSocket(_WebSocket):
             return response if isinstance(response, bool) else response.data # It will be bool in pong responses
 
     def notify_pubsub_message(self, cid, request):
-        self.invoke_service(cid, 'pubapi1.pub-sub-notify-message-published', {
+        self.invoke_service(cid, 'zato.pubsub.notify-message-published', {
             'web_socket': self,
             'request': request,
         })
@@ -641,7 +643,13 @@ class ChannelWebSocket(Connector):
     def _start(self):
         self.server = WebSocketServer(self.config, self.auth_func, self.on_message_callback)
         self.is_connected = True
-        self.server.serve_forever()
+        try:
+            self.server.serve_forever()
+        except SocketError, e:
+            if e.errno == EADDRINUSE:
+                logger.info('Ignoring EADDRINUSE for %s %s', self.config.address, e)
+            else:
+                raise
 
     def _stop(self):
         self.server.stop(3)
