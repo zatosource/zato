@@ -18,7 +18,7 @@ from sqlalchemy.sql import func
 from zato.common.odb.model import ChannelWebSocket, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, \
      WebSocketClient, WebSocketClientPubSubKeys
 from zato.common.time_util import datetime_from_ms
-from zato.server.service import Opaque
+from zato.server.service import List, ListOfDicts, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -107,5 +107,22 @@ class AfterPublish(AdminService):
                     'sub_key': elem.sub_key,
                 },
             }, pid=elem.server_proc_pid)
+
+# ################################################################################################################################
+
+class AfterWSXReconnect(AdminService):
+    """ Invoked by WSX clients after they reconnect with a list of their sub_keys on input.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('sql_ws_client_id',)
+        input_optional = (List('sub_key_list'),)
+        output_optional = (ListOfDicts('queue_depth'),)
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            for sub_key in self.request.input.sub_key_list:
+                self.pubsub.add_ws_client_pubsub_keys(session, self.request.input.sql_ws_client_id, sub_key)
+
+            session.commit()
 
 # ################################################################################################################################

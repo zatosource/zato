@@ -19,7 +19,9 @@ from globre import compile as globre_compile
 
 # Zato
 from zato.common import DATA_FORMAT, PUBSUB
+from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
+from zato.common.odb.model import WebSocketClientPubSubKeys
 
 # ################################################################################################################################
 
@@ -134,19 +136,33 @@ class Subscription(object):
         self.endpoint_id = config.endpoint_id
         self.topic_name = config.topic_name
 
+class SubKeyServer(object):
+    """ Holds information about which server has subscribers (WSX) to a given sub_key.
+    """
+    def __init__(self, config):
+        self.sub_key = config.sub_key
+        self.server_name = config.server_name
+        self.server_pid = config.server_pid
+
 # ################################################################################################################################
 
 class PubSub(object):
-    def __init__(self):
-        self.subscriptions_by_topic = {}    # Topic name     -> Subscription object
-        self.subscriptions_by_sub_key = {}  # Sub key        -> Subscription object
+    def __init__(self, cluster_id, server, broker_client=None):
+        self.cluster_id = cluster_id
+        self.server = server
+        self.broker_client = broker_client
 
-        self.endpoints = {}                 # Endpoint ID    -> Endpoint object
-        self.topics = {}                    # Topic ID       -> Topic object
+        self.subscriptions_by_topic = {}       # Topic name     -> Subscription object
+        self.subscriptions_by_sub_key = {}     # Sub key        -> Subscription object
 
-        self.sec_id_to_endpoint_id = {}     # Sec def ID     -> Endpoint ID
+        self.endpoints = {}                    # Endpoint ID    -> Endpoint object
+        self.topics = {}                       # Topic ID       -> Topic object
+
+        self.sec_id_to_endpoint_id = {}        # Sec def ID     -> Endpoint ID
         self.ws_channel_id_to_endpoint_id = {} # WS chan def ID -> Endpoint ID
-        self.topic_name_to_id = {}          # Topic name     -> Topic ID
+        self.topic_name_to_id = {}             # Topic name     -> Topic ID
+
+        self.ws_sub_key_servers = {}           # Sub key        -> Server/PID handling it
 
         self.lock = RLock()
 
@@ -323,5 +339,29 @@ class PubSub(object):
 
     def is_allowed_sub_topic(self, name, security_id=None, ws_channel_id=None):
         return self._is_allowed('sub_topic_patterns', name, security_id, ws_channel_id)
+
+# ################################################################################################################################
+
+    def add_ws_client_pubsub_keys(self, session, sql_ws_client_id, sub_key):
+        """ Adds to SQL information that a given WSX client handles messages for sub_key.
+        This information is transient - it will be dropped each time a WSX client disconnects
+        """
+        # Update state in SQL
+        ws_sub_key = WebSocketClientPubSubKeys()
+        ws_sub_key.client_id = sql_ws_client_id
+        ws_sub_key.sub_key = sub_key
+        ws_sub_key.cluster_id = self.cluster_id
+        session.add(ws_sub_key)
+
+        # Update in-RAM state of workers
+        self.broker_client.publish({
+            'action': BROKER_MSG_PUBSUB.WSX_CLIENT_SUB_KEY_SERVER_SET.value,
+            'server_name': self.server.name,
+            'server_pid': self.server.pid,
+            'sub_key': sub_key,
+        })
+
+    def set_ws_sub_key_server(self, config):
+        self.ws_sub_key_servers[config.sub_key] = SubKeyServer(config)
 
 # ################################################################################################################################

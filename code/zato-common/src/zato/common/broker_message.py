@@ -423,6 +423,9 @@ class PUBSUB(Constants):
     TOPIC_EDIT = ValueConstant('')
     TOPIC_DELETE = ValueConstant('')
 
+    WSX_CLIENT_SUB_KEY_SERVER_SET = ValueConstant('')
+    WSX_CLIENT_SUB_KEY_SERVER_REMOVE = ValueConstant('')
+
 class SMS(Constants):
     code_start = 106000
 
