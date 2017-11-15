@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from contextlib import closing
 import logging
 
 # gevent
@@ -17,11 +18,16 @@ from gevent.lock import RLock
 # globre
 from globre import compile as globre_compile
 
+# SQLAlchemy
+from sqlalchemy import update
+
 # Zato
+from zato.common.time_util import datetime_from_ms, utcnow_as_ms
+
 from zato.common import DATA_FORMAT, PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
-from zato.common.odb.model import WebSocketClientPubSubKeys
+from zato.common.odb.model import PubSubMessage, PubSubEndpointEnqueuedMessage, PubSubSubscription, WebSocketClientPubSubKeys
 
 # ################################################################################################################################
 
@@ -415,5 +421,63 @@ class PubSub(object):
                 not_found.append(sub_key)
 
         return found, not_found
+
+# ################################################################################################################################
+
+    def get_sql_messages_by_sub_key(self, sub_key, last_sql_run):
+        """ Returns from SQL all messages queued up for a given sub_key.
+        """
+        now = utcnow_as_ms()
+
+        with closing(self.server.odb.session()) as session:
+
+            query = session.query(
+                PubSubMessage.id,
+                PubSubMessage.pub_msg_id,
+                PubSubMessage.pub_correl_id,
+                PubSubMessage.in_reply_to,
+                PubSubMessage.ext_client_id,
+                PubSubMessage.group_id,
+                PubSubMessage.position_in_group,
+                PubSubMessage.pub_time,
+                PubSubMessage.ext_pub_time,
+                PubSubMessage.data,
+                PubSubMessage.mime_type,
+                PubSubMessage.priority,
+                PubSubMessage.expiration,
+                PubSubMessage.expiration_time,
+            ).\
+            filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
+            filter(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
+            filter(PubSubEndpointEnqueuedMessage.is_delivered==False).\
+            filter(PubSubSubscription.sub_key==sub_key).\
+            filter(PubSubMessage.expiration_time > now)
+
+            if last_sql_run:
+                query = query.\
+                    filter(PubSubMessage.pub_time > last_sql_run)
+
+            query = query.\
+                order_by(PubSubMessage.priority.desc()).\
+                order_by(PubSubMessage.ext_pub_time).\
+                order_by(PubSubMessage.pub_time)
+
+            return query.all()
+
+    def confirm_pubsub_msg_delivered(self, sub_key, pub_msg_id):
+
+        with closing(self.server.odb.session()) as session:
+            session.execute(
+                update(PubSubEndpointEnqueuedMessage).\
+                values({
+                    'is_delivered': True,
+                    'delivery_time': utcnow_as_ms()
+                    }).\
+                where(PubSubEndpointEnqueuedMessage.pub_msg_id==pub_msg_id).\
+                where(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
+                where(PubSubSubscription.sub_key==sub_key)
+            )
+
+            session.commit()
 
 # ################################################################################################################################

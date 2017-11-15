@@ -374,6 +374,7 @@ class Publish(AdminService):
                                 'cluster_id': self.server.cluster_id,
                                 'has_gd': False,
                                 'is_in_staging': False,
+                                'is_delivered': False,
                             })
 
                     # Move the message to endpoint queues
