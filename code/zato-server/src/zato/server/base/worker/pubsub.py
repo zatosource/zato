@@ -73,3 +73,8 @@ class PubSub(WorkerImpl):
         self.pubsub.set_ws_sub_key_server(msg)
 
 # ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_WSX_CLIENT_SUB_KEY_SERVER_REMOVE(self, msg):
+        self.pubsub.remove_ws_sub_key_server(msg)
+
+# ################################################################################################################################

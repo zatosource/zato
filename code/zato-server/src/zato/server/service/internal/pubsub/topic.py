@@ -27,7 +27,7 @@ from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, 
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
 from zato.common.pubsub import new_sub_key
 from zato.common.time_util import datetime_from_ms, utcnow_as_ms
-from zato.server.service import AsIs, Bool, Int
+from zato.server.service import AsIs, Bool, Int, Opaque
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -192,8 +192,9 @@ class GetMessageList(AdminService):
 class SubscribeServiceImpl(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('topic_name',)
-        input_optional = (Bool('gd'), 'deliver_to', 'delivery_format', 'security_id', 'ws_channel_id',
-            'sql_ws_client_id', 'deliver_by', 'is_internal', AsIs('ext_client_id'), 'delivery_group_size')
+        input_optional = (Bool('gd'), 'deliver_to', 'delivery_format', 'security_id', 'ws_channel_id', 'ws_channel_name',
+            AsIs('ws_pub_client_id'), 'sql_ws_client_id', 'deliver_by', 'is_internal', AsIs('ext_client_id'),
+            'delivery_group_size', Opaque('web_socket'))
         output_optional = ('sub_key', Int('queue_depth'))
 
 # ################################################################################################################################
@@ -274,7 +275,11 @@ class SubscribeServiceImpl(AdminService):
                     session.add(ws_sub)
 
                     # This object will be transient - dropped each time a WSX disconnects
-                    self.pubsub.add_ws_client_pubsub_keys(session, sql_ws_client_id, sub_key)
+                    self.pubsub.add_ws_client_pubsub_keys(session, sql_ws_client_id, sub_key,
+                        self.request.input.ws_channel_name, self.request.input.ws_pub_client_id)
+
+                    # Let the WebSocket connection object know that it should handle this particular sub_key
+                    self.request.input.web_socket.pubsub_tool.add_sub_key(sub_key)
 
                 else:
                     ws_sub = None
