@@ -27,6 +27,7 @@ class NotifyMessagePublished(AdminService):
     """ Notifies an individual WebSocket client that messages related to a specific sub_key became available.
     """
     def handle(self):
+        '''
         web_socket = self.request.raw_request['web_socket'] # type: WebSocket
         sub_key = self.request.raw_request['request']['sub_key']
 
@@ -34,7 +35,7 @@ class NotifyMessagePublished(AdminService):
 
         self.logger.info('Got sub_key %s for %s', sub_key, web_socket.pub_client_id)
 
-        print(web_socket.pub_client_id)
+        #server_info = self.pubsub.get_ws_clients_by_sub_keys(
 
         # Note that in the query below we join by pub_client_id only to be on the safe
         # side. In theory and practice, looking up messages by sub_key would suffice but we want
@@ -61,7 +62,8 @@ class NotifyMessagePublished(AdminService):
                 ext_pub_time = datetime_from_ms(msg.ext_pub_time)
                 pub_time = datetime_from_ms(msg.pub_time)
 
-                print(idx, msg.priority, ext_pub_time, pub_time, msg.group_id, msg.position_in_group)
+                #print(idx, msg.priority, ext_pub_time, pub_time, msg.group_id, msg.position_in_group)
+                '''
 
 # ################################################################################################################################
 
@@ -83,30 +85,19 @@ class AfterPublish(AdminService):
         # TODO: server_messages = {} # Server name/PID/channel_name -> sub keys
         sub_keys = [sub.config.sub_key for sub in self.request.input.subscriptions]
 
-        with closing(self.odb.session()) as session:
-            current_ws_clients = session.query(
-                WebSocketClientPubSubKeys.sub_key,
-                WebSocketClient.pub_client_id,
-                WebSocketClient.server_id,
-                WebSocketClient.server_name,
-                WebSocketClient.server_proc_pid,
-                ChannelWebSocket.name.label('channel_name'),
-                ).\
-                filter(WebSocketClientPubSubKeys.client_id==WebSocketClient.id).\
-                filter(ChannelWebSocket.id==WebSocketClient.channel_id).\
-                filter(WebSocketClientPubSubKeys.cluster_id==self.server.cluster_id).\
-                filter(WebSocketClientPubSubKeys.sub_key.in_(sub_keys)).\
-                all()
+        current_servers, not_found = self.pubsub.get_ws_clients_by_sub_keys(sub_keys)
 
-        for elem in current_ws_clients:
-            self.server.servers[elem.server_name].invoke('zato.channel.web-socket.client.notify-pub-sub-message', {
-                'pub_client_id': elem.pub_client_id,
-                'channel_name': elem.channel_name,
+        for server_info, sub_key_list in current_servers.items():
+            server_name, server_pid, pub_client_id, channel_name = server_info
+
+            self.server.servers[server_name].invoke('zato.channel.web-socket.client.notify-pub-sub-message', {
+                'pub_client_id': pub_client_id,
+                'channel_name': channel_name,
                 'request': {
                     'has_gd': True,
-                    'sub_key': elem.sub_key,
+                    'sub_key_list': sub_key_list,
                 },
-            }, pid=elem.server_proc_pid)
+            }, pid=server_pid)
 
 # ################################################################################################################################
 
@@ -114,7 +105,7 @@ class AfterWSXReconnect(AdminService):
     """ Invoked by WSX clients after they reconnect with a list of their sub_keys on input.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('sql_ws_client_id',)
+        input_required = ('sql_ws_client_id', Opaque('web_socket'))
         input_optional = (List('sub_key_list'),)
         output_optional = (ListOfDicts('queue_depth'),)
 
@@ -122,6 +113,7 @@ class AfterWSXReconnect(AdminService):
         with closing(self.odb.session()) as session:
             for sub_key in self.request.input.sub_key_list:
                 self.pubsub.add_ws_client_pubsub_keys(session, self.request.input.sql_ws_client_id, sub_key)
+                self.request.input.web_socket.pubsub_tool.add_sub_key(sub_key)
 
             session.commit()
 

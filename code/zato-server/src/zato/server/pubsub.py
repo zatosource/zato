@@ -136,13 +136,17 @@ class Subscription(object):
         self.endpoint_id = config.endpoint_id
         self.topic_name = config.topic_name
 
+# ################################################################################################################################
+
 class SubKeyServer(object):
-    """ Holds information about which server has subscribers (WSX) to a given sub_key.
+    """ Holds information about which server has subscribers (WSX) to an individual sub_key.
     """
     def __init__(self, config):
         self.sub_key = config.sub_key
         self.server_name = config.server_name
         self.server_pid = config.server_pid
+        self.channel_name = config.channel_name
+        self.pub_client_id = config.pub_client_id
 
 # ################################################################################################################################
 
@@ -316,14 +320,22 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def _is_allowed(self, target, name, security_id, ws_channel_id):
+    def _is_allowed(self, target, name, security_id, ws_channel_id, endpoint_id=None):
 
-        if security_id:
-            source, id = self.sec_id_to_endpoint_id, security_id
-        else:
-            source, id = self.ws_channel_id_to_endpoint_id, ws_channel_id
+        if not endpoint_id:
 
-        endpoint_id = source[id]
+            if not(security_id or ws_channel_id):
+                raise ValueError(
+                    'Either security_id or ws_channel_id must be given on input instead of `{}` `{}`'.format(
+                    security_id, ws_channel_id))
+
+            if security_id:
+                source, id = self.sec_id_to_endpoint_id, security_id
+            else:
+                source, id = self.ws_channel_id_to_endpoint_id, ws_channel_id
+
+            endpoint_id = source[id]
+
         endpoint = self.endpoints[endpoint_id]
 
         for orig, matcher in getattr(endpoint, target):
@@ -337,12 +349,17 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def is_allowed_pub_topic_by_endpoint_id(self, name, endpoint_id):
+        return self._is_allowed('pub_topic_patterns', name, None, None, endpoint_id)
+
+# ################################################################################################################################
+
     def is_allowed_sub_topic(self, name, security_id=None, ws_channel_id=None):
         return self._is_allowed('sub_topic_patterns', name, security_id, ws_channel_id)
 
 # ################################################################################################################################
 
-    def add_ws_client_pubsub_keys(self, session, sql_ws_client_id, sub_key):
+    def add_ws_client_pubsub_keys(self, session, sql_ws_client_id, sub_key, channel_name, pub_client_id):
         """ Adds to SQL information that a given WSX client handles messages for sub_key.
         This information is transient - it will be dropped each time a WSX client disconnects
         """
@@ -359,9 +376,44 @@ class PubSub(object):
             'server_name': self.server.name,
             'server_pid': self.server.pid,
             'sub_key': sub_key,
+            'channel_name': channel_name,
+            'pub_client_id': pub_client_id,
         })
+
+# ################################################################################################################################
 
     def set_ws_sub_key_server(self, config):
         self.ws_sub_key_servers[config.sub_key] = SubKeyServer(config)
+
+# ################################################################################################################################
+
+    def remove_ws_sub_key_server(self, config):
+
+        for sub_key in config.sub_key_list:
+            self.ws_sub_key_servers.pop(sub_key, None)
+            for server_info in self.ws_sub_key_servers.values():
+                if server_info.sub_key == sub_key:
+                    del self.ws_sub_key_servers[sub_key]
+                    break
+
+# ################################################################################################################################
+
+    def get_ws_clients_by_sub_keys(self, sub_keys):
+        """ Returns a dictionary keyed by (server_name, server_pid, pub_client_id, channel_name) tuples
+        and values being sub_keys that a WSX client pointed to by each key has subscribed to.
+        """
+        found = {}
+        not_found = []
+
+        for sub_key in sub_keys:
+            info = self.ws_sub_key_servers.get(sub_key)
+            if info:
+                _key = (info.server_name, info.server_pid, info.pub_client_id, info.channel_name)
+                _info = found.setdefault(_key, [])
+                _info.append(sub_key)
+            else:
+                not_found.append(sub_key)
+
+        return found, not_found
 
 # ################################################################################################################################

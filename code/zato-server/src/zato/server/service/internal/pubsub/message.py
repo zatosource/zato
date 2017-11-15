@@ -27,6 +27,7 @@ from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnq
 from zato.common.odb.query import pubsub_message, pubsub_queue_message
 from zato.common.pubsub import new_msg_id
 from zato.common.time_util import datetime_to_ms, datetime_from_ms, utcnow_as_ms
+from zato.common.util import spawn_greenlet
 from zato.server.pubsub import get_expiration, get_priority
 from zato.server.service import AsIs, Bool, Int, List
 from zato.server.service.internal import AdminService, AdminSIO
@@ -273,7 +274,7 @@ class Publish(AdminService):
 # ################################################################################################################################
 
     def _notify_pubsub_task_runners(self, topic_name, subscriptions):
-        spawn(self.invoke, 'zato.pubsub.message.pub-sub-after-publish', {
+        spawn_greenlet(self.invoke, 'zato.pubsub.after-publish', {
             'topic_name':topic_name,
             'subscriptions': subscriptions
         })
@@ -297,12 +298,12 @@ class Publish(AdminService):
             else:
                 raise NotImplementedError('To be implemented')
 
-        #if input.get('skip_pattern_matching'):
-        #    pattern_matched = PUBSUB.SKIPPED_PATTERN_MATCHING
-        #else:
-        # Confirm if this client may publish at all to the topic it chose
-        kwargs = {'security_id':security_id} if security_id else {'ws_channel_id':ws_channel_id}
-        pattern_matched = pubsub.is_allowed_sub_topic(input.topic_name, **kwargs)
+            kwargs = {'security_id':security_id} if security_id else {'ws_channel_id':ws_channel_id}
+            pattern_matched = pubsub.is_allowed_pub_topic(input.topic_name, **kwargs)
+
+        else:
+            pattern_matched = pubsub.is_allowed_pub_topic_by_endpoint_id(input.topic_name, endpoint_id)
+
         if not pattern_matched:
             raise Forbidden(self.cid)
 

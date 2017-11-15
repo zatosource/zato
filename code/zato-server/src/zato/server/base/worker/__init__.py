@@ -182,7 +182,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.zmq_out_api = ConnectorStore(connector_type.out.zmq, OutZMQSimple)
 
         # WebSocket
-        self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket)
+        self.web_socket_api = ConnectorStore(connector_type.duplex.web_socket, ChannelWebSocket, self.server)
         self.outgoing_web_sockets = OutgoingWebSocket(self.server.cluster_id, self.server.servers, self.server.odb)
 
         # AMQP

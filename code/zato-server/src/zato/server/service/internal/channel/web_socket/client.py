@@ -15,9 +15,10 @@ from contextlib import closing
 from dateutil.parser import parse
 
 # Zato
+from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import ChannelWebSocket, Cluster, WebSocketClient
 from zato.common.odb.query import web_socket_client_by_pub_id, web_socket_clients_by_server_id
-from zato.server.service import AsIs
+from zato.server.service import AsIs, List
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -85,6 +86,21 @@ class DeleteByPubId(AdminService):
             client, _ = web_socket_client_by_pub_id(session, self.request.input.pub_client_id)
             session.delete(client)
             session.commit()
+
+# ################################################################################################################################
+
+class UnregisterWSSubKey(AdminService):
+    """ Notifies all workers about sub keys that will not longer be accessible because current WSX client disconnects.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = (List('sub_key_list'),)
+
+    def handle(self):
+        # Update in-RAM state of workers
+        self.broker_client.publish({
+            'action': BROKER_MSG_PUBSUB.WSX_CLIENT_SUB_KEY_SERVER_REMOVE.value,
+            'sub_key_list': self.request.input.sub_key_list,
+        })
 
 # ################################################################################################################################
 
