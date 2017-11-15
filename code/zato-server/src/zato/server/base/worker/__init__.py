@@ -132,7 +132,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         self.update_lock = RLock()
         self.kvdb = server.kvdb
         self.broker_client = None
-        self.pubsub = PubSub()
+        self.pubsub = PubSub(self.server.cluster_id, self.server)
         self.rbac = RBAC()
         self.worker_idx = int(os.environ['ZATO_SERVER_WORKER_IDX'])
 
@@ -292,8 +292,14 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
+    def after_broker_client_set(self):
+        self.pubsub.broker_client = self.broker_client
+
+# ################################################################################################################################
+
     def set_broker_client(self, broker_client):
         self.broker_client = broker_client
+        self.after_broker_client_set()
 
 # ################################################################################################################################
 
@@ -736,6 +742,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def init_pubsub(self):
+
         for value in self.worker_config.pubsub_endpoint.values():
             self.pubsub.create_endpoint(bunchify(value['config']))
 

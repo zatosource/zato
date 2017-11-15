@@ -19,10 +19,11 @@ from sqlalchemy import and_, exists, insert
 from sqlalchemy.sql import expression as expr, func
 
 # Zato
-from zato.common.broker_message import PUBSUB
+from zato.common import PUBSUB
+from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, PubSubSubscriptionExists
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, PubSubTopic, \
-     WebSocketClientPubSubKeys, WebSocketSubscription
+     WebSocketSubscription
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
 from zato.common.pubsub import new_sub_key
 from zato.common.time_util import datetime_from_ms, utcnow_as_ms
@@ -35,7 +36,7 @@ from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 elem = 'pubsub_topic'
 model = PubSubTopic
 label = 'a pub/sub topic'
-broker_message = PUBSUB
+broker_message = BROKER_MSG_PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
 skip_input_params = ['is_internal', 'last_pub_time', 'current_depth']
@@ -272,12 +273,8 @@ class SubscribeServiceImpl(AdminService):
                     ws_sub.cluster_id = self.server.cluster_id
                     session.add(ws_sub)
 
-                    # This object is transient - it will be dropped each time a WSX client disconnects
-                    ws_sub_key = WebSocketClientPubSubKeys()
-                    ws_sub_key.client_id = sql_ws_client_id
-                    ws_sub_key.sub_key = sub_key
-                    ws_sub_key.cluster_id = self.server.cluster_id
-                    session.add(ws_sub_key)
+                    # This object will be transient - dropped each time a WSX disconnects
+                    self.pubsub.add_ws_client_pubsub_keys(session, sql_ws_client_id, sub_key)
 
                 else:
                     ws_sub = None
@@ -359,5 +356,5 @@ class SubscribeServiceImpl(AdminService):
                 for name in sub_broker_attrs:
                     broker_input[name] = getattr(ps_sub, name, None)
 
-                broker_input.action = PUBSUB.SUBSCRIPTION_CREATE.value
+                broker_input.action = BROKER_MSG_PUBSUB.SUBSCRIPTION_CREATE.value
                 self.broker_client.publish(broker_input)
