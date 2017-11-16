@@ -2257,7 +2257,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     """
     __tablename__ = 'pubsub_endp_msg_queue'
     __table_args__ = (
-        Index('pubsb_enms_q_id_idx', 'cluster_id', 'pub_msg_id', unique=True),
+        Index('pubsb_enms_q_pubmid_idx', 'cluster_id', 'pub_msg_id', unique=True),
         Index('pubsb_enms_q_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_enms_q_endp_idx', 'cluster_id', 'endpoint_id', unique=False),
         Index('pubsb_enms_q_subs_idx', 'cluster_id', 'subscription_id', unique=False),
