@@ -18,7 +18,7 @@ from gevent import spawn
 # Zato
 from zato.common import DATA_FORMAT
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
-from zato.common.odb.query_pubsub import get_topic_depth, incr_topic_depth, insert_queue_messages, insert_topic_messages, \
+from zato.common.odb.query_ps_publish import get_topic_depth, incr_topic_depth, insert_queue_messages, insert_topic_messages, \
      update_publish_metadata
 from zato.common.pubsub import new_msg_id
 from zato.common.time_util import datetime_to_ms, utcnow_as_ms
