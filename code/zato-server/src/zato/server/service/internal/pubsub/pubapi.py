@@ -103,7 +103,7 @@ class TopicService(PubSubService):
 
         input = self.request.input
 
-        self.response.payload.msg_id = self.invoke('zato.pubsub.message.publish', {
+        self.response.payload.msg_id = self.invoke('zato.pubsub.publish.publish', {
             'topic_name': input.topic_name,
             'mime_type': mime_type,
             'security_id': security_id,
@@ -131,7 +131,7 @@ class SubscribeService(PubSubService):
         # Check credentials first
         security_id = self._pubsub_check_credentials()
 
-        response = self.invoke('zato.pubsub.topic.subscribe-service-impl', {
+        response = self.invoke('zato.pubsub.subscribe.subscribe-service-impl', {
             'topic_name': self.request.input.topic_name,
             'security_id': security_id,
             'has_gd': self.request.input.gd,
