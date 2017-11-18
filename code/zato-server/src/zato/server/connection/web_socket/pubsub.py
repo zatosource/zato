@@ -270,10 +270,7 @@ class PubSubTool(object):
             messages = self.pubsub.get_sql_messages_by_sub_key(sub_key, self.last_sql_run[sub_key])
 
             for msg in messages:
-                logger.warn('333 %s', msg)
                 self.delivery_lists[sub_key].add(Message(msg))
-
-            logger.warn('444 %s', hex(id(self.delivery_lists[sub_key])))
 
 # ################################################################################################################################
 
