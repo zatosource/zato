@@ -13,9 +13,9 @@ from contextlib import closing
 
 # Zato
 from zato.common import PUBSUB
-from zato.common.odb.query_ps_queue import acknowledge_delivery, get_messages
+from zato.common.odb.query_ps_queue import acknowledge_delivery, get_messages, get_queue_depth_by_sub_key
 from zato.common.time_util import datetime_from_ms, utcnow_as_ms
-from zato.server.service import AsIs, List
+from zato.server.service import AsIs, Dict, Int, List
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -85,5 +85,30 @@ class AcknowledgeDelivery(AdminService):
 
                 # .. and confirm the transaction
                 session.commit()
+
+# ################################################################################################################################
+
+class GetQueueDepthBySubKey(AdminService):
+    """ For each sub_key given on input, return depth of its associated message queue.
+    """
+    class SimpleIO(AdminSIO):
+        input_optional = ('sub_key', List('sub_key_list'))
+        output_optional = (Dict('queue_depth'),)
+
+    def handle(self):
+        input = self.request.input
+        input.require_any('sub_key', 'sub_key_list')
+
+        # Support both on input but always pass on a list further on
+        sub_key_list = [input.sub_key] if input.sub_key else input.sub_key_list
+
+        # Response to return
+        response = {}
+
+        with closing(self.odb.session()) as session:
+            for item in sub_key_list:
+                response[item] = get_queue_depth_by_sub_key(session, self.server.cluster_id, item, utcnow_as_ms())
+
+        self.response.payload.queue_depth = response
 
 # ################################################################################################################################

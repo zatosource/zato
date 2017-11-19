@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 
 # Zato
-from zato.server.service import List, ListOfDicts, Opaque
+from zato.server.service import AsIs, Dict, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -99,16 +99,35 @@ class AfterWSXReconnect(AdminService):
     """ Invoked by WSX clients after they reconnect with a list of their sub_keys on input.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('sql_ws_client_id', Opaque('web_socket'))
+        input_required = ('sql_ws_client_id', 'channel_name', AsIs('pub_client_id'), Opaque('web_socket'))
         input_optional = (List('sub_key_list'),)
-        output_optional = (ListOfDicts('queue_depth'),)
+        output_optional = (Opaque('queue_depth'),)
 
     def handle(self):
+
         with closing(self.odb.session()) as session:
+
+            # Response to produce
+            response = {}
+
+            # For each sub_key from input ..
             for sub_key in self.request.input.sub_key_list:
-                self.pubsub.add_ws_client_pubsub_keys(session, self.request.input.sql_ws_client_id, sub_key)
+
+                # .. add relevant SQL objects ..
+                self.pubsub.add_ws_client_pubsub_keys(
+                    session, self.request.input.sql_ws_client_id, sub_key,
+                    self.request.input.channel_name, self.request.input.pub_client_id)
+
+                # .. update state of that WebSocket's pubsub tool that keeps track of message delivery
                 self.request.input.web_socket.pubsub_tool.add_sub_key(sub_key)
 
+                # .. return current depth
+                response[sub_key] = self.invoke('zato.pubsub.queue.get-queue-depth-by-sub-key', {
+                    'sub_key': sub_key
+                })['response']['queue_depth'][sub_key]
+
             session.commit()
+
+        self.response.payload.queue_depth = response
 
 # ################################################################################################################################

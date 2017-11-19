@@ -14,7 +14,7 @@ from sqlalchemy import update
 # Zato
 from zato.common import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription
-from zato.common.odb.query import _pubsub_queue_message
+from zato.common.odb.query import count, _pubsub_queue_message
 
 # ################################################################################################################################
 
@@ -72,5 +72,20 @@ def acknowledge_delivery(session, cluster_id, sub_key, msg_id_list, now, _delive
         where(PubSubEndpointEnqueuedMessage.delivery_status==_waiting).\
         where(PubSubEndpointEnqueuedMessage.pub_msg_id.in_(msg_id_list))
     )
+
+# ################################################################################################################################
+
+def get_queue_depth_by_sub_key(session, cluster_id, sub_key, now):
+    """ Returns queue depth for a given sub_key - does not include messages expired, in staging, or already delivered.
+    """
+    current_q = session.query(PubSubEndpointEnqueuedMessage.id).\
+        filter(PubSubSubscription.id==PubSubEndpointEnqueuedMessage.subscription_id).\
+        filter(PubSubEndpointEnqueuedMessage.is_in_staging != True).\
+        filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
+        filter(PubSubMessage.expiration_time>=now).\
+        filter(PubSubSubscription.sub_key==sub_key).\
+        filter(PubSubEndpointEnqueuedMessage.cluster_id==cluster_id)
+
+    return count(session, current_q)
 
 # ################################################################################################################################
