@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from contextlib import closing
 
 # Zato
-from zato.server.service import AsIs, Dict, List, Opaque
+from zato.server.service import AsIs, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
