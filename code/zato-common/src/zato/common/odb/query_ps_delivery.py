@@ -12,12 +12,19 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from sqlalchemy import update
 
 # Zato
+from zato.common import PUBSUB
 from zato.common.odb.model import PubSubMessage, PubSubEndpointEnqueuedMessage, PubSubSubscription
 
 # ################################################################################################################################
 
-def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now):
-    """ Returns all SQL messages queued up for a given sub_key.
+_initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
+_delivered = PUBSUB.DELIVERY_STATUS.DELIVERED
+
+# ################################################################################################################################
+
+def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now, _initialized=_initialized):
+    """ Returns all SQL messages queued up for a given sub_key that are not being delivered
+    or have not been delivered already.
     """
     query = session.query(
         PubSubMessage.id,
@@ -37,7 +44,7 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now)
     ).\
     filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
     filter(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
-    filter(PubSubEndpointEnqueuedMessage.is_delivered==False).\
+    filter(PubSubEndpointEnqueuedMessage.delivery_status==_initialized).\
     filter(PubSubSubscription.sub_key==sub_key).\
     filter(PubSubMessage.expiration_time > now).\
     filter(PubSubMessage.cluster_id==cluster_id)
@@ -55,13 +62,13 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now)
 
 # ################################################################################################################################
 
-def confirm_pubsub_msg_delivered(session, cluster_id, sub_key, pub_msg_id, now):
+def confirm_pubsub_msg_delivered(session, cluster_id, sub_key, pub_msg_id, now, _delivered=_delivered):
     """ Returns all SQL messages queued up for a given sub_key.
     """
     session.execute(
         update(PubSubEndpointEnqueuedMessage).\
         values({
-            'is_delivered': True,
+            'delivery_status': _delivered,
             'delivery_time': now
             }).\
         where(PubSubEndpointEnqueuedMessage.pub_msg_id==pub_msg_id).\

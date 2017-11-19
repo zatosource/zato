@@ -125,7 +125,7 @@ class DeliveryTask(object):
     def run(self, no_msg_sleep_time=1):
         try:
             while self.keep_running:
-                logger.warn('DLVLIST %s', hex(id(self.delivery_list)))
+                #logger.warn('DLVLIST %s', hex(id(self.delivery_list)))
 
                 if not self.delivery_list:
                     sleep(no_msg_sleep_time) # No need to wake up too often if there is not much to do

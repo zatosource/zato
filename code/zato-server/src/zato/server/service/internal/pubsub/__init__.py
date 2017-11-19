@@ -11,13 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 
-# SQLAlchemy
-from sqlalchemy.sql import func
-
 # Zato
-from zato.common.odb.model import ChannelWebSocket, PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubSubscription, \
-     WebSocketClient, WebSocketClientPubSubKeys
-from zato.common.time_util import datetime_from_ms
 from zato.server.service import List, ListOfDicts, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 

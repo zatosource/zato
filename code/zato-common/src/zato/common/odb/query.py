@@ -1094,7 +1094,6 @@ def pubsub_messages_for_topic(session, cluster_id, topic_id, needs_columns=False
 
 def _pubsub_queue_message(session, cluster_id):
     return session.query(
-
         PubSubMessage.pub_msg_id.label('msg_id'),
         PubSubMessage.pub_correl_id.label('correl_id'),
         PubSubMessage.in_reply_to,
