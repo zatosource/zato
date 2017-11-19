@@ -11,6 +11,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 # Zato
+from zato.common import PUBSUB
 from zato.common.exception import BadRequest
 from zato.common.odb.model import PubSubTopic, PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage
 
@@ -23,6 +24,10 @@ EnqueuedMsgInsert = PubSubEndpointEnqueuedMessage.__table__.insert
 Topic = PubSubTopic.__table__
 Endpoint = PubSubEndpoint.__table__
 EndpointTopic = PubSubEndpointTopic.__table__
+
+# ################################################################################################################################
+
+_initialized=PUBSUB.DELIVERY_STATUS.INITIALIZED
 
 # ################################################################################################################################
 
@@ -66,7 +71,7 @@ def insert_topic_messages(session, cid, msg_list):
 
 # ################################################################################################################################
 
-def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list, topic_id, now):
+def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list, topic_id, now, _initialized=_initialized):
     """ Moves messages to each subscriber's queue, i.e. runs an INSERT that add relevant references
     to the topic message.
     """
@@ -83,7 +88,7 @@ def insert_queue_messages(session, cluster_id, subscriptions_by_topic, msg_list,
                 'cluster_id': cluster_id,
                 'has_gd': False,
                 'is_in_staging': False,
-                'is_delivered': False,
+                'delivery_status': _initialized,
             })
 
     # Move the message to endpoint queues

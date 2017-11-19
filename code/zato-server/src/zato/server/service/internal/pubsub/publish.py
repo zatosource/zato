@@ -6,6 +6,8 @@ Copyright (C) 2017, Zato Source s.r.o. https://zato.io
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 # stdlib
 from contextlib import closing
 
@@ -16,7 +18,7 @@ from dateparser import parse as dt_parse
 from gevent import spawn
 
 # Zato
-from zato.common import DATA_FORMAT
+from zato.common import DATA_FORMAT, PUBSUB
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
 from zato.common.odb.query_ps_publish import get_topic_depth, incr_topic_depth, insert_queue_messages, insert_topic_messages, \
      update_publish_metadata
@@ -30,6 +32,7 @@ from zato.server.service.internal import AdminService
 # ################################################################################################################################
 
 _JSON = DATA_FORMAT.JSON
+_initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
 
 # ################################################################################################################################
 
@@ -46,7 +49,7 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_message(self, topic, input, now, pattern_matched, endpoint_id):
+    def _get_message(self, topic, input, now, pattern_matched, endpoint_id, _initialized=_initialized):
 
         priority = get_priority(self.cid, input)
         expiration = get_expiration(self.cid, input)
@@ -73,6 +76,7 @@ class Publish(AdminService):
             'pub_correl_id': pub_correl_id,
             'in_reply_to': in_reply_to,
             'pub_time': now,
+            'delivery_status': _initialized,
             'pattern_matched': pattern_matched,
             'data': input['data'].encode('utf8'),
             'data_prefix': input['data'][:2048].encode('utf8'),
@@ -147,7 +151,7 @@ class Publish(AdminService):
             raise Forbidden(self.cid)
 
         # Alright, we are in
-        return pattern_matched
+        return endpoint_id, pattern_matched
 
 # ################################################################################################################################
 
@@ -158,7 +162,7 @@ class Publish(AdminService):
         endpoint_id = input.endpoint_id
 
         # Will return publication pattern matched or raise an exception that we don't catch
-        pattern_matched = self.get_pattern_matched(self, input)
+        endpoint_id, pattern_matched = self.get_pattern_matched(endpoint_id, input)
 
         try:
             topic = pubsub.get_topic_by_name(input.topic_name)
@@ -192,14 +196,14 @@ class Publish(AdminService):
 
                 # .. otherwise, update current depth and timestamp of last publication to the topic.
                 else:
-                    incr_topic_depth(session, cluster_id, now, len(ps_msg_list))
+                    incr_topic_depth(session, cluster_id, topic.id, now, len(ps_msg_list))
 
                 # Publish messages - INSERT rows, each representing an individual message
                 insert_topic_messages(session, self.cid, ps_msg_list)
 
                 # Move messages to each subscriber's queue
                 if subscriptions_by_topic:
-                    insert_queue_messages(session, cluster_id, subscriptions_by_topic, ps_msg_list, topic.id)
+                    insert_queue_messages(session, cluster_id, subscriptions_by_topic, ps_msg_list, topic.id, now)
 
                 # Run an SQL commit for all queries above
                 session.commit()

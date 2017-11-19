@@ -2273,7 +2273,7 @@ class PubSubEndpointEnqueuedMessage(Base):
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
     is_in_staging = Column(Boolean(), nullable=False, default=False)
 
-    is_delivered = Column(Boolean(), nullable=False, default=False)
+    delivery_status = Column(Text, nullable=False)
     delivery_time = Column(BigInteger(), nullable=True)
 
     pub_msg_id = Column(String(200), ForeignKey('pubsub_message.pub_msg_id', ondelete='CASCADE'), nullable=False)

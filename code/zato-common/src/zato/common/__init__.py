@@ -734,6 +734,7 @@ class PUBSUB:
 
     class DEFAULT:
         TOPIC_MAX_DEPTH = 10000
+        GET_BATCH_SIZE = 50
 
     class QUEUE_TYPE:
         STAGING = 'staging'
@@ -766,6 +767,11 @@ class PUBSUB:
         NOTIFY = 'notify'
         PULL = 'pull'
         WEB_SOCKET = 'web-socket'
+
+    class DELIVERY_STATUS:
+        INITIALIZED = 'initialized'
+        WAITING_FOR_CONFIRMATION = 'waiting-for-confirmation'
+        DELIVERED = 'delivered'
 
     class PRIORITY:
         DEFAULT = 5
