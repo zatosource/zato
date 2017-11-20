@@ -79,8 +79,6 @@ class Publish(AdminService):
             'delivery_status': _initialized,
             'pattern_matched': pattern_matched,
             'data': input['data'].encode('utf8'),
-            'data_prefix': input['data'][:2048].encode('utf8'),
-            'data_prefix_short': input['data'][:64].encode('utf8'),
             'mime_type': input.get('mime_type', 'text/plain'),
             'size': len(input['data']),
             'priority': priority,
@@ -96,28 +94,46 @@ class Publish(AdminService):
             'position_in_group': input.get('position_in_group') or None,
         }
 
+        # These are needed only for GD messages that are stored in SQL
+        if has_gd:
+            ps_msg['data_prefix'] = input['data'][:2048].encode('utf8')
+            ps_msg['data_prefix_short'] = input['data'][:64].encode('utf8')
+
         return ps_msg
 
 # ################################################################################################################################
 
     def _get_messages_from_data(self, topic, data_list, input, now, pattern_matched, endpoint_id):
 
-        ps_msg_list = []
+        # List of messages with GD enabled
+        gd_msg_list = []
+
+        # List of messages without GD enabled
+        non_gd_msg_list = []
+
+        # List of all message IDs - in the same order as messages were given on input
+        msg_id_list = []
 
         if data_list and isinstance(data_list, (list, tuple)):
             for elem in data_list:
-                ps_msg_list.append(self._get_message(topic, elem, now, pattern_matched, endpoint_id))
+                msg = self._get_message(topic, elem, now, pattern_matched, endpoint_id)
+                msg_id_list.append(msg['pub_msg_id'])
+                gd_msg_list.append(msg) if msg['has_gd'] else non_gd_msg_list.append(msg)
         else:
-            ps_msg_list.append(self._get_message(topic, input, now, pattern_matched, endpoint_id))
+            msg = self._get_message(topic, input, now, pattern_matched, endpoint_id)
+            msg_id_list.append(msg['pub_msg_id'])
+            gd_msg_list.append(msg) if msg['has_gd'] else non_gd_msg_list.append(msg)
 
-        return ps_msg_list
+        return msg_id_list, gd_msg_list, non_gd_msg_list
 
 # ################################################################################################################################
 
-    def _notify_pubsub_task_runners(self, topic_name, subscriptions):
+    def _notify_pubsub_task_runners(self, topic_name, subscriptions, non_gd_msg_list, has_gd_msg_list):
         spawn_greenlet(self.invoke, 'zato.pubsub.after-publish', {
             'topic_name':topic_name,
-            'subscriptions': subscriptions
+            'subscriptions': subscriptions,
+            'non_gd_msg_list': non_gd_msg_list,
+            'has_gd_msg_list': has_gd_msg_list,
         })
 
 # ################################################################################################################################
@@ -175,52 +191,60 @@ class Publish(AdminService):
         # If input.data is a list, it means that it is a list of messages, each of which has its own
         # metadata. Otherwise, it's a string to publish and other input parameters describe it.
         data_list = input.data_list if input.data_list else None
-        ps_msg_list = self._get_messages_from_data(topic, data_list, input, now, pattern_matched, endpoint_id)
+
+        # Input messages may contain a mix of GD and non-GD messages, and we need to extract them separately.
+        msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
+            topic, data_list, input, now, pattern_matched, endpoint_id)
 
         # Get all subscribers for that topic from local worker store
         subscriptions_by_topic = pubsub.get_subscriptions_by_topic(input.topic_name)
 
         cluster_id = self.server.cluster_id
 
-        # Operate under a global lock for that topic to rule out any interference
+        # Operate under a global lock for that topic to rule out any interference from other publishers
         with self.lock('zato.pubsub.publish.%s' % input.topic_name):
 
-            with closing(self.odb.session()) as session:
+            # We don't always have GD messages on input so there is no point in running an SQL transaction otherwise.
+            if gd_msg_list:
 
-                # Get current depth of this topic
-                current_depth = get_topic_depth(session, cluster_id, topic.id)
+                with closing(self.odb.session()) as session:
 
-                # Abort if max depth is already reached ..
-                if current_depth >= topic.max_depth:
-                    raise ServiceUnavailable(self.cid, 'Max depth already reached for `{}`'.format(topic.name))
+                    # Get current depth of this topic
+                    current_depth = get_topic_depth(session, cluster_id, topic.id)
 
-                # .. otherwise, update current depth and timestamp of last publication to the topic.
-                else:
-                    incr_topic_depth(session, cluster_id, topic.id, now, len(ps_msg_list))
+                    # Abort if max depth is already reached ..
+                    if current_depth >= topic.max_depth:
+                        raise ServiceUnavailable(self.cid, 'Max depth already reached for `{}`'.format(topic.name))
 
-                # Publish messages - INSERT rows, each representing an individual message
-                insert_topic_messages(session, self.cid, ps_msg_list)
+                    # .. otherwise, update current depth and timestamp of last publication to the topic.
+                    else:
+                        incr_topic_depth(session, cluster_id, topic.id, now, len(ps_msg_list))
 
-                # Move messages to each subscriber's queue
-                if subscriptions_by_topic:
-                    insert_queue_messages(session, cluster_id, subscriptions_by_topic, ps_msg_list, topic.id, now)
+                    # Publish messages - INSERT rows, each representing an individual message
+                    insert_topic_messages(session, self.cid, ps_msg_list)
 
-                # Run an SQL commit for all queries above
-                session.commit()
+                    # Move messages to each subscriber's queue
+                    if subscriptions_by_topic:
+                        insert_queue_messages(session, cluster_id, subscriptions_by_topic, ps_msg_list, topic.id, now)
 
-        # Update metadata in background
-        spawn(self._update_pub_metadata, cluster_id, topic.id, endpoint_id, now, ps_msg_list, pattern_matched)
+                    # Run an SQL commit for all queries above
+                    session.commit()
+
+                # Update metadata in background
+                spawn(self._update_pub_metadata, cluster_id, topic.id, endpoint_id, now, ps_msg_list, pattern_matched)
 
         # Also in background, notify pub/sub task runners that there are new messages for them
         if subscriptions_by_topic:
-            self._notify_pubsub_task_runners(topic.name, subscriptions_by_topic)
+            self._notify_pubsub_task_runners(topic.name, subscriptions_by_topic, non_gd_msg_list, len(gd_msg_list) > 1)
 
         # Return either a single msg_id if there was only one message published or a list of message IDs,
         # one for each message published.
-        if len(ps_msg_list) == 1:
-            self.response.payload.msg_id = ps_msg_list[0]['pub_msg_id']
+        len_msg_list = len(gd_msg_list) + len(non_gd_msg_list)
+
+        if len_msg_list == 1:
+            self.response.payload.msg_id = msg_id_list[0]
         else:
-            self.response.payload.msg_id_list = [elem['pub_msg_id'] for elem in ps_msg_list]
+            self.response.payload.msg_id_list = msg_id_list
 
 # ################################################################################################################################
 

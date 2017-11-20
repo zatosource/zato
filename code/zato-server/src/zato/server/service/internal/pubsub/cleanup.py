@@ -9,6 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+import logging
 from contextlib import closing
 from random import choice
 from traceback import format_exc
@@ -20,6 +21,10 @@ from gevent import sleep
 from zato.common.odb.query_ps_cleanup import delete_expired, delete_delivered
 from zato.common.time_util import utcnow_as_ms
 from zato.server.service.internal import AdminService
+
+# ################################################################################################################################
+
+logger = logging.getLogger('zato_pubsub')
 
 # ################################################################################################################################
 
@@ -51,13 +56,13 @@ class CleanupService(AdminService):
 
                     # Log what was done
                     suffix = 's' if(number==0 or number > 1) else ''
-                    self.logger.info('Deleted %s %s pub/sub message%s' % (number, kind, suffix))
+                    logger.info('Deleted %s %s pub/sub message%s' % (number, kind, suffix))
 
                     # Actually commit on SQL level
                     session.commit()
 
             except Exception, e:
-                self.logger.warn('Error in cleanup: `%s`', format_exc(e))
+                logger.warn('Error in cleanup: `%s`', format_exc(e))
                 sleep(sleep_time)
 
 # ################################################################################################################################

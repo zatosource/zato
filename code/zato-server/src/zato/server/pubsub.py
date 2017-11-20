@@ -19,18 +19,19 @@ from gevent.lock import RLock
 from globre import compile as globre_compile
 
 # Zato
-from zato.common.time_util import utcnow_as_ms
-
 from zato.common import DATA_FORMAT, PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
+from zato.common.multidict import MultiDict
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query_ps_delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
+from zato.common.time_util import utcnow_as_ms
 
 # ################################################################################################################################
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('zato_pubsub')
+logger_overflown = logging.getLogger('zato_pubsub_overflown')
 
 # ################################################################################################################################
 
@@ -161,17 +162,17 @@ class PubSub(object):
         self.server = server
         self.broker_client = broker_client
 
-        self.subscriptions_by_topic = {}       # Topic name     -> Subscription object
-        self.subscriptions_by_sub_key = {}     # Sub key        -> Subscription object
+        self.subscriptions_by_topic = {}       # Topic name       -> Subscription object
+        self.subscriptions_by_sub_key = {}     # Sub key          -> Subscription object
 
-        self.endpoints = {}                    # Endpoint ID    -> Endpoint object
-        self.topics = {}                       # Topic ID       -> Topic object
+        self.endpoints = {}                    # Endpoint ID      -> Endpoint object
+        self.topics = {}                       # Topic ID         -> Topic object
 
-        self.sec_id_to_endpoint_id = {}        # Sec def ID     -> Endpoint ID
-        self.ws_channel_id_to_endpoint_id = {} # WS chan def ID -> Endpoint ID
-        self.topic_name_to_id = {}             # Topic name     -> Topic ID
-
-        self.ws_sub_key_servers = {}           # Sub key        -> Server/PID handling it
+        self.sec_id_to_endpoint_id = {}        # Sec def ID       -> Endpoint ID
+        self.ws_channel_id_to_endpoint_id = {} # WS chan def ID   -> Endpoint ID
+        self.topic_name_to_id = {}             # Topic name       -> Topic ID
+        self.ws_sub_key_servers = {}           # Sub key          -> Server/PID handling it
+        self.in_ram_backlog = MultiDict()      # List of sub_keys -> non-GD message list for each
 
         self.lock = RLock()
 
@@ -437,5 +438,21 @@ class PubSub(object):
         with closing(self.server.odb.session()) as session:
             _confirm_pubsub_msg_delivered(session, self.server.cluster_id, sub_key, pub_msg_id, utcnow_as_ms())
             session.commit()
+
+# ################################################################################################################################
+
+    def store_in_ram(self, service, sub_keys, non_gd_msg_list, from_notif_error):
+        """ Stores in RAM up to input non-GD messages for each sub_key. A backlog queue for each sub_key
+        cannot be longer than topic's max_depth_non_gd and overlown messages are not kept in RAM.
+        They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
+        go to disk (or to another location that logger_overflown is configured to use).
+        """
+        service.invoke('pubapi1.store-in-ram', {
+            'sub_keys': sub_keys,
+            'non_gd_msg_list': non_gd_msg_list,
+            'from_notif_error': from_notif_error,
+            'pubsub': self,
+        })
+
 
 # ################################################################################################################################
