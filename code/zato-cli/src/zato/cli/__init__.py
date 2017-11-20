@@ -191,8 +191,8 @@ handlers:
         class: logging.handlers.ConcurrentRotatingFileHandler
         filename: './logs/pubsub-overflown.log'
         mode: 'a'
-        maxBytes: 20000000
-        backupCount: 10
+        maxBytes: 200000000
+        backupCount: 30
     rbac:
         formatter: default
         class: logging.handlers.ConcurrentRotatingFileHandler
