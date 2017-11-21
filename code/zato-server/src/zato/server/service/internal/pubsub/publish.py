@@ -11,6 +11,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from logging import getLogger
+from traceback import format_exc
 
 # datetutil
 from dateparser import parse as dt_parse
@@ -133,15 +134,18 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _notify_pubsub_task_runners(self, topic_id, topic_name, subscriptions, non_gd_msg_list, has_gd_msg_list):
-        spawn_greenlet(self.invoke, 'zato.pubsub.after-publish', {
-            'cid': self.cid,
-            'topic_id':topic_id,
-            'topic_name':topic_name,
-            'subscriptions': subscriptions,
-            'non_gd_msg_list': non_gd_msg_list,
-            'has_gd_msg_list': has_gd_msg_list,
-        })
+    def _notify_pubsub_tasks(self, topic_id, topic_name, subscriptions, non_gd_msg_list, has_gd_msg_list):
+        try:
+            spawn(self.invoke, 'zato.pubsub.after-publish', {
+                'cid': self.cid,
+                'topic_id':topic_id,
+                'topic_name':topic_name,
+                'subscriptions': subscriptions,
+                'non_gd_msg_list': non_gd_msg_list,
+                'has_gd_msg_list': has_gd_msg_list,
+            })
+        except Exception, e:
+            self.logger.warn('Could not notify pub/sub tasks, e:`%s`', format_exc(e))
 
 # ################################################################################################################################
 
@@ -259,7 +263,8 @@ class Publish(AdminService):
 
         # Also in background, notify pub/sub task runners that there are new messages for them
         if subscriptions_by_topic:
-            self._notify_pubsub_task_runners(topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, len(gd_msg_list) > 1)
+            self._notify_pubsub_tasks(
+                topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, len(gd_msg_list) > 1)
 
         # Return either a single msg_id if there was only one message published or a list of message IDs,
         # one for each message published.

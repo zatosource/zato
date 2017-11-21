@@ -56,7 +56,7 @@ class CleanupService(AdminService):
 
                     # Log what was done
                     suffix = 's' if(number==0 or number > 1) else ''
-                    logger.info('Deleted %s %s pub/sub message%s' % (number, kind, suffix))
+                    logger.info('GD. Deleted %s %s pub/sub message%s' % (number, kind, suffix))
 
                     # Actually commit on SQL level
                     session.commit()
