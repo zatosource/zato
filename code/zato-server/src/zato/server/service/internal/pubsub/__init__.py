@@ -64,7 +64,7 @@ class NotifyMessagePublished(AdminService):
 
 class AfterPublish(AdminService):
     class SimpleIO(AdminSIO):
-        input_required = ('topic_name',)
+        input_required = ('cid', AsIs('topic_id'), 'topic_name')
         input_optional = (Opaque('subscriptions'), Opaque('non_gd_msg_list'), 'has_gd_msg_list')
 
     def handle(self):
@@ -102,28 +102,31 @@ class AfterPublish(AdminService):
         try:
             current_servers, not_found = self.pubsub.get_ws_clients_by_sub_keys(sub_keys)
 
-            # Local alias
+            # Local aliases
+            cid = self.request.input.cid
+            topic_id = self.request.input.topic_id
+            topic_name = self.request.input.topic_name
             non_gd_msg_list = self.request.input.non_gd_msg_list
 
             # We already know we can store them in RAM
-            self._store_in_ram(not_found, non_gd_msg_list, False)
+            self._store_in_ram(cid, topic_id, topic_name, not_found, non_gd_msg_list, False)
 
             # Attempt to notify pub/sub tasks about non-GD messages ..
             notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list, self.request.input.has_gd_msg_list)
 
             # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
             if notif_error_sub_keys:
-                self._store_in_ram(notif_error_sub_keys, non_gd_msg_list, True)
+                self._store_in_ram(cid, topic_id, topic_name, notif_error_sub_keys, non_gd_msg_list, True)
 
         except Exception, e:
             self.logger.warn('Error in after_publish callback, e:`%s`', format_exc(e))
 
 # ################################################################################################################################
 
-    def _store_in_ram(self, sub_keys, non_gd_msg_list, from_notif_error):
+    def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error):
         """ Stores in RAM all input messages for all sub_keys.
         """
-        self.pubsub.store_in_ram(self, sub_keys, non_gd_msg_list, from_notif_error)
+        self.pubsub.store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error)
 
 # ################################################################################################################################
 

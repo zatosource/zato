@@ -22,16 +22,17 @@ from globre import compile as globre_compile
 from zato.common import DATA_FORMAT, PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest
-from zato.common.multidict import MultiDict
 from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query_ps_delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
 from zato.common.time_util import utcnow_as_ms
+from zato.common.util import new_cid
 
 # ################################################################################################################################
 
 logger = logging.getLogger('zato_pubsub')
-logger_overflown = logging.getLogger('zato_pubsub_overflown')
+logger_zato = logging.getLogger('zato')
+logger_overflow = logging.getLogger('zato_pubsub_overflow')
 
 # ################################################################################################################################
 
@@ -156,11 +157,72 @@ class SubKeyServer(object):
 
 # ################################################################################################################################
 
+class InRAMBacklog(object):
+    """ A backlog of messages kept in RAM. Stores a list of sub_keys and all messages each point to.
+    It acts as a multi-key dict and keeps only a single copy of message for each sub_key.
+    """
+    def __init__(self):
+        self.lock = RLock()
+        self.topic_sub_key_to_msg_id = {} # Topic ID -> Sub key -> Msg ID
+        self.topic_msg_id_to_msg = {}     # Topic ID -> Msg ID  -> Message data
+        self.msg_id_to_expiration = {}    # Msg ID   -> Expiration time in milliseconds
+
+    def log_messages_to_store(self, cid, topic_name, max_depth, sub_keys, messages):
+
+        # Used by both loggers
+        msg = 'Reached max in-RAM depth of %r for topic `%r` (cid:%r). Extra messages will be stored in logs.'
+        args = (max_depth, topic_name, cid)
+
+        # Log in pub/sub log and the main one as well, just to make sure it will be easily found
+        logger.warn(msg, *args)
+        logger_zato.warn(msg, *args)
+
+        # Store messages in logger - by default will go to disk
+        logger_overflow.info('CID:%s, topic:`%s`, sub_keys:%s, messages:%s', cid, topic_name, sub_keys, messages)
+
+    def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages):
+        with self.lock:
+
+            # We need to keep data for each topic separately because they have their max depth.
+            topic_sub_key_dict = self.topic_sub_key_to_msg_id.setdefault(topic_id, {})
+            topic_msg_dict = self.topic_msg_id_to_msg.setdefault(topic_id, {})
+
+            # If adding messages would overflow the topic's depth, store the messages through logger instead.
+            if len(topic_msg_dict) + len(messages) > max_depth:
+                self.log_messages_to_store(cid, topic_name, max_depth, sub_keys, messages)
+                return
+
+            # We can still keep the messages in RAM
+            else:
+                # Messages is a list and we now turn it into a dictionary keyed by msg ID.
+                msg_dict = {}
+
+                for item in messages:
+                    msg_id = item['pub_msg_id']
+                    msg_dict[msg_id] = item
+
+                    # For each message, make its expiration known to background cleanup task
+                    self.msg_id_to_expiration[msg_id] = item['expiration_time']
+
+                # Get this list once and refer to it multiple times below
+                msg_ids = msg_dict.keys()
+
+                # Add new messages to RAM
+                self.topic_msg_id_to_msg.update(msg_dict)
+
+                # Add references to the new messages for each sub_key
+                for sub_key in sub_keys:
+                    sub_key_messages = topic_msg_dict.setdefault(sub_key, [])
+                    sub_key_messages.extend(msg_ids)
+
+# ################################################################################################################################
+
 class PubSub(object):
     def __init__(self, cluster_id, server, broker_client=None):
         self.cluster_id = cluster_id
         self.server = server
         self.broker_client = broker_client
+        self.lock = RLock()
 
         self.subscriptions_by_topic = {}       # Topic name       -> Subscription object
         self.subscriptions_by_sub_key = {}     # Sub key          -> Subscription object
@@ -172,9 +234,7 @@ class PubSub(object):
         self.ws_channel_id_to_endpoint_id = {} # WS chan def ID   -> Endpoint ID
         self.topic_name_to_id = {}             # Topic name       -> Topic ID
         self.ws_sub_key_servers = {}           # Sub key          -> Server/PID handling it
-        self.in_ram_backlog = MultiDict()      # List of sub_keys -> non-GD message list for each
-
-        self.lock = RLock()
+        self.in_ram_backlog = InRAMBacklog()   # List of sub_keys -> non-GD message list for each
 
 # ################################################################################################################################
 
@@ -441,13 +501,16 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def store_in_ram(self, service, sub_keys, non_gd_msg_list, from_notif_error):
+    def store_in_ram(self, service, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error):
         """ Stores in RAM up to input non-GD messages for each sub_key. A backlog queue for each sub_key
         cannot be longer than topic's max_depth_non_gd and overlown messages are not kept in RAM.
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """
         service.invoke('pubapi1.store-in-ram', {
+            'cid': cid,
+            'topic_id': topic_id,
+            'topic_name': topic_name,
             'sub_keys': sub_keys,
             'non_gd_msg_list': non_gd_msg_list,
             'from_notif_error': from_notif_error,
