@@ -9,10 +9,12 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
-from contextlib import closing
 import logging
+from contextlib import closing
+from traceback import format_exc
 
 # gevent
+from gevent import sleep
 from gevent.lock import RLock
 
 # globre
@@ -26,7 +28,7 @@ from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query_ps_delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
 from zato.common.time_util import utcnow_as_ms
-from zato.common.util import new_cid
+from zato.common.util import new_cid, spawn_greenlet
 
 # ################################################################################################################################
 
@@ -165,7 +167,64 @@ class InRAMBacklog(object):
         self.lock = RLock()
         self.topic_sub_key_to_msg_id = {} # Topic ID -> Sub key -> Msg ID
         self.topic_msg_id_to_msg = {}     # Topic ID -> Msg ID  -> Message data
-        self.msg_id_to_expiration = {}    # Msg ID   -> Expiration time in milliseconds
+        self.msg_id_to_expiration = {}    # Msg ID   -> Topic ID, expiration time in milliseconds
+
+        # Start in background a cleanup task that removes all expired messages
+        spawn_greenlet(self.run_cleanup_task)
+
+# ################################################################################################################################
+
+    def run_cleanup_task(self, _utcnow=utcnow_as_ms, _sleep=sleep):
+        """ A background task waking up periodically to remove all expired messages from backlog.
+        """
+        while True:
+            try:
+                with self.lock:
+
+                    # We keep them separate so as not to modify any dictionaries during iteration.
+                    expired = []
+
+                    # Calling it once will suffice.
+                    now = _utcnow()
+
+                    # Check expiration for all messages currently held.
+                    for msg_id, (topic_id, sub_keys, expiration) in self.msg_id_to_expiration.items():
+                        if expiration <= now:
+                            expired.append((topic_id, sub_keys, msg_id))
+
+                    # If we found anything, remove them from per-topic backlogs and from the dict of expiration times.
+                    for topic_id, sub_keys, msg_id in expired:
+
+                        # These are direct mappings.
+                        self.msg_id_to_expiration.pop(msg_id)
+                        self.topic_msg_id_to_msg.get(topic_id, {}).pop(msg_id)
+
+                        # But here, we need to remove msg_id for each sub_key found in sub_keys.
+                        sub_keys_for_topic_id = self.topic_sub_key_to_msg_id.get(topic_id, {})
+                        if sub_keys_for_topic_id:
+                            for sub_key in sub_keys:
+                                msg_ids_for_sub_key = sub_keys_for_topic_id.get(sub_key, {})
+                                msg_ids_for_sub_key.pop(msg_id)
+
+                                # Delete sub_key from its parent topic if that was the last message for this sub_key
+                                # so as not to keep references to unneeded sub_keys without a reason.
+                                if not msg_ids_for_sub_key:
+                                    del sub_keys_for_topic_id[sub_key]
+
+                    # Log what was done
+                    number = len(expired)
+                    suffix = 's' if(number==0 or number > 1) else ''
+                    logger.info('In-RAM. Deleted %s expired pub/sub message%s' % (number, suffix))
+
+                # Sleep for a moment before looping again, but do it outside the main loop
+                # so that other parts of code can acquire the lock for their purposes.
+                _sleep(5)
+
+            except Exception, e:
+                logger_zato.warn('Could not remove expired messages from in-RAM backlog, e:`%s`', format_exc(e))
+                _sleep(5)
+
+# ################################################################################################################################
 
     def log_messages_to_store(self, cid, topic_name, max_depth, sub_keys, messages):
 
@@ -179,6 +238,8 @@ class InRAMBacklog(object):
 
         # Store messages in logger - by default will go to disk
         logger_overflow.info('CID:%s, topic:`%s`, sub_keys:%s, messages:%s', cid, topic_name, sub_keys, messages)
+
+# ################################################################################################################################
 
     def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages):
         with self.lock:
@@ -202,13 +263,13 @@ class InRAMBacklog(object):
                     msg_dict[msg_id] = item
 
                     # For each message, make its expiration known to background cleanup task
-                    self.msg_id_to_expiration[msg_id] = item['expiration_time']
+                    self.msg_id_to_expiration[msg_id] = (topic_id, sub_keys, item['expiration_time'])
 
                 # Get this list once and refer to it multiple times below
                 msg_ids = msg_dict.keys()
 
                 # Add new messages to RAM
-                self.topic_msg_id_to_msg.update(msg_dict)
+                topic_msg_dict.update(msg_dict)
 
                 # Add references to the new messages for each sub_key
                 for sub_key in sub_keys:
