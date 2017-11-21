@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from logging import getLogger
 
 # datetutil
 from dateparser import parse as dt_parse
@@ -33,6 +34,10 @@ from zato.server.service.internal import AdminService
 
 _JSON = DATA_FORMAT.JSON
 _initialized = PUBSUB.DELIVERY_STATUS.INITIALIZED
+
+# ################################################################################################################################
+
+logger_audit = getLogger('zato_pubsub_audit')
 
 # ################################################################################################################################
 
@@ -128,8 +133,10 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _notify_pubsub_task_runners(self, topic_name, subscriptions, non_gd_msg_list, has_gd_msg_list):
+    def _notify_pubsub_task_runners(self, topic_id, topic_name, subscriptions, non_gd_msg_list, has_gd_msg_list):
         spawn_greenlet(self.invoke, 'zato.pubsub.after-publish', {
+            'cid': self.cid,
+            'topic_id':topic_id,
             'topic_name':topic_name,
             'subscriptions': subscriptions,
             'non_gd_msg_list': non_gd_msg_list,
@@ -199,7 +206,12 @@ class Publish(AdminService):
         # Get all subscribers for that topic from local worker store
         subscriptions_by_topic = pubsub.get_subscriptions_by_topic(input.topic_name)
 
+        # Local aliases
         cluster_id = self.server.cluster_id
+        has_pubsub_audit_log = self.server.has_pubsub_audit_log
+
+        # This is initially unknown and will be set only for GD messages
+        current_depth = 'n/a'
 
         # Operate under a global lock for that topic to rule out any interference from other publishers
         with self.lock('zato.pubsub.publish.%s' % input.topic_name):
@@ -218,24 +230,36 @@ class Publish(AdminService):
 
                     # .. otherwise, update current depth and timestamp of last publication to the topic.
                     else:
-                        incr_topic_depth(session, cluster_id, topic.id, now, len(ps_msg_list))
+                        len_gd_msg_list = len(gd_msg_list)
+                        incr_topic_depth(session, cluster_id, topic.id, now, len(gd_msg_list))
+                        current_depth = current_depth + len_gd_msg_list
 
                     # Publish messages - INSERT rows, each representing an individual message
-                    insert_topic_messages(session, self.cid, ps_msg_list)
+                    insert_topic_messages(session, self.cid, gd_msg_list)
 
                     # Move messages to each subscriber's queue
                     if subscriptions_by_topic:
-                        insert_queue_messages(session, cluster_id, subscriptions_by_topic, ps_msg_list, topic.id, now)
+                        insert_queue_messages(session, cluster_id, subscriptions_by_topic, gd_msg_list, topic.id, now)
 
                     # Run an SQL commit for all queries above
                     session.commit()
 
-                # Update metadata in background
-                spawn(self._update_pub_metadata, cluster_id, topic.id, endpoint_id, now, ps_msg_list, pattern_matched)
+                    # Update metadata in background
+                    spawn(self._update_pub_metadata, cluster_id, topic.id, endpoint_id, now, gd_msg_list, pattern_matched)
+
+            # Either commit succeeded or there were no GD messages on input but in both cases we can now,
+            # optionally, store data in pub/sub audit log.
+            if has_pubsub_audit_log:
+
+                msg = 'PUB. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' \
+                      ', GD data:`%s`, non-GD data:`%s`'
+
+                logger_audit.info(msg, self.cid, topic.name, self.pubsub.endpoints[endpoint_id].name,
+                    input.get('ext_client_id') or'n/a', pattern_matched, current_depth, gd_msg_list, non_gd_msg_list)
 
         # Also in background, notify pub/sub task runners that there are new messages for them
         if subscriptions_by_topic:
-            self._notify_pubsub_task_runners(topic.name, subscriptions_by_topic, non_gd_msg_list, len(gd_msg_list) > 1)
+            self._notify_pubsub_task_runners(topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, len(gd_msg_list) > 1)
 
         # Return either a single msg_id if there was only one message published or a list of message IDs,
         # one for each message published.
@@ -248,18 +272,18 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _update_pub_metadata(self, cluster_id, topic_id, endpoint_id, now, ps_msg_list, pattern_matched):
+    def _update_pub_metadata(self, cluster_id, topic_id, endpoint_id, now, gd_msg_list, pattern_matched):
         """ Updates in background metadata about a topic and publisher after each publication.
         """
-        last_pub_msg_id = ps_msg_list[-1]['pub_msg_id']
-        last_pub_correl_id = ps_msg_list[-1]['pub_correl_id']
-        last_ext_client_id = ps_msg_list[-1]['ext_client_id']
-        last_in_reply_to = ps_msg_list[-1]['in_reply_to']
+        last_pub_msg_id = gd_msg_list[-1]['pub_msg_id']
+        last_pub_correl_id = gd_msg_list[-1]['pub_correl_id']
+        last_ext_client_id = gd_msg_list[-1]['ext_client_id']
+        last_in_reply_to = gd_msg_list[-1]['in_reply_to']
 
         with closing(self.odb.session()) as session:
 
             # Update last pub time and related metadata for topic and current publisher
-            update_publish_metadata(session, cluster_id, topic_id, endpoint_id, now, ps_msg_list, pattern_matched,
+            update_publish_metadata(session, cluster_id, topic_id, endpoint_id, now, gd_msg_list, pattern_matched,
                 last_pub_msg_id, last_pub_correl_id, last_ext_client_id, last_in_reply_to)
 
             session.commit()
