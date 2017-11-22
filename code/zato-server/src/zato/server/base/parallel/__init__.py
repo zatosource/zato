@@ -505,7 +505,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
-    def invoke_all_pids(self, service, request, *args, **kwargs):
+    def invoke_all_pids(self, service, request, timeout=5, *args, **kwargs):
         """ Invokes a given service in each of processes current server has.
         """
         # PID -> response from that process
@@ -526,7 +526,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             }
 
             try:
-                response['pid_data'] = self.invoke_by_pid(service, request or '', pid, *args, **kwargs)
+                response['pid_data'] = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
                 response['is_ok'] = True
             except Exception, e:
                 response['error_info'] = format_exc(e)
