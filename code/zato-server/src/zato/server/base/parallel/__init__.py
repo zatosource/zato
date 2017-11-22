@@ -14,6 +14,7 @@ from datetime import datetime
 from logging import INFO
 from re import IGNORECASE
 from tempfile import mkstemp
+from traceback import format_exc
 from uuid import uuid4
 
 # anyjson
@@ -504,10 +505,42 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
+    def invoke_all_pids(self, service, request, *args, **kwargs):
+        """ Invokes a given service in each of processes current server has.
+        """
+        # PID -> response from that process
+        out = {}
+
+        # Get all current PIDs
+        data = self.invoke('zato.info.get-worker-pids', serialize=False).getvalue(False)
+        pids = data['response']['pids']
+
+        # Underlying IPC needs strings on input instead of None
+        request = request or ''
+
+        for pid in pids:
+            response = {
+                'is_ok': False,
+                'pid_data': None,
+                'error_info': None
+            }
+
+            try:
+                response['pid_data'] = self.invoke_by_pid(service, request or '', pid, *args, **kwargs)
+                response['is_ok'] = True
+            except Exception, e:
+                response['error_info'] = format_exc(e)
+            finally:
+                out[pid] = response
+
+        return out
+
+# ################################################################################################################################
+
     def invoke_by_pid(self, service, request, target_pid, *args, **kwargs):
         """ Invokes a service in a worker process by the latter's PID.
         """
-        self.ipc_api.publish(request)
+        return self.ipc_api.invoke_by_pid(service, request, target_pid, self.fifo_response_buffer_size, *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -515,16 +548,18 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         """ Invokes a service either in our own worker or, if PID is given on input, in another process of this server.
         """
         target_pid = kwargs.pop('pid', None)
-
         if target_pid and target_pid != self.pid:
 
             # We need it only in the other branch, not here.
             kwargs.pop('data_format', None)
 
-            return self.ipc_api.invoke_by_pid(service, request, target_pid, self.fifo_response_buffer_size, *args, **kwargs)
+            return self.invoke_by_pid(service, request, target_pid, *args, **kwargs)
         else:
             return self.worker_store.invoke(
-                service, request, data_format=kwargs.pop('data_format', DATA_FORMAT.DICT), *args, **kwargs)
+                service, request,
+                data_format=kwargs.pop('data_format', DATA_FORMAT.DICT),
+                serialize=kwargs.pop('serialize', True),
+                *args, **kwargs)
 
 # ################################################################################################################################
 
@@ -579,6 +614,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         # Per-worker cleanup
         else:
+            self.invoke('zato.channel.web-socket.client.delete-by-server')
             self.invoke('zato.channel.web-socket.client.delete-by-server')
 
     # Convenience API

@@ -568,6 +568,6 @@ class PubSub(object):
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """
-        self.in_ram_backlog.add_messages(cid, topic_id, topic_name, 1, sub_keys, non_gd_msg_list)
+        self.in_ram_backlog.add_messages(cid, topic_id, topic_name, 10, sub_keys, non_gd_msg_list)
 
 # ################################################################################################################################

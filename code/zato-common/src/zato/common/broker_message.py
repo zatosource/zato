@@ -473,6 +473,11 @@ class CACHE(Constants):
     MEMCACHED_EDIT = ValueConstant('')
     MEMCACHED_DELETE = ValueConstant('')
 
+class SERVER_STATUS(Constants):
+    code_start = 106800
+
+    STATUS_CHANGED = ValueConstant('')
+
 code_to_name = {}
 
 # To prevent 'RuntimeError: dictionary changed size during iteration'

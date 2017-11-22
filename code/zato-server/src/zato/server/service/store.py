@@ -77,6 +77,7 @@ def set_up_class_attributes(class_, service_store=None, name=None):
         # and can be shared as class attributes.
         class_._enforce_service_invokes = service_store.server.enforce_service_invokes
 
+        class_.servers = service_store.server.servers
         class_.odb = service_store.server.worker_store.server.odb
         class_.kvdb = service_store.server.worker_store.kvdb
         class_.pubsub = service_store.server.worker_store.pubsub

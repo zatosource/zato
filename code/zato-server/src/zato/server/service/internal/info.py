@@ -15,9 +15,10 @@ from json import dumps, loads
 # Zato
 from zato.client import AnyServiceInvoker
 from zato.common import INFO_FORMAT, SERVER_JOIN_STATUS, SERVER_UP_STATUS
+from zato.common.broker_message import SERVER_STATUS
 from zato.common.odb.query import server_list
-from zato.common.component_info import format_info, get_info
-from zato.server.service import Service
+from zato.common.component_info import format_info, get_info, get_worker_pids
+from zato.server.service import List, Opaque, Service
 
 # ################################################################################################################################
 
@@ -32,7 +33,7 @@ class GetInfo(Service):
         out = {}
 
         with closing(self.odb.session()) as session:
-            for item in server_list(session, self.server.cluster_id, None, False):
+            for item in server_list(session, self.server.cluster_id, None, None, False):
                 server_info = out.setdefault(item.name, {})
                 server_info['cluster_name'] = item.cluster_name
 
@@ -59,6 +60,8 @@ class GetInfo(Service):
         self.response.content_type = 'application/json'
         self.response.payload = dumps(out)
 
+# ################################################################################################################################
+
 class GetServerInfo(Service):
     """ Collects information about a server it's invoked on.
     """
@@ -68,3 +71,27 @@ class GetServerInfo(Service):
     def handle(self):
         self.response.content_type = 'application/json'
         self.response.payload.info = format_info(get_info(self.server.base_dir, INFO_FORMAT.JSON), INFO_FORMAT.JSON)
+
+# ################################################################################################################################
+
+class GetWorkerPids(Service):
+    """ Returns PIDs of all workers of current server.
+    """
+    class SimpleIO(object):
+        output_required = (List('pids'),)
+
+    def handle(self):
+        self.response.payload.pids = get_worker_pids(self.server.base_dir)
+
+# ################################################################################################################################
+
+class SetServerUpStatus(Service):
+    """ Notifies all worker processes that current one has just started.
+    """
+    def handle(self):
+        self.broker_client.publish({
+            'action': SERVER_STATUS.STATUS_CHANGED.value,
+            'status': SERVER_UP_STATUS.RUNNING,
+        })
+
+# ################################################################################################################################

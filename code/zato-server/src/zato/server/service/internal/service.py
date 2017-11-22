@@ -17,8 +17,8 @@ from traceback import format_exc
 from urlparse import parse_qs
 from uuid import uuid4
 
-# anyjson
-from anyjson import loads
+# rapidjson
+from rapidjson import dumps, loads
 
 # validate
 from validate import is_boolean
@@ -263,7 +263,7 @@ class Invoke(AdminService):
         request_elem = 'zato_service_invoke_request'
         response_elem = 'zato_service_invoke_response'
         input_optional = ('id', 'name', 'payload', 'channel', 'data_format', 'transport', Boolean('async'),
-            Integer('expiration'), Integer('pid'))
+            Integer('expiration'), Integer('pid'), Boolean('all_pids'))
         output_optional = ('response',)
 
     def handle(self):
@@ -275,6 +275,7 @@ class Invoke(AdminService):
         id = self.request.input.get('id')
         name = self.request.input.get('name')
         pid = self.request.input.get('pid')
+        all_pids = self.request.input.get('all_pids')
 
         channel = self.request.input.get('channel')
         data_format = self.request.input.get('data_format')
@@ -298,12 +299,15 @@ class Invoke(AdminService):
 
         else:
 
-            # Same as above in async branch
-            if pid:
-                response = self.server.invoke(name, payload, pid=pid, data_format=data_format)
+            # Same as above in async branch, except in async there was no all_pids
+            if all_pids:
+                response = dumps(self.server.invoke_all_pids(name, payload))
             else:
-                func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
-                response = func(id_, payload, channel, data_format, transport, serialize=True)
+                if pid:
+                    response = self.server.invoke(name, payload, pid=pid, data_format=data_format)
+                else:
+                    func, id_ = (self.invoke, name) if name else (self.invoke_by_id, id)
+                    response = func(id_, payload, channel, data_format, transport, serialize=True)
 
         if isinstance(response, basestring):
             if response:
