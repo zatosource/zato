@@ -339,7 +339,7 @@ SERVICES = [
         name='query_cassandra',
         prefix='zato.query.cassandra',
         object_dependencies={
-            'sec_def': {
+            'def_name': {
                 'dependent_type': 'def_cassandra',
                 'dependent_field': 'name',
                 'empty_value': NO_SEC_DEF_NEEDED,
