@@ -880,7 +880,7 @@ class JsonCodec(object):
         return anyjson.loads(fp.read())
 
     def dump(self, fp, obj):
-        fp.write(json.dumps(self.json, indent=1, sort_keys=True))
+        fp.write(json.dumps(obj, indent=1, sort_keys=True))
 
 class YamlCodec(object):
     extension = '.yml'
@@ -904,7 +904,7 @@ class InputParser(object):
                 return self.codec.load(fp, results)
         except (IOError, TypeError, ValueError) as e:
             raw = (path, e)
-            results.add_error(raw, ERROR_INVALID_INPUT, 'Failed to parse {}: {}', path, exc)
+            results.add_error(raw, ERROR_INVALID_INPUT, 'Failed to parse {}: {}', path, e)
             return None
 
     def _get_include_path(self, include_path):
