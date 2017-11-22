@@ -435,7 +435,7 @@ class InputValidator(object):
             if item.get(req_key) is None: # 0 or '' can be correct values
                 raw = (req_key, required_keys, item_dict, item_type)
                 self.results.add_error(raw, ERROR_KEYS_MISSING,
-                                       "Key '{}' must not be None in '{}' ({})",
+                                       "Key '{}' must exist in '{}' ({})",
                                        req_key, item_dict, item_type)
 
 class DependencyScanner(object):
@@ -812,6 +812,8 @@ class ClusterObjectManager(object):
     )
 
     def is_ignored_name(self, item):
+        if 'name' not in item:
+            return False
         name = item.name.lower()
         return 'zato' in name or name in self.IGNORED_NAMES
 
