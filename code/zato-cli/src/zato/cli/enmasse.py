@@ -96,12 +96,17 @@ SHORTNAME_BY_PREFIX = [
     ('zato.definition.', 'def'),
     ('zato.email.', 'email'),
     ('zato.message.namespace', 'def_namespace'),
+    ('zato.cloud.aws.s3', 'cloud_aws_s3'),
+    ('zato.cloud.openstack.swift', 'def_cloud_openstack_swift'),
     ('zato.message.xpath', 'xpath'),
     ('zato.message.json-pointer', 'json_pointer'),
     ('zato.notif.', 'notif'),
     ('zato.outgoing.', 'outconn'),
     ('zato.scheduler.job', 'scheduler'),
     ('zato.search.', 'search'),
+    ('zato.security.tech-account', 'tech_acc'),
+    ('zato.security.tls.channel', 'tls_channel_sec'),
+    ('zato.security.xpath', 'xpath_sec'),
     ('zato.security.', ''),
 ]
 
@@ -309,14 +314,6 @@ SERVICES = [
             'service': {}
         },
     ),
-    ServiceInfo(
-        name='cloud_aws_s3',
-        prefix='zato.cloud.aws.s3',
-    ),
-    ServiceInfo(
-        name='def_cloud_openstack_swift',
-        prefix='zato.cloud.openstack.swift',
-    ),
     # Added for the exporter.
     ServiceInfo(
         name='outconn_plain_http',
@@ -348,18 +345,6 @@ SERVICES = [
                 'empty_value': NO_SEC_DEF_NEEDED,
             },
         },
-    ),
-    ServiceInfo(
-        name='tech_acc',
-        prefix='zato.security.tech-account',
-    ),
-    ServiceInfo(
-        name='tls_channel_sec',
-        prefix='zato.security.tls.channel',
-    ),
-    ServiceInfo(
-        name='xpath_sec',
-        prefix='zato.security.xpath',
     ),
 ]
 
