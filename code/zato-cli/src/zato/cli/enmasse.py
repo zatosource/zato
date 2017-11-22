@@ -915,27 +915,29 @@ class InputParser(object):
     def is_include(self, value):
         return isinstance(value, basestring)
 
-    def merge_include(self, item, results):
-        abs_path = self.get_include_abspath(self.curdir, item)
+    def load_include(self, item_type, relpath, results):
+        abs_path = self._get_include_path(relpath)
         if abs_path in self.seen_includes:
             raw = (abs_path,)
-            results.add_error(raw, ERROR_ITEM_INCLUDED_MULTIPLE_TIMES, '{} included multiple times', abs_path)
+            results.add_error(raw, ERROR_ITEM_INCLUDED_MULTIPLE_TIMES, '{} included repeatedly', abs_path)
         self.seen_includes.add(abs_path)
-        return self._parse_file(abs_path, results)
 
-    def merge_includes(self, results):
-        merged = Bunch()
+        obj = self._parse_file(abs_path, results)
+        if obj is None:
+            return  # Failure, error was recorded.
 
-        for item_type, items in self.json.items():
-            merged_items = merged.setdefault(item_type, [])
-            for item in items:
-                if self.is_include(item):
-                    item = self.merge_include(item, reults)
-                merged_items.append(item)
+        if not isinstance(obj, dict):
+            raw = (abs_path, obj)
+            results.add_error(raw, ERROR_INVALID_INPUT, "Include {} is incorrect: expected a dictionary containing one item, or a fully formed dump file.")
+            return
 
-        if results.ok:
-            self.json = merged
-            self.logger.info('Includes merged in successfully')
+        if 'name' in obj or 'id' in obj:
+            # Classic raw include.
+            self.parse_item(item_type, obj, results)
+        else:
+            # Fully formed dump input file. This allows an include file to be
+            # imported directly, or simply included.
+            self.parse_items(obj, results)
 
     def parse_def_sec(self, item, results):
         # While reading old enmasse files, expand def_sec entries out to their
@@ -961,12 +963,19 @@ class InputParser(object):
     def parse_item(self, item_type, item, results):
         normalize_service_name(item)
 
-        if item_type == 'def_sec':
-            return self.parse_def_sec(item, results)
+        if self.is_include(item):
+            self.load_include(item_type, item, results)
+        elif item_type == 'def_sec':
+            self.parse_def_sec(item, results)
         else:
             self.json.setdefault(item_type, []).append(Bunch(item))
 
-    def parse(self, merge=True):
+    def parse_items(self, dct, results):
+        for item_type, items in dct.items():
+            for item in items:
+                self.parse_item(item_type, item, results)
+
+    def parse(self):
         results = Results()
         self.json = {}
 
@@ -974,13 +983,7 @@ class InputParser(object):
         if not results.ok:
             return results
 
-        for item_type, items in parsed.items():
-            for item in items:
-                self.parse_item(item_type, item, results)
-
-        if merge:
-            self.merge_includes(results)
-
+        self.parse_items(parsed, results)
         return results
 
 class EnMasse(ManageCommand):
@@ -1067,7 +1070,7 @@ class EnMasse(ManageCommand):
 
         # 1)
         elif args.export_local:
-            self.report_warnings_errors(self.export_local())
+            self.report_warnings_errors(self.export())
             self.write_output()
 
         # 2)
@@ -1223,14 +1226,7 @@ class EnMasse(ManageCommand):
 
         return []
 
-    def export_local(self, needs_includes=True):
-        if needs_includes:
-            self.merge_includes()
-        return self.export()
-
     def export_local_odb(self, needs_local=True):
-        if needs_local:
-            self.merge_includes()
         self.object_mgr.refresh()
         self.logger.info('ODB objects read')
 
@@ -1239,7 +1235,7 @@ class EnMasse(ManageCommand):
             return [results]
         self.logger.info('ODB objects merged in')
 
-        return self.export_local(False)
+        return self.export()
 
     def export_odb(self):
         return self.export_local_odb(False)
