@@ -1245,10 +1245,13 @@ def _server(session, cluster_id, cluster_name):
     return q
 
 @query_wrapper
-def server_list(session, cluster_id, cluster_name, needs_columns=False):
+def server_list(session, cluster_id, cluster_name, up_status=None, needs_columns=False):
     """ All the servers defined on a cluster.
     """
-    return _server(session, cluster_id, cluster_name)
+    q = _server(session, cluster_id, cluster_name)
+    if up_status:
+        q = q.filter(Server.up_status==up_status)
+    return q
 
 # ################################################################################################################################
 

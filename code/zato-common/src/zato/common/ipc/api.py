@@ -14,6 +14,7 @@ import logging
 import os
 import stat
 import tempfile
+from cStringIO import StringIO
 from datetime import datetime, timedelta
 from traceback import format_exc
 from uuid import uuid4
@@ -65,10 +66,18 @@ class IPCAPI(object):
     def _get_response(self, fifo, buffer_size, fifo_ignore_err=fifo_ignore_err, empty=('', None)):
 
         try:
-            response = os.read(fifo, buffer_size)
+            buff = StringIO()
+            data = object() # Just a sentinel because '' or None are expected from os.read
 
-            if response not in empty:
-                return loads(response)
+            while data not in empty:
+                data = os.read(fifo, 1)
+                buff.write(data)
+
+            value = buff.getvalue()
+            response = loads(value) if value else ''
+            buff.close()
+
+            return response
 
         except OSError, e:
             if e.errno not in fifo_ignore_err:

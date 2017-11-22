@@ -11,9 +11,11 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from logging import getLogger
+from traceback import format_exc
 
 # Zato
 from zato.client import AnyServiceInvoker
+from zato.common import SERVER_UP_STATUS
 from zato.common.util import make_repr
 from zato.common.odb.query import server_list
 from zato.server.service import Service
@@ -61,7 +63,9 @@ class _SelfServer(_Server):
 class _RemoteServer(_Server):
     """ API through which it is possible to invoke services directly on other remote servers or clusters.
     """
-    def __init__(self, cluster_id, cluster_name, name, preferred_address, port, crypto_use_tls, api_password):
+    repr_to_avoid = ['api_password']
+
+    def __init__(self, cluster_id, cluster_name, name, preferred_address, port, crypto_use_tls, api_password, up_status):
         self.cluster_id = cluster_id
         self.cluster_name = cluster_name
         self.name = name
@@ -69,10 +73,13 @@ class _RemoteServer(_Server):
         self.port = port
         self.crypto_use_tls = crypto_use_tls
         self.api_password = api_password
+        self.up_status = up_status
         self.address = 'http{}://{}:{}'.format(
             's' if self.crypto_use_tls else '', self.preferred_address, self.port)
 
         self.invoker = AnyServiceInvoker(self.address, '/zato/internal/invoke', (api_user, self.api_password))
+
+# ################################################################################################################################
 
     def invoke(self, service, request=None, *args, **kwargs):
         response = self.invoker.invoke(service, request, *args, **kwargs)
@@ -81,6 +88,13 @@ class _RemoteServer(_Server):
             return response.data
         else:
             raise Exception(response.details)
+
+# ################################################################################################################################
+
+    def invoke_all_pids(self, service, request=None, *args, **kwargs):
+        return self.invoker.invoke(service, request, all_pids=True, *args, **kwargs)
+
+# ################################################################################################################################
 
     def invoke_async(self, service, request=None, *args, **kwargs):
         return self.invoker.invoke_async(service, request, *args, **kwargs)
@@ -104,8 +118,12 @@ class Servers(object):
         # Remote server = use HTTP
         return self._servers.setdefault(item, self._add_server(item))
 
+# ################################################################################################################################
+
     def get(self, name):
         return self._servers.get(name)
+
+# ################################################################################################################################
 
     def _add_server(self, address):
 
@@ -117,19 +135,94 @@ class Servers(object):
             cluster_name = self.cluster_name
 
         with closing(self.odb.session()) as session:
+            return self.get_server_from_odb(session, server_name, cluster_name)
 
-            for item in server_list(session, None, cluster_name, False):
-                if item.name == server_name and item.cluster_name == cluster_name:
+# ################################################################################################################################
 
-                    for sec_item in self.odb.get_basic_auth_list(None, cluster_name):
-                        if sec_item.name == sec_def_name:
-                            return _RemoteServer(
-                                item.cluster_id, self.cluster_name, item.name, item.preferred_address, item.bind_port,
-                                item.crypto_use_tls, sec_item.password)
+    def get_servers_from_odb(self, session):
+        """ Returns all servers defined in ODB.
+        """
+        return list(self._get_servers_from_odb(session, cluster_name=self.cluster_name))
 
-            else:
-                msg = 'No such server or cluster {}@{}'.format(server_name, cluster_name)
-                logger.warn(msg)
-                raise ValueError(msg)
+# ################################################################################################################################
+
+    def get_server_from_odb(self, session, server_name, cluster_name):
+        """ Returns a specific server defined in ODB.
+        """
+        servers = list(self._get_servers_from_odb(session, server_name, cluster_name))
+
+        # No match at all
+        if not servers:
+            msg = 'No such server or cluster {}@{}'.format(server_name, cluster_name)
+            logger.warn(msg)
+            raise ValueError(msg)
+
+        # Multiple matches - naturally, should not happen
+        if len(servers) > 1:
+            msg = 'Unexpected output for {}@{} servers:`{}`'.format(server_name, cluster_name, servers)
+            logger.warn(msg)
+            raise ValueError(msg)
+
+        # OK, we have the one server we need
+        return servers[0]
+
+# ################################################################################################################################
+
+    def _get_servers_from_odb(self, session, server_name=None, cluster_name=None):
+        """ Returns a list of servers in ODB, optionally returning only one that matches
+        both server_name and cluster_name.
+        """
+        for item in server_list(session, None, cluster_name, None, False):
+
+            if server_name and cluster_name:
+                if item.name != server_name and item.cluster_name != cluster_name:
+                    continue
+
+            for sec_item in self.odb.get_basic_auth_list(None, cluster_name):
+                if sec_item.name == sec_def_name:
+                    yield _RemoteServer(
+                        item.cluster_id, self.cluster_name, item.name, item.preferred_address, item.bind_port,
+                        item.crypto_use_tls, sec_item.password, item.up_status)
+
+# ################################################################################################################################
+
+    def populate_servers(self):
+        """ Looks up all servers in ODB and adds information about them to self._servers.
+        """
+        with closing(self.odb.session()) as session:
+            servers = self.get_servers_from_odb(session)
+            for server in servers:
+                self._servers['{}@{}'.format(server.name, server.cluster_name)] = server
+
+# ################################################################################################################################
+
+    def invoke_all(self, service, request=None, *args, **kwargs):
+        """ Invokes a service on all servers, including all of their processes, and returns combined output.
+        """
+        # Look up current state of servers in ODB
+        self.populate_servers()
+
+        # Server name -> Responses for all PIDs from that server
+        out = {}
+
+        for server in self._servers.values():
+            if server.up_status == SERVER_UP_STATUS.RUNNING:
+                response = {
+                    'is_ok': False,
+                    'server_data': None,
+                    'error_info': None,
+                    'meta': {
+                        'address': server.address,
+                    }
+                }
+                try:
+                    response['server_data'] = server.invoke_all_pids(service, request, *args, **kwargs).data
+                    response['is_ok'] = True
+                except Exception, e:
+                    response['server_data'] = format_exc(e)
+                finally:
+                    out[server.name] = response
+
+        return out
 
 # ################################################################################################################################
