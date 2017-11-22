@@ -17,7 +17,7 @@ import pyaml
 import yaml
 
 # Bunch
-from bunch import Bunch, bunchify
+from zato.bunch import Bunch, bunchify, debunchify
 
 # Pip
 import pip
@@ -415,7 +415,7 @@ class InputValidator(object):
                                    item_type, sorted(SERVICE_BY_NAME))
             return
 
-        item_dict = item.toDict()
+        item_dict = dict(item)
         missing = None
 
         sinfo = SERVICE_BY_NAME[item_type]
@@ -509,12 +509,12 @@ class ObjectImporter(object):
         #: ClusterObjectManager instance.
         self.object_mgr = object_mgr
         #: JSON to import.
-        self.json = Bunch(copy.deepcopy(json))
+        self.json = bunchify(json)
         self.ignore_missing = ignore_missing
 
     def validate_service_required(self, item_type, item):
         sinfo = SERVICE_BY_NAME[item_type]
-        item_dict = item.toDict()
+        item_dict = dict(item)
 
         for dep_field, dep_info in sinfo.service_dependencies.items():
             only_if_field = dep_info.get('only_if_field')
@@ -568,7 +568,7 @@ class ObjectImporter(object):
             return True
 
     def _import(self, item_type, attrs, is_edit):
-        attrs_dict = attrs.toDict()
+        attrs_dict = dict(attrs)
         attrs.cluster_id = self.client.cluster_id
 
         response = self._import_object(item_type, attrs, is_edit)
@@ -596,7 +596,7 @@ class ObjectImporter(object):
         raw = (item_type, value_dict)
         results.add_warning(raw, WARNING_ALREADY_EXISTS_IN_ODB,
             '{} already exists in ODB {} ({})',
-            value_dict.toDict(), item.toDict(), item_type)
+            dict(value_dict), dict(item), item_type)
 
     def find_already_existing_odb_objects(self):
         results = Results()
@@ -607,7 +607,7 @@ class ObjectImporter(object):
                     raw = (item_type, item)
                     results.add_error(raw, ERROR_NAME_MISSING,
                         "{} has no 'name' key ({})",
-                        item.toDict(), item_type)
+                        dict(item), item_type)
 
                 if item_type == 'http_soap':
                     connection = item.get('connection')
@@ -683,8 +683,8 @@ class ObjectImporter(object):
             attrs[first] = attrs[second]
 
     def _import_object(self, def_type, attrs, is_edit):
-        attrs_dict = attrs.toDict()
         sinfo = SERVICE_BY_NAME[def_type]
+        attrs_dict = dict(attrs)
 
         if is_edit:
             service_name = sinfo.get_service_name('edit')
@@ -1085,14 +1085,17 @@ class EnMasse(ManageCommand):
 # ################################################################################################################################
 
     def write_output(self):
+        # Make a copy and remove Bunch; pyaml does not like Bunch instances.
+        output = debunchify(self.json)
+
         # Preserve old format by wrapping security services into one key.
-        output = copy.deepcopy(self.json)
-        output['def_sec'] = [
-            dict(item, type=sinfo.name)
-            for sinfo in SERVICES
-            for item in output.pop(sinfo.name, [])
-            if sinfo.is_security
-        ]
+        output['def_sec'] = []
+        for sinfo in SERVICES:
+            if sinfo.is_security:
+                output['def_sec'].extend(
+                    dict(item, type=sinfo.name)
+                    for item in output.pop(sinfo.name, [])
+                )
 
         for _, items in output.items():
             for item in items:
