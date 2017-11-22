@@ -32,12 +32,10 @@ def add_opts(parser, opts):
     """
     for opt in opts:
         arguments = {}
-        for name in('help', 'action', 'default'):
-            try:
+        for name in ('help', 'action', 'default', 'choices'):
+            # Almost no command uses 'action' or 'default' parameters
+            if name in opt:
                 arguments[name] = opt[name]
-            except KeyError:
-                # Almost no command uses 'action' or 'default' parameters
-                pass
 
         parser.add_argument(opt['name'], **arguments)
 
