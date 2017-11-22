@@ -363,7 +363,6 @@ SERVICES = [
     ),
 ]
 
-SECURITY_SERVICE_NAMES = set(s.name for s in SERVICES if s.is_security)
 SERVICE_BY_NAME = {info.name: info for info in SERVICES}
 SERVICE_BY_PREFIX = {info.prefix: info for info in SERVICES}
 
@@ -905,7 +904,7 @@ class YamlCodec(object):
         return yaml.load(fp)
 
     def dump(self, fp, obj):
-        fp.write(pyaml.dump(obj))
+        fp.write(pyaml.dump(obj, vspacing=True))
 
 class InputParser(object):
     def __init__(self, path, logger, codec):
@@ -1107,9 +1106,12 @@ class EnMasse(ManageCommand):
             if sinfo.is_security
         ]
 
-        for _, items in self.json.items():
+        for _, items in output.items():
             for item in items:
                 normalize_service_name(item)
+
+            # Sort item lists by ID.
+            items.sort(key=lambda item: item['id'])
 
         now = datetime.now().isoformat() # Not in UTC, we want to use user's TZ
         name = 'zato-export-{}{}'.format(re.sub('[.:]', '_', now), self.codec.extension)
