@@ -126,7 +126,7 @@ class AfterPublish(AdminService):
     def _store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error):
         """ Stores in RAM all input messages for all sub_keys.
         """
-        self.pubsub.store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error)
+        self.pubsub.store_in_ram(cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error)
 
 # ################################################################################################################################
 

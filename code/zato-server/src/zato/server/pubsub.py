@@ -562,21 +562,12 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def store_in_ram(self, service, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error):
+    def store_in_ram(self, cid, topic_id, topic_name, sub_keys, non_gd_msg_list, from_notif_error):
         """ Stores in RAM up to input non-GD messages for each sub_key. A backlog queue for each sub_key
         cannot be longer than topic's max_depth_non_gd and overlown messages are not kept in RAM.
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """
-        service.invoke('pubapi1.store-in-ram', {
-            'cid': cid,
-            'topic_id': topic_id,
-            'topic_name': topic_name,
-            'sub_keys': sub_keys,
-            'non_gd_msg_list': non_gd_msg_list,
-            'from_notif_error': from_notif_error,
-            'pubsub': self,
-        })
-
+        self.in_ram_backlog.add_messages(cid, topic_id, topic_name, 1, sub_keys, non_gd_msg_list)
 
 # ################################################################################################################################
