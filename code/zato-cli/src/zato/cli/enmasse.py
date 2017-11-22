@@ -11,8 +11,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import collections, copy, json, logging, os, re, sys
 from datetime import datetime
 
-# anyjson
+# Serialization formats.
 import anyjson
+import pyaml
+import yaml
 
 # Bunch
 from bunch import Bunch, bunchify
@@ -887,16 +889,35 @@ class ClusterObjectManager(object):
         for sinfo in SERVICES:
             self.refresh_by_type(sinfo.name)
 
-class JsonParser(object):
-    def __init__(self, path, logger):
+class JsonCodec(object):
+    extension = '.json'
+
+    def load(self, fp, results):
+        return anyjson.loads(fp.read())
+
+    def dump(self, fp, obj):
+        fp.write(json.dumps(self.json, indent=1, sort_keys=True))
+
+class YamlCodec(object):
+    extension = '.yml'
+
+    def load(self, fp, results):
+        return yaml.load(fp)
+
+    def dump(self, fp, obj):
+        fp.write(pyaml.dump(obj))
+
+class InputParser(object):
+    def __init__(self, path, logger, codec):
         self.path = os.path.abspath(path)
         self.logger = logger
+        self.codec = codec
         self.seen_includes = set()
 
     def _parse_file(self, path, results):
         try:
             with open(path) as fp:
-                return anyjson.loads(fp.read())
+                return self.codec.load(fp, results)
         except (IOError, TypeError, ValueError) as e:
             raw = (path, e)
             results.add_error(raw, ERROR_INVALID_INPUT, 'Failed to parse {}: {}', path, exc)
@@ -987,6 +1008,7 @@ class EnMasse(ManageCommand):
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
         {'name':'--import', 'help':'Import definitions from a local JSON (excludes --export-*)', 'action':'store_true'},
         {'name':'--clean-odb', 'help':'Delete all ODB definitions before proceeding', 'action':'store_true'},
+        {'name':'--dump-format', 'help':'Select I/O format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'json'},
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to JSON', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
         {'name':'--input', 'help':'Path to an input JSON document'},
@@ -997,6 +1019,11 @@ class EnMasse(ManageCommand):
         self.args = args
         self.curdir = os.path.abspath(self.original_dir)
         self.json = {}
+
+        if args.dump_format == 'json':
+            self.codec = JsonCodec()
+        elif args.dump_format == 'yaml':
+            self.codec = YamlCodec()
 
         #
         # Tasks and scenarios
@@ -1041,7 +1068,7 @@ class EnMasse(ManageCommand):
 
         if args.export_local or has_import:
             path = os.path.join(self.curdir, self.args.input)
-            parser = JsonParser(path, self.logger)
+            parser = InputParser(path, self.logger, self.codec)
             results = parser.parse()
             if not results.ok:
                 self.logger.error('JSON parsing failed')
@@ -1052,17 +1079,17 @@ class EnMasse(ManageCommand):
         # 3)
         if args.export_local and args.export_odb:
             self.report_warnings_errors(self.export_local_odb())
-            self.save_json()
+            self.write_output()
 
         # 1)
         elif args.export_local:
             self.report_warnings_errors(self.export_local())
-            self.save_json()
+            self.write_output()
 
         # 2)
         elif args.export_odb:
             self.report_warnings_errors(self.export_odb())
-            self.save_json()
+            self.write_output()
 
         # 4) a/b
         elif has_import:
@@ -1070,16 +1097,13 @@ class EnMasse(ManageCommand):
 
 # ################################################################################################################################
 
-    def save_json(self):
-        now = datetime.now().isoformat() # Not in UTC, we want to use user's TZ
-        name = 'zato-export-{}.json'.format(now.replace(':', '_').replace('.', '_'))
-
-        # Preserve old format by wrapping all security services into a single
-        # key.
-        self.json['def_sec'] = [
+    def write_output(self):
+        # Preserve old format by wrapping security services into one key.
+        output = copy.deepcopy(self.json)
+        output['def_sec'] = [
             dict(item, type=sinfo.name)
             for sinfo in SERVICES
-            for item in self.json.pop(sinfo.name, [])
+            for item in output.pop(sinfo.name, [])
             if sinfo.is_security
         ]
 
@@ -1087,15 +1111,15 @@ class EnMasse(ManageCommand):
             for item in items:
                 normalize_service_name(item)
 
-        with open(os.path.join(self.curdir, name), 'w') as f:
-            f.write(json.dumps(self.json, indent=1, sort_keys=True))
-
-        self.logger.info('Data exported to {}'.format(f.name))
+        now = datetime.now().isoformat() # Not in UTC, we want to use user's TZ
+        name = 'zato-export-{}{}'.format(re.sub('[.:]', '_', now), self.codec.extension)
+        with open(os.path.join(self.curdir, name), 'w') as fp:
+            self.codec.dump(fp, output)
+        self.logger.info('Data exported to {}'.format(fp.name))
 
 # ################################################################################################################################
 
     def get_warnings_errors(self, items):
-
         warn_idx = 1
         error_idx = 1
         warn_err = {}
