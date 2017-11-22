@@ -782,13 +782,13 @@ class ClusterObjectManager(object):
             }
 
     def _update_service_name(self, item):
-        service = find_first(self.services.values(),
-            lambda s: s.id == item.service_id)
+        service = find_first(self.services.values(), lambda s: s.id == item.service_id)
         if service:
             item.service = service.name
 
-    def fix_up_odb_object(self, key, item):
-        if key == 'http_soap':
+    def fix_up_odb_object(self, item_type, item):
+        normalize_service_name(item)
+        if item_type == 'http_soap':
             if item.connection == 'channel':
                 self._update_service_name(item)
             if item.security_id:
@@ -798,7 +798,7 @@ class ClusterObjectManager(object):
                     item.sec_def = sec_def.name
             else:
                 item.sec_def = NO_SEC_DEF_NEEDED
-        elif key == 'scheduler':
+        elif item_type == 'scheduler':
             self._update_service_name(item)
         elif 'sec_type' in item:
             item['type'] = item['sec_type']
@@ -961,13 +961,13 @@ class InputParser(object):
         self.json.setdefault(sec_type, []).append(Bunch(item))
 
     def parse_item(self, item_type, item, results):
-        normalize_service_name(item)
-
         if self.is_include(item):
             self.load_include(item_type, item, results)
         elif item_type == 'def_sec':
+            normalize_service_name(item)
             self.parse_def_sec(item, results)
         else:
+            normalize_service_name(item)
             self.json.setdefault(item_type, []).append(Bunch(item))
 
     def parse_items(self, dct, results):
