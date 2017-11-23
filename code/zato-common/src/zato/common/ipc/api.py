@@ -119,6 +119,9 @@ class IPCAPI(object):
                     else:
                         now = datetime.utcnow()
 
+            except Exception, e:
+                logger.warn('Exception in IPC FIFO, e:`%s`', format_exc(e))
+
             finally:
                 os.close(fifo)
 
