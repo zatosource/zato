@@ -33,7 +33,7 @@ class MsgPublishForm(MsgForm):
     pub_hook_service_id = forms.ChoiceField(widget=forms.Select())
 
     def __init__(self, req, topic_list, publisher_list, *args, **kwargs):
-        super(MsgPublishForm, self).__init__(*args, **kwargs)
+        super(MsgPublishForm, self).__init__(req.GET, *args, **kwargs)
         add_select(self, 'topic_name', topic_list)
         add_select(self, 'publisher_id', publisher_list)
         add_select(self, 'gd', PUBSUB.GD_CHOICE, False)

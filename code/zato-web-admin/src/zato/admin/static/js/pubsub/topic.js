@@ -55,6 +55,9 @@ $.fn.zato.pubsub.topic.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', data.subscribers_link);
 
     row += String.format('<td>{0}</td>',
+        String.format("<a href=\"/zato/pubsub/message/publish/cluster/{0}/topic/{1}\">Publish</a>", item.cluster_id, data.id));
+
+    row += String.format('<td>{0}</td>',
         String.format("<a href=\"javascript:$.fn.zato.pubsub.topic.clear('{0}')\">Clear</a>", data.id));
 
     row += String.format('<td>{0}</td>',
