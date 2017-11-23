@@ -2203,7 +2203,7 @@ class PubSubSubscription(Base):
     creation_time = Column(BigInteger(), nullable=False)
     sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
     pattern_matched = Column(Text, nullable=False)
-    deliver_by = Column(Text, nullable=False)
+    deliver_by = Column(Text, nullable=True)
 
     is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
@@ -2214,7 +2214,7 @@ class PubSubSubscription(Base):
     delivery_method = Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY)
     delivery_data_format = Column(String(200), nullable=False, default=DATA_FORMAT.JSON)
     delivery_endpoint = Column(Text, nullable=True)
-    delivery_group_size = Column(Integer, nullable=False)
+    delivery_group_size = Column(Integer, nullable=True)
 
     last_interaction_time = Column(BigInteger(), nullable=True)
     last_interaction_type = Column(String(200), nullable=True)
