@@ -991,22 +991,43 @@ class EnMasse(ManageCommand):
         {'name':'--export-odb', 'help':'Export ODB definitions into one file (can be used with --export-local)', 'action':'store_true'},
         {'name':'--import', 'help':'Import definitions from a local JSON (excludes --export-*)', 'action':'store_true'},
         {'name':'--clean-odb', 'help':'Delete all ODB definitions before proceeding', 'action':'store_true'},
-        {'name':'--dump-format', 'help':'Select I/O format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'json'},
+        {'name':'--dump-format', 'help':'Select output format ("json" or "yaml")', 'choices':('json', 'yaml'), 'default':'yaml'},
         {'name':'--ignore-missing-defs', 'help':'Ignore missing definitions when exporting to JSON', 'action':'store_true'},
         {'name':'--replace-odb-objects', 'help':'Force replacing objects already existing in ODB during import', 'action':'store_true'},
         {'name':'--input', 'help':'Path to an input JSON document'},
         {'name':'--cols_width', 'help':'A list of columns width to use for the table output, default: {}'.format(DEFAULT_COLS_WIDTH), 'action':'store_true'},
     ]
 
+    CODEC_BY_EXTENSION = {
+        'json': JsonCodec,
+        'yaml': YamlCodec,
+        'yml': YamlCodec,
+    }
+
+    def load_input(self):
+        _, _, ext = self.args.input.rpartition('.')
+        codec_klass = self.CODEC_BY_EXTENSION.get(ext.lower())
+        if codec_klass is None:
+            exts = ', '.join(sorted(self.CODEC_BY_EXTENSION))
+            self.logger.error('Unrecognized file extension "{}": must be one of {}'.format(ext.lower(), exts))
+            sys.exit(self.SYS_ERROR.INVALID_INPUT)
+
+        path = os.path.join(self.curdir, self.args.input)
+        parser = InputParser(path, self.logger, codec_klass())
+        results = parser.parse()
+        if not results.ok:
+            self.logger.error('JSON parsing failed')
+            self.report_warnings_errors([results])
+            sys.exit(self.SYS_ERROR.INVALID_INPUT)
+        self.json = parser.json
+
     def _on_server(self, args):
         self.args = args
         self.curdir = os.path.abspath(self.original_dir)
         self.json = {}
 
-        if args.dump_format == 'json':
-            self.codec = JsonCodec()
-        elif args.dump_format == 'yaml':
-            self.codec = YamlCodec()
+        #: The output serialization format. Not used for input.
+        self.codec = self.CODEC_BY_EXTENSION[args.dump_format]()
 
         #
         # Tasks and scenarios
@@ -1023,7 +1044,7 @@ class EnMasse(ManageCommand):
         self.client = get_client_from_server_conf(self.args.path)
         self.object_mgr = ClusterObjectManager(self.client, self.logger)
         self.client.invoke('zato.ping')
-        populate_services_from_apispec(self.client)
+        populate_services_from_apispec(self.client, self.logger)
 
         has_import = getattr(args, 'import')
         if True not in (args.export_local, args.export_odb, args.clean_odb, has_import):
@@ -1050,14 +1071,7 @@ class EnMasse(ManageCommand):
             sys.exit(self.SYS_ERROR.CONFLICTING_OPTIONS)
 
         if args.export_local or has_import:
-            path = os.path.join(self.curdir, self.args.input)
-            parser = InputParser(path, self.logger, self.codec)
-            results = parser.parse()
-            if not results.ok:
-                self.logger.error('JSON parsing failed')
-                self.report_warnings_errors([results])
-                sys.exit(self.SYS_ERROR.INVALID_INPUT)
-            self.json = parser.json
+            self.load_input()
 
         # 3)
         if args.export_local and args.export_odb:
