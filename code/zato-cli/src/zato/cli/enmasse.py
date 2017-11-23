@@ -67,7 +67,7 @@ IGNORE_PREFIXES = {
     "zato.pubsub.topics",
 }
 
-def populate_services_from_apispec(client):
+def populate_services_from_apispec(client, logger):
     """Request a list of services from the APISpec service, and merge the
     results into SERVICES_BY_PREFIX, creating new ServiceInfo instances to
     represent previously unknown services as appropriate."""
@@ -573,7 +573,7 @@ class ObjectImporter(object):
             raw = (item_type, attrs_dict, response.details)
             self.results.add_error(raw, ERROR_COULD_NOT_IMPORT_OBJECT,
                                    "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'",
-                                    is_edit, attrs.name, attrs_dict, service_name, response.details)
+                                    is_edit, attrs.name, attrs_dict, item_type, response.details)
             return self.results
 
         # It's been just imported so we don't want to create in next steps
