@@ -41,6 +41,7 @@ WARNING_MISSING_DEF_INCL_ODB = Code('W04', 'missing def incl. ODB')
 ERROR_ITEM_INCLUDED_MULTIPLE_TIMES = Code('E01', 'item incl multiple')
 ERROR_INCLUDE_COULD_NOT_BE_PARSED = Code('E03', 'incl parsing error')
 ERROR_INVALID_INPUT = Code('E05', 'invalid JSON')
+ERROR_UNKNOWN_ELEM = Code('E06', 'unrecognized import element')
 ERROR_KEYS_MISSING = Code('E08', 'missing keys')
 ERROR_INVALID_SEC_DEF_TYPE = Code('E09', 'invalid sec def type')
 ERROR_INVALID_KEY = Code('E10', 'invalid key')
@@ -58,10 +59,12 @@ def find_first(it, pred):
 
 #: List of zato services we explicitly don't support.
 IGNORE_PREFIXES = {
+    "zato.kvdb.data-dict.dictionary",
+    "zato.kvdb.data-dict.translation",
     "zato.pubsub.consumers",
     "zato.pubsub.message",
-    "zato.pubsub.topics",
     "zato.pubsub.producers",
+    "zato.pubsub.topics",
 }
 
 def populate_services_from_apispec(client):
@@ -595,7 +598,7 @@ class ObjectImporter(object):
                 name = item.get('name')
                 if not name:
                     raw = (item_type, item)
-                    results.add_error(raw, ERROR_NAME_MISSING,
+                    results.add_error(raw, ERROR_KEYS_MISSING,
                         "{} has no 'name' key ({})",
                         dict(item), item_type)
 
@@ -960,6 +963,11 @@ class InputParser(object):
 
     def parse_items(self, dct, results):
         for item_type, items in dct.items():
+            if item_type not in SERVICE_BY_NAME:
+                raw = (item_type,)
+                results.add_error(raw, ERROR_UNKNOWN_ELEM, "Ignoring unknown element type {} in the input.", item_type)
+                continue
+
             for item in items:
                 self.parse_item(item_type, item, results)
 
