@@ -73,7 +73,7 @@ def _create_edit(action, cid, input, payload, logger, session, broker_client, re
     # if the job type's is either interval-based or Cron-style. The base
     # instance will be enough if it's a one-time job.
 
-    extra = input.extra.encode('utf-8')
+    extra = (input.extra or u'').encode('utf-8')
     is_active = input.is_active
     start_date = parse(input.start_date)
 
