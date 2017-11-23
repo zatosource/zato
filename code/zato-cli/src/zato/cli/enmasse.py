@@ -315,9 +315,6 @@ SERVICES = [
                 'dependent_field': 'name',
             },
         },
-        service_dependencies={
-            'service': {}
-        },
     ),
     # Added for the exporter.
     ServiceInfo(
@@ -519,12 +516,12 @@ class ObjectImporter(object):
             raw = (service_name, item_dict, item_type)
             if not service_name:
                 self.results.add_error(raw, ERROR_SERVICE_NAME_MISSING,
-                    "No service defined in '{}' ({})",
-                    item_dict, item_type)
+                                       "No {} service key defined type {}: {}",
+                                       dep_field, item_type, item_dict)
             elif service_name not in self.object_mgr.services:
                 self.results.add_error(raw, ERROR_SERVICE_MISSING,
-                    "Service '{}' from '{}' missing in ODB ({})",
-                    service_name, item_dict, item_type)
+                                       "Service '{}' from '{}' missing in ODB ({})",
+                                       service_name, item_dict, item_type)
 
     def validate_import_data(self):
         results = Results()
