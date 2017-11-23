@@ -13,52 +13,8 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.server.service import AsIs, List, Opaque
+from zato.server.service import AsIs, Int, List, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
-
-# ################################################################################################################################
-
-class NotifyMessagePublished(AdminService):
-    """ Notifies an individual WebSocket client that messages related to a specific sub_key became available.
-    """
-    def handle(self):
-        '''
-        web_socket = self.request.raw_request['web_socket'] # type: WebSocket
-        sub_key = self.request.raw_request['request']['sub_key']
-
-        # Find all WSX clients currently connected to our server process and try to deliver new messages to them.
-
-        self.logger.info('Got sub_key %s for %s', sub_key, web_socket.pub_client_id)
-
-        #server_info = self.pubsub.get_ws_clients_by_sub_keys(
-
-        # Note that in the query below we join by pub_client_id only to be on the safe
-        # side. In theory and practice, looking up messages by sub_key would suffice but we want
-        # to double-check that our WSX connection is truly allowed to get these messages so this is
-        # why we check by both sub_key and pub_client_id - to rule out situations where other WSX
-        # connections erroneously subscribe to our own sub_key or that we subscribe messages
-        # destined to other WSX connections.
-
-        with closing(self.odb.session()) as session:
-            messages = session.query(PubSubMessage).\
-                filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
-                filter(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\
-                filter(PubSubSubscription.sub_key==WebSocketClientPubSubKeys.sub_key).\
-                filter(WebSocketClientPubSubKeys.client_id==WebSocketClient.id).\
-                filter(WebSocketClient.pub_client_id==web_socket.pub_client_id).\
-                filter(PubSubSubscription.sub_key==sub_key).\
-                order_by(PubSubMessage.priority.desc()).\
-                order_by(func.coalesce(PubSubMessage.ext_pub_time, PubSubMessage.pub_time)).\
-                order_by(PubSubMessage.group_id).\
-                order_by(PubSubMessage.position_in_group).\
-                all()
-
-            for idx, msg in enumerate(messages, 1):
-                ext_pub_time = datetime_from_ms(msg.ext_pub_time)
-                pub_time = datetime_from_ms(msg.pub_time)
-
-                #print(idx, msg.priority, ext_pub_time, pub_time, msg.group_id, msg.position_in_group)
-                '''
 
 # ################################################################################################################################
 
@@ -164,33 +120,50 @@ class AfterWSXReconnect(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('sql_ws_client_id', 'channel_name', AsIs('pub_client_id'), Opaque('web_socket'))
         input_optional = (List('sub_key_list'),)
-        output_optional = (Opaque('queue_depth'),)
+        output_optional = (Int('queue_depth_gd'), Int('queue_depth_non_gd'), Int('queue_depth_total'))
 
     def handle(self):
 
         with closing(self.odb.session()) as session:
 
-            # Response to produce
-            response = {}
+            # Everything is performed using that WebSocket's pub/sub lock to ensure that both
+            # in-RAM and SQL (non-GD and GD) messages are made available to the WebSocket as a single unit.
+            with self.request.input.web_socket.pubsub_tool.lock:
 
-            # For each sub_key from input ..
-            for sub_key in self.request.input.sub_key_list:
+                # Response to produce
+                response = {}
 
-                # .. add relevant SQL objects ..
-                self.pubsub.add_ws_client_pubsub_keys(
-                    session, self.request.input.sql_ws_client_id, sub_key,
-                    self.request.input.channel_name, self.request.input.pub_client_id)
+                get_in_ram_service = 'zato.pubsub.topic.get-in-ram-message-list'
+                non_gd = self.servers.invoke_all(
+                    get_in_ram_service, {'sub_key_list':self.request.input.sub_key_list}, timeout=120)
 
-                # .. update state of that WebSocket's pubsub tool that keeps track of message delivery
-                self.request.input.web_socket.pubsub_tool.add_sub_key(sub_key)
+                self.logger.warn('zzzzzzzzzz')
 
-                # .. return current depth
-                response[sub_key] = self.invoke('zato.pubsub.queue.get-queue-depth-by-sub-key', {
-                    'sub_key': sub_key
-                })['response']['queue_depth'][sub_key]
+                self.logger.warn('333 %s', non_gd)
 
-            session.commit()
+                # For each sub_key from input ..
+                for sub_key in self.request.input.sub_key_list:
 
-        self.response.payload.queue_depth = response
+                    # .. add relevant SQL objects ..
+                    self.pubsub.add_ws_client_pubsub_keys(
+                        session, self.request.input.sql_ws_client_id, sub_key,
+                        self.request.input.channel_name, self.request.input.pub_client_id)
+
+                    # .. update state of that WebSocket's pubsub tool that keeps track of message delivery
+                    self.request.input.web_socket.pubsub_tool.add_sub_key_no_lock(sub_key)
+
+                    # .. return current depth
+                    response[sub_key] = self.invoke('zato.pubsub.queue.get-queue-depth-by-sub-key', {
+                        'sub_key': sub_key
+                    })['response']['queue_depth'][sub_key]
+
+                session.commit()
+
+            self.response.payload.queue_depth = response
+
+# ################################################################################################################################
+
+    def _get_non_gd_messages(self, server_response):
+        return 'zzz'
 
 # ################################################################################################################################

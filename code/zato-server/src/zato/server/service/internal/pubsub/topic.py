@@ -15,8 +15,9 @@ from contextlib import closing
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, PubSubTopic
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
+from zato.common.odb.query_ps_topic import get_topics_by_sub_keys
 from zato.common.time_util import datetime_from_ms
-from zato.server.service import AsIs
+from zato.server.service import AsIs, Dict, List
 from zato.server.service.internal import AdminService, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -175,5 +176,34 @@ class GetMessageList(AdminService):
         for item in self.response.payload.zato_output:
             item.pub_time = datetime_from_ms(item.pub_time)
             item.ext_pub_time = datetime_from_ms(item.ext_pub_time) if item.ext_pub_time else ''
+
+# ################################################################################################################################
+
+class GetInRAMMessageList(AdminService):
+    """ Returns all in-RAM messages matching input sub_keys. Messages, if there were any, are deleted from RAM.
+    """
+    class SimpleIO:
+        input_required = (List('sub_key_list'),)
+        output_optional = (Dict('messages'),)
+
+    def handle(self):
+
+        out = {}
+        topic_sub_keys = {}
+
+        with closing(self.odb.session()) as session:
+            for topic_id, sub_key in get_topics_by_sub_keys(session, self.server.cluster_id, self.request.input.sub_key_list):
+                sub_keys = topic_sub_keys.setdefault(topic_id, [])
+                sub_keys.append(sub_key)
+
+        for topic_id, sub_keys in topic_sub_keys.items():
+
+            # This is a dictionary of sub_key -> msg_id -> message data ..
+            data = self.pubsub.in_ram_backlog.retrieve_messages_by_sub_keys(topic_id, sub_keys)
+
+            # .. which is why we can extend out directly - sub_keys are always unique
+            out.update(data)
+
+        self.response.payload.messages = out
 
 # ################################################################################################################################

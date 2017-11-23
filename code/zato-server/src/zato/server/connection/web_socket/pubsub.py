@@ -224,20 +224,29 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
+    def add_sub_key_no_lock(self, sub_key):
+        """ Adds metadata about a given sub_key - must be called with self.lock held.
+        """
+        self.sub_keys.append(sub_key)
+        self.batch_size[sub_key] = 1
+        self.last_sql_run[sub_key] = None
+
+        delivery_list = SortedList()
+        delivery_lock = RLock()
+
+        self.delivery_lists[sub_key] = delivery_list
+        self.delivery_tasks[sub_key] = DeliveryTask(
+            sub_key, delivery_lock, delivery_list, self.web_socket.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered)
+
+        self.sub_key_locks[sub_key] = delivery_lock
+
+# ################################################################################################################################
+
     def add_sub_key(self, sub_key):
+        """ Same as self.add_sub_key_no_lock but holds self.lock.
+        """
         with self.lock:
-            self.sub_keys.append(sub_key)
-            self.batch_size[sub_key] = 1
-            self.last_sql_run[sub_key] = None
-
-            delivery_list = SortedList()
-            delivery_lock = RLock()
-
-            self.delivery_lists[sub_key] = delivery_list
-            self.delivery_tasks[sub_key] = DeliveryTask(
-                sub_key, delivery_lock, delivery_list, self.web_socket.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered)
-
-            self.sub_key_locks[sub_key] = delivery_lock
+            self.fetch_gd_messages_by_sub_key(sub_key)
 
 # ################################################################################################################################
 
@@ -265,7 +274,14 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def add_messages_by_sub_key(self, sub_key):
+    def add_non_gd_messages_by_sub_key(self, sub_key, messages):
+        with self.sub_key_locks[sub_key]:
+            for msg in messages:
+                self.delivery_lists[sub_key].add(Message(msg))
+
+# ################################################################################################################################
+
+    def fetch_gd_messages_by_sub_key(self, sub_key):
         with self.sub_key_locks[sub_key]:
             messages = self.pubsub.get_sql_messages_by_sub_key(sub_key, self.last_sql_run[sub_key])
 
