@@ -56,6 +56,14 @@ def find_first(it, pred):
         if pred(obj):
             return obj
 
+#: List of zato services we explicitly don't support.
+IGNORE_PREFIXES = {
+    "zato.pubsub.consumers",
+    "zato.pubsub.message",
+    "zato.pubsub.topics",
+    "zato.pubsub.producers",
+}
+
 def populate_services_from_apispec(client):
     """Request a list of services from the APISpec service, and merge the
     results into SERVICES_BY_PREFIX, creating new ServiceInfo instances to
@@ -77,6 +85,8 @@ def populate_services_from_apispec(client):
     for prefix, methods in by_prefix.items():
         # Ignore prefixes lacking "get-list", "create" and "edit" methods.
         if not all(n in methods for n in ('get-list', 'create', 'edit')):
+            continue
+        if prefix in IGNORE_PREFIXES:
             continue
 
         sinfo = SERVICE_BY_PREFIX.get(prefix)
@@ -171,22 +181,14 @@ class ServiceInfo(object):
     def has_service(self, name):
         return self.get_service_name(name) is not None
 
-    replace_names = {
-        'def_id': 'def_name',
-    }
-
     def get_required_keys(self):
         """Return the set of keys required to create a new instance."""
         method_sig = self.methods.get('create')
         if method_sig is None:
             return set()
 
-        required = set(
-            self.replace_names.get(f['name'], f['name'])
-            for f in method_sig['simple_io']['zato']['input_required']
-        )
-        if 'sql' in self.name:  # TODO
-            required.add('password')
+        input_required = method_sig['simple_io']['zato']['input_required']
+        required = set(f['name'] for f in input_required)
         required.discard('cluster_id')
         return required
 
@@ -416,27 +418,15 @@ class InputValidator(object):
             return
 
         item_dict = dict(item)
-        missing = None
-
         sinfo = SERVICE_BY_NAME[item_type]
         required_keys = sinfo.get_required_keys()
-        missing = sorted(required_keys - set(item))
-        if missing:
-            missing_value = "key '{}'".format(missing[0]) if len(missing) == 1 else "keys '{}'".format(missing)
-            name = item.get('name')
-            raw = (item_type, name, item_dict, required_keys, missing)
-            self.results.add_error(raw, ERROR_KEYS_MISSING,
-                                   "Missing {} in '{}', the rest is '{}' ({})",
-                                   missing_value, name, item_dict,
-                                   item_type)
-
         # OK, the keys are there, but do they all have non-None values?
         for req_key in required_keys:
             if item.get(req_key) is None: # 0 or '' can be correct values
                 raw = (req_key, required_keys, item_dict, item_type)
                 self.results.add_error(raw, ERROR_KEYS_MISSING,
-                                       "Key '{}' must exist in '{}' ({})",
-                                       req_key, item_dict, item_type)
+                                       "Key '{}' must exist in {}: {}",
+                                       req_key, item_type, item_dict)
 
 class DependencyScanner(object):
     def __init__(self, json, ignore_missing=False):
@@ -798,12 +788,8 @@ class ClusterObjectManager(object):
                     item.sec_def = sec_def.name
             else:
                 item.sec_def = NO_SEC_DEF_NEEDED
-        elif item_type == 'scheduler':
+        if item_type == 'scheduler':
             self._update_service_name(item)
-        elif 'sec_type' in item:
-            item['type'] = item['sec_type']
-            del item['sec_type']
-
         return item
 
     IGNORED_NAMES = (
