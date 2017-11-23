@@ -167,22 +167,70 @@ class InRAMBacklog(object):
         self.lock = RLock()
         self.topic_sub_key_to_msg_id = {} # Topic ID -> Sub key -> Msg ID
         self.topic_msg_id_to_msg = {}     # Topic ID -> Msg ID  -> Message data
-        self.msg_id_to_expiration = {}    # Msg ID   -> Topic ID, expiration time in milliseconds
+        self.msg_id_to_expiration = {}    # Msg ID   -> (Topic ID, sub_keys, expiration time in milliseconds)
 
         # Start in background a cleanup task that removes all expired messages
         spawn_greenlet(self.run_cleanup_task)
 
 # ################################################################################################################################
 
+    def retrieve_messages_by_sub_keys(self, topic_id, sub_keys):
+        """ Returns all messages matching input sub_keys and deletes them from RAM.
+        """
+        out = {}
+        to_delete = []
+
+        with self.lock:
+
+            # First, collect data for all sub_keys ..
+
+            for sub_key in sub_keys:
+                msg_ids = self.topic_sub_key_to_msg_id.get(topic_id, {}).get(sub_key, [])
+                for msg_id in msg_ids:
+                    out_sub_key = out.setdefault(sub_key, {})
+                    out_sub_key[msg_id] = self.topic_msg_id_to_msg[topic_id][msg_id]
+
+                    # Make note of what needs to be deleted
+                    to_delete.append((topic_id, sub_key, msg_id))
+
+            # Now delete everything found above
+            for topic_id, sub_key, msg_id in to_delete:
+
+                # We can access and delete them safely because we run under self.lock
+                # and we have just collected them above so they must exist
+                self.topic_sub_key_to_msg_id[topic_id][sub_key].remove(msg_id)
+
+                # While we are at it, delete sub_keys that don't have any messages
+                if not self.topic_sub_key_to_msg_id[topic_id][sub_key]:
+                    del self.topic_sub_key_to_msg_id[topic_id][sub_key]
+
+                # Also, check if there are any other subscribers for Msg IDs that we are returning.
+                # If there are none, delete the message from in-RAM topic dictionaries.
+                for topic_sub_key in self.topic_sub_key_to_msg_id[topic_id]:
+                    if msg_id in self.topic_sub_key_to_msg_id[topic_id][topic_sub_key]:
+
+                        # Ok, there is at least one reference to that Msg ID
+                        break
+
+                # No break caught above = this Msg ID is not needed by any subscriber,
+                # again, we are doing it under self.lock so del is fine.
+                else:
+                    del self.topic_msg_id_to_msg[topic_id][msg_id]
+                    del self.msg_id_to_expiration[msg_id]
+
+        return out
+
+# ################################################################################################################################
+
     def run_cleanup_task(self, _utcnow=utcnow_as_ms, _sleep=sleep):
-        """ A background task waking up periodically to remove all expired messages from backlog.
+        """ A background task waking up periodically to remove all expired and retrieved messages from backlog.
         """
         while True:
             try:
                 with self.lock:
 
                     # We keep them separate so as not to modify any dictionaries during iteration.
-                    expired = []
+                    to_process = []
 
                     # Calling it once will suffice.
                     now = _utcnow()
@@ -190,10 +238,10 @@ class InRAMBacklog(object):
                     # Check expiration for all messages currently held.
                     for msg_id, (topic_id, sub_keys, expiration) in self.msg_id_to_expiration.items():
                         if expiration <= now:
-                            expired.append((topic_id, sub_keys, msg_id))
+                            to_process.append((topic_id, sub_keys, msg_id))
 
                     # If we found anything, remove them from per-topic backlogs and from the dict of expiration times.
-                    for topic_id, sub_keys, msg_id in expired:
+                    for topic_id, sub_keys, msg_id in to_process:
 
                         # These are direct mappings.
                         self.msg_id_to_expiration.pop(msg_id)
@@ -212,16 +260,16 @@ class InRAMBacklog(object):
                                     del sub_keys_for_topic_id[sub_key]
 
                     # Log what was done
-                    number = len(expired)
+                    number = len(to_process)
                     suffix = 's' if(number==0 or number > 1) else ''
-                    logger.info('In-RAM. Deleted %s expired pub/sub message%s' % (number, suffix))
+                    logger.info('In-RAM. Deleted %s pub/sub message%s' % (number, suffix))
 
                 # Sleep for a moment before looping again, but do it outside the main loop
                 # so that other parts of code can acquire the lock for their purposes.
                 _sleep(5)
 
             except Exception, e:
-                logger_zato.warn('Could not remove expired messages from in-RAM backlog, e:`%s`', format_exc(e))
+                logger_zato.warn('Could not remove messages from in-RAM backlog, e:`%s`', format_exc(e))
                 _sleep(5)
 
 # ################################################################################################################################
@@ -244,7 +292,7 @@ class InRAMBacklog(object):
     def add_messages(self, cid, topic_id, topic_name, max_depth, sub_keys, messages):
         with self.lock:
 
-            # We need to keep data for each topic separately because they have their max depth.
+            # We need to keep data for each topic separately because they have their separate max depth values.
             topic_sub_key_dict = self.topic_sub_key_to_msg_id.setdefault(topic_id, {})
             topic_msg_dict = self.topic_msg_id_to_msg.setdefault(topic_id, {})
 
@@ -273,7 +321,7 @@ class InRAMBacklog(object):
 
                 # Add references to the new messages for each sub_key
                 for sub_key in sub_keys:
-                    sub_key_messages = topic_msg_dict.setdefault(sub_key, [])
+                    sub_key_messages = topic_sub_key_dict.setdefault(sub_key, [])
                     sub_key_messages.extend(msg_ids)
 
 # ################################################################################################################################
@@ -568,6 +616,6 @@ class PubSub(object):
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """
-        self.in_ram_backlog.add_messages(cid, topic_id, topic_name, 10, sub_keys, non_gd_msg_list)
+        self.in_ram_backlog.add_messages(cid, topic_id, topic_name, 2, sub_keys, non_gd_msg_list)
 
 # ################################################################################################################################
