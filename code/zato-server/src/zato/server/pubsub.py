@@ -192,7 +192,9 @@ class InRAMBacklog(object):
 
                     # Make note of what needs to be deleted
                     to_delete.append((topic_id, sub_key, msg_id))
+                    z
 
+            '''
             # Now delete everything found above
             for topic_id, sub_key, msg_id in to_delete:
 
@@ -217,6 +219,7 @@ class InRAMBacklog(object):
                 else:
                     del self.topic_msg_id_to_msg[topic_id][msg_id]
                     del self.msg_id_to_expiration[msg_id]
+                    '''
 
         return out
 
