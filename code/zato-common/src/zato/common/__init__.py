@@ -884,9 +884,16 @@ CONTENT_TYPE = Bunch(
     SOAP12 = 'application/soap+xml; charset=utf-8',
 )
 
-class IPC_ACTION:
-    INVOKE_SERVICE = 'invoke-service'
-    INVOKE_WORKER_STORE = 'invoke-worker-store'
+class IPC:
+
+    class ACTION:
+        INVOKE_SERVICE = 'invoke-service'
+        INVOKE_WORKER_STORE = 'invoke-worker-store'
+
+    class STATUS:
+        SUCCESS = 'zato.success'
+        FAILURE = 'zato.failure'
+        LENGTH = 12 # Length of either success or failure messages
 
 class WEB_SOCKET:
     class DEFAULT:

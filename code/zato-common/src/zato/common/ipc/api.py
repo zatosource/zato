@@ -26,6 +26,7 @@ from gevent import sleep
 from rapidjson import loads
 
 # Zato
+from zato.common import IPC
 from zato.common.ipc.forwarder import Forwarder
 from zato.common.ipc.publisher import Publisher
 from zato.common.ipc.subscriber import Subscriber
@@ -73,11 +74,18 @@ class IPCAPI(object):
                 data = os.read(fifo, 1)
                 buff.write(data)
 
-            value = buff.getvalue()
-            response = loads(value) if value else ''
+            response = buff.getvalue()
+
+            status = response[:IPC.STATUS.LENGTH]
+            response = response[IPC.STATUS.LENGTH+1:] # Add 1 to account for the separator
+            is_success = status == IPC.STATUS.SUCCESS
+
+            if is_success:
+                response = loads(response) if response else ''
+
             buff.close()
 
-            return response
+            return is_success, response
 
         except OSError, e:
             if e.errno not in fifo_ignore_err:
@@ -99,7 +107,7 @@ class IPCAPI(object):
             if is_async:
                 return
 
-            response = None
+            response = None, None
 
             try:
 

@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from traceback import format_exc
 
 # dateutil
 from dateutil.parser import parse
@@ -125,7 +126,11 @@ class NotifyPubSubMessage(AdminService):
 
     def handle(self):
         req = self.request.input
-        self.response.payload.response = self.server.worker_store.web_socket_api.notify_pubsub_message(
-            req.channel_name, self.cid, req.pub_client_id, req.request)
+        try:
+            self.response.payload.response = self.server.worker_store.web_socket_api.notify_pubsub_message(
+                req.channel_name, self.cid, req.pub_client_id, req.request)
+        except Exception, e:
+            self.logger.warn(format_exc(e))
+            raise
 
 # ################################################################################################################################

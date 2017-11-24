@@ -9,7 +9,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common import IPC_ACTION
+from zato.common import IPC
 from zato.common.ipc import IPCEndpoint, Request
 
 # ################################################################################################################################
@@ -20,7 +20,7 @@ class Publisher(IPCEndpoint):
     socket_method = 'connect'
     socket_type = 'pub'
 
-    def publish(self, payload, service='', target_pid=None, action=IPC_ACTION.INVOKE_SERVICE, reply_to_fifo=None):
+    def publish(self, payload, service='', target_pid=None, action=IPC.ACTION.INVOKE_SERVICE, reply_to_fifo=None):
         request = Request(self.name, self.pid)
 
         request.payload = payload

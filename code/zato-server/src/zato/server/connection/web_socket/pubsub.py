@@ -159,6 +159,26 @@ class Message(object):
     """ Wrapper for messages adding __cmp__ which uses a custom comparison protocol,
     by priority, then ext_pub_time, then pub_time.
     """
+    def __cmp__(self, other, max_pri=9):
+        return cmp(
+            (max_pri - self.priority, self.ext_pub_time, self.pub_time),
+            (max_pri - other.priority, other.ext_pub_time, other.pub_time)
+        )
+
+    def __repr__(self):
+        return '<Msg id:{} pub_id:{} ext_cli:{} exp:{}>'.format(
+            self.id, self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time))
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+        }
+
+# ################################################################################################################################
+
+class GDMessage(Message):
+    """ A guaranteed delivery message initialized from SQL data.
+    """
     def __init__(self, msg):
         self.id = msg.id
         self.pub_msg_id = msg.pub_msg_id
@@ -175,20 +195,26 @@ class Message(object):
         self.expiration = msg.expiration
         self.expiration_time = msg.expiration_time
 
-    def __cmp__(self, other, max_pri=9):
-        return cmp(
-            (max_pri - self.priority, self.ext_pub_time, self.pub_time),
-            (max_pri - other.priority, other.ext_pub_time, other.pub_time)
-        )
+# ################################################################################################################################
 
-    def __repr__(self):
-        return '<Msg id:{} pub_id:{} ext_cli:{} exp:{}>'.format(
-            self.id, self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time))
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-        }
+class NonGDMessage(Message):
+    """ A non-guaranteed delivery message initialized from a Python dict.
+    """
+    def __init__(self, msg):
+        self.id = msg['id']
+        self.pub_msg_id = msg['pub_msg_id']
+        self.pub_correl_id = msg['pub_correl_id']
+        self.in_reply_to = msg['in_reply_to']
+        self.ext_client_id = msg['ext_client_id']
+        self.group_id = msg['group_id']
+        self.position_in_group = msg['position_in_group']
+        self.pub_time = msg['pub_time']
+        self.ext_pub_time = msg['ext_pub_time']
+        self.data = msg['data']
+        self.mime_type = msg['mime_type']
+        self.priority = msg['priority']
+        self.expiration = msg['expiration']
+        self.expiration_time = msg['expiration_time']
 
 # ################################################################################################################################
 
@@ -277,7 +303,7 @@ class PubSubTool(object):
     def add_non_gd_messages_by_sub_key(self, sub_key, messages):
         with self.sub_key_locks[sub_key]:
             for msg in messages:
-                self.delivery_lists[sub_key].add(Message(msg))
+                self.delivery_lists[sub_key].add(NonGDMessage(msg))
 
 # ################################################################################################################################
 
@@ -286,7 +312,7 @@ class PubSubTool(object):
             messages = self.pubsub.get_sql_messages_by_sub_key(sub_key, self.last_sql_run[sub_key])
 
             for msg in messages:
-                self.delivery_lists[sub_key].add(Message(msg))
+                self.delivery_lists[sub_key].add(GDMessage(msg))
 
 # ################################################################################################################################
 

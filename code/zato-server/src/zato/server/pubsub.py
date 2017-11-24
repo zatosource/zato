@@ -192,7 +192,6 @@ class InRAMBacklog(object):
 
                     # Make note of what needs to be deleted
                     to_delete.append((topic_id, sub_key, msg_id))
-                    z
 
             '''
             # Now delete everything found above

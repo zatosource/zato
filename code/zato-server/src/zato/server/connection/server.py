@@ -17,7 +17,7 @@ from traceback import format_exc
 from zato.client import AnyServiceInvoker
 from zato.common import SERVER_UP_STATUS
 from zato.common.util import make_repr
-from zato.common.odb.query import server_list
+from zato.common.odb.query import server_by_name, server_list
 from zato.server.service import Service
 
 # ################################################################################################################################
@@ -135,7 +135,7 @@ class Servers(object):
             cluster_name = self.cluster_name
 
         with closing(self.odb.session()) as session:
-            return self.get_server_from_odb(session, server_name, cluster_name)
+            return self.get_server_from_odb(session, cluster_name, server_name)
 
 # ################################################################################################################################
 
@@ -146,43 +146,49 @@ class Servers(object):
 
 # ################################################################################################################################
 
-    def get_server_from_odb(self, session, server_name, cluster_name):
+    def get_server_from_odb(self, session, cluster_name, server_name):
         """ Returns a specific server defined in ODB.
         """
-        servers = list(self._get_servers_from_odb(session, server_name, cluster_name))
-
-        # No match at all
-        if not servers:
+        result = server_by_name(session, None, cluster_name, server_name)
+        if not result:
             msg = 'No such server or cluster {}@{}'.format(server_name, cluster_name)
             logger.warn(msg)
             raise ValueError(msg)
 
         # Multiple matches - naturally, should not happen
-        if len(servers) > 1:
-            msg = 'Unexpected output for {}@{} servers:`{}`'.format(server_name, cluster_name, servers)
+        elif len(result) > 1:
+            msg = 'Unexpected output for {}@{} len:`{}`, result:`{}`'.format(
+                server_name, cluster_name, len(result), '\n' + '\n'.join(str(elem) for elem in result))
             logger.warn(msg)
             raise ValueError(msg)
 
-        # OK, we have the one server we need
-        return servers[0]
+        else:
+            server = result[0]
+            invoke_sec_def = self._get_invoke_sec_def(session, cluster_name)
+
+            return _RemoteServer(
+                server.cluster_id, cluster_name, server.name, server.preferred_address, server.bind_port,
+                server.crypto_use_tls, invoke_sec_def.password, server.up_status)
 
 # ################################################################################################################################
 
-    def _get_servers_from_odb(self, session, server_name=None, cluster_name=None):
-        """ Returns a list of servers in ODB, optionally returning only one that matches
-        both server_name and cluster_name.
+    def _get_servers_from_odb(self, session, cluster_name=None):
+        """ Returns a list of servers in ODB.
         """
+        # Used by all servers
+        invoke_sec_def = self._get_invoke_sec_def(session, cluster_name)
+
         for item in server_list(session, None, cluster_name, None, False):
+            yield _RemoteServer(
+                item.cluster_id, self.cluster_name, item.name, item.preferred_address, item.bind_port,
+                item.crypto_use_tls, invoke_sec_def.password, item.up_status)
 
-            if server_name and cluster_name:
-                if item.name != server_name and item.cluster_name != cluster_name:
-                    continue
+# ################################################################################################################################
 
-            for sec_item in self.odb.get_basic_auth_list(None, cluster_name):
-                if sec_item.name == sec_def_name:
-                    yield _RemoteServer(
-                        item.cluster_id, self.cluster_name, item.name, item.preferred_address, item.bind_port,
-                        item.crypto_use_tls, sec_item.password, item.up_status)
+    def _get_invoke_sec_def(self, session, cluster_name):
+        for sec_item in self.odb.get_basic_auth_list(None, cluster_name):
+            if sec_item.name == sec_def_name:
+                return sec_item
 
 # ################################################################################################################################
 
