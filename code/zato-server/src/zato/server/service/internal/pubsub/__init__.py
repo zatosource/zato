@@ -13,7 +13,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.server.service import AsIs, Int, List, Opaque
+from zato.server.service import AsIs, Int, List, ListOfDicts, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -121,13 +121,17 @@ class AfterWSXReconnect(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('sql_ws_client_id', 'channel_name', AsIs('pub_client_id'), Opaque('web_socket'))
         input_optional = (List('sub_key_list'),)
-        output_optional = (Int('queue_depth_gd'), Int('queue_depth_non_gd'), Int('queue_depth_total'))
+        output_optional = (ListOfDicts('queue_depth'),)
 
     def handle(self):
 
         # Local aliases
         sub_key_list = self.request.input.sub_key_list
         pubsub_tool = self.request.input.web_socket.pubsub_tool
+
+        # Response to produce - a list of dictionaries, each keyed by sub_key,
+        # values are a dictionary of gd, non_gd for Guaranteed Delivery and non-GD messages for that sub_key
+        response = []
 
         with closing(self.odb.session()) as session:
 
@@ -167,10 +171,24 @@ class AfterWSXReconnect(AdminService):
                     # which we want to have after all sub_keys have been processed.
                     pubsub_tool.fetch_gd_messages_by_sub_key(sub_key, session)
 
-                    # .. return current depth
-                    response[sub_key] = self.invoke('zato.pubsub.queue.get-queue-depth-by-sub-key', {
+                    # Will hold depths of queues
+                    response[sub_key] = {
+                        'queue_depth_gd': None,
+                        'queue_depth_non_gd': None,
+                    }
+
+                    # .. set current depth for GD messages ..
+                    response[sub_key]['queue_depth_gd'] = self.invoke('zato.pubsub.queue.get-queue-depth-by-sub-key', {
                         'sub_key': sub_key
                     })['response']['queue_depth'][sub_key]
+
+                    # .. get depths for a given sub_key, but ignore the GD one
+                    # because it only indicates how many GD messages are in the delivery task,
+                    # not a total of GD messages which we have already obtained above.
+                    _, queue_depth_non_gd = pubsub_tool.get_queue_depth(sub_key)
+
+                    # .. set current depth for GD messages ..
+                    response[sub_key]['queue_depth_non_gd'] = queue_depth_non_gd
 
                 session.commit()
 
