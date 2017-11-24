@@ -699,10 +699,11 @@ class ObjectImporter(object):
                 sec = self.object_mgr.find_sec(attrs.sec_def)
                 attrs.security_id = sec.id
 
-        if def_type in ('channel_amqp', 'channel_jms_wmq', 'outconn_amqp', 'outconn_jms_wmq'):
-            def_type_name = def_type.replace('channel', 'def').replace('outconn', 'def')
-            odb_item = self.object_mgr.find(def_type_name, attrs.get('def_name'))
-            attrs.def_id = odb_item.id
+        for field_name, info in sinfo.object_dependencies.items():
+            dep_obj = self.object_mgr.find(info['dependent_type'],
+                                           attrs[field_name],
+                                           info['dependent_field'])
+            attrs.def_id = dep_obj.id
 
         response = self.client.invoke(service_name, attrs)
         if response.ok:
@@ -741,11 +742,11 @@ class ClusterObjectManager(object):
         self.client = client
         self.logger = logger
 
-    def find(self, item_type, name):
+    def find(self, item_type, value, field='name'):
         # This probably isn't necessary any more:
         item_type = item_type.replace('-', '_')
         lst = self.objects.get(item_type, ())
-        return find_first(lst, lambda item: item.name == name)
+        return find_first(lst, lambda item: getattr(item, field) == value)
 
     def find_sec(self, name):
         """Find any security definition with the given name."""
