@@ -152,7 +152,7 @@ class AfterWSXReconnect(AdminService):
                             pubsub_tool.add_non_gd_messages_by_sub_key(sub_key, messages)
 
                 # For each sub_key from input ..
-                for sub_key in self.request.input.sub_key_list:
+                for sub_key in sub_key_list:
 
                     # .. add relevant SQL objects ..
                     self.pubsub.add_ws_client_pubsub_keys(

@@ -180,6 +180,16 @@ class InRAMBacklog(object):
         out = {}
         to_delete = []
 
+        '''
+        logger_zato.warn('')
+        logger_zato.warn('')
+
+        logger_zato.warn('Before RETR current depth %s', len(self.topic_msg_id_to_msg.get(topic_id, [])))
+
+        logger_zato.warn('')
+        logger_zato.warn('')
+        '''
+
         with self.lock:
 
             # First, collect data for all sub_keys ..
@@ -218,13 +228,15 @@ class InRAMBacklog(object):
                     del self.topic_msg_id_to_msg[topic_id][msg_id]
                     del self.msg_id_to_expiration[msg_id]
 
-                logger_zato.warn('')
-                logger_zato.warn('')
+                    '''
+            logger_zato.warn('')
+            logger_zato.warn('')
 
-                logger_zato.warn('RETR current depth %s', len(self.topic_msg_id_to_msg[topic_id]))
+            logger_zato.warn('After RETR current depth %s', len(self.topic_msg_id_to_msg.get(topic_id, [])))
 
-                logger_zato.warn('')
-                logger_zato.warn('')
+            logger_zato.warn('')
+            logger_zato.warn('')
+            '''
 
         return out
 
@@ -282,7 +294,7 @@ class InRAMBacklog(object):
 
 # ################################################################################################################################
 
-    def log_messages_to_store(self, cid, topic_name, max_depth, sub_keys, messages):
+    def log_messages_to_store(self, cid, topic_name, max_depth, sub_key, messages):
 
         # Used by both loggers
         msg = 'Reached max in-RAM depth of %r for topic `%r` (cid:%r). Extra messages will be stored in logs.'
@@ -293,7 +305,7 @@ class InRAMBacklog(object):
         logger_zato.warn(msg, *args)
 
         # Store messages in logger - by default will go to disk
-        logger_overflow.info('CID:%s, topic:`%s`, sub_keys:%s, messages:%s', cid, topic_name, sub_keys, messages)
+        logger_overflow.info('CID:%s, topic:`%s`, sub_key:%s, messages:%s', cid, topic_name, sub_key, messages)
 
 # ################################################################################################################################
 
@@ -304,6 +316,7 @@ class InRAMBacklog(object):
             topic_sub_key_dict = self.topic_sub_key_to_msg_id.setdefault(topic_id, {})
             topic_msg_dict = self.topic_msg_id_to_msg.setdefault(topic_id, {})
 
+            '''
             # If adding messages would overflow the topic's depth, store the messages through logger instead.
             if len(topic_msg_dict) + len(messages) > max_depth:
                 self.log_messages_to_store(cid, topic_name, max_depth, sub_keys, messages)
@@ -311,6 +324,23 @@ class InRAMBacklog(object):
 
             # We can still keep the messages in RAM
             else:
+                '''
+
+            # First, build a list of sub_keys in that topic that have not yet reached max_depth,
+            # and for those that have, log messages through logger.
+            may_continue = []
+
+            for sub_key in sub_keys:
+                sub_key_messages = topic_sub_key_dict.setdefault(sub_key, [])
+
+                if len(sub_key_messages) + len(messages) > max_depth:
+                    self.log_messages_to_store(cid, topic_name, max_depth, sub_key, messages)
+                else:
+                    may_continue.append(sub_key)
+
+            # Continue only if there is at least one sub_key that has not reached max_depth yet
+            if may_continue:
+
                 # Messages is a list and we now turn it into a dictionary keyed by msg ID.
                 msg_dict = {}
 
@@ -319,7 +349,7 @@ class InRAMBacklog(object):
                     msg_dict[msg_id] = item
 
                     # For each message, make its expiration known to background cleanup task
-                    self.msg_id_to_expiration[msg_id] = (topic_id, sub_keys, item['expiration_time'])
+                    self.msg_id_to_expiration[msg_id] = (topic_id, may_continue, item['expiration_time'])
 
                 # Get this list once and refer to it multiple times below
                 msg_ids = msg_dict.keys()
@@ -328,7 +358,7 @@ class InRAMBacklog(object):
                 topic_msg_dict.update(msg_dict)
 
                 # Add references to the new messages for each sub_key
-                for sub_key in sub_keys:
+                for sub_key in may_continue:
                     sub_key_messages = topic_sub_key_dict.setdefault(sub_key, [])
                     sub_key_messages.extend(msg_ids)
 
