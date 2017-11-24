@@ -526,8 +526,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             }
 
             try:
-                response['pid_data'] = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
-                response['is_ok'] = True
+                by_pid_response = self.invoke_by_pid(service, request, pid, timeout=timeout, *args, **kwargs)
+                is_ok, pid_data = by_pid_response
+                response['is_ok'] = is_ok
+                response['pid_data' if is_ok else 'error_info'] = pid_data
             except Exception, e:
                 response['error_info'] = format_exc(e)
             finally:

@@ -540,7 +540,7 @@ class WebSocket(_WebSocket):
         this WSX client is responsible for.
         """
         for sub_key in request['sub_key_list']:
-            self.pubsub_tool.add_messages_by_sub_key(sub_key)
+            self.pubsub_tool.fetch_gd_messages_by_sub_key(sub_key)
 
 # ################################################################################################################################
 

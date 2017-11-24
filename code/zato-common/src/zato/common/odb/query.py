@@ -1253,6 +1253,11 @@ def server_list(session, cluster_id, cluster_name, up_status=None, needs_columns
         q = q.filter(Server.up_status==up_status)
     return q
 
+def server_by_name(session, cluster_id, cluster_name, server_name):
+    return _server(session, cluster_id, cluster_name).\
+        filter(Server.name==server_name).\
+        all()
+
 # ################################################################################################################################
 
 def _cassandra_conn(session, cluster_id):

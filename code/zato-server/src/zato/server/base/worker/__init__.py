@@ -38,7 +38,7 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 # Zato
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
-from zato.common import broker_message, CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, KVDB, MSG_PATTERN_TYPE, NOTIF, \
+from zato.common import broker_message, CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, MSG_PATTERN_TYPE, NOTIF, \
      SEC_DEF_TYPE, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
@@ -1999,7 +1999,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
 # ################################################################################################################################
 
-    def on_ipc_message(self, msg):
+    def on_ipc_message(self, msg, success=IPC.STATUS.SUCCESS, failure=IPC.STATUS.FAILURE):
 
         # If there is target_pid we cannot continue if we are not the recipient.
         if msg.target_pid and msg.target_pid != self.server.pid:
@@ -2007,9 +2007,16 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # We get here if there is no target_pid or if there is one and it matched that of ours.
 
-        response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=msg.data_format)
+        try:
+            response = self.invoke(msg.service, msg.payload, channel=CHANNEL.IPC, data_format=msg.data_format)
+            status = success
+        except Exception, e:
+            response = format_exc(e)
+            status = failure
+        finally:
+            data = '{};{}'.format(status, response)
 
         with open(msg.reply_to_fifo, 'wb') as fifo:
-            fifo.write(response)
+            fifo.write(data)
 
 # ################################################################################################################################
