@@ -151,6 +151,20 @@ class DeliveryTask(object):
         logger.info('Stopping delivery task for sub_key:`%s`', self.sub_key)
         self.keep_running = False
 
+    def get_queue_depth(self):
+        """ Returns the number of GD and non-GD messages in delivery list.
+        """
+        gd = 0
+        non_gd = 0
+
+        for msg in self.delivery_list:
+            if msg.has_gd:
+                gd += 1
+            else:
+                non_gd += 1
+
+        return gd, non_gd
+
 # ################################################################################################################################
 
 class Message(object):
@@ -358,5 +372,13 @@ class PubSubTool(object):
 
     def confirm_pubsub_msg_delivered(self, sub_key, pub_msg_id):
         self.pubsub.confirm_pubsub_msg_delivered(sub_key, pub_msg_id)
+
+# ################################################################################################################################
+
+    def get_queue_depth(self, sub_key):
+        """ Returns the number of GD and non-GD messages queued up for input sub_key.
+        """
+        with self.sub_key_locks[sub_key]:
+            return self.delivery_tasks[sub_key].get_queue_depth()
 
 # ################################################################################################################################
