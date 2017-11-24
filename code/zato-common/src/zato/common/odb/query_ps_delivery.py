@@ -27,7 +27,6 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now,
     or have not been delivered already.
     """
     query = session.query(
-        PubSubMessage.id,
         PubSubMessage.pub_msg_id,
         PubSubMessage.pub_correl_id,
         PubSubMessage.in_reply_to,
@@ -41,6 +40,7 @@ def get_sql_messages_by_sub_key(session, cluster_id, sub_key, last_sql_run, now,
         PubSubMessage.priority,
         PubSubMessage.expiration,
         PubSubMessage.expiration_time,
+        PubSubMessage.has_gd,
     ).\
     filter(PubSubEndpointEnqueuedMessage.pub_msg_id==PubSubMessage.pub_msg_id).\
     filter(PubSubEndpointEnqueuedMessage.subscription_id==PubSubSubscription.id).\

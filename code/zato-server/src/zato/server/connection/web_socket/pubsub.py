@@ -150,7 +150,7 @@ class DeliveryTask(object):
             logger.warn('Exception in delivery task for sub_key:`%s`, e:`%s`', self.sub_key, format_exc(e))
 
     def stop(self):
-        logger.warn('Stopping delivery task for sub_key:`%s`', self.sub_key)
+        logger.info('Stopping delivery task for sub_key:`%s`', self.sub_key)
         self.keep_running = False
 
 # ################################################################################################################################
@@ -166,12 +166,13 @@ class Message(object):
         )
 
     def __repr__(self):
-        return '<Msg id:{} pub_id:{} ext_cli:{} exp:{}>'.format(
-            self.id, self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time))
+        return '<Msg pub_id:{} ext_cli:{} exp:{}>'.format(
+            self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time))
 
     def to_dict(self):
         return {
-            'id': self.id,
+            'pub_msg_id': self.pub_msg_id,
+            'has_gd': self.has_gd,
         }
 
 # ################################################################################################################################
@@ -180,7 +181,6 @@ class GDMessage(Message):
     """ A guaranteed delivery message initialized from SQL data.
     """
     def __init__(self, msg):
-        self.id = msg.id
         self.pub_msg_id = msg.pub_msg_id
         self.pub_correl_id = msg.pub_correl_id
         self.in_reply_to = msg.in_reply_to
@@ -194,6 +194,7 @@ class GDMessage(Message):
         self.priority = msg.priority
         self.expiration = msg.expiration
         self.expiration_time = msg.expiration_time
+        self.has_gd = msg.has_gd
 
 # ################################################################################################################################
 
@@ -201,7 +202,11 @@ class NonGDMessage(Message):
     """ A non-guaranteed delivery message initialized from a Python dict.
     """
     def __init__(self, msg):
-        self.id = msg['id']
+        print()
+        print()
+        print(msg)
+        print()
+        print()
         self.pub_msg_id = msg['pub_msg_id']
         self.pub_correl_id = msg['pub_correl_id']
         self.in_reply_to = msg['in_reply_to']
@@ -215,6 +220,7 @@ class NonGDMessage(Message):
         self.priority = msg['priority']
         self.expiration = msg['expiration']
         self.expiration_time = msg['expiration_time']
+        self.has_gd = msg['has_gd']
 
 # ################################################################################################################################
 
@@ -253,6 +259,10 @@ class PubSubTool(object):
     def add_sub_key_no_lock(self, sub_key):
         """ Adds metadata about a given sub_key - must be called with self.lock held.
         """
+        # Already seen it - can be ignored
+        if sub_key in self.sub_keys:
+            return
+
         self.sub_keys.append(sub_key)
         self.batch_size[sub_key] = 1
         self.last_sql_run[sub_key] = None
@@ -272,7 +282,7 @@ class PubSubTool(object):
         """ Same as self.add_sub_key_no_lock but holds self.lock.
         """
         with self.lock:
-            self.fetch_gd_messages_by_sub_key(sub_key)
+            self.add_sub_key_no_lock(sub_key)
 
 # ################################################################################################################################
 
@@ -300,19 +310,56 @@ class PubSubTool(object):
 
 # ################################################################################################################################
 
-    def add_non_gd_messages_by_sub_key(self, sub_key, messages):
-        with self.sub_key_locks[sub_key]:
-            for msg in messages:
-                self.delivery_lists[sub_key].add(NonGDMessage(msg))
+    def _add_non_gd_messages_by_sub_key(self, sub_key, messages):
+        """ Low-level implementation of add_non_gd_messages_by_sub_key,
+        must be called with a lock for input sub_key.
+        """
+        for msg in messages:
+            self.delivery_lists[sub_key].add(NonGDMessage(msg))
 
 # ################################################################################################################################
 
-    def fetch_gd_messages_by_sub_key(self, sub_key):
+    def add_non_gd_messages_by_sub_key(self, sub_key, messages):
+        """ Adds to local delivery queue all non-GD messages from input.
+        """
         with self.sub_key_locks[sub_key]:
-            messages = self.pubsub.get_sql_messages_by_sub_key(sub_key, self.last_sql_run[sub_key])
+            self._add_non_gd_messages_by_sub_key(sub_key, messages)
 
-            for msg in messages:
-                self.delivery_lists[sub_key].add(GDMessage(msg))
+# ################################################################################################################################
+
+    def handle_new_messages(self, cid, has_gd, sub_key_list, non_gd_msg_list):
+        """ A callback invoked when there is at least one new message to be handled for input sub_keys.
+        If has_gd is True, it means that at least one GD message available. If non_gd_msg_list is not empty,
+        it is a list of non-GD message for sub_keys.
+        """
+        # Iterate over all input sub keys and carry out all operations while holding a lock for each sub_key
+        for sub_key in sub_key_list:
+            with self.sub_key_locks[sub_key]:
+
+                # Fetch all GD messages, if there are any at all
+                if has_gd:
+                    self._fetch_gd_messages_by_sub_key(sub_key)
+
+                # Accept all input non-GD messages
+                if non_gd_msg_list:
+                    self._add_non_gd_messages_by_sub_key(sub_key, non_gd_msg_list)
+
+# ################################################################################################################################
+
+    def _fetch_gd_messages_by_sub_key(self, sub_key, session=None):
+        """ Low-level implementation of fetch_gd_messages_by_sub_key,
+        must be called with a lock for input sub_key.
+        """
+        for msg in self.pubsub.get_sql_messages_by_sub_key(sub_key, self.last_sql_run[sub_key], session):
+            self.delivery_lists[sub_key].add(GDMessage(msg))
+
+# ################################################################################################################################
+
+    def fetch_gd_messages_by_sub_key(self, sub_key, session=None):
+        """ Fetches GD messages from SQL for sub_key given on input and adds them to local queue of messages to deliver.
+        """
+        with self.sub_key_locks[sub_key]:
+            self._fetch_gd_messages_by_sub_key(sub_key, session)
 
 # ################################################################################################################################
 

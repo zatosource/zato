@@ -11,14 +11,12 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 from contextlib import closing
 from httplib import BAD_REQUEST, NOT_FOUND
+from json import dumps, loads
 from mimetypes import guess_type
 from tempfile import NamedTemporaryFile
 from traceback import format_exc
 from urlparse import parse_qs
 from uuid import uuid4
-
-# rapidjson
-from rapidjson import dumps, loads
 
 # validate
 from validate import is_boolean

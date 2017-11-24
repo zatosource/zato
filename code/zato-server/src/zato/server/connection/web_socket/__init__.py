@@ -539,8 +539,7 @@ class WebSocket(_WebSocket):
         """ Invoked by internal services each a pub/sub message is available for at least one of sub_keys
         this WSX client is responsible for.
         """
-        for sub_key in request['sub_key_list']:
-            self.pubsub_tool.fetch_gd_messages_by_sub_key(sub_key)
+        self.pubsub_tool.handle_new_messages(cid, request['has_gd'], request['sub_key_list'], request['non_gd_msg_list'])
 
 # ################################################################################################################################
 

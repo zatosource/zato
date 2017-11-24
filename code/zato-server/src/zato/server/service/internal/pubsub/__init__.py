@@ -65,7 +65,8 @@ class AfterPublish(AdminService):
             non_gd_msg_list = self.request.input.non_gd_msg_list
 
             # We already know we can store them in RAM
-            self._store_in_ram(cid, topic_id, topic_name, not_found, non_gd_msg_list, False)
+            if not_found:
+                self._store_in_ram(cid, topic_id, topic_name, not_found, non_gd_msg_list, False)
 
             # Attempt to notify pub/sub tasks about non-GD messages ..
             notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list, self.request.input.has_gd_msg_list)
@@ -124,22 +125,31 @@ class AfterWSXReconnect(AdminService):
 
     def handle(self):
 
+        # Local aliases
+        sub_key_list = self.request.input.sub_key_list
+        pubsub_tool = self.request.input.web_socket.pubsub_tool
+
         with closing(self.odb.session()) as session:
 
             # Everything is performed using that WebSocket's pub/sub lock to ensure that both
             # in-RAM and SQL (non-GD and GD) messages are made available to the WebSocket as a single unit.
-            with self.request.input.web_socket.pubsub_tool.lock:
+            with pubsub_tool.lock:
 
                 # Response to produce
                 response = {}
 
                 get_in_ram_service = 'zato.pubsub.topic.get-in-ram-message-list'
-                non_gd = self.servers.invoke_all(
-                    get_in_ram_service, {'sub_key_list':self.request.input.sub_key_list}, timeout=120)
+                non_gd_messages = self.servers.invoke_all(get_in_ram_service, {'sub_key_list':sub_key_list}, timeout=120)
 
-                self.logger.warn('zzzzzzzzzz')
+                # Parse non-GD messages on output from all servers, if any at all, into per-sub_key lists ..
+                if non_gd_messages:
+                    non_gd_messages = self._parse_non_gd_messages(sub_key_list, non_gd_messages)
 
-                self.logger.warn('333 %s', non_gd)
+                    # If there are any non-GD messages, add them to this WebSocket's pubsub tool.
+                    if non_gd_messages:
+                        for sub_key, messages in non_gd_messages.items():
+                            pubsub_tool.add_sub_key_no_lock(sub_key)
+                            pubsub_tool.add_non_gd_messages_by_sub_key(sub_key, messages)
 
                 # For each sub_key from input ..
                 for sub_key in self.request.input.sub_key_list:
@@ -150,7 +160,12 @@ class AfterWSXReconnect(AdminService):
                         self.request.input.channel_name, self.request.input.pub_client_id)
 
                     # .. update state of that WebSocket's pubsub tool that keeps track of message delivery
-                    self.request.input.web_socket.pubsub_tool.add_sub_key_no_lock(sub_key)
+                    pubsub_tool.add_sub_key_no_lock(sub_key)
+
+                    # .. add any GD messages waiting for this sub_key - note that we providing our
+                    # own session on input so as to control when the SQL commit happens,
+                    # which we want to have after all sub_keys have been processed.
+                    pubsub_tool.fetch_gd_messages_by_sub_key(sub_key, session)
 
                     # .. return current depth
                     response[sub_key] = self.invoke('zato.pubsub.queue.get-queue-depth-by-sub-key', {
@@ -163,7 +178,32 @@ class AfterWSXReconnect(AdminService):
 
 # ################################################################################################################################
 
-    def _get_non_gd_messages(self, server_response):
-        return 'zzz'
+    def _parse_non_gd_messages(self, sub_key_list, server_response):
+        out = dict.fromkeys(sub_key_list, [])
+
+        for server_name, server_data_dict in server_response.items():
+            if server_data_dict['is_ok']:
+                server_data = server_data_dict['server_data']
+
+                for server_pid, pid_data_dict in server_data.items():
+                    if not pid_data_dict['is_ok']:
+                        self.logger.warn('Could not retrieve non-GD in-RAM messages from PID %s of %s (%s), details:`%s`',
+                            server_pid, server_name, server_data_dict['meta']['address'], pid_data_dict['error_info'])
+                    else:
+                        messages = pid_data_dict['pid_data']['response']['messages']
+                        for sub_key, sub_key_data in messages.items():
+                            for msg in sub_key_data.values():
+                                out[sub_key].append(msg)
+            else:
+                self.logger.warn('Could not retrieve non-GD in-RAM messages from %s (%s), details:`%s`',
+                    server_name, server_data_dict['meta']['address'], server_data_dict['error_info'])
+
+        # Do not return empty lists unnecessarily - note that it may happen that all sub_keys
+        # will be deleted in which cases only an empty dictionary remains.
+        for sub_key in sub_key_list:
+            if not out[sub_key]:
+                del out[sub_key]
+
+        return out
 
 # ################################################################################################################################
