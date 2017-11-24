@@ -193,7 +193,6 @@ class InRAMBacklog(object):
                     # Make note of what needs to be deleted
                     to_delete.append((topic_id, sub_key, msg_id))
 
-            '''
             # Now delete everything found above
             for topic_id, sub_key, msg_id in to_delete:
 
@@ -218,7 +217,14 @@ class InRAMBacklog(object):
                 else:
                     del self.topic_msg_id_to_msg[topic_id][msg_id]
                     del self.msg_id_to_expiration[msg_id]
-                    '''
+
+                logger_zato.warn('')
+                logger_zato.warn('')
+
+                logger_zato.warn('RETR current depth %s', len(self.topic_msg_id_to_msg[topic_id]))
+
+                logger_zato.warn('')
+                logger_zato.warn('')
 
         return out
 
@@ -595,11 +601,20 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_sql_messages_by_sub_key(self, sub_key, last_sql_run):
+    def get_sql_messages_by_sub_key(self, sub_key, last_sql_run, session=None):
         """ Returns from SQL all messages queued up for a given sub_key.
         """
-        with closing(self.server.odb.session()) as session:
+        if not session:
+            session = self.server.odb.session()
+            needs_close = True
+        else:
+            needs_close = False
+
+        try:
             return _get_sql_messages_by_sub_key(session, self.server.cluster_id, sub_key, last_sql_run, utcnow_as_ms())
+        finally:
+            if needs_close:
+                session.close()
 
 # ################################################################################################################################
 
