@@ -125,8 +125,6 @@ class DeliveryTask(object):
     def run(self, no_msg_sleep_time=1):
         try:
             while self.keep_running:
-                #logger.warn('DLVLIST %s', hex(id(self.delivery_list)))
-
                 if not self.delivery_list:
                     sleep(no_msg_sleep_time) # No need to wake up too often if there is not much to do
                 else:
@@ -166,8 +164,8 @@ class Message(object):
         )
 
     def __repr__(self):
-        return '<Msg pub_id:{} ext_cli:{} exp:{}>'.format(
-            self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time))
+        return '<Msg pub_id:{} ext_cli:{} exp:{} gd:{}>'.format(
+            self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time), self.has_gd)
 
     def to_dict(self):
         return {
@@ -202,11 +200,6 @@ class NonGDMessage(Message):
     """ A non-guaranteed delivery message initialized from a Python dict.
     """
     def __init__(self, msg):
-        print()
-        print()
-        print(msg)
-        print()
-        print()
         self.pub_msg_id = msg['pub_msg_id']
         self.pub_correl_id = msg['pub_correl_id']
         self.in_reply_to = msg['in_reply_to']
