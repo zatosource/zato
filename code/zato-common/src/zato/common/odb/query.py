@@ -931,6 +931,7 @@ def _pubsub_topic(session, cluster_id):
         PubSubTopic.is_internal, PubSubTopic.last_pub_time,
         PubSubTopic.max_depth_gd, PubSubTopic.max_depth_non_gd,
         PubSubTopic.current_depth_gd, PubSubTopic.has_gd,
+        PubSubTopic.gd_depth_check_freq,
         ).\
         filter(Cluster.id==PubSubTopic.cluster_id).\
         filter(Cluster.id==cluster_id).\

@@ -2083,6 +2083,7 @@ class PubSubTopic(Base):
     max_depth_gd = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD)
     max_depth_non_gd = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD)
     current_depth_gd = Column(Integer(), nullable=False, default=0)
+    gd_depth_check_freq = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.GD_DEPTH_CHECK_FREQ)
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)

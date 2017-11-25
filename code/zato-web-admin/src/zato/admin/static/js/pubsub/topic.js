@@ -18,7 +18,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.topic.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.topic.before_submit_hook;
-    $.fn.zato.data_table.setup_forms(['name', 'max_depth_gd', 'max_depth_non_gd']);
+    $.fn.zato.data_table.setup_forms(['name', 'max_depth_gd', 'max_depth_non_gd', 'gd_depth_check_freq']);
 })
 
 
