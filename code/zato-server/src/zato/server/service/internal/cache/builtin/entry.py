@@ -61,7 +61,7 @@ class GetList(_Base):
         max_chars = self.request.input.get('max_chars') or 60
         out = []
 
-        now = self.time.utc_now(needs_format=False)
+        now = self.time.utcnow(needs_format=False)
 
         start = query_ctx.cur_page * query_ctx.page_size
         stop = start + query_ctx.page_size
