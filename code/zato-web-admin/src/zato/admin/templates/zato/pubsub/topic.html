@@ -42,6 +42,7 @@
 
             'max_depth_gd',
             'max_depth_non_gd',
+            'gd_depth_check_freq',
         ]
     }
     </script>
@@ -93,6 +94,7 @@
 
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -132,6 +134,7 @@
 
                         <td class='ignore'>{{ item.max_depth_gd }}</td>
                         <td class='ignore'>{{ item.max_depth_non_gd }}</td>
+                        <td class='ignore'>{{ item.gd_depth_check_freq }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -171,6 +174,10 @@
                             <td>{{ create_form.max_depth_non_gd }} </td>
                         </tr>
                         <tr>
+                            <td style="vertical-align:middle">GD depth check freq.</td>
+                            <td>{{ create_form.gd_depth_check_freq }} </td>
+                        </tr>
+                        <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
                                 <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
@@ -205,6 +212,10 @@
                         <tr>
                             <td style="vertical-align:middle">Max depth RAM</td>
                             <td>{{ edit_form.max_depth_non_gd }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">GD depth check freq.</td>
+                            <td>{{ edit_form.gd_depth_check_freq }} </td>
                         </tr>
                         <tr>
                             <td colspan="2" style="text-align:right">

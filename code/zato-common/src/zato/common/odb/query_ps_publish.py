@@ -35,7 +35,7 @@ def get_topic_depth(session, cluster_id, topic_id):
     """ Returns current depth of input topic by its ID.
     """
     return session.execute(
-        select([Topic.c.current_depth]).\
+        select([Topic.c.current_depth_gd]).\
         where(Topic.c.id==topic_id).\
         where(Topic.c.cluster_id==cluster_id)
         ).\
@@ -49,7 +49,7 @@ def incr_topic_depth(session, cluster_id, topic_id, now, incr_by):
     session.execute(
         update(Topic).\
         values({
-            'current_depth': Topic.c.current_depth + incr_by,
+            'current_depth_gd': Topic.c.current_depth_gd + incr_by,
             'last_pub_time': now
             }).\
         where(Topic.c.id==topic_id).\

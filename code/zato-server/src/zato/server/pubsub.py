@@ -136,6 +136,16 @@ class Topic(object):
         self.max_depth_gd = config.max_depth_gd
         self.max_depth_non_gd = config.max_depth_non_gd
         self.has_gd = config.has_gd
+        self.gd_depth_check_freq = config.gd_depth_check_freq
+        self.gd_depth_check_iter = 0
+
+    def incr_gd_depth_check(self):
+        """ Increases counter indicating whether topic's depth should be checked for max_depth reached.
+        """
+        self.gd_depth_check_iter += 1
+
+    def needs_gd_depth_check(self):
+        return self.gd_depth_check_iter % self.gd_depth_check_freq == 0
 
 # ################################################################################################################################
 

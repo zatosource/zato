@@ -27,9 +27,13 @@ from zato.common.odb.query_ps_publish import get_topic_depth, incr_topic_depth, 
 from zato.common.pubsub import new_msg_id
 from zato.common.time_util import datetime_to_ms, utcnow_as_ms
 from zato.common.util import spawn_greenlet
-from zato.server.pubsub import get_expiration, get_priority
+from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService
+
+# For pyflakes
+PubSub = PubSub
+Topic = Topic
 
 # ################################################################################################################################
 
@@ -185,14 +189,14 @@ class Publish(AdminService):
     def handle(self):
 
         input = self.request.input
-        pubsub = self.server.worker_store.pubsub
+        pubsub = self.server.worker_store.pubsub # type: PubSub
         endpoint_id = input.endpoint_id
 
         # Will return publication pattern matched or raise an exception that we don't catch
         endpoint_id, pattern_matched = self.get_pattern_matched(endpoint_id, input)
 
         try:
-            topic = pubsub.get_topic_by_name(input.topic_name)
+            topic = pubsub.get_topic_by_name(input.topic_name) # type: Topic
         except KeyError:
             raise NotFound(self.cid, 'No such topic `{}`'.format(input.topic_name))
 
@@ -223,20 +227,28 @@ class Publish(AdminService):
             # We don't always have GD messages on input so there is no point in running an SQL transaction otherwise.
             if gd_msg_list:
 
+                len_gd_msg_list = len(gd_msg_list)
+
                 with closing(self.odb.session()) as session:
 
-                    # Get current depth of this topic
-                    current_depth = get_topic_depth(session, cluster_id, topic.id)
+                    # Abort if max depth is already reached but check first if we should check the depth in this iteration.
+                    topic.incr_gd_depth_check()
 
-                    # Abort if max depth is already reached ..
-                    if current_depth >= topic.max_depth_gd:
-                        raise ServiceUnavailable(self.cid, 'Max depth already reached for `{}`'.format(topic.name))
+                    if topic.needs_gd_depth_check():
 
-                    # .. otherwise, update current depth and timestamp of last publication to the topic.
-                    else:
-                        len_gd_msg_list = len(gd_msg_list)
-                        incr_topic_depth(session, cluster_id, topic.id, now, len(gd_msg_list))
-                        current_depth = current_depth + len_gd_msg_list
+                        # Get current depth of this topic
+                        current_depth = get_topic_depth(session, cluster_id, topic.id)
+
+                        if current_depth + len_gd_msg_list > topic.max_depth_gd:
+                            raise ServiceUnavailable(self.cid,
+                                'Publication rejected - would have exceeded max depth for `{}`'.format(topic.name))
+                        else:
+
+                            # This only updates the local variable
+                            current_depth = current_depth + len_gd_msg_list
+
+                    # This updates data in SQL
+                    incr_topic_depth(session, cluster_id, topic.id, now, len_gd_msg_list)
 
                     # Publish messages - INSERT rows, each representing an individual message
                     insert_topic_messages(session, self.cid, gd_msg_list)

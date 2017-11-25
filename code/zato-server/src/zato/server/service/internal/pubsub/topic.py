@@ -109,7 +109,7 @@ class Clear(AdminService):
             with self.lock('zato.pubsub.publish.%s' % topic.name):
 
                 # Set metadata for topic
-                topic.current_depth = 0
+                topic.current_depth_gd = 0
 
                 # Remove all messages
                 session.query(PubSubMessage).\

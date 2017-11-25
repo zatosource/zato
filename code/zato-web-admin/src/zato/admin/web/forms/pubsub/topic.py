@@ -23,6 +23,8 @@ class CreateForm(forms.Form):
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD)
     max_depth_non_gd = forms.CharField(widget=forms.TextInput(
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_NON_GD)
+    gd_depth_check_freq = forms.CharField(widget=forms.TextInput(
+        attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.GD_DEPTH_CHECK_FREQ)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
