@@ -2086,6 +2086,9 @@ class PubSubTopic(Base):
     gd_depth_check_freq = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.GD_DEPTH_CHECK_FREQ)
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
 
+    # A hook service invoked during publications to this specific topic
+    hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_topics', order_by=name, cascade='all, delete, delete-orphan'))
 
@@ -2222,6 +2225,24 @@ class PubSubSubscription(Base):
     last_interaction_type = Column(String(200), nullable=True)
     last_interaction_details = Column(Text, nullable=True)
 
+    # How many messages to deliver in a single batch for that endpoint
+    delivery_batch_size = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE)
+
+    # How many times to retry delivery for a single message
+    delivery_max_retry = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_RETRY)
+
+    # Should a failed delivery of a single message block the entire delivery queue
+    delivery_fail_blocks = Column(Boolean(), nullable=False)
+
+    # How many seconds to wait on a TCP socket error
+    wait_sock_err = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.WAIT_TIME_SOCKET_ERROR)
+
+    # How many seconds to wait on an error other than a TCP socket one
+    wait_non_sock_err = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.WAIT_TIME_NON_SOCKET_ERROR)
+
+    # A hook service invoked before messages are delivered for this specific subscription
+    hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
+
     topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(
         PubSubTopic, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
@@ -2274,6 +2295,10 @@ class PubSubEndpointEnqueuedMessage(Base):
 
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
     is_in_staging = Column(Boolean(), nullable=False, default=False)
+
+    # A flag indicating whether this message is deliverable at all - will be set to False
+    # after delivery_count reaches max retries for subscription or if a hook services decides so.
+    is_deliverable = Column(Boolean(), nullable=False, default=True)
 
     delivery_status = Column(Text, nullable=False)
     delivery_time = Column(BigInteger(), nullable=True)

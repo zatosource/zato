@@ -737,6 +737,10 @@ class PUBSUB:
         TOPIC_MAX_DEPTH_NON_GD = 1000
         GD_DEPTH_CHECK_FREQ = 100
         GET_BATCH_SIZE = 50
+        DELIVERY_BATCH_SIZE = 50
+        DELIVERY_MAX_RETRY = 2 ** 32 - 1
+        WAIT_TIME_SOCKET_ERROR = 60
+        WAIT_TIME_NON_SOCKET_ERROR = 60
 
     class QUEUE_TYPE:
         STAGING = 'staging'
