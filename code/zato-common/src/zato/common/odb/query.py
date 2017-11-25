@@ -928,8 +928,10 @@ def pubsub_endpoint_list(session, cluster_id, needs_columns=False):
 def _pubsub_topic(session, cluster_id):
     return session.query(
         PubSubTopic.id, PubSubTopic.name, PubSubTopic.is_active,
-        PubSubTopic.is_internal, PubSubTopic.last_pub_time, PubSubTopic.max_depth,
-        PubSubTopic.current_depth, PubSubTopic.has_gd).\
+        PubSubTopic.is_internal, PubSubTopic.last_pub_time,
+        PubSubTopic.max_depth_gd, PubSubTopic.max_depth_non_gd,
+        PubSubTopic.current_depth_gd, PubSubTopic.has_gd,
+        ).\
         filter(Cluster.id==PubSubTopic.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(PubSubTopic.name)

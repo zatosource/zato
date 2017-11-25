@@ -229,7 +229,7 @@ class Publish(AdminService):
                     current_depth = get_topic_depth(session, cluster_id, topic.id)
 
                     # Abort if max depth is already reached ..
-                    if current_depth >= topic.max_depth:
+                    if current_depth >= topic.max_depth_gd:
                         raise ServiceUnavailable(self.cid, 'Max depth already reached for `{}`'.format(topic.name))
 
                     # .. otherwise, update current depth and timestamp of last publication to the topic.

@@ -133,7 +133,8 @@ class Topic(object):
         self.name = config.name
         self.is_active = config.is_active
         self.is_internal = config.is_internal
-        self.max_depth = config.max_depth
+        self.max_depth_gd = config.max_depth_gd
+        self.max_depth_non_gd = config.max_depth_non_gd
         self.has_gd = config.has_gd
 
 # ################################################################################################################################

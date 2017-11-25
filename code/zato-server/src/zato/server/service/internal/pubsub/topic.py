@@ -29,8 +29,8 @@ label = 'a pub/sub topic'
 broker_message = BROKER_MSG_PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
-skip_input_params = ['is_internal', 'last_pub_time', 'current_depth']
-output_optional_extra = ['current_depth', 'last_pub_time', 'is_internal']
+skip_input_params = ['current_depth_gd', 'last_pub_time', 'is_internal']
+output_optional_extra = ['current_depth_gd', 'last_pub_time', 'is_internal']
 
 # ################################################################################################################################
 
@@ -79,7 +79,8 @@ class Delete(AdminService):
 class Get(AdminService):
     class SimpleIO:
         input_required = ('cluster_id', AsIs('id'))
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth', 'current_depth')
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd',
+            'current_depth_gd')
         output_optional = ('last_pub_time',)
 
     def handle(self):

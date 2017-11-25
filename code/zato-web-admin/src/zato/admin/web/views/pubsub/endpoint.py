@@ -190,7 +190,7 @@ class EndpointTopics(_EndpointObjects):
     output_class = PubSubTopic
 
     class SimpleIO(_EndpointObjects.SimpleIO):
-        output_required = ('topic_id', 'name', 'is_active', 'is_internal', 'max_depth')
+        output_required = ('topic_id', 'name', 'is_active', 'is_internal', 'max_depth_gd', 'max_depth_non_gd')
         output_optional = ('last_pub_time', 'last_msg_id', 'last_correl_id', 'last_in_reply_to', 'ext_client_id')
 
     def on_before_append_item(self, item):

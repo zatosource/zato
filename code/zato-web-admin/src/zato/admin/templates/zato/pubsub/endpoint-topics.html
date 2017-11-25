@@ -18,7 +18,7 @@
             '_numbering',
             '_selection',
             '_topic_name',
-            'max_depth',
+            '_max_depth',
             'last_pub_time',
             'last_msg_id',
             'last_correl_id',
@@ -48,7 +48,7 @@
                         <th style="width:5%">&nbsp;</th>
                         <th>&nbsp;</th>
                         <th><a href="#">Topic name</a></th>
-                        <th><a href="#">Max depth</a></th>
+                        <th><a href="#">Max depth GD / RAM</a></th>
                         <th><a href="#">Last pub time</a></th>
                         <th><a href="#">Last Msg ID</a></th>
                         <th><a href="#">Last Correl ID</a></th>
@@ -64,7 +64,7 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
                         <td><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.name }}</a></td>
-                        <td>{{ item.max_depth }}</td>
+                        <td>{{ item.max_depth_gd }} / {{ item.max_depth_non_gd }}</td>
                         <td>{{ item.last_pub_time }}</td>
                         <td><a href="{% url "pubsub-message" cluster_id "topic" item.topic_id item.last_msg_id %}">{{ item.last_msg_id }}</a></td>
                         <td>{{ item.last_correl_id|default:'<span class="form_hint">---</span>' }}</td>
