@@ -41,7 +41,7 @@ class Index(_Index):
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd',
-            'current_depth_gd', 'gd_depth_check_freq')
+            'current_depth_gd', 'gd_depth_check_freq', 'hook_service_id')
         output_optional = ('last_pub_time',)
         output_repeated = True
 
@@ -63,6 +63,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd', 'gd_depth_check_freq')
+        input_optional = ('hook_service_id',)
         output_required = ('id', 'name', 'has_gd')
 
     def post_process_return_data(self, return_data):
