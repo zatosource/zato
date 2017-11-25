@@ -733,7 +733,8 @@ class PUBSUB:
     SKIPPED_PATTERN_MATCHING = '<skipped>'
 
     class DEFAULT:
-        TOPIC_MAX_DEPTH = 10000
+        TOPIC_MAX_DEPTH_GD = 10000
+        TOPIC_MAX_DEPTH_NON_GD = 1000
         GET_BATCH_SIZE = 50
 
     class QUEUE_TYPE:

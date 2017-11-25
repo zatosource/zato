@@ -40,7 +40,8 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth', 'current_depth')
+        output_required = ('id', 'name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd',
+            'current_depth_gd')
         output_optional = ('last_pub_time',)
         output_repeated = True
 
@@ -61,7 +62,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_active', 'is_internal', 'has_gd', 'max_depth', )
+        input_required = ('name', 'is_active', 'is_internal', 'has_gd', 'max_depth_gd', 'max_depth_non_gd')
         output_required = ('id', 'name', 'has_gd')
 
     def post_process_return_data(self, return_data):
@@ -89,11 +90,24 @@ class _CreateEdit(CreateEdit):
         else:
             return_data['last_pub_time'] = None
 
-        return_data['current_depth_link'] = '<a href="{}?cluster={}">{}</a>'.format(
+        return_data['current_depth_link'] = """
+            <a href="{}?cluster={}">{}</a>
+            /
+            <a href="{}?cluster={}">{}</a>
+            """.format(
+
+            # GD messages
             django_url_reverse('pubsub-topic-messages',
                 kwargs={'topic_id':return_data['id'], 'name_slug':slugify(return_data['name'])}),
             self.req.zato.cluster_id,
-            item.current_depth)
+            item.current_depth_gd,
+
+            # Non-GD messages
+            django_url_reverse('pubsub-topic-in-ram-backlog',
+                kwargs={'topic_id':return_data['id'], 'name_slug':slugify(return_data['name'])}),
+            self.req.zato.cluster_id,
+            item.current_depth_gd
+        )
 
     def success_message(self, item):
         return 'Successfully {} the pub/sub topic `{}`'.format(self.verb, item.name)
@@ -215,5 +229,15 @@ class TopicMessages(_Index):
                     'id':self.input.topic_id,
                 }).data.response.name
         }
+
+# ################################################################################################################################
+
+class InRAMBacklog(_Index):
+    method_allowed = 'GET'
+    url_name = 'pubsub-topic-in-ram-backlog'
+    template = 'zato/pubsub/topic-in-ram-backlog.html'
+    service_name = 'zato.pubsub.topic.get-in-ram-backlog'
+    output_class = PubSubMessage
+    paginate = True
 
 # ################################################################################################################################
