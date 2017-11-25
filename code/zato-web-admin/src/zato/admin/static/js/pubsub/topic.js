@@ -91,7 +91,7 @@ $.fn.zato.pubsub.topic.clear = function(id) {
 
     var http_callback = function(data, status) {
         var success = status == 'success';
-        $('#current_depth_' + instance.id).html('0');
+        $('#current_depth_' + instance.id).html('0 / 0');
         $.fn.zato.user_message(success, data.responseText);
     }
 

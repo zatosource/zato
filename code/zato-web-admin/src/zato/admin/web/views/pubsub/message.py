@@ -191,9 +191,13 @@ def publish(req, cluster_id, topic_id):
 
     topic_list = []
     publisher_list = []
+    topic_id = int(topic_id)
+    topic_name = None
 
     topic_list_response = req.zato.client.invoke('zato.pubsub.topic.get-list', {'cluster_id':cluster_id}).data
     for item in topic_list_response:
+        if item.id == topic_id:
+            topic_name = item.name
         topic_list.append({'id':item.name, 'name':item.name}) # Topics are identified by their name, not ID
 
     publisher_list_response = req.zato.client.invoke('zato.pubsub.endpoint.get-list', {'cluster_id':cluster_id}).data
@@ -206,8 +210,9 @@ def publish(req, cluster_id, topic_id):
     return_data = {
         'cluster_id': cluster_id,
         'action': 'publish',
-        'form': MsgPublishForm(req, topic_list, publisher_list)
+        'form': MsgPublishForm(req, topic_name, topic_list, publisher_list)
     }
+
     return TemplateResponse(req, 'zato/pubsub/message-publish.html', return_data)
 
 # ################################################################################################################################
