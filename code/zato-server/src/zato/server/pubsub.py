@@ -180,16 +180,6 @@ class InRAMBacklog(object):
         out = {}
         to_delete = []
 
-        '''
-        logger_zato.warn('')
-        logger_zato.warn('')
-
-        logger_zato.warn('Before RETR current depth %s', len(self.topic_msg_id_to_msg.get(topic_id, [])))
-
-        logger_zato.warn('')
-        logger_zato.warn('')
-        '''
-
         with self.lock:
 
             # First, collect data for all sub_keys ..
@@ -227,16 +217,6 @@ class InRAMBacklog(object):
                 else:
                     del self.topic_msg_id_to_msg[topic_id][msg_id]
                     del self.msg_id_to_expiration[msg_id]
-
-                    '''
-            logger_zato.warn('')
-            logger_zato.warn('')
-
-            logger_zato.warn('After RETR current depth %s', len(self.topic_msg_id_to_msg.get(topic_id, [])))
-
-            logger_zato.warn('')
-            logger_zato.warn('')
-            '''
 
         return out
 
@@ -315,16 +295,6 @@ class InRAMBacklog(object):
             # We need to keep data for each topic separately because they have their separate max depth values.
             topic_sub_key_dict = self.topic_sub_key_to_msg_id.setdefault(topic_id, {})
             topic_msg_dict = self.topic_msg_id_to_msg.setdefault(topic_id, {})
-
-            '''
-            # If adding messages would overflow the topic's depth, store the messages through logger instead.
-            if len(topic_msg_dict) + len(messages) > max_depth:
-                self.log_messages_to_store(cid, topic_name, max_depth, sub_keys, messages)
-                return
-
-            # We can still keep the messages in RAM
-            else:
-                '''
 
             # First, build a list of sub_keys in that topic that have not yet reached max_depth,
             # and for those that have, log messages through logger.
