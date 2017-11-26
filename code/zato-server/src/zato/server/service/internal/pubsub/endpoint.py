@@ -36,7 +36,7 @@ broker_message = PUBSUB
 broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
 skip_input_params = ['is_internal', 'sub_key']
-output_optional_extra = ['ws_channel_name', 'hook_service_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key']
+output_optional_extra = ['ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key']
 
 # ################################################################################################################################
 
@@ -54,35 +54,6 @@ def instance_hook(self, input, instance, attrs):
     instance.last_pub_time = instance.last_pub_time or None
     instance.last_sub_time = instance.last_sub_time or None
     instance.last_deliv_time = instance.last_deliv_time or None
-
-    #
-    # 1) If role indicates a subscriber but sub_key doesn't exist, we need to create a new one.
-    #
-    # 2) If sub_key exists and role indicates a subscriber, we don't do anything
-    #    because this is a valid sub_key.
-    #
-    # 3) If role doesn't indicate the instance is a subscriber but sub_key exists,
-    #    it means that we need to remove this sub_key from instance because
-    #    it used to be a subscriber but is not anymore.
-    #
-
-    has_sub_role = 'sub' in input.role
-
-    if has_sub_role:
-
-        # 1)
-        if not instance.sub_key:
-            instance.sub_key = 'zpsk{}'.format(new_cid())
-            input.sub_key = instance.sub_key
-
-        # 2)
-        else:
-            pass # Explicitly don't do anything
-
-    else:
-        # 3)
-        if instance.sub_key:
-            instance.sub_key = None
 
 def broker_message_hook(self, input, instance, attrs, service_type):
     if service_type == 'create_edit':
@@ -117,8 +88,7 @@ class Get(AdminService):
         input_required = ('cluster_id', AsIs('id'))
         output_required = ('id', 'name', 'is_active', 'is_internal', 'role')
         output_optional = ('tags', 'topic_patterns', 'pub_tag_patterns', 'message_tag_patterns',
-            'security_id', 'ws_channel_id', 'hook_service_id', 'sec_type', 'sec_name', 'ws_channel_name', 'hook_service_name',
-            'sub_key')
+            'security_id', 'ws_channel_id', 'sec_type', 'sec_name', 'ws_channel_name', 'sub_key')
 
     def handle(self):
         with closing(self.odb.session()) as session:
@@ -348,25 +318,5 @@ class GetEndpointQueueMessages(AdminService):
         for item in self.response.payload.zato_output:
             item.recv_time = datetime_from_ms(item.recv_time)
             item.last_delivery_time = datetime_from_ms(item.last_delivery_time) if item.last_delivery_time else ''
-
-# ################################################################################################################################
-
-class GetHookService(AdminService):
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', AsIs('endpoint_id'))
-        output_optional = ('service_id', 'service_name')
-
-    def handle(self):
-        with closing(self.odb.session()) as session:
-            item = session.query(
-                Service.id.label('service_id'),
-                Service.name.label('service_name')).\
-                filter(Service.id==PubSubEndpoint.hook_service_id).\
-                filter(PubSubEndpoint.id==self.request.input.endpoint_id).\
-                filter(Service.cluster_id==self.server.cluster_id).\
-                first()
-
-            if item:
-                self.response.payload = item
 
 # ################################################################################################################################

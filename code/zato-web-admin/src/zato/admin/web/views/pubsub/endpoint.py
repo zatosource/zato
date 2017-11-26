@@ -91,7 +91,7 @@ class Index(_Index):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'is_internal', 'role')
         output_optional = ('topic_patterns', 'security_id', 'ws_channel_id', 'ws_channel_name',
-            'hook_service_id', 'hook_service_name', 'sec_type', 'sec_name', 'sub_key')
+            'sec_type', 'sec_name', 'sub_key')
         output_repeated = True
 
     def on_before_append_item(self, item):
@@ -119,7 +119,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_internal', 'role', 'is_active')
-        input_optional = ('topic_patterns', 'security_id', 'ws_channel_id', 'hook_service_id')
+        input_optional = ('topic_patterns', 'security_id', 'ws_channel_id')
         output_required = ('id', 'name')
 
     def on_after_set_input(self):

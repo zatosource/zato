@@ -52,8 +52,8 @@ class Index(_Index):
 
     def handle(self):
         return {
-            'create_form': CreateForm(),
-            'edit_form': EditForm(prefix='edit'),
+            'create_form': CreateForm(self.req),
+            'edit_form': EditForm(self.req, prefix='edit'),
         }
 
 # ################################################################################################################################

@@ -2051,9 +2051,6 @@ class PubSubEndpoint(Base):
     ws_channel = relationship(
         ChannelWebSocket, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
-    # A hook service invoked during publications and subscriptions
-    hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
-
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('pubsub_endpoints', order_by=id, cascade='all, delete, delete-orphan'))
 
@@ -2061,7 +2058,6 @@ class PubSubEndpoint(Base):
     sec_name = None          # Not used by DB
     ws_channel_name = None   # Not used by DB
     service_name = None      # Not used by DB
-    hook_service_name = None # Not used by DB
 
 # ################################################################################################################################
 
@@ -2228,11 +2224,19 @@ class PubSubSubscription(Base):
     # How many messages to deliver in a single batch for that endpoint
     delivery_batch_size = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE)
 
+    # If delivery_batch_size is 1, whether such a single message delivered to endpoint
+    # should be sent as-is or wrapped in a single-element list.
+    wrap_one_msg_in_list = Column(Boolean(), nullable=False)
+
     # How many times to retry delivery for a single message
     delivery_max_retry = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_RETRY)
 
     # Should a failed delivery of a single message block the entire delivery queue
-    delivery_fail_blocks = Column(Boolean(), nullable=False)
+    # until that particular message has been successfully delivered.
+    delivery_err_should_block = Column(Boolean(), nullable=False)
+
+    # How many bytes to send at most in a single delivery
+    delivery_max_size = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_SIZE)
 
     # How many seconds to wait on a TCP socket error
     wait_sock_err = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.WAIT_TIME_SOCKET_ERROR)

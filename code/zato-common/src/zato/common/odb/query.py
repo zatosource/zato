@@ -897,13 +897,10 @@ def _pubsub_endpoint(session, cluster_id):
         PubSubEndpoint.topic_patterns,
         PubSubEndpoint.pub_tag_patterns, PubSubEndpoint.message_tag_patterns,
         PubSubEndpoint.security_id, PubSubEndpoint.ws_channel_id,
-        PubSubEndpoint.hook_service_id,
         SecurityBase.sec_type,
         SecurityBase.name.label('sec_name'),
-        Service.name.label('hook_service_name'),
         ChannelWebSocket.name.label('ws_channel_name'),
         ).\
-        outerjoin(Service, Service.id==PubSubEndpoint.hook_service_id).\
         outerjoin(SecurityBase, SecurityBase.id==PubSubEndpoint.security_id).\
         outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
         filter(Cluster.id==cluster_id).\
@@ -932,7 +929,6 @@ def _pubsub_topic(session, cluster_id):
         PubSubTopic.max_depth_gd, PubSubTopic.max_depth_non_gd,
         PubSubTopic.current_depth_gd, PubSubTopic.has_gd,
         PubSubTopic.gd_depth_check_freq,
-        PubSubTopic.hook_service_id,
         ).\
         filter(Cluster.id==PubSubTopic.cluster_id).\
         filter(Cluster.id==cluster_id).\

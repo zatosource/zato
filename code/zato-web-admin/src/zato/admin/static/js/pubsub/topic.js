@@ -3,9 +3,11 @@
 
 $.fn.zato.data_table.PubSubTopic = new Class({
     toString: function() {
-        var s = '<PubSubTopic id:{0} name:{1}>';
+        var s = '<PubSubTopic id:{0} name:{1} hook_service_id:{2}>';
         return String.format(s, this.id ? this.id : '(none)',
-                                this.name ? this.name : '(none)');
+                                this.name ? this.name : '(none)',
+                                this.hook_service_id ? this.hook_service_id : '(none)'
+                                );
     }
 });
 

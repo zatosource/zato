@@ -732,6 +732,15 @@ class PUBSUB:
 
     SKIPPED_PATTERN_MATCHING = '<skipped>'
 
+    class DELIVER_BY:
+        PRIORITY = 'priority'
+        EXT_PUB_TIME = 'ext_pub_time'
+        PUB_TIME = 'pub_time'
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.PRIORITY, self.EXT_PUB_TIME, self.PUB_TIME))
+
     class DEFAULT:
         TOPIC_MAX_DEPTH_GD = 10000
         TOPIC_MAX_DEPTH_NON_GD = 1000
@@ -739,6 +748,7 @@ class PUBSUB:
         GET_BATCH_SIZE = 50
         DELIVERY_BATCH_SIZE = 50
         DELIVERY_MAX_RETRY = 2 ** 32 - 1
+        DELIVERY_MAX_SIZE = 500000 # 500 kB
         WAIT_TIME_SOCKET_ERROR = 60
         WAIT_TIME_NON_SOCKET_ERROR = 60
 
@@ -751,7 +761,7 @@ class PUBSUB:
                 return iter((self.STAGING, self.CURRENT))
 
     class GD_CHOICE:
-        DEFAULT_PER_TOPIC = NameId('Default per topic', 'default-per-topic')
+        DEFAULT_PER_TOPIC = NameId('----------', 'default-per-topic')
         YES = NameId('Yes', 'true')
         NO = NameId('No', 'false')
 

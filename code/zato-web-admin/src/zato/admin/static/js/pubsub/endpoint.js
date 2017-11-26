@@ -77,7 +77,6 @@ $.fn.zato.pubsub.endpoint.data_table.new_row = function(item, data, include_tr) 
     row += String.format("<td class='ignore'>{0}</td>", data.topic_patterns);
     row += String.format("<td class='ignore'>{0}</td>", data.security_id);
     row += String.format("<td class='ignore'>{0}</td>", data.ws_channel_id);
-    row += String.format("<td class='ignore'>{0}</td>", data.hook_service_id);
 
     if(include_tr) {
         row += '</tr>';
