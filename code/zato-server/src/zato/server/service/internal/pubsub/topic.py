@@ -30,7 +30,7 @@ broker_message = BROKER_MSG_PUBSUB
 broker_message_prefix = 'TOPIC_'
 list_func = pubsub_topic_list
 skip_input_params = ['current_depth_gd', 'last_pub_time', 'is_internal']
-output_optional_extra = ['current_depth_gd', 'last_pub_time', 'is_internal']
+output_optional_extra = ['current_depth_gd', 'last_pub_time', 'is_internal', 'hook_service_name']
 
 # ################################################################################################################################
 
