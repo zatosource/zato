@@ -192,14 +192,21 @@ def publish(req, cluster_id, topic_id):
     topic_list = []
     publisher_list = []
     topic_id = int(topic_id)
-    topic_name = None
-    hook_service_name = None
+    initial_topic_name = None
+    initial_hook_service_name = None
+    select_changer_data = {}
 
     topic_list_response = req.zato.client.invoke('zato.pubsub.topic.get-list', {'cluster_id':cluster_id}).data
     for item in topic_list_response:
+
+        # Initial data for this topic
         if item.id == topic_id:
-            topic_name = item.name
-            hook_service_name = item.hook_service_name
+            initial_topic_name = item.name
+            initial_hook_service_name = item.hook_service_name
+
+        # All topics -> hook service names for select changer
+        select_changer_data[item.name] = item.hook_service_name or ''
+
         topic_list.append({'id':item.name, 'name':item.name}) # Topics are identified by their name, not ID
 
     publisher_list_response = req.zato.client.invoke('zato.pubsub.endpoint.get-list', {'cluster_id':cluster_id}).data
@@ -212,7 +219,8 @@ def publish(req, cluster_id, topic_id):
     return_data = {
         'cluster_id': cluster_id,
         'action': 'publish',
-        'form': MsgPublishForm(req, topic_name, topic_list, hook_service_name, publisher_list)
+        'form': MsgPublishForm(req, dumps(select_changer_data), initial_topic_name, topic_list,
+            initial_hook_service_name, publisher_list)
     }
 
     return TemplateResponse(req, 'zato/pubsub/message-publish.html', return_data)

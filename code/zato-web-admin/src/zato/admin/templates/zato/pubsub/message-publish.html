@@ -14,6 +14,7 @@
     <script type="text/javascript" src="/static/jquery/jquery.form.js"></script>
 
     <script type="text/javascript" src="/static/js/pubsub/message-publish.js"></script>
+    <script type="text/python" src="/static/brython/_zato/pubsub/message_publish.py"></script>
 
 {% endblock %}
 
@@ -76,7 +77,7 @@
 
                 <td class='inline_header' style="width:90px">Pub hook service</td>
                 <td style="width:140px">
-                    {{ form.hook_service_id }}
+                    {{ form.hook_service_name }}
                 </td>
 
             </tr>
@@ -125,9 +126,10 @@
             <tr>
                 <td colspan="6" style="text-align:right">
                     <input type="submit" name="update-message-button" value="Publish message to topic" />
+                    {% csrf_token %}
+                    <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
+                    {{ form.select_changer_source }}
                 </td>
-                {% csrf_token %}
-                <input type="hidden" name="cluster_id" id="cluster_id" value="{{ cluster_id }}" />
             </tr>
         </table>
     </form>

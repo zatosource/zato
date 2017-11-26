@@ -56,8 +56,7 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
 def add_services(form, req, by_id=False, initial_service=None):
     if req.zato.cluster_id:
 
-        service_fields = ['service_name', 'service_id', 'service',
-            'hook_service_id', 'pub_hook_service_id', 'sub_hook_service_id']
+        service_fields = ['service_name', 'service_id', 'service', 'hook_service_id', 'hook_service_name']
 
         for name in service_fields:
             field = form.fields.get(name)
@@ -65,7 +64,8 @@ def add_services(form, req, by_id=False, initial_service=None):
                 field_name = name
                 break
         else:
-            raise ValueError('Could not find any service field (tried: `{}`)'.format(service_fields))
+            raise ValueError('Could not find any service field (tried: `{}` in `{}`)'.format(
+                service_fields, form.fields))
 
         field.choices = []
         field.choices.append(INITIAL_CHOICES)
