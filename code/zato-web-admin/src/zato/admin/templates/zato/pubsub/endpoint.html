@@ -55,7 +55,21 @@
     {% if cluster_id %}
 
         <div class='page_prompt' style="clear:left">
-            <a href="javascript:$.fn.zato.pubsub.endpoint.create()">Create a new pub/sub endpoint</a>
+            <span style="font-size:11px">Create an endpoint:</a>
+            <select>
+                <option value="">------</option>
+                <option value="amqp">AMQP</option>
+                <option value="files">Files</option>
+                <option value="ftp">FTP</option>
+                <option value="imap">IMAP</option>
+                <option value="rest">REST</option>
+                <option value="service">Service</option>
+                <option value="sms-twilio">SMS - Twilio</option>
+                <option value="smtp">SMTP</option>
+                <option value="soap">SOAP</option>
+                <option value="sql">SQL</option>
+                <option value="WebSockets">WebSockets</option>
+            </select>
         </div>
 
         <div id="markup">
