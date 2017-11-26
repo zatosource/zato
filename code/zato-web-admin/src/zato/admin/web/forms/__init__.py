@@ -78,7 +78,7 @@ def add_services(form, req, by_id=False, initial_service=None):
             field.choices.append([id_attr, service.name])
 
         if initial_service:
-            form[field_name] = initial_service
+            form.initial[field_name] = initial_service
 
 # ################################################################################################################################
 

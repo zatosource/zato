@@ -193,13 +193,13 @@ def publish(req, cluster_id, topic_id):
     publisher_list = []
     topic_id = int(topic_id)
     topic_name = None
-    hook_service_id = None
+    hook_service_name = None
 
     topic_list_response = req.zato.client.invoke('zato.pubsub.topic.get-list', {'cluster_id':cluster_id}).data
     for item in topic_list_response:
         if item.id == topic_id:
             topic_name = item.name
-            hook_service_id = item.hook_service_id
+            hook_service_name = item.hook_service_name
         topic_list.append({'id':item.name, 'name':item.name}) # Topics are identified by their name, not ID
 
     publisher_list_response = req.zato.client.invoke('zato.pubsub.endpoint.get-list', {'cluster_id':cluster_id}).data
@@ -212,7 +212,7 @@ def publish(req, cluster_id, topic_id):
     return_data = {
         'cluster_id': cluster_id,
         'action': 'publish',
-        'form': MsgPublishForm(req, topic_name, topic_list, hook_service_id, publisher_list)
+        'form': MsgPublishForm(req, topic_name, topic_list, hook_service_name, publisher_list)
     }
 
     return TemplateResponse(req, 'zato/pubsub/message-publish.html', return_data)
@@ -242,7 +242,7 @@ def publish_action(req):
         for name in('cluster_id', 'topic_name', 'data'):
             service_input[name] = req.POST[name]
 
-        for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group', 'pub_hook_service_id'):
+        for name in('correl_id', 'priority', 'ext_client_id', 'position_in_group'):
             service_input[name] = req.POST[name] or None
 
         req.zato.client.invoke('zato.pubsub.publish.publish', service_input)

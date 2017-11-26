@@ -929,7 +929,9 @@ def _pubsub_topic(session, cluster_id):
         PubSubTopic.max_depth_gd, PubSubTopic.max_depth_non_gd,
         PubSubTopic.current_depth_gd, PubSubTopic.has_gd,
         PubSubTopic.gd_depth_check_freq,
+        Service.name.label('hook_service_name'),
         ).\
+        outerjoin(Service, Service.id==PubSubTopic.hook_service_id).\
         filter(Cluster.id==PubSubTopic.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(PubSubTopic.name)
