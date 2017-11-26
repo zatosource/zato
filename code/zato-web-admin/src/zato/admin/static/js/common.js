@@ -292,8 +292,15 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
                         }
                     }
                     else if(form_elem.is('select')) {
-                        var option = $(String.format("{0} option[value='{1}']", form_elem_name, value));
-                        option.attr('selected', 'selected');
+                        // Set the value only if it exists in SELECT, otherwise reset the field
+                        // so it doesn't get automatically populated with previous instance's value
+                        var option_value = $(String.format("{0} option[value='{1}']", form_elem_name, value));
+                        if($.fn.zato.data_table.select_has_value(option_value)) {
+                            option_value.attr('selected', 'selected');
+                        }
+                        else {
+                            $(String.format("{0} option:first", form_elem_name)).prop('selected',true);
+                        }
                     }
                     else {
                         form_elem.val(value);
@@ -783,6 +790,10 @@ $.fn.zato.data_table.ping = function(id) {
     var url = String.format('./ping/{0}/cluster/{1}/', id, $(document).getUrlParam('cluster'));
     $.fn.zato.post(url, callback, '', 'text');
 
+}
+
+$.fn.zato.data_table.select_has_value = function(select_option) {
+    return select_option.length > 0;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
