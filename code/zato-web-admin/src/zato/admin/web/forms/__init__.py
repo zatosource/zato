@@ -53,7 +53,7 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
 
 # ################################################################################################################################
 
-def add_services(form, req, by_id=False):
+def add_services(form, req, by_id=False, initial_service=None):
     if req.zato.cluster_id:
 
         service_fields = ['service_name', 'service_id', 'service',
@@ -62,6 +62,7 @@ def add_services(form, req, by_id=False):
         for name in service_fields:
             field = form.fields.get(name)
             if field:
+                field_name = name
                 break
         else:
             raise ValueError('Could not find any service field (tried: `{}`)'.format(service_fields))
@@ -75,6 +76,9 @@ def add_services(form, req, by_id=False):
             # Older parts of web-admin use service names only but newer ones prefer service ID
             id_attr = service.id if by_id else service.name
             field.choices.append([id_attr, service.name])
+
+        if initial_service:
+            form[field_name] = initial_service
 
 # ################################################################################################################################
 

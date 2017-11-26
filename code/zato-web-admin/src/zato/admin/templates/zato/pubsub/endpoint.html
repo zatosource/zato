@@ -34,7 +34,6 @@
             'topic_patterns',
             'security_id',
             'ws_channel_id',
-            'hook_service_id',
         ]
     }
     </script>
@@ -122,7 +121,6 @@
                         <td class='ignore'>{{ item.topic_patterns|default:'' }}</td>
                         <td class='ignore'>{{ item.security_id|default:'' }}</td>
                         <td class='ignore'>{{ item.ws_channel_id|default:'' }}</td>
-                        <td class='ignore'>{{ item.hook_service_id|default:'' }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -156,10 +154,6 @@
                         <tr>
                             <td style="vertical-align:middle">WebSockets channel</td>
                             <td>{{ create_form.ws_channel_id }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Hook service</td>
-                            <td>{{ create_form.hook_service_id }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Topics allowed</td>
@@ -197,10 +191,6 @@
                         <tr>
                             <td style="vertical-align:middle">WebSockets channel</td>
                             <td>{{ edit_form.ws_channel_id }} </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle">Hook service</td>
-                            <td>{{ edit_form.hook_service_id }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Topics allowed</td>

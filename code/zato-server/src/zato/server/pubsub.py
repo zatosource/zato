@@ -78,7 +78,6 @@ class Endpoint(object):
         self.role = config.role
         self.is_active = config.is_active
         self.is_internal = config.is_internal
-        self.hook_service_id = config.hook_service_id
 
         self.topic_patterns = config.topic_patterns or ''
 

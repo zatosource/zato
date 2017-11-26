@@ -30,9 +30,9 @@ class MsgPublishForm(MsgForm):
     group_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     msg_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     position_in_group = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%'}))
-    pub_hook_service_id = forms.ChoiceField(widget=forms.Select())
+    hook_service_id = forms.ChoiceField(widget=forms.Select())
 
-    def __init__(self, req, topic_name, topic_list, publisher_list, *args, **kwargs):
+    def __init__(self, req, topic_name, topic_list, hook_service_id, publisher_list, *args, **kwargs):
         super(MsgPublishForm, self).__init__(*args, **kwargs)
         add_select(self, 'topic_name', topic_list)
         add_select(self, 'publisher_id', publisher_list)

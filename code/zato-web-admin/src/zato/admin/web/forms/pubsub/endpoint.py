@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_select, add_security_select, add_services
+from zato.admin.web.forms import add_select, add_security_select
 from zato.common import PUBSUB
 
 # ################################################################################################################################
@@ -24,7 +24,6 @@ class CreateForm(forms.Form):
     role = forms.ChoiceField(widget=forms.Select())
     topic_patterns = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:120px'}))
     security_id = forms.ChoiceField(widget=forms.Select())
-    hook_service_id = forms.ChoiceField(widget=forms.Select())
     ws_channel_id = forms.ChoiceField(widget=forms.Select())
     sub_key = forms.CharField(widget=forms.HiddenInput())
 
@@ -40,7 +39,6 @@ class CreateForm(forms.Form):
         add_security_select(self, security_list, field_name='security_id', needs_no_security=False, needs_rbac=False)
         add_select(self, 'ws_channel_id', ws_channel_list)
         add_select(self, 'role', PUBSUB.ROLE)
-        add_services(self, req, by_id=True)
 
 # ################################################################################################################################
 
