@@ -16,13 +16,12 @@ from contextlib import closing
 # Zato
 from zato.common import PUBSUB as COMMON_PUBSUB
 from zato.common.broker_message import PUBSUB
-from zato.common.exception import BadRequest
+from zato.common.exception import BadRequest, Conflict
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
-     PubSubSubscription, PubSubTopic, Service
+     PubSubSubscription, PubSubTopic
 from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_queue, pubsub_endpoint_queue_list, \
      pubsub_endpoint_list, pubsub_messages_for_queue
 from zato.common.time_util import datetime_from_ms
-from zato.common.util import new_cid
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
@@ -69,7 +68,44 @@ class GetList(AdminService):
 # ################################################################################################################################
 
 class Create(AdminService):
-    __metaclass__ = CreateEditMeta
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'name', 'is_internal', 'role', 'is_active', 'is_internal', 'endpoint_type')
+        input_optional = ('topic_patterns', 'security_id', 'service_id', 'ws_channel_id')
+        output_required = (AsIs('id'), 'name')
+        request_elem = 'zato_pubsub_endpoint_create_request'
+        response_elem = 'zato_pubsub_endpoint_create_response'
+
+    def handle(self):
+        input = self.request.input
+
+        with closing(self.odb.session()) as session:
+
+            existing_one = session.query(PubSubEndpoint.id).\
+                filter(PubSubEndpoint.cluster_id==input.cluster_id).\
+                filter(PubSubEndpoint.name==input.name).\
+                first()
+
+            if existing_one:
+                raise Conflict(self.cid, 'Endpoint `{}` already exists'.format(input.name))
+
+            endpoint = PubSubEndpoint()
+            endpoint.cluster_id = input.cluster_id
+            endpoint.name = input.name
+            endpoint.is_active = input.is_active
+            endpoint.is_internal = input.is_internal
+            endpoint.endpoint_type = input.endpoint_type
+            endpoint.role = input.role
+            endpoint.topic_patterns = input.topic_patterns
+            endpoint.security_id = input.security_id
+            endpoint.service_id = input.service_id
+            endpoint.ws_channel_id = input.ws_channel_id
+
+            session.add(endpoint)
+            session.commit()
+
+            self.response.payload.id = endpoint.id
+            self.response.payload.name = self.request.input.name
+
 
 # ################################################################################################################################
 

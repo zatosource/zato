@@ -31,14 +31,14 @@ class CreateForm(forms.Form):
     security_id = forms.ChoiceField(widget=forms.Select())
 
     # REST
-    out_rest_id = forms.ChoiceField(widget=forms.Select())
-    out_rest_callback = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    #out_rest_id = forms.ChoiceField(widget=forms.Select())
+    #out_rest_callback = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
 
     # Service
     service_id = forms.ChoiceField(widget=forms.Select())
 
     # SOAP
-    out_soap_id = forms.ChoiceField(widget=forms.Select())
+    #out_soap_id = forms.ChoiceField(widget=forms.Select())
 
     # WebSockets
     ws_channel_id = forms.ChoiceField(widget=forms.Select())
@@ -50,8 +50,8 @@ class CreateForm(forms.Form):
         self.fields['ws_channel_id'].choices = []
 
         add_security_select(self, data_list.security_list, field_name='security_id', needs_no_security=False, needs_rbac=False)
-        add_select(self, 'out_rest_id', data_list.out_rest_list)
-        add_select(self, 'out_soap_id', data_list.out_soap_list)
+        #add_select(self, 'out_rest_id', data_list.out_rest_list)
+        #add_select(self, 'out_soap_id', data_list.out_soap_list)
         add_select(self, 'ws_channel_id', data_list.ws_channel_list)
         add_select(self, 'role', PUBSUB.ROLE)
         add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE, needs_initial_select=False)
