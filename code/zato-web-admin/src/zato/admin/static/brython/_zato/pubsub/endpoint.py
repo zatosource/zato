@@ -89,7 +89,7 @@ class EndpointFormHandler(object):
     def on_changed(self, e, form_prefix=''):
         """ A callback that switches values according to currently selected value.
         """
-        self.switch_to(e.srcElement.value)
+        self.switch_to(e.srcElement.value, form_prefix)
 
 # ################################################################################################################################
 
@@ -129,9 +129,10 @@ class EndpointFormHandler(object):
             row.set_style({'display':style})
 
             # Above, we changed display style for the table row but we still need to reset each individual field.
-            field_id = 'id_{}'.format(row_id.replace(row_prefix, '', 1))
-            field = doc[field_id]
-            field.set_value('')
+            if not form_prefix:
+                field_id = 'id_{}'.format(row_id.replace(row_prefix, '', 1))
+                field = doc[field_id]
+                field.set_value('')
 
 # ################################################################################################################################
 
