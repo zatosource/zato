@@ -38,11 +38,23 @@ $.fn.zato.pubsub.endpoint.before_submit_hook = function(form) {
     }
 }
 
+$.fn.zato.pubsub.endpoint.clear_forms = function() {
+    // Hide everything ..
+    $('tr[id^=endpoint_row_id_]').css('display', 'none');
+    $('tr[id^=edit-endpoint_row_id_]').css('display', 'none');
+
+    // .. except for WebSockets which we display by default.
+    $('tr[id=endpoint_row_id_ws_channel_id]').css('display', 'table-row');
+    $('tr[id=edit-endpoint_row_id_ws_channel_id]').css('display', 'table-row');
+}
+
 $.fn.zato.pubsub.endpoint.create = function() {
+    $.fn.zato.pubsub.endpoint.clear_forms();
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub endpoint', null);
 }
 
 $.fn.zato.pubsub.endpoint.edit = function(id) {
+    $.fn.zato.pubsub.endpoint.clear_forms();
     $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub endpoint', id);
 }
 
