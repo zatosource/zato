@@ -10,7 +10,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from json import loads
 
 # Brython
-from browser import document as doc
+from browser import document as doc, window
 
 # ################################################################################################################################
 
@@ -51,16 +51,24 @@ class EndpointFormHandler(object):
         self.edit_source = doc['id_edit-{}'.format(elem_name)]
 
     def run(self):
+        # Bind events
         self.create_source.bind('change', self.on_create_changed)
         self.edit_source.bind('change', self.on_edit_changed)
 
-        # Clear out any older values possibly left in forms
-        self.remove('', self.get_all_rows(''))
-        self.remove('edit-', self.get_all_rows('edit-'))
+        # Remove any old data
+        self.clear()
 
         # Populate initial forms
         self.switch_to(self.current, '')
         self.switch_to(self.current, 'edit-')
+
+# ################################################################################################################################
+
+    def clear(self):
+        """ Clear out any older values possibly left in forms.
+        """
+        self.remove('', self.get_all_rows(''))
+        self.remove('edit-', self.get_all_rows('edit-'))
 
 # ################################################################################################################################
 
@@ -143,5 +151,8 @@ class EndpointFormHandler(object):
 
 handler = EndpointFormHandler()
 handler.run()
+
+# Register our code with JavaScript
+window.zato_endpoint_form_handler = handler
 
 # ################################################################################################################################
