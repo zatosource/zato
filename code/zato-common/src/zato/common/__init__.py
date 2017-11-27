@@ -803,6 +803,24 @@ class PUBSUB:
             def __iter__(self):
                 return iter((self.PUBLISHER, self.SUBSCRIBER, self.PUBLISHER_SUBSCRIBER))
 
+    class ENDPOINT_TYPE:
+        AMQP = NameId('AMQP', 'amqp')
+        FILES = NameId('Files', 'files')
+        FTP = NameId('FTP', 'ftp')
+        IMAP = NameId('IMAP', 'imap')
+        REST = NameId('REST', 'rest')
+        SERVICE = NameId('Service', 'service')
+        SMS_TWILIO = NameId('SMS - Twilio', 'sms-twilio')
+        SMTP = NameId('SMTP', 'smtp')
+        SOAP = NameId('SOAP', 'soap')
+        SQL = NameId('SQL', 'sql')
+        WEB_SOCKETS = NameId('WebSockets', 'websockets')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.AMQP, self.FILES, self.FTP, self.IMAP, self.REST, self.SERVICE, self.SMS_TWILIO, self.SMTP,
+                    self.SOAP, self.SQL, self.WEB_SOCKETS))
+
 class EMAIL:
     class DEFAULT:
         TIMEOUT = 10

@@ -20,6 +20,7 @@ from zato.common import PUBSUB
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
+    endpoint_type = forms.ChoiceField(widget=forms.Select())
     is_internal = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     role = forms.ChoiceField(widget=forms.Select())
     topic_patterns = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:120px'}))
@@ -39,6 +40,10 @@ class CreateForm(forms.Form):
         add_security_select(self, security_list, field_name='security_id', needs_no_security=False, needs_rbac=False)
         add_select(self, 'ws_channel_id', ws_channel_list)
         add_select(self, 'role', PUBSUB.ROLE)
+        add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE, needs_initial_select=False)
+
+        # Let's assume the default type of pub/sub endpoint will be REST clients
+        self.initial['endpoint_type'] = PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
 
 # ################################################################################################################################
 
