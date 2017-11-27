@@ -18,7 +18,7 @@ from traceback import format_exc
 from arrow import get as arrow_get
 
 # Bunch
-from bunch import bunchify
+from bunch import Bunch, bunchify
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
@@ -30,7 +30,7 @@ from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm, EndpointQ
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, \
      invoke_service_with_json_response, method_allowed, slugify
 from zato.admin.web.views.pubsub import get_client_html
-from zato.common import ZATO_NONE
+from zato.common import CONNECTION, URL_TYPE, ZATO_NONE
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubSubscription, PubSubTopic
 
 # ################################################################################################################################
@@ -99,17 +99,42 @@ class Index(_Index):
 
     def handle(self):
 
+        data_list = Bunch()
+        data_list.security_list = []
+        data_list.ws_channel_list = []
+        data_list.out_rest_list = []
+        data_list.out_soap_list = []
+
         if self.req.zato.cluster_id:
-            sec_list = self.get_sec_def_list('basic_auth').def_items
-            ws_channel_list = result = self.req.zato.client.invoke(
+
+            # Security definitions
+            data_list.security_list = self.get_sec_def_list('basic_auth').def_items
+
+            # WebSockets channels
+            data_list.ws_channel_list = self.req.zato.client.invoke(
                 'zato.channel.web-socket.get-list', {'cluster_id': self.req.zato.cluster_id})
-        else:
-            sec_list = []
-            ws_channel_list = []
+
+            # Outgoing REST connections
+            data_list.out_rest_list = self.req.zato.client.invoke(
+                'zato.http-soap.get-list', {
+                    'cluster_id': self.req.zato.cluster_id,
+                    'name_filter': '*',
+                    'connection': CONNECTION.OUTGOING,
+                    'transport': URL_TYPE.PLAIN_HTTP,
+                })
+
+            # Outgoing SOAP connections
+            data_list.out_soap_list = self.req.zato.client.invoke(
+                'zato.http-soap.get-list', {
+                    'cluster_id': self.req.zato.cluster_id,
+                    'name_filter': '*',
+                    'connection': CONNECTION.OUTGOING,
+                    'transport': URL_TYPE.SOAP,
+                })
 
         return {
-            'create_form': CreateForm(sec_list, ws_channel_list, req=self.req),
-            'edit_form': EditForm(sec_list, ws_channel_list, prefix='edit', req=self.req),
+            'create_form': CreateForm(self.req, data_list),
+            'edit_form': EditForm(self.req, data_list, prefix='edit'),
         }
 
 # ################################################################################################################################
