@@ -143,8 +143,8 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('name', 'is_internal', 'role', 'is_active')
-        input_optional = ('topic_patterns', 'security_id', 'ws_channel_id')
+        input_required = ('name', 'is_internal', 'role', 'is_active', 'endpoint_type')
+        input_optional = ('topic_patterns', 'security_id', 'service_id', 'ws_channel_id')
         output_required = ('id', 'name')
 
     def on_after_set_input(self):
@@ -163,7 +163,7 @@ class _CreateEdit(CreateEdit):
         return_data.update(enrich_item(self.req.zato.cluster_id, response))
 
     def success_message(self, item):
-        return 'Successfully {} the pub/sub endpoint `{}`'.format(self.verb, item.name)
+        return 'Successfully {} pub/sub endpoint `{}`'.format(self.verb, item.name)
 
 # ################################################################################################################################
 

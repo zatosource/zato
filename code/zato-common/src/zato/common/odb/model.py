@@ -2018,6 +2018,7 @@ class PubSubEndpoint(Base):
     name = Column(String(200), nullable=False)
     is_internal = Column(Boolean(), nullable=False, default=False)
     is_active = Column(Boolean(), nullable=False, default=True) # Unusued for now
+    endpoint_type = Column(String(40), nullable=False) # WSX, REST, AMQP and other types
 
     last_seen = Column(BigInteger(), nullable=True)
     last_pub_time = Column(BigInteger(), nullable=True)
@@ -2215,7 +2216,6 @@ class PubSubSubscription(Base):
     delivery_method = Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY)
     delivery_data_format = Column(String(200), nullable=False, default=DATA_FORMAT.JSON)
     delivery_endpoint = Column(Text, nullable=True)
-    delivery_group_size = Column(Integer, nullable=True)
 
     last_interaction_time = Column(BigInteger(), nullable=True)
     last_interaction_type = Column(String(200), nullable=True)

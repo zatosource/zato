@@ -23,11 +23,11 @@ rows = {
     'files': [],
     'ftp': [],
     'imap': [],
-    'rest': ['security_id', 'out_rest_id', 'out_rest_callback'],
+    'rest': ['security_id'],
     'service': ['service_id'],
     'sms-twilio': [],
     'smtp': [],
-    'soap': ['security_id', 'out_soap_id'],
+    'soap': ['security_id'],
     'sql': [],
     'websockets': ['ws_channel_id'],
 }
