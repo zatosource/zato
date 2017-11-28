@@ -39,11 +39,12 @@ class CreateForm(forms.Form):
         super(CreateForm, self).__init__(*args, **kwargs)
 
         add_security_select(self, data_list.security_list, field_name='security_id', needs_no_security=False, needs_rbac=False)
-        add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE, needs_initial_select=False)
+        add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE, needs_initial_select=False,
+            skip=PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
         add_select(self, 'service_id', data_list.service_list)
 
         # Let's assume the default type of pub/sub endpoint will be REST clients
-        self.initial['endpoint_type'] = PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
+        self.initial['endpoint_type'] = PUBSUB.ENDPOINT_TYPE.REST.id
 
 # ################################################################################################################################
 
