@@ -91,7 +91,7 @@ class Index(_Index):
         input_required = ('cluster_id',)
         output_required = ('id', 'name', 'is_active', 'is_internal', 'role')
         output_optional = ('topic_patterns', 'security_id', 'ws_channel_id', 'ws_channel_name',
-            'sec_type', 'sec_name', 'sub_key')
+            'sec_type', 'sec_name', 'sub_key', 'service_id')
         output_repeated = True
 
     def on_before_append_item(self, item):
@@ -102,8 +102,9 @@ class Index(_Index):
         data_list = Bunch()
         data_list.security_list = []
         data_list.ws_channel_list = []
-        data_list.out_rest_list = []
-        data_list.out_soap_list = []
+        data_list.service_list = []
+        #data_list.out_rest_list = []
+        #data_list.out_soap_list = []
 
         if self.req.zato.cluster_id:
 
@@ -112,8 +113,13 @@ class Index(_Index):
 
             # WebSockets channels
             data_list.ws_channel_list = self.req.zato.client.invoke(
-                'zato.channel.web-socket.get-list', {'cluster_id': self.req.zato.cluster_id})
+                'zato.channel.web-socket.get-list', {'cluster_id': self.req.zato.cluster_id}).data
 
+            # Services
+            data_list.service_list = self.req.zato.client.invoke(
+                'zato.service.get-list', {'cluster_id': self.req.zato.cluster_id}).data
+
+            '''
             # Outgoing REST connections
             data_list.out_rest_list = self.req.zato.client.invoke(
                 'zato.http-soap.get-list', {
@@ -131,11 +137,34 @@ class Index(_Index):
                     'connection': CONNECTION.OUTGOING,
                     'transport': URL_TYPE.SOAP,
                 })
+                '''
+
+        # Filter out items that are already in use, this is needed because a single one
+        # can be used in only one endpoint. This is also enforced on SQL level by services.
+        data_list.security_list = self.filter_out_already_in_use(data_list.security_list, 'security_id')
+        data_list.ws_channel_list = self.filter_out_already_in_use(data_list.ws_channel_list, 'ws_channel_id')
+        data_list.service_list = self.filter_out_already_in_use(data_list.service_list, 'service_id')
 
         return {
             'create_form': CreateForm(self.req, data_list),
             'edit_form': EditForm(self.req, data_list, prefix='edit'),
         }
+
+    def filter_out_already_in_use(self, data_list, id_attr):
+        out = []
+        id_list = [elem for elem in [getattr(elem, id_attr) for elem in self.items] if elem]
+
+        if id_attr == 'security_id':
+            for elem in data_list:
+                elem_id = elem[0]
+                if elem_id not in id_list:
+                    out.append(elem)
+        else:
+            for elem in data_list:
+                if elem.id not in id_list:
+                    out.append(elem)
+
+        return out
 
 # ################################################################################################################################
 

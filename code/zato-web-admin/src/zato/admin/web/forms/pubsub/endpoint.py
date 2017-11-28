@@ -50,12 +50,12 @@ class CreateForm(forms.Form):
         self.fields['ws_channel_id'].choices = []
 
         add_security_select(self, data_list.security_list, field_name='security_id', needs_no_security=False, needs_rbac=False)
+        add_select(self, 'service_id', data_list.service_list)
+        add_select(self, 'ws_channel_id', data_list.ws_channel_list)
         #add_select(self, 'out_rest_id', data_list.out_rest_list)
         #add_select(self, 'out_soap_id', data_list.out_soap_list)
-        add_select(self, 'ws_channel_id', data_list.ws_channel_list)
         add_select(self, 'role', PUBSUB.ROLE)
         add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE, needs_initial_select=False)
-        add_services(self, req)
 
         # Let's assume the default type of pub/sub endpoint will be REST clients
         self.initial['endpoint_type'] = PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
