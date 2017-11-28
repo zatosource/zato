@@ -2082,6 +2082,7 @@ class PubSubTopic(Base):
     current_depth_gd = Column(Integer(), nullable=False, default=0)
     gd_depth_check_freq = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.GD_DEPTH_CHECK_FREQ)
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
+    is_api_sub_allowed = Column(Boolean(), nullable=False)
 
     # A hook service invoked during publications to this specific topic
     hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)

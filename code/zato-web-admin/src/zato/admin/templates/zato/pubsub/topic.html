@@ -39,6 +39,7 @@
             'is_internal',
             'is_active',
             'has_gd',
+            'is_api_sub_allowed',
 
             'max_depth_gd',
             'max_depth_non_gd',
@@ -136,6 +137,7 @@
                         <td class='ignore'>{{ item.is_internal }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.has_gd }}</td>
+                        <td class='ignore'>{{ item.is_api_sub_allowed }}</td>
 
                         <td class='ignore'>{{ item.max_depth_gd }}</td>
                         <td class='ignore'>{{ item.max_depth_non_gd }}</td>
@@ -172,6 +174,10 @@
                         <tr>
                             <td style="vertical-align:middle">Guaranteed delivery</td>
                             <td>{{ create_form.has_gd }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Is API sub. allowed</td>
+                            <td>{{ create_form.is_api_sub_allowed }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Max depth GD</td>
@@ -216,6 +222,10 @@
                         <tr>
                             <td style="vertical-align:middle">Guaranteed delivery</td>
                             <td>{{ edit_form.has_gd }} </td>
+                        </tr>
+                        <tr>
+                            <td style="vertical-align:middle">Is API sub. allowed</td>
+                            <td>{{ edit_form.is_api_sub_allowed }} </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Max depth GD</td>

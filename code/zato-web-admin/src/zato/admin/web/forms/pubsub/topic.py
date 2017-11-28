@@ -20,6 +20,7 @@ class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
     has_gd = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    is_api_sub_allowed = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     max_depth_gd = forms.CharField(widget=forms.TextInput(
         attrs={'class':'required', 'style':'width:20%'}), initial=PUBSUB.DEFAULT.TOPIC_MAX_DEPTH_GD)
     max_depth_non_gd = forms.CharField(widget=forms.TextInput(

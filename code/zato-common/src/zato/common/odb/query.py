@@ -933,10 +933,16 @@ def pubsub_endpoint_list(session, cluster_id, needs_columns=False):
 
 def _pubsub_topic(session, cluster_id):
     return session.query(
-        PubSubTopic.id, PubSubTopic.name, PubSubTopic.is_active,
-        PubSubTopic.is_internal, PubSubTopic.last_pub_time,
-        PubSubTopic.max_depth_gd, PubSubTopic.max_depth_non_gd,
-        PubSubTopic.current_depth_gd, PubSubTopic.has_gd,
+        PubSubTopic.id,
+        PubSubTopic.name,
+        PubSubTopic.is_active,
+        PubSubTopic.is_internal,
+        PubSubTopic.last_pub_time,
+        PubSubTopic.max_depth_gd,
+        PubSubTopic.max_depth_non_gd,
+        PubSubTopic.current_depth_gd,
+        PubSubTopic.has_gd,
+        PubSubTopic.is_api_sub_allowed,
         PubSubTopic.gd_depth_check_freq,
         Service.name.label('hook_service_name'),
         ).\
