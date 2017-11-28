@@ -103,9 +103,12 @@ class Create(AdminService):
             session.add(endpoint)
             session.commit()
 
+            input.action = PUBSUB.ENDPOINT_CREATE.value
+            input.id = endpoint.id
+            self.broker_client.publish(input)
+
             self.response.payload.id = endpoint.id
             self.response.payload.name = self.request.input.name
-
 
 # ################################################################################################################################
 
