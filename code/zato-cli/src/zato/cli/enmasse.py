@@ -649,8 +649,10 @@ class ObjectImporter(object):
         # Create new objects, again, definitions come first ..
         #
         for item_type, items in self.json.items():
-            new = new_defs if 'def' in item_type else new_other
-            new.append({item_type:items})
+            if SERVICE_BY_NAME[item_type].is_security or 'def' in item_type:
+                new_defs.append({item_type: items})
+            else:
+                new_other.append({item_type: items})
 
         #
         # .. actually create the objects now.
