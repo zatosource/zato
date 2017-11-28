@@ -189,7 +189,7 @@ class Edit(_CreateEdit):
 
 class Delete(_Delete):
     url_name = 'pubsub-endpoint-delete'
-    error_message = 'Could not delete the pub/sub endpoint'
+    error_message = 'Could not delete pub/sub endpoint'
     service_name = 'zato.pubsub.endpoint.delete'
 
 # ################################################################################################################################

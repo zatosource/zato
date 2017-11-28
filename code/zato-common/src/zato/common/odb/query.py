@@ -891,13 +891,18 @@ def cloud_aws_s3_list(session, cluster_id, needs_columns=False):
 
 def _pubsub_endpoint(session, cluster_id):
     return session.query(
-        PubSubEndpoint.id, PubSubEndpoint.name,
-        PubSubEndpoint.is_internal, PubSubEndpoint.is_active,
-        PubSubEndpoint.role, PubSubEndpoint.tags,
+        PubSubEndpoint.id,
+        PubSubEndpoint.name,
+        PubSubEndpoint.is_active,
+        PubSubEndpoint.is_internal,
+        PubSubEndpoint.role,
+        PubSubEndpoint.tags,
         PubSubEndpoint.topic_patterns,
         PubSubEndpoint.endpoint_type,
-        PubSubEndpoint.pub_tag_patterns, PubSubEndpoint.message_tag_patterns,
-        PubSubEndpoint.security_id, PubSubEndpoint.ws_channel_id,
+        PubSubEndpoint.pub_tag_patterns,
+        PubSubEndpoint.message_tag_patterns,
+        PubSubEndpoint.security_id,
+        PubSubEndpoint.ws_channel_id,
         SecurityBase.sec_type,
         SecurityBase.name.label('sec_name'),
         Service.id.label('service_id'),
@@ -952,39 +957,6 @@ def pubsub_topic_list(session, cluster_id, needs_columns=False):
     """ All pub/sub topics.
     """
     return _pubsub_topic(session, cluster_id)
-
-# ################################################################################################################################
-
-def _pubsub_subscription(session, cluster_id):
-    return session.query(
-        PubSubSubscription.id, PubSubSubscription.active_status,
-        PubSubSubscription.is_internal, PubSubSubscription.creation_time,
-        PubSubSubscription.sub_key, PubSubSubscription.is_durable,
-        PubSubSubscription.has_gd, PubSubSubscription.topic_id,
-        PubSubSubscription.endpoint_id, PubSubSubscription.out_http_soap_id,
-        PubSubSubscription.out_amqp_id, PubSubSubscription.ws_sub_id,
-        PubSubSubscription.ws_channel_id,
-        PubSubSubscription.cluster_id,
-        PubSubSubscription.id.label('name'), # A 'name' attribute is needed by ConfigDict
-        PubSubTopic.name.label('topic_name'),
-        ).\
-        outerjoin(PubSubTopic, PubSubTopic.id==PubSubSubscription.topic_id).\
-        filter(Cluster.id==PubSubSubscription.cluster_id).\
-        filter(Cluster.id==cluster_id).\
-        order_by(PubSubSubscription.id)
-
-def pubsub_subscription(session, cluster_id, id):
-    """ A pub/sub subscription.
-    """
-    return _pubsub_subscription(session, cluster_id).\
-        filter(PubSubSubscription.id==id).\
-        one()
-
-@query_wrapper
-def pubsub_subscription_list(session, cluster_id, needs_columns=False):
-    """ All pub/sub subscriptions.
-    """
-    return _pubsub_subscription(session, cluster_id)
 
 # ################################################################################################################################
 

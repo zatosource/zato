@@ -34,7 +34,7 @@ label = 'a pub/sub endpoint'
 broker_message = PUBSUB
 broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
-skip_input_params = ['is_internal', 'sub_key']
+skip_input_params = ['is_internal', 'sub_key', 'is_sub_allowed']
 output_optional_extra = ['ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key']
 
 # ################################################################################################################################

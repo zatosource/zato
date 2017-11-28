@@ -1,0 +1,98 @@
+# -*- coding: utf-8 -*-
+
+"""
+Copyright (C) 2017, Zato Source s.r.o. https://zato.io
+
+Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
+"""
+
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+# stdlib
+import logging
+
+# Zato
+from zato.admin.web import from_utc_to_user
+from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
+from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.common.odb.model import PubSubEndpoint
+
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+class Index(_Index):
+    method_allowed = 'GET'
+    url_name = 'pubsub-subscription'
+    template = 'zato/pubsub/subscription.html'
+    service_name = 'zato.pubsub.subscription.get-endpoint-summary-list'
+    output_class = PubSubEndpoint
+    paginate = True
+
+    class SimpleIO(_Index.SimpleIO):
+        input_required = ('cluster_id',)
+        output_required = ('id', 'endpoint_name', 'endpoint_type', 'subscription_count', 'is_active', 'is_internal')
+        output_optional = ('security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
+            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role')
+        output_repeated = True
+
+    def on_before_append_item(self, item):
+
+        if item.last_seen:
+            item.last_seen = from_utc_to_user(item.last_seen+'+00:00', self.req.zato.user_profile)
+
+        if item.last_deliv_time:
+            item.last_deliv_time = from_utc_to_user(item.last_deliv_time+'+00:00', self.req.zato.user_profile)
+
+        return item
+
+    def handle(self):
+
+        return {
+            'create_form': CreateForm(self.req),
+            'edit_form': EditForm(self.req, prefix='edit'),
+        }
+
+# ################################################################################################################################
+
+class _CreateEdit(CreateEdit):
+    method_allowed = 'POST'
+
+    class SimpleIO(CreateEdit.SimpleIO):
+        input_required = ('endpoint_id', 'is_active')
+        input_optional = ('topic_list_text', 'topic_list_json')
+        output_required = ('id',)
+
+    def post_process_return_data(self, return_data):
+
+        response = self.req.zato.client.invoke('zato.pubsub.subscription.get', {
+            'cluster_id': self.req.zato.cluster_id,
+            'id': return_data['id'],
+        }).data['response']
+
+    def success_message(self, item):
+        return 'Pub/sub subscription {} successfully'.format(self.verb)
+
+# ################################################################################################################################
+
+class Create(_CreateEdit):
+    url_name = 'pubsub-subscription-create'
+    service_name = 'zato.pubsub.subscription.create'
+
+# ################################################################################################################################
+
+class Edit(_CreateEdit):
+    url_name = 'pubsub-subscription-edit'
+    form_prefix = 'edit-'
+    service_name = 'zato.pubsub.subscription.edit'
+
+# ################################################################################################################################
+
+class Delete(_Delete):
+    url_name = 'pubsub-subscription-delete'
+    error_message = 'Could not delete pub/sub subscription'
+    service_name = 'zato.pubsub.subscription.delete'
+
+# ################################################################################################################################

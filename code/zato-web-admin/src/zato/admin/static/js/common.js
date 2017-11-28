@@ -107,6 +107,7 @@ $.namespace('zato.pattern.delivery');
 $.namespace('zato.pattern.delivery.in_doubt');
 $.namespace('zato.pubsub.endpoint');
 $.namespace('zato.pubsub.endpoint_queue');
+$.namespace('zato.pubsub.subscription');
 $.namespace('zato.pubsub.topic');
 $.namespace('zato.pubsub.message');
 $.namespace('zato.pubsub.message.details');

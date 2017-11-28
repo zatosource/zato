@@ -38,7 +38,7 @@ from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, SEC_DEF_TYPE, SECRET_
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, JWT, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition, \
      VaultConnection
-from zato.common.odb import ping_queries, query
+from zato.common.odb import ping_queries, query, query_ps_subscription
 from zato.common.util import current_host, get_component_name, get_engine_url, get_http_json_channel, get_http_soap_channel, \
      parse_extra_into_dict, parse_tls_channel_security_definition
 
@@ -1187,7 +1187,7 @@ class ODBManager(SessionWrapper):
     def get_pubsub_subscription_list(self, cluster_id, needs_columns=False):
         """ Returns a list of pub/sub subscriptions defined in a cluster.
         """
-        return query.pubsub_subscription_list(self._session, cluster_id, needs_columns)
+        return query_ps_subscription.pubsub_subscription_list(self._session, cluster_id, needs_columns)
 
 # ################################################################################################################################
 
