@@ -57,6 +57,13 @@ def find_first(it, pred):
         if pred(obj):
             return obj
 
+def dict_match(haystack, needle):
+    """Return True if all the keys from `needle` appear in `haystack` with the
+    same value."""
+    return all(haystack.get(key) == value
+               for key, value in needle.items())
+
+
 #: List of zato services we explicitly don't support.
 IGNORE_PREFIXES = {
     "zato.kvdb.data-dict.dictionary",
@@ -122,6 +129,7 @@ SHORTNAME_BY_PREFIX = [
     ('zato.security.xpath', 'xpath_sec'),
     ('zato.security.', ''),
 ]
+
 
 def make_service_name(prefix):
     escaped = re.sub('[.-]', '_', prefix)
@@ -229,32 +237,6 @@ SERVICES = [
         },
     ),
     ServiceInfo(
-        name='channel_plain_http',
-        object_dependencies={
-            'sec_def': {
-                'dependent_type': 'def_sec',
-                'dependent_field': 'name',
-                'empty_value': NO_SEC_DEF_NEEDED,
-            },
-        },
-        service_dependencies={
-            'service_name': {}
-        },
-    ),
-    ServiceInfo(
-        name='channel_soap',
-        object_dependencies={
-            'sec_def': {
-                'dependent_type': 'def_sec',
-                'dependent_field': 'name',
-                'empty_value': NO_SEC_DEF_NEEDED,
-            },
-        },
-        service_dependencies={
-            'service_name': {}
-        },
-    ),
-    ServiceInfo(
         name='channel_zmq',
         prefix='zato.channel.zmq',
         service_dependencies={
@@ -268,7 +250,7 @@ SERVICES = [
     ServiceInfo(
         name='http_soap',
         prefix='zato.http-soap',
-        # TODO: note: covers all of outconn_plain_http, outconn_soap, http_soap
+        # Covers outconn_plain_http, outconn_soap, channel_plain_http, channel_soap
         object_dependencies={
             'sec_def': {
                 'dependent_type': 'def_sec',
@@ -280,11 +262,20 @@ SERVICES = [
             'service_name': {
                 'only_if_field': 'connection',
                 'only_if_value': 'channel',
+                'id_field': 'service_id',
             }
         },
         export_filter={
             'is_internal': True,
         }
+    ),
+    ServiceInfo(
+        name='scheduler',
+        service_dependencies={
+            'service_name': {
+                'id_field': 'service_id',
+            }
+        },
     ),
     ServiceInfo(
         name='notif_sql',
@@ -316,27 +307,6 @@ SERVICES = [
             },
         },
     ),
-    # Added for the exporter.
-    ServiceInfo(
-        name='outconn_plain_http',
-        object_dependencies={
-            'sec_def': {
-                'dependent_type': 'def_sec',
-                'dependent_field': 'name',
-                'empty_value': NO_SEC_DEF_NEEDED,
-            },
-        },
-    ),
-    ServiceInfo(
-        name='outconn_soap',
-        object_dependencies={
-            'sec_def': {
-                'dependent_type': 'def_sec',
-                'dependent_field': 'name',
-                'empty_value': NO_SEC_DEF_NEEDED,
-            },
-        },
-    ),
     ServiceInfo(
         name='query_cassandra',
         prefix='zato.query.cassandra',
@@ -352,6 +322,15 @@ SERVICES = [
 
 SERVICE_BY_NAME = {info.name: info for info in SERVICES}
 SERVICE_BY_PREFIX = {info.prefix: info for info in SERVICES}
+
+HTTP_SOAP_KINDS = (
+    # item_type             connection      transport
+    ('channel_soap',        'channel',      'soap'),
+    ('channel_plain_http',  'channel',      'plain_http'),
+    ('outconn_soap',        'outgoing',     'soap'),
+    ('outconn_plain_http',  'outgoing',     'plain_http')
+)
+HTTP_SOAP_ITEM_TYPES = set(tup[0] for tup in HTTP_SOAP_KINDS)
 
 class _DummyLink(object):
     """ Pip requires URLs to have a .url attribute.
@@ -435,22 +414,16 @@ class DependencyScanner(object):
         #: (item_type, name): [(item_type, name), ..]
         self.missing = {}
 
-    def find_by_type_and_value(self, item_type, field, value):
-        """
-        Find an object in :py:attr:`json` of a particular type with a field
-        matching a particular value.
-
-        :param item_type:
-            ServiceInfo.name of the item's type.
-        :param field:
-            The name of the field in the item to compare.
-        :param value:
-            The value to match.
-        :return:
-            First matching object, or ``None`` if no such object exists.
-        """
+    def find(self, item_type, fields):
         lst = self.json.get(item_type, ())
-        return find_first(lst, lambda item: item[field] == value)
+        return find_first(lst, lambda item: dict_match(item, fields))
+
+    def find_sec(self, fields):
+        for service in SERVICES:
+            if service.is_security:
+                item = self.find(service.name, fields)
+                if item is not None:
+                    return item
 
     def scan_item(self, item_type, item):
         """
@@ -462,10 +435,19 @@ class DependencyScanner(object):
         """
         sinfo = SERVICE_BY_NAME[item_type]
         for dep_key, dep_info in sinfo.object_dependencies.items():
-            if ((item.get(dep_key) != dep_info.get('empty_value')) and
-                self.find_by_type_and_value(dep_info['dependent_type'],
-                                            dep_info['dependent_field'],
-                                            item[dep_key]) is None):
+            if item.get(dep_key) == dep_info.get('empty_value'):
+                continue
+
+            if dep_key == 'sec_def':
+                dep = self.find_sec({
+                    dep_info['dependent_field']: item[dep_key]
+                })
+            else:
+                dep = self.find(dep_info['dependent_type'], {
+                    dep_info['dependent_field']: item[dep_key]
+                })
+
+            if dep is None:
                 key = (dep_info['dependent_type'], item[dep_key])
                 names = self.missing.setdefault(key, [])
                 names.append(item.name)
@@ -496,7 +478,7 @@ class ObjectImporter(object):
         self.logger = logger
         #: Validation result.
         self.results = Results()
-        #: ClusterObjectManager instance.
+        #: ObjectManager instance.
         self.object_mgr = object_mgr
         #: JSON to import.
         self.json = bunchify(json)
@@ -532,7 +514,7 @@ class ObjectImporter(object):
         if missing_defs:
             for warning in missing_defs.warnings:
                 missing_type, missing_name, dep_names, existing = warning.value_raw
-                if not self.object_mgr.find(missing_type, missing_name):
+                if not self.object_mgr.find(missing_type, {'name': missing_name}):
                     raw = (missing_type, missing_name)
                     results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB,
                         "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
@@ -610,7 +592,7 @@ class ObjectImporter(object):
                     if item is not None:
                         self.add_warning(results, item_type, item, item)
                 else:
-                    existing = self.object_mgr.find(item_type, name)
+                    existing = self.object_mgr.find(item_type, {'name': name})
                     if existing is not None:
                         self.add_warning(results, item_type, item, existing)
 
@@ -691,22 +673,23 @@ class ObjectImporter(object):
         # Fetch an item from a cache of ODB object and assign its ID
         # to attrs so that the Edit service knows what to update.
         if is_edit:
-            odb_item = self.object_mgr.find(def_type, attrs.name)
+            odb_item = self.object_mgr.find(def_type, {'name': attrs.name})
             attrs.id = odb_item.id
 
         if def_type == 'http_soap':
             if attrs.sec_def == NO_SEC_DEF_NEEDED:
                 attrs.security_id = None
             else:
-                sec = self.object_mgr.find_sec(attrs.sec_def)
+                sec = self.object_mgr.find_sec({'name': attrs.sec_def})
                 attrs.security_id = sec.id
 
         for field_name, info in sinfo.object_dependencies.items():
-            dep_obj = self.object_mgr.find(info['dependent_type'],
-                                           attrs[field_name],
-                                           info['dependent_field'])
+            dep_obj = self.object_mgr.find(info['dependent_type'], {
+                info['dependent_field']: attrs[field_name]
+            })
             attrs.def_id = dep_obj.id
 
+        self.logger.debug("Invoking {} for {}".format(service_name, sinfo.name))
         response = self.client.invoke(service_name, attrs)
         if response.ok:
             verb = 'Updated' if is_edit else 'Created'
@@ -739,22 +722,24 @@ class ObjectImporter(object):
                 self.logger.info("Updated password '{}' ({} {})".format(attrs.name, def_type, service_name))
 
 
-class ClusterObjectManager(object):
+class ObjectManager(object):
     def __init__(self, client, logger):
         self.client = client
         self.logger = logger
 
-    def find(self, item_type, value, field='name'):
+    def find(self, item_type, fields):
+        if item_type == 'def_sec':
+            return self.find_sec(fields)
         # This probably isn't necessary any more:
         item_type = item_type.replace('-', '_')
         lst = self.objects.get(item_type, ())
-        return find_first(lst, lambda item: getattr(item, field) == value)
+        return find_first(lst, lambda item: dict_match(item, fields))
 
-    def find_sec(self, name):
+    def find_sec(self, fields):
         """Find any security definition with the given name."""
         for service in SERVICES:
             if service.is_security:
-                item = self.find(service_name, name)
+                item = self.find(service.name, fields)
                 if item is not None:
                     return item
 
@@ -774,25 +759,16 @@ class ClusterObjectManager(object):
                 for service in response.data
             }
 
-    def _update_service_name(self, item):
-        service = find_first(self.services.values(), lambda s: s.id == item.service_id)
-        if service:
-            item.service = service.name
-
     def fix_up_odb_object(self, item_type, item):
-        normalize_service_name(item)
         if item_type == 'http_soap':
-            if item.connection == 'channel':
-                self._update_service_name(item)
             if item.security_id:
-                sec_def = find_first(self.objects.sec_def,
-                    lambda sec_def: sec_def.id == item.security_id)
+                sec_def = self.find_sec({'id': item.security_id})
                 if sec_def is not None:
                     item.sec_def = sec_def.name
             else:
                 item.sec_def = NO_SEC_DEF_NEEDED
-        if item_type == 'scheduler':
-            self._update_service_name(item)
+
+        normalize_service_name(item)
         return item
 
     IGNORED_NAMES = (
@@ -955,21 +931,32 @@ class InputParser(object):
         if self.is_include(item):
             self.load_include(item_type, item, results)
         elif item_type == 'def_sec':
-            normalize_service_name(item)
             self.parse_def_sec(item, results)
         else:
-            normalize_service_name(item)
             self.json.setdefault(item_type, []).append(Bunch(item))
+
+    def _maybe_fixup_http_soap(self, original_item_type, item):
+        # Preserve old format by merging http-soap subtypes into one.
+        for item_type, connection, transport in HTTP_SOAP_KINDS:
+            if item_type == original_item_type:
+                item['connection'] = connection
+                item['transport'] = transport
+                return 'http_soap'
+        return original_item_type
 
     def parse_items(self, dct, results):
         for item_type, items in dct.items():
-            if item_type not in SERVICE_BY_NAME:
+            if item_type not in SERVICE_BY_NAME and item_type not in HTTP_SOAP_ITEM_TYPES:
                 raw = (item_type,)
                 results.add_error(raw, ERROR_UNKNOWN_ELEM, "Ignoring unknown element type {} in the input.", item_type)
                 continue
 
             for item in items:
-                self.parse_item(item_type, item, results)
+                this_item_type = item_type
+                if isinstance(item, dict):
+                    this_item_type = self._maybe_fixup_http_soap(item_type, item)
+                    normalize_service_name(item)
+                self.parse_item(this_item_type, item, results)
 
     def parse(self):
         results = Results()
@@ -1042,7 +1029,7 @@ class EnMasse(ManageCommand):
 
         # Get client and issue a sanity check as quickly as possible
         self.client = get_client_from_server_conf(self.args.path)
-        self.object_mgr = ClusterObjectManager(self.client, self.logger)
+        self.object_mgr = ObjectManager(self.client, self.logger)
         self.client.invoke('zato.ping')
         populate_services_from_apispec(self.client, self.logger)
 
@@ -1097,6 +1084,12 @@ class EnMasse(ManageCommand):
     def write_output(self):
         # Make a copy and remove Bunch; pyaml does not like Bunch instances.
         output = debunchify(self.json)
+
+        # Preserve old format by splitting out particular types of http-soap.
+        for item in output.pop('http_soap', []):
+            for item_type, connection, transport in HTTP_SOAP_KINDS:
+                if item.connection == connection and item.transport == transport:
+                    output.setdefault(item_type, []).append(item)
 
         # Preserve old format by wrapping security services into one key.
         output['def_sec'] = []
