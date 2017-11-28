@@ -308,6 +308,7 @@ class Index(_BaseView):
     def invoke_admin_service(self):
         if self.req.zato.get('cluster'):
             func = self.req.zato.client.invoke_async if self.async_invoke else self.req.zato.client.invoke
+            print(4545, self.input)
             return func(self.service_name, self.input)
 
     def _handle_item_list(self, item_list):

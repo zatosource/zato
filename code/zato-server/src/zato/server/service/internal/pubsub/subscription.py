@@ -18,18 +18,51 @@ from bunch import Bunch
 from zato.common import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, PubSubSubscriptionExists
+from zato.common.odb.model import PubSubEndpoint, PubSubSubscription
 from zato.common.odb.query_ps_subscribe import add_subscription, add_wsx_subscription, has_subscription, \
      move_messages_to_sub_queue
+from zato.common.odb.query_ps_subscription import pubsub_endpoint_summary_list
 from zato.common.pubsub import new_sub_key
-from zato.common.time_util import utcnow_as_ms
+from zato.common.time_util import datetime_from_ms, utcnow_as_ms
 from zato.server.service import AsIs, Bool, Int, Opaque
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 # ################################################################################################################################
 
 sub_broker_attrs = ('active_status', 'active_status', 'cluster_id', 'creation_time', 'endpoint_id', 'has_gd', 'id',
     'is_durable', 'is_internal', 'name', 'out_amqp_id', 'out_http_soap_id', 'sub_key', 'topic_id', 'ws_channel_id',
     'ws_sub_id', 'delivery_group_size')
+
+# ################################################################################################################################
+
+class GetEndpointSummaryList(AdminService):
+    """ Returns summarized information about endpoints subscribed to topics.
+    """
+    _filter_by = PubSubEndpoint.name,
+
+    class SimpleIO(GetListAdminSIO):
+        input_required = ('cluster_id',)
+        output_required = ('id', 'endpoint_name', 'endpoint_type', 'subscription_count', 'is_active', 'is_internal')
+        output_optional = ('security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
+            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role')
+        request_elem = 'zato_pubsub_subscription_get_endpoint_summary_list_request'
+        response_elem = 'zato_pubsub_subscription_get_endpoint_summary_list_response'
+
+    def get_data(self, session):
+        result = self._search(pubsub_endpoint_summary_list, session, self.request.input.cluster_id, False)
+        for item in result:
+
+            if item.last_seen:
+                item.last_seen = datetime_from_ms(item.last_seen)
+
+            if item.last_deliv_time:
+                item.last_deliv_time = datetime_from_ms(item.last_deliv_time)
+
+        return result
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload[:] = self.get_data(session)
 
 # ################################################################################################################################
 

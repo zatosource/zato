@@ -47,6 +47,7 @@ from zato.admin.web.views.outgoing import stomp as out_stomp
 from zato.admin.web.views.outgoing import zmq as out_zmq
 from zato.admin.web.views.pubsub import endpoint as pubsub_endpoint
 from zato.admin.web.views.pubsub import message as pubsub_message
+from zato.admin.web.views.pubsub import subscription as pubsub_subscription
 from zato.admin.web.views.pubsub import topic as pubsub_topic
 from zato.admin.web.views.query import cassandra as query_cassandra
 from zato.admin.web.views.search import es
@@ -1230,6 +1231,17 @@ urlpatterns += [
         login_required(pubsub_topic.TopicMessages()), name=pubsub_topic.TopicMessages.url_name),
     url(r'^zato/pubsub/topic/in-ram-backlog/(?P<topic_id>.*)/(?P<name_slug>.*)$',
         login_required(pubsub_topic.InRAMBacklog()), name=pubsub_topic.InRAMBacklog.url_name),
+
+    # Pub/sub - subscriptions
+
+    url(r'^zato/pubsub/subscription/$',
+        login_required(pubsub_subscription.Index()), name=pubsub_subscription.Index.url_name),
+    url(r'^zato/pubsub/subscription/create/$',
+        login_required(pubsub_subscription.Create()), name=pubsub_subscription.Create.url_name),
+    url(r'^zato/pubsub/subscription/edit/$',
+        login_required(pubsub_subscription.Edit()), name=pubsub_subscription.Edit.url_name),
+    url(r'^zato/pubsub/subscription/delete/(?P<id>.*)/cluster/(?P<cluster_id>.*)/$',
+        login_required(pubsub_subscription.Delete()), name=pubsub_subscription.Delete.url_name),
 
     # Details of an individual message
     url(r'^zato/pubsub/message/details/cluster/(?P<cluster_id>.*)/(?P<object_type>.*)/(?P<object_id>.*)/msg/(?P<msg_id>.*)$',
