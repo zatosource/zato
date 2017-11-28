@@ -16,12 +16,15 @@ from browser import document as doc, window
 
 row_prefix = 'dyn_form_row_id_'
 
+zato_dyn_form_default = window['zato_dyn_form_default']
+zato_dyn_form_elem_name = window['zato_dyn_form_elem_name']
+
 # ################################################################################################################################
 
-class EndpointFormHandler(object):
+class DynFormHandler(object):
     """ Dynamically adds or remove entries from forms depending on values changed in source SELECT.
     """
-    def __init__(self, default='websockets', elem_name='endpoint_type'):
+    def __init__(self, default=zato_dyn_form_default, elem_name=zato_dyn_form_elem_name):
         self.current = default
         self.create_source = doc['id_{}'.format(elem_name)]
         self.edit_source = doc['id_edit-{}'.format(elem_name)]
@@ -136,10 +139,7 @@ class EndpointFormHandler(object):
 
 # ################################################################################################################################
 
-handler = EndpointFormHandler()
+handler = DynFormHandler()
 handler.run()
-
-# Register our code with JavaScript
-window.zato_endpoint_form_handler = handler
 
 # ################################################################################################################################
