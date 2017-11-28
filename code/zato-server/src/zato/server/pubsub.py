@@ -359,6 +359,7 @@ class PubSub(object):
 
         self.sec_id_to_endpoint_id = {}        # Sec def ID       -> Endpoint ID
         self.ws_channel_id_to_endpoint_id = {} # WS chan def ID   -> Endpoint ID
+        self.service_id_to_endpoint_id = {}    # Service ID        -> Endpoint ID
         self.topic_name_to_id = {}             # Topic name       -> Topic ID
         self.ws_sub_key_servers = {}           # Sub key          -> Server/PID handling it
         self.in_ram_backlog = InRAMBacklog()   # List of sub_keys -> non-GD message list for each
@@ -395,6 +396,12 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_endpoint_id_by_service_id(self, service_id):
+        with self.lock:
+            return self.service_id_to_endpoint_id[service_id]
+
+# ################################################################################################################################
+
     def _get_topic_id_by_name(self, topic_name):
         return self.topic_name_to_id[topic_name]
 
@@ -421,6 +428,9 @@ class PubSub(object):
         if config['ws_channel_id']:
             self.ws_channel_id_to_endpoint_id[config['ws_channel_id']] = config.id
 
+        if config['service_id']:
+            self.service_id_to_endpoint_id[config['service_id']] = config.id
+
 # ################################################################################################################################
 
     def create_endpoint(self, config):
@@ -434,6 +444,7 @@ class PubSub(object):
 
         sec_id = None
         ws_chan_id = None
+        service_id = None
 
         for key, value in self.sec_id_to_endpoint_id.iteritems():
             if value == endpoint_id:
@@ -445,11 +456,19 @@ class PubSub(object):
                 ws_chan_id = key
                 break
 
+        for key, value in self.service_id_to_endpoint_id.iteritems():
+            if value == endpoint_id:
+                service_id = key
+                break
+
         if sec_id:
             del self.sec_id_to_endpoint_id[sec_id]
 
         if ws_chan_id:
             del self.ws_channel_id_to_endpoint_id[ws_chan_id]
+
+        if service_id:
+            del self.service_id_to_endpoint_id[service_id]
 
 # ################################################################################################################################
 

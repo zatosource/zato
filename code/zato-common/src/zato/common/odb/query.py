@@ -900,9 +900,12 @@ def _pubsub_endpoint(session, cluster_id):
         PubSubEndpoint.security_id, PubSubEndpoint.ws_channel_id,
         SecurityBase.sec_type,
         SecurityBase.name.label('sec_name'),
+        Service.id.label('service_id'),
+        Service.name.label('service_name'),
         ChannelWebSocket.name.label('ws_channel_name'),
         ).\
         outerjoin(SecurityBase, SecurityBase.id==PubSubEndpoint.security_id).\
+        outerjoin(Service, PubSubEndpoint.id==PubSubEndpoint.service_id).\
         outerjoin(ChannelWebSocket, ChannelWebSocket.id==PubSubEndpoint.ws_channel_id).\
         filter(Cluster.id==cluster_id).\
         filter(Cluster.id==PubSubEndpoint.cluster_id).\
