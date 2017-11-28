@@ -131,7 +131,7 @@ class SubscribeService(PubSubService):
         # Check credentials first
         security_id = self._pubsub_check_credentials()
 
-        response = self.invoke('zato.pubsub.subscribe.subscribe-service-impl', {
+        response = self.invoke('zato.pubsub.subscription.subscribe-service-impl', {
             'topic_name': self.request.input.topic_name,
             'security_id': security_id,
             'has_gd': self.request.input.gd,
