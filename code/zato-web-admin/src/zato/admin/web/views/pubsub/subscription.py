@@ -11,6 +11,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # stdlib
 import logging
 
+# Bunch
+from bunch import Bunch
+
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
@@ -50,9 +53,22 @@ class Index(_Index):
 
     def handle(self):
 
+        data_list = Bunch()
+        data_list.security_list = []
+        data_list.service_list = []
+
+        if self.req.zato.cluster_id:
+
+            # Security definitions
+            data_list.security_list = self.get_sec_def_list('basic_auth').def_items
+
+            # Services
+            data_list.service_list = self.req.zato.client.invoke(
+                'zato.service.get-list', {'cluster_id': self.req.zato.cluster_id}).data
+
         return {
-            'create_form': CreateForm(self.req),
-            'edit_form': EditForm(self.req, prefix='edit'),
+            'create_form': CreateForm(self.req, data_list),
+            'edit_form': EditForm(self.req, data_list, prefix='edit'),
         }
 
 # ################################################################################################################################

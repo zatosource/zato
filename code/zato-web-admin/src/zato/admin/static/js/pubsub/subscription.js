@@ -33,12 +33,12 @@ $.fn.zato.pubsub.subscription.clear_forms = function() {
 }
 
 $.fn.zato.pubsub.subscription.create = function() {
-    //$.fn.zato.pubsub.subscription.clear_forms();
+    window.zato_run_dyn_form_handler();
     $.fn.zato.data_table._create_edit('create', 'Create new pub/sub subscriptions', null);
 }
 
 $.fn.zato.pubsub.subscription.edit = function(id) {
-    //$.fn.zato.pubsub.subscription.clear_forms();
+    window.zato_run_dyn_form_handler();
     $.fn.zato.data_table._create_edit('edit', 'Update pub/sub subscriptions', id);
 }
 

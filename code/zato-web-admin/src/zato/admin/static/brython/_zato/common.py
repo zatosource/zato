@@ -16,25 +16,26 @@ from browser import document as doc, window
 
 row_prefix = 'dyn_form_row_id_'
 
-zato_dyn_form_default = window['zato_dyn_form_default']
-zato_dyn_form_elem_name = window['zato_dyn_form_elem_name']
-
 # ################################################################################################################################
 
 class DynFormHandler(object):
     """ Dynamically adds or remove entries from forms depending on values changed in source SELECT.
     """
-    def __init__(self, default=zato_dyn_form_default, elem_name=zato_dyn_form_elem_name):
-        self.current = default
-        self.create_source = doc['id_{}'.format(elem_name)]
-        self.edit_source = doc['id_edit-{}'.format(elem_name)]
+    def __init__(self):
+        self.current = window['zato_dyn_form_default']
+        self.elem_name = window['zato_dyn_form_elem_name']
+        self.create_source_select = doc['id_{}'.format(self.elem_name)]
+        self.edit_source_select = doc['id_edit-{}'.format(self.elem_name)]
+        self.switch_to_select_data_target = window['zato_select_data_target']
+        self.switch_to_select_data_target_items = window['zato_select_data_target_items']
+        self.jquery = window.jQuery
         self.rows = {}
         self.all_rows = set()
 
     def run(self):
         # Bind events
-        self.create_source.bind('change', self.on_create_changed)
-        self.edit_source.bind('change', self.on_edit_changed)
+        self.create_source_select.bind('change', self.on_create_changed)
+        self.edit_source_select.bind('change', self.on_edit_changed)
 
         # Get input that should have been already prepared in HTML
         self.rows = window['zato_dyn_form_rows'].to_dict()
@@ -108,6 +109,25 @@ class DynFormHandler(object):
 
         self.current = switch_to
 
+        if self.switch_to_select_data_target:
+            target_select = doc['id_{}{}'.format(form_prefix, self.switch_to_select_data_target)]
+            target_select.clear()
+
+            items = self.switch_to_select_data_target_items[self.switch_to_select_data_target]
+            items = items[self.current]
+
+            # Initially, nothing is selected
+            option = doc.createElement('option');
+            option.value = ''
+            option.text = '------'
+            target_select.appendChild(option)
+
+            for item in items:
+                option = doc.createElement('option');
+                option.value = item.id
+                option.text = item.name
+                target_select.appendChild(option)
+
 # ################################################################################################################################
 
     def set_visibility(self, form_prefix, rows, style):
@@ -139,7 +159,10 @@ class DynFormHandler(object):
 
 # ################################################################################################################################
 
-handler = DynFormHandler()
-handler.run()
+def zato_run_dyn_form_handler():
+    handler = DynFormHandler()
+    handler.run()
+
+window.zato_run_dyn_form_handler = zato_run_dyn_form_handler
 
 # ################################################################################################################################

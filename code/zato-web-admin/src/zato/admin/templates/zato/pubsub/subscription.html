@@ -13,8 +13,41 @@
     <script type="text/javascript" src="/static/jquery/jquery.alerts.min.js"></script>
 
     <script type="text/javascript" src="/static/js/common.js"></script>
-    <script type="text/python" src="/static/brython/_zato/pubsub/subscription.py"></script>
+    <script type="text/python" src="/static/brython/_zato/common.py"></script>
     <script type="text/javascript" src="/static/js/pubsub/subscription.js"></script>
+
+    <script type="text/javascript">
+    window.zato_dyn_form_default = 'websockets';
+    window.zato_dyn_form_elem_name = 'endpoint_type';
+    window.zato_dyn_form_rows = {
+        'amqp': [],
+        'files': [],
+        'ftp': [],
+        'imap': [],
+        'rest': ['security_id'],
+        'service': ['service_id'],
+        'sms-twilio': [],
+        'smtp': [],
+        'soap': ['security_id'],
+        'sql': [],
+        'websockets': [],
+    }
+
+    window.zato_select_data_target = 'endpoint_id';
+    window.zato_select_data_target_items = {
+        'endpoint_id': {
+            'rest': [
+                {'id':'rest-a1', 'name':'rest-aa11'},
+                {'id':'rest-b2', 'name':'rest-bb22'},
+            ],
+            'websockets': [
+                {'id':'ws-a1', 'name':'ws-aa11'},
+                {'id':'ws-b2', 'name':'ws-bb22'},
+            ]
+        }
+    }
+
+    </script>
 
     <script type="text/javascript">
     $.fn.zato.data_table.get_columns = function() {
@@ -176,13 +209,14 @@
             <div class="bd">
                 <form action="{% url "pubsub-subscription-create" %}" method="post" id="create-form">
                     <table class="form-data">
+
                         <tr>
-                            <td style="vertical-align:middle; width:12%">Type</td>
-                            <td>{{ create_form.name }}</td>
+                            <td style="vertical-align:middle; width:16%">Type</td>
+                            <td>{{ create_form.endpoint_type }}</td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle; width:12%">Endpoint</td>
-                            <td>{{ create_form.endpoint_type }}</td>
+                            <td>{{ create_form.endpoint_id }}</td>
                         </tr>
 
                         {% comment %} --------- REST/SOAP --------- {% endcomment %}
@@ -195,12 +229,6 @@
                         <tr id="dyn_form_row_id_service_id" style="display:none">
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ create_form.service_id }} </td>
-                        </tr>
-
-                        {% comment %} --------- WebSockets --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_ws_channel_id" style="display:none">
-                            <td style="vertical-align:middle">WebSockets channel</td>
-                            <td>{{ create_form.ws_channel_id }} </td>
                         </tr>
 
                         <tr>
@@ -226,13 +254,14 @@
             <div class="bd">
                 <form action="{% url "pubsub-subscription-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
+
                         <tr>
-                            <td style="vertical-align:middle; width:15%">Name</td>
-                            <td>{{ edit_form.name }}</td>
+                            <td style="vertical-align:middle; width:12%">Type</td>
+                            <td>{{ edit_form.endpoint_type }}</td>
                         </tr>
                         <tr>
-                            <td style="vertical-align:middle; width:15%">Type</td>
-                            <td>{{ edit_form.endpoint_type }}</td>
+                            <td style="vertical-align:middle; width:12%">Endpoint</td>
+                            <td>{{ edit_form.endpoint_id }}</td>
                         </tr>
 
                         <tr>
@@ -240,16 +269,16 @@
                             <td>{{ edit_form.role }} </td>
                         </tr>
 
+                        {% comment %} --------- REST/SOAP --------- {% endcomment %}
+                        <tr id="edit-dyn_form_row_id_security_id" style="display:none">
+                            <td style="vertical-align:middle">API client credentials</td>
+                            <td>{{ edit_form.security_id }} </td>
+                        </tr>
+
                         {% comment %} --------- Service --------- {% endcomment %}
                         <tr id="edit-dyn_form_row_id_service_id" style="display:none">
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.service_id }} </td>
-                        </tr>
-
-                        {% comment %} --------- WebSockets --------- {% endcomment %}
-                        <tr id="edit-dyn_form_row_id_ws_channel_id" style="display:none">
-                            <td style="vertical-align:middle">WebSockets channel</td>
-                            <td>{{ edit_form.ws_channel_id }} </td>
                         </tr>
 
                         <tr>

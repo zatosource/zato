@@ -50,11 +50,13 @@ $.fn.zato.pubsub.endpoint.clear_forms = function() {
 
 $.fn.zato.pubsub.endpoint.create = function() {
     $.fn.zato.pubsub.endpoint.clear_forms();
+    window.zato_run_dyn_form_handler();
     $.fn.zato.data_table._create_edit('create', 'Create a new pub/sub endpoint', null);
 }
 
 $.fn.zato.pubsub.endpoint.edit = function(id) {
     $.fn.zato.pubsub.endpoint.clear_forms();
+    window.zato_run_dyn_form_handler();
     $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub endpoint', id);
 }
 
