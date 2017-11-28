@@ -189,9 +189,6 @@ class ServiceInfo(object):
     def get_service_name(self, method):
         return self.methods.get(method, {}).get('name')
 
-    def has_service(self, name):
-        return self.get_service_name(name) is not None
-
     def get_required_keys(self):
         """Return the set of keys required to create a new instance."""
         method_sig = self.methods.get('create')
@@ -544,11 +541,12 @@ class ObjectImporter(object):
         attrs.cluster_id = self.client.cluster_id
 
         response = self._import_object(item_type, attrs, is_edit)
-        if response is None:
-            response = self._maybe_change_password(item_type, attrs, is_edit)
+        if response.ok:
+            object_id = response.data['id']
+            response = self._maybe_change_password(object_id, item_type, attrs)
 
         # We quit on first error encountered
-        if not response.ok:
+        if response and not response.ok:
             raw = (item_type, attrs_dict, response.details)
             self.results.add_error(raw, ERROR_COULD_NOT_IMPORT_OBJECT,
                                    "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'",
@@ -696,31 +694,21 @@ class ObjectImporter(object):
             self.logger.info("{} object '{}' with {}".format(verb, attrs.name, service_name))
         return response
 
-    def _maybe_change_password(self, def_type, attrs, is_edit):
-        sinfo = SERVICE_BY_NAME[def_type]
+    def _maybe_change_password(self, object_id, item_type, attrs):
+        sinfo = SERVICE_BY_NAME[item_type]
         service_name = sinfo.get_service_name('change-password')
-        if not service_name:
+        if service_name is None or 'password' not in attrs:
             return None
 
-        if not attrs.get('password'):
-            if sinfo.has_service('change-password'):
-                self.logger.info("Password missing but not required '{}' ({} {})".format(
-                    attrs.name, def_type, sinfo.get_service_name('change-password')))
-            else:
-                return "Password missing but is required '{}' ({} {}) attrs '{}'".format(
-                    attrs.name, def_type, service_name, attrs_dict)
-        else:
-            if not is_edit:
-                attrs.id = response.data['id']
+        response = self.client.invoke(service_name, {
+            'id': object_id,
+            'password1': attrs.password,
+            'password2': attrs.password,
+        })
 
-            request = {'id':attrs.id, 'password1':attrs.password, 'password2':attrs.password}
-            service_name = sinfo.get_service_name('change-password')
-            response = self.client.invoke(service_name, request)
-            if not response.ok:
-                return response.details
-            else:
-                self.logger.info("Updated password '{}' ({} {})".format(attrs.name, def_type, service_name))
-
+        if response.ok:
+            self.logger.info("Updated password for '{}' ({})".format(attrs.name, service_name))
+        return response
 
 class ObjectManager(object):
     def __init__(self, client, logger):
