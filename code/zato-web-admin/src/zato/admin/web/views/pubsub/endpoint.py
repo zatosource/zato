@@ -103,8 +103,6 @@ class Index(_Index):
         data_list.security_list = []
         data_list.ws_channel_list = []
         data_list.service_list = []
-        #data_list.out_rest_list = []
-        #data_list.out_soap_list = []
 
         if self.req.zato.cluster_id:
 
@@ -118,26 +116,6 @@ class Index(_Index):
             # Services
             data_list.service_list = self.req.zato.client.invoke(
                 'zato.service.get-list', {'cluster_id': self.req.zato.cluster_id}).data
-
-            '''
-            # Outgoing REST connections
-            data_list.out_rest_list = self.req.zato.client.invoke(
-                'zato.http-soap.get-list', {
-                    'cluster_id': self.req.zato.cluster_id,
-                    'name_filter': '*',
-                    'connection': CONNECTION.OUTGOING,
-                    'transport': URL_TYPE.PLAIN_HTTP,
-                })
-
-            # Outgoing SOAP connections
-            data_list.out_soap_list = self.req.zato.client.invoke(
-                'zato.http-soap.get-list', {
-                    'cluster_id': self.req.zato.cluster_id,
-                    'name_filter': '*',
-                    'connection': CONNECTION.OUTGOING,
-                    'transport': URL_TYPE.SOAP,
-                })
-                '''
 
         # Filter out items that are already in use, this is needed because a single one
         # can be used in only one endpoint. This is also enforced on SQL level by services.
