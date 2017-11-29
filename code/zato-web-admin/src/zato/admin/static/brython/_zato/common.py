@@ -33,6 +33,7 @@ class DynFormHandler(object):
         self.all_rows = set()
 
     def run(self):
+
         # Bind events
         self.create_source_select.bind('change', self.on_create_changed)
         self.edit_source_select.bind('change', self.on_edit_changed)
@@ -140,8 +141,13 @@ class DynFormHandler(object):
             # Above, we changed display style for the table row but we still need to reset each individual field.
             if not form_prefix:
                 field_id = 'id_{}'.format(row_id.replace(row_prefix, '', 1))
-                field = doc[field_id]
-                field.set_value('')
+                try:
+                    field = doc[field_id]
+                except Exception:
+                    # This is not necessarily an error - it may happen if a single row contains multiple elements.
+                    print('No such fields `{}`'.format(field_id))
+                else:
+                    field.set_value('')
 
 # ################################################################################################################################
 
