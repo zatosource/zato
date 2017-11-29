@@ -15,6 +15,12 @@ from django import forms
 from zato.common import PUBSUB
 from zato.admin.web.forms import add_security_select, add_select
 
+skip_endpoint_types = (
+    PUBSUB.ENDPOINT_TYPE.IMAP.id,
+    PUBSUB.ENDPOINT_TYPE.SQL.id,
+    PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id,
+)
+
 # ################################################################################################################################
 
 class CreateForm(forms.Form):
@@ -61,7 +67,7 @@ class CreateForm(forms.Form):
 
         add_security_select(self, data_list.security_list, field_name='security_id', needs_no_security=False, needs_rbac=False)
         add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE, needs_initial_select=False,
-            skip=PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
+            skip=skip_endpoint_types)
         add_select(self, 'service_id', data_list.service_list)
 
         add_select(self, 'active_status', PUBSUB.QUEUE_ACTIVE_STATUS)
