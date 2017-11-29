@@ -143,9 +143,9 @@ class DynFormHandler(object):
                 field_id = 'id_{}'.format(row_id.replace(row_prefix, '', 1))
                 try:
                     field = doc[field_id]
-                except Exception:
+                except KeyError:
                     # This is not necessarily an error - it may happen if a single row contains multiple elements.
-                    print('No such fields `{}`'.format(field_id))
+                    pass
                 else:
                     field.set_value('')
 
