@@ -29,6 +29,8 @@ class CreateForm(forms.Form):
     endpoint_type = forms.ChoiceField(widget=forms.Select())
     endpoint_id = forms.ChoiceField(widget=forms.Select())
 
+    hook_serice_id = forms.ChoiceField(widget=forms.Select())
+
     active_status = forms.ChoiceField(widget=forms.Select())
     is_staging_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
@@ -44,14 +46,17 @@ class CreateForm(forms.Form):
     delivery_method = forms.ChoiceField(widget=forms.Select())
     delivery_data_format = forms.ChoiceField(widget=forms.Select())
 
-    delivery_endpoint = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
-    out_http_soap_id = forms.ChoiceField(widget=forms.Select())
-    out_amqp_id = forms.ChoiceField(widget=forms.Select())
+    # This is not shown to users - only holds ID of an underlying interval-based job,
+    # if one is in use for a given subscription.
+    out_job_id = forms.CharField(widget=forms.HiddenInput())
 
-    hook_service_id = forms.ChoiceField(widget=forms.Select())
+    # REST
+    rest_delivery_endpoint = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    out_rest_http_soap_id = forms.ChoiceField(widget=forms.Select())
 
-    # REST/SOAP
-    security_id = forms.ChoiceField(widget=forms.Select())
+    # SOAP
+    soap_delivery_endpoint = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    out_soap_http_soap_id = forms.ChoiceField(widget=forms.Select())
 
     # Service
     service_id = forms.ChoiceField(widget=forms.Select())
@@ -59,13 +64,35 @@ class CreateForm(forms.Form):
     # WebSockets
     ws_channel_id = forms.ChoiceField(widget=forms.Select())
 
+    # AMQP
+    out_amqp_id = forms.ChoiceField(widget=forms.Select())
+    amqp_exchange = forms.CharField(widget=forms.TextInput(attrs={'style':'width:49%'}))
+    amqp_routing_key = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+
+    # Flat files
+    files_directory_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:60px'}))
+
+    # FTP
+    ftp_directory_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:60px'}))
+
+    # SMTP - Twilio
+    sms_twilio_from = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    sms_twilio_to_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:60px'}))
+
+    # SMTP
+    out_smtp_id = forms.ChoiceField(widget=forms.Select())
+    smtp_subject = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
+    smtp_from = forms.CharField(widget=forms.TextInput(attrs={'style':'width:50%'}))
+    smtp_to_list = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:60px'}))
+    smtp_body = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:120px'}))
+    smtp_is_html = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+
     topic_list_text = forms.CharField(widget=forms.Textarea(attrs={'style':'width:100%; height:120px'}))
     topic_list_json = forms.CharField(widget=forms.Textarea(attrs={'display':'none'}))
 
     def __init__(self, req, data_list, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)
 
-        add_security_select(self, data_list.security_list, field_name='security_id', needs_no_security=False, needs_rbac=False)
         add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE, needs_initial_select=False,
             skip=skip_endpoint_types)
         add_select(self, 'service_id', data_list.service_list)
