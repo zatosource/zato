@@ -316,9 +316,8 @@ class Generator(object):
 # ################################################################################################################################
 
     def parse(self, ignore_prefix):
-
         for impl_name, details in self.service_store_services.iteritems():
-            if not impl_name.startswith(ignore_prefix):
+            if (not ignore_prefix) or impl_name.startswith(ignore_prefix):
                 details = bunchify(details)
                 info = ServiceInfo(details['name'], details['service_class'])
                 self.services[info.name] = info
