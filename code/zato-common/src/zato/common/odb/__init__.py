@@ -28,7 +28,7 @@ WMQ_DEFAULT_PRIORITY = 5
 # ODB version
 VERSION = 1
 
-SUPPORTED_DB_TYPES = (b'oracle', b'postgresql', b'mysql', b'sqlite')
+SUPPORTED_DB_TYPES = (b'oracle', b'postgresql', b'mysql', b'sqlite', b'mssql')
 
 def create_pool(crypto_manager, engine_params):
     engine_params = copy.deepcopy(engine_params)

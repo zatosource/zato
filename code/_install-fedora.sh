@@ -19,7 +19,7 @@ sudo yum -y install git bzr gcc-gfortran haproxy \
     libevent-devel libev libev-devel libgfortran lapack-devel lapack \
     libyaml-devel libxml2-devel libxslt-devel suitesparse \
     openssl openssl-devel postgresql-devel python-devel numpy \
-    scipy swig uuid-devel uuid
+    scipy swig uuid-devel uuid freetds-devel
 
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
 sudo python get-pip.py
