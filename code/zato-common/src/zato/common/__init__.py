@@ -732,6 +732,19 @@ class PUBSUB:
 
     SKIPPED_PATTERN_MATCHING = '<skipped>'
 
+    class DATA_FORMAT:
+        CSV         = NameId('CSV', DATA_FORMAT.CSV)
+        DICT        = NameId('Dict', DATA_FORMAT.DICT)
+        FIXED_WIDTH = NameId('Fixed-width', DATA_FORMAT.FIXED_WIDTH)
+        JSON        = NameId('JSON', DATA_FORMAT.JSON)
+        POST        = NameId('POST', DATA_FORMAT.POST)
+        SOAP        = NameId('SOAP', DATA_FORMAT.SOAP)
+        XML         = NameId('XML', DATA_FORMAT.XML)
+
+        class __metaclass__(type):
+            def __iter__(self):
+                return iter((self.CSV, self.DICT, self.FIXED_WIDTH, self.JSON, self.POST, self.SOAP, self.XML))
+
     class DELIVER_BY:
         PRIORITY = 'priority'
         EXT_PUB_TIME = 'ext_pub_time'
@@ -745,12 +758,11 @@ class PUBSUB:
         TOPIC_MAX_DEPTH_GD = 10000
         TOPIC_MAX_DEPTH_NON_GD = 1000
         GD_DEPTH_CHECK_FREQ = 100
-        GET_BATCH_SIZE = 50
         DELIVERY_BATCH_SIZE = 50
         DELIVERY_MAX_RETRY = 2 ** 32 - 1
         DELIVERY_MAX_SIZE = 500000 # 500 kB
-        WAIT_TIME_SOCKET_ERROR = 60
-        WAIT_TIME_NON_SOCKET_ERROR = 60
+        WAIT_TIME_SOCKET_ERROR = 10
+        WAIT_TIME_NON_SOCKET_ERROR = 30
 
     class QUEUE_TYPE:
         STAGING = 'staging'
@@ -780,9 +792,14 @@ class PUBSUB:
                 return iter((self.FULLY_ENABLED, self.PUB_ONLY, self.SUB_ONLY, self.DISABLED))
 
     class DELIVERY_METHOD:
-        NOTIFY = 'notify'
-        PULL = 'pull'
-        WEB_SOCKET = 'web-socket'
+        NOTIFY = NameId('Notify', 'notify')
+        PULL = NameId('Pull', 'pull')
+        WEB_SOCKET = NameId('WebSocket', 'web-socket')
+
+        class __metaclass__(type):
+            def __iter__(self):
+                # Note that WEB_SOCKET is not included because it's not shown in GUI for subscriptions
+                return iter((self.NOTIFY, self.PULL))
 
     class DELIVERY_STATUS:
         INITIALIZED = 'initialized'

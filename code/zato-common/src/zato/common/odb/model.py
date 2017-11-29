@@ -2214,7 +2214,7 @@ class PubSubSubscription(Base):
     active_status = Column(String(200), nullable=False)
     is_staging_enabled = Column(Boolean(), nullable=False, default=False)
 
-    delivery_method = Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY)
+    delivery_method = Column(String(200), nullable=False, default=PUBSUB.DELIVERY_METHOD.NOTIFY.id)
     delivery_data_format = Column(String(200), nullable=False, default=DATA_FORMAT.JSON)
     delivery_endpoint = Column(Text, nullable=True)
 
@@ -2230,7 +2230,7 @@ class PubSubSubscription(Base):
     wrap_one_msg_in_list = Column(Boolean(), nullable=False)
 
     # How many bytes to send at most in a single delivery
-    delivery_max_size = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_SIZE)
+    delivery_max_size = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_SIZE) # Unused for now
 
     # How many times to retry delivery for a single message
     delivery_max_retry = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_RETRY)
