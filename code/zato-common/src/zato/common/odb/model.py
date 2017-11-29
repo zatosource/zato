@@ -2248,6 +2248,27 @@ class PubSubSubscription(Base):
     # A hook service invoked before messages are delivered for this specific subscription
     hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
 
+    # AMQP
+    amqp_exchange = Column(Text, nullable=True)
+    amqp_routing_key = Column(Text, nullable=True)
+
+    # Flat files
+    files_directory_list = Column(Text, nullable=True)
+
+    # FTP
+    ftp_directory_list = Column(Text, nullable=True)
+
+    # SMS - Twilio
+    sms_twilio_from = Column(Text, nullable=True)
+    sms_twilio_to_list = Column(Text, nullable=True)
+
+    # SMTP
+    smtp_subject = Column(Text, nullable=True)
+    smtp_from = Column(Text, nullable=True)
+    smtp_to_list = Column(Text, nullable=True)
+    smtp_body = Column(Text, nullable=True)
+    smtp_is_html = Column(Boolean(), nullable=True)
+
     topic_id = Column(Integer, ForeignKey('pubsub_topic.id', ondelete='CASCADE'), nullable=False)
     topic = relationship(
         PubSubTopic, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
@@ -2256,13 +2277,21 @@ class PubSubSubscription(Base):
     endpoint = relationship(
         PubSubEndpoint, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
+    out_job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=False)
+    out_job = relationship(
+        Job, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
+
     out_http_soap_id = Column(Integer, ForeignKey('http_soap.id', ondelete='CASCADE'), nullable=True)
     out_http_soap = relationship(
-        HTTPSOAP, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
+        HTTPSOAP, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
+
+    out_smtp_id = Column(Integer, ForeignKey('email_smtp.id', ondelete='CASCADE'), nullable=True)
+    out_smtp = relationship(
+        SMTP, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
     out_amqp_id = Column(Integer, ForeignKey('out_amqp.id', ondelete='CASCADE'), nullable=True)
-    out_http_soap = relationship(
-        HTTPSOAP, backref=backref('pubsub_subscriptions', order_by=id, cascade='all, delete, delete-orphan'))
+    out_amqp = relationship(
+        OutgoingAMQP, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
     ws_sub_id = Column(Integer, ForeignKey('web_socket_sub.id', ondelete='CASCADE'), nullable=True)
     ws_sub = relationship(

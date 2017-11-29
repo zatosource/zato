@@ -27,7 +27,7 @@ def add_initial_select(form, field_name):
 
 def add_select(form, field_name, elems, needs_initial_select=True, skip=None):
     skip = skip or []
-    if not isinstance(skip, list):
+    if not isinstance(skip, (list, tuple)):
         skip = [skip]
 
     if needs_initial_select:
