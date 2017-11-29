@@ -2229,15 +2229,15 @@ class PubSubSubscription(Base):
     # should be sent as-is or wrapped in a single-element list.
     wrap_one_msg_in_list = Column(Boolean(), nullable=False)
 
+    # How many bytes to send at most in a single delivery
+    delivery_max_size = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_SIZE)
+
     # How many times to retry delivery for a single message
     delivery_max_retry = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_RETRY)
 
     # Should a failed delivery of a single message block the entire delivery queue
     # until that particular message has been successfully delivered.
     delivery_err_should_block = Column(Boolean(), nullable=False)
-
-    # How many bytes to send at most in a single delivery
-    delivery_max_size = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.DELIVERY_MAX_SIZE)
 
     # How many seconds to wait on a TCP socket error
     wait_sock_err = Column(Integer(), nullable=False, default=PUBSUB.DEFAULT.WAIT_TIME_SOCKET_ERROR)
