@@ -210,7 +210,7 @@
                     <table class="form-data">
 
                         <tr>
-                            <td style="vertical-align:middle; width:23%">Type</td>
+                            <td style="vertical-align:middle; width:20%">Type</td>
                             <td>{{ create_form.endpoint_type }}</td>
                         </tr>
                         <tr>
@@ -220,37 +220,31 @@
 
                         <tr>
                             <td style="vertical-align:middle; width:12%">
-                                Active status
-                                <br/>
-                                (STG enabled)
+                                Status
                             </td>
                             <td>
                                 {{ create_form.active_status }}
-                                {{ create_form.is_staging_enabled }}
+                                | STG enabled {{ create_form.is_staging_enabled }}
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle; width:12%">Delivery max size,<br/>method and format</td>
+                            <td style="vertical-align:middle; width:12%">Delivery method<br/>and format</td>
                             <td>
-                                {{ create_form.delivery_max_size }}
                                 {{ create_form.delivery_method }}
                                 {{ create_form.delivery_data_format }}
                             </td>
                         </tr>
 
                         <tr>
-                            <td style="vertical-align:middle; width:12%">Delivery batch<br/>(list required?)</td>
+                            <td style="vertical-align:middle; width:12%">Deliv. batch size<br/>(list required?)</td>
                             <td>
                                 {{ create_form.delivery_batch_size }}
                                 {{ create_form.wrap_one_msg_in_list }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">Deliv. max retries<br/>(error blocks?)</td>
-                            <td>
+                                |
+                                Deliv. max retries
                                 {{ create_form.delivery_max_retry }}
+                                Block on err.?
                                 {{ create_form.delivery_err_should_block }}
                             </td>
                         </tr>
@@ -264,6 +258,7 @@
                             <td>
                                 {{ create_form.wait_sock_err }}
                                 {{ create_form.wait_non_sock_err }}
+                                <span class="form_hint">(both in seconds)</span>
                             </td>
                         </tr>
 

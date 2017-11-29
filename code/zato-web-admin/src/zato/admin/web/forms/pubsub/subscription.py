@@ -29,9 +29,7 @@ class CreateForm(forms.Form):
     delivery_batch_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:15%'}))
     wrap_one_msg_in_list = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
-    delivery_max_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:15%'}))
-
-    delivery_max_retry = forms.CharField(widget=forms.TextInput(attrs={'style':'width:15%'}))
+    delivery_max_retry = forms.CharField(widget=forms.TextInput(attrs={'style':'width:25%'}))
     delivery_err_should_block = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
 
     wait_sock_err = forms.CharField(widget=forms.TextInput(attrs={'style':'width:15%'}))
@@ -66,8 +64,15 @@ class CreateForm(forms.Form):
             skip=PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
         add_select(self, 'service_id', data_list.service_list)
 
-        # Let's assume the default type of pub/sub endpoint will be REST clients
+        add_select(self, 'active_status', PUBSUB.QUEUE_ACTIVE_STATUS)
+        add_select(self, 'delivery_method', PUBSUB.DELIVERY_METHOD)
+        add_select(self, 'delivery_data_format', PUBSUB.DATA_FORMAT)
+
         self.initial['endpoint_type'] = PUBSUB.ENDPOINT_TYPE.REST.id
+        self.initial['delivery_batch_size'] = PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE
+        self.initial['delivery_max_retry'] = PUBSUB.DEFAULT.DELIVERY_MAX_RETRY
+        self.initial['wait_sock_err'] = PUBSUB.DEFAULT.WAIT_TIME_SOCKET_ERROR
+        self.initial['wait_non_sock_err'] = PUBSUB.DEFAULT.WAIT_TIME_NON_SOCKET_ERROR
 
 # ################################################################################################################################
 
