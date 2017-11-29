@@ -748,11 +748,11 @@ class ObjectManager(object):
             }
 
     def fix_up_odb_object(self, item_type, item):
-        if item_type == 'http_soap':
-            if item.security_id:
+        sinfo = SERVICE_BY_NAME[item_type]
+        if 'sec_def' in sinfo.object_dependencies:
+            if item.get('security_id'):
                 sec_def = self.find_sec({'id': item.security_id})
-                if sec_def is not None:
-                    item.sec_def = sec_def.name
+                item.sec_def = sec_def.name
             else:
                 item.sec_def = NO_SEC_DEF_NEEDED
 
@@ -820,13 +820,16 @@ class ObjectManager(object):
             if self.is_ignored_name(item):
                 continue
 
-            self.fix_up_odb_object(sinfo.name, item)
             self.objects[sinfo.name].append(item)
 
     def _refresh_objects(self):
         self.objects = Bunch()
         for sinfo in SERVICES:
             self.refresh_by_type(sinfo.name)
+
+        for item_type, items in self.objects.items():
+            for item in items:
+                self.fix_up_odb_object(item_type, item)
 
 class JsonCodec(object):
     extension = '.json'
@@ -1076,7 +1079,7 @@ class EnMasse(ManageCommand):
         # Preserve old format by splitting out particular types of http-soap.
         for item in output.pop('http_soap', []):
             for item_type, connection, transport in HTTP_SOAP_KINDS:
-                if item.connection == connection and item.transport == transport:
+                if item['connection'] == connection and item['transport'] == transport:
                     output.setdefault(item_type, []).append(item)
 
         # Preserve old format by wrapping security services into one key.
