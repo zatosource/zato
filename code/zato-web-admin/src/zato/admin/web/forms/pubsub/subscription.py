@@ -32,6 +32,7 @@ class CreateForm(forms.Form):
     hook_serice_id = forms.ChoiceField(widget=forms.Select())
 
     active_status = forms.ChoiceField(widget=forms.Select())
+    has_gd = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     is_staging_enabled = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     delivery_batch_size = forms.CharField(widget=forms.TextInput(attrs={'style':'width:15%'}))

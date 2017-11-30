@@ -10,68 +10,33 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from copy import deepcopy
-from datetime import datetime, timedelta
-from errno import EADDRINUSE
-from httplib import BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, responses
 from logging import getLogger
 from random import randint
-from socket import error as SocketError
 from traceback import format_exc
-from urlparse import urlparse
-
-# Bunch
-from bunch import bunchify
 
 # gevent
-from gevent import sleep, socket, spawn
+from gevent import sleep
 from gevent.lock import RLock
-
-# pyrapidjson
-from rapidjson import loads
 
 # sortedcontainers
 from sortedcontainers import SortedList
 
-# ws4py
-from ws4py.websocket import WebSocket as _WebSocket
-from ws4py.server.geventserver import WSGIServer
-from ws4py.server.wsgiutils import WebSocketWSGIApplication
-
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, ParsingException, SEC_DEF_TYPE, WEB_SOCKET
-from zato.common.exception import Reportable
 from zato.common.time_util import datetime_from_ms
-from zato.common.util import new_cid, spawn_greenlet
-from zato.server.connection.connector import Connector
-from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientInvokeRequest, ClientMessage, copy_forbidden, \
-     error_response, ErrorResponse, Forbidden, OKResponse
+from zato.common.util import spawn_greenlet
 from zato.server.pubsub import PubSub
-from zato.vault.client import VAULT
 
 # For pyflakes
 PubSub = PubSub
 
-
 # ################################################################################################################################
 
-logger = getLogger('zato_web_socket')
-
-# ################################################################################################################################
-
-http404 = b'{} {}'.format(NOT_FOUND, responses[NOT_FOUND])
-
-# ################################################################################################################################
-
-_wsgi_drop_keys = ('ws4py.socket', 'wsgi.errors', 'wsgi.input')
-
-# ################################################################################################################################
-
-VAULT_TOKEN_HEADER=VAULT.HEADERS.TOKEN_RESPONSE
+logger = getLogger('zato')
 
 # ################################################################################################################################
 
 class PubSubTask(object):
-    """ A background task responsible for delivery of pub/sub messages each WebSocket connections may possible subscribe to.
+    """ A background task responsible for delivery of pub/sub messages each pub/sub endpoint may possibly subscribe to.
     """
     def __init__(self, sql_conn_func):
         self.sql_conn_func = sql_conn_func
@@ -234,9 +199,9 @@ class NonGDMessage(Message):
 class PubSubTool(object):
     """ A utility object for pub/sub-related tasks.
     """
-    def __init__(self, pubsub, web_socket):
+    def __init__(self, pubsub, parent):
         self.pubsub = pubsub # type: PubSub
-        self.web_socket = web_socket # type: WebSocket
+        self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
 
         # A broad lock for generic pub/sub matters
         self.lock = RLock()
@@ -279,7 +244,7 @@ class PubSubTool(object):
 
         self.delivery_lists[sub_key] = delivery_list
         self.delivery_tasks[sub_key] = DeliveryTask(
-            sub_key, delivery_lock, delivery_list, self.web_socket.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered)
+            sub_key, delivery_lock, delivery_list, self.parent.deliver_pubsub_msg, self.confirm_pubsub_msg_delivered)
 
         self.sub_key_locks[sub_key] = delivery_lock
 

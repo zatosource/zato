@@ -84,16 +84,23 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('endpoint_id', 'is_active')
-        input_optional = ('topic_list_text', 'topic_list_json')
+        input_required = ('endpoint_id', 'is_active', 'cluster_id')
+        input_optional = ('has_gd', 'topic_list_text', 'topic_list_json', 'endpoint_type', 'endpoint_id', 'active_status',
+            'delivery_method', 'delivery_data_format', 'delivery_batch_size', 'wrap_one_msg_in_list', 'delivery_max_retry',
+            'delivery_err_should_block', 'wait_sock_err', 'wait_non_sock_err', 'topic_list_text', 'amqp_exchange',
+            'amqp_routing_key', 'files_directory_list', 'ftp_directory_list', 'out_rest_http_soap_id', 'rest_delivery_endpoint',
+            'service_id', 'sms_twilio_from', 'sms_twilio_to_list', 'smtp_is_html', 'smtp_subject', 'smtp_from', 'smtp_to_list',
+            'smtp_body', 'out_soap_http_soap_id', 'soap_delivery_endpoint')
         output_required = ('id',)
 
     def post_process_return_data(self, return_data):
 
+        '''
         response = self.req.zato.client.invoke('zato.pubsub.subscription.get', {
             'cluster_id': self.req.zato.cluster_id,
             'id': return_data['id'],
         }).data['response']
+        '''
 
     def success_message(self, item):
         return 'Pub/sub subscription {} successfully'.format(self.verb)
@@ -102,7 +109,7 @@ class _CreateEdit(CreateEdit):
 
 class Create(_CreateEdit):
     url_name = 'pubsub-subscription-create'
-    service_name = 'zato.pubsub.subscription.create'
+    service_name = 'pubapi1.create-subscription' #'zato.pubsub.subscription.create'
 
 # ################################################################################################################################
 

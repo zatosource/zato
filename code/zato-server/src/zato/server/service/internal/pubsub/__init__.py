@@ -116,7 +116,9 @@ class AfterPublish(AdminService):
 # ################################################################################################################################
 
 class AfterWSXReconnect(AdminService):
-    """ Invoked by WSX clients after they reconnect with a list of their sub_keys on input.
+    """ Invoked by WSX clients after they reconnect with a list of their sub_keys on input. Collects all messages
+    waiting on other servers for that WebSocket and lets the caller know how many of them are available. At the same time,
+    the collection process trigger's that WebSocket's delivery task (via pubsub_tool) to start deliveries.
     """
     class SimpleIO(AdminSIO):
         input_required = ('sql_ws_client_id', 'channel_name', AsIs('pub_client_id'), Opaque('web_socket'))

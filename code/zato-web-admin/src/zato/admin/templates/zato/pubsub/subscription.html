@@ -220,6 +220,7 @@
                             </td>
                             <td>
                                 {{ create_form.active_status }}
+                                | GD enabled {{ create_form.has_gd }}
                                 | STG enabled {{ create_form.is_staging_enabled }}
                             </td>
                         </tr>
@@ -400,6 +401,7 @@
                             </td>
                             <td>
                                 {{ edit_form.active_status }}
+                                | GD enabled {{ edit_form.has_gd }}
                                 | STG enabled {{ edit_form.is_staging_enabled }}
                             </td>
                         </tr>
