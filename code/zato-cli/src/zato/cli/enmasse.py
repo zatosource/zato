@@ -152,6 +152,18 @@ def normalize_service_name(item):
         item.setdefault('service', item.get('service_name'))
         item.setdefault('service_name', item.get('service'))
 
+def test_item(item, cond):
+    """Given a dictionary `cond` containing some conditions to test an item
+    for, return True if those conditions match. Currently only supports testing
+    whether a field has a particular value. Returns ``True`` if `cond` is
+    ``None``."""
+    if cond is not None:
+        only_if_field = cond.get('only_if_field')
+        only_if_value = cond.get('only_if_value')
+        if only_if_field and item.get(only_if_field) != only_if_value:
+            return False
+    return True
+
 class ServiceInfo(object):
     def __init__(self, prefix=None,
                  name=None,
@@ -257,9 +269,11 @@ SERVICES = [
         },
         service_dependencies={
             'service_name': {
-                'only_if_field': 'connection',
-                'only_if_value': 'channel',
                 'id_field': 'service_id',
+                'condition': {
+                    'only_if_field': 'connection',
+                    'only_if_value': 'channel',
+                },
             }
         },
         export_filter={
@@ -434,6 +448,8 @@ class DependencyScanner(object):
         for dep_key, dep_info in sinfo.object_dependencies.items():
             if item.get(dep_key) == dep_info.get('empty_value'):
                 continue
+            if not test_item(item, dep_info.get('condition')):
+                continue
 
             if dep_key == 'sec_def':
                 dep = self.find_sec({
@@ -486,9 +502,7 @@ class ObjectImporter(object):
         item_dict = dict(item)
 
         for dep_field, dep_info in sinfo.service_dependencies.items():
-            only_if_field = dep_info.get('only_if_field')
-            only_if_value = dep_info.get('only_if_value')
-            if only_if_field and item.get(only_if_field) != only_if_value:
+            if not test_item(item, dep_info.get('condition')):
                 continue
 
             service_name = item.get(dep_field)
