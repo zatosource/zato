@@ -19,8 +19,57 @@ $(document).ready(function() {
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.subscription.data_table.new_row;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.subscription.before_submit_hook;
-    $.fn.zato.data_table.setup_forms(['name', 'role']);
+    $.fn.zato.data_table.setup_forms([
+        'endpoint_id',
+        'active_status',
+        'delivery_method',
+        'delivery_batch_size',
+        'delivery_max_retry',
+        'wait_sock_err',
+        'wait_non_sock_err',
+    ]);
 })
+
+$.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
+    var form = $(form);
+
+    var is_edit = form.attr('id').includes('edit');
+    var prefix = is_edit ? 'edit-' : '';
+    var endpoint_type = $('#id_' + prefix + 'endpoint_type').val();
+
+    if(endpoint_type == 'rest' || endpoint_type == 'rest') {
+        var delivery_method = $('#id_' + prefix + 'delivery_method').val();
+    }
+
+    if(endpoint_type == 'rest') {
+        if(delivery_method == 'notify') {
+            var out_rest_http_soap_id = $('#id_' + prefix + 'out_rest_http_soap_id');
+            var rest_delivery_endpoint = $('#id_' + prefix + 'rest_delivery_endpoint');
+
+            if(!out_rest_http_soap_id.val() && !rest_delivery_endpoint.val()) {
+                form.data('bValidator').showMsg(out_rest_http_soap_id,
+                    'Either REST outconn or REST callback are required if delivery method is Notify');
+            return false;
+            }
+        }
+    }
+
+    if(endpoint_type == 'soap') {
+        if(delivery_method == 'notify') {
+            var out_soap_http_soap_id = $('#id_' + prefix + 'out_soap_http_soap_id');
+            var rest_delivery_endpoint = $('#id_' + prefix + 'soap_delivery_endpoint');
+
+            if(!out_rest_http_soap_id.val() && !soap_delivery_endpoint.val()) {
+                form.data('bValidator').showMsg(out_soap_http_soap_id,
+                    'Either SOAP outconn or SOAP callback are required if delivery method is Notify');
+                return false;
+            }
+        }
+    }
+
+    return true;
+
+}
 
 $.fn.zato.pubsub.subscription.clear_forms = function() {
     // Hide everything ..
@@ -84,7 +133,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
 $.fn.zato.pubsub.subscription.delete_ = function(id) {
     $.fn.zato.data_table.delete_(id, 'td.item_id_',
         'Pub/sub endpoint `{0}` deleted',
-        'Are you sure you want to delete the pub/sub endpoint `{0}`?',
+        'Are you sure you want to delete pub/sub endpoint `{0}`?',
         true);
 }
 
