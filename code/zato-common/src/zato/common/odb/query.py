@@ -893,6 +893,7 @@ def _pubsub_endpoint(session, cluster_id):
     return session.query(
         PubSubEndpoint.id,
         PubSubEndpoint.name,
+        PubSubEndpoint.endpoint_type,
         PubSubEndpoint.is_active,
         PubSubEndpoint.is_internal,
         PubSubEndpoint.role,

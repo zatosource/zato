@@ -3,10 +3,11 @@
 
 $.fn.zato.data_table.PubSubEndpoint = new Class({
     toString: function() {
-        var s = '<PubSubEndpoint id:{0} name:{1} sub_key:{2}>';
+        var s = '<PubSubEndpoint id:{0} name:{1} sub_key:{2} type:{3}>';
         return String.format(s, this.id ? this.id : '(none)',
                                 this.name ? this.name : '(none)',
-                                this.sub_key ? this.sub_key : '(none)'
+                                this.sub_key ? this.sub_key : '(none)',
+                                this.endpoint_type ? this.endpoint_type : '(none)',
                                 );
     }
 });
