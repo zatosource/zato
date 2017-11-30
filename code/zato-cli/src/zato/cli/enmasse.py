@@ -288,6 +288,7 @@ SERVICES = [
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
                 'empty_value': NO_SEC_DEF_NEEDED,
+                'id_field': 'sec_id',
             },
         },
         service_dependencies={
@@ -726,10 +727,11 @@ class ObjectImporter(object):
                 attrs.security_id = sec.id
 
         for field_name, info in sinfo.object_dependencies.items():
-            dep_obj = self.object_mgr.find(info['dependent_type'], {
-                info['dependent_field']: attrs[field_name]
-            })
-            attrs.def_id = dep_obj.id
+            if 'id_field' in info:
+                dep_obj = self.object_mgr.find(info['dependent_type'], {
+                    info['dependent_field']: attrs[field_name]
+                })
+                attrs[info['id_field']] = dep_obj.id
 
         self.logger.debug("Invoking {} for {}".format(service_name, sinfo.name))
         response = self.client.invoke(service_name, attrs)
