@@ -49,6 +49,7 @@
             '_edit',
             '_delete',
             'id',
+            'endpoint_type',
             'is_internal',
             'is_active',
             'topic_patterns',
@@ -99,6 +100,7 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                 </thead>
 
                 <tbody>
@@ -135,6 +137,7 @@
                             {% endif %}
                         </td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
+                        <td class='ignore'>{{ item.endpoint_type }}</td>
                         <td class='ignore'>{{ item.is_internal }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.topic_patterns|default:'' }}</td>

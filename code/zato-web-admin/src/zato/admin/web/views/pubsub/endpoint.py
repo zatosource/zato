@@ -89,7 +89,7 @@ class Index(_Index):
 
     class SimpleIO(_Index.SimpleIO):
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'is_internal', 'role')
+        output_required = ('id', 'name', 'endpoint_type', 'is_active', 'is_internal', 'role')
         output_optional = ('topic_patterns', 'security_id', 'ws_channel_id', 'ws_channel_name',
             'sec_type', 'sec_name', 'sub_key', 'service_id')
         output_repeated = True
