@@ -57,7 +57,13 @@ class Index(_Index):
         data_list.security_list = []
         data_list.service_list = []
 
+        select_data_target = Bunch()
+
         if self.req.zato.cluster_id:
+
+            for item in self.items:
+                targets = select_data_target.setdefault(item.endpoint_type, [])
+                targets.append({b'id':item.id, b'name':item.endpoint_name})
 
             # Security definitions
             data_list.security_list = self.get_sec_def_list('basic_auth').def_items
@@ -69,6 +75,7 @@ class Index(_Index):
         return {
             'create_form': CreateForm(self.req, data_list),
             'edit_form': EditForm(self.req, data_list, prefix='edit'),
+            'select_data_target': select_data_target,
         }
 
 # ################################################################################################################################

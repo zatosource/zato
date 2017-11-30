@@ -12,8 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.common import PUBSUB
-from zato.admin.web.forms import add_security_select, add_select
+from zato.common import CONNECTION, PUBSUB, URL_TYPE
+from zato.admin.web.forms import add_http_soap_select, add_security_select, add_select
 
 skip_endpoint_types = (
     PUBSUB.ENDPOINT_TYPE.IMAP.id,
@@ -93,19 +93,23 @@ class CreateForm(forms.Form):
     def __init__(self, req, data_list, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)
 
-        add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE, needs_initial_select=False,
-            skip=skip_endpoint_types)
+        add_select(self, 'endpoint_type', PUBSUB.ENDPOINT_TYPE, needs_initial_select=False, skip=skip_endpoint_types)
         add_select(self, 'service_id', data_list.service_list)
 
         add_select(self, 'active_status', PUBSUB.QUEUE_ACTIVE_STATUS)
         add_select(self, 'delivery_method', PUBSUB.DELIVERY_METHOD)
         add_select(self, 'delivery_data_format', PUBSUB.DATA_FORMAT)
 
+        add_http_soap_select(self, 'out_rest_http_soap_id', req, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP)
+        add_http_soap_select(self, 'out_soap_http_soap_id', req, CONNECTION.OUTGOING, URL_TYPE.SOAP)
+
         self.initial['endpoint_type'] = PUBSUB.ENDPOINT_TYPE.REST.id
         self.initial['delivery_batch_size'] = PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE
         self.initial['delivery_max_retry'] = PUBSUB.DEFAULT.DELIVERY_MAX_RETRY
         self.initial['wait_sock_err'] = PUBSUB.DEFAULT.WAIT_TIME_SOCKET_ERROR
         self.initial['wait_non_sock_err'] = PUBSUB.DEFAULT.WAIT_TIME_NON_SOCKET_ERROR
+
+
 
 # ################################################################################################################################
 

@@ -59,6 +59,32 @@ def add_security_select(form, security_list, needs_no_security=True, field_name=
 
 # ################################################################################################################################
 
+def add_http_soap_select(form, field_name, req, connection, transport, needs_initial_select=True, skip=None):
+
+    skip = skip or []
+    if not isinstance(skip, (list, tuple)):
+        skip = [skip]
+
+    if needs_initial_select:
+        add_initial_select(form, field_name)
+    else:
+        form.fields[field_name].choices = []
+
+    field = form.fields[field_name]
+
+    if req.zato.cluster_id:
+
+        response = req.zato.client.invoke('zato.http-soap.get-list', {
+            'cluster_id': req.zato.cluster_id,
+            'connection': connection,
+            'transport': transport,
+        })
+
+        for item in response.data:
+            field.choices.append([item.id, item.name])
+
+# ################################################################################################################################
+
 def add_services(form, req, by_id=False, initial_service=None):
     if req.zato.cluster_id:
 
