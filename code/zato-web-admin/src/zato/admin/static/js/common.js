@@ -269,14 +269,14 @@ $.fn.zato.form.populate = function(form, instance, name_prefix, id_prefix) {
     var skip_boolean = ['in_lb']; // A list of boolean fields that should be treated as though they were regular text
 
     for(field_name in fields) {
-        console.log('Field -> `'+ field_name +'`');
+        //console.log('Field -> `'+ field_name +'`');
         if(field_name.indexOf(name_prefix) === 0 || field_name == 'id') {
             field_name = field_name.replace(name_prefix, '');
             for(item_attr in instance) {
-                console.log('Item attr -> `'+ item_attr +'`');
+                //console.log('Item attr -> `'+ item_attr +'`');
                 if(item_attr == field_name) {
                     value = instance[item_attr];
-                    console.log('Value -> `'+ value +'`');
+                    console.log('Field/value: `'+ item_attr + '` `'+ value +'`');
                     form_elem_name = id_prefix + field_name;
                     form_elem = $(form_elem_name);
                     if($.fn.zato.like_bool(value)) {
@@ -341,14 +341,14 @@ $.fn.zato.data_table.parse = function() {
         var instance = new $.fn.zato.data_table.class_()
         var tds = $(row).find('td');
 
-        console.info('columns = ' + columns);
+        // console.info('columns = ' + columns);
 
         $.each(tds, function(td_idx, td) {
 
             var attr_name = columns[td_idx];
             var attr_value = $(td).text().trim();
 
-            console.log('td_idx:`'+ td_idx +'`, attr_name:`'+ attr_name +'`, attr_value:`'+ attr_value + '`');
+            //console.log('td_idx:`'+ td_idx +'`, attr_name:`'+ attr_name +'`, attr_value:`'+ attr_value + '`');
 
             // Don't bother with ignored attributes.
             if(attr_name[0] != '_') {
