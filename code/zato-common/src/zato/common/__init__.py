@@ -783,7 +783,7 @@ class PUBSUB:
                 return iter((self.DEFAULT_PER_TOPIC, self.YES, self.NO))
 
     class QUEUE_ACTIVE_STATUS:
-        FULLY_ENABLED = NameId('Fully enabled', 'pub-sub')
+        FULLY_ENABLED = NameId('Pub and sub', 'pub-sub')
         PUB_ONLY = NameId('Pub only', 'pub-only')
         SUB_ONLY = NameId('Sub only', 'sub-only')
         DISABLED = NameId('Disabled', 'disabled')

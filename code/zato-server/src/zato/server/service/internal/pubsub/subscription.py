@@ -31,7 +31,25 @@ from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
 sub_broker_attrs = ('active_status', 'active_status', 'cluster_id', 'creation_time', 'endpoint_id', 'has_gd', 'id',
     'is_durable', 'is_internal', 'name', 'out_amqp_id', 'out_http_soap_id', 'sub_key', 'topic_id', 'ws_channel_id',
-    'ws_sub_id', 'delivery_group_size')
+    'ws_sub_id', 'delivery_batch_size')
+
+# ################################################################################################################################
+
+class _Input:
+    common = ('topic_list_text', 'topic_list_json', 'active_status', 'endpoint_type', 'endpoint_id',
+        'delivery_method', 'delivery_data_format', 'delivery_batch_size', 'wrap_one_msg_in_list', 'delivery_max_retry',
+        'delivery_err_should_block', 'wait_sock_err', 'wait_non_sock_err')
+    amqp = ('amqp_exchange', 'amqp_routing_key')
+    files = ('files_directory_list',)
+    ftp = ('ftp_directory_list',)
+    rest = ('out_rest_http_soap_id', 'rest_delivery_endpoint')
+    service = ('service_id',)
+    sms_twilio = ('sms_twilio_from', 'sms_twilio_to_list')
+    smtp = ('smtp_is_html', 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body')
+    soap = ('out_soap_http_soap_id', 'soap_delivery_endpoint')
+
+_create_edit_input_optional = _Input.common + _Input.amqp + _Input.files + _Input.ftp + _Input.rest + _Input.service + \
+    _Input.sms_twilio + _Input.smtp + _Input.soap
 
 # ################################################################################################################################
 
@@ -69,9 +87,25 @@ class GetEndpointSummaryList(AdminService):
 class SubscribeServiceImpl(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('topic_name',)
-        input_optional = (Bool('gd'), 'deliver_to', 'delivery_format', 'security_id', 'ws_channel_id', 'ws_channel_name',
-            AsIs('ws_pub_client_id'), 'sql_ws_client_id', 'deliver_by', 'is_internal', AsIs('ext_client_id'),
-            'delivery_group_size', Opaque('web_socket'))
+        input_optional = _create_edit_input_optional
+
+        '''
+        input_optional = (
+          Bool('gd'),
+          'deliver_to',
+          'delivery_format',
+          'security_id',
+          'ws_channel_id',
+          'ws_channel_name',
+          AsIs('ws_pub_client_id'),
+          'sql_ws_client_id',
+          'deliver_by',
+          'is_internal',
+          AsIs('ext_client_id'),
+          'delivery_group_size',
+          Opaque('web_socket')
+        )
+        '''
         output_optional = ('sub_key', Int('queue_depth'))
 
 # ################################################################################################################################
@@ -125,12 +159,12 @@ class SubscribeServiceImpl(AdminService):
         delivery_data_format = input.delivery_format or None
         deliver_to = input.deliver_to or None
         deliver_by = input.deliver_by or 'priority,ext_pub_time,pub_time'
-        delivery_group_size = input.delivery_group_size or 1
+        delivery_batch_size = input.delivery_batch_size or 1
 
         if input.ws_channel_id:
             delivery_method = PUBSUB.DELIVERY_METHOD.WEB_SOCKET
         else:
-            delivery_method = PUBSUB.DELIVERY_METHOD.NOTIFY if deliver_to else PUBSUB.DELIVERY_METHOD.PULL
+            delivery_method = input.delivery_method
 
         cluster_id = self.server.cluster_id
 
@@ -165,7 +199,7 @@ class SubscribeServiceImpl(AdminService):
                 # Create a new subscription object
                 ps_sub = add_subscription(session, cluster_id, PUBSUB.QUEUE_ACTIVE_STATUS.FULLY_ENABLED.id, False, now,
                     pattern_matched, sub_key, has_gd, topic.id, endpoint_id, delivery_method, delivery_data_format,
-                    deliver_to, deliver_by, delivery_group_size, ws_channel_id, ws_sub)
+                    deliver_to, deliver_by, delivery_batch_size, ws_channel_id, ws_sub)
 
                 # Flush the session because we need the subscription's ID below in INSERT from SELECT
                 session.flush()

@@ -45,7 +45,7 @@ def add_wsx_subscription(session, cluster_id, is_internal, sub_key, ext_client_i
 # ################################################################################################################################
 
 def add_subscription(session, cluster_id, active_status, is_internal, creation_time, pattern_matched, sub_key, has_gd, topic_id,
-    endpoint_id, delivery_method, delivery_data_format, deliver_to, deliver_by, delivery_group_size, ws_channel_id, ws_sub):
+    endpoint_id, delivery_method, delivery_data_format, deliver_to, deliver_by, delivery_batch_size, ws_channel_id, ws_sub):
     """ Adds an object representing a subscription regardless of the underlying protocol.
     """
     ps_sub = PubSubSubscription()
@@ -61,7 +61,7 @@ def add_subscription(session, cluster_id, active_status, is_internal, creation_t
     ps_sub.delivery_data_format = delivery_data_format
     ps_sub.delivery_endpoint = deliver_to
     ps_sub.deliver_by = deliver_by
-    ps_sub.delivery_group_size = delivery_group_size
+    ps_sub.delivery_batch_size = delivery_batch_size
     ps_sub.ws_channel_id = ws_channel_id
     ps_sub.ws_sub = ws_sub
     ps_sub.cluster_id = cluster_id
