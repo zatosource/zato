@@ -21,8 +21,8 @@ row_prefix = 'dyn_form_row_id_'
 class DynFormHandler(object):
     """ Dynamically adds or remove entries from forms depending on values changed in source SELECT.
     """
-    def __init__(self):
-        self.current = window['zato_dyn_form_default']
+    def __init__(self, dyn_form_default=None):
+        self.current = dyn_form_default or window['zato_dyn_form_default']
         self.elem_name = window['zato_dyn_form_elem_name']
         self.create_source_select = doc['id_{}'.format(self.elem_name)]
         self.edit_source_select = doc['id_edit-{}'.format(self.elem_name)]
@@ -165,8 +165,8 @@ class DynFormHandler(object):
 
 # ################################################################################################################################
 
-def zato_run_dyn_form_handler():
-    handler = DynFormHandler()
+def zato_run_dyn_form_handler(dyn_form_default=None):
+    handler = DynFormHandler(dyn_form_default)
     handler.run()
 
 window.zato_run_dyn_form_handler = zato_run_dyn_form_handler
