@@ -157,7 +157,7 @@ class _CreateEdit(CreateEdit):
 
     class SimpleIO(CreateEdit.SimpleIO):
         input_required = ('name', 'is_internal', 'role', 'is_active', 'endpoint_type')
-        input_optional = ('topic_patterns', 'security_id', 'service_id', 'ws_channel_id')
+        input_optional = ('is_internal', 'topic_patterns', 'security_id', 'service_id', 'ws_channel_id')
         output_required = ('id', 'name')
 
     def on_after_set_input(self):
