@@ -158,6 +158,7 @@
             <div class="bd">
                 <form action="{% url "pubsub-endpoint-create" %}" method="post" id="create-form">
                     <table class="form-data">
+
                         <tr>
                             <td style="vertical-align:middle; width:15%">Name</td>
                             <td>{{ create_form.name }}</td>
@@ -188,11 +189,11 @@
                             <td style="vertical-align:middle">WebSockets channel</td>
                             <td>{{ create_form.ws_channel_id }} </td>
                         </tr>
-
                         <tr>
                             <td style="vertical-align:middle">Topics allowed</td>
                             <td>{{ create_form.topic_patterns }} </td>
                         </tr>
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
@@ -210,6 +211,7 @@
             <div class="bd">
                 <form action="{% url "pubsub-endpoint-edit" %}" method="post" id="edit-form">
                     <table class="form-data">
+
                         <tr>
                             <td style="vertical-align:middle; width:15%">Name</td>
                             <td>{{ edit_form.name }}</td>
@@ -218,7 +220,6 @@
                             <td style="vertical-align:middle; width:15%">Type</td>
                             <td>{{ edit_form.endpoint_type }}</td>
                         </tr>
-
                         <tr>
                             <td style="vertical-align:middle">Role</td>
                             <td>{{ edit_form.role }} </td>
@@ -227,7 +228,7 @@
                         {% comment %} --------- REST/SOAP --------- {% endcomment %}
                         <tr id="edit-dyn_form_row_id_security_id" style="display:none">
                             <td style="vertical-align:middle">API client credentials</td>
-                            <td>{{ create_form.security_id }} </td>
+                            <td>{{ edit_form.security_id }} </td>
                         </tr>
 
                         {% comment %} --------- Service --------- {% endcomment %}
@@ -241,11 +242,12 @@
                             <td style="vertical-align:middle">WebSockets channel</td>
                             <td>{{ edit_form.ws_channel_id }} </td>
                         </tr>
-
                         <tr>
                             <td style="vertical-align:middle">Topics allowed</td>
                             <td>{{ edit_form.topic_patterns }} </td>
                         </tr>
+
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />
