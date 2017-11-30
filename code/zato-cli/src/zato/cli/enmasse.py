@@ -553,14 +553,13 @@ class ObjectImporter(object):
         if not scan_results.ok:
             return scan_results
 
-        if missing_defs:
-            for warning in missing_defs.warnings:
-                missing_type, missing_name, dep_names, existing = warning.value_raw
-                if not self.object_mgr.find(missing_type, {'name': missing_name}):
-                    raw = (missing_type, missing_name)
-                    results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB,
-                        "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
-                        missing_name, missing_type, dep_names)
+        for warning in scan_results.warnings:
+            missing_type, missing_name, dep_names, existing = warning.value_raw
+            if not self.object_mgr.find(missing_type, {'name': missing_name}):
+                raw = (missing_type, missing_name)
+                results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB,
+                    "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
+                    missing_name, missing_type, dep_names)
 
         for item_type, items in self.json.items():
             for item in items:
