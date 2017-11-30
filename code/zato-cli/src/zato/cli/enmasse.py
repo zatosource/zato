@@ -47,6 +47,7 @@ ERROR_INVALID_SEC_DEF_TYPE = Code('E09', 'invalid sec def type')
 ERROR_INVALID_KEY = Code('E10', 'invalid key')
 ERROR_SERVICE_NAME_MISSING = Code('E11', 'service name missing')
 ERROR_SERVICE_MISSING = Code('E12', 'service missing')
+ERROR_MISSING_DEP = Code('E13', 'dependency missing')
 ERROR_COULD_NOT_IMPORT_OBJECT = Code('E13', 'could not import object')
 ERROR_TYPE_MISSING = Code('E04', 'type missing')
 
@@ -452,7 +453,7 @@ class DependencyScanner(object):
                 if item is not None:
                     return item
 
-    def scan_item(self, item_type, item):
+    def scan_item(self, item_type, item, results):
         """
         Scan the data of a single item for required dependencies, recording any
         that are missing in :py:attr:`missing`.
@@ -462,10 +463,15 @@ class DependencyScanner(object):
         """
         sinfo = SERVICE_BY_NAME[item_type]
         for dep_key, dep_info in sinfo.object_dependencies.items():
-            if item.get(dep_key) == dep_info.get('empty_value'):
-                continue
             if not test_item(item, dep_info.get('condition')):
                 continue
+
+            value = item.get(dep_key)
+            if value == dep_info.get('empty_value') and not dep_info.get('optional'):
+                results.add_error((dep_key, dep_info), ERROR_MISSING_DEP,
+                                  "Item of type {} lacks required {} field: {}",
+                                  item_type, dep_key, item)
+                return
 
             if dep_key == 'sec_def':
                 dep = self.find_sec({
@@ -488,7 +494,7 @@ class DependencyScanner(object):
         results = Results()
         for item_type, items in self.json.items():
             for item in items:
-                self.scan_item(item_type, item)
+                self.scan_item(item_type, item, results)
 
         if not self.ignore_missing:
             for (missing_type, missing_name), dep_names in sorted(self.missing.items()):
@@ -537,7 +543,10 @@ class ObjectImporter(object):
         dep_scanner = DependencyScanner(self.json,
             ignore_missing=self.ignore_missing)
 
-        missing_defs = dep_scanner.scan()
+        scan_results = dep_scanner.scan()
+        if not scan_results.ok:
+            return scan_results
+
         if missing_defs:
             for warning in missing_defs.warnings:
                 missing_type, missing_name, dep_names, existing = warning.value_raw
