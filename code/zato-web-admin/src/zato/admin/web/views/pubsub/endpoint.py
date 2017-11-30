@@ -104,6 +104,11 @@ class Index(_Index):
         data_list.ws_channel_list = []
         data_list.service_list = []
 
+        in_use = Bunch()
+        in_use.security_list = []
+        in_use.ws_channel_list = []
+        in_use.service_list = []
+
         if self.req.zato.cluster_id:
 
             # Security definitions
@@ -117,29 +122,30 @@ class Index(_Index):
             data_list.service_list = self.req.zato.client.invoke(
                 'zato.service.get-list', {'cluster_id': self.req.zato.cluster_id}).data
 
-        # Filter out items that are already in use, this is needed because a single one
-        # can be used in only one endpoint. This is also enforced on SQL level by services.
-        data_list.security_list = self.filter_out_already_in_use(data_list.security_list, 'security_id')
-        data_list.ws_channel_list = self.filter_out_already_in_use(data_list.ws_channel_list, 'ws_channel_id')
-        data_list.service_list = self.filter_out_already_in_use(data_list.service_list, 'service_id')
+            # Build a list of IDs that are already used to make fronted warn of this situation.
+            # This is also enforced on SQL level by services.
+            in_use.security_list = self.get_already_in_use(data_list.security_list, 'security_id')
+            in_use.ws_channel_list = self.get_already_in_use(data_list.ws_channel_list, 'ws_channel_id')
+            in_use.service_list = self.get_already_in_use(data_list.service_list, 'service_id')
 
         return {
             'create_form': CreateForm(self.req, data_list),
             'edit_form': EditForm(self.req, data_list, prefix='edit'),
+            'in_use': dumps(in_use),
         }
 
-    def filter_out_already_in_use(self, data_list, id_attr):
+    def get_already_in_use(self, data_list, id_attr):
         out = []
         id_list = [elem for elem in [getattr(elem, id_attr) for elem in self.items] if elem]
 
         if id_attr == 'security_id':
             for elem in data_list:
                 elem_id = elem[0]
-                if elem_id not in id_list:
+                if elem_id in id_list:
                     out.append(elem)
         else:
             for elem in data_list:
-                if elem.id not in id_list:
+                if elem.id in id_list:
                     out.append(elem)
 
         return out

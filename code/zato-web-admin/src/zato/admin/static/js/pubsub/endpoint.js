@@ -57,8 +57,9 @@ $.fn.zato.pubsub.endpoint.create = function() {
 
 $.fn.zato.pubsub.endpoint.edit = function(id) {
     $.fn.zato.pubsub.endpoint.clear_forms();
-    window.zato_run_dyn_form_handler();
-    $.fn.zato.data_table._create_edit('edit', 'Update the pub/sub endpoint', id);
+    var instance = $.fn.zato.data_table.data[id]
+    window.zato_run_dyn_form_handler(instance.endpoint_type);
+    $.fn.zato.data_table._create_edit('edit', 'Update pub/sub endpoint', id);
 }
 
 $.fn.zato.pubsub.endpoint.data_table.new_row = function(item, data, include_tr) {
