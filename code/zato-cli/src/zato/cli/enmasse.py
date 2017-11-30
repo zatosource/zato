@@ -128,6 +128,7 @@ SHORTNAME_BY_PREFIX = [
     ('zato.security.tls.channel', 'tls_channel_sec'),
     ('zato.security.xpath', 'xpath_sec'),
     ('zato.security.', ''),
+    ('zato.channel.', ''),
 ]
 
 
