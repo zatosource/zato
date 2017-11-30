@@ -24,7 +24,8 @@ class GetList(DataDictService):
     class SimpleIO(GetListAdminSIO):
         request_elem = 'zato_kvdb_data_dict_dictionary_get_list_request'
         response_elem = 'zato_kvdb_data_dict_dictionary_get_list_response'
-        output_required = ('id', 'system', 'key', 'value')
+        output_required = ('id', 'system', 'key')
+        output_optional = ('value',)
 
     def get_data(self):
         return self._get_dict_items()
@@ -33,12 +34,12 @@ class GetList(DataDictService):
         self.response.payload[:] = self.get_data()
 
 class _CreateEdit(DataDictService):
-    NAME_PATTERN = '\w+'
+    NAME_PATTERN = '[\w\-\.]+'
     NAME_RE = re.compile(NAME_PATTERN)
 
     class SimpleIO(AdminSIO):
-        input_required = ('system', 'key', 'value')
-        input_optional = ('id',)
+        input_required = ('system', 'key')
+        input_optional = ('id', 'value')
         output_required = ('id',)
 
     def _validate_entry(self, validate_item, id=None):
@@ -48,7 +49,7 @@ class _CreateEdit(DataDictService):
             if match and match.group() == name:
                 continue
             else:
-                msg = "System and key may contain only letters, digits and an underscore, failed to validate [{}] against the regular expression {}".format(
+                msg = "System and key may contain only letters, dots, digits, dashes and underscores, failed to validate [{}] against regular expression {}".format(
                     name, self.NAME_PATTERN)
                 raise ZatoException(self.cid, msg)
 
@@ -61,7 +62,7 @@ class _CreateEdit(DataDictService):
         return True
 
     def _get_item_name(self):
-        return dict_item_name(self.request.input.system, self.request.input.key, self.request.input.value)
+        return dict_item_name(self.request.input.system, self.request.input.key, self.request.input.value or '')
 
     def handle(self):
         item = self._get_item_name()

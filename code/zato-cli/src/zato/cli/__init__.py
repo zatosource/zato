@@ -465,15 +465,16 @@ class ZatoCommand(object):
                     sys.exit(self.SYS_ERROR.FILE_MISSING) # noqa
 
             check_password = []
-            for opt_dict in self.opts:
-                name = opt_dict['name']
-                if 'password' in name or 'secret' in name:
+            if args.command != 'from_config' and not 'password' in args:
+                for opt_dict in self.opts:
+                    name = opt_dict['name']
+                    if 'password' in name or 'secret' in name:
 
-                    # Don't required password on SQLite
-                    if 'odb' in name and args.odb_type == 'sqlite':
-                        continue
+                        # Don't required password on SQLite
+                        if 'odb' in name and args.odb_type == 'sqlite':
+                            continue
 
-                    check_password.append((name, opt_dict['help']))
+                        check_password.append((name, opt_dict['help']))
 
             self.before_execute(args)
 

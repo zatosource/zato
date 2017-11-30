@@ -801,8 +801,8 @@ class Service(object):
         """ Offers the last chance to influence the service's operations.
         """
 
-    @staticmethod
-    def after_add_to_store(logger):
+    @classmethod
+    def after_add_to_store(cls, logger):
         """ Invoked right after the class has been added to the service store.
         """
 
