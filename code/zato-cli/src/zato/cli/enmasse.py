@@ -113,6 +113,7 @@ def populate_services_from_apispec(client, logger):
 #: the second element. The prefixes must match exactly if the first element
 #: does not end in a period.
 SHORTNAME_BY_PREFIX = [
+    ('zato.pubsub.', 'pubsub'),
     ('zato.definition.', 'def'),
     ('zato.email.', 'email'),
     ('zato.message.namespace', 'def_namespace'),
@@ -230,6 +231,20 @@ SERVICES = [
         },
         service_dependencies={
             'service_name': {}
+        },
+    ),
+    ServiceInfo(
+        name='pubsub_endpoint',
+        prefix='zato.pubsub.endpoint',
+        object_dependencies={
+            'ws_channel_name': {
+                'dependent_type': 'web_socket',
+                'dependent_field': 'name',
+                'condition': {
+                    'only_if_field': 'endpoint_type',
+                    'only_if_value': 'wsx',
+                },
+            }
         },
     ),
     ServiceInfo(
