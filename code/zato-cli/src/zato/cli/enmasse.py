@@ -69,10 +69,6 @@ def dict_match(haystack, needle):
 IGNORE_PREFIXES = {
     "zato.kvdb.data-dict.dictionary",
     "zato.kvdb.data-dict.translation",
-    "zato.pubsub.consumers",
-    "zato.pubsub.message",
-    "zato.pubsub.producers",
-    "zato.pubsub.topics",
 }
 
 def populate_services_from_apispec(client, logger):
@@ -163,7 +159,9 @@ def test_item(item, cond):
     if cond is not None:
         only_if_field = cond.get('only_if_field')
         only_if_value = cond.get('only_if_value')
-        if only_if_field and item.get(only_if_field) != only_if_value:
+        if not isinstance(only_if_value, (list, tuple)):
+            only_if_value = [only_if_value]
+        if only_if_field and item.get(only_if_field) not in only_if_value:
             return False
     return True
 
@@ -250,6 +248,14 @@ SERVICES = [
                 'condition': {
                     'only_if_field': 'endpoint_type',
                     'only_if_value': 'wsx',
+                },
+            },
+            'sec_def': {
+                'dependent_type': 'basic_auth',
+                'dependent_field': 'name',
+                'condition': {
+                    'only_if_field': 'endpoint_type',
+                    'only_if_value': ['soap', 'rest'],
                 },
             }
         },

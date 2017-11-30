@@ -2277,7 +2277,7 @@ class PubSubSubscription(Base):
     endpoint = relationship(
         PubSubEndpoint, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
-    out_job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=False)
+    out_job_id = Column(Integer, ForeignKey('job.id', ondelete='CASCADE'), nullable=True)
     out_job = relationship(
         Job, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
