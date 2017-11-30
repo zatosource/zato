@@ -232,7 +232,7 @@ class GetEndpointQueueList(AdminService):
 # ################################################################################################################################
 
 class UpdateEndpointQueue(AdminService):
-    """ Returns all queues to which a given endpoint is subscribed.
+    """ Modifies selected subscription queue.
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'id', 'sub_key', 'active_status')
