@@ -235,6 +235,12 @@ SERVICES = [
         },
     ),
     ServiceInfo(
+        name='web_socket',
+        service_dependencies={
+            'service': {}
+        },
+    ),
+    ServiceInfo(
         name='pubsub_endpoint',
         prefix='zato.pubsub.endpoint',
         object_dependencies={
