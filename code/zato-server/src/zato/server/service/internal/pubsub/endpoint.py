@@ -69,7 +69,7 @@ class GetList(AdminService):
 
 class Create(AdminService):
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'name', 'is_internal', 'role', 'is_active', 'is_internal', 'endpoint_type')
+        input_required = ('cluster_id', 'name', 'role', 'is_active', 'is_internal', 'endpoint_type')
         input_optional = ('topic_patterns', 'security_id', 'service_id', 'ws_channel_id')
         output_required = (AsIs('id'), 'name')
         request_elem = 'zato_pubsub_endpoint_create_request'
