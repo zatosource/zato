@@ -61,8 +61,7 @@ def find_first(it, pred):
 def dict_match(haystack, needle):
     """Return True if all the keys from `needle` appear in `haystack` with the
     same value."""
-    return all(haystack.get(key) == value
-               for key, value in needle.items())
+    return all(haystack.get(key) == value for key, value in needle.items())
 
 
 #: List of zato services we explicitly don't support.
@@ -72,9 +71,8 @@ IGNORE_PREFIXES = {
 }
 
 def populate_services_from_apispec(client, logger):
-    """Request a list of services from the APISpec service, and merge the
-    results into SERVICES_BY_PREFIX, creating new ServiceInfo instances to
-    represent previously unknown services as appropriate."""
+    """Request a list of services from the APISpec service, and merge the results into SERVICES_BY_PREFIX, creating new ServiceInfo instances to represent
+    previously unknown services as appropriate."""
     response = client.invoke('zato.apispec.get-api-spec', {
         'return_internal': True
     })
@@ -105,10 +103,8 @@ def populate_services_from_apispec(client, logger):
 
         sinfo.methods = methods
 
-#: The common prefix for a set of services is tested against the first element
-#: in this list using startswith(). If it matches, that prefix is replaced by
-#: the second element. The prefixes must match exactly if the first element
-#: does not end in a period.
+#: The common prefix for a set of services is tested against the first element in this list using startswith(). If it matches, that prefix is replaced by the
+#: second element. The prefixes must match exactly if the first element does not end in a period.
 SHORTNAME_BY_PREFIX = [
     ('zato.pubsub.', 'pubsub'),
     ('zato.definition.', 'def'),
@@ -143,19 +139,15 @@ def make_service_name(prefix):
     return escaped
 
 def normalize_service_name(item):
-    """Given an item originating from the API or from an import file, if the
-    item contains either the 'service' or 'service_name' keys, ensure the other
-    key is set. Either the dict contains neither key, or both keys set to the
-    same value."""
+    """Given an item originating from the API or from an import file, if the item contains either the 'service' or 'service_name' keys, ensure the other key is
+    set. Either the dict contains neither key, or both keys set to the same value."""
     if 'service' in item or 'service_name' in item:
         item.setdefault('service', item.get('service_name'))
         item.setdefault('service_name', item.get('service'))
 
 def test_item(item, cond):
-    """Given a dictionary `cond` containing some conditions to test an item
-    for, return True if those conditions match. Currently only supports testing
-    whether a field has a particular value. Returns ``True`` if `cond` is
-    ``None``."""
+    """Given a dictionary `cond` containing some conditions to test an item for, return True if those conditions match. Currently only supports testing whether
+    a field has a particular value. Returns ``True`` if `cond` is ``None``."""
     if cond is not None:
         only_if_field = cond.get('only_if_field')
         only_if_value = cond.get('only_if_value')
@@ -179,28 +171,29 @@ class ServiceInfo(object):
         #: Overwritten by populate_services_from_apispec().
         self.methods = {}
         #: Specifies a list of object dependencies:
-        #:      field_name: {"dependent_type": "shortname",
-        #:                   "dependent_field": "fieldname",
-        #:                   "empty_value": None, or e.g. ZATO_NO_SECURITY}
+        #:      field_name: {"dependent_type": "shortname", "dependent_field": "fieldname", "empty_value": None, or e.g. ZATO_NO_SECURITY}
         self.object_dependencies = object_dependencies or {}
         #: Specifies a list of service dependencies. The field's value contains
         #: the name of a service that must exist.
-        #:      field_name: {"only_if_field": "field_name" or None,
-        #:                   "only_if_value": "vlaue" or None}
+        #:      field_name: {"only_if_field": "field_name" or None, "only_if_value": "value" or None}
         self.service_dependencies = service_dependencies or {}
-        #: List of field/value specifications that should be ignored during
-        #: export:
+        #: List of field/value specifications that should be ignored during export:
         #:      field_name: value
         self.export_filter = export_filter or {}
 
+# ################################################################################################################################
+
     @property
     def is_security(self):
-        """If True, indicates the service is source of authentication
-        credentials for use in another service."""
+        """If True, indicates the service is source of authentication credentials for use in another service."""
         return self.prefix and self.prefix.startswith('zato.security.')
+
+# ################################################################################################################################
 
     def get_service_name(self, method):
         return self.methods.get(method, {}).get('name')
+
+# ################################################################################################################################
 
     def get_required_keys(self):
         """Return the set of keys required to create a new instance."""
@@ -213,11 +206,12 @@ class ServiceInfo(object):
         required.discard('cluster_id')
         return required
 
+# ################################################################################################################################
+
     def __repr__(self):
         return '<ServiceInfo for {}>'.format(self.prefix)
 
-#: ServiceInfo templates for services that have additional semantics not yet
-#: described by apispec. To be replaced by introspection later.
+#: ServiceInfo templates for services that have additional semantics not yet described by apispec. To be replaced by introspection later.
 SERVICES = [
     ServiceInfo(
         name='channel_amqp',
@@ -387,6 +381,8 @@ class Notice(object):
         self.value = value
         self.code = code
 
+# ################################################################################################################################
+
     def __repr__(self):
         return "<{} at {} value_raw:'{}' value:'{}' code:'{}'>".format(
             self.__class__.__name__, hex(id(self)), self.value_raw,
@@ -400,15 +396,21 @@ class Results(object):
         self.errors = errors or []
         self.service_name = service.get_name() if service else None
 
+# ################################################################################################################################
+
     def add_error(self, raw, code, msg, *args):
         if args:
             msg = msg.format(*args)
         self.errors.append(Notice(raw, msg, code))
 
+# ################################################################################################################################
+
     def add_warning(self, raw, code, msg, *args):
         if args:
             msg = msg.format(*args)
         self.warnings.append(Notice(raw, msg, code))
+
+# ################################################################################################################################
 
     @property
     def ok(self):
@@ -421,6 +423,8 @@ class InputValidator(object):
         #: Input JSON to validate.
         self.json = json
 
+# ################################################################################################################################
+
     def validate(self):
         """
         :rtype Results:
@@ -431,12 +435,12 @@ class InputValidator(object):
 
         return self.results
 
+# ################################################################################################################################
+
     def validate_one(self, item_type, item):
         if item_type not in SERVICE_BY_NAME:
             raw = (item_type, sorted(SERVICE_BY_NAME))
-            self.results.add_error(raw, ERROR_INVALID_KEY,
-                                   "Invalid key '{}', must be one of '{}'",
-                                   item_type, sorted(SERVICE_BY_NAME))
+            self.results.add_error(raw, ERROR_INVALID_KEY, "Invalid key '{}', must be one of '{}'", item_type, sorted(SERVICE_BY_NAME))
             return
 
         item_dict = dict(item)
@@ -446,9 +450,7 @@ class InputValidator(object):
         for req_key in required_keys:
             if item.get(req_key) is None: # 0 or '' can be correct values
                 raw = (req_key, required_keys, item_dict, item_type)
-                self.results.add_error(raw, ERROR_KEYS_MISSING,
-                                       "Key '{}' must exist in {}: {}",
-                                       req_key, item_type, item_dict)
+                self.results.add_error(raw, ERROR_KEYS_MISSING, "Key '{}' must exist in {}: {}", req_key, item_type, item_dict)
 
 class DependencyScanner(object):
     def __init__(self, json, ignore_missing=False):
@@ -457,11 +459,15 @@ class DependencyScanner(object):
         #: (item_type, name): [(item_type, name), ..]
         self.missing = {}
 
+# ################################################################################################################################
+
     def find(self, item_type, fields):
         if item_type == 'sec_def':
             return self.find_sec(fields)
         lst = self.json.get(item_type, ())
         return find_first(lst, lambda item: dict_match(item, fields))
+
+# ################################################################################################################################
 
     def find_sec(self, fields):
         for service in SERVICES:
@@ -470,10 +476,11 @@ class DependencyScanner(object):
                 if item is not None:
                     return item
 
+# ################################################################################################################################
+
     def scan_item(self, item_type, item, results):
         """
-        Scan the data of a single item for required dependencies, recording any
-        that are missing in :py:attr:`missing`.
+        Scan the data of a single item for required dependencies, recording any that are missing in :py:attr:`missing`.
 
         :param item_type: ServiceInfo.name of the item's type.
         :param item: dict describing the item.
@@ -484,9 +491,7 @@ class DependencyScanner(object):
                 continue
 
             if dep_key not in item:
-                results.add_error((dep_key, dep_info), ERROR_MISSING_DEP,
-                                  "{} lacks required {} field: {}",
-                                  item_type, dep_key, item)
+                results.add_error((dep_key, dep_info), ERROR_MISSING_DEP, "{} lacks required {} field: {}", item_type, dep_key, item)
 
             value = item.get(dep_key)
             if value != dep_info.get('empty_value'):
@@ -495,6 +500,8 @@ class DependencyScanner(object):
                     key = (dep_info['dependent_type'], item[dep_key])
                     names = self.missing.setdefault(key, [])
                     names.append(item.name)
+
+# ################################################################################################################################
 
     def scan(self):
         """
@@ -509,9 +516,7 @@ class DependencyScanner(object):
             for (missing_type, missing_name), dep_names in sorted(self.missing.items()):
                 existing = sorted(item.name for item in self.json.get(missing_type, []))
                 raw = (missing_type, missing_name, dep_names, existing)
-                results.add_warning(raw, WARNING_MISSING_DEF,
-                    "'{}' is needed by '{}' but was not among '{}'",
-                    missing_name, sorted(dep_names), existing)
+                results.add_warning(raw, WARNING_MISSING_DEF, "'{}' is needed by '{}' but was not among '{}'", missing_name, sorted(dep_names), existing)
 
         return results
 
@@ -528,6 +533,8 @@ class ObjectImporter(object):
         self.json = bunchify(json)
         self.ignore_missing = ignore_missing
 
+# ################################################################################################################################
+
     def validate_service_required(self, item_type, item):
         sinfo = SERVICE_BY_NAME[item_type]
         item_dict = dict(item)
@@ -539,13 +546,11 @@ class ObjectImporter(object):
             service_name = item.get(dep_field)
             raw = (service_name, item_dict, item_type)
             if not service_name:
-                self.results.add_error(raw, ERROR_SERVICE_NAME_MISSING,
-                                       "No {} service key defined type {}: {}",
-                                       dep_field, item_type, item_dict)
+                self.results.add_error(raw, ERROR_SERVICE_NAME_MISSING, "No {} service key defined type {}: {}", dep_field, item_type, item_dict)
             elif service_name not in self.object_mgr.services:
-                self.results.add_error(raw, ERROR_SERVICE_MISSING,
-                                       "Service '{}' from '{}' missing in ODB ({})",
-                                       service_name, item_dict, item_type)
+                self.results.add_error(raw, ERROR_SERVICE_MISSING, "Service '{}' from '{}' missing in ODB ({})", service_name, item_dict, item_type)
+
+# ################################################################################################################################
 
     def validate_import_data(self):
         results = Results()
@@ -560,15 +565,16 @@ class ObjectImporter(object):
             missing_type, missing_name, dep_names, existing = warning.value_raw
             if not self.object_mgr.find(missing_type, {'name': missing_name}):
                 raw = (missing_type, missing_name)
-                results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB,
-                    "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
-                    missing_name, missing_type, dep_names)
+                results.add_warning(raw, WARNING_MISSING_DEF_INCL_ODB, "Definition '{}' not found in JSON/ODB ({}), needed by '{}'",
+                                    missing_name, missing_type, dep_names)
 
         for item_type, items in self.json.items():
             for item in items:
                 self.validate_service_required(item_type, item)
 
         return results
+
+# ################################################################################################################################
 
     def remove_from_import_list(self, item_type, name):
         lst = self.json.get(item_type, [])
@@ -578,10 +584,14 @@ class ObjectImporter(object):
         else:
             raise KeyError('Tried to remove missing %r named %r' % (item_type, name))
 
+# ################################################################################################################################
+
     def should_skip_item(self, item_type, attrs, is_edit):
         # Root RBAC role cannot be edited
         if item_type == 'rbac_role' and attrs.name == 'Root':
             return True
+
+# ################################################################################################################################
 
     def _import(self, item_type, attrs, is_edit):
         attrs_dict = dict(attrs)
@@ -595,25 +605,24 @@ class ObjectImporter(object):
         # We quit on first error encountered
         if response and not response.ok:
             raw = (item_type, attrs_dict, response.details)
-            self.results.add_error(raw, ERROR_COULD_NOT_IMPORT_OBJECT,
-                                   "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'",
-                                    is_edit, attrs.name, attrs_dict, item_type, response.details)
+            self.results.add_error(raw, ERROR_COULD_NOT_IMPORT_OBJECT, "Could not import (is_edit {}) '{}' with '{}', response from '{}' was '{}'",
+                                   is_edit, attrs.name, attrs_dict, item_type, response.details)
             return self.results
 
-        # It's been just imported so we don't want to create in next steps
-        # (this in fact would result in an error as the object already exists).
+        # It's been just imported so we don't want to create in next steps (this in fact would result in an error as the object already exists).
         if is_edit:
             self.remove_from_import_list(item_type, attrs.name)
 
-        # We'll see how expensive this call is. Seems to be but
-        # let's see in practice if it's a burden.
+        # We'll see how expensive this call is. Seems to be but let's see in practice if it's a burden.
         self.object_mgr.refresh_by_type(item_type)
+
+# ################################################################################################################################
 
     def add_warning(self, results, item_type, value_dict, item):
         raw = (item_type, value_dict)
-        results.add_warning(raw, WARNING_ALREADY_EXISTS_IN_ODB,
-            '{} already exists in ODB {} ({})',
-            dict(value_dict), dict(item), item_type)
+        results.add_warning(raw, WARNING_ALREADY_EXISTS_IN_ODB, '{} already exists in ODB {} ({})', dict(value_dict), dict(item), item_type)
+
+# ################################################################################################################################
 
     def find_already_existing_odb_objects(self):
         results = Results()
@@ -643,6 +652,8 @@ class ObjectImporter(object):
 
         return results
 
+# ################################################################################################################################
+
     def import_objects(self, already_existing):
         existing_defs = []
         existing_other = []
@@ -651,8 +662,7 @@ class ObjectImporter(object):
         new_other = []
 
         #
-        # Update already existing objects first, definitions before any object
-        # that may depend on them ..
+        # Update already existing objects first, definitions before any object that may depend on them ..
         #
         for w in already_existing.warnings:
             item_type, _ = w.value_raw
@@ -697,9 +707,13 @@ class ObjectImporter(object):
 
         return self.results
 
+# ################################################################################################################################
+
     def _swap_service_name(self, required, attrs, first, second):
         if first in required and second in attrs:
             attrs[first] = attrs[second]
+
+# ################################################################################################################################
 
     def _import_object(self, def_type, item, is_edit):
         sinfo = SERVICE_BY_NAME[def_type]
@@ -715,8 +729,7 @@ class ObjectImporter(object):
         self._swap_service_name(required, item, 'service', 'service_name')
         self._swap_service_name(required, item, 'service_name', 'service')
 
-        # Fetch an item from a cache of ODB object and assign its ID
-        # to item so that the Edit service knows what to update.
+        # Fetch an item from a cache of ODB object and assign its ID to item so that the Edit service knows what to update.
         if is_edit:
             odb_item = self.object_mgr.find(def_type, {'name': item.name})
             item.id = odb_item.id
@@ -734,6 +747,8 @@ class ObjectImporter(object):
             verb = 'Updated' if is_edit else 'Created'
             self.logger.info("{} object '{}' with {}".format(verb, item.name, service_name))
         return response
+
+# ################################################################################################################################
 
     def _maybe_change_password(self, object_id, item_type, attrs):
         sinfo = SERVICE_BY_NAME[item_type]
@@ -756,6 +771,8 @@ class ObjectManager(object):
         self.client = client
         self.logger = logger
 
+# ################################################################################################################################
+
     def find(self, item_type, fields):
         if item_type == 'def_sec':
             return self.find_sec(fields)
@@ -763,6 +780,8 @@ class ObjectManager(object):
         item_type = item_type.replace('-', '_')
         lst = self.objects.get(item_type, ())
         return find_first(lst, lambda item: dict_match(item, fields))
+
+# ################################################################################################################################
 
     def find_sec(self, fields):
         """Find any security definition with the given name."""
@@ -772,9 +791,13 @@ class ObjectManager(object):
                 if item is not None:
                     return item
 
+# ################################################################################################################################
+
     def refresh(self):
         self._refresh_services()
         self._refresh_objects()
+
+# ################################################################################################################################
 
     def _refresh_services(self):
         response = self.client.invoke('zato.service.get-list', {
@@ -788,11 +811,12 @@ class ObjectManager(object):
                 for service in response.data
             }
 
+# ################################################################################################################################
+
     def fix_up_odb_object(self, item_type, item):
-        """For each ODB object, ensure fields that specify a dependency have
-        their associated name field updated to match the dependent object.
-        Otherwise, ensure the field is set to the corresponding empty value
-        (either None or ZATO_NO_SECURITY)."""
+        """For each ODB object, ensure fields that specify a dependency have their associated name field updated to match the dependent object. Otherwise,
+        ensure the field is set to the corresponding empty value (either None or ZATO_NO_SECURITY)."""
+        normalize_service_name(item)
         sinfo = SERVICE_BY_NAME[item_type]
         for field_name, info in sinfo.object_dependencies.iteritems():
             if 'id_field' not in info:
@@ -813,8 +837,9 @@ class ObjectManager(object):
             dep = self.find(info['dependent_type'], {'id': dep_id})
             item[field_name] = dep[info['dependent_field']]
 
-        normalize_service_name(item)
         return item
+
+# ################################################################################################################################
 
     IGNORED_NAMES = (
         'admin.invoke',
@@ -826,6 +851,8 @@ class ObjectManager(object):
             return False
         name = item.name.lower()
         return 'zato' in name or name in self.IGNORED_NAMES
+
+# ################################################################################################################################
 
     def delete(self, item_type, item):
         sinfo = SERVICE_BY_NAME[item_type]
@@ -844,6 +871,8 @@ class ObjectManager(object):
         else:
             self.logger.error("Could not delete {} ID {}: {}".format(item_type, item.id, response))
 
+# ################################################################################################################################
+
     def delete_all(self):
         count = 0
         for item_type, items in self.objects.items():
@@ -851,6 +880,8 @@ class ObjectManager(object):
                 self.delete(item_type, item)
                 count += 1
         return count
+
+# ################################################################################################################################
 
     def refresh_by_type(self, item_type):
         sinfo = SERVICE_BY_NAME[item_type]
@@ -879,6 +910,8 @@ class ObjectManager(object):
 
             self.objects[sinfo.name].append(item)
 
+# ################################################################################################################################
+
     def _refresh_objects(self):
         self.objects = Bunch()
         for sinfo in SERVICES:
@@ -891,8 +924,12 @@ class ObjectManager(object):
 class JsonCodec(object):
     extension = '.json'
 
+# ################################################################################################################################
+
     def load(self, fp, results):
         return anyjson.loads(fp.read())
+
+# ################################################################################################################################
 
     def dump(self, fp, obj):
         fp.write(json.dumps(obj, indent=1, sort_keys=True))
@@ -900,8 +937,12 @@ class JsonCodec(object):
 class YamlCodec(object):
     extension = '.yml'
 
+# ################################################################################################################################
+
     def load(self, fp, results):
         return yaml.load(fp)
+
+# ################################################################################################################################
 
     def dump(self, fp, obj):
         fp.write(pyaml.dump(obj, vspacing=True))
@@ -913,6 +954,8 @@ class InputParser(object):
         self.codec = codec
         self.seen_includes = set()
 
+# ################################################################################################################################
+
     def _parse_file(self, path, results):
         try:
             with open(path) as fp:
@@ -922,13 +965,19 @@ class InputParser(object):
             results.add_error(raw, ERROR_INVALID_INPUT, 'Failed to parse {}: {}', path, e)
             return None
 
+# ################################################################################################################################
+
     def _get_include_path(self, include_path):
         curdir = os.path.dirname(self.path)
         joined = os.path.join(curdir, include_path.replace('file://', ''))
         return os.path.abspath(joined)
 
+# ################################################################################################################################
+
     def is_include(self, value):
         return isinstance(value, basestring)
+
+# ################################################################################################################################
 
     def load_include(self, item_type, relpath, results):
         abs_path = self._get_include_path(relpath)
@@ -950,13 +999,13 @@ class InputParser(object):
             # Classic raw include.
             self.parse_item(item_type, obj, results)
         else:
-            # Fully formed dump input file. This allows an include file to be
-            # imported directly, or simply included.
+            # Fully formed dump input file. This allows an include file to be imported directly, or simply included.
             self.parse_items(obj, results)
 
+# ################################################################################################################################
+
     def parse_def_sec(self, item, results):
-        # While reading old enmasse files, expand def_sec entries out to their
-        # original service type.
+        # While reading old enmasse files, expand def_sec entries out to their original service type.
         sec_type = item.pop('type', None)
         if sec_type is None:
             raw = ('def_sec', item)
@@ -975,6 +1024,8 @@ class InputParser(object):
 
         self.json.setdefault(sec_type, []).append(Bunch(item))
 
+# ################################################################################################################################
+
     def parse_item(self, item_type, item, results):
         if self.is_include(item):
             self.load_include(item_type, item, results)
@@ -982,6 +1033,8 @@ class InputParser(object):
             self.parse_def_sec(item, results)
         else:
             self.json.setdefault(item_type, []).append(Bunch(item))
+
+# ################################################################################################################################
 
     def _maybe_fixup_http_soap(self, original_item_type, item):
         # Preserve old format by merging http-soap subtypes into one.
@@ -991,6 +1044,8 @@ class InputParser(object):
                 item['transport'] = transport
                 return 'http_soap'
         return original_item_type
+
+# ################################################################################################################################
 
     def parse_items(self, dct, results):
         for item_type, items in dct.items():
@@ -1005,6 +1060,8 @@ class InputParser(object):
                     this_item_type = self._maybe_fixup_http_soap(item_type, item)
                     normalize_service_name(item)
                 self.parse_item(this_item_type, item, results)
+
+# ################################################################################################################################
 
     def parse(self):
         results = Results()
@@ -1039,6 +1096,8 @@ class EnMasse(ManageCommand):
         'yml': YamlCodec,
     }
 
+# ################################################################################################################################
+
     def load_input(self):
         _, _, ext = self.args.input.rpartition('.')
         codec_klass = self.CODEC_BY_EXTENSION.get(ext.lower())
@@ -1055,6 +1114,8 @@ class EnMasse(ManageCommand):
             self.report_warnings_errors([results])
             sys.exit(self.SYS_ERROR.INVALID_INPUT)
         self.json = parser.json
+
+# ################################################################################################################################
 
     def _on_server(self, args):
         self.args = args
@@ -1183,6 +1244,8 @@ class EnMasse(ManageCommand):
 
         return warn_err, warn_no, error_no
 
+# ################################################################################################################################
+
     def report_warnings_errors(self, items):
         warn_err, warn_no, error_no = self.get_warnings_errors(items)
         table = self.get_table(warn_err)
@@ -1239,9 +1302,7 @@ class EnMasse(ManageCommand):
             if odb_key not in merged:
                 sorted_merged = sorted(merged)
                 raw = (json_key, odb_key, sorted_merged)
-                results.add_error(raw, ERROR_INVALID_KEY,
-                    "JSON key '{}' not one of '{}'",
-                    odb_key, sorted_merged)
+                results.add_error(raw, ERROR_INVALID_KEY, "JSON key '{}' not one of '{}'", odb_key, sorted_merged)
             else:
                 for json_elem in json_elems:
                     if 'http' in json_key or 'soap' in json_key:
@@ -1280,6 +1341,8 @@ class EnMasse(ManageCommand):
 
         return []
 
+# ################################################################################################################################
+
     def export_local_odb(self, needs_local=True):
         self.object_mgr.refresh()
         self.logger.info('ODB objects read')
@@ -1291,8 +1354,12 @@ class EnMasse(ManageCommand):
 
         return self.export()
 
+# ################################################################################################################################
+
     def export_odb(self):
         return self.export_local_odb(False)
+
+# ################################################################################################################################
 
     def run_import(self):
         self.object_mgr.refresh()
