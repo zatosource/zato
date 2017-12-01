@@ -1108,8 +1108,8 @@ class EnMasse(ManageCommand):
 
         # 2)
         elif args.export_odb:
-            self.report_warnings_errors(self.export_odb())
-            self.write_output()
+            if self.report_warnings_errors(self.export_odb()):
+                self.write_output()
 
         # 4) a/b
         elif has_import:
