@@ -458,6 +458,8 @@ class DependencyScanner(object):
         self.missing = {}
 
     def find(self, item_type, fields):
+        if item_type == 'sec_def':
+            return self.find_sec(fields)
         lst = self.json.get(item_type, ())
         return find_first(lst, lambda item: dict_match(item, fields))
 
@@ -486,22 +488,13 @@ class DependencyScanner(object):
                                   "{} lacks required {} field: {}",
                                   item_type, dep_key, item)
 
-            if item.get(dep_key) == dep_info.get('empty_value'):
-                return
-
-            if dep_key == 'sec_def':
-                dep = self.find_sec({
-                    dep_info['dependent_field']: item[dep_key]
-                })
-            else:
-                dep = self.find(dep_info['dependent_type'], {
-                    dep_info['dependent_field']: item[dep_key]
-                })
-
-            if dep is None:
-                key = (dep_info['dependent_type'], item[dep_key])
-                names = self.missing.setdefault(key, [])
-                names.append(item.name)
+            value = item.get(dep_key)
+            if value != dep_info.get('empty_value'):
+                dep = self.find({dep_info['dependent_field']: value)
+                if dep is None:
+                    key = (dep_info['dependent_type'], item[dep_key])
+                    names = self.missing.setdefault(key, [])
+                    names.append(item.name)
 
     def scan(self):
         """
