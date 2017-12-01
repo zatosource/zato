@@ -482,7 +482,7 @@ class DependencyScanner(object):
             value = item.get(dep_key)
             if value == dep_info.get('empty_value') and not dep_info.get('optional'):
                 results.add_error((dep_key, dep_info), ERROR_MISSING_DEP,
-                                  "Item of type {} lacks required {} field: {}",
+                                  "{} lacks required {} field: {}",
                                   item_type, dep_key, item)
                 return
 
@@ -725,15 +725,8 @@ class ObjectImporter(object):
             odb_item = self.object_mgr.find(def_type, {'name': attrs.name})
             attrs.id = odb_item.id
 
-        if def_type == 'http_soap':
-            if attrs.sec_def == NO_SEC_DEF_NEEDED:
-                attrs.security_id = None
-            else:
-                sec = self.object_mgr.find_sec({'name': attrs.sec_def})
-                attrs.security_id = sec.id
-
         for field_name, info in sinfo.object_dependencies.items():
-            if 'id_field' in info:
+            if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
                 dep_obj = self.object_mgr.find(info['dependent_type'], {
                     info['dependent_field']: attrs[field_name]
                 })
