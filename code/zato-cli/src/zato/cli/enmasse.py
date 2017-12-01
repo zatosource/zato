@@ -31,7 +31,7 @@ from zato.cli.check_config import CheckConfig
 from zato.common.util import get_client_from_server_conf
 
 DEFAULT_COLS_WIDTH = '15,100'
-NO_SEC_DEF_NEEDED = 'zato-no-security'
+ZATO_NO_SECURITY = 'zato-no-security'
 
 Code = collections.namedtuple('Code', ('symbol', 'desc'))
 
@@ -181,7 +181,7 @@ class ServiceInfo(object):
         #: Specifies a list of object dependencies:
         #:      field_name: {"dependent_type": "shortname",
         #:                   "dependent_field": "fieldname",
-        #:                   "empty_value": None, or e.g. NO_SEC_DEF_NEEDED}
+        #:                   "empty_value": None, or e.g. ZATO_NO_SECURITY}
         self.object_dependencies = object_dependencies or {}
         #: Specifies a list of service dependencies. The field's value contains
         #: the name of a service that must exist.
@@ -249,14 +249,17 @@ SERVICES = [
                     'only_if_field': 'endpoint_type',
                     'only_if_value': 'wsx',
                 },
+                'id_field': 'ws_channel_id',
             },
             'sec_def': {
                 'dependent_type': 'basic_auth',
                 'dependent_field': 'name',
+                'empty_value': ZATO_NO_SECURITY,
                 'condition': {
                     'only_if_field': 'endpoint_type',
                     'only_if_value': ['soap', 'rest'],
                 },
+                'id_field': 'security_id',
             }
         },
     ),
@@ -267,7 +270,6 @@ SERVICES = [
             'def_name': {
                 'dependent_type': 'def_jms_wmq',
                 'dependent_field': 'name',
-                'empty_value': NO_SEC_DEF_NEEDED,
             },
         },
         service_dependencies={
@@ -293,8 +295,8 @@ SERVICES = [
             'sec_def': {
                 'dependent_type': 'def_sec',
                 'dependent_field': 'name',
-                'empty_value': NO_SEC_DEF_NEEDED,
-                'id_field': 'sec_id',
+                'empty_value': ZATO_NO_SECURITY,
+                'id_field': 'security_id',
             },
         },
         service_dependencies={
@@ -355,7 +357,7 @@ SERVICES = [
             'def_name': {
                 'dependent_type': 'def_cassandra',
                 'dependent_field': 'name',
-                'empty_value': NO_SEC_DEF_NEEDED,
+                'empty_value': ZATO_NO_SECURITY,
             },
         },
     ),
@@ -479,11 +481,12 @@ class DependencyScanner(object):
             if not test_item(item, dep_info.get('condition')):
                 continue
 
-            value = item.get(dep_key)
-            if value == dep_info.get('empty_value') and not dep_info.get('optional'):
+            if dep_key not in item:
                 results.add_error((dep_key, dep_info), ERROR_MISSING_DEP,
                                   "{} lacks required {} field: {}",
                                   item_type, dep_key, item)
+
+            if item.get(dep_key) == dep_info.get('empty_value'):
                 return
 
             if dep_key == 'sec_def':
@@ -705,9 +708,9 @@ class ObjectImporter(object):
         if first in required and second in attrs:
             attrs[first] = attrs[second]
 
-    def _import_object(self, def_type, attrs, is_edit):
+    def _import_object(self, def_type, item, is_edit):
         sinfo = SERVICE_BY_NAME[def_type]
-        attrs_dict = dict(attrs)
+        attrs_dict = dict(item)
 
         if is_edit:
             service_name = sinfo.get_service_name('edit')
@@ -716,27 +719,27 @@ class ObjectImporter(object):
 
         # service and service_name are interchangeable
         required = sinfo.get_required_keys()
-        self._swap_service_name(required, attrs, 'service', 'service_name')
-        self._swap_service_name(required, attrs, 'service_name', 'service')
+        self._swap_service_name(required, item, 'service', 'service_name')
+        self._swap_service_name(required, item, 'service_name', 'service')
 
         # Fetch an item from a cache of ODB object and assign its ID
-        # to attrs so that the Edit service knows what to update.
+        # to item so that the Edit service knows what to update.
         if is_edit:
-            odb_item = self.object_mgr.find(def_type, {'name': attrs.name})
-            attrs.id = odb_item.id
+            odb_item = self.object_mgr.find(def_type, {'name': item.name})
+            item.id = odb_item.id
 
         for field_name, info in sinfo.object_dependencies.items():
             if item.get(field_name) != info.get('empty_value') and 'id_field' in info:
                 dep_obj = self.object_mgr.find(info['dependent_type'], {
-                    info['dependent_field']: attrs[field_name]
+                    info['dependent_field']: item[field_name]
                 })
-                attrs[info['id_field']] = dep_obj.id
+                item[info['id_field']] = dep_obj.id
 
         self.logger.debug("Invoking {} for {}".format(service_name, sinfo.name))
-        response = self.client.invoke(service_name, attrs)
+        response = self.client.invoke(service_name, item)
         if response.ok:
             verb = 'Updated' if is_edit else 'Created'
-            self.logger.info("{} object '{}' with {}".format(verb, attrs.name, service_name))
+            self.logger.info("{} object '{}' with {}".format(verb, item.name, service_name))
         return response
 
     def _maybe_change_password(self, object_id, item_type, attrs):
@@ -793,13 +796,29 @@ class ObjectManager(object):
             }
 
     def fix_up_odb_object(self, item_type, item):
+        """For each ODB object, ensure fields that specify a dependency have
+        their associated name field updated to match the dependent object.
+        Otherwise, ensure the field is set to the corresponding empty value
+        (either None or ZATO_NO_SECURITY)."""
         sinfo = SERVICE_BY_NAME[item_type]
-        if 'sec_def' in sinfo.object_dependencies:
-            if item.get('security_id'):
-                sec_def = self.find_sec({'id': item.security_id})
-                item.sec_def = sec_def.name
-            else:
-                item.sec_def = NO_SEC_DEF_NEEDED
+        for field_name, info in sinfo.object_dependencies.iteritems():
+            if 'id_field' not in info:
+                continue
+
+            if not test_item(item, info.get('condition')):
+                # If the field's condition is false, then just set empty values
+                # and stop.
+                item[field_name] = info.get('empty_value')
+                item[info['id_field']] = None
+                continue
+
+            dep_id = item.get(info['id_field'])
+            if dep_id is None:
+                item[field_name] = info.get('empty_value')
+                continue
+
+            dep = self.find(info['dependent_type'], {'id': dep_id})
+            item[field_name] = dep[info['dependent_field']]
 
         normalize_service_name(item)
         return item
