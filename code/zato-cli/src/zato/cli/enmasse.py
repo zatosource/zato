@@ -216,8 +216,8 @@ class ServiceInfo(object):
     def __repr__(self):
         return '<ServiceInfo for {}>'.format(self.prefix)
 
-#: List of ServiceInfo objects for all supported services. To be replaced by
-#: introspection later.
+#: ServiceInfo templates for services that have additional semantics not yet
+#: described by apispec. To be replaced by introspection later.
 SERVICES = [
     ServiceInfo(
         name='channel_amqp',
