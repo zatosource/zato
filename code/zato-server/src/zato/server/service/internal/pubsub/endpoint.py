@@ -323,7 +323,7 @@ class DeleteEndpointQueue(AdminService):
     """ Deletes a given queue for messages - including all messages and their parent subscription object.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'id')
+        input_required = ('cluster_id', 'sub_key')
 
     def handle(self):
 
@@ -331,7 +331,7 @@ class DeleteEndpointQueue(AdminService):
         with closing(self.odb.session()) as session:
             session.query(PubSubSubscription).\
                 filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                filter(PubSubSubscription.id==self.request.input.id).\
+                filter(PubSubSubscription.sub_key==self.request.input.sub_key).\
                 delete()
 
             session.commit()

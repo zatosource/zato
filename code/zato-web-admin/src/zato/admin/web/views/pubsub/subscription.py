@@ -135,8 +135,9 @@ class Edit(_CreateEdit):
 # ################################################################################################################################
 
 class Delete(_Delete):
-    url_name = 'pubsub-subscription-delete'
-    error_message = 'Could not delete pub/sub subscription'
-    service_name = 'zato.pubsub.subscription.delete'
+    id_elem = 'endpoint_id'
+    url_name = 'pubsub-subscription-delete-all'
+    error_message = 'Could not delete pub/sub subscriptions'
+    service_name = 'zato.pubsub.subscription.delete-all'
 
 # ################################################################################################################################

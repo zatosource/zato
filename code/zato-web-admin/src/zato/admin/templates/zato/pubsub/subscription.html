@@ -123,7 +123,8 @@
                         <td>{{ item.role }}</td>
 
                         <td>
-                            <a href="{% url "pubsub-endpoint-queues" cluster_id item.id item.endpoint_name|slugify %}">{{ item.subscription_count}} </a>
+                            <a id="pubsub_endpoint_queues_link_{{ item.id }}"
+                               href="{% url "pubsub-endpoint-queues" cluster_id item.id item.endpoint_name|slugify %}">{{ item.subscription_count}} </a>
                         </td>
 
                         <td>{{ item.last_seen|default:"<span class='form_hint'>---</span>" }}</td>
@@ -131,9 +132,9 @@
 
                         <td>
                             {% if item.is_internal %}
-                                <span class="form_hint">Delete</span>
+                                <span class="form_hint">Delete all subscriptions</span>
                             {% else %}
-                                <a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a>
+                                <a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete all subscriptions</a>
                             {% endif %}
                         </td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>

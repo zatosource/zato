@@ -151,8 +151,7 @@ $.fn.zato.pubsub.endpoint_queue.delete_ = function(id) {
         'Queue `{0}` deleted',
         'Are you sure you want to delete sub queue `{0}`?',
         true, false,
-        '/zato/pubsub/endpoint/queue/delete/{0}/',
-        {'queue_name': instance.queue_name});
+        '/zato/pubsub/endpoint/queue/delete/{0}/' + instance.sub_key + '/');
 }
 
 $.fn.zato.pubsub.endpoint_queue.toggle_sub_key = function(id) {
