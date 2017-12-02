@@ -30,7 +30,7 @@ class Index(_Index):
     method_allowed = 'GET'
     url_name = 'pubsub-subscription'
     template = 'zato/pubsub/subscription.html'
-    service_name = 'zato.pubsub.subscription.get-endpoint-summary-list'
+    service_name = 'zato.pubsub.endpoint.get-endpoint-summary-list'
     output_class = PubSubEndpoint
     paginate = True
 
@@ -95,6 +95,9 @@ class _CreateEdit(CreateEdit):
 
     def post_process_return_data(self, return_data):
 
+        print(333, return_data)
+        print(333, self.input)
+
         '''
         response = self.req.zato.client.invoke('zato.pubsub.subscription.get', {
             'cluster_id': self.req.zato.cluster_id,
@@ -103,20 +106,20 @@ class _CreateEdit(CreateEdit):
         '''
 
     def success_message(self, item):
-        return 'Pub/sub subscription {} successfully'.format(self.verb)
+        return 'Pub/sub subscription(s) {} successfully'.format(self.verb)
 
 # ################################################################################################################################
 
 class Create(_CreateEdit):
     url_name = 'pubsub-subscription-create'
-    service_name = 'pubapi1.create-subscription' #'zato.pubsub.subscription.create'
+    service_name = 'zato.pubsub.subscription.create'
 
 # ################################################################################################################################
 
 class Edit(_CreateEdit):
     url_name = 'pubsub-subscription-edit'
     form_prefix = 'edit-'
-    service_name = 'zato.pubsub.subscription.edit'
+    service_name = 'subscription-edit' #'zato.pubsub.subscription.edit'
 
 # ################################################################################################################################
 
