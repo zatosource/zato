@@ -36,20 +36,23 @@ sub_broker_attrs = ('active_status', 'active_status', 'cluster_id', 'creation_ti
 # ################################################################################################################################
 
 class _Input:
-    common = ('topic_list_text', 'topic_list_json', 'active_status', 'endpoint_type', 'endpoint_id',
+    common = ('is_internal', 'topic_list_text', 'topic_list_json', 'active_status', 'endpoint_type', 'endpoint_id',
         'delivery_method', 'delivery_data_format', 'delivery_batch_size', 'wrap_one_msg_in_list', 'delivery_max_retry',
         'delivery_err_should_block', 'wait_sock_err', 'wait_non_sock_err')
     amqp = ('amqp_exchange', 'amqp_routing_key')
     files = ('files_directory_list',)
     ftp = ('ftp_directory_list',)
+    pubapi = ('security_id',)
     rest = ('out_rest_http_soap_id', 'rest_delivery_endpoint')
     service = ('service_id',)
     sms_twilio = ('sms_twilio_from', 'sms_twilio_to_list')
     smtp = ('smtp_is_html', 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body')
     soap = ('out_soap_http_soap_id', 'soap_delivery_endpoint')
+    websockets = ('ws_channel_id', 'ws_channel_name', AsIs('ws_pub_client_id'), 'sql_ws_client_id', AsIs('ext_client_id'),
+        Opaque('web_socket'))
 
 _create_edit_input_optional = _Input.common + _Input.amqp + _Input.files + _Input.ftp + _Input.rest + _Input.service + \
-    _Input.sms_twilio + _Input.smtp + _Input.soap
+    _Input.sms_twilio + _Input.smtp + _Input.soap + _Input.websockets + _Input.pubapi
 
 # ################################################################################################################################
 
@@ -86,26 +89,8 @@ class GetEndpointSummaryList(AdminService):
 
 class SubscribeServiceImpl(AdminService):
     class SimpleIO(AdminSIO):
-        input_required = ('topic_name',)
+        input_required = ('topic_name', 'endpoint_type')
         input_optional = _create_edit_input_optional
-
-        '''
-        input_optional = (
-          Bool('gd'),
-          'deliver_to',
-          'delivery_format',
-          'security_id',
-          'ws_channel_id',
-          'ws_channel_name',
-          AsIs('ws_pub_client_id'),
-          'sql_ws_client_id',
-          'deliver_by',
-          'is_internal',
-          AsIs('ext_client_id'),
-          'delivery_group_size',
-          Opaque('web_socket')
-        )
-        '''
         output_optional = ('sub_key', Int('queue_depth'))
 
 # ################################################################################################################################
@@ -131,6 +116,14 @@ class SubscribeServiceImpl(AdminService):
 # ################################################################################################################################
 
     def handle(self):
+        self.logger.warn(self.request.input.endpont_type)
+
+# ################################################################################################################################
+
+class SubscribeWebSockets(SubscribeServiceImpl):
+
+    def _subscribe_websockets(self):
+        return
 
         input = self.request.input
         topic_name = self.request.input.topic_name
