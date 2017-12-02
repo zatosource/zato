@@ -17,7 +17,7 @@ from bunch import Bunch
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, Index as _Index
+from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, slugify
 from zato.common.odb.model import PubSubEndpoint
 
 # ################################################################################################################################
@@ -95,15 +95,26 @@ class _CreateEdit(CreateEdit):
 
     def post_process_return_data(self, return_data):
 
-        print(333, return_data)
-        print(333, self.input)
-
-        '''
-        response = self.req.zato.client.invoke('zato.pubsub.subscription.get', {
+        response = self.req.zato.client.invoke('zato.pubsub.endpoint.get-endpoint-summary', {
             'cluster_id': self.req.zato.cluster_id,
-            'id': return_data['id'],
-        }).data['response']
-        '''
+            'endpoint_id': self.input.endpoint_id,
+        }).data
+
+        if response['last_seen']:
+            response['last_seen'] = from_utc_to_user(response['last_seen']+'+00:00', self.req.zato.user_profile)
+
+        if response['last_deliv_time']:
+            response['last_deliv_time'] = from_utc_to_user(response['last_deliv_time']+'+00:00', self.req.zato.user_profile)
+
+        response['pubsub_endpoint_queues_link'] = \
+            django_url_reverse('pubsub-endpoint-queues',
+                    kwargs={
+                        'cluster_id':self.req.zato.cluster_id,
+                        'endpoint_id':response['id'],
+                        'name_slug':slugify(response['endpoint_name'])}
+                    ),
+
+        return_data.update(response)
 
     def success_message(self, item):
         return 'Pub/sub subscription(s) {} successfully'.format(self.verb)

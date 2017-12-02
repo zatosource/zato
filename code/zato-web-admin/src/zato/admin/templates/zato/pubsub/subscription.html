@@ -63,24 +63,8 @@
             '_last_seen',
             '_last_deliv_time',
 
-            '_edit',
             '_delete',
-
             'id',
-            'is_internal',
-            '_is_active',
-            'topic_list_text',
-
-            'endpoint_id',
-
-            'sec_type',
-            'sec_name',
-
-            'ws_channel_id',
-            'ws_channel_name',
-
-            'service_id',
-            'service_name',
         ]
     }
     </script>
@@ -122,22 +106,6 @@
                         <th><a href="#">Last deliv. time</a></th>
 
                         <th>&nbsp;</th>
-                        <th>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
-                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
 
@@ -161,7 +129,6 @@
                         <td>{{ item.last_seen|default:"<span class='form_hint'>---</span>" }}</td>
                         <td>{{ item.last_deliv_time|default:"<span class='form_hint'>---</span>" }}</td>
 
-                        <td><a href="javascript:$.fn.zato.pubsub.subscription.edit('{{ item.id }}')">Edit</a></td>
                         <td>
                             {% if item.is_internal %}
                                 <span class="form_hint">Delete</span>
@@ -169,28 +136,12 @@
                                 <a href="javascript:$.fn.zato.pubsub.subscription.delete_('{{ item.id }}')">Delete</a>
                             {% endif %}
                         </td>
-
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
-                        <td class='ignore'>{{ item.is_internal }}</td>
-                        <td class='ignore'>{{ item.is_active }}</td>
-                        <td class='ignore'>{{ item.topic_list_text }}</td>
-
-                        <td class='ignore'>{{ item.endpoint_id }}</td>
-
-                        <td class='ignore'>{{ item.sec_type }}</td>
-                        <td class='ignore'>{{ item.sec_name }}</td>
-
-                        <td class='ignore'>{{ item.ws_channel_id }}</td>
-                        <td class='ignore'>{{ item.ws_channel_name }}</td>
-
-                        <td class='ignore'>{{ item.service_id }}</td>
-                        <td class='ignore'>{{ item.service_name }}</td>
-
                     </tr>
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='23'>No results</td>
+                        <td colspan='11'>No results</td>
                     </tr>
                 {% endif %}
 

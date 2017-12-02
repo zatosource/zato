@@ -743,19 +743,25 @@ $.fn.zato.data_table.on_submit = function(action) {
     return $.fn.zato.data_table._on_submit(form, callback);
 }
 
-$.fn.zato.data_table.on_submit_complete = function(data, status,
-    action) {
+$.fn.zato.data_table.on_submit_complete = function(data, status, action) {
 
     if(status == 'success') {
         var json = $.parseJSON(data.responseText);
         var include_tr = true ? action == 'create' : false;
         var row = $.fn.zato.data_table.add_row(json, action, $.fn.zato.data_table.new_row_func, include_tr);
 
-        if($('#data-table').data('is_empty')) {
-            $('#data-table tr:last').remove();
+        // There are forms (like the one for subscriptions) where create action does create an object
+        // but it is not displayed in current data_table so we treat it as an update actually,
+        // and new_row_func_update_in_place is the flag to enable this behaviour.
+        var needs_create = action == 'create' && (!$.fn.zato.data_table.new_row_func_update_in_place);
+
+        if(!$.fn.zato.data_table.new_row_func_update_in_place) {
+            if($('#data-table').data('is_empty')) {
+                $('#data-table tr:last').remove();
+            }
         }
 
-        if(action == 'create') {
+        if(needs_create) {
             $('#data-table').data('is_empty', false);
             $('#data-table > tbody:last').prepend(row);
         }
