@@ -501,9 +501,10 @@ class BaseCallView(_BaseView):
 class Delete(BaseCallView):
     """ Our subclasses will delete objects such as connections and others.
     """
+    id_elem = 'id'
     def get_input_dict(self):
         return {
-            'id': self.req.zato.id,
+            self.id_elem: self.req.zato.id,
             'cluster_id': self.cluster_id
         }
 

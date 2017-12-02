@@ -358,17 +358,19 @@ def endpoint_queue_clear(req, cluster_id, sub_id):
 # ################################################################################################################################
 
 @method_allowed('POST')
-def endpoint_queue_delete(req, sub_id, cluster_id):
+def endpoint_queue_delete(req, sub_id, sub_key, cluster_id):
+
+    # Note that sub_id is always ignored, it's sent by JS but we don't use,
+    # instead we are interested in sub_key.
 
     try:
         req.zato.client.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
-            'id': sub_id,
+            'sub_key': sub_key,
             'cluster_id': cluster_id,
         })
     except Exception, e:
         return HttpResponseServerError(format_exc(e))
     else:
-        queue_name = req.POST['queue_name']
         return HttpResponse() # 200 OK
 
 # ################################################################################################################################

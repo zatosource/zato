@@ -2198,6 +2198,7 @@ class PubSubSubscription(Base):
         Index('pubsb_sub_clust_idx', 'cluster_id', unique=False),
         Index('pubsb_sub_id_idx', 'cluster_id', 'id', unique=True),
         Index('pubsb_sub_clust_endpt_idx', 'cluster_id', 'endpoint_id', 'topic_id', unique=False),
+        Index('pubsb_sub_clust_subk', 'cluster_id', 'sub_key', unique=True),
     {})
 
     id = Column(Integer, Sequence('pubsub_sub_seq'), primary_key=True)

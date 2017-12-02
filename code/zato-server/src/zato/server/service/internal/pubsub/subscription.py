@@ -20,6 +20,7 @@ from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, PubSubSubscriptionExists
 from zato.common.odb.query_ps_subscribe import add_subscription, add_wsx_subscription, has_subscription, \
      move_messages_to_sub_queue
+from zato.common.odb.query_ps_subscription import pubsub_subscription_list_by_endpoint_id
 from zato.common.pubsub import new_sub_key
 from zato.common.time_util import utcnow_as_ms
 from zato.server.connection.web_socket import WebSocket
@@ -454,5 +455,28 @@ class Create(_Subscribe):
             for topic_name in topic_list:
                 sub_request['topic_name'] = topic_name
                 self.response.payload = self.invoke(sub_service, sub_request)
+
+# ################################################################################################################################
+
+class DeleteAll(AdminService):
+    """ Deletes all pub/sub subscriptions of a given endpoint.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'endpoint_id')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+
+            # Get all subscriptions for that endpoint ..
+            items = pubsub_subscription_list_by_endpoint_id(
+                session, self.request.input.cluster_id, self.request.input.endpoint_id)
+
+            # .. iterate over all results, extracting sub_key for each element to call
+            # the actual service that deletes this subscription.
+            for item in items:
+                self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
+                    'cluster_id': self.request.input.cluster_id,
+                    'sub_key': item.sub_key,
+                })
 
 # ################################################################################################################################

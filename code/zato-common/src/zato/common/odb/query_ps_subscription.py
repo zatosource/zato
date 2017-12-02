@@ -40,6 +40,8 @@ def _pubsub_subscription(session, cluster_id):
         filter(Cluster.id==cluster_id).\
         order_by(PubSubSubscription.id)
 
+# ################################################################################################################################
+
 def pubsub_subscription(session, cluster_id, id):
     """ A pub/sub subscription.
     """
@@ -47,11 +49,22 @@ def pubsub_subscription(session, cluster_id, id):
         filter(PubSubSubscription.id==id).\
         one()
 
+# ################################################################################################################################
+
 @query_wrapper
 def pubsub_subscription_list(session, cluster_id, needs_columns=False):
     """ All pub/sub subscriptions.
     """
     return _pubsub_subscription(session, cluster_id)
+
+# ################################################################################################################################
+
+def pubsub_subscription_list_by_endpoint_id(session, cluster_id, endpoint_id):
+    """ A list of all pub/sub subscriptions for a given endpoint.
+    """
+    return _pubsub_subscription(session, cluster_id).\
+        filter(PubSubSubscription.endpoint_id==endpoint_id).\
+        all()
 
 # ################################################################################################################################
 
