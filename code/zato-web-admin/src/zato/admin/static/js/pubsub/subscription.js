@@ -17,6 +17,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.password_required = false;
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubEndpoint;
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.subscription.data_table.new_row;
+    $.fn.zato.data_table.new_row_func_update_in_place = true;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.subscription.before_submit_hook;
     $.fn.zato.data_table.setup_forms([
@@ -94,38 +95,29 @@ $.fn.zato.pubsub.subscription.edit = function(id) {
 $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_tr) {
     var row = '';
 
-    if(include_tr) {
-        row += String.format("<tr id='tr_{0}' class='updated'>", item.id);
-    }
+    var is_active = data.is_active ? "Yes" : "No";
+    var last_seen = data.last_seen ? data.last_seen : $.fn.zato.empty_value;
+    var last_deliv_time = data.last_deliv_time ? data.last_deliv_time : $.fn.zato.empty_value;
 
-    var empty = '<span class="form_hint">---</span>';
-    var topic_patterns_html = data.topic_patterns_html ? data.topic_patterns_html : empty;
-    var client_html = data.client_html ? data.client_html : empty;
-
-    // Update it with latest content dynamically obtained from the call to backend
-    item.sub_key = data.sub_key;
+    var pubsub_endpoint_queues_link = String.format(
+        "<a href=\{0})\">{1}</a>", data.pubsub_endpoint_queues_link, data.subscription_count);
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
-    row += String.format('<td>{0}</td>', data.name);
-    row += String.format('<td>{0}</td>', data.role);
-    row += String.format('<td>{0}</td>', topic_patterns_html);
-    row += String.format('<td>{0}</td>', client_html);
-    row += String.format('<td>{0}</td>', data.endpoint_topics_html);
-    row += String.format('<td>{0}</td>', data.endpoint_queues_html);
-    row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.edit('{0}')\">Edit</a>", data.id));
-    row += String.format('<td>{0}</td>', data.delete_html);
-    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
-    row += String.format("<td class='ignore'>{0}</td>", data.is_internal);
-    row += String.format("<td class='ignore'>{0}</td>", data.is_active);
-    row += String.format("<td class='ignore'>{0}</td>", data.topic_patterns);
-    row += String.format("<td class='ignore'>{0}</td>", data.security_id);
-    row += String.format("<td class='ignore'>{0}</td>", data.ws_channel_id);
 
-    if(include_tr) {
-        row += '</tr>';
-    }
+    row += String.format('<td>{0}</td>', is_active);
+    row += String.format('<td>{0}</td>', data.endpoint_name);
+    row += String.format('<td>{0}</td>', data.endpoint_type);
+
+    row += String.format('<td>{0}</td>', data.role);
+    row += String.format('<td>{0}</td>', pubsub_endpoint_queues_link);
+
+    row += String.format('<td>{0}</td>', last_seen);
+    row += String.format('<td>{0}</td>', last_deliv_time);
+
+    row += String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.pubsub.subscription.delete_('{0}')\">Delete</a>", data.id));
+    row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
 
     return row;
 }

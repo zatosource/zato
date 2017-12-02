@@ -21,7 +21,7 @@ from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage,
      PubSubSubscription, PubSubTopic
 from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_queue, pubsub_endpoint_queue_list, \
      pubsub_endpoint_list, pubsub_messages_for_queue
-from zato.common.odb.query_ps_subscription import pubsub_endpoint_summary_list
+from zato.common.odb.query_ps_endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
 from zato.common.time_util import datetime_from_ms
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -361,16 +361,37 @@ class GetEndpointQueueMessages(AdminService):
 
 # ################################################################################################################################
 
-class GetEndpointSummaryList(AdminService):
-    """ Returns summarized information about endpoints subscribed to topics.
+class _GetEndpointSummaryBase(AdminService):
+    """ Base class for services returning summaries about endpoints
     """
-    _filter_by = PubSubEndpoint.name,
-
-    class SimpleIO(GetListAdminSIO):
+    class SimpleIO:
         input_required = ('cluster_id',)
         output_required = ('id', 'endpoint_name', 'endpoint_type', 'subscription_count', 'is_active', 'is_internal')
         output_optional = ('security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
             'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role')
+
+# ################################################################################################################################
+
+class GetEndpointSummary(_GetEndpointSummaryBase):
+    """ Returns summarized information about a selected endpoint subscribed to topics.
+    """
+    class SimpleIO(_GetEndpointSummaryBase.SimpleIO):
+        input_required = _GetEndpointSummaryBase.SimpleIO.input_required + ('endpoint_id',)
+        request_elem = 'zato_pubsub_subscription_get_endpoint_summary_request'
+        response_elem = 'zato_pubsub_subscription_get_endpoint_summary_response'
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload = pubsub_endpoint_summary(session, self.server.cluster_id, self.request.input.endpoint_id)
+
+# ################################################################################################################################
+
+class GetEndpointSummaryList(_GetEndpointSummaryBase):
+    """ Returns summarized information about all endpoints subscribed to topics.
+    """
+    _filter_by = PubSubEndpoint.name,
+
+    class SimpleIO(_GetEndpointSummaryBase.SimpleIO, GetListAdminSIO):
         request_elem = 'zato_pubsub_subscription_get_endpoint_summary_list_request'
         response_elem = 'zato_pubsub_subscription_get_endpoint_summary_list_response'
 
