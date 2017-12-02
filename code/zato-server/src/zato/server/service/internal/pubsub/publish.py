@@ -26,7 +26,6 @@ from zato.common.odb.query_ps_publish import get_topic_depth, incr_topic_depth, 
      update_publish_metadata
 from zato.common.pubsub import new_msg_id
 from zato.common.time_util import datetime_to_ms, utcnow_as_ms
-from zato.common.util import spawn_greenlet
 from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService

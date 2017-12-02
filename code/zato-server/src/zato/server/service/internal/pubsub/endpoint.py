@@ -21,6 +21,7 @@ from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage,
      PubSubSubscription, PubSubTopic
 from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_queue, pubsub_endpoint_queue_list, \
      pubsub_endpoint_list, pubsub_messages_for_queue
+from zato.common.odb.query_ps_subscription import pubsub_endpoint_summary_list
 from zato.common.time_util import datetime_from_ms
 from zato.server.service import AsIs, Int
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
@@ -357,5 +358,36 @@ class GetEndpointQueueMessages(AdminService):
         for item in self.response.payload.zato_output:
             item.recv_time = datetime_from_ms(item.recv_time)
             item.last_delivery_time = datetime_from_ms(item.last_delivery_time) if item.last_delivery_time else ''
+
+# ################################################################################################################################
+
+class GetEndpointSummaryList(AdminService):
+    """ Returns summarized information about endpoints subscribed to topics.
+    """
+    _filter_by = PubSubEndpoint.name,
+
+    class SimpleIO(GetListAdminSIO):
+        input_required = ('cluster_id',)
+        output_required = ('id', 'endpoint_name', 'endpoint_type', 'subscription_count', 'is_active', 'is_internal')
+        output_optional = ('security_id', 'sec_type', 'sec_name', 'ws_channel_id', 'ws_channel_name',
+            'service_id', 'service_name', 'last_seen', 'last_deliv_time', 'role')
+        request_elem = 'zato_pubsub_subscription_get_endpoint_summary_list_request'
+        response_elem = 'zato_pubsub_subscription_get_endpoint_summary_list_response'
+
+    def get_data(self, session):
+        result = self._search(pubsub_endpoint_summary_list, session, self.request.input.cluster_id, False)
+        for item in result:
+
+            if item.last_seen:
+                item.last_seen = datetime_from_ms(item.last_seen)
+
+            if item.last_deliv_time:
+                item.last_deliv_time = datetime_from_ms(item.last_deliv_time)
+
+        return result
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            self.response.payload[:] = self.get_data(session)
 
 # ################################################################################################################################

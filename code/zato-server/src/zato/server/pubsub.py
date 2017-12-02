@@ -28,7 +28,7 @@ from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query_ps_delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
 from zato.common.time_util import utcnow_as_ms
-from zato.common.util import new_cid, spawn_greenlet
+from zato.common.util import spawn_greenlet
 
 # ################################################################################################################################
 
@@ -568,6 +568,11 @@ class PubSub(object):
 
     def is_allowed_sub_topic(self, name, security_id=None, ws_channel_id=None):
         return self._is_allowed('sub_topic_patterns', name, security_id, ws_channel_id)
+
+# ################################################################################################################################
+
+    def is_allowed_sub_topic_by_endpoint_id(self, name, endpoint_id):
+        return self._is_allowed('sub_topic_patterns', name, None, None, endpoint_id)
 
 # ################################################################################################################################
 

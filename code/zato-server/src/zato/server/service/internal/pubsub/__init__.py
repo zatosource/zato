@@ -13,7 +13,7 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
-from zato.server.service import AsIs, Int, List, ListOfDicts, Opaque
+from zato.server.service import AsIs, List, ListOfDicts, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
