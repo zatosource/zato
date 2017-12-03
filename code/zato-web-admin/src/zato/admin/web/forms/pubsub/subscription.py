@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.common import CONNECTION, PUBSUB, URL_TYPE
-from zato.admin.web.forms import add_http_soap_select, add_security_select, add_select
+from zato.admin.web.forms import add_http_soap_select, add_security_select, add_select, add_select_from_service
 
 skip_endpoint_types = (
     PUBSUB.ENDPOINT_TYPE.IMAP.id,
@@ -26,6 +26,7 @@ skip_endpoint_types = (
 class CreateForm(forms.Form):
 
     id = forms.CharField(widget=forms.HiddenInput())
+    server_id = forms.ChoiceField(widget=forms.Select())
     endpoint_type = forms.ChoiceField(widget=forms.Select())
     endpoint_id = forms.ChoiceField(widget=forms.Select())
 
@@ -103,6 +104,8 @@ class CreateForm(forms.Form):
 
         add_http_soap_select(self, 'out_rest_http_soap_id', req, CONNECTION.OUTGOING, URL_TYPE.PLAIN_HTTP)
         add_http_soap_select(self, 'out_soap_http_soap_id', req, CONNECTION.OUTGOING, URL_TYPE.SOAP)
+
+        add_select_from_service(self, req, 'zato.server.get-list', 'server_id')
 
         self.initial['endpoint_type'] = PUBSUB.ENDPOINT_TYPE.REST.id
         self.initial['delivery_batch_size'] = PUBSUB.DEFAULT.DELIVERY_BATCH_SIZE

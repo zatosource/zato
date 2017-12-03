@@ -755,6 +755,7 @@ class PUBSUB:
                 return iter((self.PRIORITY, self.EXT_PUB_TIME, self.PUB_TIME))
 
     class DEFAULT:
+        DATA_FORMAT = 'text/plain'
         TOPIC_MAX_DEPTH_GD = 10000
         TOPIC_MAX_DEPTH_NON_GD = 1000
         GD_DEPTH_CHECK_FREQ = 100
@@ -828,7 +829,7 @@ class PUBSUB:
         IMAP = NameId('IMAP', 'imap')
         REST = NameId('REST', 'rest')
         SERVICE = NameId('Service', 'service')
-        SMS_TWILIO = NameId('SMS - Twilio', 'sms-twilio')
+        SMS_TWILIO = NameId('SMS - Twilio', 'sms_twilio')
         SMTP = NameId('SMTP', 'smtp')
         SOAP = NameId('SOAP', 'soap')
         SQL = NameId('SQL', 'sql')

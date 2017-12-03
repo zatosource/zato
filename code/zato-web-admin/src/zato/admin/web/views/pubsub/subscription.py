@@ -84,7 +84,7 @@ class _CreateEdit(CreateEdit):
     method_allowed = 'POST'
 
     class SimpleIO(CreateEdit.SimpleIO):
-        input_required = ('endpoint_id', 'is_active', 'cluster_id')
+        input_required = ('endpoint_id', 'is_active', 'cluster_id', 'server_id')
         input_optional = ('has_gd', 'topic_list_text', 'topic_list_json', 'endpoint_type', 'endpoint_id', 'active_status',
             'delivery_method', 'delivery_data_format', 'delivery_batch_size', 'wrap_one_msg_in_list', 'delivery_max_retry',
             'delivery_err_should_block', 'wait_sock_err', 'wait_non_sock_err', 'topic_list_text', 'amqp_exchange',

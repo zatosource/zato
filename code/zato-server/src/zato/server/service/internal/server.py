@@ -15,7 +15,33 @@ from traceback import format_exc
 # Zato
 from zato.common import ZatoException
 from zato.common.odb.model import Server
+from zato.common.odb.query import server_list
 from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.meta import GetListMeta
+
+# ################################################################################################################################
+
+elem = 'server'
+model = Server
+label = 'a Zato server'
+list_func = server_list
+skip_output_params = ['token']
+
+def response_hook(self, input, _ignored_instance, attrs, service_type):
+    if service_type == 'get_list':
+        for item in self.response.payload:
+            if item.last_join_mod_date:
+                item.last_join_mod_date = item.last_join_mod_date.isoformat()
+            if item.up_mod_date:
+                item.up_mod_date = item.up_mod_date.isoformat()
+
+# ################################################################################################################################
+
+class GetList(AdminService):
+    _filter_by = Server.name,
+    __metaclass__ = GetListMeta
+
+# ################################################################################################################################
 
 class Edit(AdminService):
     """ Updates a server.
@@ -59,6 +85,8 @@ class Edit(AdminService):
 
                 raise
 
+# ################################################################################################################################
+
 class GetByID(AdminService):
     """ Returns a particular server
     """
@@ -83,6 +111,8 @@ class GetByID(AdminService):
                 attr = getattr(self.response.payload, name, None)
                 if attr:
                     setattr(self.response.payload, name, attr.isoformat())
+
+# ################################################################################################################################
 
 class Delete(AdminService):
     """ Deletes a server.
@@ -115,3 +145,5 @@ class Delete(AdminService):
                 self.logger.error(msg)
 
                 raise
+
+# ################################################################################################################################

@@ -25,18 +25,24 @@ class DynFormHandler(object):
         self.current = dyn_form_default or window['zato_dyn_form_default']
         self.elem_name = window['zato_dyn_form_elem_name']
         self.create_source_select = doc['id_{}'.format(self.elem_name)]
-        self.edit_source_select = doc['id_edit-{}'.format(self.elem_name)]
         self.switch_to_select_data_target = window['zato_select_data_target']
         self.switch_to_select_data_target_items = window['zato_select_data_target_items']
         self.jquery = window.jQuery
         self.rows = {}
         self.all_rows = set()
 
+        self.needs_edit = not window['zato_dyn_form_skip_edit']
+
+        if self.needs_edit:
+            self.edit_source_select = doc['id_edit-{}'.format(self.elem_name)]
+
     def run(self):
 
         # Bind events
         self.create_source_select.bind('change', self.on_create_changed)
-        self.edit_source_select.bind('change', self.on_edit_changed)
+
+        if self.needs_edit:
+            self.edit_source_select.bind('change', self.on_edit_changed)
 
         # Get input that should have been already prepared in HTML
         self.rows = window['zato_dyn_form_rows'].to_dict()
@@ -51,7 +57,9 @@ class DynFormHandler(object):
 
         # Populate initial forms
         self.switch_to(self.current, '')
-        self.switch_to(self.current, 'edit-')
+
+        if self.needs_edit:
+            self.switch_to(self.current, 'edit-')
 
 # ################################################################################################################################
 
@@ -59,7 +67,9 @@ class DynFormHandler(object):
         """ Clear out any older values possibly left in forms.
         """
         self.remove('', self.get_all_rows(''))
-        self.remove('edit-', self.get_all_rows('edit-'))
+
+        if self.needs_edit:
+            self.remove('edit-', self.get_all_rows('edit-'))
 
 # ################################################################################################################################
 

@@ -51,6 +51,7 @@ def add_subscription(session, cluster_id, ctx):
     ps_sub = PubSubSubscription()
 
     ps_sub.cluster_id = ctx.cluster_id
+    ps_sub.server_id = ctx.server_id
     ps_sub.topic_id = ctx.topic.id
     ps_sub.is_internal = ctx.is_internal
     ps_sub.creation_time = ctx.creation_time

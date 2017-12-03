@@ -24,18 +24,55 @@ _subscriber_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.
 
 def _pubsub_subscription(session, cluster_id):
     return session.query(
-        PubSubSubscription.id, PubSubSubscription.active_status,
-        PubSubSubscription.is_internal, PubSubSubscription.creation_time,
-        PubSubSubscription.sub_key, PubSubSubscription.is_durable,
-        PubSubSubscription.has_gd, PubSubSubscription.topic_id,
-        PubSubSubscription.endpoint_id, PubSubSubscription.out_http_soap_id,
-        PubSubSubscription.out_amqp_id, PubSubSubscription.ws_sub_id,
+        PubSubSubscription.id,
+        PubSubSubscription.id.label('name'), # A unique 'name' attribute is needed by ConfigDict
+        PubSubSubscription.active_status,
+        PubSubSubscription.server_id,
+        PubSubSubscription.is_internal,
+        PubSubSubscription.creation_time,
+        PubSubSubscription.sub_key,
+        PubSubSubscription.is_durable,
+        PubSubSubscription.has_gd,
+        PubSubSubscription.topic_id,
+        PubSubSubscription.endpoint_id,
+        PubSubSubscription.delivery_method,
+        PubSubSubscription.delivery_data_format,
+        PubSubSubscription.delivery_batch_size,
+        PubSubSubscription.wrap_one_msg_in_list,
+        PubSubSubscription.delivery_max_retry,
+        PubSubSubscription.ext_client_id,
+
+        PubSubSubscription.out_amqp_id,
+        PubSubSubscription.amqp_exchange,
+        PubSubSubscription.amqp_routing_key,
+
+        PubSubSubscription.files_directory_list,
+
+        PubSubSubscription.ftp_directory_list,
+
+        PubSubSubscription.sms_twilio_from,
+        PubSubSubscription.sms_twilio_to_list,
+
+        PubSubSubscription.smtp_is_html,
+        PubSubSubscription.smtp_subject,
+        PubSubSubscription.smtp_from,
+        PubSubSubscription.smtp_to_list,
+        PubSubSubscription.smtp_body,
+
+        PubSubSubscription.out_http_soap_id,
+        PubSubSubscription.delivery_endpoint,
+
+        PubSubSubscription.ws_sub_id,
         PubSubSubscription.ws_channel_id,
         PubSubSubscription.cluster_id,
-        PubSubSubscription.id.label('name'), # A 'name' attribute is needed by ConfigDict
+
         PubSubTopic.name.label('topic_name'),
+        PubSubEndpoint.name.label('endpoint_name'),
+        PubSubEndpoint.endpoint_type,
+        PubSubEndpoint.service_id,
         ).\
         outerjoin(PubSubTopic, PubSubTopic.id==PubSubSubscription.topic_id).\
+        filter(PubSubEndpoint.id==PubSubSubscription.endpoint_id).\
         filter(Cluster.id==PubSubSubscription.cluster_id).\
         filter(Cluster.id==cluster_id).\
         order_by(PubSubSubscription.id)

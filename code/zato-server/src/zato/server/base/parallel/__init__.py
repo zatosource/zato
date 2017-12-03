@@ -123,6 +123,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.ipc_forwarder = IPCAPI(True)
         self.fifo_response_buffer_size = 0.1 # In megabytes
         self.live_msg_browser = None
+        self.is_first_worker = None
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -323,6 +324,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         # This cannot be done in __init__ because each sub-process obviously has its own PID
         self.pid = os.getpid()
+
+        # This also cannot be done in __init__ which doesn't have this variable yet
+        self.is_first_worker = int(os.environ['ZATO_SERVER_WORKER_IDX']) == 0
 
         # Used later on
         use_tls = asbool(self.fs_server_config.crypto.use_tls)
@@ -572,8 +576,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
 # ################################################################################################################################
 
-    def invoke_outconn_http(self, name, request):
-        logger.warn('AAA %s %s', name, request)
+    def deliver_pubsub_msg(self, msg):
+        """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
+        """
+        logger.warn('MSG CB: %s', msg)
 
 # ################################################################################################################################
 

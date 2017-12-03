@@ -240,9 +240,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # Caches
         self.init_caches()
 
-        # Pub/sub
-        self.init_pubsub()
-
         # API keys
         self.update_apikeys()
 
@@ -276,6 +273,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         # AMQP
         self.init_amqp()
+
+        # Pub/sub
+        self.init_pubsub()
 
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True

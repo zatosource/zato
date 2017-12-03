@@ -13,8 +13,22 @@ from contextlib import closing
 from traceback import format_exc
 
 # Zato
+from zato.common import PUBSUB
 from zato.server.service import AsIs, List, ListOfDicts, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
+
+endpoint_type_service = {
+    PUBSUB.ENDPOINT_TYPE.AMQP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.FILES.id:       'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.FTP.id:         'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.REST.id:        'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.REST.id:        'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.SERVICE.id:     'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id:  'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.SMTP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.SOAP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
+    PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: 'zato.channel.web-socket.client.notify-pub-sub-message',
+}
 
 # ################################################################################################################################
 
@@ -56,7 +70,7 @@ class AfterPublish(AdminService):
         #
 
         try:
-            current_servers, not_found = self.pubsub.get_ws_clients_by_sub_keys(sub_keys)
+            current_servers, not_found = self.pubsub.get_task_servers_by_sub_keys(sub_keys)
 
             # Local aliases
             cid = self.request.input.cid
@@ -87,26 +101,29 @@ class AfterPublish(AdminService):
 
 # ################################################################################################################################
 
-    def _notify_pub_sub(self, current_servers, non_gd_msg_list, has_gd_msg_list):
+    def _notify_pub_sub(self, current_servers, non_gd_msg_list, has_gd_msg_list, endpoint_type_service=endpoint_type_service):
         """ Notifies all relevant remote servers about new messages available for delivery.
-        For GD messages     - a flag is sent to indicate that there is at least one message in SQL waiting.
+        For GD messages     - a flag is sent to indicate that there is at least one message waiting in SQL DB.
         For non-GD messages - their actual contents is sent.
         """
         notif_error_sub_keys = []
 
         for server_info, sub_key_list in current_servers.items():
-            server_name, server_pid, pub_client_id, channel_name = server_info
+            server_name, server_pid, pub_client_id, channel_name, endpoint_type = server_info
+            service_name = endpoint_type_service[endpoint_type]
 
             try:
-                self.server.servers[server_name].invoke('zato.channel.web-socket.client.notify-pub-sub-message', {
+                response = self.server.servers[server_name].invoke(service_name, {
                     'pub_client_id': pub_client_id,
                     'channel_name': channel_name,
                     'request': {
+                        'endpoint_type': endpoint_type,
                         'has_gd': has_gd_msg_list,
                         'sub_key_list': sub_key_list,
                         'non_gd_msg_list': non_gd_msg_list
                     },
                 }, pid=server_pid)
+
             except Exception, e:
                 self.logger.warn('Error in pub/sub notification %r', format_exc(e))
                 notif_error_sub_keys.extend(sub_key_list)
