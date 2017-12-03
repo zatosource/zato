@@ -34,7 +34,7 @@ from ws4py.server.geventserver import WSGIServer
 from ws4py.server.wsgiutils import WebSocketWSGIApplication
 
 # Zato
-from zato.common import CHANNEL, DATA_FORMAT, ParsingException, SEC_DEF_TYPE, WEB_SOCKET
+from zato.common import CHANNEL, DATA_FORMAT, ParsingException, PUBSUB, SEC_DEF_TYPE, WEB_SOCKET
 from zato.common.exception import Reportable
 from zato.common.util import new_cid
 from zato.server.connection.connector import Connector
@@ -95,7 +95,7 @@ class WebSocket(_WebSocket):
         self.ping_last_response_time = None
 
         # For publish/subscribe over WSX
-        self.pubsub_tool = PubSubTool(config.parallel_server.worker_store.pubsub, self)
+        self.pubsub_tool = PubSubTool(config.parallel_server.worker_store.pubsub, self, PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id)
 
         # Active WebSocket client ID (WebSocketClient model, web_socket_client.id in SQL)
         self.sql_ws_client_id = None
