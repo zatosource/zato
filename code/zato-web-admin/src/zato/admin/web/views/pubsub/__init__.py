@@ -47,7 +47,6 @@ def get_client_html(item, security_id, cluster_id):
 # ################################################################################################################################
 
 def get_endpoint_html(item, cluster_id, endpoint_id_attr='endpoint_id', endpoint_name_attr='endpoint_name'):
-    path_name = 'endpoint'
     id_value = getattr(item, endpoint_id_attr, None) or item[endpoint_id_attr]
     name = getattr(item, endpoint_name_attr, None) or item[endpoint_name_attr]
 

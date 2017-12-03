@@ -8,13 +8,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# SQLAlchemy
-from sqlalchemy import delete
-
 # Zato
 from zato.common import PUBSUB
 from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage
-from zato.common.odb.query import count, _pubsub_queue_message
 
 # ################################################################################################################################
 

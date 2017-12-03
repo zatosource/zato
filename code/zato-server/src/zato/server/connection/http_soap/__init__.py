@@ -8,9 +8,6 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from httplib import BAD_REQUEST, CONFLICT, FORBIDDEN, METHOD_NOT_ALLOWED, NOT_FOUND, UNAUTHORIZED
-
 # Zato
 from zato.common import exception
 

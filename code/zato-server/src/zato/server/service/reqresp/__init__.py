@@ -32,7 +32,6 @@ from sqlalchemy.util import KeyedTuple
 # Zato
 from zato.common import NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, SIMPLE_IO, simple_types, TRACE1, ZatoException, \
      ZATO_OK
-from zato.common.exception import Reportable
 from zato.common.util import make_repr
 from zato.server.service.reqresp.fixed_width import FixedWidth
 from zato.server.service.reqresp.sio import AsIs, convert_param, ForceType, ServiceInput, SIOConverter

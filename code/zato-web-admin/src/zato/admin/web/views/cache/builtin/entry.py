@@ -8,14 +8,10 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from json import dumps
-
 # Bunch
 from bunch import bunchify
 
 # Django
-from django.http.response import HttpResponseBadRequest, HttpResponse
 from django.template.response import TemplateResponse
 
 # Zato

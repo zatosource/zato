@@ -112,7 +112,7 @@ class AfterPublish(AdminService):
             service_name = endpoint_type_service[endpoint_type]
 
             try:
-                response = self.server.servers[server_name].invoke(service_name, {
+                self.server.servers[server_name].invoke(service_name, {
                     'pub_client_id': pub_client_id,
                     'channel_name': channel_name,
                     'request': {

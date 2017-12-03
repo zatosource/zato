@@ -16,14 +16,14 @@ from json import dumps
 from dictalchemy import make_class_dictable
 
 # SQLAlchemy
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, Float, ForeignKey, func, Index, Integer, LargeBinary, \
-     Sequence, SmallInteger, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, ForeignKey, Index, Integer, LargeBinary, Sequence, \
+     SmallInteger, String, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import backref, relation, relationship
+from sqlalchemy.orm import backref, relationship
 
 # Zato
-from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, \
-     MISC, NOTIF, MSG_PATTERN_TYPE, ODOO, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
+from zato.common import AMQP, CASSANDRA, CLOUD, CONNECTION, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, MISC, NOTIF, \
+     MSG_PATTERN_TYPE, ODOO, PUBSUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY, URL_TYPE
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()

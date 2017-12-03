@@ -10,7 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # Zato
 from zato.common import PUBSUB
-from zato.common.odb.model import Cluster, PubSubTopic, PubSubEndpoint, PubSubSubscription
+from zato.common.odb.model import Cluster, PubSubEndpoint, PubSubSubscription
 from zato.common.odb.query import query_wrapper
 
 # SQLAlchemy

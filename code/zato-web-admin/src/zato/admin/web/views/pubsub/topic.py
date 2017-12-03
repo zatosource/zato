@@ -10,17 +10,15 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 import logging
-from json import dumps
 from traceback import format_exc
 
 # Django
 from django.http import HttpResponse, HttpResponseServerError
-from django.template.response import TemplateResponse
 
 # Zato
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.topic import CreateForm, EditForm
-from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
+from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, slugify
 from zato.admin.web.views.pubsub import get_client_html, get_endpoint_html
 from zato.common.odb.model import PubSubEndpoint, PubSubMessage, PubSubTopic
 
