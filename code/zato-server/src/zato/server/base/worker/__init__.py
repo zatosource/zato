@@ -274,9 +274,6 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         # AMQP
         self.init_amqp()
 
-        # Pub/sub
-        self.init_pubsub()
-
         # All set, whoever is waiting for us, if anyone at all, can now proceed
         self.is_ready = True
 
@@ -294,6 +291,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
     def after_broker_client_set(self):
         self.pubsub.broker_client = self.broker_client
+
+        # Pub/sub requires broker client
+        self.init_pubsub()
 
 # ################################################################################################################################
 

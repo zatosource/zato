@@ -532,19 +532,7 @@ class PubSub(object):
 
                     # .. but make sure only the first worker of this server will start delivery tasks, not all of them.
                     if self.server.is_first_worker:
-
-                        #from json import dumps
-                        #self.server.invoke('pubapi1.create-delivery-task', config)
-                        pass
-
-                        '''
-                        import os
-                        for k, v in sorted(os.environ.items()):
-                            print(11, k, v)
-
-                        print(config)
-                        print()
-                        '''
+                        self.server.invoke('zato.pubsub.delivery.create-delivery-task', config)
 
 # ################################################################################################################################
 

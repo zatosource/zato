@@ -213,6 +213,10 @@ class Publish(AdminService):
         # Get all subscribers for that topic from local worker store
         subscriptions_by_topic = pubsub.get_subscriptions_by_topic(input.topic_name)
 
+        # Just so it is not overlooked, log information that no subscribers are found for this topic
+        if not subscriptions_by_topic:
+            self.logger.warn('No subscribers found for topic `%s`', input.topic_name)
+
         # Local aliases
         cluster_id = self.server.cluster_id
         has_pubsub_audit_log = self.server.has_pubsub_audit_log
