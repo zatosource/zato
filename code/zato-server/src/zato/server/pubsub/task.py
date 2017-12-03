@@ -201,9 +201,10 @@ class NonGDMessage(Message):
 class PubSubTool(object):
     """ A utility object for pub/sub-related tasks.
     """
-    def __init__(self, pubsub, parent):
+    def __init__(self, pubsub, parent, endpoint_type):
         self.pubsub = pubsub # type: PubSub
         self.parent = parent # This is our parent, e.g. an individual WebSocket on whose behalf we execute
+        self.endpoint_type = endpoint_type
 
         # A broad lock for generic pub/sub matters
         self.lock = RLock()
@@ -268,6 +269,7 @@ class PubSubTool(object):
         """
         with self.lock:
             self.add_sub_key_no_lock(sub_key)
+            self.pubsub.set_pubsub_tool_for_sub_key(sub_key, self)
 
 # ################################################################################################################################
 

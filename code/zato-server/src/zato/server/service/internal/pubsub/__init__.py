@@ -41,8 +41,7 @@ class AfterPublish(AdminService):
         # Notify all background tasks that new messages are available for their recipients.
         # However, this needs to take into account the fact that there may be many notifications
         # pointing to a single server so instead of sending notifications one by one,
-        # we first find all servers and then notify each server once giving it a list of subscriptions
-        # on input.
+        # we first find all servers and then notify each server once giving it a list of subscriptions on input.
         #
         # We also need to remember that recipients may be currently offline, or in any other way inaccessible,
         # in which case we keep non-GD messages in our server's RAM.

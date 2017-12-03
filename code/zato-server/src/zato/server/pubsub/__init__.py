@@ -375,18 +375,19 @@ class PubSub(object):
         self.broker_client = broker_client
         self.lock = RLock()
 
-        self.subscriptions_by_topic = {}       # Topic name       -> Subscription object
-        self.subscriptions_by_sub_key = {}     # Sub key          -> Subscription object
-        self.sub_key_servers = {}              # Sub key          -> Server/PID handling it
+        self.subscriptions_by_topic = {}       # Topic name     -> Subscription object
+        self.subscriptions_by_sub_key = {}     # Sub key        -> Subscription object
+        self.sub_key_servers = {}              # Sub key        -> Server/PID handling it
 
-        self.endpoints = {}                    # Endpoint ID      -> Endpoint object
-        self.topics = {}                       # Topic ID         -> Topic object
+        self.endpoints = {}                    # Endpoint ID    -> Endpoint object
+        self.topics = {}                       # Topic ID       -> Topic object
 
-        self.sec_id_to_endpoint_id = {}        # Sec def ID       -> Endpoint ID
-        self.ws_channel_id_to_endpoint_id = {} # WS chan def ID   -> Endpoint ID
-        self.service_id_to_endpoint_id = {}    # Service ID       -> Endpoint ID
-        self.topic_name_to_id = {}             # Topic name       -> Topic ID
+        self.sec_id_to_endpoint_id = {}        # Sec def ID     -> Endpoint ID
+        self.ws_channel_id_to_endpoint_id = {} # WS chan def ID -> Endpoint ID
+        self.service_id_to_endpoint_id = {}    # Service ID     -> Endpoint ID
+        self.topic_name_to_id = {}             # Topic name     -> Topic ID
 
+        self.pubsub_tool_by_sub_key = {}       # Sub key        -> PubSubTool object
         self.pubsub_tools = []                 # A list of PubSubTool objects, each containing delivery tasks
 
         self.in_ram_backlog = InRAMBacklog()
@@ -765,8 +766,11 @@ class PubSub(object):
                         for pubsub_tool in self.pubsub_tools:
                             if pubsub_tool.handles_sub_key(sub_key):
 
-                                # .. and stop the delivery task.
+                                # .. stop the delivery task ..
                                 pubsub_tool.remove_sub_key(sub_key)
+
+                                # .. and remove the mapping of sub_key -> pubsub_tool.
+                                del self.pubsub_tool_by_sub_key[sub_key]
 
                                 # No need to iterate further, there can be only one task for each sub_key
                                 break
@@ -777,5 +781,12 @@ class PubSub(object):
         """ Registers a new pubsub_tool for this server, i.e. a new delivery task container.
         """
         self.pubsub_tools.append(pubsub_tool)
+
+# ################################################################################################################################
+
+    def set_pubsub_tool_for_sub_key(self, sub_key, pubsub_tool):
+        """ Adds a mapping between a sub_key and pubsub_tool handling its messages.
+        """
+        self.pubsub_tool_by_sub_key[sub_key] = pubsub_tool
 
 # ################################################################################################################################
