@@ -11,12 +11,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 # Django
 from django import forms
 
-# elasticutils
-from elasticutils import DEFAULT_TIMEOUT
-
-# Zato
-from zato.common import SEARCH
-
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))

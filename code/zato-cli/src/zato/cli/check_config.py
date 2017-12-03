@@ -119,7 +119,7 @@ class CheckConfig(ManageCommand):
                 raise Exception('Could not parse pid value `{}` as an integer ({})'.format(pid, pidfile))
             else:
                 try:
-                    info = get_info(self.component_dir, INFO_FORMAT.DICT)
+                    get_info(self.component_dir, INFO_FORMAT.DICT)
                 except AccessDenied:
                     # This could be another process /or/ it can be our own component started by another user,
                     # so to be on the safe side, indicate an error instead of deleting the pidfile

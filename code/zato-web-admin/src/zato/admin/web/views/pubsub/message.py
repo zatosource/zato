@@ -20,7 +20,7 @@ from django.http import HttpResponse, HttpResponseServerError
 from django.template.response import TemplateResponse
 
 # Zato
-from zato.admin.web import from_user_to_utc, from_utc_to_user
+from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub import MsgForm, MsgPublishForm
 from zato.admin.web.views import method_allowed, slugify
 from zato.admin.web.views.pubsub import get_endpoint_html
@@ -69,7 +69,7 @@ def get(req, cluster_id, object_type, object_id, msg_id):
             'msg_id': msg_id,
         }).data.response
 
-    except Exception, e:
+    except Exception:
         return_data.has_msg = False
 
     else:

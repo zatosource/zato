@@ -18,7 +18,7 @@ from zato.common import INFO_FORMAT, SERVER_JOIN_STATUS, SERVER_UP_STATUS
 from zato.common.broker_message import SERVER_STATUS
 from zato.common.odb.query import server_list
 from zato.common.component_info import format_info, get_info, get_worker_pids
-from zato.server.service import List, Opaque, Service
+from zato.server.service import List, Service
 
 # ################################################################################################################################
 

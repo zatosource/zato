@@ -8,18 +8,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-# stdlib
-from traceback import format_exc
-
-# Bunch
-from bunch import bunchify
-
 # Zato
 from zato.common import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.server.pubsub.task import PubSubTool
-from zato.server.service import AsIs, List
-from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal import AdminService
 
 # ################################################################################################################################
 

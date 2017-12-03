@@ -224,7 +224,7 @@ class InRAMBacklog(object):
 
                 # Delete sub_keys if delete_sub is explicitly set (because we are unsubscring),
                 # or if there are no messages left for that topic
-                if delete_topic or (not self.topic_sub_key_to_msg_id[topic_id][sub_key]):
+                if delete_sub or (not self.topic_sub_key_to_msg_id[topic_id][sub_key]):
                     del self.topic_sub_key_to_msg_id[topic_id][sub_key]
 
                 # Also, check if there are any other subscribers for Msg IDs that we are returning.

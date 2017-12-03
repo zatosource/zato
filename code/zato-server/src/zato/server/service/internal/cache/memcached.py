@@ -9,10 +9,9 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Zato
-from zato.common import CACHE as _COMMON_CACHE
 from zato.common.broker_message import CACHE
 from zato.common.exception import BadRequest
-from zato.common.odb.model import Cache, CacheMemcached
+from zato.common.odb.model import CacheMemcached
 from zato.common.odb.query import cache_memcached_list
 from zato.common.util import parse_extra_into_dict
 from zato.server.service.internal import AdminService

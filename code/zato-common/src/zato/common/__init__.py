@@ -18,7 +18,6 @@ from numbers import Number
 from string import Template
 from sys import maxint
 from traceback import format_exc
-from uuid import uuid4
 
 # boto
 from boto.s3.key import Key

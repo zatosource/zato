@@ -28,17 +28,10 @@ from django.template.response import TemplateResponse
 from pytz import UTC
 
 # Zato
+from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, LB_AGENT_CONNECT_TIMEOUT
 from zato.admin.web import from_utc_to_user
 from zato.common import SEC_DEF_TYPE_NAME, ZatoException, ZATO_NONE, ZATO_SEC_USE_RBAC
-
-logger = logging.getLogger(__name__)
-
-# Zato
-from zato.admin.settings import ssl_key_file, ssl_cert_file, ssl_ca_certs, \
-     LB_AGENT_CONNECT_TIMEOUT
 from zato.common.util import get_lb_client as _get_lb_client
-
-logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
@@ -48,6 +41,14 @@ try:
 except ImportError:
     from django.urls import reverse as django_url_reverse              # Django >= 1.10
     from django.utils import slugify
+
+# For pyflakes
+django_url_reverse = django_url_reverse
+slugify = slugify
+
+# ################################################################################################################################
+
+logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
@@ -552,7 +553,7 @@ def id_only_service(req, service, id, error_template):
 def invoke_service_with_json_response(req, service, input_dict, ok_msg, error_template='', content_type='application/javascript',
         extra=None):
     try:
-        result = req.zato.client.invoke(service, input_dict)
+        req.zato.client.invoke(service, input_dict)
     except Exception, e:
         return HttpResponseServerError(e.message, content_type=content_type)
     else:

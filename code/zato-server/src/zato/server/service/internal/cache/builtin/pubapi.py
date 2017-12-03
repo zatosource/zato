@@ -14,7 +14,7 @@ from datetime import datetime
 # Zato
 from zato.common import ZATO_NOT_GIVEN
 from zato.common.exception import BadRequest, InternalServerError, NotFound
-from zato.server.service import Bool, Dict, Float, ListOfDicts, Service
+from zato.server.service import Bool, Float, Service
 
 # ################################################################################################################################
 
