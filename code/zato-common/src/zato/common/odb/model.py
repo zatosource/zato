@@ -2170,7 +2170,7 @@ class PubSubMessage(Base):
     data = Column(Text(), nullable=False)
     data_prefix = Column(Text(), nullable=False)
     data_prefix_short = Column(String(200), nullable=False)
-    data_format = Column(String(200), nullable=False)
+    data_format = Column(String(200), nullable=False, default=PUBSUB.DEFAULT.DATA_FORMAT)
     mime_type = Column(String(200), nullable=False)
     size = Column(Integer, nullable=False)
     priority = Column(Integer, nullable=False)
@@ -2207,7 +2207,8 @@ class PubSubSubscription(Base):
     creation_time = Column(BigInteger(), nullable=False)
     sub_key = Column(String(200), nullable=False) # Externally visible ID of this subscription
     pattern_matched = Column(Text, nullable=False)
-    deliver_by = Column(Text, nullable=True)
+    deliver_by = Column(Text, nullable=True) # Delivery order, e.g. by priority, date etc.
+    ext_client_id = Column(Text, nullable=True) # Subscriber's ID as it is stored by that external system
 
     is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
@@ -2301,6 +2302,11 @@ class PubSubSubscription(Base):
     ws_channel_id = Column(Integer, ForeignKey('channel_web_socket.id', ondelete='CASCADE'), nullable=True)
     ws_channel = relationship(
         ChannelWebSocket, backref=backref('pubsub_ws_subs', order_by=id, cascade='all, delete, delete-orphan'))
+
+    # Server that will run the delivery task for this subscription
+    server_id = Column(Integer, ForeignKey('server.id', ondelete='CASCADE'), nullable=True)
+    server = relationship(
+        Server, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=True)
     cluster = relationship(

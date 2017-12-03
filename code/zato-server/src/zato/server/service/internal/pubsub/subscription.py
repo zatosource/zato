@@ -49,6 +49,7 @@ class SubCtx(object):
     def __init__(self, cluster_id, pubsub):
         self.pubsub = pubsub # type: PubSub
         self.cluster_id = cluster_id
+        self.server_id = None
         self.has_gd = None
         self.pattern_matched = None
         self.topic = None # type: Topic
@@ -217,7 +218,7 @@ ctx_class = {
 class _Input:
     common = ('is_internal', 'topic_name', 'active_status', 'endpoint_type', 'endpoint_id', 'delivery_method',
         'delivery_data_format', 'delivery_batch_size', Bool('wrap_one_msg_in_list'), 'delivery_max_retry',
-        Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err')
+        Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id')
     amqp = ('amqp_exchange', 'amqp_routing_key')
     files = ('files_directory_list',)
     ftp = ('ftp_directory_list',)
@@ -372,6 +373,7 @@ class SubscribeServiceImpl(_Subscribe):
                 # Notify workers of a new subscription
                 broker_input = Bunch()
                 broker_input.topic_name = ctx.topic.name
+                broker_input.endpoint_type = self.endpoint_type
 
                 for name in sub_broker_attrs:
                     broker_input[name] = getattr(ps_sub, name, None)
@@ -417,7 +419,7 @@ class Create(_Subscribe):
     """ Creates a new pub/sub subscription by invoking a subscription service specific to input endpoint_type.
     """
     def handle(self):
-        topic_list_text = [elem.strip() for elem in self.request.raw_request.pop('topic_list_text', '').splitlines()]
+        topic_list_text = [elem.strip() for elem in (self.request.raw_request.pop('topic_list_text', '') or '').splitlines()]
         topic_list_json = self.request.raw_request.pop('topic_list_json', [])
         topic_name = self.request.raw_request.pop('topic_name', '').strip()
 

@@ -19,13 +19,14 @@
     <script type="text/javascript">
     window.zato_dyn_form_default = 'rest';
     window.zato_dyn_form_elem_name = 'endpoint_type';
+    window.zato_dyn_form_skip_edit = true;
     window.zato_dyn_form_rows = {
         'amqp': ['out_amqp_id', 'amqp_details'],
         'files': ['files_directory_list'],
         'ftp': ['ftp_directory_list'],
         'rest': ['out_rest_http_soap_id', 'rest_delivery_endpoint'],
         'service': ['service_id'],
-        'sms-twilio': ['sms_twilio_from', 'sms_twilio_to_list'],
+        'sms_twilio': ['sms_twilio_from', 'sms_twilio_to_list'],
         'smtp': ['out_smtp_id', 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body'],
         'soap': ['out_soap_http_soap_id', 'soap_delivery_endpoint'],
     }
@@ -38,7 +39,7 @@
             'ftp': [],
             'rest': {{ select_data_target.rest|safe }},
             'service': [],
-            'sms-twilio': [],
+            'sms_twilio': [],
             'smtp': [],
             'soap': {{ select_data_target.soap|safe }},
             'websockets': [],
@@ -159,7 +160,10 @@
 
                         <tr>
                             <td style="vertical-align:middle; width:20%">Type</td>
-                            <td>{{ create_form.endpoint_type }}</td>
+                            <td>
+                                {{ create_form.endpoint_type }}
+                                | Delivery server {{ create_form.server_id }}
+                            </td>
                         </tr>
                         <tr>
                             <td style="vertical-align:middle; width:12%">Endpoint</td>
@@ -168,7 +172,7 @@
 
                         <tr>
                             <td style="vertical-align:middle; width:12%">
-                                Status
+                                State
                             </td>
                             <td>
                                 {{ create_form.active_status }}
@@ -328,186 +332,6 @@
                     <input type="hidden" name="is_active" value="on" />
                     <input type="hidden" id="cluster_id" name="cluster_id" value="{{ cluster_id }}" />
                     <input type="hidden" id="out_job_id" name="out_job_id" />
-                </form>
-            </div>
-        </div>
-
-        <div id="edit-div" class='data-popup ignore'>
-            <div class="bd">
-                <form action="{% url "pubsub-subscription-edit" %}" method="post" id="edit-form">
-                    <table class="form-data">
-
-
-                        <tr>
-                            <td style="vertical-align:middle; width:20%">Type</td>
-                            <td>{{ edit_form.endpoint_type }}</td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">Endpoint</td>
-                            <td>{{ edit_form.endpoint_id }}</td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">
-                                Status
-                            </td>
-                            <td>
-                                {{ edit_form.active_status }}
-                                | GD enabled {{ edit_form.has_gd }}
-                                | STG enabled {{ edit_form.is_staging_enabled }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">Delivery method<br/>and format</td>
-                            <td>
-                                {{ edit_form.delivery_method }}
-                                {{ edit_form.delivery_data_format }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">Deliv. batch size<br/>(list required?)</td>
-                            <td>
-                                {{ edit_form.delivery_batch_size }}
-                                {{ edit_form.wrap_one_msg_in_list }}
-                                |
-                                Deliv. max retries
-                                {{ edit_form.delivery_max_retry }}
-                                Block on err.?
-                                {{ edit_form.delivery_err_should_block }}
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">
-                                Sleep on error
-                                <br/>
-                                socket / other
-                            </td>
-                            <td>
-                                {{ edit_form.wait_sock_err }}
-                                {{ edit_form.wait_non_sock_err }}
-                                <span class="form_hint">(both in seconds)</span>
-                            </td>
-                        </tr>
-
-                        {% comment %} --------- Topics --------- {% endcomment %}
-                        <tr>
-                            <td style="vertical-align:middle">
-                                Topics
-                            </td>
-                            <td>{{ edit_form.topic_list_text }} </td>
-                        </tr>
-
-                        {% comment %} --------- AMQP --------- {% endcomment %}
-                        <tr id="edit-dyn_form_row_id_out_amqp_id" style="display:none">
-                            <td style="vertical-align:middle; width:12%">AMQP outconn</td>
-                            <td>{{ edit_form.out_amqp_id }}</td>
-                        </tr>
-                        <tr id="edit-dyn_form_row_id_amqp_details" style="display:none">
-                            <td style="vertical-align:middle; width:12%">AMQP exchange<br/>and routing key</td>
-                            <td>
-                                {{ edit_form.amqp_exchange }}
-                                {{ edit_form.amqp_routing_key }}
-                            </td>
-                        </tr>
-
-                        {% comment %} --------- Files --------- {% endcomment %}
-                        <tr id="edit-dyn_form_row_id_files_directory_list" style="display:none">
-                            <td style="vertical-align:middle; width:12%">Local directories</td>
-                            <td>{{ edit_form.files_directory_list }}</td>
-                        </tr>
-
-                        {% comment %} --------- FTP --------- {% endcomment %}
-                        <tr id="edit-dyn_form_row_id_ftp_directory_list" style="display:none">
-                            <td style="vertical-align:middle; width:12%">FTP directories</td>
-                            <td>{{ edit_form.ftp_directory_list }}</td>
-                        </tr>
-
-                        {% comment %} --------- REST --------- {% endcomment %}
-                        <tr id="edit-dyn_form_row_id_out_rest_http_soap_id" style="display:none">
-                            <td style="vertical-align:middle; width:12%">REST outconn</td>
-                            <td>{{ edit_form.out_rest_http_soap_id }}</td>
-                        </tr>
-                        <tr id="edit-dyn_form_row_id_rest_delivery_endpoint" style="display:none">
-                            <td style="vertical-align:middle; width:12%">REST callback</td>
-                            <td>{{ edit_form.rest_delivery_endpoint }}</td>
-                        </tr>
-
-                        {% comment %} --------- Service --------- {% endcomment %}
-                        <tr id="edit-dyn_form_row_id_service_id" style="display:none">
-                            <td style="vertical-align:middle">Service</td>
-                            <td>{{ edit_form.service_id }} </td>
-                        </tr>
-
-                        {% comment %} --------- SMS - Twilio --------- {% endcomment %}
-                        <tr id="edit-dyn_form_row_id_sms_twilio_from" style="display:none">
-                            <td style="vertical-align:middle">SMS from</td>
-                            <td>{{ edit_form.sms_twilio_from }} </td>
-                        </tr>
-                        <tr id="edit-dyn_form_row_id_sms_twilio_to_list" style="display:none">
-                            <td style="vertical-align:middle">SMS to</td>
-                            <td>{{ edit_form.sms_twilio_to_list }} </td>
-                        </tr>
-
-                        {% comment %} --------- SMTP --------- {% endcomment %}
-                        <tr id="edit-dyn_form_row_id_out_smtp_id" style="display:none">
-                            <td style="vertical-align:middle">SMTP outconn</td>
-                            <td>
-                                {{ edit_form.out_smtp_id }}
-                                |
-                                HTML?
-                                {{ edit_form.smtp_is_html }}
-                            </td>
-                        </tr>
-                        <tr id="edit-dyn_form_row_id_smtp_subject" style="display:none">
-                            <td style="vertical-align:middle">SMTP subject</td>
-                            <td>
-                                {{ edit_form.smtp_subject }}
-                            </td>
-                        </tr>
-                        <tr id="edit-dyn_form_row_id_smtp_from" style="display:none">
-                            <td style="vertical-align:middle">SMTP from</td>
-                            <td>
-                                {{ edit_form.smtp_from }}
-                            </td>
-                        </tr>
-                        <tr id="edit-dyn_form_row_id_smtp_to_list" style="display:none">
-                            <td style="vertical-align:middle">SMTP to</td>
-                            <td>
-                                {{ edit_form.smtp_to_list }}
-                            </td>
-                        </tr>
-                        <tr id="edit-dyn_form_row_id_smtp_body" style="display:none">
-                            <td style="vertical-align:middle">SMTP body</td>
-                            <td>
-                                {{ edit_form.smtp_body }}
-                            </td>
-                        </tr>
-
-                        {% comment %} --------- SOAP --------- {% endcomment %}
-                        <tr id="edit-dyn_form_row_id_out_soap_http_soap_id" style="display:none">
-                            <td style="vertical-align:middle; width:12%">REST outconn</td>
-                            <td>{{ edit_form.out_soap_http_soap_id }}</td>
-                        </tr>
-                        <tr id="edit-dyn_form_row_id_soap_delivery_endpoint" style="display:none">
-                            <td style="vertical-align:middle; width:12%">SOAP callback</td>
-                            <td>{{ edit_form.soap_delivery_endpoint }}</td>
-                        </tr>
-
-                        <tr>
-                            <td colspan="2" style="text-align:right">
-                                <input type="submit" value="OK" />
-                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
-                            </td>
-                        </tr>
-
-
-                    </table>
-                    <input type="hidden" name="is_active" value="on" />
-                    <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />
-                    <input type="hidden" id="id_edit-id" name="id" />
                 </form>
             </div>
         </div>

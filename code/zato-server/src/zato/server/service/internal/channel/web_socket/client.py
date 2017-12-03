@@ -64,16 +64,6 @@ class Create(AdminService):
 
             self.response.payload.ws_client_id = client.id
 
-            # Create default subscriptions for the client
-            '''
-            self.invoke('zato.channel.web-socket.subscription.create-default', {
-                'ext_client_id': req.ext_client_id,
-                'client_id': client.id,
-                'channel_id': channel.id,
-                'channel_name': channel.name,
-            })
-            '''
-
 # ################################################################################################################################
 
 class DeleteByPubId(AdminService):

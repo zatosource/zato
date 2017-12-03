@@ -69,7 +69,7 @@ class PubSub(WorkerImpl):
 
 # ################################################################################################################################
 
-    def on_broker_msg_PUBSUB_WSX_CLIENT_SUB_KEY_SERVER_SET(self, msg):
+    def on_broker_msg_PUBSUB_SUB_KEY_SERVER_SET(self, msg):
         self.pubsub.set_sub_key_server(msg)
 
 # ################################################################################################################################

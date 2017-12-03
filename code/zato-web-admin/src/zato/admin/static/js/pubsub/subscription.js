@@ -26,6 +26,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.subscription.before_submit_hook;
     $.fn.zato.data_table.setup_forms([
         'endpoint_id',
+        'server_id',
         'active_status',
         'delivery_method',
         'delivery_batch_size',

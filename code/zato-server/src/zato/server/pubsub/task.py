@@ -61,6 +61,7 @@ class DeliveryTask(object):
         """ Actually attempts to deliver messages. Each time it runs, it gets all the messages
         that are still to be delivered from self.delivery_list.
         """
+        logger.warn('DLV-LIST %s', self.delivery_list)
         for msg in self.delivery_list:
             try:
                 self.deliver_pubsub_msg_cb(msg)
@@ -90,6 +91,7 @@ class DeliveryTask(object):
     def run(self, no_msg_sleep_time=1):
         try:
             while self.keep_running:
+                logger.info('RUN %s', self.sub_key)
                 if not self.delivery_list:
                     sleep(no_msg_sleep_time) # No need to wake up too often if there is not much to do
                 else:

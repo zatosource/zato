@@ -162,12 +162,15 @@ class SubKeyServer(object):
     """ Holds information about which server has subscribers to an individual sub_key.
     """
     def __init__(self, config):
-        self.sub_key = config.sub_key
-        self.cluster_id = config.cluster_id
-        self.server_name = config.server_name
-        self.server_pid = config.server_pid
-        self.channel_name = config.channel_name
-        self.pub_client_id = config.pub_client_id
+        self.sub_key = config['sub_key']
+        self.cluster_id = config['cluster_id']
+        self.server_name = config['server_name']
+        self.server_pid = config['server_pid']
+        self.endpoint_type = config['endpoint_type']
+
+        # Attributes below are only for WebSockets
+        self.channel_name = config.get('channel_name')
+        self.pub_client_id = config.get('pub_client_id')
 
 # ################################################################################################################################
 
@@ -519,6 +522,29 @@ class PubSub(object):
             existing_by_sub_key = self.subscriptions_by_sub_key.setdefault(config.sub_key, [])
             existing_by_sub_key.append(sub)
 
+            # We don't start dedicated tasks for WebSockets - they are all dynamic without a fixed server.
+            # But for other endpoint types, we create and start a delivery task here.
+            if config.endpoint_type != PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id:
+
+                # We have a matching server..
+                if config.cluster_id == self.cluster_id and config.server_id == self.server.id:
+
+                    # .. but make sure only the first worker of this server will start delivery tasks, not all of them.
+                    if self.server.is_first_worker:
+
+                        #from json import dumps
+                        #self.server.invoke('pubapi1.create-delivery-task', config)
+                        pass
+
+                        '''
+                        import os
+                        for k, v in sorted(os.environ.items()):
+                            print(11, k, v)
+
+                        print(config)
+                        print()
+                        '''
+
 # ################################################################################################################################
 
     def _create_topic(self, config):
@@ -613,19 +639,20 @@ class PubSub(object):
 
         # Update in-RAM state of workers
         self.broker_client.publish({
-            'action': BROKER_MSG_PUBSUB.WSX_CLIENT_SUB_KEY_SERVER_SET.value,
+            'action': BROKER_MSG_PUBSUB.SUB_KEY_SERVER_SET.value,
             'cluster_id': self.cluster_id,
             'server_name': self.server.name,
             'server_pid': self.server.pid,
             'sub_key': sub_key,
             'channel_name': channel_name,
             'pub_client_id': pub_client_id,
+            'endpoint_type': PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id
         })
 
 # ################################################################################################################################
 
     def set_sub_key_server(self, config):
-        self.sub_key_servers[config.sub_key] = SubKeyServer(config)
+        self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
 # ################################################################################################################################
 
@@ -642,19 +669,17 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_ws_clients_by_sub_keys(self, sub_keys):
+    def get_task_servers_by_sub_keys(self, sub_keys):
         """ Returns a dictionary keyed by (server_name, server_pid, pub_client_id, channel_name) tuples
         and values being sub_keys that a WSX client pointed to by each key has subscribed to.
         """
-        #    zzz zzz delete sub keys from self.server.pubsub
-
         found = {}
         not_found = []
 
         for sub_key in sub_keys:
             info = self.sub_key_servers.get(sub_key)
             if info:
-                _key = (info.server_name, info.server_pid, info.pub_client_id, info.channel_name)
+                _key = (info.server_name, info.server_pid, info.pub_client_id, info.channel_name, info.endpoint_type)
                 _info = found.setdefault(_key, [])
                 _info.append(sub_key)
             else:
@@ -696,7 +721,8 @@ class PubSub(object):
         They are not lost altogether though, because, if enabled by topic's use_overflow_log, all such messages
         go to disk (or to another location that logger_overflown is configured to use).
         """
-        self.in_ram_backlog.add_messages(cid, topic_id, topic_name, 2, sub_keys, non_gd_msg_list)
+        self.in_ram_backlog.add_messages(cid, topic_id, topic_name, self.topics[topic_id].max_depth_non_gd,
+            sub_keys, non_gd_msg_list)
 
 # ################################################################################################################################
 
