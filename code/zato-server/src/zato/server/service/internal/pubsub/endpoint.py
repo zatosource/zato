@@ -19,11 +19,11 @@ from zato.common.broker_message import PUBSUB
 from zato.common.exception import BadRequest, Conflict
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
      PubSubSubscription, PubSubTopic
-from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_queue, pubsub_endpoint_queue_list, \
-     pubsub_endpoint_list, pubsub_messages_for_queue
+from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, pubsub_endpoint_queue, \
+     pubsub_endpoint_queue_list, pubsub_endpoint_queue_list_by_sub_keys, pubsub_messages_for_queue
 from zato.common.odb.query_ps_endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
 from zato.common.time_util import datetime_from_ms
-from zato.server.service import AsIs, Int
+from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
@@ -320,21 +320,51 @@ class ClearEndpointQueue(AdminService):
 # ################################################################################################################################
 
 class DeleteEndpointQueue(AdminService):
-    """ Deletes a given queue for messages - including all messages and their parent subscription object.
+    """ Deletes input message queues for a subscriber based on sub_keys - including all messages
+    and their parent subscription object.
     """
     class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'sub_key')
+        input_required = ('cluster_id',)
+        input_optional = ('sub_key', List('sub_key_list'))
 
     def handle(self):
 
-        # Remove the subscription object which in turn cascades and removes all dependant objects
+        sub_key = self.request.input.sub_key
+        sub_key_list = self.request.input.sub_key_list
+
+        if not(sub_key or sub_key_list):
+            raise BadRequest(self.cid, 'Exactly one of sub_key or sub_key_list is required')
+
+        if sub_key and sub_key_list:
+            raise BadRequest(self.cid, 'Cannot provide both sub_key and sub_key_list on input')
+
+        if sub_key:
+            sub_key_list = [sub_key] # Otherwise, we already had sub_key_list on input so 'else' is not needed
+
+        cluster_id = self.request.input.cluster_id
+        topic_sub_keys = {}
+
         with closing(self.odb.session()) as session:
+
+            # First we need a list of topics to which sub_keys were related - required by broker messages.
+            for item in pubsub_endpoint_queue_list_by_sub_keys(session, cluster_id, sub_key_list):
+                sub_keys = topic_sub_keys.setdefault(item.topic_name, [])
+                sub_keys.append(item.sub_key)
+
+            # Remove the subscription object which in turn cascades and removes all dependant objects
             session.query(PubSubSubscription).\
                 filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
-                filter(PubSubSubscription.sub_key==self.request.input.sub_key).\
-                delete()
+                filter(PubSubSubscription.sub_key.in_(sub_key_list)).\
+                delete(synchronize_session=False)
+            session.expire_all()
 
             session.commit()
+
+        # Notify workers that this subscription needs to be deleted
+        self.broker_client.publish({
+            'topic_sub_keys': topic_sub_keys,
+            'action': PUBSUB.SUBSCRIPTION_DELETE.value,
+        })
 
 # ################################################################################################################################
 

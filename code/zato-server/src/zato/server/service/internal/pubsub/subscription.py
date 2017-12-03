@@ -471,12 +471,12 @@ class DeleteAll(AdminService):
             items = pubsub_subscription_list_by_endpoint_id(
                 session, self.request.input.cluster_id, self.request.input.endpoint_id)
 
-            # .. iterate over all results, extracting sub_key for each element to call
-            # the actual service that deletes this subscription.
-            for item in items:
+            # Build a list of sub_keys that this endpoint was using and delete them all in one go.
+            sub_key_list = [item.sub_key for item in items]
+            if sub_key_list:
                 self.invoke('zato.pubsub.endpoint.delete-endpoint-queue', {
                     'cluster_id': self.request.input.cluster_id,
-                    'sub_key': item.sub_key,
+                    'sub_key_list': sub_key_list,
                 })
 
 # ################################################################################################################################

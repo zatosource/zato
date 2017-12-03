@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Copyright (C) 2016 Dariusz Suchojad <dsuch at zato.io>
+Copyright (C) 2017, Zato Source s.r.o. https://zato.io
 
 Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
@@ -40,12 +40,8 @@ from zato.common.util import new_cid
 from zato.server.connection.connector import Connector
 from zato.server.connection.web_socket.msg import AuthenticateResponse, ClientInvokeRequest, ClientMessage, copy_forbidden, \
      error_response, ErrorResponse, Forbidden, OKResponse
-from zato.server.connection.web_socket.pubsub import PubSubTool
-from zato.server.pubsub import PubSub
+from zato.server.pubsub.task import PubSubTool
 from zato.vault.client import VAULT
-
-# For pyflakes
-PubSub = PubSub
 
 # ################################################################################################################################
 
