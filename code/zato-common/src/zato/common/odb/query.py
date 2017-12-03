@@ -1062,6 +1062,13 @@ def pubsub_endpoint_queue_list(session, cluster_id, endpoint_id):
 
 # ################################################################################################################################
 
+def pubsub_endpoint_queue_list_by_sub_keys(session, cluster_id, sub_key_list):
+    return _pubsub_endpoint_queue(session, cluster_id).\
+        filter(PubSubSubscription.sub_key.in_(sub_key_list)).\
+        all()
+
+# ################################################################################################################################
+
 def pubsub_endpoint_queue(session, cluster_id, sub_id):
     return _pubsub_endpoint_queue(session, cluster_id).\
         filter(PubSubSubscription.id==sub_id).\

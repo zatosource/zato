@@ -152,16 +152,18 @@ class Subscription(object):
     def __init__(self, config):
         self.config = config
         self.id = config.id
+        self.sub_key = config.sub_key
         self.endpoint_id = config.endpoint_id
         self.topic_name = config.topic_name
 
 # ################################################################################################################################
 
 class SubKeyServer(object):
-    """ Holds information about which server has subscribers (WSX) to an individual sub_key.
+    """ Holds information about which server has subscribers to an individual sub_key.
     """
     def __init__(self, config):
         self.sub_key = config.sub_key
+        self.cluster_id = config.cluster_id
         self.server_name = config.server_name
         self.server_pid = config.server_pid
         self.channel_name = config.channel_name
@@ -170,7 +172,7 @@ class SubKeyServer(object):
 # ################################################################################################################################
 
 class InRAMBacklog(object):
-    """ A backlog of messages kept in RAM. Stores a list of sub_keys and all messages each point to.
+    """ A backlog of messages kept in RAM. Stores a list of sub_keys and all messages that a sub_key points to.
     It acts as a multi-key dict and keeps only a single copy of message for each sub_key.
     """
     def __init__(self):
@@ -184,10 +186,15 @@ class InRAMBacklog(object):
 
 # ################################################################################################################################
 
-    def retrieve_messages_by_sub_keys(self, topic_id, sub_keys):
-        """ Returns all messages matching input sub_keys and deletes them from RAM.
+    def _get_delete_messages_by_sub_keys(self, topic_id, sub_keys, needs_out, delete_sub=False):
+        """ Deletes from RAM all messages matching input sub_keys and, optionally, returns them.
+        If delete_sub is True, deletes subscription by sub_key from that topic altogether.
         """
-        out = {}
+        # Optional output
+        if needs_out:
+            out = {}
+
+        # We always delete messages found, no matter if they are to be returned or not
         to_delete = []
 
         with self.lock:
@@ -197,21 +204,24 @@ class InRAMBacklog(object):
             for sub_key in sub_keys:
                 msg_ids = self.topic_sub_key_to_msg_id.get(topic_id, {}).get(sub_key, [])
                 for msg_id in msg_ids:
-                    out_sub_key = out.setdefault(sub_key, {})
-                    out_sub_key[msg_id] = self.topic_msg_id_to_msg[topic_id][msg_id]
+
+                    if needs_out:
+                        out_sub_key = out.setdefault(sub_key, {})
+                        out_sub_key[msg_id] = self.topic_msg_id_to_msg[topic_id][msg_id]
 
                     # Make note of what needs to be deleted
                     to_delete.append((topic_id, sub_key, msg_id))
 
-            # Now delete everything found above
+            # Now delete all messages, and possibly subscriptions, found above
             for topic_id, sub_key, msg_id in to_delete:
 
                 # We can access and delete them safely because we run under self.lock
                 # and we have just collected them above so they must exist
                 self.topic_sub_key_to_msg_id[topic_id][sub_key].remove(msg_id)
 
-                # While we are at it, delete sub_keys that don't have any messages
-                if not self.topic_sub_key_to_msg_id[topic_id][sub_key]:
+                # Delete sub_keys if delete_sub is explicitly set (because we are unsubscring),
+                # or if there are no messages left for that topic
+                if delete_topic or (not self.topic_sub_key_to_msg_id[topic_id][sub_key]):
                     del self.topic_sub_key_to_msg_id[topic_id][sub_key]
 
                 # Also, check if there are any other subscribers for Msg IDs that we are returning.
@@ -228,7 +238,18 @@ class InRAMBacklog(object):
                     del self.topic_msg_id_to_msg[topic_id][msg_id]
                     del self.msg_id_to_expiration[msg_id]
 
-        return out
+        if needs_out:
+            return out
+
+# ################################################################################################################################
+
+    def retrieve_messages_by_sub_keys(self, topic_id, sub_keys):
+        return self._get_delete_messages_by_sub_keys(topic_id, sub_keys, True)
+
+# ################################################################################################################################
+
+    def unsubscribe(self, topic_id, sub_keys):
+        self._get_delete_messages_by_sub_keys(topic_id, sub_keys, False, True)
 
 # ################################################################################################################################
 
@@ -353,16 +374,19 @@ class PubSub(object):
 
         self.subscriptions_by_topic = {}       # Topic name       -> Subscription object
         self.subscriptions_by_sub_key = {}     # Sub key          -> Subscription object
+        self.sub_key_servers = {}              # Sub key          -> Server/PID handling it
 
         self.endpoints = {}                    # Endpoint ID      -> Endpoint object
         self.topics = {}                       # Topic ID         -> Topic object
 
         self.sec_id_to_endpoint_id = {}        # Sec def ID       -> Endpoint ID
         self.ws_channel_id_to_endpoint_id = {} # WS chan def ID   -> Endpoint ID
-        self.service_id_to_endpoint_id = {}    # Service ID        -> Endpoint ID
+        self.service_id_to_endpoint_id = {}    # Service ID       -> Endpoint ID
         self.topic_name_to_id = {}             # Topic name       -> Topic ID
-        self.ws_sub_key_servers = {}           # Sub key          -> Server/PID handling it
-        self.in_ram_backlog = InRAMBacklog()   # List of sub_keys -> non-GD message list for each
+
+        self.pubsub_tools = []                 # A list of PubSubTool objects, each containing delivery tasks
+
+        self.in_ram_backlog = InRAMBacklog()
 
 # ################################################################################################################################
 
@@ -590,6 +614,7 @@ class PubSub(object):
         # Update in-RAM state of workers
         self.broker_client.publish({
             'action': BROKER_MSG_PUBSUB.WSX_CLIENT_SUB_KEY_SERVER_SET.value,
+            'cluster_id': self.cluster_id,
             'server_name': self.server.name,
             'server_pid': self.server.pid,
             'sub_key': sub_key,
@@ -599,18 +624,20 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def set_ws_sub_key_server(self, config):
-        self.ws_sub_key_servers[config.sub_key] = SubKeyServer(config)
+    def set_sub_key_server(self, config):
+        self.sub_key_servers[config.sub_key] = SubKeyServer(config)
 
 # ################################################################################################################################
 
     def remove_ws_sub_key_server(self, config):
-
+        """ Called after a WSX client disconnects - provides a list of sub_keys that it handled
+        which we must remove from our config because without this client they are no longer usable (until the client reconnects).
+        """
         for sub_key in config.sub_key_list:
-            self.ws_sub_key_servers.pop(sub_key, None)
-            for server_info in self.ws_sub_key_servers.values():
+            self.sub_key_servers.pop(sub_key, None)
+            for server_info in self.sub_key_servers.values():
                 if server_info.sub_key == sub_key:
-                    del self.ws_sub_key_servers[sub_key]
+                    del self.sub_key_servers[sub_key]
                     break
 
 # ################################################################################################################################
@@ -619,11 +646,13 @@ class PubSub(object):
         """ Returns a dictionary keyed by (server_name, server_pid, pub_client_id, channel_name) tuples
         and values being sub_keys that a WSX client pointed to by each key has subscribed to.
         """
+        #    zzz zzz delete sub keys from self.server.pubsub
+
         found = {}
         not_found = []
 
         for sub_key in sub_keys:
-            info = self.ws_sub_key_servers.get(sub_key)
+            info = self.sub_key_servers.get(sub_key)
             if info:
                 _key = (info.server_name, info.server_pid, info.pub_client_id, info.channel_name)
                 _info = found.setdefault(_key, [])
@@ -668,5 +697,59 @@ class PubSub(object):
         go to disk (or to another location that logger_overflown is configured to use).
         """
         self.in_ram_backlog.add_messages(cid, topic_id, topic_name, 2, sub_keys, non_gd_msg_list)
+
+# ################################################################################################################################
+
+    def unsubscribe(self, topic_sub_keys):
+        """ Removes subscriptions for all input sub_keys. topic_sub_keys is a dictionary keyed by topic_name,
+        and each value is a list of sub_keys, possibly one-element long.
+        """
+        for topic_name, sub_keys in topic_sub_keys.items():
+
+            # We receive topic_names on input but in-RAM backlog requires topic IDs.
+            topic_id = self.topic_name_to_id[topic_name]
+
+            # Delete subscriptions, and any related messages, from RAM
+            self.in_ram_backlog.unsubscribe(topic_id, sub_keys)
+
+            # Delete subscription metadata from local pubsub
+            subscriptions_by_topic = self.subscriptions_by_topic[topic_name]
+
+            for sub in subscriptions_by_topic:
+                if sub.sub_key in sub_keys:
+                    subscriptions_by_topic.remove(sub)
+
+            # Find and stop all delivery tasks if we are the server that handles them
+            for sub_key in sub_keys:
+                sub_key_server = self.sub_key_servers.get(sub_key)
+                if sub_key_server:
+
+                    _cluster_id = sub_key_server.cluster_id
+                    _server_name = sub_key_server.server_name
+                    _server_pid = sub_key_server.server_pid
+
+                    cluster_id = self.server.cluster_id
+                    server_name = self.server.name
+                    server_pid = self.server.pid
+
+                    # If we are the server that handles this particular sub_key ..
+                    if _cluster_id == cluster_id and _server_name == server_name and _server_pid == server_pid:
+
+                        # .. then find the pubsub_tool that actually does it ..
+                        for pubsub_tool in self.pubsub_tools:
+                            if pubsub_tool.handles_sub_key(sub_key):
+
+                                # .. and stop the delivery task.
+                                pubsub_tool.remove_sub_key(sub_key)
+
+                                # No need to iterate further, there can be only one task for each sub_key
+                                break
+
+# ################################################################################################################################
+
+    def register_pubsub_tool(self, pubsub_tool):
+        """ Registers a new pubsub_tool for this server, i.e. a new delivery task container.
+        """
+        self.pubsub_tools.append(pubsub_tool)
 
 # ################################################################################################################################
