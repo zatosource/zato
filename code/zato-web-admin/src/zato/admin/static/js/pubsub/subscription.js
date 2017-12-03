@@ -94,7 +94,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     var last_deliv_time = data.last_deliv_time ? data.last_deliv_time : $.fn.zato.empty_value;
 
     var pubsub_endpoint_queues_link = String.format(
-        "<a id='pubsub_endpoint_queues_link_{0}' href=\{1})\">{2}</a>", data.id, data.pubsub_endpoint_queues_link,
+        '<a id="pubsub_endpoint_queues_link_{0}" href="{1}">{2}</a>', data.id, data.pubsub_endpoint_queues_link,
         data.subscription_count);
 
     row += "<td class='numbering'>&nbsp;</td>";
@@ -105,7 +105,7 @@ $.fn.zato.pubsub.subscription.data_table.new_row = function(item, data, include_
     row += String.format('<td>{0}</td>', data.endpoint_type);
 
     row += String.format('<td>{0}</td>', data.role);
-    row += String.format('<td id=">{0}</td>', pubsub_endpoint_queues_link);
+    row += String.format('<td>{0}</td>', pubsub_endpoint_queues_link);
 
     row += String.format('<td>{0}</td>', last_seen);
     row += String.format('<td>{0}</td>', last_deliv_time);
