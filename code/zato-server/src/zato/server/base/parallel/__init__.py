@@ -201,21 +201,17 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             locally_deployed.extend(self.service_store.import_services_from_anywhere(
                 self.service_modules + self.service_sources, self.base_dir))
 
-            # Migrations
-            #self.odb.add_channels_2_0()
-
             return set(locally_deployed)
 
         lock_name = '{}{}:{}'.format(KVDB.LOCK_SERVER_STARTING, self.fs_server_config.main.token, self.deployment_key)
         already_deployed_flag = '{}{}:{}'.format(KVDB.LOCK_SERVER_ALREADY_DEPLOYED,
-                                                 self.fs_server_config.main.token, self.deployment_key)
+            self.fs_server_config.main.token, self.deployment_key)
 
-        logger.debug('Will use the lock_name: [{}]'.format(lock_name))
+        logger.debug('Will use the lock_name: `%s`', lock_name)
 
         with self.zato_lock_manager(lock_name, ttl=self.deployment_lock_expires, block=self.deployment_lock_timeout):
             if redis_conn.get(already_deployed_flag):
-                # There has been already the first worker who's done everything
-                # there is to be done so we may just return.
+                # There has been already the first worker who's done everything there is to be done so we may just return.
                 is_first = False
                 logger.debug('Not attempting to grab the lock_name:`%s`', lock_name)
 
