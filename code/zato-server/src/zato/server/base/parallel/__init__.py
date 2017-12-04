@@ -40,6 +40,7 @@ from zato.bunch import Bunch
 from zato.common import DATA_FORMAT, KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
+from zato.common.posix_ipc_util import ServerStartupIPC
 from zato.common.time_util import TimeUtil
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, register_diag_handlers
@@ -124,6 +125,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.fifo_response_buffer_size = 0.1 # In megabytes
         self.live_msg_browser = None
         self.is_first_worker = None
+        self.server_startup_ipc = ServerStartupIPC()
 
         # Allows users store arbitrary data across service invocations
         self.user_ctx = Bunch()
@@ -334,6 +336,9 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.deployment_key = zato_deployment_key
 
         register_diag_handlers()
+
+        # Create all POSIX IPC objects now that we have the deployment key
+        self.server_startup_ipc.create(self.deployment_key)
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         self.config.odb_data = self.get_config_odb_data(self)
@@ -601,7 +606,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def destroy(self):
         """ A Spring Python hook for closing down all the resources held.
         """
-
         # Tell the ODB we've gone through a clean shutdown but only if this is
         # the main process going down (Arbiter) not one of Gunicorn workers.
         # We know it's the main process because its ODB's session has never
@@ -618,6 +622,10 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         # Per-worker cleanup
         else:
+
+            # Close all POSIX IPC structures
+            self.server_startup_ipc.close()
+
             self.invoke('zato.channel.web-socket.client.delete-by-server')
             self.invoke('zato.channel.web-socket.client.delete-by-server')
 
