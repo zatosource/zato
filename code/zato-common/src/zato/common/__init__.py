@@ -118,6 +118,8 @@ zato_cid_xpath = etree.XPath(zato_result_path, namespaces=common_namespaces)
 zato_details_path = '//zato:zato_env/zato:details'
 zato_details_xpath = etree.XPath(zato_details_path, namespaces=common_namespaces)
 
+megabyte = 10 ** 6
+
 SECRET_SHADOW = '******'
 
 # TRACE1 logging level, even more details than DEBUG
