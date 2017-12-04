@@ -28,6 +28,7 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.id.label('name'), # A unique 'name' attribute is needed by ConfigDict
         PubSubSubscription.active_status,
         PubSubSubscription.server_id,
+        #PubSubSubscription.server_pid,
         PubSubSubscription.is_internal,
         PubSubSubscription.creation_time,
         PubSubSubscription.sub_key,
