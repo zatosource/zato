@@ -28,7 +28,6 @@ logger = getLogger(__name__)
 # ################################################################################################################################
 
 _shmem_pattern = '/zato-shmem-{}'
-_shmem_size = megabyte * 16
 
 # ################################################################################################################################
 
@@ -41,7 +40,7 @@ class SharedMemoryIPC(object):
         self.shmem_name = ''
         self.size = -1
 
-    def create(self, shmem_suffix, size=_shmem_size):
+    def create(self, shmem_suffix, size):
         """ Creates all IPC structures.
         """
         self.shmem_name = _shmem_pattern.format(shmem_suffix)
@@ -147,7 +146,11 @@ class SharedMemoryIPC(object):
 
                 # We get here if we did not return the key within timeout seconds,
                 # in which case we need to log an error and raise an exception.
-                logger.warn('Could not get parent/key `%s` `%s` after %ss', parent, key, timeout)
+
+                # Same message for logger and exception
+                msg = 'Could not get parent/key `{}` `{}` after {}s'.format(parent, key, timeout)
+                logger.warn(msg)
+                raise KeyError(msg)
 
             # No exception = re-raise exception immediately
             else:
@@ -158,15 +161,15 @@ class SharedMemoryIPC(object):
 class ServerStartupIPC(SharedMemoryIPC):
     """ A shared memory-backed IPC object for server startup initialization.
     """
-    pubsub_key_to_pid = '/pubsub/sub_key_to_pid'
+    pubsub_pid = '/pubsub/pid'
 
-    def create(self, deployment_key):
-        super(ServerStartupIPC, self).create('startup-{}'.format(deployment_key))
+    def create(self, deployment_key, size):
+        super(ServerStartupIPC, self).create('server-{}'.format(deployment_key), size)
 
-    def set_pubsub_sub_key_pid(self, sub_key, pid):
-        self.set_key(self.pubsub_key_to_pid, sub_key, pid)
+    def set_pubsub_pid(self, pid):
+        self.set_key(self.pubsub_pid, 'current', pid)
 
-    def get_pubsub_sub_key_pid(self, sub_key, timeout=10):
-        return self.get_key(self.pubsub_key_to_pid, sub_key, timeout)
+    def get_pubsub_pid(self, timeout=10):
+        return self.get_key(self.pubsub_pid, 'current', timeout)
 
 # ################################################################################################################################
