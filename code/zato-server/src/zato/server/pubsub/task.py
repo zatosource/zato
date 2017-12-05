@@ -144,8 +144,8 @@ class Message(object):
         )
 
     def __repr__(self):
-        return '<Msg pub_id:{} ext_cli:{} exp:{} gd:{}>'.format(
-            self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time), self.has_gd)
+        return '<Msg sk:{} id:{} ext:{} exp:{} gd:{}>'.format(
+            self.sub_key, self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time), self.has_gd)
 
     def to_dict(self):
         return {
@@ -158,7 +158,8 @@ class Message(object):
 class GDMessage(Message):
     """ A guaranteed delivery message initialized from SQL data.
     """
-    def __init__(self, msg):
+    def __init__(self, sub_key, msg):
+        self.sub_key = sub_key
         self.pub_msg_id = msg.pub_msg_id
         self.pub_correl_id = msg.pub_correl_id
         self.in_reply_to = msg.in_reply_to
@@ -179,7 +180,8 @@ class GDMessage(Message):
 class NonGDMessage(Message):
     """ A non-guaranteed delivery message initialized from a Python dict.
     """
-    def __init__(self, msg):
+    def __init__(self, sub_key, msg):
+        self.sub_key = sub_key
         self.pub_msg_id = msg['pub_msg_id']
         self.pub_correl_id = msg['pub_correl_id']
         self.in_reply_to = msg['in_reply_to']
@@ -301,7 +303,7 @@ class PubSubTool(object):
         must be called with a lock for input sub_key.
         """
         for msg in messages:
-            self.delivery_lists[sub_key].add(NonGDMessage(msg))
+            self.delivery_lists[sub_key].add(NonGDMessage(sub_key, msg))
 
 # ################################################################################################################################
 
@@ -337,7 +339,7 @@ class PubSubTool(object):
         must be called with a lock for input sub_key.
         """
         for msg in self.pubsub.get_sql_messages_by_sub_key(sub_key, self.last_sql_run[sub_key], session):
-            self.delivery_lists[sub_key].add(GDMessage(msg))
+            self.delivery_lists[sub_key].add(GDMessage(sub_key, msg))
 
 # ################################################################################################################################
 

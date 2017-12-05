@@ -95,3 +95,11 @@ class CreateDeliveryTask(AdminService):
         pass
 
 # ################################################################################################################################
+
+class DeliverMessage(AdminService):
+    """ Callback service invoked by delivery tasks for each message that needs to be delivered to a given endpoint.
+    """
+    def handle(self):
+        self.logger.warn('111 %s', self.request.raw_request)
+
+# ################################################################################################################################
