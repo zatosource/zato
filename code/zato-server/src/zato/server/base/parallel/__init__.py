@@ -125,6 +125,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.fifo_response_buffer_size = 0.1 # In megabytes
         self.live_msg_browser = None
         self.is_first_worker = None
+        self.shmem_size = -1.0
         self.server_startup_ipc = ServerStartupIPC()
 
         # Allows users store arbitrary data across service invocations
@@ -338,7 +339,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         register_diag_handlers()
 
         # Create all POSIX IPC objects now that we have the deployment key
-        self.server_startup_ipc.create(self.deployment_key)
+        self.shmem_size = int(float(self.fs_server_config.shmem.size) * 10**6) # Convert to megabytes as integer
+        self.server_startup_ipc.create(self.deployment_key, self.shmem_size)
 
         # Store the ODB configuration, create an ODB connection pool and have self.odb use it
         self.config.odb_data = self.get_config_odb_data(self)
@@ -580,7 +582,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def deliver_pubsub_msg(self, msg):
         """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
         """
-        logger.warn('MSG CB: %s', msg)
+        self.invoke('pubapi1.deliver-message', msg)
 
 # ################################################################################################################################
 
