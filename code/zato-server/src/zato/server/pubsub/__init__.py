@@ -532,7 +532,25 @@ class PubSub(object):
 
                     # .. but make sure only the first worker of this server will start delivery tasks, not all of them.
                     if self.server.is_first_worker:
+
+                        # Store in shared RAM information that our process handles this key
+                        self.server.server_startup_ipc.set_pubsub_sub_key_pid(config.sub_key, self.server.pid)
+
+                        config.server_pid = self.server.pid
+                        config.server_name = self.server.name
+                        self.set_sub_key_server(config)
+
+                        # Starts the delivery task and notifies other servers that we are the one
+                        # to handle deliveries for this particular sub_key.
                         self.server.invoke('zato.pubsub.delivery.create-delivery-task', config)
+
+                    # We are not the first worker of this server and the first one must have already stored
+                    # in RAM the mapping of sub_key -> server_pid, so we can safely read it here to add
+                    # a subscription server.
+                    else:
+                        config.server_pid = self.server.server_startup_ipc.get_pubsub_sub_key_pid(config.sub_key)
+                        config.server_name = self.server.name
+                        self.set_sub_key_server(config)
 
 # ################################################################################################################################
 
