@@ -99,8 +99,6 @@ class IPCAPI(object):
         fifo_path = os.path.join(tempfile.tempdir, 'zato-ipc-fifo-{}'.format(uuid4().hex))
         os.mkfifo(fifo_path, fifo_create_mode)
 
-        logger.warn('444 %s %s', service, target_pid)
-
         try:
             self.publisher.publish(payload, service, target_pid, reply_to_fifo=fifo_path)
 
