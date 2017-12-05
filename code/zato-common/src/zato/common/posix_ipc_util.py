@@ -9,8 +9,11 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # stdlib
+from datetime import datetime, timedelta
 from json import dumps, loads
+from logging import getLogger
 from mmap import mmap
+from time import sleep
 
 # posix-ipc
 import posix_ipc as ipc
@@ -20,8 +23,12 @@ from zato.common import megabyte
 
 # ################################################################################################################################
 
+logger = getLogger(__name__)
+
+# ################################################################################################################################
+
 _shmem_pattern = '/zato-shmem-{}'
-_shmem_size = megabyte * 100
+_shmem_size = megabyte * 16
 
 # ################################################################################################################################
 
@@ -80,7 +87,7 @@ class SharedMemoryIPC(object):
         except ipc.ExistentialError:
             pass
 
-    def get_parent(self, parent_path):
+    def get_parent(self, parent_path, needs_data=True):
         """ Returns element pointed to by parent_path, creating all elements along the way, if neccessary.
         """
         data = self.load()
@@ -92,7 +99,7 @@ class SharedMemoryIPC(object):
             next = parent_path.pop(0)
             current = current.setdefault(next, {})
 
-        return data, current
+        return (data, current) if needs_data else current
 
     def set_key(self, parent, key, value):
         """ Set key to value under element called 'parent'.
@@ -106,15 +113,60 @@ class SharedMemoryIPC(object):
         # Save it all back
         self.store(data)
 
+    def _get_key(self, parent, key):
+        """ Low-level implementation of get_key which does not handle timeouts.
+        """
+        parent = self.get_parent(parent, False)
+        return parent[key]
+
+    def get_key(self, parent, key, timeout=None, _sleep=sleep, _utcnow=datetime.utcnow):
+        """ Returns a specific key from parent dictionary.
+        """
+        try:
+            return self._get_key(parent, key)
+        except KeyError:
+            if timeout:
+                now = _utcnow()
+                start = now
+                until = now + timedelta(seconds=timeout)
+                idx = 0
+
+                while now <= until:
+                    try:
+                        value = self._get_key(parent, key)
+                        if value:
+                            msg = 'Returning value `%s` for parent/key `%s` `%s` after %s'
+                            logger.info(msg, value, parent, key, now - start)
+                            return value
+                    except KeyError:
+                        _sleep(0.1)
+                        idx += 1
+                        if idx % 10 == 0:
+                            logger.info('Waiting for parent/key `%s` `%s` (timeout: %ss)', parent, key, timeout)
+                        now = _utcnow()
+
+                # We get here if we did not return the key within timeout seconds,
+                # in which case we need to log an error and raise an exception.
+                logger.warn('Could not get parent/key `%s` `%s` after %ss', parent, key, timeout)
+
+            # No exception = re-raise exception immediately
+            else:
+                raise
+
 # ################################################################################################################################
 
 class ServerStartupIPC(SharedMemoryIPC):
     """ A shared memory-backed IPC object for server startup initialization.
     """
+    pubsub_key_to_pid = '/pubsub/sub_key_to_pid'
+
     def create(self, deployment_key):
         super(ServerStartupIPC, self).create('startup-{}'.format(deployment_key))
 
     def set_pubsub_sub_key_pid(self, sub_key, pid):
-        self.set_key('/pubsub/sub_key_to_pid', sub_key, pid)
+        self.set_key(self.pubsub_key_to_pid, sub_key, pid)
+
+    def get_pubsub_sub_key_pid(self, sub_key, timeout=10):
+        return self.get_key(self.pubsub_key_to_pid, sub_key, timeout)
 
 # ################################################################################################################################
