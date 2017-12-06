@@ -137,6 +137,7 @@ class Topic(object):
         self.has_gd = config.has_gd
         self.gd_depth_check_freq = config.gd_depth_check_freq
         self.gd_depth_check_iter = 0
+        self.hook_service_invoker = config.hook_service_invoker
 
     def incr_gd_depth_check(self):
         """ Increases counter indicating whether topic's depth should be checked for max_depth reached.
@@ -155,6 +156,14 @@ class Subscription(object):
         self.sub_key = config.sub_key
         self.endpoint_id = config.endpoint_id
         self.topic_name = config.topic_name
+
+# ################################################################################################################################
+
+class HookCtx(object):
+    def __init__(self, hook_type, msg, topic):
+        self.hook_type = hook_type
+        self.msg = msg
+        self.topic = topic
 
 # ################################################################################################################################
 
@@ -394,21 +403,7 @@ class PubSub(object):
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
-        self.endpoint_getter = {
-            PUBSUB.ENDPOINT_TYPE.AMQP.id:        None,
-            PUBSUB.ENDPOINT_TYPE.FILES.id:       None,
-            PUBSUB.ENDPOINT_TYPE.FTP.id:         None,
-            PUBSUB.ENDPOINT_TYPE.FILES.id:       None,
-            PUBSUB.ENDPOINT_TYPE.FTP.id:         None,
-            PUBSUB.ENDPOINT_TYPE.IMAP.id:        None,
-            PUBSUB.ENDPOINT_TYPE.REST.id:        None,
-            PUBSUB.ENDPOINT_TYPE.SERVICE.id:     None,
-            PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id:  None,
-            PUBSUB.ENDPOINT_TYPE.SMTP.id:        None,
-            PUBSUB.ENDPOINT_TYPE.SOAP.id:        None,
-            PUBSUB.ENDPOINT_TYPE.SQL.id:         None,
-            PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: None,
-        }
+        self.endpoint_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE)
 
 # ################################################################################################################################
 
@@ -571,7 +566,25 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    def get_hook_service_invoker(self, service_name, hook_type):
+        """ Returns a function that will invoke pub/sub hooks.
+        """
+        def _invoke_hook_service(topic, msg):
+            """ A function to invoke pub/sub hook services.
+            """
+            ctx = HookCtx(hook_type, topic, msg)
+            return self.server.invoke(service_name, ctx)
+
+        return _invoke_hook_service
+
+# ################################################################################################################################
+
     def _create_topic(self, config):
+        if config.hook_service_id:
+            config.hook_service_invoker = self.get_hook_service_invoker(config.hook_service_name, PUBSUB.HOOK_TYPE.PUB)
+        else:
+            config.hook_service_invoker = None
+
         self.topics[config.id] = Topic(config)
         self.topic_name_to_id[config.name] = config.id
 

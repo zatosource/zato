@@ -114,6 +114,9 @@ class Publish(AdminService):
             ps_msg['data_prefix'] = input['data'][:2048].encode('utf8')
             ps_msg['data_prefix_short'] = input['data'][:64].encode('utf8')
 
+        if topic.hook_service_invoker:
+            topic.hook_service_invoker(topic, ps_msg)
+
         return ps_msg
 
 # ################################################################################################################################
