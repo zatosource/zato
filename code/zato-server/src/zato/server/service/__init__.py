@@ -913,7 +913,7 @@ class PubSubHook(Service):
     """
     class SimpleIO:
         input_required = (Opaque('ctx'),)
-        output_optional = (Bool('skip_msg'), Bool('delete_msg'))
+        output_optional = (Bool('skip_msg'),)
 
     def handle(self, _pub=PUBSUB.HOOK_TYPE.PUB):
         func = self.before_publish if self.request.input.ctx.hook_type == _pub else self.before_delivery

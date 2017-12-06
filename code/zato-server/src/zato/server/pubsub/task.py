@@ -22,9 +22,10 @@ from gevent.lock import RLock
 from sortedcontainers import SortedList
 
 # Zato
+from zato.common.pubsub import PubSubMessage, SkipDelivery
 from zato.common.time_util import datetime_from_ms
 from zato.common.util import spawn_greenlet
-from zato.server.pubsub import Message as _Message, PubSub
+from zato.server.pubsub import PubSub
 
 # For pyflakes
 PubSub = PubSub
@@ -63,8 +64,11 @@ class DeliveryTask(object):
         """
         for msg in self.delivery_list:
             try:
-                logger.warn('111 %s', msg)
-                self.deliver_pubsub_msg_cb(msg)
+                response = self.deliver_pubsub_msg_cb(msg)
+            except SkipDelivery:
+                # We are not to deliver this message at all
+                logger.info('Skipping delivery of pub_msg_id:`%s`', msg.pub_msg_id)
+                return
 
             except Exception, e:
                 logger.warn('Could not deliver pub/sub message, e:`%s`', format_exc(e))
@@ -134,7 +138,7 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-class Message(_Message):
+class Message(PubSubMessage):
     """ Wrapper for messages adding __cmp__ which uses a custom comparison protocol,
     by priority, then ext_pub_time, then pub_time.
     """
