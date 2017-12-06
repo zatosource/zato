@@ -24,9 +24,10 @@ from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
 from zato.common.odb.query_ps_publish import get_topic_depth, incr_topic_depth, insert_queue_messages, insert_topic_messages, \
      update_publish_metadata
+from zato.common.pubsub import PubSubMessage
 from zato.common.pubsub import new_msg_id
 from zato.common.time_util import datetime_to_ms, utcnow_as_ms
-from zato.server.pubsub import get_expiration, get_priority, Message, PubSub, Topic
+from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService
 
@@ -86,7 +87,7 @@ class Publish(AdminService):
         in_reply_to = in_reply_to.encode('utf8') if in_reply_to else None
         ext_client_id = ext_client_id.encode('utf8') if ext_client_id else None
 
-        ps_msg = Message()
+        ps_msg = PubSubMessage()
         ps_msg.topic = topic
         ps_msg.pub_msg_id = pub_msg_id
         ps_msg.pub_correl_id = pub_correl_id

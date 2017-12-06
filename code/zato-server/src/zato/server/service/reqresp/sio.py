@@ -27,6 +27,7 @@ from paste.util.converters import asbool
 from zato.common import APISPEC, DATA_FORMAT, NO_DEFAULT_VALUE, PARAMS_PRIORITY, ParsingException, path, ZatoException, \
      ZATO_NONE, ZATO_SEC_USE_RBAC
 from zato.common.exception import BadRequest, Reportable
+from zato.common.pubsub import PubSubMessage
 
 logger = logging.getLogger(__name__)
 
@@ -460,7 +461,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
     else:
         value = NOT_GIVEN
 
-    if value == NOT_GIVEN:
+    if (not isinstance(value, PubSubMessage)) and value == NOT_GIVEN:
         if default_value != NO_DEFAULT_VALUE:
             value = default_value
         else:
@@ -485,7 +486,7 @@ def convert_param(cid, payload, param, data_format, is_required, default_value, 
             else:
                 value = unicode(value)
 
-        if not isinstance(param, AsIs):
+        if not isinstance(param, (AsIs, Opaque)):
             return param_name, convert_sio(cid, param, param_name, value, has_simple_io_config, data_format==DATA_FORMAT.XML,
                 bool_parameter_prefixes, int_parameters, int_parameter_suffixes, None, data_format, False)
 

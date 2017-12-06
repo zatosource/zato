@@ -41,6 +41,7 @@ from zato.common import DATA_FORMAT, KVDB, SERVER_UP_STATUS, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import HOT_DEPLOY, MESSAGE_TYPE, TOPICS
 from zato.common.ipc.api import IPCAPI
 from zato.common.posix_ipc_util import ServerStartupIPC
+from zato.common.pubsub import SkipDelivery
 from zato.common.time_util import TimeUtil
 from zato.common.util import absolutize, get_config, get_kvdb_config_for_log, get_user_config_name, hot_deploy, \
      invoke_startup_services as _invoke_startup_services, new_cid, spawn_greenlet, StaticConfig, register_diag_handlers
@@ -582,7 +583,15 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def deliver_pubsub_msg(self, msg):
         """ A callback method invoked by pub/sub delivery tasks for each messages that is to be delivered.
         """
-        self.invoke('pubapi1.deliver-message', msg)
+        subscription = self.worker_store.pubsub.subscriptions_by_sub_key[msg.sub_key]
+        topic = self.worker_store.pubsub.topics[subscription.config.topic_id]
+
+        if topic.before_delivery_hook_service_invoker:
+            response = topic.before_delivery_hook_service_invoker(topic, msg)
+            if response['skip_msg']:
+                raise SkipDelivery(msg.pub_msg_id)
+
+        self.invoke('pubapi1.deliver-message', {'msg':msg, 'subscription':subscription})
 
 # ################################################################################################################################
 
