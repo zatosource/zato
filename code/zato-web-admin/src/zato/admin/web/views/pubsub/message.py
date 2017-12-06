@@ -108,8 +108,8 @@ def get(req, cluster_id, object_type, object_id, msg_id):
             'endpoint_id': hook_pub_endpoint_id,
             'hook_type': PUBSUB.HOOK_TYPE.PUB,
         }).data.response
-        return_data.hook_pub_service_id = hook_pub_service_response.service_id
-        return_data.hook_pub_service_name = hook_pub_service_response.service_name
+        return_data.hook_pub_service_id = hook_pub_service_response.id
+        return_data.hook_pub_service_name = hook_pub_service_response.name
 
         if hook_sub_endpoint_id:
             hook_sub_service_response = req.zato.client.invoke(
@@ -118,8 +118,8 @@ def get(req, cluster_id, object_type, object_id, msg_id):
                 'endpoint_id': hook_sub_endpoint_id,
                 'hook_type': PUBSUB.HOOK_TYPE.SUB,
             }).data.response
-            return_data.hook_sub_service_id = hook_sub_service_response.service_id
-            return_data.hook_sub_service_name = hook_sub_service_response.service_name
+            return_data.hook_sub_service_id = hook_sub_service_response.id
+            return_data.hook_sub_service_name = hook_sub_service_response.name
 
         return_data.form = MsgForm(return_data)
 

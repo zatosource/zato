@@ -17,6 +17,7 @@ from zato.common.odb.model import PubSubEndpointEnqueuedMessage, PubSubMessage, 
 from zato.common.odb.query import pubsub_messages_for_topic, pubsub_publishers_for_topic, pubsub_topic, pubsub_topic_list
 from zato.common.odb.query_ps_topic import get_topics_by_sub_keys
 from zato.common.time_util import datetime_from_ms
+from zato.common.util import ensure_pubsub_hook_is_valid
 from zato.server.service import AsIs, Dict, List
 from zato.server.service.internal import AdminService, GetListAdminSIO
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
@@ -52,6 +53,10 @@ def response_hook(service, input, instance, attrs, service_type):
         for item in service.response.payload:
             if item.last_pub_time:
                 item.last_pub_time = datetime_from_ms(item.last_pub_time)
+
+# ################################################################################################################################
+
+instance_hook = ensure_pubsub_hook_is_valid
 
 # ################################################################################################################################
 

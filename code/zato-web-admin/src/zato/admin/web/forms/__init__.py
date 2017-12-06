@@ -85,7 +85,7 @@ def add_http_soap_select(form, field_name, req, connection, transport, needs_ini
 
 # ################################################################################################################################
 
-def add_services(form, req, by_id=False, initial_service=None):
+def add_services(form, req, by_id=False, initial_service=None, api_name='zato.service.get-list', has_name_filter=True):
     if req.zato.cluster_id:
 
         service_fields = ['service_name', 'service_id', 'service', 'hook_service_id', 'hook_service_name']
@@ -102,8 +102,11 @@ def add_services(form, req, by_id=False, initial_service=None):
         field.choices = []
         field.choices.append(INITIAL_CHOICES)
 
-        for service in req.zato.client.invoke(
-            'zato.service.get-list', {'cluster_id': req.zato.cluster_id, 'name_filter':'*'}).data:
+        request = {'cluster_id': req.zato.cluster_id, 'name_filter':'*'}
+        if has_name_filter:
+            request['name_filter'] = '*'
+
+        for service in req.zato.client.invoke(api_name, request).data:
 
             # Older parts of web-admin use service names only but newer ones prefer service ID
             id_attr = service.id if by_id else service.name
@@ -111,6 +114,11 @@ def add_services(form, req, by_id=False, initial_service=None):
 
         if initial_service:
             form.initial[field_name] = initial_service
+
+# ################################################################################################################################
+
+def add_pubsub_services(form, req, by_id=False, initial_service=None):
+    return add_services(form, req, by_id, initial_service, 'zato.pubsub.get-hook-service-list', False)
 
 # ################################################################################################################################
 

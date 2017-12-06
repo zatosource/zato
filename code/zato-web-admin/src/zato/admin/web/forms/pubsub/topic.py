@@ -13,7 +13,7 @@ from django import forms
 
 # Zato
 from zato.common import PUBSUB
-from zato.admin.web.forms import add_services
+from zato.admin.web.forms import add_pubsub_services
 
 class CreateForm(forms.Form):
     id = forms.CharField(widget=forms.HiddenInput())
@@ -31,7 +31,7 @@ class CreateForm(forms.Form):
 
     def __init__(self, req, *args, **kwargs):
         super(CreateForm, self).__init__(*args, **kwargs)
-        add_services(self, req, by_id=True)
+        add_pubsub_services(self, req, by_id=True)
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
