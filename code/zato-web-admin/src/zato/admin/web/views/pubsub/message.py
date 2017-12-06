@@ -103,18 +103,20 @@ def get(req, cluster_id, object_type, object_id, msg_id):
             hook_sub_endpoint_id = return_data.endpoint_id
 
         hook_pub_service_response = req.zato.client.invoke(
-            'zato.pubsub.endpoint.get-hook-service', {
+            'zato.pubsub.get-hook-service', {
             'cluster_id': cluster_id,
             'endpoint_id': hook_pub_endpoint_id,
+            'hook_type': PUBSUB.HOOK_TYPE.PUB,
         }).data.response
         return_data.hook_pub_service_id = hook_pub_service_response.service_id
         return_data.hook_pub_service_name = hook_pub_service_response.service_name
 
         if hook_sub_endpoint_id:
             hook_sub_service_response = req.zato.client.invoke(
-                'zato.pubsub.endpoint.get-hook-service', {
+                'zato.pubsub.get-hook-service', {
                 'cluster_id': cluster_id,
                 'endpoint_id': hook_sub_endpoint_id,
+                'hook_type': PUBSUB.HOOK_TYPE.SUB,
             }).data.response
             return_data.hook_sub_service_id = hook_sub_service_response.service_id
             return_data.hook_sub_service_name = hook_sub_service_response.service_name

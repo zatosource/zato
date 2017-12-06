@@ -746,6 +746,10 @@ class PUBSUB:
             def __iter__(self):
                 return iter((self.CSV, self.DICT, self.FIXED_WIDTH, self.JSON, self.POST, self.SOAP, self.XML))
 
+    class HOOK_TYPE:
+        PUB = 'pub'
+        SUB = 'sub'
+
     class DELIVER_BY:
         PRIORITY = 'priority'
         EXT_PUB_TIME = 'ext_pub_time'

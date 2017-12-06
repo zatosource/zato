@@ -14,6 +14,8 @@ from traceback import format_exc
 
 # Zato
 from zato.common import PUBSUB
+from zato.common.odb.model import PubSubSubscription, PubSubTopic
+from zato.common.odb.query import pubsub_hook_service
 from zato.server.service import AsIs, List, ListOfDicts, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
@@ -28,6 +30,11 @@ endpoint_type_service = {
     PUBSUB.ENDPOINT_TYPE.SMTP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
     PUBSUB.ENDPOINT_TYPE.SOAP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
     PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: 'zato.channel.web-socket.client.notify-pub-sub-message',
+}
+
+hook_type_model = {
+    PUBSUB.HOOK_TYPE.PUB: PubSubTopic,
+    PUBSUB.HOOK_TYPE.SUB: PubSubSubscription,
 }
 
 # ################################################################################################################################
@@ -242,5 +249,23 @@ class AfterWSXReconnect(AdminService):
                 del out[sub_key]
 
         return out
+
+# ################################################################################################################################
+
+class GetHookService(AdminService):
+    """ Returns ID and name of a hook service assigned to endpoint, if any is assigned at all.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'endpoint_id', 'hook_type')
+        output_optional = ('service_id', 'service_name')
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            result = pubsub_hook_service(session, self.request.input.cluster_id, self.request.input.endpoint_id,
+                hook_type_model[self.request.input.hook_type])
+
+            if result:
+                self.response.payload.service_id = result.service_id
+                self.response.payload.service_name = result.service_name
 
 # ################################################################################################################################
