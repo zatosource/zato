@@ -44,7 +44,9 @@ sub_broker_attrs = ('active_status', 'active_status', 'cluster_id', 'creation_ti
 def broker_message_hook(self, input, instance, attrs, service_type):
     if service_type == 'create_edit':
         with closing(self.odb.session()) as session:
-            input.is_internal = pubsub_topic(session, input.cluster_id, instance.id).is_internal
+            topic = pubsub_topic(session, input.cluster_id, instance.id)
+            input.is_internal = topic.is_internal
+            input.hook_service_name = topic.hook_service_name
 
 # ################################################################################################################################
 
