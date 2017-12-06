@@ -42,17 +42,17 @@ class CreateDeliveryTask(AdminService):
 # ################################################################################################################################
 
     def _handle_amqp(self, config):
-        pass
+        raise NotImplementedError('AMQP not implemented yet')
 
 # ################################################################################################################################
 
     def _handle_files(self, config):
-        pass
+        raise NotImplementedError('Files not implemented yet')
 
 # ################################################################################################################################
 
     def _handle_ftp(self, config):
-        pass
+        raise NotImplementedError('FTP not implemented yet')
 
 # ################################################################################################################################
 
@@ -77,22 +77,22 @@ class CreateDeliveryTask(AdminService):
 # ################################################################################################################################
 
     def _handle_service(self, config):
-        pass
+        raise NotImplementedError('Service not implemented yet')
 
 # ################################################################################################################################
 
     def _handle_sms_twilio(self, config):
-        pass
+        raise NotImplementedError('SMTP - Twilio not implemented yet')
 
 # ################################################################################################################################
 
     def _handle_smtp(self, config):
-        pass
+        raise NotImplementedError('SMTP not implemented yet')
 
 # ################################################################################################################################
 
     def _handle_soap(self, config):
-        pass
+        raise NotImplementedError('SOAP not implemented yet')
 
 # ################################################################################################################################
 
