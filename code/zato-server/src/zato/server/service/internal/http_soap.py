@@ -29,7 +29,7 @@ from zato.common import BATCH_DEFAULTS, DEFAULT_HTTP_PING_METHOD, DEFAULT_HTTP_P
 from zato.common.broker_message import CHANNEL, OUTGOING
 from zato.common.odb.model import Cluster, JSONPointer, HTTPSOAP, HTTSOAPAudit, HTTSOAPAuditReplacePatternsJSONPointer, \
      HTTSOAPAuditReplacePatternsXPath, SecurityBase, Service, TLSCACert, to_json, XPath
-from zato.common.odb.query import http_soap_audit_item, http_soap_audit_item_list, http_soap, http_soap_list
+from zato.common.odb.query import cache_by_id, http_soap_audit_item, http_soap_audit_item_list, http_soap, http_soap_list
 from zato.server.service import Boolean, Integer, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 
@@ -223,8 +223,6 @@ class Create(_CreateEdit):
                 item.cache_id = input.cache_id
                 item.cache_expiry = input.cache_expiry
 
-                #if item.cache_id
-
                 sec_tls_ca_cert_id = input.get('sec_tls_ca_cert_id')
                 item.sec_tls_ca_cert_id = sec_tls_ca_cert_id if sec_tls_ca_cert_id and sec_tls_ca_cert_id != ZATO_NONE else None
 
@@ -235,6 +233,14 @@ class Create(_CreateEdit):
                     input.impl_name = service.impl_name
                     input.service_id = service.id
                     input.service_name = service.name
+
+                    cache = cache_by_id(session, input.cluster_id, item.cache_id) if item.cache_id else None
+                    if cache:
+                        input.cache_type = cache.cache_type
+                        input.cache_name = cache.name
+                    else:
+                        input.cache_type = None
+                        input.cache_name = None
 
                 if item.sec_tls_ca_cert_id and item.sec_tls_ca_cert_id != ZATO_NONE:
                     self.add_tls_ca_cert(input, item.sec_tls_ca_cert_id)
@@ -359,6 +365,15 @@ class Edit(_CreateEdit):
                     input.merge_url_params_req = item.merge_url_params_req
                     input.url_params_pri = item.url_params_pri
                     input.params_pri = item.params_pri
+
+                    cache = cache_by_id(session, input.cluster_id, item.cache_id) if item.cache_id else None
+                    if cache:
+                        input.cache_type = cache.cache_type
+                        input.cache_name = cache.name
+                    else:
+                        input.cache_type = None
+                        input.cache_name = None
+
                 else:
                     input.ping_method = item.ping_method
                     input.pool_size = item.pool_size
