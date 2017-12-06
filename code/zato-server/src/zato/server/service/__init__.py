@@ -916,3 +916,5 @@ class Service(object):
 class PubSubHook(Service):
     """ Subclasses of this class may act as pub/sub hooks.
     """
+    class SimpleIO:
+        output_optional = (Bool('skip_msg'), Bool('delete_msg'))
