@@ -20,7 +20,7 @@ from dateparser import parse as dt_parse
 from gevent import spawn
 
 # Zato
-from zato.common import DATA_FORMAT, PUBSUB
+from zato.common import DATA_FORMAT, PUBSUB, ZATO_NONE
 from zato.common.exception import Forbidden, NotFound, ServiceUnavailable
 from zato.common.odb.query_ps_publish import get_topic_depth, incr_topic_depth, insert_queue_messages, insert_topic_messages, \
      update_publish_metadata
@@ -58,14 +58,20 @@ class Publish(AdminService):
 
 # ################################################################################################################################
 
-    def _get_message(self, topic, input, now, pattern_matched, endpoint_id, _initialized=_initialized):
+    def _get_message(self, topic, input, now, pattern_matched, endpoint_id, _initialized=_initialized, _zato_none=ZATO_NONE):
 
         priority = get_priority(self.cid, input)
         expiration = get_expiration(self.cid, input)
         expiration_time = now + (expiration * 1000)
 
         pub_msg_id = input.get('msg_id', '').encode('utf8') or new_msg_id()
-        has_gd = input['has_gd'] if isinstance(input.get('has_gd'), bool) else topic.has_gd
+
+        has_gd = input.get('has_gd', _zato_none)
+        if has_gd != _zato_none:
+            if not isinstance(has_gd, bool):
+                raise ValueError('Input has_gd is not a bool (found:`{}`)'.format(repr(has_gd)))
+        else:
+            has_gd = topic.has_gd
 
         pub_correl_id = input.get('correl_id')
         in_reply_to = input.get('in_reply_to')
