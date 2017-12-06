@@ -118,7 +118,7 @@ def add_services(form, req, by_id=False, initial_service=None, api_name='zato.se
 # ################################################################################################################################
 
 def add_pubsub_services(form, req, by_id=False, initial_service=None):
-    return add_services(form, req, by_id, initial_service, 'zato.pubsub.get-hook-service-list', False)
+    return add_services(form, req, by_id, initial_service, 'zato.pubsub.hook.get-hook-service-list', False)
 
 # ################################################################################################################################
 
