@@ -1352,6 +1352,15 @@ def rbac_role_permission_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
+def cache_by_id(session, cluster_id, cache_id):
+    return session.query(Cache).\
+        filter(Cache.id==cluster_id).\
+        filter(Cluster.id==Cache.cluster_id).\
+        filter(Cache.id==cache_id).\
+        one()
+
+# ################################################################################################################################
+
 def _cache_builtin(session, cluster_id):
     return session.query(CacheBuiltin).\
         filter(Cluster.id==cluster_id).\
