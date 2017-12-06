@@ -279,7 +279,7 @@ class Publish(AdminService):
         # Also in background, notify pub/sub task runners that there are new messages for them
         if subscriptions_by_topic:
             self._notify_pubsub_tasks(
-                topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, len(gd_msg_list) > 1)
+                topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, len(gd_msg_list) > 0)
 
         # Return either a single msg_id if there was only one message published or a list of message IDs,
         # one for each message published.
