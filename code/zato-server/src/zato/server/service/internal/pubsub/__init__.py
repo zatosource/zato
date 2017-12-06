@@ -76,6 +76,7 @@ class AfterPublish(AdminService):
             topic_id = self.request.input.topic_id
             topic_name = self.request.input.topic_name
             non_gd_msg_list = self.request.input.non_gd_msg_list
+            has_gd_msg_list = self.request.input.has_gd_msg_list
 
             # We already know we can store them in RAM
             if not_found:
