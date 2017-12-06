@@ -33,6 +33,7 @@ $(document).ready(function() {
         'delivery_max_retry',
         'wait_sock_err',
         'wait_non_sock_err',
+        'topic_list_text',
     ]);
 })
 
