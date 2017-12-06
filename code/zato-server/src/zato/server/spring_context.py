@@ -97,6 +97,7 @@ class ZatoContext(PythonConfig):
             'zato.server.service.internal.pubsub.cleanup',
             'zato.server.service.internal.pubsub.delivery',
             'zato.server.service.internal.pubsub.endpoint',
+            'zato.server.service.internal.pubsub.hook',
             'zato.server.service.internal.pubsub.message',
             'zato.server.service.internal.pubsub.pubapi',
             'zato.server.service.internal.pubsub.publish',
