@@ -495,7 +495,7 @@ class DependencyScanner(object):
 
             value = item.get(dep_key)
             if value != dep_info.get('empty_value'):
-                dep = self.find({dep_info['dependent_field']: value)
+                dep = self.find({dep_info['dependent_field']: value})
                 if dep is None:
                     key = (dep_info['dependent_type'], item[dep_key])
                     names = self.missing.setdefault(key, [])
