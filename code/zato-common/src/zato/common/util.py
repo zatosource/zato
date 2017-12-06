@@ -1690,3 +1690,25 @@ def get_sa_model_columns(model):
     """ Returns all columns (as string) of an input SQLAlchemy model.
     """
     return [elem.key for elem in model.__table__.columns]
+
+# ################################################################################################################################
+
+def is_class_pubsub_hook(class_):
+    """ Returns True if input class subclasses PubSubHook.
+    """
+    # Imported here to avoid circular dependencies
+    from zato.server.service import PubSubHook
+    return issubclass(class_, PubSubHook) and (not class_ is PubSubHook)
+
+# ################################################################################################################################
+
+def ensure_pubsub_hook_is_valid(self, input, instance, attrs):
+    """ An instance hook that validates if an optional pub/sub hook given on input actually subclasses PubSubHook.
+    """
+    if input.hook_service_id:
+        impl_name = self.server.service_store.id_to_impl_name[input.hook_service_id]
+        details = self.server.service_store.services[impl_name]
+        if not is_class_pubsub_hook(details['service_class']):
+            raise ValueError('Service `{}` is not a PubSubHook subclass'.format(details['name']))
+
+# ################################################################################################################################

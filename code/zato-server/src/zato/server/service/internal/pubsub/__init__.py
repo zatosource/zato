@@ -14,9 +14,10 @@ from traceback import format_exc
 
 # Zato
 from zato.common import PUBSUB
+from zato.common.util import is_class_pubsub_hook
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
 from zato.common.odb.query import pubsub_hook_service
-from zato.server.service import AsIs, List, ListOfDicts, Opaque
+from zato.server.service import AsIs, List, ListOfDicts, Opaque, PubSubHook
 from zato.server.service.internal import AdminService, AdminSIO
 
 endpoint_type_service = {
@@ -257,15 +258,37 @@ class GetHookService(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'endpoint_id', 'hook_type')
-        output_optional = ('service_id', 'service_name')
+        output_optional = ('id', 'name')
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            result = pubsub_hook_service(session, self.request.input.cluster_id, self.request.input.endpoint_id,
+            self.response.payload = pubsub_hook_service(session, self.request.input.cluster_id, self.request.input.endpoint_id,
                 hook_type_model[self.request.input.hook_type])
 
-            if result:
-                self.response.payload.service_id = result.service_id
-                self.response.payload.service_name = result.service_name
+# ################################################################################################################################
+
+class GetHookServiceList(AdminService):
+    """ Returns a list of pub/sub hook services currently deployed on this server.
+    """
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id',)
+        output_optional = ('id', 'name')
+        output_repeated = True
+        request_elem = 'zato_pubsub_get_hook_service_list_request'
+        response_elem = 'zato_pubsub_get_hook_service_list_response'
+
+    def handle(self):
+        out = []
+
+        for impl_name, details in self.server.service_store.services.iteritems():
+
+            if is_class_pubsub_hook(details['service_class']):
+                service_id = self.server.service_store.impl_name_to_id[impl_name]
+                out.append({
+                    'id': service_id,
+                    'name': details['name'],
+                })
+
+        self.response.payload[:] = out
 
 # ################################################################################################################################

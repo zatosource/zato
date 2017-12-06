@@ -912,3 +912,7 @@ class Service(object):
             service._init(channel_type==http_soap)
 
 # ################################################################################################################################
+
+class PubSubHook(Service):
+    """ Subclasses of this class may act as pub/sub hooks.
+    """
