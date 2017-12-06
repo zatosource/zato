@@ -192,6 +192,8 @@ class APISpec(object):
             for elem in elems:
                 if 'service-details-header' in elem.id or 'current-item' in elem.class_name:
                     self._toggle(None, '#{}'.format(elem.id))
+            # Prevent href="#" navigation causing browser to scroll to top of page.
+            e.preventDefault()
         return _toggle
 
 # ################################################################################################################################
