@@ -75,13 +75,13 @@ class PubSubHookDemo(PubSubHook):
         """ Invoked for each pub/sub message before it is published to a topic.
         """
         self.logger.info('Demo hook before_publish invoked for pub_msg_id:`%s`, data:`%s`',
-            self.request.input.ctx.msg['pub_msg_id'], self.request.input.ctx.msg['data'])
+            self.request.input.ctx.msg.pub_msg_id, self.request.input.ctx.msg.data)
 
     def before_delivery(self):
         """ Invoked for each pub/sub message before it is delivered to an endpoint.
         """
         self.logger.info('Demo hook before_delivery invoked for pub_msg_id:`%s`, data:`%s`',
-            self.request.input.ctx.msg['pub_msg_id'], self.request.input.ctx.msg['data'])
+            self.request.input.ctx.msg.pub_msg_id, self.request.input.ctx.msg.data)
 
 # ################################################################################################################################
 

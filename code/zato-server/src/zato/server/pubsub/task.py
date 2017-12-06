@@ -24,7 +24,7 @@ from sortedcontainers import SortedList
 # Zato
 from zato.common.time_util import datetime_from_ms
 from zato.common.util import spawn_greenlet
-from zato.server.pubsub import PubSub
+from zato.server.pubsub import Message as _Message, PubSub
 
 # For pyflakes
 PubSub = PubSub
@@ -63,6 +63,7 @@ class DeliveryTask(object):
         """
         for msg in self.delivery_list:
             try:
+                logger.warn('111 %s', msg)
                 self.deliver_pubsub_msg_cb(msg)
 
             except Exception, e:
@@ -133,10 +134,30 @@ class DeliveryTask(object):
 
 # ################################################################################################################################
 
-class Message(object):
+class Message(_Message):
     """ Wrapper for messages adding __cmp__ which uses a custom comparison protocol,
     by priority, then ext_pub_time, then pub_time.
     """
+    __slots__ = ('sub_key', 'pub_msg_id', 'pub_correl_id', 'in_reply_to', 'ext_client_id', 'group_id', 'position_in_group',
+        'pub_time', 'data', 'mime_type', 'priority', 'expiration', 'expiration_time', 'has_gd')
+
+    def __init__(self):
+        self.sub_key = None
+        self.pub_msg_id = None
+        self.pub_correl_id = None
+        self.in_reply_to = None
+        self.ext_client_id = None
+        self.group_id = None
+        self.position_in_group = None
+        self.pub_time = None
+        self.ext_pub_time = None
+        self.data = None
+        self.mime_type = None
+        self.priority = None
+        self.expiration = None
+        self.expiration_time = None
+        self.has_gd = None
+
     def __cmp__(self, other, max_pri=9):
         return cmp(
             (max_pri - self.priority, self.ext_pub_time, self.pub_time),
@@ -146,12 +167,6 @@ class Message(object):
     def __repr__(self):
         return '<Msg sk:{} id:{} ext:{} exp:{} gd:{}>'.format(
             self.sub_key, self.pub_msg_id, self.ext_client_id, datetime_from_ms(self.expiration_time), self.has_gd)
-
-    def to_dict(self):
-        return {
-            'pub_msg_id': self.pub_msg_id,
-            'has_gd': self.has_gd,
-        }
 
 # ################################################################################################################################
 
