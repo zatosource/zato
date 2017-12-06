@@ -208,7 +208,7 @@
         <input type="hidden" id="cluster_id" value="{{ cluster_id }}" />
     {% endif %}
 
-        <div id="docs-data" style="display:none">{{ response_inner }}</div>
+        <script id="docs-data" language="text/plain">{{ response_inner|safe }}</script>
 
         <div id="markup">
             <table id="data-table" style="border:none">
