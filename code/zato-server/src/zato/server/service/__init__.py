@@ -30,7 +30,7 @@ from gevent import Timeout, spawn
 
 # Zato
 from zato.bunch import Bunch
-from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, ZatoException
+from zato.common import BROKER, CHANNEL, DATA_FORMAT, Inactive, KVDB, PARAMS_PRIORITY, PUBSUB, ZatoException, zato_no_op_marker
 from zato.common.broker_message import SERVICE
 from zato.common.exception import Reportable
 from zato.common.nav import DictNav, ListNav
@@ -79,11 +79,6 @@ Bool = Boolean
 Int = Integer
 
 # ################################################################################################################################
-
-# Hook methods whose func.im_func.func_defaults contains this argument will be assumed to have not been overridden by users
-# and ServiceStore will be allowed to override them with None so that they will not be called in Service.update_handle
-# which significantly improves performance (~30%).
-zato_no_op_marker = 'zato_no_op_marker'
 
 before_job_hooks = ('before_job', 'before_one_time_job', 'before_interval_based_job', 'before_cron_style_job')
 after_job_hooks = ('after_job', 'after_one_time_job', 'after_interval_based_job', 'after_cron_style_job')
@@ -917,4 +912,17 @@ class PubSubHook(Service):
     """ Subclasses of this class may act as pub/sub hooks.
     """
     class SimpleIO:
+        input_required = (Opaque('ctx'),)
         output_optional = (Bool('skip_msg'), Bool('delete_msg'))
+
+    def handle(self, _pub=PUBSUB.HOOK_TYPE.PUB):
+        func = self.before_publish if self.request.input.ctx.hook_type == _pub else self.before_delivery
+        func()
+
+    def before_publish(self, _zato_no_op_marker=zato_no_op_marker):
+        """ Invoked for each pub/sub message before it is published to a topic.
+        """
+
+    def before_delivery(self, _zato_no_op_marker=zato_no_op_marker):
+        """ Invoked for each pub/sub message before it is delivered to an endpoint.
+        """

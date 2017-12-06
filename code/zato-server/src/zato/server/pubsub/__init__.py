@@ -28,13 +28,20 @@ from zato.common.odb.model import WebSocketClientPubSubKeys
 from zato.common.odb.query_ps_delivery import confirm_pubsub_msg_delivered as _confirm_pubsub_msg_delivered, \
      get_sql_messages_by_sub_key as _get_sql_messages_by_sub_key
 from zato.common.time_util import utcnow_as_ms
-from zato.common.util import spawn_greenlet
+from zato.common.util import spawn_greenlet, is_func_overridden
 
 # ################################################################################################################################
 
 logger = logging.getLogger('zato_pubsub')
 logger_zato = logging.getLogger('zato')
 logger_overflow = logging.getLogger('zato_pubsub_overflow')
+
+# ################################################################################################################################
+
+hook_type_to_method = {
+    PUBSUB.HOOK_TYPE.PUB: 'before_publish',
+    PUBSUB.HOOK_TYPE.SUB: 'before_delivery',
+}
 
 # ################################################################################################################################
 
@@ -137,7 +144,8 @@ class Topic(object):
         self.has_gd = config.has_gd
         self.gd_depth_check_freq = config.gd_depth_check_freq
         self.gd_depth_check_iter = 0
-        self.hook_service_invoker = config.hook_service_invoker
+        self.before_publish_hook_service_invoker = config.get('before_publish_hook_service_invoker')
+        self.before_delivery_hook_service_invoker = config.get('before_delivery_hook_service_invoker')
 
     def incr_gd_depth_check(self):
         """ Increases counter indicating whether topic's depth should be checked for max_depth reached.
@@ -567,13 +575,22 @@ class PubSub(object):
 # ################################################################################################################################
 
     def get_hook_service_invoker(self, service_name, hook_type):
-        """ Returns a function that will invoke pub/sub hooks.
+        """ Returns a function that will invoke pub/sub hooks or None if a given service does not implement input hook_type.
         """
+        impl_name = self.server.service_store.name_to_impl_name[service_name]
+        service_class = self.server.service_store.service_data(impl_name)['service_class']
+        func_name = hook_type_to_method[hook_type]
+        func = getattr(service_class, func_name)
+
+        # Do not continue if we already know that user did not override the hook method
+        if not is_func_overridden(func):
+            return
+
         def _invoke_hook_service(topic, msg):
             """ A function to invoke pub/sub hook services.
             """
             ctx = HookCtx(hook_type, topic, msg)
-            return self.server.invoke(service_name, ctx, serialize=False).getvalue(serialize=False)['response']
+            return self.server.invoke(service_name, {'ctx':ctx}, serialize=False).getvalue(serialize=False)['response']
 
         return _invoke_hook_service
 
@@ -581,7 +598,10 @@ class PubSub(object):
 
     def _create_topic(self, config):
         if config.hook_service_id:
-            config.hook_service_invoker = self.get_hook_service_invoker(config.hook_service_name, PUBSUB.HOOK_TYPE.PUB)
+            config.before_publish_hook_service_invoker = self.get_hook_service_invoker(
+                config.hook_service_name, PUBSUB.HOOK_TYPE.PUB)
+            config.before_delivery_hook_service_invoker = self.get_hook_service_invoker(
+                config.hook_service_name, PUBSUB.HOOK_TYPE.SUB)
         else:
             config.hook_service_invoker = None
 
