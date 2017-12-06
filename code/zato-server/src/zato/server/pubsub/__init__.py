@@ -160,7 +160,7 @@ class Subscription(object):
 # ################################################################################################################################
 
 class HookCtx(object):
-    def __init__(self, hook_type, msg, topic):
+    def __init__(self, hook_type, topic, msg):
         self.hook_type = hook_type
         self.msg = msg
         self.topic = topic
@@ -573,7 +573,7 @@ class PubSub(object):
             """ A function to invoke pub/sub hook services.
             """
             ctx = HookCtx(hook_type, topic, msg)
-            return self.server.invoke(service_name, ctx)
+            return self.server.invoke(service_name, ctx, serialize=False).getvalue(serialize=False)['response']
 
         return _invoke_hook_service
 

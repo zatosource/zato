@@ -109,13 +109,23 @@ class Publish(AdminService):
             'position_in_group': input.get('position_in_group') or None,
         }
 
+        # Invoke hook service here because it may want to update data in which case
+        # we need to take it into account below.
+        if topic.hook_service_invoker:
+            response = topic.hook_service_invoker(topic, ps_msg)
+
+            # Hook service decided that we should not process this message
+            if response['skip_msg']:
+                logger_audit.info('Skipping message pub_msg_id:`%s`, pub_correl_id:`%s`, ext_client_id:`%s`',
+                    ps_msg.get('pub_msg_id'), ps_msg.get('pub_correl_id'), ps_msg.get('ext_client_id'))
+                return
+            else:
+                ps_msg['size'] = len(ps_msg['data'])
+
         # These are needed only for GD messages that are stored in SQL
         if has_gd:
             ps_msg['data_prefix'] = input['data'][:2048].encode('utf8')
             ps_msg['data_prefix_short'] = input['data'][:64].encode('utf8')
-
-        if topic.hook_service_invoker:
-            topic.hook_service_invoker(topic, ps_msg)
 
         return ps_msg
 
@@ -135,12 +145,14 @@ class Publish(AdminService):
         if data_list and isinstance(data_list, (list, tuple)):
             for elem in data_list:
                 msg = self._get_message(topic, elem, now, pattern_matched, endpoint_id)
-                msg_id_list.append(msg['pub_msg_id'])
-                gd_msg_list.append(msg) if msg['has_gd'] else non_gd_msg_list.append(msg)
+                if msg:
+                    msg_id_list.append(msg['pub_msg_id'])
+                    gd_msg_list.append(msg) if msg['has_gd'] else non_gd_msg_list.append(msg)
         else:
             msg = self._get_message(topic, input, now, pattern_matched, endpoint_id)
-            msg_id_list.append(msg['pub_msg_id'])
-            gd_msg_list.append(msg) if msg['has_gd'] else non_gd_msg_list.append(msg)
+            if msg:
+                msg_id_list.append(msg['pub_msg_id'])
+                gd_msg_list.append(msg) if msg['has_gd'] else non_gd_msg_list.append(msg)
 
         return msg_id_list, gd_msg_list, non_gd_msg_list
 
@@ -219,6 +231,9 @@ class Publish(AdminService):
         msg_id_list, gd_msg_list, non_gd_msg_list = self._get_messages_from_data(
             topic, data_list, input, now, pattern_matched, endpoint_id)
 
+        len_gd_msg_list = len(gd_msg_list)
+        has_gd_msg_list = bool(len_gd_msg_list)
+
         # Get all subscribers for that topic from local worker store
         subscriptions_by_topic = pubsub.get_subscriptions_by_topic(input.topic_name)
 
@@ -233,13 +248,11 @@ class Publish(AdminService):
         # This is initially unknown and will be set only for GD messages
         current_depth = 'n/a'
 
-        # Operate under a global lock for that topic to rule out any interference from other publishers
-        with self.lock('zato.pubsub.publish.%s' % input.topic_name):
+        # We don't always have GD messages on input so there is no point in running an SQL transaction otherwise.
+        if has_gd_msg_list:
 
-            # We don't always have GD messages on input so there is no point in running an SQL transaction otherwise.
-            if gd_msg_list:
-
-                len_gd_msg_list = len(gd_msg_list)
+            # Operate under a global lock for that topic to rule out any interference from other publishers
+            with self.lock('zato.pubsub.publish.%s' % input.topic_name):
 
                 with closing(self.odb.session()) as session:
 
@@ -275,24 +288,28 @@ class Publish(AdminService):
                     # Update metadata in background
                     spawn(self._update_pub_metadata, cluster_id, topic.id, endpoint_id, now, gd_msg_list, pattern_matched)
 
-            # Either commit succeeded or there were no GD messages on input but in both cases we can now,
-            # optionally, store data in pub/sub audit log.
-            if has_pubsub_audit_log:
+        # Either commit succeeded or there were no GD messages on input but in both cases we can now,
+        # optionally, store data in pub/sub audit log.
+        if has_pubsub_audit_log:
 
-                msg = 'PUB. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' \
-                      ', GD data:`%s`, non-GD data:`%s`'
+            msg = 'PUB. CID:`%s`, topic:`%s`, from:`%s`, ext_client_id:`%s`, pattern:`%s`, new_depth:`%s`' \
+                  ', GD data:`%s`, non-GD data:`%s`'
 
-                logger_audit.info(msg, self.cid, topic.name, self.pubsub.endpoints[endpoint_id].name,
-                    input.get('ext_client_id') or'n/a', pattern_matched, current_depth, gd_msg_list, non_gd_msg_list)
+            logger_audit.info(msg, self.cid, topic.name, self.pubsub.endpoints[endpoint_id].name,
+                input.get('ext_client_id') or'n/a', pattern_matched, current_depth, gd_msg_list, non_gd_msg_list)
 
         # Also in background, notify pub/sub task runners that there are new messages for them
         if subscriptions_by_topic:
-            self._notify_pubsub_tasks(
-                topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, len(gd_msg_list) > 0)
+
+            # Do not notify anything if there are no messages available - this is possible because,
+            # for instance, we had a list of messages on input but a hook service filtered them out.
+            if non_gd_msg_list or has_gd_msg_list:
+                self._notify_pubsub_tasks(
+                    topic.id, topic.name, subscriptions_by_topic, non_gd_msg_list, has_gd_msg_list)
 
         # Return either a single msg_id if there was only one message published or a list of message IDs,
         # one for each message published.
-        len_msg_list = len(gd_msg_list) + len(non_gd_msg_list)
+        len_msg_list = len_gd_msg_list + len(non_gd_msg_list)
 
         if len_msg_list == 1:
             self.response.payload.msg_id = msg_id_list[0]
