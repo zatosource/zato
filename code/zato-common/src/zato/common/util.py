@@ -1685,3 +1685,8 @@ def parse_cmd_line_options(argv):
     return parse_extra_into_dict(options)
 
 # ################################################################################################################################
+
+def get_sa_model_columns(model):
+    """ Returns all columns (as string) of an input SQLAlchemy model.
+    """
+    return [elem.key for elem in model.__table__.columns]

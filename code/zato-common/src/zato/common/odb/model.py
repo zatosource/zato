@@ -2210,9 +2210,6 @@ class PubSubSubscription(Base):
     deliver_by = Column(Text, nullable=True) # Delivery order, e.g. by priority, date etc.
     ext_client_id = Column(Text, nullable=True) # Subscriber's ID as it is stored by that external system
 
-    # Current PID of a server that runs a delivery task for this subscription (for non-WSX endpoint types)
-    server_pid = Column(Integer, nullable=True)
-
     is_durable = Column(Boolean(), nullable=False, default=True) # For now always True = survives cluster restarts
     has_gd = Column(Boolean(), nullable=False) # Guaranteed delivery
 

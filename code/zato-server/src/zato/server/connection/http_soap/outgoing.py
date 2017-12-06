@@ -53,7 +53,7 @@ class BaseHTTPSOAPWrapper(object):
     """
     def __init__(self, config, requests_module=None):
         self.config = config
-        #self.config['timeout'] = float(self.config['timeout'])
+        self.config['timeout'] = float(self.config['timeout']) if self.config['timeout'] else 0
         self.config_no_sensitive = deepcopy(self.config)
         self.config_no_sensitive['password'] = '***'
         self.requests_module = requests_module or requests

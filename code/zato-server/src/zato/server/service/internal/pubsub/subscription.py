@@ -18,11 +18,13 @@ from bunch import Bunch
 from zato.common import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.common.exception import BadRequest, NotFound, Forbidden, PubSubSubscriptionExists
+from zato.common.odb.model import PubSubSubscription
 from zato.common.odb.query_ps_subscribe import add_subscription, add_wsx_subscription, has_subscription, \
      move_messages_to_sub_queue
 from zato.common.odb.query_ps_subscription import pubsub_subscription_list_by_endpoint_id
 from zato.common.pubsub import new_sub_key
 from zato.common.time_util import utcnow_as_ms
+from zato.common.util import get_sa_model_columns
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic
 from zato.server.service import AsIs, Bool, Int, Opaque
@@ -37,9 +39,7 @@ WebSocket = WebSocket
 
 # ################################################################################################################################
 
-sub_broker_attrs = ('active_status', 'active_status', 'cluster_id', 'creation_time', 'endpoint_id', 'has_gd', 'id', 'is_durable',
-    'is_internal', 'name', 'out_amqp_id', 'out_http_soap_id', 'sub_key', 'topic_id', 'ws_channel_id','ws_sub_id',
-    'delivery_batch_size')
+sub_broker_attrs = get_sa_model_columns(PubSubSubscription)
 
 # ################################################################################################################################
 
