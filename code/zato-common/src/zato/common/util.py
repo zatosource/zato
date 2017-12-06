@@ -31,6 +31,7 @@ from datetime import datetime, timedelta
 from glob import glob
 from hashlib import sha256
 from importlib import import_module
+from inspect import ismethod
 from itertools import ifilter, izip, izip_longest, tee
 from operator import itemgetter
 from os import getuid
@@ -108,7 +109,8 @@ from validate import is_boolean, is_integer, VdtTypeError
 
 # Zato
 from zato.common import CHANNEL, CLI_ARG_SEP, curdir as common_curdir, DATA_FORMAT, engine_def, engine_def_sqlite, KVDB, MISC, \
-     SECRET_SHADOW, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, ZATO_NOT_GIVEN, ZMQ
+     SECRET_SHADOW, SIMPLE_IO, soap_body_path, soap_body_xpath, TLS, TRACE1, ZatoException, zato_no_op_marker, ZATO_NOT_GIVEN, \
+     ZMQ
 from zato.common.broker_message import SERVICE
 from zato.common.crypto import CryptoManager
 from zato.common.odb.model import HTTPBasicAuth, HTTPSOAP, IntervalBasedJob, Job, Server, Service
@@ -1710,5 +1712,21 @@ def ensure_pubsub_hook_is_valid(self, input, instance, attrs):
         details = self.server.service_store.services[impl_name]
         if not is_class_pubsub_hook(details['service_class']):
             raise ValueError('Service `{}` is not a PubSubHook subclass'.format(details['name']))
+
+# ################################################################################################################################
+
+def is_func_overridden(func):
+    """ Returns True if input func was overridden by user in a subclass - used to decide
+    whether users implemented a given hook. If there is a special internal marker in input arguments,
+    it means that it is an internal function from parent class, not a user-defined one.
+    """
+    if func and ismethod(func):
+        func_defaults = func.im_func.func_defaults
+
+        # Only internally defined methods will fullfil these conditions that they have default arguments
+        # and one of them is our no-op marker, hence if we negate it and the result is True,
+        # it means it must have been a user-defined method.
+        if not (func_defaults and isinstance(func_defaults, tuple) and zato_no_op_marker in func_defaults):
+            return True
 
 # ################################################################################################################################

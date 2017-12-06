@@ -111,8 +111,8 @@ class Publish(AdminService):
 
         # Invoke hook service here because it may want to update data in which case
         # we need to take it into account below.
-        if topic.hook_service_invoker:
-            response = topic.hook_service_invoker(topic, ps_msg)
+        if topic.before_publish_hook_service_invoker:
+            response = topic.before_publish_hook_service_invoker(topic, ps_msg)
 
             # Hook service decided that we should not process this message
             if response['skip_msg']:

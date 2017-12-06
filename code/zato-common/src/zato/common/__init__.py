@@ -120,6 +120,11 @@ zato_details_xpath = etree.XPath(zato_details_path, namespaces=common_namespaces
 
 megabyte = 10 ** 6
 
+# Hook methods whose func.im_func.func_defaults contains this argument will be assumed to have not been overridden by users
+# and ServiceStore will be allowed to override them with None so that they will not be called in Service.update_handle
+# which significantly improves performance (~30%).
+zato_no_op_marker = 'zato_no_op_marker'
+
 SECRET_SHADOW = '******'
 
 # TRACE1 logging level, even more details than DEBUG
