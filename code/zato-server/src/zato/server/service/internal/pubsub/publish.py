@@ -26,7 +26,7 @@ from zato.common.odb.query_ps_publish import get_topic_depth, incr_topic_depth, 
      update_publish_metadata
 from zato.common.pubsub import new_msg_id
 from zato.common.time_util import datetime_to_ms, utcnow_as_ms
-from zato.server.pubsub import get_expiration, get_priority, PubSub, Topic
+from zato.server.pubsub import get_expiration, get_priority, Message, PubSub, Topic
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService
 
@@ -86,28 +86,28 @@ class Publish(AdminService):
         in_reply_to = in_reply_to.encode('utf8') if in_reply_to else None
         ext_client_id = ext_client_id.encode('utf8') if ext_client_id else None
 
-        ps_msg = {
-            'pub_msg_id': pub_msg_id,
-            'pub_correl_id': pub_correl_id,
-            'in_reply_to': in_reply_to,
-            'pub_time': now,
-            'delivery_status': _initialized,
-            'pattern_matched': pattern_matched,
-            'data': input['data'].encode('utf8'),
-            'mime_type': input.get('mime_type', 'text/plain'),
-            'size': len(input['data']),
-            'priority': priority,
-            'expiration': expiration,
-            'expiration_time': expiration_time,
-            'published_by_id': endpoint_id,
-            'topic_id': topic.id,
-            'cluster_id': self.server.cluster_id,
-            'has_gd': has_gd,
-            'ext_client_id': ext_client_id,
-            'ext_pub_time': ext_pub_time,
-            'group_id': input.get('group_id') or None,
-            'position_in_group': input.get('position_in_group') or None,
-        }
+        ps_msg = Message()
+        ps_msg.topic = topic
+        ps_msg.pub_msg_id = pub_msg_id
+        ps_msg.pub_correl_id = pub_correl_id
+        ps_msg.in_reply_to = in_reply_to
+        ps_msg.pub_time = now
+        ps_msg.delivery_status = _initialized
+        ps_msg.pattern_matched = pattern_matched
+        ps_msg.data = input['data'].encode('utf8')
+        ps_msg.mime_type = input.get('mime_type', 'text/plain')
+        ps_msg.size = len(input['data'])
+        ps_msg.priority = priority
+        ps_msg.expiration = expiration
+        ps_msg.expiration_time = expiration_time
+        ps_msg.published_by_id = endpoint_id
+        ps_msg.topic_id = topic.id
+        ps_msg.cluster_id = self.server.cluster_id
+        ps_msg.has_gd = has_gd
+        ps_msg.ext_client_id = ext_client_id
+        ps_msg.ext_pub_time = ext_pub_time
+        ps_msg.group_id = input.get('group_id') or None
+        ps_msg.position_in_group = input.get('position_in_group') or None
 
         # Invoke hook service here because it may want to update data in which case
         # we need to take it into account below.
@@ -117,15 +117,15 @@ class Publish(AdminService):
             # Hook service decided that we should not process this message
             if response['skip_msg']:
                 logger_audit.info('Skipping message pub_msg_id:`%s`, pub_correl_id:`%s`, ext_client_id:`%s`',
-                    ps_msg.get('pub_msg_id'), ps_msg.get('pub_correl_id'), ps_msg.get('ext_client_id'))
+                    ps_msg.pub_msg_id, ps_msg.pub_correl_id, ps_msg.ext_client_id)
                 return
             else:
-                ps_msg['size'] = len(ps_msg['data'])
+                ps_msg.size = len(ps_msg.data)
 
         # These are needed only for GD messages that are stored in SQL
         if has_gd:
-            ps_msg['data_prefix'] = input['data'][:2048].encode('utf8')
-            ps_msg['data_prefix_short'] = input['data'][:64].encode('utf8')
+            ps_msg.data_prefix = ps_msg.data[:2048].encode('utf8')
+            ps_msg.data_prefix_short = ps_msg.data[:64].encode('utf8')
 
         return ps_msg
 
@@ -146,13 +146,15 @@ class Publish(AdminService):
             for elem in data_list:
                 msg = self._get_message(topic, elem, now, pattern_matched, endpoint_id)
                 if msg:
-                    msg_id_list.append(msg['pub_msg_id'])
-                    gd_msg_list.append(msg) if msg['has_gd'] else non_gd_msg_list.append(msg)
+                    msg_id_list.append(msg.pub_msg_id)
+                    msg_as_dict = msg.to_dict()
+                    gd_msg_list.append(msg_as_dict) if msg.has_gd else non_gd_msg_list.append(msg_as_dict)
         else:
             msg = self._get_message(topic, input, now, pattern_matched, endpoint_id)
             if msg:
-                msg_id_list.append(msg['pub_msg_id'])
-                gd_msg_list.append(msg) if msg['has_gd'] else non_gd_msg_list.append(msg)
+                msg_id_list.append(msg.pub_msg_id)
+                msg_as_dict = msg.to_dict()
+                gd_msg_list.append(msg_as_dict) if msg.has_gd else non_gd_msg_list.append(msg_as_dict)
 
         return msg_id_list, gd_msg_list, non_gd_msg_list
 
