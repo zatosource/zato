@@ -422,8 +422,8 @@ class GetEndpointSummaryList(_GetEndpointSummaryBase):
     _filter_by = PubSubEndpoint.name,
 
     class SimpleIO(_GetEndpointSummaryBase.SimpleIO, GetListAdminSIO):
-        request_elem = 'zato_pubsub_subscription_get_endpoint_summary_list_request'
-        response_elem = 'zato_pubsub_subscription_get_endpoint_summary_list_response'
+        request_elem = 'zato_pubsub_endpoint_get_endpoint_summary_list_request'
+        response_elem = 'zato_pubsub_endpoint_get_endpoint_summary_list_response'
 
     def get_data(self, session):
         result = self._search(pubsub_endpoint_summary_list, session, self.request.input.cluster_id, False)

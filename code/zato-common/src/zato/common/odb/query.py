@@ -1133,6 +1133,17 @@ def pubsub_messages_for_queue(session, cluster_id, sub_id, needs_columns=False):
 
 # ################################################################################################################################
 
+def pubsub_hook_service(session, cluster_id, endpoint_id, model_class):
+    return session.query(
+        Service.id.label('service_id'),
+        Service.name.label('service_name'),
+        ).\
+        filter(Cluster.id==Service.cluster_id).\
+        filter(Service.id==model_class.hook_service_id).\
+        first()
+
+# ################################################################################################################################
+
 def _notif_cloud_openstack_swift(session, cluster_id, needs_password):
     """ OpenStack Swift notifications.
     """
