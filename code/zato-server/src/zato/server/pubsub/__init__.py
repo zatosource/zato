@@ -392,6 +392,24 @@ class PubSub(object):
 
         self.in_ram_backlog = InRAMBacklog()
 
+        # Getter methods for each endpoint type that return actual endpoints,
+        # e.g. REST outgoing connections. Values are set by worker store.
+        self.endpoint_getter = {
+            PUBSUB.ENDPOINT_TYPE.AMQP.id:        None,
+            PUBSUB.ENDPOINT_TYPE.FILES.id:       None,
+            PUBSUB.ENDPOINT_TYPE.FTP.id:         None,
+            PUBSUB.ENDPOINT_TYPE.FILES.id:       None,
+            PUBSUB.ENDPOINT_TYPE.FTP.id:         None,
+            PUBSUB.ENDPOINT_TYPE.IMAP.id:        None,
+            PUBSUB.ENDPOINT_TYPE.REST.id:        None,
+            PUBSUB.ENDPOINT_TYPE.SERVICE.id:     None,
+            PUBSUB.ENDPOINT_TYPE.SMS_TWILIO.id:  None,
+            PUBSUB.ENDPOINT_TYPE.SMTP.id:        None,
+            PUBSUB.ENDPOINT_TYPE.SOAP.id:        None,
+            PUBSUB.ENDPOINT_TYPE.SQL.id:         None,
+            PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: None,
+        }
+
 # ################################################################################################################################
 
     def get_subscriptions_by_topic(self, topic_name):
@@ -793,5 +811,12 @@ class PubSub(object):
         """ Adds a mapping between a sub_key and pubsub_tool handling its messages.
         """
         self.pubsub_tool_by_sub_key[sub_key] = pubsub_tool
+
+# ################################################################################################################################
+
+    def get_endpoint_by_sub_key(self, sub_key):
+        """ Returns an endpoint by subscription's sub_key - the object returned is an actual recipient,
+        e.g. an outgoing REST connection.
+        """
 
 # ################################################################################################################################

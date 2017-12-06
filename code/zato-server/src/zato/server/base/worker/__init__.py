@@ -39,7 +39,7 @@ from gunicorn.workers.sync import SyncWorker as GunicornSyncWorker
 from zato.broker import BrokerMessageReceiver
 from zato.bunch import Bunch
 from zato.common import broker_message, CHANNEL, DATA_FORMAT, HTTP_SOAP_SERIALIZATION_TYPE, IPC, KVDB, MSG_PATTERN_TYPE, NOTIF, \
-     SEC_DEF_TYPE, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
+     PUBSUB, SEC_DEF_TYPE, simple_types, TRACE1, ZATO_NONE, ZATO_ODB_POOL_NAME, ZMQ
 from zato.common.broker_message import code_to_name, SERVICE
 from zato.common.dispatch import dispatcher
 from zato.common.match import Matcher
@@ -396,8 +396,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def yield_outconn_http_config_dicts(self):
         for transport in('soap', 'plain_http'):
             config_dict = getattr(self.worker_config, 'out_' + transport)
-            for name in config_dict:
-                yield config_dict[name]
+            for name in config_dict.keys(): # Must use .keys() explicitly so that config_dict can be changed during iteration
+                yield config_dict, config_dict[name]
 
 # ################################################################################################################################
 
@@ -428,12 +428,15 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
     def init_http_soap(self):
         """ Initializes plain HTTP/SOAP connections.
         """
-        for config_dict in self.yield_outconn_http_config_dicts():
-            wrapper = self._http_soap_wrapper_from_config(config_dict.config)
-            config_dict.conn = wrapper
+        for config_dict, config_data in self.yield_outconn_http_config_dicts():
+            wrapper = self._http_soap_wrapper_from_config(config_data.config)
+            config_data.conn = wrapper
 
             # To make the API consistent with that of SQL connection pools
-            config_dict.ping = wrapper.ping
+            config_data.ping = wrapper.ping
+
+            # Store ID -> name mapping
+            config_dict.set_key_id_data(config_data.config)
 
     def init_cloud(self):
         """ Initializes all the cloud connections.
@@ -742,7 +745,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 # ################################################################################################################################
 
     def init_pubsub(self):
-
+        """ Sets up all pub/sub endpoints, subscriptions and topics. Also, configures pubsub with getters for each endpoint type.
+        """
         for value in self.worker_config.pubsub_endpoint.values():
             self.pubsub.create_endpoint(bunchify(value['config']))
 
@@ -751,6 +755,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
 
         for value in self.worker_config.pubsub_topic.values():
             self.pubsub.create_topic(bunchify(value['config']))
+
+        self.pubsub.endpoint_getter[PUBSUB.ENDPOINT_TYPE.REST.id] = self.worker_config.out_plain_http.get_by_id
+        self.pubsub.endpoint_getter[PUBSUB.ENDPOINT_TYPE.SOAP.id] = self.worker_config.out_soap.get_by_id
 
 # ################################################################################################################################
 
@@ -1446,6 +1453,9 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         config_dict[msg['name']].config = msg
         config_dict[msg['name']].conn = wrapper
         config_dict[msg['name']].ping = wrapper.ping # (just like in self.init_http)
+
+        # Store mapping of ID -> name
+        config_dict.set_key_id_data(msg)
 
     def on_broker_msg_OUTGOING_HTTP_SOAP_DELETE(self, msg, *args):
         """ Deletes an outgoing HTTP/SOAP connection (actually delegates the

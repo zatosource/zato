@@ -896,3 +896,4 @@ $.fn.zato.empty_value = '<span class="form_hint">---</span>';
 
 window.zato_select_data_target = null;
 window.zato_select_data_target_items = {};
+window.zato_dyn_form_skip_edit = null;

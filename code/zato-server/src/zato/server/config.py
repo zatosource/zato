@@ -91,6 +91,17 @@ class ConfigDict(object):
         with self.lock:
             return self._impl.items()
 
+    def get_by_id(self, key_id, default=None):
+        with self.lock:
+            key = self._impl.get('_zato_id_%s' % key_id)
+            return self._impl.get(key, default)
+
+    def set_key_id_data(self, config):
+        with self.lock:
+            key_id = config['id']
+            key = config['name']
+            self._impl['_zato_id_%s' % key_id] = key
+
     def copy(self):
         """ Returns a new instance of ConfigDict with items copied over from self.
         """
