@@ -71,12 +71,11 @@ class DeliveryTask(object):
                 return
 
             except Exception, e:
-                logger.warn('Could not deliver pub/sub message, e:`%s`', format_exc(e))
-
                 # Do not attempt to deliver any other message, simply return and our
                 # parent will sleep for a small amount of time and then re-run us,
                 # thanks to which the next time we run we will again iterate over all the messages
-                # currently queued up
+                # currently queued up.
+                logger.warn('Could not deliver pub/sub message, e:`%s`', format_exc(e))
                 return
 
             else:
