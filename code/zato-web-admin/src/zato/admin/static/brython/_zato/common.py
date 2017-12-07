@@ -157,7 +157,11 @@ class DynFormHandler(object):
                     # This is not necessarily an error - it may happen if a single row contains multiple elements.
                     pass
                 else:
-                    field.set_value('')
+                    # Do not override fields that perhaps already have default values
+                    if field_id in window.zato_dyn_form_skip_clear_field:
+                        continue
+                    else:
+                        field.set_value('')
 
 # ################################################################################################################################
 

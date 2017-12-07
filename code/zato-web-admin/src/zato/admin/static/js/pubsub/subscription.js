@@ -46,6 +46,13 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 
     if(endpoint_type == 'rest' || endpoint_type == 'soap') {
         var delivery_method = $('#id_' + prefix + 'delivery_method').val();
+        var out_http_method = $('#id_' + prefix + 'out_http_method');
+
+        if(!out_http_method.val()) {
+            form.data('bValidator').showMsg(out_http_method, 'This is a required field');
+            return false;
+        }
+
     }
 
     if(endpoint_type == 'rest') {
@@ -56,7 +63,7 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
             if(!out_rest_http_soap_id.val() && !rest_delivery_endpoint.val()) {
                 form.data('bValidator').showMsg(out_rest_http_soap_id,
                     'Either REST outconn or REST callback are required if delivery method is Notify');
-            return false;
+                return false;
             }
         }
     }

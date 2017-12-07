@@ -90,7 +90,7 @@ class _CreateEdit(CreateEdit):
             'delivery_err_should_block', 'wait_sock_err', 'wait_non_sock_err', 'topic_list_text', 'amqp_exchange',
             'amqp_routing_key', 'files_directory_list', 'ftp_directory_list', 'out_rest_http_soap_id', 'rest_delivery_endpoint',
             'service_id', 'sms_twilio_from', 'sms_twilio_to_list', 'smtp_is_html', 'smtp_subject', 'smtp_from', 'smtp_to_list',
-            'smtp_body', 'out_soap_http_soap_id', 'soap_delivery_endpoint')
+            'smtp_body', 'out_soap_http_soap_id', 'soap_delivery_endpoint', 'out_http_method')
         output_required = ('id',)
 
     def post_process_return_data(self, return_data):

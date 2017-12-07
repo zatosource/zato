@@ -2250,6 +2250,9 @@ class PubSubSubscription(Base):
     # A hook service invoked before messages are delivered for this specific subscription
     hook_service_id = Column(Integer, ForeignKey('service.id', ondelete='CASCADE'), nullable=True)
 
+    # REST/POST
+    out_http_method = Column(Text, nullable=True, default='POST') # E.g. POST or PATCH
+
     # AMQP
     amqp_exchange = Column(Text, nullable=True)
     amqp_routing_key = Column(Text, nullable=True)
