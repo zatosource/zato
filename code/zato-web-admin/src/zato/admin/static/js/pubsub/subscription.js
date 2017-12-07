@@ -44,7 +44,7 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
     var prefix = is_edit ? 'edit-' : '';
     var endpoint_type = $('#id_' + prefix + 'endpoint_type').val();
 
-    if(endpoint_type == 'rest' || endpoint_type == 'rest') {
+    if(endpoint_type == 'rest' || endpoint_type == 'soap') {
         var delivery_method = $('#id_' + prefix + 'delivery_method').val();
     }
 
