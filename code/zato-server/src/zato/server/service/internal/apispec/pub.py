@@ -40,6 +40,8 @@ class Main(_Base):
     def filter_services(self, matcher, services):
         return [svc for svc in services if matcher.is_allowed(svc['name'])]
 
+# ################################################################################################################################
+
     def get_filtered_apispec_response(self):
         """Return zato.apispec.get-api-spec response filtered according to apispec_services_allowed config."""
         matcher = Matcher()
@@ -56,6 +58,8 @@ class Main(_Base):
                 del response['namespaces'][namespace]
 
         return json.dumps(response)
+
+# ################################################################################################################################
 
     def handle(self):
         replace_with = {
