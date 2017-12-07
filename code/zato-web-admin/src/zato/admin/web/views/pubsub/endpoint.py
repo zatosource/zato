@@ -22,7 +22,8 @@ from django.http import HttpResponse, HttpResponseServerError
 
 # Zato
 from zato.admin.web import from_utc_to_user
-from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm, EndpointQueueEditForm
+from zato.admin.web.forms.pubsub.endpoint import CreateForm, EditForm
+from zato.admin.web.forms.pubsub.subscription import EditForm as EditSubscriptionForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, method_allowed, slugify
 from zato.admin.web.views.pubsub import get_client_html
 from zato.common import ZATO_NONE
@@ -211,7 +212,6 @@ class _EndpointObjects(_Index):
                     'cluster_id':self.req.zato.cluster_id,
                     'id':self.input.endpoint_id,
                 }).data.response.name,
-            'edit_form': EndpointQueueEditForm(),
         }
 
 # ################################################################################################################################
@@ -251,6 +251,16 @@ class EndpointQueues(_EndpointObjects):
         if item.last_interaction_time:
             item.last_interaction_time = from_utc_to_user(item.last_interaction_time+'+00:00', self.req.zato.user_profile)
         return item
+
+    def handle(self):
+        out = super(EndpointQueues, self).handle()
+
+        data_list = Bunch()
+        data_list.service_list = []
+
+        out['edit_form'] = EditSubscriptionForm(self.req, data_list, prefix='edit')
+
+        return out
 
 # ################################################################################################################################
 
