@@ -62,7 +62,7 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 
             if(!out_rest_http_soap_id.val() && !rest_delivery_endpoint.val()) {
                 form.data('bValidator').showMsg(out_rest_http_soap_id,
-                    'Either REST outconn or REST callback are required if delivery method is Notify');
+                    'This is a required field');
                 return false;
             }
         }
@@ -75,7 +75,7 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
 
             if(!out_rest_http_soap_id.val() && !soap_delivery_endpoint.val()) {
                 form.data('bValidator').showMsg(out_soap_http_soap_id,
-                    'Either SOAP outconn or SOAP callback are required if delivery method is Notify');
+                    'This is a required field');
                 return false;
             }
         }
