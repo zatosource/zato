@@ -61,6 +61,7 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.smtp_body,
 
         PubSubSubscription.out_http_soap_id,
+        PubSubSubscription.out_http_method,
         PubSubSubscription.delivery_endpoint,
 
         PubSubSubscription.ws_sub_id,

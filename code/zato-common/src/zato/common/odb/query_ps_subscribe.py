@@ -84,6 +84,7 @@ def add_subscription(session, cluster_id, ctx):
     # REST/SOAP
     ps_sub.security_id = ctx.security_id
     ps_sub.out_http_soap_id = ctx.out_http_soap_id
+    ps_sub.out_http_method = ctx.out_http_method
 
     # Services
     ps_sub.service_id = ctx.service_id

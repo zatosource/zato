@@ -73,7 +73,7 @@ class DeliverMessage(AdminService):
 
     def _deliver_rest_soap(self, msg, subscription, impl_getter):
         endpoint = impl_getter(subscription.config.out_http_soap_id)
-        endpoint.conn.post(self.cid, data=msg.data)
+        endpoint.conn.http_request(subscription.config.out_http_method, self.cid, msg.data)
 
 # ################################################################################################################################
 

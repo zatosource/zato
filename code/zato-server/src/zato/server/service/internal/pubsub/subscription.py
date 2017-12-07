@@ -68,6 +68,7 @@ class SubCtx(object):
         self.ext_client_id = None
         self.delivery_endpoint = None
         self.out_http_soap_id = None
+        self.out_http_method = None
         self.creation_time = None
         self.sub_key = None
 
@@ -218,8 +219,8 @@ ctx_class = {
 class _Input:
     common = ('is_internal', 'topic_name', 'active_status', 'endpoint_type', 'endpoint_id', 'delivery_method',
         'delivery_data_format', 'delivery_batch_size', Bool('wrap_one_msg_in_list'), 'delivery_max_retry',
-        Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id')
-    amqp = ('amqp_exchange', 'amqp_routing_key')
+        Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id', 'out_http_method',)
+    amqp = ('amqp_exchange', 'amqp_routing_key', 'out_http_method')
     files = ('files_directory_list',)
     ftp = ('ftp_directory_list',)
     pubapi = ('security_id',)

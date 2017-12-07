@@ -20,15 +20,16 @@
     window.zato_dyn_form_default = 'rest';
     window.zato_dyn_form_elem_name = 'endpoint_type';
     window.zato_dyn_form_skip_edit = true;
+    window.zato_dyn_form_skip_clear_field = ['id_out_http_method'];
     window.zato_dyn_form_rows = {
         'amqp': ['out_amqp_id', 'amqp_details'],
         'files': ['files_directory_list'],
         'ftp': ['ftp_directory_list'],
-        'rest': ['out_rest_http_soap_id'],
+        'rest': ['out_rest_http_soap_id', 'out_http_method'],
         'service': ['service_id'],
         'sms_twilio': ['sms_twilio_from', 'sms_twilio_to_list'],
         'smtp': ['out_smtp_id', 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body'],
-        'soap': ['out_soap_http_soap_id'],
+        'soap': ['out_soap_http_soap_id', 'out_http_method'],
     }
 
     window.zato_select_data_target = 'endpoint_id';
@@ -249,6 +250,12 @@
                             <td>{{ create_form.ftp_directory_list }}</td>
                         </tr>
 
+                        {% comment %} --------- REST/SOAP --------- {% endcomment %}
+                        <tr id="dyn_form_row_id_out_http_method" style="display:none">
+                            <td style="vertical-align:middle; width:12%">HTTP method</td>
+                            <td>{{ create_form.out_http_method }}</td>
+                        </tr>
+
                         {% comment %} --------- REST --------- {% endcomment %}
                         <tr id="dyn_form_row_id_out_rest_http_soap_id" style="display:none">
                             <td style="vertical-align:middle; width:12%">REST outconn</td>
@@ -258,7 +265,6 @@
                             <td style="vertical-align:middle; width:12%">REST callback</td>
                             <td>{{ create_form.rest_delivery_endpoint }}</td>
                         </tr>
-
                         {% comment %} --------- Service --------- {% endcomment %}
                         <tr id="dyn_form_row_id_service_id" style="display:none">
                             <td style="vertical-align:middle">Service</td>

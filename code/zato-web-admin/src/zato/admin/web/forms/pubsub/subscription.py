@@ -55,6 +55,7 @@ class CreateForm(forms.Form):
     # REST
     rest_delivery_endpoint = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     out_rest_http_soap_id = forms.ChoiceField(widget=forms.Select())
+    out_http_method = forms.CharField(widget=forms.TextInput(attrs={'style':'width:30%'}))
 
     # SOAP
     soap_delivery_endpoint = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
@@ -112,8 +113,7 @@ class CreateForm(forms.Form):
         self.initial['delivery_max_retry'] = PUBSUB.DEFAULT.DELIVERY_MAX_RETRY
         self.initial['wait_sock_err'] = PUBSUB.DEFAULT.WAIT_TIME_SOCKET_ERROR
         self.initial['wait_non_sock_err'] = PUBSUB.DEFAULT.WAIT_TIME_NON_SOCKET_ERROR
-
-
+        self.initial['out_http_method'] = 'POST'
 
 # ################################################################################################################################
 
