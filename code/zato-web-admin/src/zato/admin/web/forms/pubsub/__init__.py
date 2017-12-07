@@ -12,7 +12,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from django import forms
 
 # Zato
-from zato.admin.web.forms import add_select, add_services
+from zato.admin.web.forms import add_select
 from zato.common import PUBSUB
 
 class MsgForm(forms.Form):
@@ -30,7 +30,6 @@ class MsgPublishForm(MsgForm):
     group_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     msg_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     position_in_group = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%'}))
-    hook_service_name = forms.ChoiceField(widget=forms.Select())
     select_changer_source = forms.CharField(widget=forms.Textarea(attrs={'style':'display:none'}))
 
     def __init__(self, req, select_changer_data, initial_topic_name, topic_list, initial_hook_service_name, publisher_list,
@@ -39,7 +38,6 @@ class MsgPublishForm(MsgForm):
         add_select(self, 'topic_name', topic_list)
         add_select(self, 'publisher_id', publisher_list)
         add_select(self, 'gd', PUBSUB.GD_CHOICE, False)
-        add_services(self, req, initial_service=initial_hook_service_name)
 
         self.initial['topic_name'] = initial_topic_name
         self.initial['select_changer_source'] = select_changer_data
