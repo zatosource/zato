@@ -63,11 +63,12 @@ class Main(_Base):
 
     def handle(self):
         replace_with = {
+            'ZATO_BASE_CSS': pkg_resources.resource_string(__name__, 'data/style.css').decode('utf-8'),
+            'ZATO_CLUSTER_ID': str(self.server.cluster_id),
             'ZATO_DATA': self.get_filtered_apispec_response(),
             'ZATO_LOGO': pkg_resources.resource_string(__name__, 'data/logo.png').encode('base64'),
-            'ZATO_CLUSTER_ID': str(self.server.cluster_id),
-            'ZATO_PUB_NAME': self.server.fs_server_config.apispec.pub_name,
             'ZATO_PUB_CSS_STYLE': self.server.fs_server_config.apispec.pub_css_style,
+            'ZATO_PUB_NAME': self.server.fs_server_config.apispec.pub_name,
         }
 
         page_template = pkg_resources.resource_string(__name__, 'data/index.html').decode('utf-8')
