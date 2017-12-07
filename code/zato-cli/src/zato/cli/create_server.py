@@ -237,6 +237,12 @@ pub_enabled=False
 pub_name=API specification
 pub_css_style="color:#eee; font-weight:bold; font-size:17px; padding-left:2px"
 
+[apispec_services_allowed]
+# By default, public APIspec endpoints only display Zato-internal services
+order=false_true
+*=False
+zato*=True
+
 [os_environ]
 sample_key=sample_value
 """.format(**CONTENT_TYPE).encode('utf-8')
