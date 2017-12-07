@@ -7,6 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
+import json
 
 # pkg_resources
 import pkg_resources
@@ -15,6 +16,7 @@ import pkg_resources
 from paste.util.converters import asbool
 
 # Zato
+from zato.common.match import Matcher
 from zato.common.util import get_brython_js
 from zato.server.connection.http_soap import NotFound
 from zato.server.service import Service
@@ -35,10 +37,29 @@ class _Base(Service):
 class Main(_Base):
     """ Returns public version of API specifications.
     """
-    def handle(self):
+    def filter_services(self, matcher, services):
+        return [svc for svc in services if matcher.is_allowed(svc['name'])]
 
+    def get_filtered_apispec_response(self):
+        """Return zato.apispec.get-api-spec response filtered according to apispec_services_allowed config."""
+        matcher = Matcher()
+        matcher.read_config(self.server.fs_server_config.apispec_services_allowed)
+
+        ns_name = lambda s: s['namespace_name'] + ('.' if s['namespace_name'] else '') + s['name']
+        response = json.loads(self.invoke('zato.apispec.get-api-spec', {'return_internal': True}))
+        response['services'] = self.filter_services(matcher, response['services'])
+
+        # Remove any namespace definitions for which no service matched.
+        for namespace, info in list(response['namespaces'].items()):
+            info['services'] = self.filter_services(matcher, info['services'])
+            if not info['services']:
+                del response['namespaces'][namespace]
+
+        return json.dumps(response)
+
+    def handle(self):
         replace_with = {
-            'ZATO_DATA': self.invoke('zato.apispec.get-api-spec'),
+            'ZATO_DATA': self.get_filtered_apispec_response(),
             'ZATO_LOGO': pkg_resources.resource_string(__name__, 'data/logo.png').encode('base64'),
             'ZATO_CLUSTER_ID': str(self.server.cluster_id),
             'ZATO_PUB_NAME': self.server.fs_server_config.apispec.pub_name,
