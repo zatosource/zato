@@ -2316,6 +2316,9 @@ class PubSubSubscription(Base):
         Cluster, backref=backref('pubsub_sub_list', order_by=id, cascade='all, delete, delete-orphan'))
 
     topic_name = None # Not used by DB
+    total_depth = None # Not used by DB
+    current_depth = None # Not used by DB
+    staging_depth = None # Not used by DB
 
 # ################################################################################################################################
 

@@ -1055,7 +1055,8 @@ def _pubsub_endpoint_queue(session, cluster_id):
 
 # ################################################################################################################################
 
-def pubsub_endpoint_queue_list(session, cluster_id, endpoint_id):
+@query_wrapper
+def pubsub_endpoint_queue_list(session, cluster_id, endpoint_id, needs_columns=False):
     return _pubsub_endpoint_queue(session, cluster_id).\
         filter(PubSubSubscription.endpoint_id==endpoint_id).\
         order_by(PubSubSubscription.last_interaction_time.desc()).\
