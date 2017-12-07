@@ -7,7 +7,7 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 """
 
 from __future__ import absolute_import, division, print_function, unicode_literals
-import json
+import json, re
 
 # pkg_resources
 import pkg_resources
@@ -71,10 +71,8 @@ class Main(_Base):
         }
 
         page_template = pkg_resources.resource_string(__name__, 'data/index.html').decode('utf-8')
-        for k, v in replace_with.items():
-            page_template = page_template.replace(k, v)
-
-        self.response.payload = page_template
+        replace = lambda match: replace_with[match.group(1)]
+        self.response.payload = re.sub('{{([^}]+)}}', replace, page_template)
         self.response.headers['Content-Type'] = 'text/html'
 
 # ################################################################################################################################

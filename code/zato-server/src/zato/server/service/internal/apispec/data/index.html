@@ -199,13 +199,15 @@
 <body onload="brython()">
 
         <div id="hd">
-            <div id="console-header">&nbsp;<img src="data:image/png;charset=utf-8;base64, ZATO_LOGO" alt="Zato samurai helmet logo" style="vertical-align:bottom"/>
+            <div id="console-header">&nbsp;<img src="data:image/png;charset=utf-8;base64, {{ZATO_LOGO}}" alt="Zato samurai helmet logo" style="vertical-align:bottom"/>
             <span id="logo"><a href="https://zato.io/docs">Zato</a></span>
-            <span style="color:#eee; font-weight:bold; font-size:17px; padding-left:2px">ZATO_PUB_NAME</span>
+            <span style="color:#eee; font-weight:bold; font-size:17px; padding-left:2px">{{ZATO_PUB_NAME}}</span>
             </div>
         </div>
 
-    <script id="docs-data" type="text/plain">ZATO_DATA</script>
+    <script id="docs-data" type="text/plain">
+       {{ZATO_DATA}}
+    </script>
 
     <div id="markup">
         <table id="data-table" style="border:none">
@@ -216,7 +218,7 @@
     </div>
 
     <form>
-      <input type="hidden" id="cluster_id" value="ZATO_CLUSTER_ID" />
+      <input type="hidden" id="cluster_id" value="{{ZATO_CLUSTER_ID}}" />
     </form>
 
 </body>
