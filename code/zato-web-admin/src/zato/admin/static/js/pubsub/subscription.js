@@ -22,6 +22,7 @@ $(document).ready(function() {
     $.fn.zato.data_table.class_ = $.fn.zato.data_table.PubSubEndpoint;
     $.fn.zato.data_table.new_row_func = $.fn.zato.pubsub.subscription.data_table.new_row;
     $.fn.zato.data_table.new_row_func_update_in_place = true;
+    $.fn.zato.data_table.add_row_hook = $.fn.zato.pubsub.subscription.add_row_hook;
     $.fn.zato.data_table.parse();
     $.fn.zato.data_table.before_submit_hook = $.fn.zato.pubsub.subscription.before_submit_hook;
     $.fn.zato.data_table.setup_forms([
@@ -36,6 +37,12 @@ $(document).ready(function() {
         'topic_list_text',
     ]);
 })
+
+$.fn.zato.pubsub.subscription.add_row_hook = function(instance, elem_name, html_elem) {
+    if(elem_name == 'endpoint_id') {
+        instance.endpoint_name = html_elem.find('option:selected').text();
+    }
+}
 
 $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
     var form = $(form);
