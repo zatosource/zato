@@ -756,8 +756,8 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         for value in self.worker_config.pubsub_topic.values():
             self.pubsub.create_topic(bunchify(value['config']))
 
-        self.pubsub.endpoint_getter[PUBSUB.ENDPOINT_TYPE.REST.id] = self.worker_config.out_plain_http.get_by_id
-        self.pubsub.endpoint_getter[PUBSUB.ENDPOINT_TYPE.SOAP.id] = self.worker_config.out_soap.get_by_id
+        self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.REST.id] = self.worker_config.out_plain_http.get_by_id
+        self.pubsub.endpoint_impl_getter[PUBSUB.ENDPOINT_TYPE.SOAP.id] = self.worker_config.out_soap.get_by_id
 
 # ################################################################################################################################
 

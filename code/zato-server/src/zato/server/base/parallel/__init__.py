@@ -591,7 +591,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             if response['skip_msg']:
                 raise SkipDelivery(msg.pub_msg_id)
 
-        self.invoke('pubapi1.deliver-message', {'msg':msg, 'subscription':subscription})
+        self.invoke('zato.pubsub.delivery.deliver-message', {'msg':msg, 'subscription':subscription})
 
 # ################################################################################################################################
 

@@ -12,7 +12,8 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from zato.common import PUBSUB
 from zato.common.broker_message import PUBSUB as BROKER_MSG_PUBSUB
 from zato.server.pubsub.task import PubSubTool
-from zato.server.service.internal import AdminService
+from zato.server.service import Opaque
+from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
 
@@ -36,30 +37,9 @@ class CreateDeliveryTask(AdminService):
     """
     def handle(self):
         config = self.request.raw_request
-        func = getattr(self, '_handle_{}'.format(config.endpoint_type))
-        func(config)
-
-# ################################################################################################################################
-
-    def _handle_amqp(self, config):
-        raise NotImplementedError('AMQP not implemented yet')
-
-# ################################################################################################################################
-
-    def _handle_files(self, config):
-        raise NotImplementedError('Files not implemented yet')
-
-# ################################################################################################################################
-
-    def _handle_ftp(self, config):
-        raise NotImplementedError('FTP not implemented yet')
-
-# ################################################################################################################################
-
-    def _handle_rest(self, config):
 
         # Creates a pubsub_tool that will handle this subscription and registers it with pubsub
-        pubsub_tool = PubSubTool(self.pubsub, self.server, PUBSUB.ENDPOINT_TYPE.REST.id)
+        pubsub_tool = PubSubTool(self.pubsub, self.server, config.endpoint_type)
 
         # Makes this sub_key known to pubsub
         pubsub_tool.add_sub_key(config.sub_key)
@@ -71,35 +51,36 @@ class CreateDeliveryTask(AdminService):
             'server_name': self.server.name,
             'server_pid': self.server.pid,
             'sub_key': config.sub_key,
-            'endpoint_type': PUBSUB.ENDPOINT_TYPE.REST.id
+            'endpoint_type': config.endpoint_type
         })
-
-# ################################################################################################################################
-
-    def _handle_service(self, config):
-        raise NotImplementedError('Service not implemented yet')
-
-# ################################################################################################################################
-
-    def _handle_sms_twilio(self, config):
-        raise NotImplementedError('SMTP - Twilio not implemented yet')
-
-# ################################################################################################################################
-
-    def _handle_smtp(self, config):
-        raise NotImplementedError('SMTP not implemented yet')
-
-# ################################################################################################################################
-
-    def _handle_soap(self, config):
-        raise NotImplementedError('SOAP not implemented yet')
 
 # ################################################################################################################################
 
 class DeliverMessage(AdminService):
     """ Callback service invoked by delivery tasks for each message that needs to be delivered to a given endpoint.
     """
+    class SimpleIO(AdminSIO):
+        input_required = (Opaque('msg'), Opaque('subscription'))
+
     def handle(self):
-        self.logger.warn('111 %s', self.request.raw_request)
+        msg = self.request.input.msg
+
+        subscription = self.request.input.subscription
+        endpoint_impl_getter = self.pubsub.endpoint_impl_getter[subscription.config.endpoint_type]
+
+        func = deliver_func[subscription.config.endpoint_type]
+        func(self, msg, subscription, endpoint_impl_getter)
+
+    def _deliver_rest_soap(self, msg, subscription, impl_getter):
+        endpoint = impl_getter(subscription.config.out_http_soap_id)
+        endpoint.conn.post(self.cid, data=msg.data)
+
+# ################################################################################################################################
+
+# We need to register it here because it refers to DeliverMessage's methods
+deliver_func = {
+    PUBSUB.ENDPOINT_TYPE.REST.id: DeliverMessage._deliver_rest_soap,
+    PUBSUB.ENDPOINT_TYPE.SOAP.id: DeliverMessage._deliver_rest_soap,
+}
 
 # ################################################################################################################################

@@ -183,8 +183,8 @@ class SubCtxSOAP(SubCtxSecBased):
 
     def after_properties_set(self):
         super(SubCtxSOAP, self).after_properties_set()
-        self.out_http_soap_id = self.out_rest_http_soap_id
-        self.delivery_endpoint = self.rest_delivery_endpoint
+        self.out_http_soap_id = self.out_soap_http_soap_id
+        self.delivery_endpoint = self.soap_delivery_endpoint
 
 # ################################################################################################################################
 
