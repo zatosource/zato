@@ -181,7 +181,9 @@ class GetTopicList(AdminService):
 class GetEndpointQueueList(AdminService):
     """ Returns all queues to which a given endpoint is subscribed.
     """
-    class SimpleIO(AdminSIO):
+    _filter_by = PubSubTopic.name,
+
+    class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'endpoint_id')
         output_required = ('sub_id', 'topic_id', 'topic_name', 'name', 'active_status', 'is_internal',
             'is_staging_enabled', 'creation_time', 'sub_key', 'has_gd', 'delivery_method',
@@ -189,16 +191,19 @@ class GetEndpointQueueList(AdminService):
         output_optional = ('delivery_endpoint', 'last_interaction_time', 'last_interaction_type', 'last_interaction_details',
             AsIs('ws_ext_client_id'))
         output_repeated = True
+        request_elem = 'zato_pubsub_endpoint_get_endpoint_queue_list_request'
+        response_elem = 'zato_pubsub_endpoint_get_endpoint_queue_list_response'
+
+    def get_data(self, session):
+        return self._search(pubsub_endpoint_queue_list, session, self.request.input.cluster_id,
+            self.request.input.endpoint_id, False)
 
     def handle(self):
         response = []
 
         with closing(self.odb.session()) as session:
 
-            queue_list = pubsub_endpoint_queue_list(session, self.request.input.cluster_id, self.request.input.endpoint_id).\
-                all()
-
-            for item in queue_list:
+            for item in self.get_data(session):
 
                 total_q = session.query(PubSubEndpointEnqueuedMessage.id).\
                     filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
