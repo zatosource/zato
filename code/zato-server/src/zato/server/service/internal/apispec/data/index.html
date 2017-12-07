@@ -1,0 +1,222 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>API specification</title>
+
+    <style type="text/css">
+        html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-weight:inherit;font-style:inherit;font-family:sans-serif;vertical-align:baseline}:focus{outline:0}html{overflow-y:scroll}body{color:black;background:#f3f3f3}ol,ul{list-style:none}table{border-collapse:separate;border-spacing:0}caption,th,td{text-align:left;font-weight:normal}blockquote:before,blockquote:after,q:before,q:after{content:""}blockquote,q{quotes:"" ""}.sf-menu{float:left;margin-bottom:0}.sf-menu li{background:#363636}.sf-menu li li{background:#363636}.sf-menu li li li{background:#363636}.sf-menu li:hover,.sf-menu li.sfHover,.sf-menu a:focus,.sf-menu a:hover,.sf-menu a:active{background:#464646;outline:0}.sf-menu a{border-left:1px solid #fff;border-top:1px solid #CFDEFF;padding:.75em 1em;text-shadow:-1px -1px 0 red;text-decoration:none;display:block;position:relative}span.like-a{color:#fff}.sf-menu a,span.like-a{text-shadow:1px 1px 0 #000}.sf-menu a,.sf-menu a:visited,span.like-a{font-size:11px;font-family:sans-serif;border:none;text-decoration:none}.sf-sub-indicator{display:none}#console-header{background-color:#0e0e0e;box-shadow:0px 0px 4px #333}#logo a:hover{background-color:transparent}#logo a{text-decoration:none;font-size:140%;padding-left:5px;color:#999;font-weight:600;font-family:sans-serif;text-shadow:2px 2px 0 #333}#logout{color:#fff;float:right;font-size:11px;padding-top:6px;padding-right:7.5px}#main-menu{background-color:#363636;border-bottom:3px solid #aaa}#main-menu ul,span.like-a{float:left;font-size:11px;font-family:sans-serif}#main-menu ul li,span.like-a{display:inline}#main-menu ul li a,span.like-a{float:left;text-decoration:none;color:white;padding:10.5px	5px}#main-menu ul li.wide{width:120px}#user-message-div{padding-top:16px;font-size:12px;margin-left:4px;margin-right:4px}.user-message{padding:6px;border-style:dotted;color:#333333;text-align:left}.user-message-success{border-color:#333333;border-width:1px;background-color:#bbdd55}.user-message-failure{border-color:red;border-width:2px;background-color:#eeee33}.error-message{background-color:#ffccbb;padding:6px;margin-bottom:12px;border:1px dotted #999999;font-weight:600;color:#933}.loading{background:url(/static/gfx/ajax-loader.gif) no-repeat;height:16px}.loading:after{content:"Please wait ...";padding-left:30px}#data-table{width:100%;margin-top:8px;margin-left:2%;border:1px solid #ccc;font-size:12px;counter-reset:data_table_counter}#data-table a{font-size:12px}#data-table tr.odd{background-color:#fff}#data-table tr.even{background-color:#e8e8e8}#data-table tr.updated{background-color:#f7f089}#data-table tr.attention td,#data-table tr.updated td{border-bottom:1px solid #a9a244}#data-table td,#data-table th{padding:6px}#data-table th{background:#ddd;font-size:11px}#data-table td{vertical-align:base}#data-table td.inline_header{background:#ddd}#data-table td.numbering:before{content:counter(data_table_counter);counter-increment:data_table_counter}#data-table td.impexp{width:1px}#data-table td.impexp input{display:none;width:1px}.form-data{width:100%;border:1px solid #666;padding:10px;font-size:12px;background-color:#ccc;color:#000;text-shadow:1px 1px 0 #eee}.form-data td{border:none;padding:4px;padding-right:12px}.ui-dialog-titlebar{padding:10px;background-color:#999;font-size:13px;border:1px solid #666;border-bottom:none;text-align:left;text-shadow:1px 1px 0 #aaa;padding-bottom:10px !important}.form_hint{font-size:smaller;color:#333}.attention{background-color:#f7f089}div.bd{box-shadow:1px 1px 10px #000}div.ui-dialog{width:33em !important}p.big-notice{background-color:#ccc;width:50%;margin:0 auto;padding:20px;margin-top:20px;text-align:center;font-size:large;border:1px solid #999}.ui-dialog-titlebar{padding-bottom:0px;background-color:#333;font-size:13px;border:1px solid #666;border-bottom:none;text-align:left;color:#eee;text-shadow:1px 1px 0 #000}.ui-icon-closethick{display:none}.ui-dialog-buttonset{text-align:right}.ui-icon-closethick{display:none}.ui-widget{box-shadow:1px 1px 10px #000}.ui-datepicker{border:1px solid #aaaaaa;background:#fff url(images/ui-bg_glass_75_ffffff_1x400.png) 50% 50% repeat-x;color:#222222;font-size:0.9em}.ui-slider .ui-slider-handle{border:1px solid #999}#popup_container{border-radius:0 0 0 0}h2.zato{font-size:80%;padding:10px;padding-left:4px;color:#222;border-bottom:1px dotted #767676}div.prompt{font-size:11px;padding:10px;padding-left:4px}div.prompt form{padding-top:4px}a{color:#000;font-family:arial,helvetica,clean,sans-serif;text-decoration:underline;padding:3px;padding-left:0px}a:hover{background-color:#e0e030;color:#000033;text-decoration:none}a.top{color:#fff;text-shadow:none}a.top:hover{color:#000}a.hint{color:#333;font-size:10px}#footer{border-top:1px solid #999999;border-bottom:1px solid #999999;margin:5px 5px 0px 0px;padding:5px;background-color:#e0e0e0;text-align:right}.validation-advice{color:#c00}.options-button{cursor:pointer}#markup{width:94%;text-align:center}th.ignore,td.ignore,div.ignore{display:none}div.page_prompt{padding:4px;font-size:12px}div.page_prompt a.current{font-weight:bolder}#id_file{width:100%}.hidden{visibility:hidden;display:none}.visible{visibility:visible}
+    </style>
+
+    <style type="text/css">
+
+        /* ///////////////////////////////////
+        // Namespaces
+        // //////////////////////////////// */
+
+        div.highlight span.header {
+            background-color:#e0e030;
+            color:#000
+        }
+
+        .td-ns {
+            background-color: #e1e3e5;
+            border: 1px solid #adb3b9;
+            border-radius: 3px;
+            box-shadow: 0 1px 0 rgba(12, 13, 14, 0.2), 0 0 0 2px #fff inset;
+            font-size: 12px;
+            line-height: 1.4;
+            margin: 0 0.1em;
+            margin-bottom: 3px;
+            text-shadow: 0 1px 0 #fff;
+            white-space: nowrap;
+            vertical-align:bottom !important;
+        }
+
+        .ns-name {
+            float:left;
+            font-weight:600
+        }
+
+        .ns-name span.docs {
+            font-weight:500;
+            color: #666;
+        }
+
+        .ns-options {
+            float:right;
+            padding:none !important
+        }
+
+        .tr-ns + .tr-service .td-service {
+            border-top:none;
+        }
+
+        /* ///////////////////////////////////
+        // Services
+        // //////////////////////////////// */
+
+        .td-service {
+            border-left:1px dashed #c3c3c3;
+            border-right:1px dashed #c3c3c3;
+            border-top:1px dashed #c3c3c3;
+        }
+
+        .service-name > .service-desc{
+            color:#666
+        }
+
+        .service-name > .service-desc {
+            display:inline !important;
+        }
+
+        .service-name {
+            float:left;
+            padding-left:3px;
+        }
+
+        .service-io th {
+            text-align:center;
+            font-size:0.9em !important;
+            border-bottom:1px solid #c9c9c9 !important;
+            border-top:1px solid #c9c9c9 !important;
+            border-right:1px solid #c9c9c9 !important;
+        }
+
+        .service-io th.input {
+            border-left:1px solid #c9c9c9 !important;
+        }
+
+        .service-io td {
+            padding:10px !important;
+            border-bottom:1px dashed #ccc;
+            border-right:1px dashed #ccc;
+            font-size:1em;
+        }
+
+        .service-io td.req-opt {
+            font-size:0.8em;
+            color:#666;
+            font-style:italic
+        }
+
+        .io-is-required {
+            border-right:1px solid #c9c9c9 !important;
+        }
+
+        .tr-io-last td {
+            border-bottom:1px solid #c9c9c9 !important;
+        }
+
+        .io-name-input {
+            border-left:1px solid #c9c9c9 !important;
+        }
+
+        .service-options {
+            float:right;
+        }
+
+        .service-details {
+            clear:left;
+            padding:5px;
+            padding-left:0px;
+            color: #555;
+        }
+
+        .header-details {
+            margin-top:5px;
+            padding-top:5px;
+            padding-bottom:5px;
+            color:#333
+        }
+
+        .header-details strong, .header-details em {
+            color:#000;
+            padding:3px;
+            background-color:#e3e3e3;
+            font-style:italic;
+        }
+
+        .header-details p {
+            padding-top:3px;
+            padding-bottom:3px;
+        }
+
+        .header-details ul {
+            list-style-type: "• ";
+            padding-left:15px;
+        }
+
+        .header-details ol {
+            list-style-type:decimal;
+            padding-left:20px;
+        }
+
+        .header-details li {
+            padding-top:2px;
+            padding-bottom:2px;
+        }
+
+        .service-details .header, .service-details .header a {
+            font-size:11px !important;
+            color:#333;
+        }
+
+        .service-details .header, .service-details .header a:hover {
+            color:#000;
+        }
+
+        /* ///////////////////////////////////
+        // Containers and misc
+        // //////////////////////////////// */
+
+        #main-div {
+            text-align:center;
+        }
+
+        #main-div.no-results {
+            text-align:left;
+            background-color:#e9e9e9;
+            padding:5px;
+            border:1px dashed #ccc
+        }
+
+        #spec-table {
+            width:100%;
+            text-align:center;
+        }
+
+        #spec-table tr.tr-service:last-child > td {
+            border-bottom:1px dashed #ccc;
+        }
+
+    </style>
+
+    <script type="text/javascript" src="/apispec/static/brython/_brython/brython.js"></script>
+    <script type="text/python" src="/apispec/static/brython/_zato/docs.py"></script>
+
+</head>
+<body onload="brython()">
+
+        <div id="hd">
+            <div id="console-header">&nbsp;<img src="data:image/png;charset=utf-8;base64, iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAh3pUWHRSYXcgcHJvZmlsZSB0eXBlIGV4aWYAAHjadY7LDQMxCETvVJES+Hkw5UQrr5QOUn6wvJZPeQcYjdAwNL6fm14TYSVv0ZEAF56e+i7ReWHMoixz11w826SUHptMl0D2YD+H/vibZui4wyPQcOHSStdhYlqzHtFM5VkjT4iM3eiPv1v8AEsULHmqW1+DAAAJ6WlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iWE1QIENvcmUgNC40LjAtRXhpdjIiPgogPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4KICA8cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0iIgogICAgeG1sbnM6ZXhpZj0iaHR0cDovL25zLmFkb2JlLmNvbS9leGlmLzEuMC8iCiAgICB4bWxuczp0aWZmPSJodHRwOi8vbnMuYWRvYmUuY29tL3RpZmYvMS4wLyIKICAgZXhpZjpQaXhlbFhEaW1lbnNpb249IjMwIgogICBleGlmOlBpeGVsWURpbWVuc2lvbj0iMzAiCiAgIHRpZmY6SW1hZ2VXaWR0aD0iMSIKICAgdGlmZjpJbWFnZUhlaWdodD0iMzAiLz4KIDwvcmRmOlJERj4KPC94OnhtcG1ldGE+CiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgCiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIAogICAgICAgICAgICAgICAgICAgICAgICAgICAKPD94cGFja2V0IGVuZD0idyI/PoOxCoAAAAAEc0JJVAgICAh8CGSIAAAFl0lEQVRIx72XbYxcVRnHf/87O51ddtvd7m5fTNdunHubpYWyNL7wgdKatraRWEJUTIwaMTq3JGoVbCJCoMiLisE0Rm3sTBNDIgllCcFaG2OwiRJfI8SGZLX2ntkGU0Vxd2kxXbrrzt8P3GmW6Rb4wHK+zNxznvP87nlez4WWUalUCrzdI03TeCH0hhAW1+v1aO5cNAf6EdvPLwQ4juOXbe+4CJym6UpgplarzbwZRbt377768OHDHz158uQNIYTVb5J/PIRwefOhLf+9Ddj7Bm7oA75te2tPT0//smXLFkVRZNvnQwinbI8kSXLfpfZLmrR9T5Zlu5IkcVuapottX1er1aZeB7oT+J7tgWKxWFizZg29vb1NhYuA9cBQCGE78Ok4juutOqIomp6dnR2Q1ANMRsAVkt7xOtAbgYeBQUmF7u5uyuUybW1traKLgGttHwkhDLQuNhoNgC5gedPHi20vTdO0fR7oAPADYKltR1HE4ODghdO2mBLbkjRk+7GxsbGoBbwIWNp0bwSck1QEPtwCLQCPAiubujs6OiiXyxSLRWzPCwciSe+enZ29q8XUK4B+wE3wX2xPAnvSNC3OkR0GrsplLMl9fX0sX74cSU2IL+GhoqTPZFm2pDlh+35AwL8Bomq1OiHpV8AQ8Ik5gl8FOvP/kuTe3t6p9vb2cWDC9lS+Nm8QAyslvT8vINfYvh44JWlibjrtBbYDD6VpGoA/ARtyBQCvAD+V9FCj0fjrq1bV5bb3SPoQ0D7n9M09s8CGLMv+YPthoAjcUS6XGxcKSLVaPQn8OI+6J4Cttm8BngFeknTfgQMHPrZx48a+Uql0L/B1271JktwEfAuYyoGyPQ1kwJeBEeCYpLKko3EcH6Pl7ZoB9RPgg7bPS3oEuBXYXK1Wf75v377ali1bburq6jpnuyipZPtQkiSVEMIvbK8HTkh6wnYV+Jyku/OM+F2SJJtafdHanR7LzVe0/bykHcCGoaGhg9u2bTs0PDyc5n47Amyy/UngKUnTQJvtiqQvAc1c/rXtnUmSnJ+3SeQnXgLcBVRs/0PSEtuThUJhU6lUOteE5uOOfP8NURQVgGO2/y7pO8AgMG77a3Ecb2+FXgSuVqtnJR0E3iVpCLgTmImiaLqzs7M4Pj7eMSfql+YWM7DE9rCkTtv/BO4HhqIoejnLsnXzhX3UOmH7aeB227+1/QowVSgUftbR0VGYmJg4GkLYHEK4XtJ3bc9IqjUajRi4G7hO0lrbz9k+2mg0bikWi38LIWy9JLhSqbw3TdPdwD3AqKRhSTVJz9Xr9Wf7+/sflLTe9lFgxPY7JT0Qx/EfJf1LUt32zbZHgUckrZX0+cHBwf8B3wghVC4KrjRN24DfA6vzVPqPpCfzXC4Af+7u7t65a9eukqQbc8s8LqkAPAkkthdJant1yS9I+kocx4+GEL5p+zZgNEmSDa85se1+oJzX0iOSVlSr1WuAKvACcOWqVauOT09P7wcawIykg7afycvqZZIi22ds/zKKovfZPhRCuBf4Yt4619br9c++BizpSuCy3AI9thfnwfaF/DS3RlE0lsvtBR4Ars2r0YvAqO3vS7oa2AFMSjoC7LHd2Wybtm/PsqxzbsnsAiLbDUmP12q1p+dE+hSwH9g/OjrancuW8pecBs4BZ5MkuXBtqtfrReAKoEOS8xIrYLWkTwE/bIKz3Hwv5V1k3rFu3bozwJk3ulyVy+UzWZY9JenmPEYudC3gzhDCSDOqTwGnbe+v1Wpjb8XNMoqivbbPtnYt2wPAVc0m8V9gH/DgW3WlLZfLpyU9O6drOY+nKdsvaiE/EOr1+scbjcaPJJWaNyDbx4vF4nsWFAyQZdmopLU59LSkD8RxfCJaaLCkEdtnbf9G0uY4jk+8Ld9jWZatCCFsbJ3/P3NnfsE+60ljAAAAAElFTkSuQmC" alt="Zato samurai helmet logo" style="vertical-align:bottom"/>
+            <span id="logo"><a href="https://zato.io/docs">Zato</a></span>
+            <span style="color:#eee; font-weight:bold; font-size:17px; padding-left:2px">ZATO_PUB_NAME</span>
+            </div>
+        </div>
+
+    <script id="docs-data" type="text/plain">ZATO_DATA</script>
+
+    <div id="markup">
+        <table id="data-table" style="border:none">
+            <tr>
+                <td><div id="main-div"></div></td>
+            </tr>
+        </table>
+    </div>
+
+    <form>
+      <input type="hidden" id="cluster_id" value="ZATO_CLUSTER_ID" />
+    </form>
+
+</body>
