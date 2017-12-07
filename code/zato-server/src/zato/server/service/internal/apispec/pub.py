@@ -21,11 +21,6 @@ from zato.server.service import Service
 
 # ################################################################################################################################
 
-def get_resource_string(suffix):
-    return pkg_resources.resource_string(__name__, suffix).decode('utf-8')
-
-# ################################################################################################################################
-
 class _Base(Service):
 
     def validate_input(self):
@@ -44,12 +39,13 @@ class Main(_Base):
 
         replace_with = {
             'ZATO_DATA': self.invoke('zato.apispec.get-api-spec'),
+            'ZATO_LOGO': pkg_resources.resource_string(__name__, 'data/logo.png').encode('base64'),
             'ZATO_CLUSTER_ID': str(self.server.cluster_id),
             'ZATO_PUB_NAME': self.server.fs_server_config.apispec.pub_name,
             'ZATO_PUB_CSS_STYLE': self.server.fs_server_config.apispec.pub_css_style,
         }
 
-        page_template = get_resource_string('data/index.html')
+        page_template = pkg_resources.resource_string(__name__, 'data/index.html').decode('utf-8')
         for k, v in replace_with.items():
             page_template = page_template.replace(k, v)
 
@@ -94,7 +90,7 @@ class Frontend(_Base):
     """ Returns Brython frontend code to display API specifications.
     """
     def handle(self):
-        self.response.payload = get_resource_string('data/docs.py')
+        self.response.payload = pkg_resources.resource_string(__name__, 'data/docs.py')
         self.response.headers['Content-Type'] = 'text/python'
 
 # ################################################################################################################################
