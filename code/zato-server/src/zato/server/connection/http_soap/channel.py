@@ -125,7 +125,7 @@ class RequestDispatcher(object):
         if soap_action[0] == '"' and soap_action[-1] == '"':
             soap_action = soap_action[1:-1]
 
-        return soap_action
+        return soap_action.decode('utf-8')
 
     def dispatch(self, cid, req_timestamp, wsgi_environ, worker_store, _status_response=status_response,
         no_url_match=(None, False), _response_404=response_404, _has_debug=_has_debug,

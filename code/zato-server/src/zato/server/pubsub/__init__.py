@@ -411,7 +411,7 @@ class PubSub(object):
 
         # Getter methods for each endpoint type that return actual endpoints,
         # e.g. REST outgoing connections. Values are set by worker store.
-        self.endpoint_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE)
+        self.endpoint_impl_getter = dict.fromkeys(PUBSUB.ENDPOINT_TYPE)
 
 # ################################################################################################################################
 
