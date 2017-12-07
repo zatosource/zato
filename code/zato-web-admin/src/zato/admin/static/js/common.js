@@ -465,7 +465,7 @@ $.fn.zato.data_table.delete_ = function(id, td_prefix, success_pattern, confirm_
         name = instance.name;
     }
 
-    console.log('Instance: ' + instance);
+    console.log('Instance to delete: ' + instance);
 
     var _callback = function(data, status) {
         var success = status == 'success';
@@ -606,7 +606,7 @@ $.fn.zato.data_table._create_edit = function(action, title, id) {
 
 $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) {
 
-    var item = new $.fn.zato.data_table.class_();
+    var instance = new $.fn.zato.data_table.class_();
     var form = $(String.format('#{0}-form', action));
 
     var prefix;
@@ -627,27 +627,35 @@ $.fn.zato.data_table.add_row = function(data, action, new_row_func, include_tr) 
         html_elem = $('#id_' + prefix + name);
         tag_name = html_elem.prop('tagName');
 
+        console.log('Creating elem from: ' + name);
+
         if(tag_name && html_elem.prop('type') == 'checkbox') {
-            item[name] = html_elem.is(':checked');
+            instance[name] = html_elem.is(':checked');
         }
 
         else {
-            item[name] = elem.value;
+            instance[name] = elem.value;
         }
 
         if(tag_name && tag_name.toLowerCase() == 'select') {
-            item[name + '_select'] = $('#id_' + prefix + name + ' :selected').text();
+            instance[name + '_select'] = $('#id_' + prefix + name + ' :selected').text();
+        }
+
+        if($.fn.zato.data_table.add_row_hook) {
+            $.fn.zato.data_table.add_row_hook(instance, name, html_elem);
         }
 
     })
 
-    if(!item.id) {
-        item.id = data.id;
+    if(!instance.id) {
+        instance.id = data.id;
     }
 
-    $.fn.zato.data_table.data[item.id] = item;
+    console.log('Instance created: ' + instance);
 
-    return new_row_func(item, data, include_tr);
+    $.fn.zato.data_table.data[instance.id] = instance;
+
+    return new_row_func(instance, data, include_tr);
 }
 
 $.fn.zato.data_table.set_field_required = function(field_id) {
