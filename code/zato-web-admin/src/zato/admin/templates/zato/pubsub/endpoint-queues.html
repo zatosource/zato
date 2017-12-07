@@ -41,10 +41,50 @@
 
             'id',
             'sub_key',
+            'amqp_exchange',
+            'amqp_routing_key',
+
+            'creation_time',
+            'delivery_batch_size',
+            'delivery_data_format',
+            'delivery_endpoint',
+
+            'delivery_max_retry',
+            'delivery_method',
+            'endpoint_id',
+            'endpoint_name',
+
+            'endpoint_type',
+            'ext_client_id',
+            'files_directory_list',
+            'ftp_directory_list',
+
             'has_gd',
-            'is_staging_enabled',
+            'is_durable',
+            'is_internal',
             'name',
-            'name_slug',
+
+            'out_amqp_id',
+            'out_http_method',
+            'out_http_soap_id',
+            'server_id',
+
+            'server_name',
+            'server_pid',
+            'service_id',
+            'sms_twilio_from',
+
+            'sms_twilio_to_list',
+            'smtp_body',
+            'smtp_from',
+            'smtp_is_html',
+
+            'smtp_subject',
+            'smtp_to_list',
+            'topic_id',
+            'topic_name',
+
+            'wrap_one_msg_in_list',
         ]
     }
     </script>
@@ -93,6 +133,48 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                 </thead>
@@ -137,10 +219,51 @@
 
                         <td class='ignore item_id_{{ item.sub_id }}'>{{ item.sub_id }}</td>
                         <td class='ignore'>{{ item.sub_key }}</td>
-                        <td class='ignore'>{{ item.has_gd }}</td>
-                        <td class='ignore'>{{ item.is_staging_enabled }}</td>
-                        <td class='ignore'>{{ item.name }}</td>
-                        <td class='ignore'>{{ item.name_slug }}</td>
+                        <td class='ignore'>{{ item.amqp_exchange|default:'' }}</td>
+                        <td class='ignore'>{{ item.amqp_routing_key|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.creation_time }}</td>
+                        <td class='ignore'>{{ item.delivery_batch_size|default:'' }}</td>
+                        <td class='ignore'>{{ item.delivery_data_format|default:'' }}</td>
+                        <td class='ignore'>{{ item.delivery_endpoint|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.delivery_max_retry|default:'' }}</td>
+                        <td class='ignore'>{{ item.delivery_method|default:'' }}</td>
+                        <td class='ignore'>{{ item.endpoint_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.endpoint_name|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.endpoint_type }}</td>
+                        <td class='ignore'>{{ item.ext_client_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.files_directory_list|default:'' }}</td>
+                        <td class='ignore'>{{ item.ftp_directory_list|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.has_gd|default:'' }}</td>
+                        <td class='ignore'>{{ item.is_durable|default:'' }}</td>
+                        <td class='ignore'>{{ item.is_internal|default:'' }}</td>
+                        <td class='ignore'>{{ item.name|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.out_amqp_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.out_http_method|default:'' }}</td>
+                        <td class='ignore'>{{ item.out_http_soap_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.server_id|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.server_name|default:'' }}</td>
+                        <td class='ignore'>{{ item.server_pid|default:'' }}</td>
+                        <td class='ignore'>{{ item.service_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.sms_twilio_from|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.sms_twilio_to_list|default:'' }}</td>
+                        <td class='ignore'>{{ item.smtp_body|default:'' }}</td>
+                        <td class='ignore'>{{ item.smtp_from|default:'' }}</td>
+                        <td class='ignore'>{{ item.smtp_is_html|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.smtp_subject|default:'' }}</td>
+                        <td class='ignore'>{{ item.smtp_to_list|default:'' }}</td>
+                        <td class='ignore'>{{ item.topic_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.topic_name|default:'' }}</td>
+
+                        <td class='ignore'>{{ item.wrap_one_msg_in_list|default:'' }}</td>
+
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
