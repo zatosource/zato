@@ -15,12 +15,16 @@ from django import forms
 from zato.admin.web.forms import add_select
 from zato.common import PUBSUB
 
+# ################################################################################################################################
+
 class MsgForm(forms.Form):
     correl_id = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     in_reply_to = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     expiration = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:50%'}))
     priority = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:30%'}), initial=5)
     mime_type = forms.CharField(widget=forms.HiddenInput())
+
+# ################################################################################################################################
 
 class MsgPublishForm(MsgForm):
     topic_name = forms.ChoiceField(widget=forms.Select())
@@ -41,3 +45,5 @@ class MsgPublishForm(MsgForm):
 
         self.initial['topic_name'] = initial_topic_name
         self.initial['select_changer_source'] = select_changer_data
+
+# ################################################################################################################################

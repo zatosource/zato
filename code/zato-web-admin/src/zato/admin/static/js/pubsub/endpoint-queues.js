@@ -98,7 +98,7 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
 }
 
 $.fn.zato.pubsub.endpoint_queue.edit = function(id) {
-    $.fn.zato.data_table._create_edit('edit', 'Update queue', id);
+    $.fn.zato.data_table._create_edit('edit', 'Update subscription', id);
 }
 
 $.fn.zato.pubsub.endpoint_queue.get_depth_link = function(link_type, cluster_id, id, name_slug, depth) {
@@ -165,18 +165,4 @@ $.fn.zato.pubsub.endpoint_queue.toggle_sub_key = function(id) {
     else {
         elem.html(hidden);
     }
-}
-
-$.fn.zato.pubsub.endpoint_queue.get_new_sub_key = function() {
-    var sub_key = '';
-    var array = new Uint8Array(24);
-    var alphabet = 'abcdef0123456789'
-
-    window.crypto.getRandomValues(array);
-
-    for(let i = 0; i < array.length; i++) {
-        sub_key += alphabet.charAt(array[i] % 16);
-    }
-
-    $('#id_edit-sub_key').val('zpsk' + sub_key);
 }
