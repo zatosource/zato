@@ -19,6 +19,10 @@ from threading import RLock
 from time import time
 from traceback import format_exc
 
+# mxODBC Connect
+from mx.ODBCConnect.Client import ServerSession as mxServerSession
+from mx.ODBCConnect.Error import OperationalError
+
 # Spring Python
 from springpython.context import DisposableObject
 
@@ -117,17 +121,44 @@ class SQLConnectionPool(object):
                 _extra['poolclass'] = NullPool
 
         engine_url = get_engine_url(config)
-        self.engine = create_engine(engine_url, **_extra)
+        self.engine = self._create_engine(engine_url, config, _extra)
 
-        event.listen(self.engine, 'checkin', self.on_checkin)
-        event.listen(self.engine, 'checkout', self.on_checkout)
-        event.listen(self.engine, 'connect', self.on_connect)
-        event.listen(self.engine, 'first_connect', self.on_first_connect)
+        if self.engine:
+            event.listen(self.engine, 'checkin', self.on_checkin)
+            event.listen(self.engine, 'checkout', self.on_checkout)
+            event.listen(self.engine, 'connect', self.on_connect)
+            event.listen(self.engine, 'first_connect', self.on_first_connect)
 
     def __str__(self):
         return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
 
     __repr__ = __str__
+
+    def _create_engine(self, engine_url, config, extra):
+        if 'mxodbc' in engine_url:
+            config_data = {}
+
+            config_data['Server_Connection'] = {}
+            config_data['Logging'] = {}
+            config_data['Integration'] = {}
+
+            config_data['Server_Connection']['host'] = config['host']
+            config_data['Server_Connection']['port'] = config['port']
+            config_data['Server_Connection']['using_ssl'] = extra.pop('mxodbc_using_ssl', False)
+
+            config_data['Integration']['gevent'] = True
+
+            try:
+                session = mxServerSession(config_data=config_data)
+                odbc = session.open()
+            except OperationalError, e:
+                self.logger.warn('SQL connection could not be created, caught mxODBC exception, e:`%s`', format_exc(e))
+            else:
+                url = '{engine}://{username}:{password}@{db_name}'.format(**config)
+                return create_engine(url, module=odbc, echo=True)
+
+        else:
+            return create_engine(engine_url, **extra)
 
     def on_checkin(self, dbapi_conn, conn_record):
         if self.logger.isEnabledFor(DEBUG):
