@@ -42,19 +42,8 @@ def update_globals(config, base_dir='.'):
 
 # Maps SQLAlchemy engine's name to a UI-friendly one.
 engine_friendly_name = {
-    'postgresql+pg8000': 'PostgreSQL',
-    'oracle': 'Oracle',
-    'mysql+pymysql': 'MySQL',
-
-    # These are not supported /yet/.
-    # 'mssql': 'MS SQL Server',
-    # 'access': 'MS Access',
-    # 'firebird': 'Firebird',
-    # 'db2': 'DB2',
-    # 'informix':'Informix'
-}
-
-odb_engine_friendly_name = {
+    'db2_mx_odbc': 'DB2',
+    'mssql_mx_odbc': 'MS SQL Server',
     'postgresql+pg8000': 'PostgreSQL',
     'oracle': 'Oracle',
     'mysql+pymysql': 'MySQL',
@@ -68,15 +57,12 @@ django_sqlalchemy_engine = {
     'dummy':'dummy'
 }
 
-sqlalchemy_django_engine = dict((v,k) for k,v in django_sqlalchemy_engine.items())
-
 # Maps job types as they are used by servers into UI friendly names.
 job_type_friendly_names = {
     SCHEDULER.JOB_TYPE.ONE_TIME: 'one-time',
     SCHEDULER.JOB_TYPE.INTERVAL_BASED: 'interval-based',
     SCHEDULER.JOB_TYPE.CRON_STYLE: 'cron-style',
 }
-
 
 # Maps AMQP delivery modes to UI-friendly names
 delivery_friendly_name = {

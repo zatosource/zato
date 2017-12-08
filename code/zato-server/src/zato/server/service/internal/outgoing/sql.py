@@ -223,7 +223,8 @@ class Ping(AdminService):
                     filter(SQLConnectionPool.id==self.request.input.id).\
                     one()
 
-                self.response.payload.response_time = str(self.outgoing.sql.get(item.name, False).pool.ping())
+                ping = self.outgoing.sql.get(item.name, False).pool.ping
+                self.response.payload.response_time = str(ping(self.server.fs_sql_config))
 
             except Exception, e:
                 session.rollback()

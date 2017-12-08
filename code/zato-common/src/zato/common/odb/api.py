@@ -38,7 +38,7 @@ from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, SEC_DEF_TYPE, SECRET_
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, JWT, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition, \
      VaultConnection
-from zato.common.odb import ping_queries, query
+from zato.common.odb import get_ping_query, query
 from zato.common.util import current_host, get_component_name, get_engine_url, get_http_json_channel, get_http_soap_channel, \
      parse_extra_into_dict, parse_tls_channel_security_definition
 
@@ -59,10 +59,11 @@ class SessionWrapper(object):
 
     def init_session(self, name, config, pool, use_scoped_session=True):
         self.config = config
+        self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
 
         try:
-            self.pool.ping()
+            self.pool.ping(self.fs_sql_config)
         except Exception, e:
             msg = 'Could not ping:`%s`, session will be left uninitialized, e:`%s`'
             self.logger.warn(msg, name, format_exc(e))
@@ -149,18 +150,18 @@ class SQLConnectionPool(object):
             msg = 'First connect dbapi_conn:{}, conn_record:{}'.format(dbapi_conn, conn_record)
             self.logger.debug(msg)
 
-    def ping(self):
+    def ping(self, fs_sql_config):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
-        query = ping_queries[self.engine_name]
+        query = get_ping_query(fs_sql_config, self.config)
 
-        self.logger.debug('About to ping the SQL connection pool:[{}], query:[{}]'.format(self.config_no_sensitive, query))
+        self.logger.debug('About to ping the SQL connection pool:`%s`, query:`%s`', self.config_no_sensitive, query)
 
         start_time = time()
         self.engine.connect().execute(query)
         response_time = time() - start_time
 
-        self.logger.debug('Ping OK, pool:[{0}], response_time:[{1:03.4f} s]'.format(self.config_no_sensitive, response_time))
+        self.logger.debug('Ping OK, pool:`%s`, response_time:`%s` s', self.config_no_sensitive, response_time)
 
         return response_time
 

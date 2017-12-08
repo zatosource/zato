@@ -87,6 +87,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         self.hot_deploy_config = None
         self.pickup = None
         self.fs_server_config = None
+        self.fs_sql_config = None
         self.pickup_config = None
         self.connector_server_grace_time = None
         self.id = None
@@ -305,6 +306,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
     def set_odb_pool(self):
         # This is the call that creates an SQLAlchemy connection
+        self.config.odb_data['fs_sql_config'] = self.fs_sql_config
         self.sql_pool_store[ZATO_ODB_POOL_NAME] = self.config.odb_data
         self.odb.pool = self.sql_pool_store[ZATO_ODB_POOL_NAME].pool
         self.odb.token = self.config.odb_data.token
@@ -560,6 +562,7 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
         if not self.odb.session_initialized:
 
             self.config.odb_data = self.get_config_odb_data(self)
+            self.config.odb_data['fs_sql_config'] = self.fs_sql_config
             self.set_odb_pool()
 
             self.odb.init_session(ZATO_ODB_POOL_NAME, self.config.odb_data, self.odb.pool, False)
