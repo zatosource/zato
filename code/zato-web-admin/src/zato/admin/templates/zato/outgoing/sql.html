@@ -96,7 +96,7 @@
                         <td class="impexp"><input type="checkbox" /></td>
                         <td>{{ item.name }}</td>
                         <td>{{ item.is_active|yesno:'Yes,No' }}</td>
-                        <td>{{ item.engine_text }}</td>
+                        <td>{{ item.engine_display_name }}</td>
                         <td>{{ item.host }}</td>
                         <td>{{ item.port }}</td>
                         <td>{{ item.db_name }}</td>
@@ -142,33 +142,33 @@
                             <td style="vertical-align:middle">Engine</td>
                             <td colspan="3">{{ create_form.engine }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Host</td>
                             <td colspan="3">{{ create_form.host }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Port</td>
                             <td colspan="3">{{ create_form.port }}</td>
                         </tr>
-                            
+
                         <tr>
                             <td style="vertical-align:middle">Database name</td>
                             <td>{{ create_form.db_name }}</td>
                             <td style="vertical-align:middle">User</td>
                             <td>{{ create_form.username }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Pool size</td>
                             <td colspan="3">{{ create_form.pool_size }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="4">Extra</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="4">{{ create_form.extra }}</td>
                         </tr>
@@ -203,33 +203,33 @@
                             <td style="vertical-align:middle">Engine</td>
                             <td colspan="3">{{ edit_form.engine }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Host</td>
                             <td colspan="3">{{ edit_form.host }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Port</td>
                             <td colspan="3">{{ edit_form.port }}</td>
                         </tr>
-                            
+
                         <tr>
                             <td style="vertical-align:middle">Database name</td>
                             <td>{{ edit_form.db_name }}</td>
                             <td style="vertical-align:middle">User</td>
                             <td>{{ edit_form.username }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td style="vertical-align:middle">Pool size</td>
                             <td colspan="3">{{ edit_form.pool_size }}</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="4">Extra</td>
                         </tr>
-                        
+
                         <tr>
                             <td colspan="4">{{ edit_form.extra }}</td>
                         </tr>
@@ -246,7 +246,7 @@
                 </form>
             </div>
         </div>
-        
+
         <div id="change_password-div" class='data-popup ignore'>
             <div class="bd">
                 <form action="{% url "out-sql-change-password" %}" method="post" id="change_password-form">
@@ -261,7 +261,7 @@
                         </tr>
                         <tr>
                             <td style="vertical-align:middle">Confirm password</td>
-                            <td>{{ change_password_form.password2 }} 
+                            <td>{{ change_password_form.password2 }}
                                 <input type="hidden" id="id_change_password-id" name="id" />
                                 <input type="hidden" id="id_change_password-cluster_id" name="cluster_id" value='{{ cluster_id}}' />
                             </td>

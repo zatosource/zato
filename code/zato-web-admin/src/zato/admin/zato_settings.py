@@ -40,15 +40,6 @@ def update_globals(config, base_dir='.'):
 
 # ##############################################################################
 
-# Maps SQLAlchemy engine's name to a UI-friendly one.
-engine_friendly_name = {
-    'db2_mx_odbc': 'DB2',
-    'mssql_mx_odbc': 'MS SQL Server',
-    'postgresql+pg8000': 'PostgreSQL',
-    'oracle': 'Oracle',
-    'mysql+pymysql': 'MySQL',
-}
-
 django_sqlalchemy_engine = {
     'postgresql': 'postgresql_psycopg2',
     'mysql':'mysql',
