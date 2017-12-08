@@ -32,8 +32,8 @@ def get_ping_query(fs_sql_config, engine_params):
     """ Returns a ping query for input engine and component-wide SQL configuration.
     """
     ping_query = None
-    for value in fs_sql_config.values():
-        if value.get('sqlalchemy_dialect') == engine_params['engine']:
+    for key, value in fs_sql_config.items():
+        if key == engine_params['engine']:
             ping_query = value.get('ping_query')
             break
 
