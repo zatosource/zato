@@ -282,15 +282,10 @@
 
 
                         <tr>
-                            <td style="vertical-align:middle; width:20%">Type</td>
+                            <td style="vertical-align:middle; width:20%">Delivery server</td>
                             <td>
-                                {{ edit_form.endpoint_type }}
-                                | Delivery server {{ edit_form.server_id }}
+                                {{ edit_form.server_id }}
                             </td>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:middle; width:12%">Endpoint</td>
-                            <td>{{ edit_form.endpoint_id }}</td>
                         </tr>
 
                         <tr>
@@ -440,6 +435,12 @@
                             <td>{{ edit_form.soap_delivery_endpoint }}</td>
                         </tr>
 
+                        <tr>
+                            <td colspan="2" style="text-align:right">
+                                <input type="submit" value="OK" />
+                                <button type='button' onclick='javascript:$.fn.zato.data_table.close(this)'>Cancel</button>
+                            </td>
+                        </tr>
 
                     </table>
                     <input type="hidden" id="id_edit-cluster_id" name="cluster_id" value="{{ cluster_id }}" />

@@ -85,8 +85,10 @@ class SubCtx(object):
     def after_properties_set(self):
         """ A hook that lets subclasses customize this object after it is known that all common properties have been set.
         """
-        self.wait_sock_err = PUBSUB.DEFAULT.WAIT_TIME_SOCKET_ERROR
-        self.wait_non_sock_err = PUBSUB.DEFAULT.WAIT_TIME_NON_SOCKET_ERROR
+        #if not self.wait_sock_err:
+        #    self.wait_sock_err = PUBSUB.DEFAULT.WAIT_TIME_SOCKET_ERROR
+        #if not self.wait_non_sock_err:
+        #    self.wait_non_sock_err = PUBSUB.DEFAULT.WAIT_TIME_NON_SOCKET_ERROR
 
 # ################################################################################################################################
 
