@@ -33,21 +33,16 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     var topic_link = String.format(
         '<a href="/zato/pubsub/topic/?cluster={0}&highlight={1}">{2}</a>', data.cluster_id, data.id, data.queue_name);
 
+    var depth_func = $.fn.zato.pubsub.endpoint_queue.get_depth_link;
+
     var has_gd = data.has_gd ? 'Yes' : 'No';
     var is_staging_enabled = data.is_staging_enabled ? 'Yes' : 'No';
 
-    var total_link = $.fn.zato.pubsub.endpoint_queue.get_depth_link(
-        'total', data.cluster_id, data.id, data.name_slug, data.total_depth);
-
-    var current_link = $.fn.zato.pubsub.endpoint_queue.get_depth_link(
-        'current', data.cluster_id, data.id, data.name_slug, data.current_depth);
-
-    var staging_link = $.fn.zato.pubsub.endpoint_queue.get_depth_link(
-        'staging', data.cluster_id, data.id, data.name_slug, data.staging_depth);
-
+    var total_link = depth_func('total', data.cluster_id, data.id, data.name_slug, data.total_depth);
+    var current_link = depth_func('current', data.cluster_id, data.id, data.name_slug, data.current_depth);
+    var staging_link = depth_func('staging', data.cluster_id, data.id, data.name_slug, data.staging_depth);
     var sub_key_link = String.format(
         '<a id="sub_key_{0}" href="javascript:$.fn.zato.pubsub.endpoint_queue.toggle_sub_key(\'{0}\')">Show</a>', data.id);
-
     var last_interaction_link = '';
 
     if(data.last_interaction) {
@@ -58,6 +53,13 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     else {
         last_interaction = $.fn.zato.empty_value;
     }
+
+    var clear_link = String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.clear('{0}')\">Clear</a>", data.id));
+    var edit_link = String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.edit('{0}')\">Edit</a>", data.id));
+    var delete_link = String.format('<td>{0}</td>',
+        String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.delete_('{0}')\">Delete</a>", data.id));
 
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -76,19 +78,69 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     row += String.format('<td>{0}</td>', sub_key_link);
     row += String.format('<td>{0}</td>', last_interaction);
 
-    row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.clear('{0}')\">Clear</a>", data.id));
-    row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.edit('{0}')\">Edit</a>", data.id));
-    row += String.format('<td>{0}</td>',
-        String.format("<a href=\"javascript:$.fn.zato.pubsub.endpoint_queue.delete_('{0}')\">Delete</a>", data.id));
+    row += clear_link;
+    row += edit_link;
+    row += delete_link;
 
+    /* -- 1 -- */
     row += String.format("<td class='ignore item_id_{0}'>{0}</td>", data.id);
     row += String.format("<td class='ignore'>{0}</td>", data.sub_key);
+    row += String.format("<td class='ignore'>{0}</td>", data.amqp_exchange);
+    row += String.format("<td class='ignore'>{0}</td>", data.amqp_routing_key);
+    row += String.format("<td class='ignore'>{0}</td>", data.creation_time);
+
+    /* -- 2 -- */
+    row += String.format("<td class='ignore'>{0}</td>", data.delivery_batch_size);
+    row += String.format("<td class='ignore'>{0}</td>", data.delivery_data_format);
+    row += String.format("<td class='ignore'>{0}</td>", data.delivery_endpoint);
+    row += String.format("<td class='ignore'>{0}</td>", data.delivery_max_retry);
+    row += String.format("<td class='ignore'>{0}</td>", data.delivery_method);
+
+    /* -- 3 -- */
+    row += String.format("<td class='ignore'>{0}</td>", data.endpoint_id);
+    row += String.format("<td class='ignore'>{0}</td>", data.endpoint_name);
+    row += String.format("<td class='ignore'>{0}</td>", data.endpoint_type);
+    row += String.format("<td class='ignore'>{0}</td>", data.ext_client_id);
+    row += String.format("<td class='ignore'>{0}</td>", data.files_directory_list);
+
+    /* -- 4 -- */
+    row += String.format("<td class='ignore'>{0}</td>", data.ftp_directory_list);
     row += String.format("<td class='ignore'>{0}</td>", data.has_gd);
-    row += String.format("<td class='ignore'>{0}</td>", data.is_staging_enabled);
+    row += String.format("<td class='ignore'>{0}</td>", data.is_durable);
+    row += String.format("<td class='ignore'>{0}</td>", data.is_internal);
     row += String.format("<td class='ignore'>{0}</td>", data.name);
-    row += String.format("<td class='ignore'>{0}</td>", data.name_slug);
+
+    /* -- 5 -- */
+    row += String.format("<td class='ignore'>{0}</td>", data.out_amqp_id);
+    row += String.format("<td class='ignore'>{0}</td>", data.out_http_method);
+    row += String.format("<td class='ignore'>{0}</td>", data.out_http_soap_id);
+    row += String.format("<td class='ignore'>{0}</td>", data.server_id);
+    row += String.format("<td class='ignore'>{0}</td>", data.server_name);
+
+    /* -- 6 -- */
+    row += String.format("<td class='ignore'>{0}</td>", data.service_id);
+    row += String.format("<td class='ignore'>{0}</td>", data.sms_twilio_from);
+    row += String.format("<td class='ignore'>{0}</td>", data.sms_twilio_to_list);
+    row += String.format("<td class='ignore'>{0}</td>", data.smtp_body);
+
+    /* -- 7 -- */
+    row += String.format("<td class='ignore'>{0}</td>", data.smtp_from);
+    row += String.format("<td class='ignore'>{0}</td>", data.smtp_is_html);
+    row += String.format("<td class='ignore'>{0}</td>", data.smtp_subject);
+    row += String.format("<td class='ignore'>{0}</td>", data.smtp_to_list);
+    row += String.format("<td class='ignore'>{0}</td>", data.topic_id);
+
+    /* -- 8 -- */
+    row += String.format("<td class='ignore'>{0}</td>", data.topic_name);
+    row += String.format("<td class='ignore'>{0}</td>", data.wrap_one_msg_in_list);
+    row += String.format("<td class='ignore'>{0}</td>", data.wait_sock_err);
+    row += String.format("<td class='ignore'>{0}</td>", data.wait_non_sock_err);
+    row += String.format("<td class='ignore'>{0}</td>", data.out_rest_http_soap_id);
+
+    /* -- 9 -- */
+    row += String.format("<td class='ignore'>{0}</td>", data.out_soap_http_soap_id);
+    row += String.format("<td class='ignore'>{0}</td>", data.delivery_err_should_block);
+    row += String.format("<td class='ignore'>{0}</td>", data.is_staging_enabled);
 
     if(include_tr) {
         row += '</tr>';
