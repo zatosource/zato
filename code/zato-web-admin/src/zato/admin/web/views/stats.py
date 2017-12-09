@@ -14,6 +14,7 @@ from copy import deepcopy
 from cStringIO import StringIO
 from csv import DictWriter
 from datetime import datetime
+from traceback import format_exc
 
 # anyjson
 from anyjson import dumps
@@ -551,12 +552,24 @@ def settings(req):
 
     if req.zato.get('cluster'):
 
+        return_data = {
+            'zato_clusters': req.zato.clusters,
+            'cluster_id': req.zato.cluster_id,
+            'search_form':req.zato.search_form,
+        }
+
         _settings = {}
         defaults = deepcopy(DEFAULT_STATS_SETTINGS)
 
         for mapping in job_mappings:
 
-            response = req.zato.client.invoke('zato.scheduler.job.get-by-name', {'cluster_id':req.zato.cluster.id, 'name': mapping.job_name})
+            request = {'cluster_id':req.zato.cluster.id, 'name': mapping.job_name}
+            try:
+                response = req.zato.client.invoke('zato.scheduler.job.get-by-name', request)
+            except Exception, e:
+                logger.warn(format_exc(e))
+                return_data['has_scheduler_jobs'] = False
+                break
             if response.has_data:
 
                 for attr in mapping.attrs:
@@ -572,19 +585,18 @@ def settings(req):
                         # A sample response.data.extra is, for instance, 'max_batch_size=123456'
                         _settings['scheduler_{}'.format(attr.form_name)] = response.data.extra.split('=')[1]
 
+        # No break in the exception handler above means we were able to read in all the scheduler jobs needed
+        else:
+            return_data['has_scheduler_jobs'] = True
+
         for name in DEFAULT_STATS_SETTINGS:
             if not name.startswith('scheduler'):
                 _settings[name] = req.zato.settings_db.get(name, default=DEFAULT_STATS_SETTINGS[name])
     else:
         defaults, _settings = None, {}
 
-    return_data = {
-        'zato_clusters': req.zato.clusters,
-        'cluster_id': req.zato.cluster_id,
-        'search_form':req.zato.search_form,
-        'form': SettingsForm(initial=_settings),
-        'defaults':defaults,
-    }
+    return_data['form'] = SettingsForm(initial=_settings)
+    return_data['defaults'] = defaults
 
     return TemplateResponse(req, 'zato/stats/settings.html', return_data)
 
