@@ -54,6 +54,7 @@ def add_subscription(session, cluster_id, ctx):
     ps_sub.server_id = ctx.server_id
     ps_sub.topic_id = ctx.topic.id
     ps_sub.is_internal = ctx.is_internal
+    ps_sub.is_staging_enabled = ctx.is_staging_enabled
     ps_sub.creation_time = ctx.creation_time
     ps_sub.sub_key = ctx.sub_key
     ps_sub.pattern_matched = ctx.pattern_matched

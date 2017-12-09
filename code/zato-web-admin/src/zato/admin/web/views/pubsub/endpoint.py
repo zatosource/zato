@@ -28,6 +28,7 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_rever
 from zato.admin.web.views.pubsub import get_client_html
 from zato.common import ZATO_NONE
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubSubscription, PubSubTopic
+from zato.common import PUBSUB
 from zato.common.util import get_sa_model_columns
 
 # ################################################################################################################################
@@ -36,7 +37,8 @@ logger = logging.getLogger(__name__)
 
 # ################################################################################################################################
 
-sub_attrs = get_sa_model_columns(PubSubSubscription) + ['total_depth', 'current_depth', 'staging_depth', 'sub_id', 'topic_name']
+sub_attrs = get_sa_model_columns(PubSubSubscription) + ['total_depth', 'current_depth', 'staging_depth', 'sub_id', 'topic_name',
+    'out_rest_http_soap_id', 'out_soap_http_soap_id']
 
 # ################################################################################################################################
 
@@ -210,13 +212,14 @@ class _EndpointObjects(_Index):
         output_repeated = True
 
     def handle(self):
+        endpoint = self.req.zato.client.invoke('zato.pubsub.endpoint.get', {
+            'cluster_id':self.req.zato.cluster_id,
+            'id':self.input.endpoint_id,
+        }).data.response
+
         return {
-            'endpoint_id': self.input.endpoint_id,
-            'endpoint_name': self.req.zato.client.invoke(
-                'zato.pubsub.endpoint.get', {
-                    'cluster_id':self.req.zato.cluster_id,
-                    'id':self.input.endpoint_id,
-                }).data.response.name,
+            'endpoint':endpoint,
+            'endpoint_type': PUBSUB.ENDPOINT_TYPE,
         }
 
 # ################################################################################################################################

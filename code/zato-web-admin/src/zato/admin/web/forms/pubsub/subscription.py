@@ -24,7 +24,6 @@ skip_endpoint_types = (
 # ################################################################################################################################
 
 class CreateForm(forms.Form):
-    is_create = True
 
     id = forms.CharField(widget=forms.HiddenInput())
     server_id = forms.ChoiceField(widget=forms.Select())
@@ -119,6 +118,6 @@ class CreateForm(forms.Form):
 # ################################################################################################################################
 
 class EditForm(CreateForm):
-    is_create = False
+    pass
 
 # ################################################################################################################################
