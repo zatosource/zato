@@ -27,8 +27,9 @@ from zato.common.time_util import utcnow_as_ms
 from zato.common.util import get_sa_model_columns
 from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic
-from zato.server.service import AsIs, Bool, Int, Opaque
+from zato.server.service import Int
 from zato.server.service.internal import AdminService, AdminSIO
+from zato.server.service.internal.pubsub import common_sub_create_edit_input_optional
 
 # ################################################################################################################################
 
@@ -218,27 +219,6 @@ ctx_class = {
 
 # ################################################################################################################################
 
-class _Input:
-    common = ('is_internal', 'topic_name', 'active_status', 'endpoint_type', 'endpoint_id', 'delivery_method',
-        'delivery_data_format', 'delivery_batch_size', Bool('wrap_one_msg_in_list'), 'delivery_max_retry',
-        Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id', 'out_http_method',)
-    amqp = ('amqp_exchange', 'amqp_routing_key', 'out_http_method')
-    files = ('files_directory_list',)
-    ftp = ('ftp_directory_list',)
-    pubapi = ('security_id',)
-    rest = ('out_rest_http_soap_id', 'rest_delivery_endpoint')
-    service = ('service_id',)
-    sms_twilio = ('sms_twilio_from', 'sms_twilio_to_list')
-    smtp = (Bool('smtp_is_html'), 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body')
-    soap = ('out_soap_http_soap_id', 'soap_delivery_endpoint')
-    websockets = ('ws_channel_id', 'ws_channel_name', AsIs('ws_pub_client_id'), 'sql_ws_client_id', AsIs('ext_client_id'),
-        Opaque('web_socket'))
-
-_create_edit_input_optional = _Input.common + _Input.amqp + _Input.files + _Input.ftp + _Input.rest + _Input.service + \
-    _Input.sms_twilio + _Input.smtp + _Input.soap + _Input.websockets + _Input.pubapi
-
-# ################################################################################################################################
-
 class _Subscribe(AdminService):
     """ Base class for services implementing pub/sub subscriptions.
     """
@@ -275,7 +255,7 @@ class SubscribeServiceImpl(_Subscribe):
 
     class SimpleIO(AdminSIO):
         input_required = ('topic_name', 'is_internal')
-        input_optional = _create_edit_input_optional
+        input_optional = common_sub_create_edit_input_optional
         output_optional = ('sub_key', Int('queue_depth'))
         default_value = None
 

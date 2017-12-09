@@ -25,12 +25,14 @@ _subscriber_role = (PUBSUB.ROLE.PUBLISHER_SUBSCRIBER.id, PUBSUB.ROLE.SUBSCRIBER.
 def _pubsub_subscription(session, cluster_id):
     return session.query(
         PubSubSubscription.id,
+        PubSubSubscription.id.label('sub_id'),
         PubSubSubscription.id.label('name'), # A unique 'name' attribute is needed by ConfigDict
         PubSubSubscription.active_status,
         PubSubSubscription.server_id,
-        #PubSubSubscription.server_pid,
         PubSubSubscription.is_internal,
+        PubSubSubscription.is_staging_enabled,
         PubSubSubscription.creation_time,
+        PubSubSubscription.last_interaction_time,
         PubSubSubscription.sub_key,
         PubSubSubscription.is_durable,
         PubSubSubscription.has_gd,
@@ -42,6 +44,9 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.wrap_one_msg_in_list,
         PubSubSubscription.delivery_max_retry,
         PubSubSubscription.ext_client_id,
+        PubSubSubscription.delivery_err_should_block,
+        PubSubSubscription.wait_sock_err,
+        PubSubSubscription.wait_non_sock_err,
 
         PubSubSubscription.out_amqp_id,
         PubSubSubscription.amqp_exchange,
@@ -98,12 +103,12 @@ def pubsub_subscription_list(session, cluster_id, needs_columns=False):
 
 # ################################################################################################################################
 
-def pubsub_subscription_list_by_endpoint_id(session, cluster_id, endpoint_id):
+@query_wrapper
+def pubsub_subscription_list_by_endpoint_id(session, cluster_id, endpoint_id, needs_columns=False):
     """ A list of all pub/sub subscriptions for a given endpoint.
     """
     return _pubsub_subscription(session, cluster_id).\
-        filter(PubSubSubscription.endpoint_id==endpoint_id).\
-        all()
+        filter(PubSubSubscription.endpoint_id==endpoint_id)
 
 # ################################################################################################################################
 

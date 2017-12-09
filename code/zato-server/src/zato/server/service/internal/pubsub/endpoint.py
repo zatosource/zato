@@ -20,11 +20,13 @@ from zato.common.exception import BadRequest, Conflict
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
      PubSubSubscription, PubSubTopic
 from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, pubsub_endpoint_queue, \
-     pubsub_endpoint_queue_list, pubsub_endpoint_queue_list_by_sub_keys, pubsub_messages_for_queue
+     pubsub_endpoint_queue_list_by_sub_keys, pubsub_messages_for_queue
 from zato.common.odb.query_ps_endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
+from zato.common.odb.query_ps_subscription import pubsub_subscription_list_by_endpoint_id
 from zato.common.time_util import datetime_from_ms
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
+from zato.server.service.internal.pubsub import common_sub_create_edit_input_optional
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
@@ -185,17 +187,13 @@ class GetEndpointQueueList(AdminService):
 
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'endpoint_id')
-        output_required = ('sub_id', 'topic_id', 'topic_name', 'name', 'active_status', 'is_internal',
-            'is_staging_enabled', 'creation_time', 'sub_key', 'has_gd', 'delivery_method',
-            'delivery_data_format', 'endpoint_name', Int('total_depth'), Int('current_depth'), Int('staging_depth'))
-        output_optional = ('delivery_endpoint', 'last_interaction_time', 'last_interaction_type', 'last_interaction_details',
-            AsIs('ws_ext_client_id'))
+        output_optional = common_sub_create_edit_input_optional
         output_repeated = True
         request_elem = 'zato_pubsub_endpoint_get_endpoint_queue_list_request'
         response_elem = 'zato_pubsub_endpoint_get_endpoint_queue_list_response'
 
     def get_data(self, session):
-        return self._search(pubsub_endpoint_queue_list, session, self.request.input.cluster_id,
+        return self._search(pubsub_subscription_list_by_endpoint_id, session, self.request.input.cluster_id,
             self.request.input.endpoint_id, False)
 
     def handle(self):
