@@ -19,10 +19,6 @@ from threading import RLock
 from time import time
 from traceback import format_exc
 
-# mxODBC Connect
-from mx.ODBCConnect.Client import ServerSession as mxServerSession
-from mx.ODBCConnect.Error import OperationalError
-
 # Spring Python
 from springpython.context import DisposableObject
 
