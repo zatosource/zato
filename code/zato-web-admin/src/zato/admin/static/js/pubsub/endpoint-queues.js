@@ -31,7 +31,7 @@ $.fn.zato.pubsub.endpoint_queue.data_table.new_row = function(item, data, includ
     }
 
     var topic_link = String.format(
-        '<a href="/zato/pubsub/topic/?cluster={0}&highlight={1}">{2}</a>', data.cluster_id, data.id, data.queue_name);
+        '<a href="/zato/pubsub/topic/?cluster={0}&highlight={1}">{2}</a>', data.cluster_id, data.id, data.topic_name);
 
     var depth_func = $.fn.zato.pubsub.endpoint_queue.get_depth_link;
 

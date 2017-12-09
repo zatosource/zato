@@ -305,10 +305,13 @@ class EndpointQueueBrowser(_Index):
 @method_allowed('POST')
 def endpoint_queue_edit(req):
 
+    sub_id = req.POST['id']
+    cluster_id = req.POST['cluster_id']
+
     # Always available
     request = {
-        'id': req.POST['id'],
-        'cluster_id': req.POST['cluster_id']
+        'id': sub_id,
+        'cluster_id': cluster_id
     }
 
     # Need form prefix
@@ -318,51 +321,30 @@ def endpoint_queue_edit(req):
             value = req.POST.get(key)
             request[item] = value
 
+    # Update subscription ..
     req.zato.client.invoke('zato.pubsub.endpoint.update-endpoint-queue', request)
 
-    response = {
-        'message': 'Subscription updated successfully',
-    }
+    # .. and read it back - but this time it will include current data about depth.
+    service = 'zato.pubsub.endpoint.get-endpoint-queue'
+    request = bunchify({
+        'id': sub_id,
+        'cluster_id': cluster_id,
+    })
+    service_response = req.zato.client.invoke(service, request).data.response
+
+    service_response.creation_time = from_utc_to_user(service_response.creation_time+'+00:00', req.zato.user_profile)
+
+    if service_response.last_interaction_time:
+        service_response.last_interaction_time = from_utc_to_user(
+            service_response.last_interaction_time+'+00:00', req.zato.user_profile)
+
+    response = {}
+    response['id'] = sub_id
+    response['message'] = 'Subscription updated successfully'
+    response.update(**service_response)
+    response.update(**request)
 
     return HttpResponse(dumps(response), content_type='application/javascript')
-
-    '''
-    try:
-        sub_id = req.POST['id']
-        cluster_id = req.POST['cluster_id']
-
-        request = {
-            'id': sub_id,
-            'cluster_id': cluster_id,
-            'sub_key': req.POST['edit-sub_key'],
-            'active_status': req.POST['edit-active_status'],
-            'has_gd': req.POST.get('edit-has_gd'),
-            'is_staging_enabled': req.POST.get('edit-is_staging_enabled'),
-        }
-
-        queue_name = req.zato.client.invoke('zato.pubsub.endpoint.update-endpoint-queue', request).data.name
-
-    except Exception, e:
-        return HttpResponseServerError(format_exc(e))
-    else:
-        service = 'zato.pubsub.endpoint.get-endpoint-queue'
-        request = bunchify({
-            'id': sub_id,
-            'cluster_id': cluster_id,
-        })
-        response = deepcopy(request)
-        response.message = 'Successfully updated sub queue for topic `{}`'.format(queue_name)
-        response.queue_name_slug = slugify(queue_name)
-        response.update(req.zato.client.invoke(service, request).data.response)
-
-        response.creation_time = from_utc_to_user(response.creation_time+'+00:00', req.zato.user_profile)
-
-        if response.last_interaction_time:
-            response.last_interaction_time = from_utc_to_user(
-                response.last_interaction_time+'+00:00', req.zato.user_profile)
-
-        return HttpResponse(dumps(response), content_type='application/javascript')
-        '''
 
 # ################################################################################################################################
 
