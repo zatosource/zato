@@ -155,7 +155,7 @@ class SQLConnectionPool(object):
                 self.logger.warn('SQL connection could not be created, caught mxODBC exception, e:`%s`', format_exc(e))
             else:
                 url = '{engine}://{username}:{password}@{db_name}'.format(**config)
-                return create_engine(url, module=odbc, echo=True)
+                return create_engine(url, module=odbc, **extra)
 
         else:
             return create_engine(engine_url, **extra)
