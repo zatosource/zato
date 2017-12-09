@@ -305,7 +305,26 @@ class EndpointQueueBrowser(_Index):
 @method_allowed('POST')
 def endpoint_queue_edit(req):
 
-    return HttpResponse(dumps(''), content_type='application/javascript')
+    # Always available
+    request = {
+        'id': req.POST['id'],
+        'cluster_id': req.POST['cluster_id']
+    }
+
+    # Need form prefix
+    for item in sorted(sub_attrs):
+        if item not in ('id', 'cluster_id'):
+            key = 'edit-{}'.format(item)
+            value = req.POST.get(key)
+            request[item] = value
+
+    req.zato.client.invoke('zato.pubsub.endpoint.update-endpoint-queue', request)
+
+    response = {
+        'message': 'Subscription updated successfully',
+    }
+
+    return HttpResponse(dumps(response), content_type='application/javascript')
 
     '''
     try:

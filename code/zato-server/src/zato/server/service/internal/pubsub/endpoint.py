@@ -24,9 +24,10 @@ from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, 
 from zato.common.odb.query_ps_endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
 from zato.common.odb.query_ps_subscription import pubsub_subscription_list_by_endpoint_id
 from zato.common.time_util import datetime_from_ms
+from zato.common.util import asbool
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
-from zato.server.service.internal.pubsub import common_sub_create_edit_input_optional
+from zato.server.service.internal.pubsub import common_sub_input
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
@@ -39,6 +40,11 @@ broker_message_prefix = 'ENDPOINT_'
 list_func = pubsub_endpoint_list
 skip_input_params = ['sub_key', 'is_sub_allowed']
 output_optional_extra = ['ws_channel_name', 'sec_id', 'sec_type', 'sec_name', 'sub_key']
+
+# ################################################################################################################################
+
+_sub_skip_update = ('id', 'sub_id', 'sub_key', 'cluster_id', 'creation_time', 'current_depth', 'endpoint_id', 'endpoint_type',
+    'last_interaction_time', 'staging_depth', 'sql_ws_client_id', 'topic_name', 'total_depth', 'web_socket')
 
 # ################################################################################################################################
 
@@ -187,7 +193,7 @@ class GetEndpointQueueList(AdminService):
 
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'endpoint_id')
-        output_optional = common_sub_create_edit_input_optional
+        output_optional = common_sub_input
         output_repeated = True
         request_elem = 'zato_pubsub_endpoint_get_endpoint_queue_list_request'
         response_elem = 'zato_pubsub_endpoint_get_endpoint_queue_list_response'
@@ -240,7 +246,7 @@ class UpdateEndpointQueue(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'id', 'sub_key', 'active_status')
-        input_optional = ('is_staging_enabled', 'has_gd')
+        input_optional = common_sub_input
         output_required = ('id', 'name')
 
     def handle(self):
@@ -251,10 +257,9 @@ class UpdateEndpointQueue(AdminService):
                 filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
                 one()
 
-            item.sub_key = self.request.input.sub_key
-            item.active_status = self.request.input.active_status
-            item.is_staging_enabled = self.request.input.is_staging_enabled
-            item.has_gd = self.request.input.has_gd
+            for key, value in sorted(self.request.input.items()):
+                if key not in _sub_skip_update:
+                    setattr(item, key, value)
 
             session.add(item)
             session.commit()
