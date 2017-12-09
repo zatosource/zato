@@ -911,12 +911,13 @@ class OutgoingFTP(Base):
     timeout = Column(Integer, nullable=True)
     port = Column(Integer, server_default=str(FTP_PORT), nullable=False)
     dircache = Column(Boolean(), nullable=False)
+    use_ftps = Column(Boolean(), nullable=False)
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_ftp', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self, id=None, name=None, is_active=None, host=None, user=None,
-                 password=None, acct=None, timeout=None, port=None, dircache=None,
+                 password=None, acct=None, timeout=None, port=None, dircache=None, use_ftps=None,
                  cluster_id=None):
         self.id = id
         self.name = name
@@ -929,6 +930,7 @@ class OutgoingFTP(Base):
         self.port = port
         self.dircache = dircache
         self.cluster_id = cluster_id
+        self.use_ftps = use_ftps
 
 class OutgoingOdoo(Base):
     """ An outgoing Odoo connection.

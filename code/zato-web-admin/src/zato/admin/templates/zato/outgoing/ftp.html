@@ -32,12 +32,14 @@
             'timeout',
             'port',
             '_dircache',
+            '_use_ftps',
             '_change_password',
             '_edit',
             '_delete',
             'id',
             'is_active',
-            'dircache'
+            'dircache',
+            'use_ftps'
         ]
     }
     </script>
@@ -76,6 +78,7 @@
                         <th><a href="#">Timeout</a></th>
                         <th><a href="#">Port</a></th>
                         <th><a href="#">Cache directories</a></th>
+                        <th><a href="#">Use TLS</a></th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
                         <th>&nbsp;</th>
@@ -98,12 +101,14 @@
                         <td>{{ item.timeout|default:'' }}</td>
                         <td>{{ item.port }}</td>
                         <td>{{ item.dircache|yesno:'Yes,No' }}</td>
+                        <td>{{ item.use_ftps|yesno:'Yes,No' }}</td>                        
                         <td><a href="javascript:$.fn.zato.data_table.change_password('{{ item.id }}')">Change password</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.ftp.edit('{{ item.id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.outgoing.ftp.delete_('{{ item.id }}')">Delete</a></td>
                         <td class='ignore item_id_{{ item.id }}'>{{ item.id }}</td>
                         <td class='ignore'>{{ item.is_active }}</td>
                         <td class='ignore'>{{ item.dircache }}</td>
+                        <td class='ignore'>{{ item.use_ftps }}</td>
                     </tr>
                 {% endfor %}
                 {% else %}
@@ -159,6 +164,11 @@
                         <tr>
                             <td style="vertical-align:middle">Cache directories</td>
                             <td>{{ create_form.dircache }}</td>
+                        </tr>
+                        
+                        <tr>
+                            <td style="vertical-align:middle">Use TLS</td>
+                            <td>{{ create_form.use_ftps }}</td>
                         </tr>
 
                         <tr>
@@ -217,6 +227,11 @@
                             <td>{{ edit_form.dircache }}</td>
                         </tr>
                         
+                        <tr>
+                            <td style="vertical-align:middle">Use TLS</td>
+                            <td>{{ edit_form.use_ftps }}</td>
+                        </tr>
+
                         <tr>
                             <td colspan="2" style="text-align:right">
                                 <input type="submit" value="OK" />

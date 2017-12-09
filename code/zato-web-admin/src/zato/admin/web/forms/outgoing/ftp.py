@@ -23,6 +23,7 @@ class CreateForm(forms.Form):
     acct = forms.CharField(widget=forms.TextInput(attrs={'style':'width:100%'}))
     timeout = forms.CharField(widget=forms.TextInput(attrs={'style':'width:10%'}))
     dircache = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'checked':'checked'}))
+    use_ftps = forms.BooleanField(required=False, widget=forms.CheckboxInput())
 
     def __init__(self, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
@@ -30,3 +31,4 @@ class CreateForm(forms.Form):
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())
     dircache = forms.BooleanField(required=False, widget=forms.CheckboxInput())
+    use_ftps = forms.BooleanField(required=False, widget=forms.CheckboxInput())

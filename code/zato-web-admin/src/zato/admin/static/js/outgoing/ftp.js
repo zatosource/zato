@@ -38,6 +38,7 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, include_tr) {
 
     var is_active = item.is_active == true;
     var dircache = item.dircache == true;
+    var use_ftps = item.use_ftps == true;
     
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
@@ -49,6 +50,7 @@ $.fn.zato.outgoing.ftp.data_table.new_row = function(item, data, include_tr) {
     row += String.format('<td>{0}</td>', item.timeout ? item.timeout : '');
     row += String.format('<td>{0}</td>', item.port);
     row += String.format('<td>{0}</td>', dircache ? 'Yes' : 'No');
+    row += String.format('<td>{0}</td>', use_ftps ? 'Yes' : 'No');
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.data_table.change_password({0})'>Change password</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href=\"javascript:$.fn.zato.outgoing.ftp.edit('{0}')\">Edit</a>", item.id));
     row += String.format('<td>{0}</td>', String.format("<a href='javascript:$.fn.zato.outgoing.ftp.delete_({0});'>Delete</a>", item.id));
