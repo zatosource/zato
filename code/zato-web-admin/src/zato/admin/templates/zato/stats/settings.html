@@ -18,13 +18,22 @@
 
 <h2 class="zato">Statistics : Settings</h2>
 
-{% if messages %}
-    {% for message in messages %}
-    <div id="user-message-div"><pre id="user-message" class="user-message user-message-{{ message.tags }}">{{ message }}</pre></div>
-    {% endfor %}
+{% if has_scheduler_jobs %}
+    {% if messages %}
+        {% for message in messages %}
+        <div id="user-message-div"><pre id="user-message" class="user-message user-message-{{ message.tags }}">{{ message }}</pre></div>
+        {% endfor %}
+    {% endif %}
+{% else %}
+<p class="big-notice" style="background-color:yellow; color:#333">
+    Error while reading internal jobs.
+    <br/>
+    Please make sure the scheduler is running.
+</p>
 {% endif %}
 
 
+{% if has_scheduler_jobs %}
 {% include "zato/search-form.html" with page_prompt="Show settings"%}
 
 {% if cluster_id %}
@@ -32,6 +41,7 @@
 <div id="markup">
     <form action="./save/?cluster={{ cluster_id }}" method="post" id="settings_form">
     {% csrf_token %}
+
     <table id="data-table">
         <tr>
             <td class="inline_header" colspan="4">Scheduler</td>
@@ -61,7 +71,9 @@
         </tr>
     </table>
     </form>
+
 </div>
+{% endif %}
 
 
 {% endif %} {% comment %}cluster_id{% endcomment %}
