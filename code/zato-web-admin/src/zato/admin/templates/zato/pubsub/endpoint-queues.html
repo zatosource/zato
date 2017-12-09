@@ -39,57 +39,65 @@
             '_edit',
             '_delete',
 
+            {% comment %} -- 1 -- {% endcomment %}
             'id',
             'sub_key',
             'amqp_exchange',
             'amqp_routing_key',
-
             'creation_time',
+
+            {% comment %} -- 2 -- {% endcomment %}
             'delivery_batch_size',
             'delivery_data_format',
             'delivery_endpoint',
-
             'delivery_max_retry',
             'delivery_method',
+
+            {% comment %} -- 3 -- {% endcomment %}
             'endpoint_id',
             'endpoint_name',
-
             'endpoint_type',
             'ext_client_id',
             'files_directory_list',
-            'ftp_directory_list',
 
+            {% comment %} -- 4 -- {% endcomment %}
+            'ftp_directory_list',
             'has_gd',
             'is_durable',
             'is_internal',
             'name',
 
+            {% comment %} -- 5 -- {% endcomment %}
             'out_amqp_id',
             'out_http_method',
             'out_http_soap_id',
             'server_id',
-
             'server_name',
-            'server_pid',
+
+            {% comment %} -- 6 -- {% endcomment %}
             'service_id',
             'sms_twilio_from',
-
             'sms_twilio_to_list',
             'smtp_body',
+
+            {% comment %} -- 7 -- {% endcomment %}
             'smtp_from',
             'smtp_is_html',
-
             'smtp_subject',
             'smtp_to_list',
             'topic_id',
-            'topic_name',
 
+            {% comment %} -- 8 -- {% endcomment %}
+            'topic_name',
             'wrap_one_msg_in_list',
             'wait_sock_err',
             'wait_non_sock_err',
-
             'out_rest_http_soap_id',
+
+            {% comment %} -- 9 -- {% endcomment %}
             'out_soap_http_soap_id',
+            'delivery_err_should_block',
+            'is_staging_enabled',
         ]
     }
     </script>
@@ -139,59 +147,63 @@
                         <th style="width:5%">&nbsp;</th>
                         <th style="width:5%">&nbsp;</th>
 
+                        {% comment %} -- 1 -- {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} -- 2 -- {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} -- 3 -- {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} -- 4 -- {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-                        <th class='ignore'>&nbsp;</th>
-
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} -- 5 -- {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        {% comment %} -- 6 -- {% endcomment %}
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} -- 7 -- {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} -- 8 -- {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
+                        {% comment %} -- 9 -- {% endcomment %}
+                        <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
 
@@ -210,7 +222,7 @@
                                 <span class="form_hint">{{ item.ws_ext_client_id }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ item.active_status }}</td>
+                        <td>{{ item.active_status }} {{item.wrap_one_msg_in_list }}</td>
 
                         <td>{{ item.has_gd|yesno:'Yes,No' }}</td>
                         <td>{{ item.is_staging_enabled|yesno:'Yes,No' }}</td>
@@ -235,62 +247,70 @@
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.edit('{{ item.sub_id }}')">Edit</a></td>
                         <td><a href="javascript:$.fn.zato.pubsub.endpoint_queue.delete_('{{ item.sub_id }}')">Delete</a></td>
 
+                        {% comment %} -- 1 -- {% endcomment %}
                         <td class='ignore item_id_{{ item.sub_id }}'>{{ item.sub_id }}</td>
                         <td class='ignore'>{{ item.sub_key }}</td>
                         <td class='ignore'>{{ item.amqp_exchange|default:'' }}</td>
                         <td class='ignore'>{{ item.amqp_routing_key|default:'' }}</td>
+                        <td class='ignore'>{{ item.creation_time|default:'' }}</td>
 
-                        <td class='ignore'>{{ item.creation_time }}</td>
+                        {% comment %} -- 2 -- {% endcomment %}
                         <td class='ignore'>{{ item.delivery_batch_size|default:'' }}</td>
                         <td class='ignore'>{{ item.delivery_data_format|default:'' }}</td>
                         <td class='ignore'>{{ item.delivery_endpoint|default:'' }}</td>
-
                         <td class='ignore'>{{ item.delivery_max_retry|default:'' }}</td>
                         <td class='ignore'>{{ item.delivery_method|default:'' }}</td>
+
+                        {% comment %} -- 3 -- {% endcomment %}
                         <td class='ignore'>{{ item.endpoint_id|default:'' }}</td>
                         <td class='ignore'>{{ item.endpoint_name|default:'' }}</td>
-
-                        <td class='ignore'>{{ item.endpoint_type }}</td>
+                        <td class='ignore'>{{ item.endpoint_type|default:'' }}</td>
                         <td class='ignore'>{{ item.ext_client_id|default:'' }}</td>
                         <td class='ignore'>{{ item.files_directory_list|default:'' }}</td>
+
+                        {% comment %} -- 4 -- {% endcomment %}
                         <td class='ignore'>{{ item.ftp_directory_list|default:'' }}</td>
+                        <td class='ignore'>{{ item.has_gd }}</td>
+                        <td class='ignore'>{{ item.is_durable }}</td>
+                        <td class='ignore'>{{ item.is_internal }}</td>
+                        <td class='ignore'>{{ item.name|default:'' }}</td>
 
-                        <td class='ignore'>{{ item.has_gd|default:'' }}</td>
-                        <td class='ignore'>{{ item.is_durable|default:'' }}</td>
-                        <td class='ignore'>{{ item.is_internal|default:'' }}</td>
-                        <td class='ignore'>{{ item.topic_name }}</td>
-
+                        {% comment %} -- 5 -- {% endcomment %}
                         <td class='ignore'>{{ item.out_amqp_id|default:'' }}</td>
                         <td class='ignore'>{{ item.out_http_method|default:'' }}</td>
                         <td class='ignore'>{{ item.out_http_soap_id|default:'' }}</td>
                         <td class='ignore'>{{ item.server_id|default:'' }}</td>
-
                         <td class='ignore'>{{ item.server_name|default:'' }}</td>
-                        <td class='ignore'>{{ item.server_pid|default:'' }}</td>
+
+                        {% comment %} -- 6 -- {% endcomment %}
                         <td class='ignore'>{{ item.service_id|default:'' }}</td>
                         <td class='ignore'>{{ item.sms_twilio_from|default:'' }}</td>
-
                         <td class='ignore'>{{ item.sms_twilio_to_list|default:'' }}</td>
                         <td class='ignore'>{{ item.smtp_body|default:'' }}</td>
-                        <td class='ignore'>{{ item.smtp_from|default:'' }}</td>
-                        <td class='ignore'>{{ item.smtp_is_html|default:'' }}</td>
 
+                        {% comment %} -- 7 -- {% endcomment %}
+                        <td class='ignore'>{{ item.smtp_from|default:'' }}</td>
+                        <td class='ignore'>{{ item.smtp_is_html }}</td>
                         <td class='ignore'>{{ item.smtp_subject|default:'' }}</td>
                         <td class='ignore'>{{ item.smtp_to_list|default:'' }}</td>
                         <td class='ignore'>{{ item.topic_id|default:'' }}</td>
-                        <td class='ignore'>{{ item.topic_name|default:'' }}</td>
 
-                        <td class='ignore'>{{ item.wrap_one_msg_in_list|default:'' }}</td>
+                        {% comment %} -- 8 -- {% endcomment %}
+                        <td class='ignore'>{{ item.topic_name|default:'' }}</td>
+                        <td class='ignore'>{{ item.wrap_one_msg_in_list }}</td>
                         <td class='ignore'>{{ item.wait_sock_err|default:'' }}</td>
                         <td class='ignore'>{{ item.wait_non_sock_err|default:'' }}</td>
-
                         <td class='ignore'>{{ item.out_rest_http_soap_id|default:'' }}</td>
+
+                        {% comment %} -- 9 -- {% endcomment %}
                         <td class='ignore'>{{ item.out_soap_http_soap_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.delivery_err_should_block }}</td>
+                        <td class='ignore'>{{ item.is_staging_enabled }}</td>
 
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
-                        <td colspan='19'>No results</td>
+                        <td colspan='55'>No results</td>
                     </tr>
                 {% endif %}
 
