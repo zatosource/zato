@@ -305,6 +305,9 @@ class EndpointQueueBrowser(_Index):
 @method_allowed('POST')
 def endpoint_queue_edit(req):
 
+    return HttpResponse(dumps(''), content_type='application/javascript')
+
+    '''
     try:
         sub_id = req.POST['id']
         cluster_id = req.POST['cluster_id']
@@ -340,6 +343,7 @@ def endpoint_queue_edit(req):
                 response.last_interaction_time+'+00:00', req.zato.user_profile)
 
         return HttpResponse(dumps(response), content_type='application/javascript')
+        '''
 
 # ################################################################################################################################
 
