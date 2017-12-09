@@ -28,10 +28,15 @@ from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_rever
 from zato.admin.web.views.pubsub import get_client_html
 from zato.common import ZATO_NONE
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubSubscription, PubSubTopic
+from zato.common.util import get_sa_model_columns
 
 # ################################################################################################################################
 
 logger = logging.getLogger(__name__)
+
+# ################################################################################################################################
+
+sub_attrs = get_sa_model_columns(PubSubSubscription) + ['total_depth', 'current_depth', 'staging_depth', 'sub_id', 'topic_name']
 
 # ################################################################################################################################
 
@@ -239,11 +244,7 @@ class EndpointQueues(_EndpointObjects):
     output_class = PubSubSubscription
 
     class SimpleIO(_EndpointObjects.SimpleIO):
-        output_required = ('sub_id', 'topic_id', 'topic_name', 'name', 'active_status', 'is_internal',
-            'total_depth', 'current_depth', 'staging_depth')
-        output_optional = ('creation_time', 'sub_key', 'has_gd', 'delivery_method', 'delivery_data_format', 'delivery_endpoint',
-            'last_interaction_time', 'last_interaction_type', 'last_interaction_details', 'endpoint_name', 'is_staging_enabled',
-            'ws_ext_client_id')
+        output_optional = sub_attrs
 
     def on_before_append_item(self, item):
         item.creation_time = from_utc_to_user(item.creation_time+'+00:00', self.req.zato.user_profile)

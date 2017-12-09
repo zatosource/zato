@@ -85,6 +85,8 @@
             'topic_name',
 
             'wrap_one_msg_in_list',
+            'wait_sock_err',
+            'wait_non_sock_err',
         ]
     }
     </script>
@@ -263,6 +265,8 @@
                         <td class='ignore'>{{ item.topic_name|default:'' }}</td>
 
                         <td class='ignore'>{{ item.wrap_one_msg_in_list|default:'' }}</td>
+                        <td class='ignore'>{{ item.wait_sock_err|default:'' }}</td>
+                        <td class='ignore'>{{ item.wait_non_sock_err|default:'' }}</td>
 
                 {% endfor %}
                 {% else %}
