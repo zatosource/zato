@@ -27,7 +27,7 @@ from zato.common.time_util import datetime_from_ms
 from zato.common.util import asbool
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
-from zato.server.service.internal.pubsub import common_sub_input
+from zato.server.service.internal.pubsub import common_sub_data
 from zato.server.service.meta import CreateEditMeta, DeleteMeta, GetListMeta
 
 # ################################################################################################################################
@@ -193,7 +193,7 @@ class GetEndpointQueueList(AdminService):
 
     class SimpleIO(GetListAdminSIO):
         input_required = ('cluster_id', 'endpoint_id')
-        output_optional = common_sub_input
+        output_optional = common_sub_data
         output_repeated = True
         request_elem = 'zato_pubsub_endpoint_get_endpoint_queue_list_request'
         response_elem = 'zato_pubsub_endpoint_get_endpoint_queue_list_response'
@@ -246,7 +246,7 @@ class UpdateEndpointQueue(AdminService):
     """
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'id', 'sub_key', 'active_status')
-        input_optional = common_sub_input
+        input_optional = common_sub_data
         output_required = ('id', 'name')
 
     def handle(self):
@@ -272,11 +272,7 @@ class UpdateEndpointQueue(AdminService):
 class GetEndpointQueue(AdminService):
     class SimpleIO(AdminSIO):
         input_required = ('cluster_id', 'id')
-        output_required = ('sub_id', 'topic_id', 'topic_name', 'name', 'active_status', 'is_internal',
-            'is_staging_enabled', 'creation_time', 'sub_key', 'has_gd', 'delivery_method',
-            'delivery_data_format', 'endpoint_id', 'endpoint_name')
-        output_optional = ('delivery_endpoint', 'last_interaction_time', 'last_interaction_type', 'last_interaction_details',
-            Int('total_depth'), Int('current_depth'), Int('staging_depth'), AsIs('ws_ext_client_id'))
+        output_optional = common_sub_data
 
     def handle(self):
         with closing(self.odb.session()) as session:

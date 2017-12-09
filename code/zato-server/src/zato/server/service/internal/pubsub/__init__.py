@@ -62,7 +62,7 @@ class CommonSubData:
     websockets = ('ws_channel_id', 'ws_channel_name', AsIs('ws_pub_client_id'), 'sql_ws_client_id', AsIs('ext_client_id'),
         Opaque('web_socket'))
 
-common_sub_input = CommonSubData.common + CommonSubData.amqp + CommonSubData.files + \
+common_sub_data = CommonSubData.common + CommonSubData.amqp + CommonSubData.files + \
     CommonSubData.ftp + CommonSubData.rest + CommonSubData.service + \
     CommonSubData.sms_twilio + CommonSubData.smtp + CommonSubData.soap + CommonSubData.websockets + CommonSubData.pubapi
 
