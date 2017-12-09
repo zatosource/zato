@@ -37,12 +37,12 @@ $.fn.zato.outgoing.sql.data_table.new_row = function(item, data, include_tr) {
     }
 
     var is_active = item.is_active == true;
-    
+
     row += "<td class='numbering'>&nbsp;</td>";
     row += "<td class='impexp'><input type='checkbox' /></td>";
     row += String.format('<td>{0}</td>', item.name);
     row += String.format('<td>{0}</td>', is_active ? 'Yes' : 'No');
-    row += String.format('<td>{0}</td>', data.engine_text);
+    row += String.format('<td>{0}</td>', data.engine_display_name);
     row += String.format('<td>{0}</td>', item.host);
     row += String.format('<td>{0}</td>', item.port);
     row += String.format('<td>{0}</td>', item.db_name);

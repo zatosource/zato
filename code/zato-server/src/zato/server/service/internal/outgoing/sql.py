@@ -10,6 +10,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 # stdlib
 from contextlib import closing
+from operator import itemgetter
 from traceback import format_exc
 from uuid import uuid4
 
@@ -18,7 +19,8 @@ from zato.common import ZatoException, ZATO_ODB_POOL_NAME
 from zato.common.broker_message import OUTGOING
 from zato.common.odb.model import SQLConnectionPool
 from zato.common.odb.query import out_sql_list
-from zato.server.service import Integer
+from zato.common.util import get_sql_engine_display_name
+from zato.server.service import AsIs, Integer
 from zato.server.service.internal import AdminService, AdminSIO, ChangePasswordBase, GetListAdminSIO
 
 class _SQLService(object):
@@ -32,7 +34,9 @@ class _SQLService(object):
 
     def validate_extra(self, cid, extra):
         if extra and not b'=' in extra:
-            raise ZatoException(cid, 'extra should be a list of key=value parameters, possibly one-element long, instead of [{}]'.format(extra.decode('utf-8')))
+            raise ZatoException(cid,
+                'extra should be a list of key=value parameters, possibly one-element long, instead of `{}`'.format(
+                    extra.decode('utf-8')))
 
 class GetList(AdminService):
     """ Returns a list of outgoing SQL connections.
@@ -43,7 +47,8 @@ class GetList(AdminService):
         request_elem = 'zato_outgoing_sql_get_list_request'
         response_elem = 'zato_outgoing_sql_get_list_response'
         input_required = ('cluster_id',)
-        output_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', Integer('pool_size'))
+        output_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username',
+            Integer('pool_size'), 'engine_display_name')
         output_optional = ('extra',)
 
     def get_data(self, session):
@@ -51,7 +56,10 @@ class GetList(AdminService):
 
     def handle(self):
         with closing(self.odb.session()) as session:
-            self.response.payload[:] = self.get_data(session)
+            data = self.get_data(session)
+            for item in data:
+                item.engine_display_name = get_sql_engine_display_name(item.engine, self.server.fs_sql_config)
+            self.response.payload[:] = data
 
 class Create(AdminService, _SQLService):
     """ Creates a new outgoing SQL connection.
@@ -59,9 +67,10 @@ class Create(AdminService, _SQLService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_sql_create_request'
         response_elem = 'zato_outgoing_sql_create_response'
-        input_required = ('name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', Integer('pool_size'))
+        input_required = ('name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username',
+            Integer('pool_size'))
         input_optional = ('extra',)
-        output_required = ('id', 'name')
+        output_required = ('id', 'name', 'display_name')
 
     def handle(self):
         input = self.request.input
@@ -100,6 +109,7 @@ class Create(AdminService, _SQLService):
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
+                self.response.payload.display_name = get_sql_engine_display_name(input.engine, self.server.fs_sql_config)
 
             except Exception, e:
                 msg = 'Could not create an outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
@@ -114,9 +124,10 @@ class Edit(AdminService, _SQLService):
     class SimpleIO(AdminSIO):
         request_elem = 'zato_outgoing_sql_edit_request'
         response_elem = 'zato_outgoing_sql_edit_response'
-        input_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username', Integer('pool_size'))
+        input_required = ('id', 'name', 'is_active', 'cluster_id', 'engine', 'host', Integer('port'), 'db_name', 'username',
+            Integer('pool_size'))
         input_optional = ('extra',)
-        output_required = ('id', 'name')
+        output_required = ('id', 'name', 'display_name')
 
     def handle(self):
         input = self.request.input
@@ -157,6 +168,7 @@ class Edit(AdminService, _SQLService):
 
                 self.response.payload.id = item.id
                 self.response.payload.name = item.name
+                self.response.payload.display_name = get_sql_engine_display_name(input.engine, self.server.fs_sql_config)
 
             except Exception, e:
                 msg = 'Could not update the outgoing SQL connection, e:[{e}]'.format(e=format_exc(e))
@@ -223,7 +235,8 @@ class Ping(AdminService):
                     filter(SQLConnectionPool.id==self.request.input.id).\
                     one()
 
-                self.response.payload.response_time = str(self.outgoing.sql.get(item.name, False).pool.ping())
+                ping = self.outgoing.sql.get(item.name, False).pool.ping
+                self.response.payload.response_time = str(ping(self.server.fs_sql_config))
 
             except Exception, e:
                 session.rollback()
@@ -246,3 +259,25 @@ class AutoPing(AdminService):
                 self.invoke(Ping.get_name(), {'id': item['id']})
             except Exception, e:
                 self.logger.warn('Could not ping SQL pool `%s`, config:`%s`, e:`%s`', item['name'], item, format_exc(e))
+
+class GetEngineList(AdminService):
+    """ Returns a list of all engines defined in sql.conf.
+    """
+    class SimpleIO(AdminSIO):
+        request_elem = 'zato_outgoing_sql_get_engine_list_request'
+        response_elem = 'zato_outgoing_sql_get_engine_list_response'
+        output_required = (AsIs('id'), 'name')
+        output_repeated = True
+
+    def get_data(self):
+        out = []
+        for id, value in self.server.fs_sql_config.items():
+            out.append({
+                'id': id,
+                'name': value['display_name']
+            })
+
+        return sorted(out, key=itemgetter('name'))
+
+    def handle(self):
+        self.response.payload[:] = self.get_data()
