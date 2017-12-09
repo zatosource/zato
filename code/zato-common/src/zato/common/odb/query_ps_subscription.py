@@ -66,6 +66,8 @@ def _pubsub_subscription(session, cluster_id):
         PubSubSubscription.smtp_body,
 
         PubSubSubscription.out_http_soap_id,
+        PubSubSubscription.out_http_soap_id.label('out_rest_http_soap_id'),
+        PubSubSubscription.out_http_soap_id.label('out_soap_http_soap_id'),
         PubSubSubscription.out_http_method,
         PubSubSubscription.delivery_endpoint,
 
@@ -105,7 +107,15 @@ def pubsub_subscription_list(session, cluster_id, needs_columns=False):
 
 @query_wrapper
 def pubsub_subscription_list_by_endpoint_id(session, cluster_id, endpoint_id, needs_columns=False):
-    """ A list of all pub/sub subscriptions for a given endpoint.
+    """ A list of all pub/sub subscriptions for a given endpoint with a search results wrapper.
+    """
+    return _pubsub_subscription(session, cluster_id).\
+        filter(PubSubSubscription.endpoint_id==endpoint_id)
+
+# ################################################################################################################################
+
+def pubsub_subscription_list_by_endpoint_id_no_search(session, cluster_id, endpoint_id):
+    """ A list of all pub/sub subscriptions for a given endpoint without a search results wrapper.
     """
     return _pubsub_subscription(session, cluster_id).\
         filter(PubSubSubscription.endpoint_id==endpoint_id)

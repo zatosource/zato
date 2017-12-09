@@ -899,7 +899,6 @@ def _pubsub_endpoint(session, cluster_id):
         PubSubEndpoint.role,
         PubSubEndpoint.tags,
         PubSubEndpoint.topic_patterns,
-        PubSubEndpoint.endpoint_type,
         PubSubEndpoint.pub_tag_patterns,
         PubSubEndpoint.message_tag_patterns,
         PubSubEndpoint.security_id,

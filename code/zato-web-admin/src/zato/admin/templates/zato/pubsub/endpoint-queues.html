@@ -87,6 +87,9 @@
             'wrap_one_msg_in_list',
             'wait_sock_err',
             'wait_non_sock_err',
+
+            'out_rest_http_soap_id',
+            'out_soap_http_soap_id',
         ]
     }
     </script>
@@ -94,7 +97,12 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Subscriptions for endpoint : <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint_id }}">{{ endpoint_name }}</a></h2>
+<h2 class="zato">
+    Subscriptions for endpoint :
+    <a href="{% url "pubsub-endpoint" %}?cluster={{ cluster_id }}&amp;highlight={{ endpoint.id }}">{{ endpoint.name }}</a>
+    : Type :
+    {{ endpoint.endpoint_type }}
+</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
@@ -179,6 +187,14 @@
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
                         <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
+                        <th class='ignore'>&nbsp;</th>
+                        <th class='ignore'>&nbsp;</th>
+
                 </thead>
 
                 <tbody>
@@ -268,6 +284,9 @@
                         <td class='ignore'>{{ item.wait_sock_err|default:'' }}</td>
                         <td class='ignore'>{{ item.wait_non_sock_err|default:'' }}</td>
 
+                        <td class='ignore'>{{ item.out_rest_http_soap_id|default:'' }}</td>
+                        <td class='ignore'>{{ item.out_soap_http_soap_id|default:'' }}</td>
+
                 {% endfor %}
                 {% else %}
                     <tr class='ignore'>
@@ -338,39 +357,54 @@
                         </tr>
 
                         {% comment %} --------- AMQP --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_out_amqp_id" style="display:none">
+                        {% ifequal endpoint.endpoint_type endpoint_type.AMQP.id %}
+                        <tr id="dyn_form_row_id_out_amqp_id">
                             <td style="vertical-align:middle; width:12%">AMQP outconn</td>
                             <td>{{ edit_form.out_amqp_id }}</td>
                         </tr>
-                        <tr id="dyn_form_row_id_amqp_details" style="display:none">
+                        <tr id="dyn_form_row_id_amqp_details">
                             <td style="vertical-align:middle; width:12%">AMQP exchange<br/>and routing key</td>
                             <td>
                                 {{ edit_form.amqp_exchange }}
                                 {{ edit_form.amqp_routing_key }}
                             </td>
                         </tr>
+                        {% endifequal %}
 
                         {% comment %} --------- Files --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_files_directory_list" style="display:none">
+                        {% ifequal endpoint.endpoint_type endpoint_type.FILES.id %}
+                        <tr id="dyn_form_row_id_files_directory_list">
                             <td style="vertical-align:middle; width:12%">Local directories</td>
                             <td>{{ edit_form.files_directory_list }}</td>
                         </tr>
+                        {% endifequal %}
 
                         {% comment %} --------- FTP --------- {% endcomment %}
+                        {% ifequal endpoint.endpoint_type endpoint_type.FTP.id %}
                         <tr>
-                        <tr id="dyn_form_row_id_ftp_directory_list" style="display:none">
+                        <tr id="dyn_form_row_id_ftp_directory_list">
                             <td style="vertical-align:middle; width:12%">FTP directories</td>
                             <td>{{ edit_form.ftp_directory_list }}</td>
                         </tr>
+                        {% endifequal %}
 
                         {% comment %} --------- REST/SOAP --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_out_http_method" style="display:none">
+                        {% ifequal endpoint.endpoint_type endpoint_type.REST.id %}
+                        <tr id="dyn_form_row_id_out_http_method">
                             <td style="vertical-align:middle; width:12%">HTTP method</td>
                             <td>{{ edit_form.out_http_method }}</td>
                         </tr>
+                        {% endifequal %}
+                        {% ifequal endpoint.endpoint_type endpoint_type.SOAP.id %}
+                        <tr id="dyn_form_row_id_out_http_method">
+                            <td style="vertical-align:middle; width:12%">HTTP method</td>
+                            <td>{{ edit_form.out_http_method }}</td>
+                        </tr>
+                        {% endifequal %}
 
                         {% comment %} --------- REST --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_out_rest_http_soap_id" style="display:none">
+                        {% ifequal endpoint.endpoint_type endpoint_type.REST.id %}
+                        <tr id="dyn_form_row_id_out_rest_http_soap_id">
                             <td style="vertical-align:middle; width:12%">REST outconn</td>
                             <td>{{ edit_form.out_rest_http_soap_id }}</td>
                         </tr>
@@ -378,24 +412,31 @@
                             <td style="vertical-align:middle; width:12%">REST callback</td>
                             <td>{{ edit_form.rest_delivery_endpoint }}</td>
                         </tr>
+                        {% endifequal %}
+
                         {% comment %} --------- Service --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_service_id" style="display:none">
+                        {% ifequal endpoint.endpoint_type endpoint_type.SERVICE.id %}
+                        <tr id="dyn_form_row_id_service_id">
                             <td style="vertical-align:middle">Service</td>
                             <td>{{ edit_form.service_id }} </td>
                         </tr>
+                        {% endifequal %}
 
                         {% comment %} --------- SMS - Twilio --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_sms_twilio_from" style="display:none">
+                        {% ifequal endpoint.endpoint_type endpoint_type.SMS_TWILIO.id %}
+                        <tr id="dyn_form_row_id_sms_twilio_from">
                             <td style="vertical-align:middle">SMS from</td>
                             <td>{{ edit_form.sms_twilio_from }} </td>
                         </tr>
-                        <tr id="dyn_form_row_id_sms_twilio_to_list" style="display:none">
+                        <tr id="dyn_form_row_id_sms_twilio_to_list">
                             <td style="vertical-align:middle">SMS to</td>
                             <td>{{ edit_form.sms_twilio_to_list }} </td>
                         </tr>
+                        {% endifequal %}
 
                         {% comment %} --------- SMTP --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_out_smtp_id" style="display:none">
+                        {% ifequal endpoint.endpoint_type endpoint_type.SMTP.id %}
+                        <tr id="dyn_form_row_id_out_smtp_id">
                             <td style="vertical-align:middle">SMTP outconn</td>
                             <td>
                                 {{ edit_form.out_smtp_id }}
@@ -404,33 +445,35 @@
                                 {{ edit_form.smtp_is_html }}
                             </td>
                         </tr>
-                        <tr id="dyn_form_row_id_smtp_subject" style="display:none">
+                        <tr id="dyn_form_row_id_smtp_subject">
                             <td style="vertical-align:middle">SMTP subject</td>
                             <td>
                                 {{ edit_form.smtp_subject }}
                             </td>
                         </tr>
-                        <tr id="dyn_form_row_id_smtp_from" style="display:none">
+                        <tr id="dyn_form_row_id_smtp_from">
                             <td style="vertical-align:middle">SMTP from</td>
                             <td>
                                 {{ edit_form.smtp_from }}
                             </td>
                         </tr>
-                        <tr id="dyn_form_row_id_smtp_to_list" style="display:none">
+                        <tr id="dyn_form_row_id_smtp_to_list">
                             <td style="vertical-align:middle">SMTP to</td>
                             <td>
                                 {{ edit_form.smtp_to_list }}
                             </td>
                         </tr>
-                        <tr id="dyn_form_row_id_smtp_body" style="display:none">
+                        <tr id="dyn_form_row_id_smtp_body">
                             <td style="vertical-align:middle">SMTP body</td>
                             <td>
                                 {{ edit_form.smtp_body }}
                             </td>
                         </tr>
+                        {% endifequal %}
 
                         {% comment %} --------- SOAP --------- {% endcomment %}
-                        <tr id="dyn_form_row_id_out_soap_http_soap_id" style="display:none">
+                        {% ifequal endpoint.endpoint_type endpoint_type.SOAP.id %}
+                        <tr id="dyn_form_row_id_out_soap_http_soap_id">
                             <td style="vertical-align:middle; width:12%">SOAP outconn</td>
                             <td>{{ edit_form.out_soap_http_soap_id }}</td>
                         </tr>
@@ -438,6 +481,7 @@
                             <td style="vertical-align:middle; width:12%">SOAP callback</td>
                             <td>{{ edit_form.soap_delivery_endpoint }}</td>
                         </tr>
+                        {% endifequal %}
 
                         <tr>
                             <td colspan="2" style="text-align:right">

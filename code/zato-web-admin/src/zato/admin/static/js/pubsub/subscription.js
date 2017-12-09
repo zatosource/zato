@@ -80,7 +80,7 @@ $.fn.zato.pubsub.subscription.before_submit_hook = function(form) {
             var out_soap_http_soap_id = $('#id_' + prefix + 'out_soap_http_soap_id');
             var rest_delivery_endpoint = $('#id_' + prefix + 'soap_delivery_endpoint');
 
-            if(!out_rest_http_soap_id.val() && !soap_delivery_endpoint.val()) {
+            if(!out_soap_http_soap_id.val() && !soap_delivery_endpoint.val()) {
                 form.data('bValidator').showMsg(out_soap_http_soap_id,
                     'This is a required field');
                 return false;

@@ -21,7 +21,7 @@ from zato.common.exception import BadRequest, NotFound, Forbidden, PubSubSubscri
 from zato.common.odb.model import PubSubSubscription
 from zato.common.odb.query_ps_subscribe import add_subscription, add_wsx_subscription, has_subscription, \
      move_messages_to_sub_queue
-from zato.common.odb.query_ps_subscription import pubsub_subscription_list_by_endpoint_id
+from zato.common.odb.query_ps_subscription import pubsub_subscription_list_by_endpoint_id_no_search
 from zato.common.pubsub import new_sub_key
 from zato.common.time_util import utcnow_as_ms
 from zato.common.util import get_sa_model_columns
@@ -453,7 +453,7 @@ class DeleteAll(AdminService):
         with closing(self.odb.session()) as session:
 
             # Get all subscriptions for that endpoint ..
-            items = pubsub_subscription_list_by_endpoint_id(
+            items = pubsub_subscription_list_by_endpoint_id_no_search(
                 session, self.request.input.cluster_id, self.request.input.endpoint_id)
 
             # Build a list of sub_keys that this endpoint was using and delete them all in one go.
