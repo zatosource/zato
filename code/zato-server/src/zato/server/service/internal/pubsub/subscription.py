@@ -29,7 +29,7 @@ from zato.server.connection.web_socket import WebSocket
 from zato.server.pubsub import PubSub, Topic
 from zato.server.service import Int
 from zato.server.service.internal import AdminService, AdminSIO
-from zato.server.service.internal.pubsub import common_sub_create_edit_input_optional
+from zato.server.service.internal.pubsub import common_sub_input
 
 # ################################################################################################################################
 
@@ -255,7 +255,7 @@ class SubscribeServiceImpl(_Subscribe):
 
     class SimpleIO(AdminSIO):
         input_required = ('topic_name', 'is_internal')
-        input_optional = common_sub_create_edit_input_optional
+        input_optional = common_sub_input
         output_optional = ('sub_key', Int('queue_depth'))
         default_value = None
 
