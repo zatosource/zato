@@ -232,10 +232,6 @@ sql_conf_contents = """
 # ######### Engines defined by Zato  ######### #
 # ######### ######################## ######### #
 
-[mssql+mxodbc]
-display_name=MS SQL Server
-ping_query=SELECT 1+1
-
 [mysql+pymysql]
 display_name=MySQL
 ping_query=SELECT 1+1
