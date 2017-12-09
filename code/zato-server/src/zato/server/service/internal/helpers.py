@@ -14,6 +14,7 @@ from logging import DEBUG
 from pprint import pprint
 
 # Django
+import django
 from django.conf import settings
 from django.template import Context, Template
 
@@ -23,6 +24,7 @@ from zato.server.service import AsIs, Service
 # Configure Django settings when the module is picked up
 if not settings.configured:
     settings.configure()
+    django.setup()
 
 # ################################################################################################################################
 
