@@ -17,8 +17,10 @@ from zato.common import PUBSUB
 from zato.common.util import is_class_pubsub_hook
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
 from zato.common.odb.query import pubsub_hook_service
-from zato.server.service import AsIs, List, ListOfDicts, Opaque, PubSubHook
+from zato.server.service import AsIs, Bool, List, ListOfDicts, Opaque, PubSubHook
 from zato.server.service.internal import AdminService, AdminSIO
+
+# ################################################################################################################################
 
 endpoint_type_service = {
     PUBSUB.ENDPOINT_TYPE.AMQP.id:        'zato.pubsub.delivery.notify-pub-sub-message',
@@ -33,10 +35,36 @@ endpoint_type_service = {
     PUBSUB.ENDPOINT_TYPE.WEB_SOCKETS.id: 'zato.channel.web-socket.client.notify-pub-sub-message',
 }
 
+# ################################################################################################################################
+
 hook_type_model = {
     PUBSUB.HOOK_TYPE.PUB: PubSubTopic,
     PUBSUB.HOOK_TYPE.SUB: PubSubSubscription,
 }
+
+# ################################################################################################################################
+
+class CommonSubData:
+    common = ('is_internal', 'topic_name', 'active_status', 'endpoint_type', 'endpoint_id', 'delivery_method',
+        'delivery_data_format', 'delivery_batch_size', Bool('wrap_one_msg_in_list'), 'delivery_max_retry',
+        Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id', 'out_http_method',
+            'out_http_method', 'creation_time', 'last_interaction_time', 'total_depth', 'current_depth', 'staging_depth',
+            'sub_key', 'has_gd', 'is_staging_enabled')
+    amqp = ('amqp_exchange', 'amqp_routing_key')
+    files = ('files_directory_list',)
+    ftp = ('ftp_directory_list',)
+    pubapi = ('security_id',)
+    rest = ('out_rest_http_soap_id', 'rest_delivery_endpoint')
+    service = ('service_id',)
+    sms_twilio = ('sms_twilio_from', 'sms_twilio_to_list')
+    smtp = (Bool('smtp_is_html'), 'smtp_subject', 'smtp_from', 'smtp_to_list', 'smtp_body')
+    soap = ('out_soap_http_soap_id', 'soap_delivery_endpoint')
+    websockets = ('ws_channel_id', 'ws_channel_name', AsIs('ws_pub_client_id'), 'sql_ws_client_id', AsIs('ext_client_id'),
+        Opaque('web_socket'))
+
+common_sub_create_edit_input_optional = CommonSubData.common + CommonSubData.amqp + CommonSubData.files + \
+    CommonSubData.ftp + CommonSubData.rest + CommonSubData.service + \
+    CommonSubData.sms_twilio + CommonSubData.smtp + CommonSubData.soap + CommonSubData.websockets + CommonSubData.pubapi
 
 # ################################################################################################################################
 

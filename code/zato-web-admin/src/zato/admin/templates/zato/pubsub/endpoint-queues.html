@@ -186,7 +186,7 @@
                         <td class='numbering'>&nbsp;</td>
                         <td class="impexp"><input type="checkbox" /></td>
 
-                        <td><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.name }}</a>
+                        <td><a href="{% url "pubsub-topic" %}?cluster={{ cluster_id }}&amp;highlight={{ item.topic_id }}">{{ item.topic_name }}</a>
                             {% if item.ws_ext_client_id %}
                                 <br/>
                                 <span class="form_hint">{{ item.ws_ext_client_id }}</span>
@@ -197,9 +197,9 @@
                         <td>{{ item.has_gd|yesno:'Yes,No' }}</td>
                         <td>{{ item.is_staging_enabled|yesno:'Yes,No' }}</td>
 
-                        <td id="total_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "total" item.sub_id item.name|slugify %}?cluster={{ cluster_id }}">{{ item.total_depth }}</a></td>
-                        <td id="current_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "current" item.sub_id item.name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth }}</a></td>
-                        <td id="staging_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "staging" item.sub_id item.name|slugify %}?cluster={{ cluster_id }}">{{ item.staging_depth }}</a></td>
+                        <td id="total_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "total" item.sub_id item.topic_name|slugify %}?cluster={{ cluster_id }}">{{ item.total_depth }}</a></td>
+                        <td id="current_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "current" item.sub_id item.topic_name|slugify %}?cluster={{ cluster_id }}">{{ item.current_depth }}</a></td>
+                        <td id="staging_depth_{{ item.sub_id}}"><a href="{% url "pubsub-endpoint-queue-browser" "staging" item.sub_id item.topic_name|slugify %}?cluster={{ cluster_id }}">{{ item.staging_depth }}</a></td>
 
                         <td>{{ item.creation_time }}</td>
                         <td>
@@ -240,7 +240,7 @@
                         <td class='ignore'>{{ item.has_gd|default:'' }}</td>
                         <td class='ignore'>{{ item.is_durable|default:'' }}</td>
                         <td class='ignore'>{{ item.is_internal|default:'' }}</td>
-                        <td class='ignore'>{{ item.name|default:'' }}</td>
+                        <td class='ignore'>{{ item.topic_name }}</td>
 
                         <td class='ignore'>{{ item.out_amqp_id|default:'' }}</td>
                         <td class='ignore'>{{ item.out_http_method|default:'' }}</td>
