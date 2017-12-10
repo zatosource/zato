@@ -186,7 +186,52 @@ class GetTopicList(AdminService):
 
 # ################################################################################################################################
 
-class GetEndpointQueueList(AdminService):
+class _GetEndpointQueue(AdminService):
+    def _add_queue_depths(self, session, item):
+
+        total_q = session.query(PubSubEndpointEnqueuedMessage.id).\
+            filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
+            filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id)
+
+        current_q = session.query(PubSubEndpointEnqueuedMessage.id).\
+            filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
+            filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id).\
+            filter(PubSubEndpointEnqueuedMessage.is_in_staging != True)
+
+        staging_q = session.query(PubSubEndpointEnqueuedMessage.id).\
+            filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
+            filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id).\
+            filter(PubSubEndpointEnqueuedMessage.is_in_staging == True)
+
+        total_depth = count(session, total_q)
+        current_depth = count(session, current_q)
+        staging_depth = count(session, staging_q)
+
+        item.total_depth = total_depth
+        item.current_depth = current_depth
+        item.staging_depth = staging_depth
+
+# ################################################################################################################################
+
+class GetEndpointQueue(_GetEndpointQueue):
+    class SimpleIO(AdminSIO):
+        input_required = ('cluster_id', 'id')
+        output_optional = common_sub_data
+
+    def handle(self):
+        with closing(self.odb.session()) as session:
+            item = pubsub_endpoint_queue(session, self.request.input.cluster_id, self.request.input.id)
+
+            self._add_queue_depths(session, item)
+            item.creation_time = datetime_from_ms(item.creation_time)
+            if item.last_interaction_time:
+                item.last_interaction_time = datetime_from_ms(item.last_interaction_time)
+
+            self.response.payload = item
+
+# ################################################################################################################################
+
+class GetEndpointQueueList(_GetEndpointQueue):
     """ Returns all queues to which a given endpoint is subscribed.
     """
     _filter_by = PubSubTopic.name,
@@ -209,28 +254,7 @@ class GetEndpointQueueList(AdminService):
 
             for item in self.get_data(session):
 
-                total_q = session.query(PubSubEndpointEnqueuedMessage.id).\
-                    filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id)
-
-                current_q = session.query(PubSubEndpointEnqueuedMessage.id).\
-                    filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id).\
-                    filter(PubSubEndpointEnqueuedMessage.is_in_staging != True)
-
-                staging_q = session.query(PubSubEndpointEnqueuedMessage.id).\
-                    filter(PubSubEndpointEnqueuedMessage.cluster_id==self.request.input.cluster_id).\
-                    filter(PubSubEndpointEnqueuedMessage.subscription_id==item.sub_id).\
-                    filter(PubSubEndpointEnqueuedMessage.is_in_staging == True)
-
-                total_depth = count(session, total_q)
-                current_depth = count(session, current_q)
-                staging_depth = count(session, staging_q)
-
-                item.total_depth = total_depth
-                item.current_depth = current_depth
-                item.staging_depth = staging_depth
-
+                self._add_queue_depths(session, item)
                 item.creation_time = datetime_from_ms(item.creation_time)
 
                 if item.last_interaction_time:
@@ -266,23 +290,6 @@ class UpdateEndpointQueue(AdminService):
 
             self.response.payload.id = self.request.input.id
             self.response.payload.name = item.topic.name
-
-# ################################################################################################################################
-
-class GetEndpointQueue(AdminService):
-    class SimpleIO(AdminSIO):
-        input_required = ('cluster_id', 'id')
-        output_optional = common_sub_data
-
-    def handle(self):
-        with closing(self.odb.session()) as session:
-            item = pubsub_endpoint_queue(session, self.request.input.cluster_id, self.request.input.id)
-
-            item.creation_time = datetime_from_ms(item.creation_time)
-            if item.last_interaction_time:
-                item.last_interaction_time = datetime_from_ms(item.last_interaction_time)
-
-            self.response.payload = item
 
 # ################################################################################################################################
 

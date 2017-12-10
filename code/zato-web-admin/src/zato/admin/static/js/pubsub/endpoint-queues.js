@@ -155,8 +155,8 @@ $.fn.zato.pubsub.endpoint_queue.edit = function(id) {
 
 $.fn.zato.pubsub.endpoint_queue.get_depth_link = function(link_type, cluster_id, id, name_slug, depth) {
     return String.format(
-        '<a href="/zato/pubsub/endpoint/queue/{0}/cluster/{1}/queue/{2}/{3}">{4}</a>',
-        link_type, cluster_id, id, name_slug, depth);
+        '<a href="/zato/pubsub/endpoint/queue/browser/{0}/queue/{1}/{2}?cluster={3}">{4}</a>',
+        link_type, id, name_slug, cluster_id, depth);
 }
 
 $.fn.zato.pubsub.endpoint_queue.clear = function(id, cluster_id) {
