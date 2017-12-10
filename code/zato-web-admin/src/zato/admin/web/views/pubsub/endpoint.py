@@ -292,6 +292,7 @@ class EndpointQueueBrowser(_Index):
         return {
             'sub_id': self.input.sub_id,
             'name': service_response.name,
+            'name_slug': slugify(service_response.name),
             'endpoint_id': service_response.endpoint_id,
             'ws_ext_client_id': service_response.ws_ext_client_id
         }

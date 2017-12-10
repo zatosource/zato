@@ -43,7 +43,10 @@
 {% endblock %}
 
 {% block "content" %}
-<h2 class="zato">Messages for queue : <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id "zzz" %}?highlight={{ sub_id }}">{{ name }}</a><span class="form_hint">{{ ws_ext_client_id }}</span></h2>
+<h2 class="zato">Messages for queue :
+    <a href="{% url "pubsub-endpoint-queues" cluster_id endpoint_id name_slug %}?highlight={{ sub_id }}">{{ name }}</a>
+    <span class="form_hint">{{ ws_ext_client_id|default:'' }}</span>
+</h2>
 
 {% if not zato_clusters %}
     {% include "zato/no-clusters.html" %}
