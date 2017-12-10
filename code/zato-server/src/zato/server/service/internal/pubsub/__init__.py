@@ -49,7 +49,7 @@ class CommonSubData:
         'delivery_data_format', 'delivery_batch_size', Bool('wrap_one_msg_in_list'), 'delivery_max_retry',
         Bool('delivery_err_should_block'), 'wait_sock_err', 'wait_non_sock_err', 'server_id', 'out_http_method',
             'out_http_method', 'creation_time', 'last_interaction_time', Int('total_depth'), Int('current_depth'),
-            Int('staging_depth'), 'sub_key', 'has_gd', 'is_staging_enabled', 'sub_id')
+            Int('staging_depth'), 'sub_key', 'has_gd', 'is_staging_enabled', 'sub_id', 'name', AsIs('ws_ext_client_id'))
     amqp = ('amqp_exchange', 'amqp_routing_key')
     files = ('files_directory_list',)
     ftp = ('ftp_directory_list',)
