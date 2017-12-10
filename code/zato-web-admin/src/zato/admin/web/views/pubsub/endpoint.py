@@ -343,7 +343,7 @@ def endpoint_queue_edit(req):
     response['message'] = 'Subscription updated successfully'
     response.update(**service_response)
     response.update(**request)
-    response['name_slug'] = slugify(response['topic_name'])
+    response['name_slug'] = slugify(response['name'])
 
     return HttpResponse(dumps(response), content_type='application/javascript')
 
