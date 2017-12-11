@@ -24,7 +24,6 @@ from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, 
 from zato.common.odb.query_ps_endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
 from zato.common.odb.query_ps_subscription import pubsub_subscription_list_by_endpoint_id
 from zato.common.time_util import datetime_from_ms
-from zato.common.util import asbool
 from zato.server.service import AsIs, Int, List
 from zato.server.service.internal import AdminService, AdminSIO, GetListAdminSIO
 from zato.server.service.internal.pubsub import common_sub_data

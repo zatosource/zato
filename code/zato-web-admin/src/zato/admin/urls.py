@@ -21,7 +21,6 @@ from zato.admin.web.views.cache import builtin as cache_builtin
 from zato.admin.web.views.cache.builtin import entries as cache_builtin_entries
 from zato.admin.web.views.cache.builtin import entry as cache_builtin_entry
 from zato.admin.web.views.cache import memcached_ as cache_memcached
-from zato.admin.web.views.cache import redis_ as cache_redis
 from zato.admin.web.views.channel import amqp_ as channel_amqp
 from zato.admin.web.views.channel import jms_wmq as channel_jms_wmq
 from zato.admin.web.views.channel import stomp as channel_stomp
