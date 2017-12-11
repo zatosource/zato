@@ -140,7 +140,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
     def deploy_missing_services(self, locally_deployed):
         """ Deploys services that exist on other servers but not on ours.
         """
-
         # The locally_deployed list are all the services that we could import based on our current
         # understanding of the contents of the cluster. However, it's possible that we have
         # been shut down for a long time and during that time other servers deployed services
@@ -157,26 +156,47 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
             missing = self.odb.get_missing_services(other_server, locally_deployed)
 
             if missing:
+
                 logger.info('Found extra services to deploy: %s', ', '.join(sorted(item.name for item in missing)))
 
+                # (file_name, source_path) -> a list of services it contains
+                modules = {}
+
+                # Coalesce all service modules - it is possible that each one has multiple services
+                # so we do want to deploy the same module over for each service found.
                 for service_id, name, source_path, source in missing:
                     file_name = os.path.basename(source_path)
-                    _, full_path = mkstemp(suffix='-'+ file_name)
+                    _, tmp_full_path = mkstemp(suffix='-'+ file_name)
 
-                    f = open(full_path, 'wb')
-                    f.write(source)
-                    f.close()
+                    # Module names are unique so they can serve as keys
+                    key = file_name
 
-                    # Create a deployment package in ODB out of which all the services will be picked up ..
+                    if key not in modules:
+                        modules[key] = {
+                            'tmp_full_path': tmp_full_path,
+                            'services': [name] # We can append initial name already in this 'if' branch
+                        }
+
+                        # Save the source code only once here
+                        f = open(tmp_full_path, 'wb')
+                        f.write(source)
+                        f.close()
+
+                    else:
+                        modules[key]['services'].append(name)
+
+                # Create a deployment package in ODB out of which all the services will be picked up ..
+                for file_name, values in modules.items():
                     msg = Bunch()
                     msg.action = HOT_DEPLOY.CREATE_SERVICE.value
                     msg.msg_type = MESSAGE_TYPE.TO_PARALLEL_ALL
-                    msg.package_id = hot_deploy(self, file_name, full_path, notify=False)
+                    msg.package_id = hot_deploy(self, file_name, values['tmp_full_path'], notify=False)
 
                     # .. and tell the worker to actually deploy all the services the package contains.
-                    gevent.spawn(self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE, msg)
+                    #gevent.spawn(self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE, msg)
+                    self.worker_store.on_broker_msg_HOT_DEPLOY_CREATE_SERVICE(msg)
 
-                    logger.info('Deployed an extra service found: %s (%s)', name, service_id)
+                    logger.info('Deployed extra services found: %s', sorted(values['services']))
 
 # ################################################################################################################################
 
@@ -400,8 +420,6 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
                 self.hot_deploy_config[name] = os.path.normpath(os.path.join(
                     self.hot_deploy_config.work_dir, self.fs_server_config.hot_deploy[name]))
 
-        self._after_init_accepted(locally_deployed)
-
         broker_callbacks = {
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ANY]: self.worker_store.on_broker_msg,
             TOPICS[MESSAGE_TYPE.TO_PARALLEL_ALL]: self.worker_store.on_broker_msg,
@@ -409,6 +427,8 @@ class ParallelServer(DisposableObject, BrokerMessageReceiver, ConfigLoader, HTTP
 
         self.broker_client = BrokerClient(self.kvdb, 'parallel', broker_callbacks, self.get_lua_programs())
         self.worker_store.set_broker_client(self.broker_client)
+
+        self._after_init_accepted(locally_deployed)
 
         self.odb.server_up_down(server.token, SERVER_UP_STATUS.RUNNING, True, self.host,
             self.port, self.preferred_address, use_tls)
