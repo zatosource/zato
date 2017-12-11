@@ -15,7 +15,7 @@ from operator import itemgetter
 from django import forms
 
 # Zato
-from zato.admin.settings import engine_friendly_name
+from zato.admin.web.forms import add_select_from_service
 
 class CreateForm(forms.Form):
     name = forms.CharField(widget=forms.TextInput(attrs={'class':'required', 'style':'width:100%'}))
@@ -28,15 +28,9 @@ class CreateForm(forms.Form):
     pool_size = forms.IntegerField(initial=1, widget=forms.TextInput(attrs={'class':'required validate-digits', 'style':'width:30px'}))
     extra = forms.CharField(widget=forms.Textarea())
 
-    def __init__(self, prefix=None, post_data=None):
+    def __init__(self, req, prefix=None, post_data=None):
         super(CreateForm, self).__init__(post_data, prefix=prefix)
-        self.fields['engine'].choices = []
-
-        # Sort engines by their friendly name.
-        engines = sorted(engine_friendly_name.iteritems(), key=itemgetter(1))
-
-        for engine, friendly_name in engines:
-            self.fields['engine'].choices.append([engine, friendly_name])
+        add_select_from_service(self, req, 'zato.outgoing.sql.get-engine-list', 'engine')
 
 class EditForm(CreateForm):
     is_active = forms.BooleanField(required=False, widget=forms.CheckboxInput())

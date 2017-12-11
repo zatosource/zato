@@ -16,9 +16,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.sql import text
 
-# Zato
-from zato.common import ping_queries
-
 logger = logging.getLogger(__name__)
 
 WMQ_DEFAULT_PRIORITY = 5
@@ -26,9 +23,35 @@ WMQ_DEFAULT_PRIORITY = 5
 # ODB version
 VERSION = 1
 
+# These databases may be used for ODB but individual SQL outconns can connect to, say, MS SQL
 SUPPORTED_DB_TYPES = (b'oracle', b'postgresql', b'mysql', b'sqlite')
 
-def create_pool(crypto_manager, engine_params):
+# ################################################################################################################################
+
+def get_ping_query(fs_sql_config, engine_params):
+    """ Returns a ping query for input engine and component-wide SQL configuration.
+    """
+    ping_query = None
+    for key, value in fs_sql_config.items():
+        if key == engine_params['engine']:
+            ping_query = value.get('ping_query')
+            break
+
+    if not ping_query:
+
+        # We special case SQLite because it is never server from sql.ini
+        if engine_params['engine'] == 'sqlite':
+            ping_query = 'SELECT 1'
+
+        if not ping_query:
+            raise ValueError('Could not find ping_query for {}'.format(engine_params))
+
+    # If we are here it means that a query was found
+    return ping_query
+
+# ################################################################################################################################
+
+def create_pool(crypto_manager, engine_params, ping_query):
     from zato.common.util import get_engine_url
 
     engine_params = copy.deepcopy(engine_params)
@@ -37,13 +60,15 @@ def create_pool(crypto_manager, engine_params):
         engine_params['extra']['pool_size'] = engine_params.pop('pool_size')
 
     engine = create_engine(get_engine_url(engine_params), **engine_params['extra'])
-    engine.execute(ping_queries[engine_params['engine']])
+    engine.execute(ping_query)
 
     Session = sessionmaker()
     Session.configure(bind=engine)
     session = Session()
 
     return session
+
+# ################################################################################################################################
 
 # Taken from http://www.siafoo.net/snippet/85
 # Licensed under BSD2 - http://opensource.org/licenses/bsd-license.php
@@ -70,3 +95,5 @@ def drop_all(engine):
             engine.execute(text('DROP SEQUENCE %s CASCADE' % seq))
         except Exception, e:
             print(e)
+
+# ################################################################################################################################

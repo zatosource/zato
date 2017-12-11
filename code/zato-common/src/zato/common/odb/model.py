@@ -610,7 +610,7 @@ class SQLConnectionPool(Base):
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('sql_pools', order_by=name, cascade='all, delete, delete-orphan'))
 
-    engine_text = None # For auto-completion, not used by the DB
+    engine_display_name = None # For auto-completion, not used by DB
 
     def __init__(self, id=None, name=None, is_active=None, db_name=None,
                  username=None, engine=None, extra=None, host=None, port=None,
