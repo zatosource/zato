@@ -88,6 +88,7 @@ class SQLConnectionPool(object):
     """
     def __init__(self, name, config, config_no_sensitive):
         self.logger = getLogger(self.__class__.__name__)
+        self.has_debug = self.logger.isEnabledFor(DEBUG)
 
         self.name = name
         self.config = config
@@ -123,31 +124,34 @@ class SQLConnectionPool(object):
         event.listen(self.engine, 'connect', self.on_connect)
         event.listen(self.engine, 'first_connect', self.on_first_connect)
 
+        self.checkins = 0
+        self.checkouts = 0
+
     def __str__(self):
         return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
 
     __repr__ = __str__
 
     def on_checkin(self, dbapi_conn, conn_record):
-        if self.logger.isEnabledFor(DEBUG):
-            msg = 'Checked in dbapi_conn:{}, conn_record:{}'.format(dbapi_conn, conn_record)
-            self.logger.debug(msg)
+        if self.has_debug:
+            self.logger.debug('Checked in dbapi_conn:%s, conn_record:%s', dbapi_conn, conn_record)
+        self.checkins += 1
 
     def on_checkout(self, dbapi_conn, conn_record, conn_proxy):
-        if self.logger.isEnabledFor(DEBUG):
-            msg = 'Checked out dbapi_conn:{}, conn_record:{}, conn_proxy:{}'.format(
-                dbapi_conn, conn_record, conn_proxy)
-            self.logger.debug(msg)
+        if self.has_debug:
+            self.logger.debug('Checked out dbapi_conn:%s, conn_record:%s, conn_proxy:%s',
+                msg, dbapi_conn, conn_record, conn_proxy)
+
+        self.checkouts += 1
+        self.logger.debug('co-cin-diff %d-%d-%d', self.checkouts, self.checkins, self.checkouts - self.checkins)
 
     def on_connect(self, dbapi_conn, conn_record):
-        if self.logger.isEnabledFor(DEBUG):
-            msg = 'Connect dbapi_conn:{}, conn_record:{}'.format(dbapi_conn, conn_record)
-            self.logger.debug(msg)
+        if self.has_debug:
+            self.logger.debug('Connect dbapi_conn:%s, conn_record:%s', dbapi_conn, conn_record)
 
     def on_first_connect(self, dbapi_conn, conn_record):
-        if self.logger.isEnabledFor(DEBUG):
-            msg = 'First connect dbapi_conn:{}, conn_record:{}'.format(dbapi_conn, conn_record)
-            self.logger.debug(msg)
+        if self.has_debug:
+            self.logger.debug('First connect dbapi_conn:%s, conn_record:%s', dbapi_conn, conn_record)
 
     def ping(self):
         """ Pings the SQL database and returns the response time, in milliseconds.
