@@ -19,7 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 # Zato
 from zato.cli import common_odb_opts, get_tech_account_opts, ZatoCommand
-from zato.common import DATA_FORMAT, SIMPLE_IO, WEB_SOCKET
+from zato.common import DATA_FORMAT, MISC, SIMPLE_IO, WEB_SOCKET
 from zato.common.odb.model import ChannelWebSocket, Cluster, HTTPBasicAuth, HTTPSOAP, JWT, RBACClientRole, RBACPermission, RBACRole, \
      RBACRolePermission, Service, WSSDefinition
 from zato.common.util import get_http_json_channel, get_http_soap_channel
@@ -727,12 +727,12 @@ class Create(ZatoCommand):
         session.add(role)
 
         name = 'apispec'
-        apispec_auth = HTTPBasicAuth(None, name, True, name, 'API Specification Reader Default Account', uuid4().hex, cluster)
+        apispec_auth = HTTPBasicAuth(None, name, True, name, 'apispec', uuid4().hex, cluster)
         session.add(apispec_auth)
 
-        role_client_def = 'sec_def:::basic_auth:::{}'.format(name)
-        role_name = '{}:::{}'.format(role_client_def, name)
-        client_role = RBACClientRole(name=role_name, client_def=role_client_def, role=role, cluster=cluster)
+        client_role_def = MISC.SEPARATOR.join(('sec_def', 'basic_auth', name))
+        client_role_name = MISC.SEPARATOR.join((client_role_def, role.name))
+        client_role = RBACClientRole(name=client_role_name, client_def=client_role_def, role=role, cluster=cluster)
         session.add(client_role)
 
         return role
