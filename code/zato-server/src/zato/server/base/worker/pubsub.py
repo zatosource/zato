@@ -77,3 +77,11 @@ class PubSub(WorkerImpl):
         self.pubsub.remove_ws_sub_key_server(msg)
 
 # ################################################################################################################################
+
+    def on_broker_msg_PUBSUB_DELIVERY_SERVER_CHANGE(self, msg):
+        if msg.old_delivery_server_id == self.server.id:
+            old_server_pid = self.pubsub.get_sub_key_server(msg.sub_key).server_pid
+            if old_server_pid == self.server.pid:
+                self.pubsub.migrate_delivery_server(msg.sub_key, msg.new_delivery_server_name, msg.endpoint_type)
+
+# ################################################################################################################################

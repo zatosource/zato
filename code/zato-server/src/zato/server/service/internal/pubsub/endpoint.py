@@ -20,7 +20,7 @@ from zato.common.exception import BadRequest, Conflict
 from zato.common.odb.model import PubSubEndpoint, PubSubEndpointEnqueuedMessage, PubSubEndpointTopic, PubSubMessage, \
      PubSubSubscription, PubSubTopic
 from zato.common.odb.query import count, pubsub_endpoint, pubsub_endpoint_list, pubsub_endpoint_queue, \
-     pubsub_endpoint_queue_list_by_sub_keys, pubsub_messages_for_queue
+     pubsub_endpoint_queue_list_by_sub_keys, pubsub_messages_for_queue, server_by_id
 from zato.common.odb.query_ps_endpoint import pubsub_endpoint_summary, pubsub_endpoint_summary_list
 from zato.common.odb.query_ps_subscription import pubsub_subscription_list_by_endpoint_id
 from zato.common.time_util import datetime_from_ms
@@ -280,25 +280,28 @@ class UpdateEndpointQueue(AdminService):
                 filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
                 one()
 
-            old_delivery_server = item.server_id
-            new_delivery_server = self.request.input.server_id
+            old_delivery_server_id = item.server_id
+            new_delivery_server_id = self.request.input.server_id
+            new_delivery_server_name = server_by_id(session, self.server.cluster_id, new_delivery_server_id).name
 
             for key, value in sorted(self.request.input.items()):
                 if key not in _sub_skip_update:
                     setattr(item, key, value)
 
             session.add(item)
-            session.commit()
+            #session.commit()
 
             self.response.payload.id = self.request.input.id
             self.response.payload.name = item.topic.name
 
-            # We change the delivery server in background
-            if current_delivery_server != new_delivery_server:
+            # We change the delivery server in background - note how we send name, not ID, on input.
+            # This is because our invocation target will want to use self.servers[server_name].invoke(...)
+            if old_delivery_server_id != new_delivery_server_id:
                 self.broker_client.publish({
                     'sub_key': self.request.input.sub_key,
-                    'old_delivery_server': old_delivery_server,
-                    'new_delivery_server': old_delivery_server,
+                    'endpoint_type': item.endpoint.endpoint_type,
+                    'old_delivery_server_id': old_delivery_server_id,
+                    'new_delivery_server_name': new_delivery_server_name,
                     'action': PUBSUB.DELIVERY_SERVER_CHANGE.value,
                 })
 

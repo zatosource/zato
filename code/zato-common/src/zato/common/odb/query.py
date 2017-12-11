@@ -1262,6 +1262,11 @@ def server_by_name(session, cluster_id, cluster_name, server_name):
         filter(Server.name==server_name).\
         all()
 
+def server_by_id(session, cluster_id, server_id):
+    return _server(session, cluster_id, None).\
+        filter(Server.id==server_id).\
+        one()
+
 # ################################################################################################################################
 
 def _cassandra_conn(session, cluster_id):

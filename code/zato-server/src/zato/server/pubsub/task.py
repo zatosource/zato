@@ -74,7 +74,7 @@ class DeliveryTask(object):
                 # Do not attempt to deliver any other message, simply return and our
                 # parent will sleep for a small amount of time and then re-run us,
                 # thanks to which the next time we run we will again iterate over all the messages
-                # currently queued up.
+                # currently queued up, including the one that were not able to deliver.
                 logger.warn('Could not deliver pub/sub message, e:`%s`', format_exc(e))
                 return
 
@@ -134,6 +134,12 @@ class DeliveryTask(object):
                 non_gd += 1
 
         return gd, non_gd
+
+    def get_gd_queue_depth(self):
+        return self.get_queue_depth()[0]
+
+    def get_non_gd_queue_depth(self):
+        return self.get_queue_depth()[1]
 
 # ################################################################################################################################
 
@@ -389,5 +395,11 @@ class PubSubTool(object):
     def handles_sub_key(self, sub_key):
         with self.lock:
             return sub_key in self.sub_keys
+
+# ################################################################################################################################
+
+    def get_delivery_task(self, sub_key):
+        with self.lock:
+            return self.delivery_tasks[sub_key]
 
 # ################################################################################################################################
