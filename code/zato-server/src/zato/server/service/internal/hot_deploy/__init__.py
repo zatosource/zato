@@ -41,6 +41,7 @@ class Create(AdminService):
         request_elem = 'zato_hot_deploy_create_request'
         response_elem = 'zato_hot_deploy_create_response'
         input_required = ('package_id',)
+        input_optional = ('is_startup',)
 
     def _delete(self, items):
         for item in items:
@@ -203,11 +204,10 @@ class Create(AdminService):
         # missing services found on other servers during our own server's startup. In that case we just
         # need to wait a moment for the server we are on to fully initialize.
         while not self.server.broker_client:
-            self.logger.warn('BRK %s', self.server.broker_client)
             sleep(0.2)
 
-        with closing(self.odb.session()) as session:
-            with self.lock(lock_name, ttl, block):
+        with self.lock(lock_name, ttl, block):
+            with closing(self.odb.session()) as session:
                 try:
                     # Only one of workers will get here ..
                     if not self.server.kvdb.conn.get(already_deployed_flag):
