@@ -21,7 +21,7 @@ from cryptography.fernet import Fernet
 from sqlalchemy.exc import IntegrityError
 
 # Zato
-from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts
+from zato.cli import ZatoCommand, common_logging_conf_contents, common_odb_opts, kvdb_opts, sql_conf_contents
 from zato.common import CONTENT_TYPE, SERVER_JOIN_STATUS
 from zato.common.defaults import http_plain_server_port
 from zato.common.odb.model import Cluster, Server
@@ -357,9 +357,10 @@ directories = (
 )
 
 files = {
-    'config/repo/logging.conf':common_logging_conf_contents.format(log_path='./logs/server.log'),
-    'config/repo/service-sources.txt':service_sources_contents,
-    'config/repo/lua/internal/zato.rename_if_exists.lua':lua_zato_rename_if_exists
+    'config/repo/logging.conf': common_logging_conf_contents.format(log_path='./logs/server.log'),
+    'config/repo/service-sources.txt': service_sources_contents,
+    'config/repo/lua/internal/zato.rename_if_exists.lua': lua_zato_rename_if_exists,
+    'config/repo/sql.conf': sql_conf_contents
 }
 
 priv_key_location = './config/repo/config-priv.pem'

@@ -78,7 +78,9 @@ class _HTTPSOAPService(object):
 
         return info
 
-class _BaseGet:
+class _BaseGet(AdminService):
+    """ Base class for services returning information about HTTP/SOAP objects.
+    """
     class SimpleIO:
         output_required = ('id', 'name', 'is_active', 'is_internal', 'url_path')
         output_optional = ('service_id', 'service_name', 'security_id', 'security_name', 'sec_type',
