@@ -18,9 +18,6 @@ from time import sleep
 # posix-ipc
 import posix_ipc as ipc
 
-# Zato
-from zato.common import megabyte
-
 # ################################################################################################################################
 
 logger = getLogger(__name__)

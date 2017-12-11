@@ -14,10 +14,8 @@ from traceback import format_exc
 
 # Zato
 from zato.common import PUBSUB
-from zato.common.util import is_class_pubsub_hook
 from zato.common.odb.model import PubSubSubscription, PubSubTopic
-from zato.common.odb.query import pubsub_hook_service
-from zato.server.service import AsIs, Bool, Int, List, ListOfDicts, Opaque, PubSubHook
+from zato.server.service import AsIs, Bool, Int, List, ListOfDicts, Opaque
 from zato.server.service.internal import AdminService, AdminSIO
 
 # ################################################################################################################################
@@ -119,7 +117,7 @@ class AfterPublish(AdminService):
                 self._store_in_ram(cid, topic_id, topic_name, not_found, non_gd_msg_list, False)
 
             # Attempt to notify pub/sub tasks about non-GD messages ..
-            notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list, self.request.input.has_gd_msg_list)
+            notif_error_sub_keys = self._notify_pub_sub(current_servers, non_gd_msg_list, has_gd_msg_list)
 
             # .. but if there are any errors, store them in RAM as though they were from not_found in the first place.
             if notif_error_sub_keys:

@@ -91,7 +91,7 @@ class CacheTestCace(TestCase):
         c.set(key2, expected2)
         c.set(key3, expected3)
 
-        # Add one second to be sure that at least that much time elapsed between when keys were stored and current time. 
+        # Add one second to be sure that at least that much time elapsed between when keys were stored and current time.
         now = c.get_timestamp() + 1
 
         returned1 = c.get(key1, True)
@@ -102,7 +102,7 @@ class CacheTestCace(TestCase):
         self.assertLess(returned1.prev_read, now)
         self.assertLess(returned1.prev_write, now)
 
-        
+
         returned2 = c.get(key2, True)
         self.assertEquals(returned2.value, expected2)
         self.assertEquals(returned2.position, 2)
@@ -167,7 +167,6 @@ class CacheTestCace(TestCase):
     def test_set_already_exists_extend_expiry_on_get_true(self):
 
         key1, expected1 = 'key1', 'value1'
-        expected1_new = 'value1_new'
 
         # sleep_time is less then expiry but we sleep twice below so the total time
         # is greater than expiry and would have made the key expire
@@ -202,7 +201,6 @@ class CacheTestCace(TestCase):
     def test_set_already_exists_extend_expiry_on_get_false(self):
 
         key1, expected1 = 'key1', 'value1'
-        expected1_new = 'value1_new'
 
         # Unlike in test_set_already_exists_extend_expiry_on_get_false,
         # in this test case extend_expiry_on_get=False so .get won't extend it.

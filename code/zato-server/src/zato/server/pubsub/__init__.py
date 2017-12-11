@@ -541,7 +541,7 @@ class PubSub(object):
             existing_by_topic = self.subscriptions_by_topic.setdefault(config.topic_name, [])
             existing_by_topic.append(sub)
 
-            existing_by_sub_key = self.subscriptions_by_sub_key[config.sub_key] = sub
+            self.subscriptions_by_sub_key[config.sub_key] = sub
 
             # We don't start dedicated tasks for WebSockets - they are all dynamic without a fixed server.
             # But for other endpoint types, we create and start a delivery task here.

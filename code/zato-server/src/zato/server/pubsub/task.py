@@ -64,7 +64,7 @@ class DeliveryTask(object):
         """
         for msg in self.delivery_list:
             try:
-                response = self.deliver_pubsub_msg_cb(msg)
+                self.deliver_pubsub_msg_cb(msg)
             except SkipDelivery:
                 # We are not to deliver this message at all
                 logger.info('Skipping delivery of pub_msg_id:`%s`', msg.pub_msg_id)

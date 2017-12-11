@@ -8,13 +8,13 @@ Licensed under LGPLv3, see LICENSE.txt for terms and conditions.
 
 from __future__ import absolute_import, division, print_function, unicode_literals
 
+# SQLAlchemy
+from sqlalchemy import func
+
 # Zato
 from zato.common import PUBSUB
 from zato.common.odb.model import Cluster, PubSubTopic, PubSubEndpoint, PubSubSubscription
 from zato.common.odb.query import query_wrapper
-
-# SQLAlchemy
-from sqlalchemy import func
 
 # ################################################################################################################################
 
