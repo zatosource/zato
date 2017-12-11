@@ -227,6 +227,32 @@ formatters:
 version: 1
 """ # nopep8
 
+sql_conf_contents = """
+# ######### ######################## ######### #
+# ######### Engines defined by Zato  ######### #
+# ######### ######################## ######### #
+
+[mysql+pymysql]
+display_name=MySQL
+ping_query=SELECT 1+1
+
+[postgresql+pg8000]
+display_name=PostgreSQL
+ping_query=SELECT 1
+
+[oracle]
+display_name=Oracle
+ping_query=SELECT 1 FROM dual
+
+# ######### ################################# ######### #
+# ######### User-defined SQL engines go below ######### #
+# ######### ################################# ######### #
+
+#[label]
+#friendly_name=My DB
+#sqlalchemy_driver=sa-name
+""".lstrip() # nopep8
+
 # ######################################################################################################################
 
 def run_command(args):

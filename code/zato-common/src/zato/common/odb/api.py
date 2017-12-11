@@ -38,7 +38,7 @@ from zato.common import DEPLOYMENT_STATUS, Inactive, MISC, SEC_DEF_TYPE, SECRET_
 from zato.common.odb.model import APIKeySecurity, Cluster, DeployedService, DeploymentPackage, DeploymentStatus, HTTPBasicAuth, \
      HTTPSOAP, HTTSOAPAudit, JWT, OAuth, Server, Service, TechnicalAccount, TLSChannelSecurity, XPathSecurity, WSSDefinition, \
      VaultConnection
-from zato.common.odb import ping_queries, query
+from zato.common.odb import get_ping_query, query
 from zato.common.util import current_host, get_component_name, get_engine_url, get_http_json_channel, get_http_soap_channel, \
      parse_extra_into_dict, parse_tls_channel_security_definition
 
@@ -59,10 +59,11 @@ class SessionWrapper(object):
 
     def init_session(self, name, config, pool, use_scoped_session=True):
         self.config = config
+        self.fs_sql_config = config['fs_sql_config']
         self.pool = pool
 
         try:
-            self.pool.ping()
+            self.pool.ping(self.fs_sql_config)
         except Exception, e:
             msg = 'Could not ping:`%s`, session will be left uninitialized, e:`%s`'
             self.logger.warn(msg, name, format_exc(e))
@@ -88,6 +89,7 @@ class SQLConnectionPool(object):
     """
     def __init__(self, name, config, config_no_sensitive):
         self.logger = getLogger(self.__class__.__name__)
+        self.has_debug = self.logger.isEnabledFor(DEBUG)
 
         self.name = name
         self.config = config
@@ -116,51 +118,81 @@ class SQLConnectionPool(object):
                 _extra['poolclass'] = NullPool
 
         engine_url = get_engine_url(config)
-        self.engine = create_engine(engine_url, **_extra)
+        self.engine = self._create_engine(engine_url, config, _extra)
 
-        event.listen(self.engine, 'checkin', self.on_checkin)
-        event.listen(self.engine, 'checkout', self.on_checkout)
-        event.listen(self.engine, 'connect', self.on_connect)
-        event.listen(self.engine, 'first_connect', self.on_first_connect)
+        if self.engine:
+            event.listen(self.engine, 'checkin', self.on_checkin)
+            event.listen(self.engine, 'checkout', self.on_checkout)
+            event.listen(self.engine, 'connect', self.on_connect)
+            event.listen(self.engine, 'first_connect', self.on_first_connect)
+
+        self.checkins = 0
+        self.checkouts = 0
 
     def __str__(self):
         return '<{} at {}, config:[{}]>'.format(self.__class__.__name__, hex(id(self)), self.config_no_sensitive)
 
     __repr__ = __str__
 
+    def _create_engine(self, engine_url, config, extra):
+        if 'mxodbc' in engine_url:
+            config_data = {}
+
+            config_data['Server_Connection'] = {}
+            config_data['Logging'] = {}
+            config_data['Integration'] = {}
+
+            config_data['Server_Connection']['host'] = config['host']
+            config_data['Server_Connection']['port'] = config['port']
+            config_data['Server_Connection']['using_ssl'] = extra.pop('mxodbc_using_ssl', False)
+
+            config_data['Integration']['gevent'] = True
+
+            try:
+                session = mxServerSession(config_data=config_data)
+                odbc = session.open()
+            except OperationalError, e:
+                self.logger.warn('SQL connection could not be created, caught mxODBC exception, e:`%s`', format_exc(e))
+            else:
+                url = '{engine}://{username}:{password}@{db_name}'.format(**config)
+                return create_engine(url, module=odbc, **extra)
+
+        else:
+            return create_engine(engine_url, **extra)
+
     def on_checkin(self, dbapi_conn, conn_record):
-        if self.logger.isEnabledFor(DEBUG):
-            msg = 'Checked in dbapi_conn:{}, conn_record:{}'.format(dbapi_conn, conn_record)
-            self.logger.debug(msg)
+        if self.has_debug:
+            self.logger.debug('Checked in dbapi_conn:%s, conn_record:%s', dbapi_conn, conn_record)
+        self.checkins += 1
 
     def on_checkout(self, dbapi_conn, conn_record, conn_proxy):
-        if self.logger.isEnabledFor(DEBUG):
-            msg = 'Checked out dbapi_conn:{}, conn_record:{}, conn_proxy:{}'.format(
-                dbapi_conn, conn_record, conn_proxy)
-            self.logger.debug(msg)
+        if self.has_debug:
+            self.logger.debug('Checked out dbapi_conn:%s, conn_record:%s, conn_proxy:%s',
+                msg, dbapi_conn, conn_record, conn_proxy)
+
+        self.checkouts += 1
+        self.logger.debug('co-cin-diff %d-%d-%d', self.checkouts, self.checkins, self.checkouts - self.checkins)
 
     def on_connect(self, dbapi_conn, conn_record):
-        if self.logger.isEnabledFor(DEBUG):
-            msg = 'Connect dbapi_conn:{}, conn_record:{}'.format(dbapi_conn, conn_record)
-            self.logger.debug(msg)
+        if self.has_debug:
+            self.logger.debug('Connect dbapi_conn:%s, conn_record:%s', dbapi_conn, conn_record)
 
     def on_first_connect(self, dbapi_conn, conn_record):
-        if self.logger.isEnabledFor(DEBUG):
-            msg = 'First connect dbapi_conn:{}, conn_record:{}'.format(dbapi_conn, conn_record)
-            self.logger.debug(msg)
+        if self.has_debug:
+            self.logger.debug('First connect dbapi_conn:%s, conn_record:%s', dbapi_conn, conn_record)
 
-    def ping(self):
+    def ping(self, fs_sql_config):
         """ Pings the SQL database and returns the response time, in milliseconds.
         """
-        query = ping_queries[self.engine_name]
+        query = get_ping_query(fs_sql_config, self.config)
 
-        self.logger.debug('About to ping the SQL connection pool:[{}], query:[{}]'.format(self.config_no_sensitive, query))
+        self.logger.debug('About to ping the SQL connection pool:`%s`, query:`%s`', self.config_no_sensitive, query)
 
         start_time = time()
         self.engine.connect().execute(query)
         response_time = time() - start_time
 
-        self.logger.debug('Ping OK, pool:[{0}], response_time:[{1:03.4f} s]'.format(self.config_no_sensitive, response_time))
+        self.logger.debug('Ping OK, pool:`%s`, response_time:`%s` s', self.config_no_sensitive, response_time)
 
         return response_time
 
