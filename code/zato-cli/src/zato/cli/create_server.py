@@ -185,6 +185,9 @@ level=WARN
 [rbac]
 custom_auth_list_service=
 
+[[auth_type_hook]]
+/apispec=zato.apispec.pub.get-default-auth-type
+
 [component_enabled]
 stats=True
 slow_response=True
@@ -236,6 +239,7 @@ allow_loopback=False
 pub_enabled=False
 pub_name=API specification
 pub_css_style="color:#eee; font-weight:bold; font-size:17px; padding-left:2px"
+pub_current_url_path=/apispec
 
 [apispec_services_allowed]
 # By default, public APIspec endpoints only display Zato-internal services

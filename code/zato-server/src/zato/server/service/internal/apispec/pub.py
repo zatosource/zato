@@ -118,3 +118,12 @@ class Frontend(_Base):
         self.response.headers['Content-Type'] = 'text/python'
 
 # ################################################################################################################################
+
+class GetDefaultAuthType(Service):
+    """ Returns default authentication method to use for clients (browsers) accessing public API specifications.
+    """
+    class SimpleIO:
+        output_required = ('auth_type',)
+
+    def handle(self):
+        self.response.payload.auth_type = 'Basic realm="{}"'.format(self.server.fs_server_config.apispec.pub_name)
