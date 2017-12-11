@@ -1915,6 +1915,7 @@ class RBACRole(Base):
     id = Column(Integer, Sequence('rbac_role_seq'), primary_key=True)
     name = Column(String(200), nullable=False)
     parent_id = Column(Integer, ForeignKey('rbac_role.id', ondelete='CASCADE'), nullable=True)
+    parent = relationship('RBACRole', backref=backref('children'), remote_side=[id])
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('rbac_roles', order_by=name, cascade='all, delete, delete-orphan'))
