@@ -280,6 +280,9 @@ class UpdateEndpointQueue(AdminService):
                 filter(PubSubSubscription.cluster_id==self.request.input.cluster_id).\
                 one()
 
+            old_delivery_server = item.server_id
+            new_delivery_server = self.request.input.server_id
+
             for key, value in sorted(self.request.input.items()):
                 if key not in _sub_skip_update:
                     setattr(item, key, value)
@@ -289,6 +292,15 @@ class UpdateEndpointQueue(AdminService):
 
             self.response.payload.id = self.request.input.id
             self.response.payload.name = item.topic.name
+
+            # We change the delivery server in background
+            if current_delivery_server != new_delivery_server:
+                self.broker_client.publish({
+                    'sub_key': self.request.input.sub_key,
+                    'old_delivery_server': old_delivery_server,
+                    'new_delivery_server': old_delivery_server,
+                    'action': PUBSUB.DELIVERY_SERVER_CHANGE.value,
+                })
 
 # ################################################################################################################################
 

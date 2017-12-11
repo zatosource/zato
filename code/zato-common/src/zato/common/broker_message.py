@@ -426,6 +426,8 @@ class PUBSUB(Constants):
     SUB_KEY_SERVER_SET = ValueConstant('') # This is shared by WSX and other endpoint types
     WSX_CLIENT_SUB_KEY_SERVER_REMOVE = ValueConstant('')
 
+    DELIVERY_SERVER_CHANGE = ValueConstant('')
+
 class SMS(Constants):
     code_start = 106000
 
