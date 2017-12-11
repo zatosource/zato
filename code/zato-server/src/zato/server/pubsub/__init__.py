@@ -597,7 +597,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def _create_topic(self, config):
-        if config.hook_service_id:
+        if 0:#config.hook_service_id:
             config.before_publish_hook_service_invoker = self.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.PUB)
             config.before_delivery_hook_service_invoker = self.get_hook_service_invoker(

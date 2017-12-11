@@ -121,7 +121,7 @@ class Create(AdminService):
         self._backup_linear_log(fs_now, current_work_dir, backup_format, backup_work_dir, backup_history)
 
     def _deploy_file(self, current_work_dir, payload, file_name):
-        f = open(file_name, 'wb')
+        f = open(file_name, 'w')
         f.write(payload)
         f.close()
 
@@ -134,12 +134,6 @@ class Create(AdminService):
             msg['cid'] = new_cid()
             msg['id'] = service_id
             msg['action'] = HOT_DEPLOY.AFTER_DEPLOY.value
-
-            # Now, it's possible we don't have the broker_client yet - this will happen if we are deploying
-            # missing services found on other servers during our own server's startup. In that case we just
-            # need to wait a moment for the server we are on to fully initialize.
-            while not self.broker_client:
-                sleep(1)
 
             self.broker_client.publish(msg)
 
@@ -157,11 +151,11 @@ class Create(AdminService):
 
         if success:
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.DEPLOYED)
-            msg = 'Uploaded package id:[{}], payload_name:[{}]'.format(package_id, payload_name)
-            self.logger.info(msg)
+            msg = 'Uploaded package id:`%s`, payload_name:`%s`'
+            self.logger.info(msg, package_id, payload_name)
         else:
-            msg = 'Package id:[{}], payload_name:[{}] has not been deployed'.format(package_id, payload_name)
-            self.logger.warn(msg)
+            msg = 'Package id:`%s`, payload_name:`%s` has not been deployed'
+            self.logger.warn(msg, package_id, payload_name)
 
     def _update_deployment_status(self, session, package_id, status):
         ds = session.query(DeploymentStatus).\
@@ -184,7 +178,7 @@ class Create(AdminService):
             # filter such things out but life is full of surprises
             self._update_deployment_status(session, package_id, DEPLOYMENT_STATUS.IGNORED)
             self.logger.warn(
-                'Ignoring package id:[{}], payload_name:[{}], not a Python file nor an archive'.format(dp.id, dp.payload_name))
+                'Ignoring package id:`%s`, payload_name:`%s`, not a Python file nor an archive', dp.id, dp.payload_name)
 
     def get_package(self, package_id, session):
         return session.query(DeploymentPackage).\
@@ -205,10 +199,17 @@ class Create(AdminService):
         ttl = self.server.deployment_lock_expires
         block = self.server.deployment_lock_timeout
 
-        with self.lock(lock_name, ttl, block):
-            with closing(self.odb.session()) as session:
+        # Now, it's possible we don't have the broker_client yet - this will happen if we are deploying
+        # missing services found on other servers during our own server's startup. In that case we just
+        # need to wait a moment for the server we are on to fully initialize.
+        while not self.server.broker_client:
+            self.logger.warn('BRK %s', self.server.broker_client)
+            sleep(0.2)
+
+        with closing(self.odb.session()) as session:
+            with self.lock(lock_name, ttl, block):
                 try:
-                    # Only the first worker will get here ..
+                    # Only one of workers will get here ..
                     if not self.server.kvdb.conn.get(already_deployed_flag):
                         self.backup_current_work_dir()
 
