@@ -597,7 +597,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def _create_topic(self, config):
-        if 0:#config.hook_service_id:
+        if config.hook_service_id:
             config.before_publish_hook_service_invoker = self.get_hook_service_invoker(
                 config.hook_service_name, PUBSUB.HOOK_TYPE.PUB)
             config.before_delivery_hook_service_invoker = self.get_hook_service_invoker(
@@ -710,6 +710,11 @@ class PubSub(object):
 
     def set_sub_key_server(self, config):
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
+
+# ################################################################################################################################
+
+    def get_sub_key_server(self, sub_key):
+        return self.sub_key_servers[sub_key]
 
 # ################################################################################################################################
 
@@ -853,3 +858,14 @@ class PubSub(object):
         """
 
 # ################################################################################################################################
+
+    def migrate_delivery_server(self, sub_key, new_delivery_server_name, endpoint_type):
+        """ Migrates the delivery task for sub_key to a new server given by ID on input,
+        including all current in-RAM messages. This method must be invoked in the same worker process that runs
+        delivery task for sub_key.
+        """
+        self.server.invoke('pubapi1.migrate-delivery-server', {
+            'sub_key': sub_key,
+            'new_delivery_server_name': new_delivery_server_name,
+            'endpoint_type': endpoint_type,
+        })
