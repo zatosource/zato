@@ -211,6 +211,9 @@ class Servers(object):
         # Server name -> Responses for all PIDs from that server
         out = {}
 
+        # Will be set to False if there is at least one error messages among all the servers and worker processes.
+        out_ok = True
+
         for server in self._servers.values():
             if server.up_status == SERVER_UP_STATUS.RUNNING:
                 response = {
@@ -223,12 +226,30 @@ class Servers(object):
                 }
                 try:
                     response['server_data'] = server.invoke_all_pids(service, request, *args, **kwargs).data
-                    response['is_ok'] = True
+
+                    # A list of responses for that server from all its PIDs
+                    per_pid_responses = response['server_data'].values()
+
+                    server_is_ok = True
+
+                    for per_pid_response in per_pid_responses:
+                        per_pid_is_ok = per_pid_response['is_ok']
+
+                        # We check all PIDs but break as soon as it is known that there was an error
+                        if not per_pid_is_ok:
+                            out_ok = False
+                            server_is_ok = False
+
+                        # Do not need to iterate anymore, we know there was an error
+                        break
+
+                    response['is_ok'] = server_is_ok
                 except Exception, e:
+                    print('aaaa', e)
                     response['server_data'] = format_exc(e)
                 finally:
                     out[server.name] = response
 
-        return out
+        return out_ok, out
 
 # ################################################################################################################################

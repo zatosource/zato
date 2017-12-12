@@ -264,6 +264,8 @@ class InRAMBacklog(object):
 # ################################################################################################################################
 
     def retrieve_messages_by_sub_keys(self, topic_id, sub_keys):
+        """ Retrieves and returns all messages matching input - messages are deleted from RAM.
+        """
         return self._get_delete_messages_by_sub_keys(topic_id, sub_keys, True)
 
 # ################################################################################################################################
@@ -708,13 +710,25 @@ class PubSub(object):
 
 # ################################################################################################################################
 
+    #def set_sub_key_server(self, config, self_setting=False, source=None):
     def set_sub_key_server(self, config):
+
+        msg = 'Setting delivery server for sub_key `%(sub_key)s` - `%(server_name)s` `%(server_pid)s`'
+        logger.warn(msg, config)
+        logger_zato.warn(msg, config)
+
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
 # ################################################################################################################################
 
     def get_sub_key_server(self, sub_key):
         return self.sub_key_servers[sub_key]
+
+# ################################################################################################################################
+
+    def delete_sub_key_server(self, sub_key):
+        logger_zato.warn('Deleting SUB-SRV for %s', sub_key)
+        del self.sub_key_servers[sub_key]
 
 # ################################################################################################################################
 
@@ -789,7 +803,7 @@ class PubSub(object):
 # ################################################################################################################################
 
     def unsubscribe(self, topic_sub_keys):
-        """ Removes subscriptions for all input sub_keys. topic_sub_keys is a dictionary keyed by topic_name,
+        """ Removes subscriptions for all input sub_keys. Input topic_sub_keys is a dictionary keyed by topic_name,
         and each value is a list of sub_keys, possibly one-element long.
         """
         for topic_name, sub_keys in topic_sub_keys.items():
@@ -852,20 +866,22 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def get_endpoint_by_sub_key(self, sub_key):
-        """ Returns an endpoint by subscription's sub_key - the object returned is an actual recipient,
-        e.g. an outgoing REST connection.
+    def delete_sub_key(self, sub_key):
+        """ Deletes
         """
 
 # ################################################################################################################################
 
-    def migrate_delivery_server(self, sub_key, new_delivery_server_name, endpoint_type):
+    def migrate_delivery_server(self, msg):
         """ Migrates the delivery task for sub_key to a new server given by ID on input,
         including all current in-RAM messages. This method must be invoked in the same worker process that runs
         delivery task for sub_key.
         """
         self.server.invoke('pubapi1.migrate-delivery-server', {
-            'sub_key': sub_key,
-            'new_delivery_server_name': new_delivery_server_name,
-            'endpoint_type': endpoint_type,
+            'sub_key': msg.sub_key,
+            'old_delivery_server_id': msg.old_delivery_server_id,
+            'new_delivery_server_name': msg.new_delivery_server_name,
+            'endpoint_type': msg.endpoint_type,
         })
+
+# ################################################################################################################################

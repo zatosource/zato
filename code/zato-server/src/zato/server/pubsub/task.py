@@ -118,8 +118,14 @@ class DeliveryTask(object):
             logger.warn('Exception in delivery task for sub_key:`%s`, e:`%s`', self.sub_key, format_exc(e))
 
     def stop(self):
-        logger.info('Stopping delivery task for sub_key:`%s`', self.sub_key)
-        self.keep_running = False
+        if self.keep_running:
+            logger.info('Stopping delivery task for sub_key:`%s`', self.sub_key)
+            self.keep_running = False
+
+    def clear(self):
+        gd, non_gd = self.get_queue_depth()
+        logger.info('Removing in-RAM messages for sub_key:`%s` (GD:%d, non-GD:%d)', self.sub_key, gd, non_gd)
+        self.delivery_list.clear()
 
     def get_queue_depth(self):
         """ Returns the number of GD and non-GD messages in delivery list.

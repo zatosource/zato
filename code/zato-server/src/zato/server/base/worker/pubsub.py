@@ -69,7 +69,9 @@ class PubSub(WorkerImpl):
 # ################################################################################################################################
 
     def on_broker_msg_PUBSUB_SUB_KEY_SERVER_SET(self, msg):
-        self.pubsub.set_sub_key_server(msg)
+        # Do not notify ourselves that we are a task server for this sub_key - our pubsub already knows it.
+        if msg.server_name != self.server.name and msg.server_pid != self.server.pid:
+            self.pubsub.set_sub_key_server(msg, False, 'on_broker_msg_PUBSUB_SUB_KEY_SERVER_SET')
 
 # ################################################################################################################################
 
@@ -82,6 +84,6 @@ class PubSub(WorkerImpl):
         if msg.old_delivery_server_id == self.server.id:
             old_server_pid = self.pubsub.get_sub_key_server(msg.sub_key).server_pid
             if old_server_pid == self.server.pid:
-                self.pubsub.migrate_delivery_server(msg.sub_key, msg.new_delivery_server_name, msg.endpoint_type)
+                self.pubsub.migrate_delivery_server(msg)
 
 # ################################################################################################################################
