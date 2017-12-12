@@ -93,7 +93,7 @@ class GetList(AdminService):
     """
     _filter_by = HTTPSOAP.name,
 
-    class SimpleIO(_BaseGet.SimpleIO, GetListAdminSIO):
+    class SimpleIO(GetListAdminSIO, _BaseGet.SimpleIO):
         request_elem = 'zato_http_soap_get_list_request'
         response_elem = 'zato_http_soap_get_list_response'
         input_required = ('cluster_id',)
