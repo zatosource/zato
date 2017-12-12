@@ -348,8 +348,10 @@ class APISpec(object):
         # Maps names of services to their summaries and descriptions
         service_details = {}
 
-        # All namespaces
+        services = self.data.get('services', [])
         namespaces = list(self.data.get('namespaces', {}).values())
+
+        # All namespaces
         for values in namespaces:
 
             # Config
@@ -394,7 +396,7 @@ class APISpec(object):
                 }
 
         # Don't display anything if there are no services in the only namespace
-        if len(namespaces) == 1 and not namespaces[0]['services']:
+        if not len(services):
             doc['main-div'].html = '<b>No results</b>'
             doc['main-div'].class_name = 'no-results'
             return
