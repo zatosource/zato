@@ -53,8 +53,13 @@ class CreateDeliveryTask(AdminService):
             'endpoint_type': config['endpoint_type']
         }
 
-        # Register this delivery task with current server's pubsub
-        #self.pubsub.set_sub_key_server(msg, True, 'CreateDeliveryTask')
+        # Register this delivery task with current server's pubsub but only if we do not have it already.
+        # It is possible that we do, for instance:
+        #
+        # 1) This server had this task when it was starting up
+        # 2) The task was migrated to another
+        #
+        self.pubsub.set_sub_key_server(msg)
 
         # Update in-RAM state of workers
         msg['action'] = BROKER_MSG_PUBSUB.SUB_KEY_SERVER_SET.value

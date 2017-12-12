@@ -713,9 +713,9 @@ class PubSub(object):
     #def set_sub_key_server(self, config, self_setting=False, source=None):
     def set_sub_key_server(self, config):
 
-        msg = 'Setting delivery server for sub_key `%(sub_key)s` - `%(server_name)s` `%(server_pid)s`'
-        logger.warn(msg, config)
-        logger_zato.warn(msg, config)
+        msg = 'Setting info about delivery server for sub_key `%(sub_key)s` - `%(server_name)s:%(server_pid)s`'
+        logger.info(msg, config)
+        logger_zato.info(msg, config)
 
         self.sub_key_servers[config['sub_key']] = SubKeyServer(config)
 
@@ -727,7 +727,12 @@ class PubSub(object):
 # ################################################################################################################################
 
     def delete_sub_key_server(self, sub_key):
-        logger_zato.warn('Deleting SUB-SRV for %s', sub_key)
+        sub_key_server = self.sub_key_servers[sub_key]
+        msg = 'Deleting info about delivery server for sub_key `%s`, was `%s:%s`'
+
+        logger.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
+        logger_zato.info(msg, sub_key, sub_key_server.server_name, sub_key_server.server_pid)
+
         del self.sub_key_servers[sub_key]
 
 # ################################################################################################################################
@@ -866,18 +871,12 @@ class PubSub(object):
 
 # ################################################################################################################################
 
-    def delete_sub_key(self, sub_key):
-        """ Deletes
-        """
-
-# ################################################################################################################################
-
     def migrate_delivery_server(self, msg):
         """ Migrates the delivery task for sub_key to a new server given by ID on input,
         including all current in-RAM messages. This method must be invoked in the same worker process that runs
         delivery task for sub_key.
         """
-        self.server.invoke('pubapi1.migrate-delivery-server', {
+        self.server.invoke('zato.pubsub.migrate-server.migrate-delivery-server', {
             'sub_key': msg.sub_key,
             'old_delivery_server_id': msg.old_delivery_server_id,
             'new_delivery_server_name': msg.new_delivery_server_name,
