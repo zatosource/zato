@@ -39,20 +39,26 @@ class CreateDeliveryTask(AdminService):
         config = self.request.raw_request
 
         # Creates a pubsub_tool that will handle this subscription and registers it with pubsub
-        pubsub_tool = PubSubTool(self.pubsub, self.server, config.endpoint_type)
+        pubsub_tool = PubSubTool(self.pubsub, self.server, config['endpoint_type'])
 
         # Makes this sub_key known to pubsub
-        pubsub_tool.add_sub_key(config.sub_key)
+        pubsub_tool.add_sub_key(config['sub_key'])
 
-        # Update in-RAM state of workers
-        self.broker_client.publish({
-            'action': BROKER_MSG_PUBSUB.SUB_KEY_SERVER_SET.value,
+        # Common message for both local server and broker
+        msg = {
             'cluster_id': self.server.cluster_id,
             'server_name': self.server.name,
             'server_pid': self.server.pid,
-            'sub_key': config.sub_key,
-            'endpoint_type': config.endpoint_type
-        })
+            'sub_key': config['sub_key'],
+            'endpoint_type': config['endpoint_type']
+        }
+
+        # Register this delivery task with current server's pubsub
+        #self.pubsub.set_sub_key_server(msg, True, 'CreateDeliveryTask')
+
+        # Update in-RAM state of workers
+        msg['action'] = BROKER_MSG_PUBSUB.SUB_KEY_SERVER_SET.value
+        self.broker_client.publish(msg)
 
 # ################################################################################################################################
 

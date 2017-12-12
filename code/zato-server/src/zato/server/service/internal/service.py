@@ -274,7 +274,7 @@ class Invoke(AdminService):
         name = self.request.input.get('name')
         pid = self.request.input.get('pid') or 0
         all_pids = self.request.input.get('all_pids')
-        timeout = self.request.input.get('timeout')
+        timeout = self.request.input.get('timeout') or None
 
         channel = self.request.input.get('channel')
         data_format = self.request.input.get('data_format')
@@ -300,7 +300,8 @@ class Invoke(AdminService):
 
             # Same as above in async branch, except in async there was no all_pids
             if all_pids:
-                response = dumps(self.server.invoke_all_pids(name, payload, timeout))
+                args = (name, payload, timeout) if timeout else (name, payload)
+                response = dumps(self.server.invoke_all_pids(*args))
             else:
                 if pid and pid != self.server.pid:
                     response = self.server.invoke(name, payload, pid=pid, data_format=data_format)

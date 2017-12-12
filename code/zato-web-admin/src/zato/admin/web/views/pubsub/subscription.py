@@ -18,6 +18,7 @@ from bunch import Bunch
 from zato.admin.web import from_utc_to_user
 from zato.admin.web.forms.pubsub.subscription import CreateForm, EditForm
 from zato.admin.web.views import CreateEdit, Delete as _Delete, django_url_reverse, Index as _Index, slugify
+from zato.common import PUBSUB
 from zato.common.odb.model import PubSubEndpoint
 
 # ################################################################################################################################
@@ -59,10 +60,13 @@ class Index(_Index):
 
         select_data_target = Bunch()
 
+        for endpoint_type in PUBSUB.ENDPOINT_TYPE:
+            select_data_target[endpoint_type.id] = []
+
         if self.req.zato.cluster_id:
 
             for item in self.items:
-                targets = select_data_target.setdefault(item.endpoint_type, [])
+                targets = select_data_target[item.endpoint_type]
                 targets.append({b'id':item.id, b'name':item.endpoint_name})
 
             # Security definitions

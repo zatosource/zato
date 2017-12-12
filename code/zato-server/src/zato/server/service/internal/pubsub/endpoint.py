@@ -289,7 +289,7 @@ class UpdateEndpointQueue(AdminService):
                     setattr(item, key, value)
 
             session.add(item)
-            #session.commit()
+            session.commit()
 
             self.response.payload.id = self.request.input.id
             self.response.payload.name = item.topic.name
