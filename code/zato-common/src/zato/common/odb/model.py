@@ -23,7 +23,7 @@ from sqlalchemy.orm import backref, relationship
 
 # Zato
 from zato.common import AMQP, CASSANDRA, CLOUD, HTTP_SOAP_SERIALIZATION_TYPE, INVOCATION_TARGET, MISC, NOTIF, \
-     MSG_PATTERN_TYPE, ODOO, PUB_SUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
+     MSG_PATTERN_TYPE, ODOO, SAP, PUB_SUB, SCHEDULER, STOMP, PARAMS_PRIORITY, URL_PARAMS_PRIORITY
 from zato.common.odb import WMQ_DEFAULT_PRIORITY
 
 Base = declarative_base()
@@ -1008,6 +1008,33 @@ class OutgoingOdoo(Base):
 
     cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
     cluster = relationship(Cluster, backref=backref('out_conns_odoo', order_by=name, cascade='all, delete, delete-orphan'))
+
+    def __init__(self):
+        self.protocol_name = None # Not used by the DB
+
+# ################################################################################################################################
+
+class OutgoingSAP(Base):
+    """ An outgoing SAP RFC connection.
+    """
+    __tablename__ = 'out_sap'
+    __table_args__ = (UniqueConstraint('name', 'cluster_id'), {})
+
+    id = Column(Integer, Sequence('out_sap_seq'), primary_key=True)
+    name = Column(String(200), nullable=False)
+    is_active = Column(Boolean(), nullable=False)
+
+    ashost = Column(String(200), nullable=False)
+    sysnr = Column(String(3), nullable=True, server_default=str(SAP.DEFAULT.INSTANCE))
+    user = Column(String(200), nullable=False)
+    client =  Column(String(4), nullable=False)
+    system_id = Column(String(4), nullable=False)
+    password = Column(String(400), nullable=False)
+    pool_size = Column(Integer(), nullable=False, server_default=str(SAP.DEFAULT.POOL_SIZE))
+    router = Column(String(400), nullable=True)
+
+    cluster_id = Column(Integer, ForeignKey('cluster.id', ondelete='CASCADE'), nullable=False)
+    cluster = relationship(Cluster, backref=backref('out_conns_sap', order_by=name, cascade='all, delete, delete-orphan'))
 
     def __init__(self):
         self.protocol_name = None # Not used by the DB

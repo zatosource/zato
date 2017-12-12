@@ -98,6 +98,7 @@ $.namespace('zato.outgoing.jms_wmq');
 $.namespace('zato.outgoing.odoo');
 $.namespace('zato.outgoing.sql');
 $.namespace('zato.outgoing.stomp');
+$.namespace('zato.outgoing.sap');
 $.namespace('zato.outgoing.zmq');
 $.namespace('zato.pattern.delivery');
 $.namespace('zato.pattern.delivery.in_doubt');
