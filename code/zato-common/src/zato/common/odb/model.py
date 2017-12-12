@@ -1027,7 +1027,7 @@ class OutgoingSAP(Base):
     host = Column(String(200), nullable=False)
     sysnr = Column(String(3), nullable=True, server_default=str(SAP.DEFAULT.INSTANCE))
     user = Column(String(200), nullable=False)
-    client =  Column(String(4), nullable=False)
+    client = Column(String(4), nullable=False)
     system_id = Column(String(4), nullable=False)
     password = Column(String(400), nullable=False)
     pool_size = Column(Integer(), nullable=False, server_default=str(SAP.DEFAULT.POOL_SIZE))
