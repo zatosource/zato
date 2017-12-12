@@ -1024,7 +1024,7 @@ class OutgoingSAP(Base):
     name = Column(String(200), nullable=False)
     is_active = Column(Boolean(), nullable=False)
 
-    ashost = Column(String(200), nullable=False)
+    host = Column(String(200), nullable=False)
     sysnr = Column(String(3), nullable=True, server_default=str(SAP.DEFAULT.INSTANCE))
     user = Column(String(200), nullable=False)
     client =  Column(String(4), nullable=False)
