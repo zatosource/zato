@@ -876,7 +876,7 @@ class PubSub(object):
         including all current in-RAM messages. This method must be invoked in the same worker process that runs
         delivery task for sub_key.
         """
-        self.server.invoke('zato.pubsub.migrate-server.migrate-delivery-server', {
+        self.server.invoke('zato.pubsub.migrate.migrate-delivery-server', {
             'sub_key': msg.sub_key,
             'old_delivery_server_id': msg.old_delivery_server_id,
             'new_delivery_server_name': msg.new_delivery_server_name,
