@@ -1245,6 +1245,11 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
         """
         channel = kwargs.get('channel', CHANNEL.WORKER)
 
+        if 'serialize' in kwargs:
+            serialize = kwargs.get('serialize')
+        else:
+            serialize = True
+
         return self.on_message_invoke_service({
             'channel': channel,
             'payload': payload,
@@ -1254,7 +1259,7 @@ class WorkerStore(_WorkerStoreBase, BrokerMessageReceiver):
             'is_async': kwargs.get('is_async'),
             'callback': kwargs.get('callback'),
             'zato_ctx': kwargs.get('zato_ctx'),
-        }, channel, None, needs_response=True, serialize=kwargs.get('serialize', True))
+        }, channel, None, needs_response=True, serialize=serialize)
 
 # ################################################################################################################################
 
