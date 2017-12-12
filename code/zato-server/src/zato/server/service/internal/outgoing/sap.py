@@ -38,6 +38,7 @@ def broker_message_hook(service, input, instance, attrs, service_type):
         input.password = instance.password
 
 class GetList(AdminService):
+    _filter_by = OutgoingSAP.name,
     __metaclass__ = GetListMeta
 
 class Create(AdminService):
