@@ -324,7 +324,7 @@ else
 end
 """
 
-default_odb_pool_size = 1
+default_odb_pool_size = 15
 
 directories = (
     'config',
