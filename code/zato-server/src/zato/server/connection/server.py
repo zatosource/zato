@@ -116,7 +116,20 @@ class Servers(object):
             return _SelfServer(item)
 
         # Remote server = use HTTP
-        return self._servers.setdefault(item, self._add_server(item))
+        server_name, cluster_name = self._get_full_name(item)
+        full_name = '{}@{}'.format(server_name, cluster_name)
+        return self._servers.setdefault(full_name, self._add_server(cluster_name, server_name))
+
+# ################################################################################################################################
+
+    def _get_full_name(self, address):
+        if '@' in address:
+            server_name, cluster_name = address.split('@')
+        else:
+            server_name = address
+            cluster_name = self.cluster_name
+
+        return server_name, cluster_name
 
 # ################################################################################################################################
 
@@ -125,15 +138,7 @@ class Servers(object):
 
 # ################################################################################################################################
 
-    def _add_server(self, address):
-
-        # It must be server@cluster
-        if '@' in address:
-            server_name, cluster_name = address.split('@')
-        else:
-            server_name = address
-            cluster_name = self.cluster_name
-
+    def _add_server(self, cluster_name, server_name):
         with closing(self.odb.session()) as session:
             return self.get_server_from_odb(session, cluster_name, server_name)
 
@@ -215,6 +220,7 @@ class Servers(object):
         out_ok = True
 
         for server in self._servers.values():
+
             if server.up_status == SERVER_UP_STATUS.RUNNING:
                 response = {
                     'is_ok': False,
@@ -225,6 +231,8 @@ class Servers(object):
                     }
                 }
                 try:
+
+                    # This is a dictionary of responses for all PIDs of a given server
                     response['server_data'] = server.invoke_all_pids(service, request, *args, **kwargs).data
 
                     # A list of responses for that server from all its PIDs

@@ -71,7 +71,7 @@ class PubSub(WorkerImpl):
     def on_broker_msg_PUBSUB_SUB_KEY_SERVER_SET(self, msg):
         # Do not notify ourselves that we are a task server for this sub_key - our pubsub already knows it.
         if msg.server_name != self.server.name and msg.server_pid != self.server.pid:
-            self.pubsub.set_sub_key_server(msg, False, 'on_broker_msg_PUBSUB_SUB_KEY_SERVER_SET')
+            self.pubsub.set_sub_key_server(msg)
 
 # ################################################################################################################################
 
